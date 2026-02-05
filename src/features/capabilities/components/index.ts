@@ -1,0 +1,5 @@
+export { CapabilitiesSection } from './capabilities-section'
+export { CapabilityCard } from './capability-card'
+export { CapabilityTable } from './capability-table'
+export { CreateCapabilityDialog } from './create-capability-dialog'
+export { EditCapabilityDialog } from './edit-capability-dialog'

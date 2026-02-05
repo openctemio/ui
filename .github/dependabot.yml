@@ -1,0 +1,123 @@
+# Dependabot configuration for Rediver UI
+# https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+
+version: 2
+updates:
+  # NPM packages
+  - package-ecosystem: 'npm'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+      time: '06:00'
+      timezone: 'Asia/Ho_Chi_Minh'
+    open-pull-requests-limit: 10
+    reviewers:
+      - 'exploopio/security'
+    labels:
+      - 'dependencies'
+      - 'npm'
+    commit-message:
+      prefix: 'deps(npm)'
+    versioning-strategy: increase
+    groups:
+      # Group React ecosystem updates
+      react:
+        patterns:
+          - 'react'
+          - 'react-dom'
+          - '@types/react'
+          - '@types/react-dom'
+      # Group Next.js updates
+      nextjs:
+        patterns:
+          - 'next'
+          - '@next/*'
+          - 'eslint-config-next'
+      # Group testing libraries
+      testing:
+        patterns:
+          - '@testing-library/*'
+          - 'vitest'
+          - '@vitest/*'
+          - 'jest'
+          - '@types/jest'
+      # Group linting/formatting
+      linting:
+        patterns:
+          - 'eslint'
+          - 'eslint-*'
+          - '@eslint/*'
+          - 'prettier'
+          - '@typescript-eslint/*'
+      # Group TypeScript
+      typescript:
+        patterns:
+          - 'typescript'
+          - '@types/*'
+      # Group Tailwind CSS
+      tailwind:
+        patterns:
+          - 'tailwindcss'
+          - '@tailwindcss/*'
+          - 'postcss'
+          - 'autoprefixer'
+      # Group shadcn/ui dependencies
+      radix-ui:
+        patterns:
+          - '@radix-ui/*'
+      # Group minor and patch updates
+      minor-patch:
+        patterns:
+          - '*'
+        update-types:
+          - 'minor'
+          - 'patch'
+        exclude-patterns:
+          - 'react'
+          - 'react-dom'
+          - 'next'
+          - '@next/*'
+    ignore:
+      # Be careful with major updates
+      - dependency-name: '*'
+        update-types: ['version-update:semver-major']
+      # Except for security updates
+    # Allow major updates for security-critical packages
+    allow:
+      - dependency-name: '*'
+        dependency-type: 'all'
+
+  # GitHub Actions
+  - package-ecosystem: 'github-actions'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+      time: '06:00'
+      timezone: 'Asia/Ho_Chi_Minh'
+    open-pull-requests-limit: 5
+    reviewers:
+      - 'exploopio/security'
+    labels:
+      - 'dependencies'
+      - 'github-actions'
+    commit-message:
+      prefix: 'deps(actions)'
+
+  # Docker
+  - package-ecosystem: 'docker'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+      time: '06:00'
+      timezone: 'Asia/Ho_Chi_Minh'
+    open-pull-requests-limit: 3
+    reviewers:
+      - 'exploopio/security'
+    labels:
+      - 'dependencies'
+      - 'docker'
+    commit-message:
+      prefix: 'deps(docker)'

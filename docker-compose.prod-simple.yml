@@ -1,0 +1,96 @@
+# =============================================================================
+# Docker Compose - Production (Without Nginx)
+# =============================================================================
+# Use this when you have an external reverse proxy (cloud load balancer,
+# Traefik, Caddy, or external Nginx) handling SSL termination.
+#
+# Usage:
+#   Build & Start:  docker compose -f docker-compose.prod-simple.yml up --build -d
+#   Stop:           docker compose -f docker-compose.prod-simple.yml down
+#   Logs:           docker compose -f docker-compose.prod-simple.yml logs -f
+#
+# When to use:
+#   - AWS ALB, GCP Load Balancer, Azure App Gateway
+#   - Kubernetes Ingress
+#   - Traefik, Caddy as external proxy
+#   - Cloudflare Tunnel
+#
+# Required Environment Variables:
+#   - CSRF_SECRET             (server-side secret for CSRF protection)
+#   - BACKEND_API_URL         (internal API URL, e.g., http://api:8080)
+#
+# For full production with built-in Nginx/SSL, use: docker-compose.prod.yml
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # Next.js Production Application
+  # ---------------------------------------------------------------------------
+  nextjs:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+      args:
+        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-https://localhost}
+        NEXT_PUBLIC_AUTH_PROVIDER: ${NEXT_PUBLIC_AUTH_PROVIDER:-local}
+        NEXT_PUBLIC_AUTH_COOKIE_NAME: ${NEXT_PUBLIC_AUTH_COOKIE_NAME:-auth_token}
+        NEXT_PUBLIC_REFRESH_COOKIE_NAME: ${NEXT_PUBLIC_REFRESH_COOKIE_NAME:-refresh_token}
+        NEXT_PUBLIC_OAUTH_CALLBACK_URL: ${NEXT_PUBLIC_OAUTH_CALLBACK_URL:-}
+        NEXT_PUBLIC_KEYCLOAK_URL: ${NEXT_PUBLIC_KEYCLOAK_URL:-}
+        NEXT_PUBLIC_KEYCLOAK_REALM: ${NEXT_PUBLIC_KEYCLOAK_REALM:-}
+        NEXT_PUBLIC_KEYCLOAK_CLIENT_ID: ${NEXT_PUBLIC_KEYCLOAK_CLIENT_ID:-}
+        NEXT_PUBLIC_KEYCLOAK_REDIRECT_URI: ${NEXT_PUBLIC_KEYCLOAK_REDIRECT_URI:-}
+        NEXT_PUBLIC_SENTRY_DSN: ${NEXT_PUBLIC_SENTRY_DSN:-}
+
+    environment:
+      NODE_ENV: production
+      BACKEND_API_URL: ${BACKEND_API_URL:-http://api:8080}
+      API_TIMEOUT: ${API_TIMEOUT:-30000}
+      CSRF_SECRET: ${CSRF_SECRET:?CSRF_SECRET is required}
+      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET:-}
+      SECURE_COOKIES: ${SECURE_COOKIES:-true}
+      COOKIE_MAX_AGE: ${COOKIE_MAX_AGE:-604800}
+      ENABLE_TOKEN_REFRESH: ${ENABLE_TOKEN_REFRESH:-true}
+      TOKEN_REFRESH_BEFORE_EXPIRY: ${TOKEN_REFRESH_BEFORE_EXPIRY:-300}
+
+    # Expose port 3000 for external reverse proxy
+    ports:
+      - "${UI_PORT:-3000}:3000"
+
+    healthcheck:
+      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+    restart: always
+
+    networks:
+      - app-network
+
+    security_opt:
+      - no-new-privileges:true
+
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+
+# =============================================================================
+# Networks
+# =============================================================================
+networks:
+  app-network:
+    driver: bridge
