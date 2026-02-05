@@ -76,6 +76,8 @@ export const Permission = {
   // ===========================================
   DashboardRead: 'dashboard:read',
   AuditRead: 'audit:read',
+  SettingsRead: 'settings:read',
+  SettingsWrite: 'settings:write',
 
   // ===========================================
   // ASSETS MODULE
@@ -83,6 +85,8 @@ export const Permission = {
   AssetsRead: 'assets:read',
   AssetsWrite: 'assets:write',
   AssetsDelete: 'assets:delete',
+  AssetsImport: 'assets:import',
+  AssetsExport: 'assets:export',
 
   // Asset Groups (assets:groups:*)
   AssetGroupsRead: 'assets:groups:read',
@@ -104,6 +108,23 @@ export const Permission = {
   FindingsRead: 'findings:read',
   FindingsWrite: 'findings:write',
   FindingsDelete: 'findings:delete',
+  FindingsAssign: 'findings:assign',
+  FindingsTriage: 'findings:triage',
+  FindingsStatus: 'findings:status',
+  FindingsExport: 'findings:export',
+  FindingsBulkUpdate: 'findings:bulk_update',
+
+  // Exposures (findings:exposures:*)
+  ExposuresRead: 'findings:exposures:read',
+  ExposuresWrite: 'findings:exposures:write',
+  ExposuresDelete: 'findings:exposures:delete',
+  ExposuresTriage: 'findings:exposures:triage',
+
+  // Suppressions (findings:suppressions:*)
+  SuppressionsRead: 'findings:suppressions:read',
+  SuppressionsWrite: 'findings:suppressions:write',
+  SuppressionsDelete: 'findings:suppressions:delete',
+  SuppressionsApprove: 'findings:suppressions:approve',
 
   // Vulnerabilities (findings:vulnerabilities:*)
   VulnerabilitiesRead: 'findings:vulnerabilities:read',
@@ -280,6 +301,18 @@ export const Permission = {
   ReportsWrite: 'reports:write',
 
   // ===========================================
+  // THREAT INTELLIGENCE MODULE
+  // ===========================================
+  ThreatIntelRead: 'threat_intel:read',
+  ThreatIntelWrite: 'threat_intel:write',
+
+  // ===========================================
+  // AI TRIAGE MODULE
+  // ===========================================
+  AITriageRead: 'ai_triage:read',
+  AITriageTrigger: 'ai_triage:trigger',
+
+  // ===========================================
   // LEGACY ALIASES (for backward compatibility)
   // ===========================================
   MembersManage: 'team:members:write', // Alias for MembersWrite
@@ -318,14 +351,19 @@ export const PermissionGroups = {
   // All read permissions
   AllRead: [
     Permission.DashboardRead,
+    Permission.AuditRead,
+    Permission.SettingsRead,
     Permission.AssetsRead,
     Permission.AssetGroupsRead,
     Permission.ComponentsRead,
     Permission.FindingsRead,
+    Permission.ExposuresRead,
+    Permission.SuppressionsRead,
     Permission.VulnerabilitiesRead,
     Permission.CredentialsRead,
     Permission.RemediationRead,
     Permission.WorkflowsRead,
+    Permission.PoliciesRead,
     Permission.ScansRead,
     Permission.ScanProfilesRead,
     Permission.SourcesRead,
@@ -353,15 +391,19 @@ export const PermissionGroups = {
     Permission.ScopeRead,
     Permission.ValidationRead,
     Permission.ReportsRead,
-    Permission.AuditRead,
+    Permission.ThreatIntelRead,
+    Permission.AITriageRead,
   ],
 
   // All write permissions
   AllWrite: [
+    Permission.SettingsWrite,
     Permission.AssetsWrite,
     Permission.AssetGroupsWrite,
     Permission.ComponentsWrite,
     Permission.FindingsWrite,
+    Permission.ExposuresWrite,
+    Permission.SuppressionsWrite,
     Permission.VulnerabilitiesWrite,
     Permission.CredentialsWrite,
     Permission.RemediationWrite,
@@ -393,6 +435,7 @@ export const PermissionGroups = {
     Permission.ScopeWrite,
     Permission.ValidationWrite,
     Permission.ReportsWrite,
+    Permission.ThreatIntelWrite,
   ],
 
   // All delete permissions
@@ -401,6 +444,8 @@ export const PermissionGroups = {
     Permission.AssetGroupsDelete,
     Permission.ComponentsDelete,
     Permission.FindingsDelete,
+    Permission.ExposuresDelete,
+    Permission.SuppressionsDelete,
     Permission.VulnerabilitiesDelete,
     Permission.PoliciesDelete,
     Permission.ScansDelete,
@@ -450,6 +495,8 @@ export const PermissionGroups = {
     Permission.FindingsRead,
     Permission.FindingsWrite,
     Permission.FindingsDelete,
+    Permission.ExposuresRead,
+    Permission.ExposuresWrite,
     Permission.VulnerabilitiesRead,
     Permission.VulnerabilitiesWrite,
     Permission.CredentialsRead,
@@ -458,6 +505,7 @@ export const PermissionGroups = {
     Permission.ValidationWrite,
     Permission.ScopeRead,
     Permission.ScopeWrite,
+    Permission.ThreatIntelRead,
   ],
 } as const
 
@@ -469,11 +517,15 @@ export const PermissionLabels: Partial<Record<PermissionString, string>> = {
   // Core
   [Permission.DashboardRead]: 'View Dashboard',
   [Permission.AuditRead]: 'View Audit Logs',
+  [Permission.SettingsRead]: 'View Settings',
+  [Permission.SettingsWrite]: 'Manage Settings',
 
   // Assets
   [Permission.AssetsRead]: 'View Assets',
   [Permission.AssetsWrite]: 'Edit Assets',
   [Permission.AssetsDelete]: 'Delete Assets',
+  [Permission.AssetsImport]: 'Import Assets',
+  [Permission.AssetsExport]: 'Export Assets',
   [Permission.AssetGroupsRead]: 'View Asset Groups',
   [Permission.AssetGroupsWrite]: 'Manage Asset Groups',
   [Permission.AssetGroupsDelete]: 'Delete Asset Groups',
@@ -485,6 +537,19 @@ export const PermissionLabels: Partial<Record<PermissionString, string>> = {
   [Permission.FindingsRead]: 'View Findings',
   [Permission.FindingsWrite]: 'Edit Findings',
   [Permission.FindingsDelete]: 'Delete Findings',
+  [Permission.FindingsAssign]: 'Assign Findings',
+  [Permission.FindingsTriage]: 'Triage Findings',
+  [Permission.FindingsStatus]: 'Change Finding Status',
+  [Permission.FindingsExport]: 'Export Findings',
+  [Permission.FindingsBulkUpdate]: 'Bulk Update Findings',
+  [Permission.ExposuresRead]: 'View Exposures',
+  [Permission.ExposuresWrite]: 'Manage Exposures',
+  [Permission.ExposuresDelete]: 'Delete Exposures',
+  [Permission.ExposuresTriage]: 'Triage Exposures',
+  [Permission.SuppressionsRead]: 'View Suppressions',
+  [Permission.SuppressionsWrite]: 'Manage Suppressions',
+  [Permission.SuppressionsDelete]: 'Delete Suppressions',
+  [Permission.SuppressionsApprove]: 'Approve Suppressions',
   [Permission.VulnerabilitiesRead]: 'View Vulnerabilities',
   [Permission.VulnerabilitiesWrite]: 'Edit Vulnerabilities',
   [Permission.VulnerabilitiesDelete]: 'Delete Vulnerabilities',
@@ -595,6 +660,14 @@ export const PermissionLabels: Partial<Record<PermissionString, string>> = {
   [Permission.ReportsRead]: 'View Reports',
   [Permission.ReportsWrite]: 'Create Reports',
 
+  // Threat Intel
+  [Permission.ThreatIntelRead]: 'View Threat Intel',
+  [Permission.ThreatIntelWrite]: 'Manage Threat Intel',
+
+  // AI Triage
+  [Permission.AITriageRead]: 'View AI Triage',
+  [Permission.AITriageTrigger]: 'Trigger AI Triage',
+
   // Note: Legacy aliases (MembersManage, BillingManage, etc.) map to
   // the same permission IDs as their canonical counterparts, so their
   // labels are inherited automatically.
@@ -622,357 +695,239 @@ export function getPermissionLabel(permission: string): string {
  */
 export const RolePermissions: Record<RoleString, PermissionString[]> = {
   [Role.Owner]: [
-    // Full resource access
-    Permission.AssetsRead,
-    Permission.AssetsWrite,
-    Permission.AssetsDelete,
-    Permission.ProjectsRead,
-    Permission.ProjectsWrite,
-    Permission.ProjectsDelete,
-    Permission.ComponentsRead,
-    Permission.ComponentsWrite,
-    Permission.ComponentsDelete,
-    Permission.FindingsRead,
-    Permission.FindingsWrite,
-    Permission.FindingsDelete,
-    Permission.VulnerabilitiesRead,
+    // Core
     Permission.DashboardRead,
-    // Asset Groups
-    Permission.AssetGroupsRead,
-    Permission.AssetGroupsWrite,
-    Permission.AssetGroupsDelete,
-    // Audit logs
     Permission.AuditRead,
+    Permission.SettingsRead, Permission.SettingsWrite,
+    // Assets
+    Permission.AssetsRead, Permission.AssetsWrite, Permission.AssetsDelete,
+    Permission.AssetsImport, Permission.AssetsExport,
+    Permission.AssetGroupsRead, Permission.AssetGroupsWrite, Permission.AssetGroupsDelete,
+    Permission.ComponentsRead, Permission.ComponentsWrite, Permission.ComponentsDelete,
+    // Findings
+    Permission.FindingsRead, Permission.FindingsWrite, Permission.FindingsDelete,
+    Permission.FindingsAssign, Permission.FindingsTriage, Permission.FindingsStatus,
+    Permission.FindingsExport, Permission.FindingsBulkUpdate,
+    Permission.ExposuresRead, Permission.ExposuresWrite, Permission.ExposuresDelete, Permission.ExposuresTriage,
+    Permission.SuppressionsRead, Permission.SuppressionsWrite, Permission.SuppressionsDelete, Permission.SuppressionsApprove,
+    Permission.VulnerabilitiesRead, Permission.VulnerabilitiesWrite, Permission.VulnerabilitiesDelete,
+    Permission.CredentialsRead, Permission.CredentialsWrite,
+    Permission.RemediationRead, Permission.RemediationWrite,
+    Permission.WorkflowsRead, Permission.WorkflowsWrite,
+    Permission.PoliciesRead, Permission.PoliciesWrite, Permission.PoliciesDelete,
     // Scans
-    Permission.ScansRead,
-    Permission.ScansWrite,
-    Permission.ScansDelete,
-    // Scan Profiles
-    Permission.ScanProfilesRead,
-    Permission.ScanProfilesWrite,
-    Permission.ScanProfilesDelete,
-    // Tool Registry
-    Permission.ToolsRead,
-    Permission.ToolsWrite,
-    Permission.ToolsDelete,
-    Permission.TenantToolsRead,
-    Permission.TenantToolsWrite,
-    Permission.TenantToolsDelete,
-    // Scanner Templates
-    Permission.ScannerTemplatesRead,
-    Permission.ScannerTemplatesWrite,
-    Permission.ScannerTemplatesDelete,
-    // Template Sources
-    Permission.TemplateSourcesRead,
-    Permission.TemplateSourcesWrite,
-    Permission.TemplateSourcesDelete,
-    // Secret Store
-    Permission.SecretStoreRead,
-    Permission.SecretStoreWrite,
-    Permission.SecretStoreDelete,
-    // Credentials
-    Permission.CredentialsRead,
-    Permission.CredentialsWrite,
-    // Reports
-    Permission.ReportsRead,
-    Permission.ReportsWrite,
-    // Pentest
-    Permission.PentestRead,
-    Permission.PentestWrite,
-    // Remediation
-    Permission.RemediationRead,
-    Permission.RemediationWrite,
-    // Workflows
-    Permission.WorkflowsRead,
-    Permission.WorkflowsWrite,
-    // Full team management
-    Permission.MembersRead,
-    Permission.MembersInvite,
-    Permission.MembersManage,
-    Permission.TeamRead,
-    Permission.TeamUpdate,
-    Permission.TeamDelete,
-    // Billing
-    Permission.BillingRead,
-    Permission.BillingManage,
-    // Integrations
-    Permission.IntegrationsRead,
-    Permission.IntegrationsManage,
-    // Access Control - Groups
-    Permission.GroupsRead,
-    Permission.GroupsWrite,
-    Permission.GroupsDelete,
-    Permission.GroupsMembers,
-    Permission.GroupsPermissions,
-    // Access Control - Permission Sets
-    Permission.PermissionSetsRead,
-    Permission.PermissionSetsWrite,
-    Permission.PermissionSetsDelete,
-    // Access Control - Roles
-    Permission.RolesRead,
-    Permission.RolesWrite,
-    Permission.RolesDelete,
-    Permission.RolesAssign,
-    // Access Control - Assignment Rules
-    Permission.AssignmentRulesRead,
-    Permission.AssignmentRulesWrite,
-    Permission.AssignmentRulesDelete,
+    Permission.ScansRead, Permission.ScansWrite, Permission.ScansDelete, Permission.ScansExecute,
+    Permission.ScanProfilesRead, Permission.ScanProfilesWrite, Permission.ScanProfilesDelete,
+    Permission.SourcesRead, Permission.SourcesWrite, Permission.SourcesDelete,
+    Permission.ToolsRead, Permission.ToolsWrite, Permission.ToolsDelete,
+    Permission.TenantToolsRead, Permission.TenantToolsWrite, Permission.TenantToolsDelete,
+    Permission.ScannerTemplatesRead, Permission.ScannerTemplatesWrite, Permission.ScannerTemplatesDelete,
+    Permission.SecretStoreRead, Permission.SecretStoreWrite, Permission.SecretStoreDelete,
     // Agents
-    Permission.AgentsRead,
-    Permission.AgentsWrite,
-    Permission.AgentsDelete,
-    // SCM Connections
-    Permission.ScmConnectionsRead,
-    Permission.ScmConnectionsWrite,
-    Permission.ScmConnectionsDelete,
-    // Sources
-    Permission.SourcesRead,
-    Permission.SourcesWrite,
-    Permission.SourcesDelete,
-    // Commands
-    Permission.CommandsRead,
-    Permission.CommandsWrite,
-    Permission.CommandsDelete,
-    // Pipelines
-    Permission.PipelinesRead,
-    Permission.PipelinesWrite,
-    Permission.PipelinesDelete,
+    Permission.AgentsRead, Permission.AgentsWrite, Permission.AgentsDelete,
+    Permission.CommandsRead, Permission.CommandsWrite, Permission.CommandsDelete,
+    // Team
+    Permission.TeamRead, Permission.TeamUpdate, Permission.TeamDelete,
+    Permission.MembersRead, Permission.MembersInvite, Permission.MembersWrite,
+    Permission.GroupsRead, Permission.GroupsWrite, Permission.GroupsDelete, Permission.GroupsMembers, Permission.GroupsAssets,
+    Permission.RolesRead, Permission.RolesWrite, Permission.RolesDelete, Permission.RolesAssign,
+    Permission.PermissionSetsRead, Permission.PermissionSetsWrite, Permission.PermissionSetsDelete,
+    Permission.AssignmentRulesRead, Permission.AssignmentRulesWrite, Permission.AssignmentRulesDelete,
+    // Integrations
+    Permission.IntegrationsRead, Permission.IntegrationsManage,
+    Permission.ScmConnectionsRead, Permission.ScmConnectionsWrite, Permission.ScmConnectionsDelete,
+    Permission.NotificationsRead, Permission.NotificationsWrite, Permission.NotificationsDelete,
+    Permission.WebhooksRead, Permission.WebhooksWrite, Permission.WebhooksDelete,
+    Permission.ApiKeysRead, Permission.ApiKeysWrite, Permission.ApiKeysDelete,
+    Permission.PipelinesRead, Permission.PipelinesWrite, Permission.PipelinesDelete, Permission.PipelinesExecute,
+    // Settings
+    Permission.BillingRead, Permission.BillingWrite,
+    Permission.SLARead, Permission.SLAWrite, Permission.SLADelete,
+    // Attack Surface
+    Permission.ScopeRead, Permission.ScopeWrite, Permission.ScopeDelete,
+    // Validation
+    Permission.ValidationRead, Permission.ValidationWrite,
+    // Reports
+    Permission.ReportsRead, Permission.ReportsWrite,
+    // Threat Intel
+    Permission.ThreatIntelRead, Permission.ThreatIntelWrite,
+    // AI Triage
+    Permission.AITriageRead, Permission.AITriageTrigger,
   ],
 
   [Role.Admin]: [
-    // Full resource access
-    Permission.AssetsRead,
-    Permission.AssetsWrite,
-    Permission.AssetsDelete,
-    Permission.ProjectsRead,
-    Permission.ProjectsWrite,
-    Permission.ProjectsDelete,
-    Permission.ComponentsRead,
-    Permission.ComponentsWrite,
-    Permission.ComponentsDelete,
-    Permission.FindingsRead,
-    Permission.FindingsWrite,
-    Permission.FindingsDelete,
-    Permission.VulnerabilitiesRead,
+    // Core
     Permission.DashboardRead,
-    // Asset Groups
-    Permission.AssetGroupsRead,
-    Permission.AssetGroupsWrite,
-    Permission.AssetGroupsDelete,
-    // Audit logs
     Permission.AuditRead,
+    Permission.SettingsRead, Permission.SettingsWrite,
+    // Assets
+    Permission.AssetsRead, Permission.AssetsWrite, Permission.AssetsDelete,
+    Permission.AssetsImport, Permission.AssetsExport,
+    Permission.AssetGroupsRead, Permission.AssetGroupsWrite, Permission.AssetGroupsDelete,
+    Permission.ComponentsRead, Permission.ComponentsWrite, Permission.ComponentsDelete,
+    // Findings
+    Permission.FindingsRead, Permission.FindingsWrite, Permission.FindingsDelete,
+    Permission.FindingsAssign, Permission.FindingsTriage, Permission.FindingsStatus,
+    Permission.FindingsExport, Permission.FindingsBulkUpdate,
+    Permission.ExposuresRead, Permission.ExposuresWrite, Permission.ExposuresDelete, Permission.ExposuresTriage,
+    Permission.SuppressionsRead, Permission.SuppressionsWrite, Permission.SuppressionsDelete,
+    Permission.VulnerabilitiesRead, Permission.VulnerabilitiesWrite, Permission.VulnerabilitiesDelete,
+    Permission.CredentialsRead, Permission.CredentialsWrite,
+    Permission.RemediationRead, Permission.RemediationWrite,
+    Permission.WorkflowsRead, Permission.WorkflowsWrite,
+    Permission.PoliciesRead, Permission.PoliciesWrite, Permission.PoliciesDelete,
     // Scans
-    Permission.ScansRead,
-    Permission.ScansWrite,
-    Permission.ScansDelete,
-    // Scan Profiles
-    Permission.ScanProfilesRead,
-    Permission.ScanProfilesWrite,
-    Permission.ScanProfilesDelete,
-    // Tool Registry (admin can manage tenant tools)
-    Permission.ToolsRead,
-    Permission.ToolsWrite,
-    Permission.ToolsDelete,
-    Permission.TenantToolsRead,
-    Permission.TenantToolsWrite,
-    Permission.TenantToolsDelete,
-    // Scanner Templates
-    Permission.ScannerTemplatesRead,
-    Permission.ScannerTemplatesWrite,
-    Permission.ScannerTemplatesDelete,
-    // Template Sources
-    Permission.TemplateSourcesRead,
-    Permission.TemplateSourcesWrite,
-    Permission.TemplateSourcesDelete,
-    // Secret Store
-    Permission.SecretStoreRead,
-    Permission.SecretStoreWrite,
-    Permission.SecretStoreDelete,
-    // Credentials
-    Permission.CredentialsRead,
-    Permission.CredentialsWrite,
-    // Reports
-    Permission.ReportsRead,
-    Permission.ReportsWrite,
-    // Pentest
-    Permission.PentestRead,
-    Permission.PentestWrite,
-    // Remediation
-    Permission.RemediationRead,
-    Permission.RemediationWrite,
-    // Workflows
-    Permission.WorkflowsRead,
-    Permission.WorkflowsWrite,
-    // Member management (can invite and manage, but not delete team)
-    Permission.MembersRead,
-    Permission.MembersInvite,
-    Permission.MembersManage,
-    Permission.TeamRead,
-    Permission.TeamUpdate,
-    // Billing read only
-    Permission.BillingRead,
-    // Integrations
-    Permission.IntegrationsRead,
-    Permission.IntegrationsManage,
-    // Access Control - Groups (admin can manage)
-    Permission.GroupsRead,
-    Permission.GroupsWrite,
-    Permission.GroupsDelete,
-    Permission.GroupsMembers,
-    Permission.GroupsPermissions,
-    // Access Control - Permission Sets (admin can manage)
-    Permission.PermissionSetsRead,
-    Permission.PermissionSetsWrite,
-    Permission.PermissionSetsDelete,
-    // Access Control - Roles (admin can manage)
-    Permission.RolesRead,
-    Permission.RolesWrite,
-    Permission.RolesDelete,
-    Permission.RolesAssign,
-    // Access Control - Assignment Rules (admin can manage)
-    Permission.AssignmentRulesRead,
-    Permission.AssignmentRulesWrite,
-    Permission.AssignmentRulesDelete,
+    Permission.ScansRead, Permission.ScansWrite, Permission.ScansDelete, Permission.ScansExecute,
+    Permission.ScanProfilesRead, Permission.ScanProfilesWrite, Permission.ScanProfilesDelete,
+    Permission.SourcesRead, Permission.SourcesWrite, Permission.SourcesDelete,
+    Permission.ToolsRead, Permission.ToolsWrite, Permission.ToolsDelete,
+    Permission.TenantToolsRead, Permission.TenantToolsWrite, Permission.TenantToolsDelete,
+    Permission.ScannerTemplatesRead, Permission.ScannerTemplatesWrite, Permission.ScannerTemplatesDelete,
+    Permission.SecretStoreRead, Permission.SecretStoreWrite, Permission.SecretStoreDelete,
     // Agents
-    Permission.AgentsRead,
-    Permission.AgentsWrite,
-    Permission.AgentsDelete,
-    // SCM Connections
-    Permission.ScmConnectionsRead,
-    Permission.ScmConnectionsWrite,
-    Permission.ScmConnectionsDelete,
-    // Sources
-    Permission.SourcesRead,
-    Permission.SourcesWrite,
-    Permission.SourcesDelete,
-    // Commands
-    Permission.CommandsRead,
-    Permission.CommandsWrite,
-    Permission.CommandsDelete,
-    // Pipelines
-    Permission.PipelinesRead,
-    Permission.PipelinesWrite,
-    Permission.PipelinesDelete,
+    Permission.AgentsRead, Permission.AgentsWrite, Permission.AgentsDelete,
+    Permission.CommandsRead, Permission.CommandsWrite, Permission.CommandsDelete,
+    // Team (no team:delete)
+    Permission.TeamRead, Permission.TeamUpdate,
+    Permission.MembersRead, Permission.MembersInvite, Permission.MembersWrite,
+    Permission.GroupsRead, Permission.GroupsWrite, Permission.GroupsDelete, Permission.GroupsMembers, Permission.GroupsAssets,
+    Permission.RolesRead, Permission.RolesWrite, Permission.RolesDelete, Permission.RolesAssign,
+    Permission.PermissionSetsRead, Permission.PermissionSetsWrite, Permission.PermissionSetsDelete,
+    Permission.AssignmentRulesRead, Permission.AssignmentRulesWrite, Permission.AssignmentRulesDelete,
+    // Integrations
+    Permission.IntegrationsRead, Permission.IntegrationsManage,
+    Permission.ScmConnectionsRead, Permission.ScmConnectionsWrite, Permission.ScmConnectionsDelete,
+    Permission.NotificationsRead, Permission.NotificationsWrite, Permission.NotificationsDelete,
+    Permission.WebhooksRead, Permission.WebhooksWrite, Permission.WebhooksDelete,
+    Permission.ApiKeysRead, Permission.ApiKeysWrite, Permission.ApiKeysDelete,
+    Permission.PipelinesRead, Permission.PipelinesWrite, Permission.PipelinesDelete, Permission.PipelinesExecute,
+    // Settings (billing read only)
+    Permission.BillingRead,
+    Permission.SLARead, Permission.SLAWrite, Permission.SLADelete,
+    // Attack Surface
+    Permission.ScopeRead, Permission.ScopeWrite, Permission.ScopeDelete,
+    // Validation
+    Permission.ValidationRead, Permission.ValidationWrite,
+    // Reports
+    Permission.ReportsRead, Permission.ReportsWrite,
+    // Threat Intel
+    Permission.ThreatIntelRead, Permission.ThreatIntelWrite,
+    // AI Triage
+    Permission.AITriageRead, Permission.AITriageTrigger,
   ],
 
   [Role.Member]: [
-    // Read + Write (no delete)
-    Permission.AssetsRead,
-    Permission.AssetsWrite,
-    Permission.ProjectsRead,
-    Permission.ProjectsWrite,
-    Permission.ComponentsRead,
-    Permission.ComponentsWrite,
-    Permission.FindingsRead,
-    Permission.FindingsWrite,
-    Permission.VulnerabilitiesRead,
+    // Core
     Permission.DashboardRead,
-    // Asset Groups (read + write)
-    Permission.AssetGroupsRead,
-    Permission.AssetGroupsWrite,
-    // Scans (read + write)
-    Permission.ScansRead,
-    Permission.ScansWrite,
-    // Scan Profiles (read + write, no delete)
-    Permission.ScanProfilesRead,
-    Permission.ScanProfilesWrite,
-    // Tool Registry (read + tenant config write)
-    Permission.ToolsRead,
-    Permission.TenantToolsRead,
-    Permission.TenantToolsWrite,
-    // Scanner Templates (read + write)
-    Permission.ScannerTemplatesRead,
-    Permission.ScannerTemplatesWrite,
-    // Template Sources (read + write)
-    Permission.TemplateSourcesRead,
-    Permission.TemplateSourcesWrite,
-    // Secret Store (read only for members)
-    Permission.SecretStoreRead,
-    // Credentials (read only)
+    Permission.AuditRead,
+    Permission.SettingsRead,
+    // Assets (read + write, no delete)
+    Permission.AssetsRead, Permission.AssetsWrite,
+    Permission.AssetGroupsRead, Permission.AssetGroupsWrite,
+    Permission.ComponentsRead, Permission.ComponentsWrite,
+    // Findings (read + write, no delete)
+    Permission.FindingsRead, Permission.FindingsWrite,
+    Permission.FindingsTriage, Permission.FindingsStatus,
+    Permission.ExposuresRead, Permission.ExposuresWrite,
+    Permission.SuppressionsRead,
+    Permission.VulnerabilitiesRead,
     Permission.CredentialsRead,
-    // Reports (read + write)
-    Permission.ReportsRead,
-    Permission.ReportsWrite,
-    // Pentest (read + write)
-    Permission.PentestRead,
-    Permission.PentestWrite,
-    // Remediation (read + write)
-    Permission.RemediationRead,
-    Permission.RemediationWrite,
-    // Workflows (read only)
+    Permission.RemediationRead, Permission.RemediationWrite,
     Permission.WorkflowsRead,
-    // Can view members but not manage
-    Permission.MembersRead,
+    Permission.PoliciesRead,
+    // Scans (read + write, no delete)
+    Permission.ScansRead, Permission.ScansWrite, Permission.ScansExecute,
+    Permission.ScanProfilesRead, Permission.ScanProfilesWrite,
+    Permission.SourcesRead, Permission.SourcesWrite,
+    Permission.ToolsRead,
+    Permission.TenantToolsRead, Permission.TenantToolsWrite,
+    Permission.ScannerTemplatesRead, Permission.ScannerTemplatesWrite,
+    Permission.SecretStoreRead, Permission.SecretStoreWrite,
+    // Agents (read + write, no delete)
+    Permission.AgentsRead, Permission.AgentsWrite,
+    Permission.CommandsRead, Permission.CommandsWrite,
+    // Team (read only)
     Permission.TeamRead,
-    // Integrations (read only)
-    Permission.IntegrationsRead,
-    // Access Control - Groups (read only for members)
+    Permission.MembersRead,
     Permission.GroupsRead,
-    // Access Control - Roles (read only for members)
     Permission.RolesRead,
-    // Agents (read only)
-    Permission.AgentsRead,
-    // SCM Connections (read only)
-    Permission.ScmConnectionsRead,
-    // Sources (read + write)
-    Permission.SourcesRead,
-    Permission.SourcesWrite,
-    // Commands (read + write)
-    Permission.CommandsRead,
-    Permission.CommandsWrite,
-    // Pipelines (read only)
-    Permission.PipelinesRead,
+    Permission.PermissionSetsRead,
+    // Integrations (read + limited write)
+    Permission.IntegrationsRead,
+    Permission.ScmConnectionsRead, Permission.ScmConnectionsWrite,
+    Permission.NotificationsRead,
+    Permission.WebhooksRead,
+    Permission.ApiKeysRead,
+    Permission.PipelinesRead, Permission.PipelinesWrite,
+    // Settings (read only)
+    Permission.BillingRead,
+    Permission.SLARead,
+    // Attack Surface (read + write)
+    Permission.ScopeRead, Permission.ScopeWrite,
+    // Validation (read + write)
+    Permission.ValidationRead, Permission.ValidationWrite,
+    // Reports (read + write)
+    Permission.ReportsRead, Permission.ReportsWrite,
+    // Threat Intel (read only)
+    Permission.ThreatIntelRead,
+    // AI Triage
+    Permission.AITriageRead, Permission.AITriageTrigger,
   ],
 
   [Role.Viewer]: [
-    // Read-only access
-    Permission.AssetsRead,
-    Permission.ProjectsRead,
-    Permission.ComponentsRead,
-    Permission.FindingsRead,
-    Permission.VulnerabilitiesRead,
+    // Core
     Permission.DashboardRead,
-    // Asset Groups (read only)
+    Permission.AuditRead,
+    Permission.SettingsRead,
+    // Assets (read only)
+    Permission.AssetsRead,
     Permission.AssetGroupsRead,
+    Permission.ComponentsRead,
+    // Findings (read only)
+    Permission.FindingsRead,
+    Permission.ExposuresRead,
+    Permission.SuppressionsRead,
+    Permission.VulnerabilitiesRead,
+    Permission.CredentialsRead,
+    Permission.RemediationRead,
+    Permission.WorkflowsRead,
+    Permission.PoliciesRead,
     // Scans (read only)
     Permission.ScansRead,
-    // Scan Profiles (read only)
     Permission.ScanProfilesRead,
-    // Tool Registry (read only)
+    Permission.SourcesRead,
     Permission.ToolsRead,
     Permission.TenantToolsRead,
-    // Scanner Templates (read only)
     Permission.ScannerTemplatesRead,
-    // Template Sources (read only)
-    Permission.TemplateSourcesRead,
-    // Secret Store (read only)
     Permission.SecretStoreRead,
-    // Credentials (read only)
-    Permission.CredentialsRead,
-    // Reports (read only)
-    Permission.ReportsRead,
-    // Pentest (read only)
-    Permission.PentestRead,
-    // Remediation (read only)
-    Permission.RemediationRead,
-    // Workflows (read only)
-    Permission.WorkflowsRead,
-    // Can view team info
-    Permission.MembersRead,
-    Permission.TeamRead,
-    // Integrations (read only)
-    Permission.IntegrationsRead,
-    // Access Control - Groups (read only)
-    Permission.GroupsRead,
-    // Access Control - Roles (read only)
-    Permission.RolesRead,
     // Agents (read only)
     Permission.AgentsRead,
-    // Sources (read only)
-    Permission.SourcesRead,
-    // Commands (read only)
     Permission.CommandsRead,
-    // Pipelines (read only)
+    // Team (read only)
+    Permission.TeamRead,
+    Permission.MembersRead,
+    Permission.GroupsRead,
+    Permission.RolesRead,
+    Permission.PermissionSetsRead,
+    // Integrations (read only)
+    Permission.IntegrationsRead,
+    Permission.ScmConnectionsRead,
+    Permission.NotificationsRead,
+    Permission.WebhooksRead,
+    Permission.ApiKeysRead,
     Permission.PipelinesRead,
+    // Settings (read only)
+    Permission.BillingRead,
+    Permission.SLARead,
+    // Attack Surface (read only)
+    Permission.ScopeRead,
+    // Validation (read only)
+    Permission.ValidationRead,
+    // Reports (read only)
+    Permission.ReportsRead,
+    // Threat Intel (read only)
+    Permission.ThreatIntelRead,
+    // AI Triage (read only)
+    Permission.AITriageRead,
   ],
 }
