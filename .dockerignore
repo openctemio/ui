@@ -1,0 +1,97 @@
+# ==============================================================================
+# Docker Ignore File
+# ==============================================================================
+# Excludes files and directories from Docker build context
+# This reduces build time and image size
+# ==============================================================================
+
+# Dependencies
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Next.js build output
+.next
+out
+
+# Production build
+dist
+build
+
+# Environment files (never copy to image)
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+.env*.local
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing
+coverage
+.nyc_output
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+__tests__
+__mocks__
+
+# Documentation (not needed in production)
+*.md
+!README.md
+docs
+CHANGELOG.md
+LICENSE
+
+# CI/CD
+.github
+.gitlab-ci.yml
+.travis.yml
+azure-pipelines.yml
+
+# Docker files (no need to copy into image - only for build context)
+docker-compose*.yml
+.dockerignore
+# Note: Dockerfile and Dockerfile.dev are needed in context for multi-stage builds
+
+# Misc
+.cache
+.temp
+temp
+tmp
+*.log
+*.pid
+*.seed
+*.pid.lock
+
+# OS
+Thumbs.db
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Vercel
+.vercel
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*

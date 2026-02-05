@@ -1,0 +1,176 @@
+# =============================================================================
+# Docker Compose - Production Configuration
+# =============================================================================
+# Option 1: Pull from Docker Hub (recommended for deployment):
+#   docker compose -f docker-compose.prod.yml up -d
+#
+# Option 2: Build locally:
+#   docker compose -f docker-compose.prod.yml up --build -d
+#
+# With specific version:
+#   UI_VERSION=v1.0.0 docker compose -f docker-compose.prod.yml up -d
+#
+# Environment:
+#   Create .env file with all required variables (copy from .env.example)
+#
+# Required Environment Variables:
+#   - CSRF_SECRET             (server-side secret for CSRF protection)
+#   - BACKEND_API_URL         (internal API URL, e.g., http://api:8080)
+#
+# Optional Environment Variables:
+#   - NEXT_PUBLIC_APP_URL     (public app URL)
+#   - SECURE_COOKIES          (true for HTTPS)
+#   - DOMAIN_NAME             (your domain, default: localhost)
+#
+# SSL Certificates:
+#   Place your SSL certificates in ./nginx/ssl/:
+#   - cert.pem (SSL certificate)
+#   - key.pem  (SSL private key)
+#   See nginx/README.md for certificate options (Let's Encrypt, etc.)
+#
+# Security Features:
+#   - Nginx reverse proxy with SSL/TLS
+#   - HTTP to HTTPS redirect
+#   - Security headers (HSTS, X-Frame-Options, etc.)
+#   - Rate limiting
+#   - no-new-privileges enabled
+#   - Resource limits enforced
+#   - JSON logging with rotation
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # Nginx Reverse Proxy (SSL Termination)
+  # ---------------------------------------------------------------------------
+  nginx:
+    image: nginx:1.27-alpine
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      nextjs:
+        condition: service_healthy
+    networks:
+      - app-network
+    restart: always
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
+    healthcheck:
+      test: ['CMD', 'wget', '--no-verbose', '--tries=1', '--spider', 'http://localhost:80/']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '50m'
+        max-file: '3'
+
+  # ---------------------------------------------------------------------------
+  # Next.js Production Application
+  # ---------------------------------------------------------------------------
+  nextjs:
+    # Pull from Docker Hub by default, build locally if --build flag is used
+    image: exploopio/ui:${UI_VERSION:-latest}
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+      args:
+        # =======================================================================
+        # Build-time variables (NEXT_PUBLIC_* are baked into client bundle)
+        # These are visible to browser - NEVER put secrets here!
+        # =======================================================================
+        # Application URL
+        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-https://localhost}
+        # Auth configuration (visible to browser for UI decisions)
+        NEXT_PUBLIC_AUTH_PROVIDER: ${NEXT_PUBLIC_AUTH_PROVIDER:-local}
+        NEXT_PUBLIC_AUTH_COOKIE_NAME: ${NEXT_PUBLIC_AUTH_COOKIE_NAME:-auth_token}
+        NEXT_PUBLIC_REFRESH_COOKIE_NAME: ${NEXT_PUBLIC_REFRESH_COOKIE_NAME:-refresh_token}
+        NEXT_PUBLIC_OAUTH_CALLBACK_URL: ${NEXT_PUBLIC_OAUTH_CALLBACK_URL:-}
+        # Keycloak (only if using OIDC auth)
+        NEXT_PUBLIC_KEYCLOAK_URL: ${NEXT_PUBLIC_KEYCLOAK_URL:-}
+        NEXT_PUBLIC_KEYCLOAK_REALM: ${NEXT_PUBLIC_KEYCLOAK_REALM:-}
+        NEXT_PUBLIC_KEYCLOAK_CLIENT_ID: ${NEXT_PUBLIC_KEYCLOAK_CLIENT_ID:-}
+        NEXT_PUBLIC_KEYCLOAK_REDIRECT_URI: ${NEXT_PUBLIC_KEYCLOAK_REDIRECT_URI:-}
+        # Monitoring (DSN is safe to expose - not a secret)
+        NEXT_PUBLIC_SENTRY_DSN: ${NEXT_PUBLIC_SENTRY_DSN:-}
+
+    # =========================================================================
+    # Runtime environment variables (server-side only, NOT in browser)
+    # These are NEVER sent to browser - only available on Next.js server
+    # =========================================================================
+    environment:
+      NODE_ENV: production
+      # Internal backend URL - used by Next.js server to proxy requests
+      BACKEND_API_URL: ${BACKEND_API_URL:-http://api:8080}
+      API_TIMEOUT: ${API_TIMEOUT:-30000}
+      # Security secrets - MUST be server-only
+      CSRF_SECRET: ${CSRF_SECRET:?CSRF_SECRET is required}
+      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET:-}
+      # Cookie settings
+      SECURE_COOKIES: ${SECURE_COOKIES:-true}
+      COOKIE_MAX_AGE: ${COOKIE_MAX_AGE:-604800}
+      # Token refresh
+      ENABLE_TOKEN_REFRESH: ${ENABLE_TOKEN_REFRESH:-true}
+      TOKEN_REFRESH_BEFORE_EXPIRY: ${TOKEN_REFRESH_BEFORE_EXPIRY:-300}
+
+    # Internal port only (nginx handles external traffic)
+    expose:
+      - '3000'
+
+    # Health check
+    healthcheck:
+      test:
+        ['CMD', 'wget', '--no-verbose', '--tries=1', '--spider', 'http://localhost:3000/api/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+    # Restart policy
+    restart: always
+
+    # Network
+    networks:
+      - app-network
+
+    # Security hardening
+    security_opt:
+      - no-new-privileges:true
+
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+    # Logging configuration
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '100m'
+        max-file: '5'
+
+# =============================================================================
+# Networks
+# =============================================================================
+networks:
+  app-network:
+    driver: bridge

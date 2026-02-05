@@ -1,0 +1,17 @@
+# Dependencies
+node_modules
+
+# Build output
+.next
+out
+dist
+build
+
+# Cache
+.cache
+*.tsbuildinfo
+
+# Misc
+*.log
+.DS_Store
+coverage

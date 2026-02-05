@@ -1,0 +1,69 @@
+# =============================================================================
+# Docker Compose - Development Configuration
+# =============================================================================
+# Development environment with hot reload support.
+#
+# Usage:
+#   Start:    docker compose up
+#   Rebuild:  docker compose up --build
+#   Stop:     docker compose down
+#   Logs:     docker compose logs -f nextjs
+#   Shell:    docker compose exec nextjs sh
+#
+# Hot Reload:
+#   - Source code is mounted as volume
+#   - Changes are detected automatically
+#   - Browser refreshes on save
+#
+# Environment:
+#   Create .env.local with your configuration (copy from .env.example)
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # Next.js Development Server
+  # ---------------------------------------------------------------------------
+  nextjs:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    # Mount source code for hot reload
+    volumes:
+      # Mount source code (enables hot reload)
+      - .:/app
+      # Exclude node_modules - use container's node_modules
+      - /app/node_modules
+      # Exclude .next to avoid conflicts
+      - /app/.next
+    # Development ports
+    ports:
+      - '${UI_PORT:-3000}:3000'
+    # Environment variables from .env.local
+    env_file:
+      - .env
+    # Override environment for development
+    environment:
+      NODE_ENV: development
+      WATCHPACK_POLLING: 'true'
+      CHOKIDAR_USEPOLLING: 'true'
+      # Backend API URL is loaded from .env.local via env_file above
+      # To override, set BACKEND_API_URL in your shell before running docker-compose
+      # Keep stdin open for debugging
+    stdin_open: true
+    tty: true
+    # Restart on failure
+    restart: unless-stopped
+    # Make host.docker.internal work on Linux
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    # Network
+    networks:
+      - app-network
+
+# =============================================================================
+# Networks
+# =============================================================================
+networks:
+  app-network:
+    driver: bridge

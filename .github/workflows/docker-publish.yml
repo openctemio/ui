@@ -1,0 +1,178 @@
+name: Docker Publish
+
+on:
+  push:
+    tags:
+      - 'v*' # Trigger on version tags (v0.1.0, v1.0.0, etc.)
+  workflow_dispatch: # Manual trigger
+    inputs:
+      version:
+        description: 'Version tag (e.g., v0.1.1, v0.1.1-staging)'
+        required: true
+        type: string
+      environment:
+        description: 'Environment'
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+        default: staging
+
+env:
+  REGISTRY: docker.io
+  IMAGE_NAME: exploopio/ui
+
+jobs:
+  # ============================================
+  # Prepare - Set build variables
+  # ============================================
+  prepare:
+    name: Prepare
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.vars.outputs.VERSION }}
+      environment: ${{ steps.vars.outputs.ENVIRONMENT }}
+      tags: ${{ steps.vars.outputs.TAGS }}
+    steps:
+      - name: Set build variables
+        id: vars
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+            ENVIRONMENT="${{ github.event.inputs.environment }}"
+          else
+            VERSION="${GITHUB_REF#refs/tags/}"
+            if [[ "$VERSION" == *"-staging"* ]]; then
+              ENVIRONMENT="staging"
+            else
+              ENVIRONMENT="production"
+            fi
+          fi
+
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "ENVIRONMENT=$ENVIRONMENT" >> $GITHUB_OUTPUT
+
+          if [ "$ENVIRONMENT" = "staging" ]; then
+            if [[ "$VERSION" != *"-staging"* ]]; then
+              VERSION="${VERSION}-staging"
+            fi
+            echo "TAGS=${{ env.IMAGE_NAME }}:${VERSION},${{ env.IMAGE_NAME }}:staging-latest" >> $GITHUB_OUTPUT
+          else
+            echo "TAGS=${{ env.IMAGE_NAME }}:${VERSION},${{ env.IMAGE_NAME }}:latest" >> $GITHUB_OUTPUT
+          fi
+
+  # ============================================
+  # Build - Parallel builds for each platform
+  # ============================================
+  # Using native runners for each architecture eliminates QEMU emulation overhead
+  # arm64 builds on native ARM runners are 3-5x faster than QEMU emulation
+  build:
+    name: Build (${{ matrix.platform }})
+    needs: [prepare]
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-latest
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push by digest
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          target: production
+          platforms: ${{ matrix.platform }}
+          outputs: type=image,name=${{ env.IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
+          cache-from: type=registry,ref=${{ env.IMAGE_NAME }}:buildcache-${{ matrix.platform == 'linux/amd64' && 'amd64' || 'arm64' }}
+          cache-to: type=registry,ref=${{ env.IMAGE_NAME }}:buildcache-${{ matrix.platform == 'linux/amd64' && 'amd64' || 'arm64' }},mode=max
+          # Disable attestations for faster builds (provenance/sbom add overhead)
+          provenance: false
+          sbom: false
+          build-args: |
+            NEXT_PUBLIC_APP_URL=${{ vars.NEXT_PUBLIC_APP_URL || 'https://app.exploop.io' }}
+            NEXT_PUBLIC_AUTH_PROVIDER=${{ vars.NEXT_PUBLIC_AUTH_PROVIDER || 'local' }}
+
+      - name: Export digest
+        run: |
+          mkdir -p /tmp/digests
+          digest="${{ steps.build.outputs.digest }}"
+          touch "/tmp/digests/${digest#sha256:}"
+
+      - name: Upload digest
+        uses: actions/upload-artifact@v6
+        with:
+          name: digests-${{ matrix.platform == 'linux/amd64' && 'amd64' || 'arm64' }}
+          path: /tmp/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  # ============================================
+  # Merge - Create multi-platform manifest
+  # ============================================
+  merge:
+    name: Merge Manifests
+    runs-on: ubuntu-latest
+    needs: [prepare, build]
+    steps:
+      - name: Download digests
+        uses: actions/download-artifact@v7
+        with:
+          path: /tmp/digests
+          pattern: digests-*
+          merge-multiple: true
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Create manifest list and push
+        working-directory: /tmp/digests
+        run: |
+          TAGS="${{ needs.prepare.outputs.tags }}"
+          TAG_ARGS=""
+          for tag in ${TAGS//,/ }; do
+            TAG_ARGS="$TAG_ARGS -t $tag"
+          done
+
+          docker buildx imagetools create $TAG_ARGS \
+            $(printf '${{ env.IMAGE_NAME }}@sha256:%s ' *)
+
+      - name: Generate build summary
+        run: |
+          echo "## Docker Image Published" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Image:** \`${{ env.IMAGE_NAME }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** \`${{ needs.prepare.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** \`${{ needs.prepare.outputs.environment }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Platforms:** \`linux/amd64, linux/arm64\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Tags" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "${{ needs.prepare.outputs.tags }}" | tr ',' '\n' >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
