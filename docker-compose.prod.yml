@@ -83,7 +83,7 @@ services:
   # ---------------------------------------------------------------------------
   nextjs:
     # Pull from Docker Hub by default, build locally if --build flag is used
-    image: exploopio/ui:${UI_VERSION:-latest}
+    image: openctemio/ui:${UI_VERSION:-latest}
     build:
       context: .
       dockerfile: Dockerfile

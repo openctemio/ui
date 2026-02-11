@@ -20,7 +20,7 @@
 import { isClient } from './env'
 
 // Storage key prefix
-const STORAGE_PREFIX = 'rediver_perms'
+const STORAGE_PREFIX = 'openctem_perms'
 
 // TTL for cached permissions (24 hours)
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000

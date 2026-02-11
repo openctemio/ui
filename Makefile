@@ -1,7 +1,7 @@
 .PHONY: all dev build start test lint format clean docker-dev docker-prod docker-down help install pre-commit-install validate
 
 # Variables
-APP_NAME := rediver-ui
+APP_NAME := openctem-ui
 COMPOSE_BASE := docker-compose.yml
 COMPOSE_PROD := docker-compose.prod.yml
 

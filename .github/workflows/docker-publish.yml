@@ -21,7 +21,7 @@ on:
 
 env:
   REGISTRY: docker.io
-  IMAGE_NAME: exploopio/ui
+  IMAGE_NAME: openctemio/ui
 
 jobs:
   # ============================================
@@ -110,7 +110,7 @@ jobs:
           provenance: false
           sbom: false
           build-args: |
-            NEXT_PUBLIC_APP_URL=${{ vars.NEXT_PUBLIC_APP_URL || 'https://app.exploop.io' }}
+            NEXT_PUBLIC_APP_URL=${{ vars.NEXT_PUBLIC_APP_URL || 'https://app.openctem.io' }}
             NEXT_PUBLIC_AUTH_PROVIDER=${{ vars.NEXT_PUBLIC_AUTH_PROVIDER || 'local' }}
 
       - name: Export digest

@@ -568,7 +568,7 @@ export default function TenantPage() {
                         <Label htmlFor="slug">URL Slug</Label>
                         <div className="flex">
                           <span className="inline-flex items-center px-3 text-sm text-muted-foreground bg-muted border border-r-0 rounded-l-md">
-                            app.rediver.io/
+                            app.openctem.io/
                           </span>
                           <Input
                             id="slug"

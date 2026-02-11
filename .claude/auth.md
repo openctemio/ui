@@ -1,10 +1,10 @@
 # Authentication Flow
 
-> Complete guide to authentication, authorization, and multi-tenant flow in Rediver.
+> Complete guide to authentication, authorization, and multi-tenant flow in OpenCTEM.
 
 ## Overview
 
-Rediver uses a **multi-tenant authentication system** with:
+OpenCTEM uses a **multi-tenant authentication system** with:
 - **Local Auth**: Email/password via backend API
 - **Social Auth**: Google, GitHub, Microsoft (OAuth2)
 - **OIDC**: Keycloak for enterprise SSO
@@ -233,7 +233,7 @@ src/
 
 ### Overview
 
-Rediver uses a **two-layer role model**:
+OpenCTEM uses a **two-layer role model**:
 
 1. **Tenant Role** (tenant_members.role): owner, admin, member, viewer
 2. **Group Permissions**: Fine-grained permissions via groups and permission sets
