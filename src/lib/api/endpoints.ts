@@ -1,7 +1,7 @@
 /**
  * API Endpoints
  *
- * Centralized API endpoint definitions for Rediver
+ * Centralized API endpoint definitions for OpenCTEM
  * Type-safe URL builders for backend API
  */
 
@@ -1832,9 +1832,9 @@ export const ingestEndpoints = {
   sarif: () => `${API_BASE.AGENT_INGEST}/sarif`,
 
   /**
-   * Ingest RIS format data (Rediver Ingest Schema)
+   * Ingest CTIS format data (CTEM Ingest Schema)
    */
-  ris: () => `${API_BASE.AGENT_INGEST}/ris`,
+  ctis: () => `${API_BASE.AGENT_INGEST}/ctis`,
 } as const
 
 // ============================================

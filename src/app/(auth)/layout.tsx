@@ -4,7 +4,7 @@ type AuthLayoutProps = {
   children: React.ReactNode
 }
 
-const appName = process.env.NEXT_PUBLIC_APP_NAME || 'Exploop'
+const appName = process.env.NEXT_PUBLIC_APP_NAME || 'OpenCTEM'
 
 export default function AuthLayout({ children }: AuthLayoutProps) {
   return (

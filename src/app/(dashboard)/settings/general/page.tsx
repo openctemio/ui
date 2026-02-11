@@ -24,7 +24,7 @@ export default function GeneralSettingsPage() {
 
   // Settings state
   const [settings, setSettings] = useState({
-    platformName: 'Rediver Security Platform',
+    platformName: 'OpenCTEM Security Platform',
     timezone: 'Asia/Ho_Chi_Minh',
     dateFormat: 'DD/MM/YYYY',
     timeFormat: '24h',
@@ -45,7 +45,7 @@ export default function GeneralSettingsPage() {
 
   const handleReset = () => {
     setSettings({
-      platformName: 'Rediver Security Platform',
+      platformName: 'OpenCTEM Security Platform',
       timezone: 'Asia/Ho_Chi_Minh',
       dateFormat: 'DD/MM/YYYY',
       timeFormat: '24h',
