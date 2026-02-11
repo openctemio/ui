@@ -541,7 +541,7 @@ export default function PipelinesPage() {
                         </Badge>
                       </div>
                       <CardDescription>
-                        Pre-built pipeline templates by Exploop. Click &quot;Use Template&quot; to
+                        Pre-built pipeline templates by OpenCTEM. Click &quot;Use Template&quot; to
                         create your own copy.
                       </CardDescription>
                     </CardHeader>

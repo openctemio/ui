@@ -165,7 +165,7 @@ export default function PreferencesPage() {
             <Palette className="h-5 w-5" />
             Appearance
           </CardTitle>
-          <CardDescription>Customize how Rediver looks on your device</CardDescription>
+          <CardDescription>Customize how OpenCTEM looks on your device</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">

@@ -1,6 +1,6 @@
 # Makefile Commands Guide
 
-This document provides a comprehensive guide to using Makefile commands for the Rediver UI project.
+This document provides a comprehensive guide to using Makefile commands for the OpenCTEM UI project.
 
 ## Quick Start
 

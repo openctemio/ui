@@ -923,31 +923,31 @@ export const MOCK_USERS: FindingUser[] = [
   {
     id: 'usr-001',
     name: 'Nguyen Van An',
-    email: 'an.nguyen@rediver.io',
+    email: 'an.nguyen@openctem.io',
     role: 'analyst',
   },
   {
     id: 'usr-002',
     name: 'Tran Thi Binh',
-    email: 'binh.tran@rediver.io',
+    email: 'binh.tran@openctem.io',
     role: 'analyst',
   },
   {
     id: 'usr-003',
     name: 'Le Van Cuong',
-    email: 'cuong.le@rediver.io',
+    email: 'cuong.le@openctem.io',
     role: 'developer',
   },
   {
     id: 'usr-004',
     name: 'Pham Thi Dung',
-    email: 'dung.pham@rediver.io',
+    email: 'dung.pham@openctem.io',
     role: 'admin',
   },
   {
     id: 'usr-005',
     name: 'Security Lead',
-    email: 'lead@rediver.io',
+    email: 'lead@openctem.io',
     role: 'admin',
   },
 ]

@@ -56,7 +56,7 @@ export const AGENT_PREFERENCE_CONFIG: Record<
   },
   platform: {
     label: 'Platform Agent',
-    description: "Use Rediver's managed cloud agents for faster execution",
+    description: "Use OpenCTEM's managed cloud agents for faster execution",
     icon: 'cloud',
   },
 }
@@ -378,7 +378,7 @@ export const AGENT_TYPE_CONFIG: Record<
   },
   platform: {
     label: 'Platform Agent',
-    description: "Running on Rediver's managed cloud infrastructure",
+    description: "Running on OpenCTEM's managed cloud infrastructure",
     color: 'purple',
   },
 }
