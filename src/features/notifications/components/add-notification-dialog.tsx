@@ -232,7 +232,7 @@ export function AddNotificationDialog({
       smtp_username: '',
       smtp_password: '',
       from_email: '',
-      from_name: 'Rediver.io',
+      from_name: 'OpenCTEM.io',
       to_emails: '',
       use_tls: false,
       use_starttls: true,
@@ -286,7 +286,7 @@ export function AddNotificationDialog({
       severity: 'CRITICAL',
       severity_emoji: '\u{1F6A8}',
       body: 'A potential SQL injection vulnerability was found in the login endpoint.',
-      url: 'https://app.rediver.io/findings/123',
+      url: 'https://app.openctem.io/findings/123',
       timestamp: new Date().toLocaleString(),
     }
 
@@ -493,7 +493,7 @@ export function AddNotificationDialog({
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="from_name">From Name</Label>
-                      <Input id="from_name" placeholder="Rediver.io" {...register('from_name')} />
+                      <Input id="from_name" placeholder="OpenCTEM.io" {...register('from_name')} />
                     </div>
                   </div>
 

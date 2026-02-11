@@ -82,7 +82,7 @@ export { Permission, Role }
 export const sidebarData: SidebarData = {
   user: {
     name: 'User',
-    email: 'user@rediver.io',
+    email: 'user@openctem.io',
     avatar: '',
   },
   teams: [

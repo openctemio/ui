@@ -1,7 +1,7 @@
 /**
  * Tenant Modules API Hook
  *
- * SWR hook for fetching tenant's enabled modules based on their subscription plan.
+ * SWR hook for fetching tenant's enabled modules.
  * Used for filtering available event types in notification channels and other
  * module-gated features.
  *
@@ -98,7 +98,7 @@ const defaultConfig: SWRConfiguration = {
 // ============================================
 
 /**
- * Fetch tenant's enabled modules based on their subscription plan
+ * Fetch tenant's enabled modules
  *
  * @returns Object with module IDs, module details, and available event types
  *

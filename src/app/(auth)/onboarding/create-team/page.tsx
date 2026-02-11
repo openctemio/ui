@@ -54,7 +54,7 @@ export default async function CreateFirstTeamPage() {
 
       <div className="mb-6 text-center">
         <h1 className="text-2xl font-bold tracking-tight">
-          Welcome to Rediver
+          Welcome to OpenCTEM
         </h1>
         <p className="mt-2 text-muted-foreground">
           Create your first team to get started with security management

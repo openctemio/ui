@@ -58,7 +58,7 @@ export default function SBOMExportPage() {
       metadata: includeMetadata
         ? {
             timestamp: new Date().toISOString(),
-            tools: [{ name: 'Rediver Security Platform', version: '1.0.0' }],
+            tools: [{ name: 'OpenCTEM Security Platform', version: '1.0.0' }],
             component: {
               type: 'application',
               name: 'Organization Assets',

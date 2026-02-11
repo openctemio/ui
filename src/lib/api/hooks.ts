@@ -2,7 +2,7 @@
  * API Hooks
  *
  * Custom React hooks for data fetching using SWR
- * Hooks for Rediver API operations
+ * Hooks for OpenCTEM API operations
  */
 
 'use client'
