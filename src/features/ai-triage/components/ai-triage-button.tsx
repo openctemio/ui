@@ -129,10 +129,6 @@ export function AITriageButton({
     },
   })
 
-  // Always fetch triage result on mount to check if there's an in-progress triage
-  // This ensures the button shows correct state after page reload
-  const isInitiallyInProgress = initialStatus === 'pending' || initialStatus === 'processing'
-
   // Determine polling refresh interval:
   // - If actively polling (user just clicked) and WebSocket not connected: use poll interval
   // - Otherwise: no auto-refresh (initial fetch only, WebSocket handles updates)
@@ -220,18 +216,25 @@ export function AITriageButton({
     }
 
     previousStatusRef.current = currentStatus ?? null
-  }, [currentStatus, triageResult?.errorMessage, onTriageCompleted, shouldPoll, wsConnected])
+  }, [
+    currentStatus,
+    triageResult?.errorMessage,
+    onTriageCompleted,
+    shouldPoll,
+    wsConnected,
+    findingId,
+  ])
 
   // Start polling when status becomes pending/processing (only if WebSocket not connected)
   useEffect(() => {
-    if (isTriageInProgress && !shouldPoll && !wsConnected) {
+    if (isTriageInProgress && !shouldPoll && !wsConnected && findingId) {
       setShouldPoll(true)
     }
     // Stop polling when WebSocket becomes connected
     if (shouldPoll && wsConnected) {
       setShouldPoll(false)
     }
-  }, [isTriageInProgress, shouldPoll, wsConnected])
+  }, [isTriageInProgress, shouldPoll, wsConnected, findingId])
 
   // Clear WebSocket status when finding changes
   useEffect(() => {

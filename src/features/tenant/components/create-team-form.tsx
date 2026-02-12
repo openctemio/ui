@@ -341,7 +341,7 @@ function CreateTeamFormUI({
                   <FormControl>
                     <div className="flex">
                       <span className="inline-flex items-center px-3 text-sm text-muted-foreground bg-muted border border-r-0 rounded-l-md">
-                        app.rediver.io/
+                        app.openctem.io/
                       </span>
                       <Input
                         placeholder="acme-corp"
@@ -364,7 +364,7 @@ function CreateTeamFormUI({
             {slugValue && (
               <div className="rounded-md bg-muted/50 p-3 text-sm">
                 <p className="text-muted-foreground mb-1">Your team URL will be:</p>
-                <p className="font-mono text-primary">https://app.rediver.io/{slugValue}</p>
+                <p className="font-mono text-primary">https://app.openctem.io/{slugValue}</p>
               </div>
             )}
 

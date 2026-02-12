@@ -1,7 +1,7 @@
 /**
  * API Types & Interfaces
  *
- * Type definitions for Rediver API requests and responses
+ * Type definitions for OpenCTEM API requests and responses
  */
 
 // ============================================

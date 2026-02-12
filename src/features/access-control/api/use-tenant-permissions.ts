@@ -5,10 +5,10 @@
  *
  * Returns permission modules filtered by tenant's enabled modules.
  * This ensures that roles UI only shows permissions for features
- * the tenant has access to based on their subscription plan.
+ * the tenant has access to based on their enabled modules.
  *
- * For example, a Free plan tenant won't see Findings, Scans, Reports
- * permissions since they don't have access to those modules.
+ * For example, a tenant without the findings module won't see Findings
+ * permissions since they don't have access to that module.
  */
 
 import { useMemo } from 'react';

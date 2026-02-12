@@ -7,11 +7,11 @@
 
 Continuous Threat Exposure Management (CTEM) platform built with Next.js 16, featuring the complete 5-stage CTEM process: Scoping, Discovery, Prioritization, Validation, and Mobilization.
 
-![Rediver Dashboard](docs/images/dashboard.png)
+![OpenCTEM Dashboard](docs/images/dashboard.png)
 
 ## Overview
 
-Rediver is an enterprise-grade Attack Surface Management (ASM) and Vulnerability Management platform that helps security teams continuously monitor, assess, and remediate security risks across their digital infrastructure.
+OpenCTEM is an enterprise-grade Attack Surface Management (ASM) and Vulnerability Management platform that helps security teams continuously monitor, assess, and remediate security risks across their digital infrastructure.
 
 ## Key Features
 
@@ -538,7 +538,7 @@ See [Security Documentation](./docs/auth/KEYCLOAK_SETUP.md#security-consideratio
 
 ## 💖 Support
 
-If you find Rediver useful, please consider supporting the project:
+If you find OpenCTEM useful, please consider supporting the project:
 
 **BSC Network (BEP-20):**
 

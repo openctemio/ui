@@ -512,11 +512,6 @@ function ConfigurationsTab() {
     return Math.round((config.successful_runs / config.total_runs) * 100)
   }, [])
 
-  // Memoized handlers
-  const handleViewDetails = useCallback((config: ScanConfig) => {
-    setSelectedConfig(config)
-  }, [])
-
   // Toggle handler for StatusToggleCell (returns Promise for loading state)
   const handleToggle = useCallback(async (action: 'pause' | 'activate', config: ScanConfig) => {
     const endpoint =

@@ -50,7 +50,7 @@ export const AGENT_PREFERENCE_LABELS: Record<AgentPreference, string> = {
 export const AGENT_PREFERENCE_DESCRIPTIONS: Record<AgentPreference, string> = {
   auto: 'Uses tenant agents when available, falls back to platform agents',
   tenant: 'Only uses agents deployed in your infrastructure',
-  platform: "Only uses Rediver's managed platform agents",
+  platform: "Only uses OpenCTEM's managed platform agents",
 }
 
 /**
