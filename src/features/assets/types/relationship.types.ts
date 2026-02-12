@@ -469,7 +469,15 @@ export const VALID_RELATIONSHIP_CONSTRAINTS: Record<RelationshipType, Relationsh
   monitors: [
     {
       sourceTypes: ['service'], // SIEM, EDR, APM as service
-      targetTypes: ['host', 'k8s_cluster', 'cloud_account', 'api', 'service', 'database', 'network'],
+      targetTypes: [
+        'host',
+        'k8s_cluster',
+        'cloud_account',
+        'api',
+        'service',
+        'database',
+        'network',
+      ],
     },
   ],
 

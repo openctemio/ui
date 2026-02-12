@@ -53,20 +53,13 @@ export default async function CreateFirstTeamPage() {
       </div>
 
       <div className="mb-6 text-center">
-        <h1 className="text-2xl font-bold tracking-tight">
-          Welcome to OpenCTEM
-        </h1>
+        <h1 className="text-2xl font-bold tracking-tight">Welcome to OpenCTEM</h1>
         <p className="mt-2 text-muted-foreground">
           Create your first team to get started with security management
         </p>
       </div>
 
-      <CreateTeamForm
-        showCancel={false}
-        isFirstTeam={true}
-        suggestedName={suggestedName}
-      />
+      <CreateTeamForm showCancel={false} isFirstTeam={true} suggestedName={suggestedName} />
     </div>
   )
 }
-

@@ -1,34 +1,23 @@
-'use client';
+'use client'
 
-import { Card, CardContent } from '@/components/ui/card';
-import {
-  Wrench,
-  CheckCircle,
-  XCircle,
-  ArrowUpCircle,
-  Package,
-  Activity,
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
-import type { Tool } from '@/lib/api/tool-types';
+import { Card, CardContent } from '@/components/ui/card'
+import { Wrench, CheckCircle, XCircle, ArrowUpCircle, Package, Activity } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import type { Tool } from '@/lib/api/tool-types'
 
 interface ToolStatsCardsProps {
-  tools: Tool[];
-  activeFilter: string | null;
-  onFilterChange: (filter: string | null) => void;
+  tools: Tool[]
+  activeFilter: string | null
+  onFilterChange: (filter: string | null) => void
 }
 
-export function ToolStatsCards({
-  tools,
-  activeFilter,
-  onFilterChange,
-}: ToolStatsCardsProps) {
-  const totalTools = tools.length;
-  const activeTools = tools.filter((t) => t.is_active).length;
-  const inactiveTools = tools.filter((t) => !t.is_active).length;
-  const updatesAvailable = tools.filter((t) => t.has_update).length;
-  const builtinTools = tools.filter((t) => t.is_builtin).length;
-  const customTools = tools.filter((t) => !t.is_builtin).length;
+export function ToolStatsCards({ tools, activeFilter, onFilterChange }: ToolStatsCardsProps) {
+  const totalTools = tools.length
+  const activeTools = tools.filter((t) => t.is_active).length
+  const inactiveTools = tools.filter((t) => !t.is_active).length
+  const updatesAvailable = tools.filter((t) => t.has_update).length
+  const builtinTools = tools.filter((t) => t.is_builtin).length
+  const customTools = tools.filter((t) => !t.is_builtin).length
 
   const stats = [
     {
@@ -85,12 +74,12 @@ export function ToolStatsCards({
       bgColor: 'bg-purple-500/10',
       filter: 'type:custom',
     },
-  ];
+  ]
 
   return (
     <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
       {stats.map((stat) => {
-        const isActive = activeFilter === stat.filter;
+        const isActive = activeFilter === stat.filter
         return (
           <Card
             key={stat.id}
@@ -112,8 +101,8 @@ export function ToolStatsCards({
               </div>
             </CardContent>
           </Card>
-        );
+        )
       })}
     </div>
-  );
+  )
 }

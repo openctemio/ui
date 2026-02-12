@@ -1,7 +1,7 @@
-"use client";
+'use client'
 
-import { ComingSoonPage } from "@/features/shared";
-import { Zap } from "lucide-react";
+import { ComingSoonPage } from '@/features/shared'
+import { Zap } from 'lucide-react'
 
 export default function ThreatFeedsPage() {
   return (
@@ -11,12 +11,12 @@ export default function ThreatFeedsPage() {
       phase="Prioritization"
       icon={Zap}
       features={[
-        "STIX/TAXII feed integration",
-        "Commercial threat intel feeds",
-        "Open source threat data",
-        "IOC correlation",
-        "Custom feed configuration",
+        'STIX/TAXII feed integration',
+        'Commercial threat intel feeds',
+        'Open source threat data',
+        'IOC correlation',
+        'Custom feed configuration',
       ]}
     />
-  );
+  )
 }

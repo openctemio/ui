@@ -1,7 +1,7 @@
-"use client";
+'use client'
 
-import { ComingSoonPage } from "@/features/shared";
-import { Lock } from "lucide-react";
+import { ComingSoonPage } from '@/features/shared'
+import { Lock } from 'lucide-react'
 
 export default function SecretsExposurePage() {
   return (
@@ -11,12 +11,12 @@ export default function SecretsExposurePage() {
       phase="Discovery"
       icon={Lock}
       features={[
-        "Git repository secret scanning",
-        "Public code repository monitoring",
-        "API key and token detection",
-        "Cloud credential exposure",
-        "Secret rotation tracking",
+        'Git repository secret scanning',
+        'Public code repository monitoring',
+        'API key and token detection',
+        'Cloud credential exposure',
+        'Secret rotation tracking',
       ]}
     />
-  );
+  )
 }

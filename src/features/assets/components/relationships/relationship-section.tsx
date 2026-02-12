@@ -1,4 +1,4 @@
-"use client";
+'use client'
 
 /**
  * Relationship Section Component
@@ -6,7 +6,7 @@
  * A section component for displaying relationships in asset detail sheets
  */
 
-import * as React from "react";
+import * as React from 'react'
 import {
   ArrowRight,
   ArrowLeft,
@@ -16,22 +16,17 @@ import {
   LayoutGrid,
   List,
   GitBranch,
-} from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { cn } from "@/lib/utils";
-import type { AssetRelationship, RelationshipDirection } from "../../types";
-import { RELATIONSHIP_LABELS } from "../../types";
-import { RelationshipCard, RelationshipListItem } from "./relationship-card";
-import { RelationshipGraphView, MiniGraph } from "./relationship-graph";
-import { buildRelationshipGraph } from "../../lib";
+} from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { cn } from '@/lib/utils'
+import type { AssetRelationship, RelationshipDirection } from '../../types'
+import { RELATIONSHIP_LABELS } from '../../types'
+import { RelationshipCard, RelationshipListItem } from './relationship-card'
+import { RelationshipGraphView, MiniGraph } from './relationship-graph'
+import { buildRelationshipGraph } from '../../lib'
 
 // ============================================
 // Types
@@ -39,29 +34,29 @@ import { buildRelationshipGraph } from "../../lib";
 
 interface RelationshipSectionProps {
   /** All relationships for this asset */
-  relationships: AssetRelationship[];
+  relationships: AssetRelationship[]
   /** Current asset ID */
-  currentAssetId: string;
+  currentAssetId: string
   /** Called when "Add" button is clicked */
-  onAddClick?: () => void;
+  onAddClick?: () => void
   /** Called when a relationship is clicked for editing */
-  onEditClick?: (relationship: AssetRelationship) => void;
+  onEditClick?: (relationship: AssetRelationship) => void
   /** Called when delete is clicked */
-  onDeleteClick?: (relationship: AssetRelationship) => void;
+  onDeleteClick?: (relationship: AssetRelationship) => void
   /** Called when an asset is clicked to navigate */
-  onAssetClick?: (assetId: string) => void;
+  onAssetClick?: (assetId: string) => void
   /** Show graph view by default */
-  defaultView?: "list" | "card" | "graph";
+  defaultView?: 'list' | 'card' | 'graph'
   /** Maximum height for scrollable area */
-  maxHeight?: string;
-  className?: string;
+  maxHeight?: string
+  className?: string
 }
 
 // ============================================
 // View Modes
 // ============================================
 
-type ViewMode = "list" | "card" | "graph";
+type ViewMode = 'list' | 'card' | 'graph'
 
 // ============================================
 // Relationship Section Component
@@ -74,55 +69,52 @@ export function RelationshipSection({
   onEditClick,
   onDeleteClick,
   onAssetClick,
-  defaultView = "list",
-  maxHeight = "400px",
+  defaultView = 'list',
+  maxHeight = '400px',
   className,
 }: RelationshipSectionProps) {
-  const [viewMode, setViewMode] = React.useState<ViewMode>(defaultView);
-  const [activeTab, setActiveTab] = React.useState<"all" | "outgoing" | "incoming">("all");
+  const [viewMode, setViewMode] = React.useState<ViewMode>(defaultView)
+  const [activeTab, setActiveTab] = React.useState<'all' | 'outgoing' | 'incoming'>('all')
 
   // Split relationships by direction
   const { outgoing, incoming } = React.useMemo(() => {
-    const out: AssetRelationship[] = [];
-    const inc: AssetRelationship[] = [];
+    const out: AssetRelationship[] = []
+    const inc: AssetRelationship[] = []
 
     relationships.forEach((rel) => {
       if (rel.sourceAssetId === currentAssetId) {
-        out.push(rel);
+        out.push(rel)
       } else {
-        inc.push(rel);
+        inc.push(rel)
       }
-    });
+    })
 
-    return { outgoing: out, incoming: inc };
-  }, [relationships, currentAssetId]);
+    return { outgoing: out, incoming: inc }
+  }, [relationships, currentAssetId])
 
   // Filter based on active tab
   const filteredRelationships = React.useMemo(() => {
     switch (activeTab) {
-      case "outgoing":
-        return outgoing;
-      case "incoming":
-        return incoming;
+      case 'outgoing':
+        return outgoing
+      case 'incoming':
+        return incoming
       default:
-        return relationships;
+        return relationships
     }
-  }, [activeTab, relationships, outgoing, incoming]);
+  }, [activeTab, relationships, outgoing, incoming])
 
   // Build graph data
-  const graphData = React.useMemo(
-    () => buildRelationshipGraph(currentAssetId),
-    [currentAssetId]
-  );
+  const graphData = React.useMemo(() => buildRelationshipGraph(currentAssetId), [currentAssetId])
 
   // Get direction for a relationship
   const getDirection = (rel: AssetRelationship): RelationshipDirection => {
-    return rel.sourceAssetId === currentAssetId ? "outgoing" : "incoming";
-  };
+    return rel.sourceAssetId === currentAssetId ? 'outgoing' : 'incoming'
+  }
 
   if (relationships.length === 0) {
     return (
-      <div className={cn("rounded-xl border p-6 bg-card", className)}>
+      <div className={cn('rounded-xl border p-6 bg-card', className)}>
         <div className="flex flex-col items-center justify-center text-center">
           <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-3">
             <Link2 className="h-6 w-6 text-muted-foreground" />
@@ -139,11 +131,11 @@ export function RelationshipSection({
           )}
         </div>
       </div>
-    );
+    )
   }
 
   return (
-    <div className={cn("rounded-xl border bg-card", className)}>
+    <div className={cn('rounded-xl border bg-card', className)}>
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b">
         <div className="flex items-center gap-3">
@@ -156,26 +148,26 @@ export function RelationshipSection({
           {/* View mode toggle */}
           <div className="flex items-center rounded-md border p-0.5">
             <Button
-              variant={viewMode === "list" ? "secondary" : "ghost"}
+              variant={viewMode === 'list' ? 'secondary' : 'ghost'}
               size="sm"
               className="h-7 w-7 p-0"
-              onClick={() => setViewMode("list")}
+              onClick={() => setViewMode('list')}
             >
               <List className="h-4 w-4" />
             </Button>
             <Button
-              variant={viewMode === "card" ? "secondary" : "ghost"}
+              variant={viewMode === 'card' ? 'secondary' : 'ghost'}
               size="sm"
               className="h-7 w-7 p-0"
-              onClick={() => setViewMode("card")}
+              onClick={() => setViewMode('card')}
             >
               <LayoutGrid className="h-4 w-4" />
             </Button>
             <Button
-              variant={viewMode === "graph" ? "secondary" : "ghost"}
+              variant={viewMode === 'graph' ? 'secondary' : 'ghost'}
               size="sm"
               className="h-7 w-7 p-0"
-              onClick={() => setViewMode("graph")}
+              onClick={() => setViewMode('graph')}
             >
               <GitBranch className="h-4 w-4" />
             </Button>
@@ -208,7 +200,7 @@ export function RelationshipSection({
         </div>
 
         <TabsContent value={activeTab} className="m-0">
-          {viewMode === "graph" ? (
+          {viewMode === 'graph' ? (
             <div className="p-4">
               <RelationshipGraphView
                 graph={graphData}
@@ -218,7 +210,7 @@ export function RelationshipSection({
             </div>
           ) : (
             <ScrollArea style={{ maxHeight }} className="p-4">
-              {viewMode === "list" ? (
+              {viewMode === 'list' ? (
                 <div className="space-y-2">
                   {filteredRelationships.map((rel) => (
                     <RelationshipListItem
@@ -257,14 +249,14 @@ export function RelationshipSection({
           {outgoing.length} outgoing, {incoming.length} incoming
         </span>
         <span>
-          Avg. Impact:{" "}
+          Avg. Impact:{' '}
           {(
             relationships.reduce((sum, r) => sum + r.impactWeight, 0) / relationships.length
           ).toFixed(1)}
         </span>
       </div>
     </div>
-  );
+  )
 }
 
 // ============================================
@@ -272,12 +264,12 @@ export function RelationshipSection({
 // ============================================
 
 interface RelationshipPreviewProps {
-  relationships: AssetRelationship[];
-  currentAssetId: string;
-  onViewAll?: () => void;
-  onAssetClick?: (assetId: string) => void;
-  maxItems?: number;
-  className?: string;
+  relationships: AssetRelationship[]
+  currentAssetId: string
+  onViewAll?: () => void
+  onAssetClick?: (assetId: string) => void
+  maxItems?: number
+  className?: string
 }
 
 export function RelationshipPreview({
@@ -288,27 +280,24 @@ export function RelationshipPreview({
   maxItems = 3,
   className,
 }: RelationshipPreviewProps) {
-  const graphData = React.useMemo(
-    () => buildRelationshipGraph(currentAssetId),
-    [currentAssetId]
-  );
+  const graphData = React.useMemo(() => buildRelationshipGraph(currentAssetId), [currentAssetId])
 
-  const displayRelationships = relationships.slice(0, maxItems);
-  const remainingCount = relationships.length - maxItems;
+  const displayRelationships = relationships.slice(0, maxItems)
+  const remainingCount = relationships.length - maxItems
 
   if (relationships.length === 0) {
     return (
-      <div className={cn("rounded-lg border p-3 bg-card", className)}>
+      <div className={cn('rounded-lg border p-3 bg-card', className)}>
         <div className="flex items-center gap-2 text-muted-foreground">
           <Link2 className="h-4 w-4" />
           <span className="text-sm">No relationships</span>
         </div>
       </div>
-    );
+    )
   }
 
   return (
-    <div className={cn("rounded-lg border bg-card", className)}>
+    <div className={cn('rounded-lg border bg-card', className)}>
       <div className="flex items-center justify-between p-3 border-b">
         <div className="flex items-center gap-2">
           <Link2 className="h-4 w-4 text-muted-foreground" />
@@ -331,11 +320,11 @@ export function RelationshipPreview({
 
         {/* Relationship list */}
         {displayRelationships.map((rel) => {
-          const isOutgoing = rel.sourceAssetId === currentAssetId;
+          const isOutgoing = rel.sourceAssetId === currentAssetId
           const otherAsset = isOutgoing
             ? { name: rel.targetAssetName, type: rel.targetAssetType, id: rel.targetAssetId }
-            : { name: rel.sourceAssetName, type: rel.sourceAssetType, id: rel.sourceAssetId };
-          const label = RELATIONSHIP_LABELS[rel.type];
+            : { name: rel.sourceAssetName, type: rel.sourceAssetType, id: rel.sourceAssetId }
+          const label = RELATIONSHIP_LABELS[rel.type]
 
           return (
             <button
@@ -353,7 +342,7 @@ export function RelationshipPreview({
               </span>
               <span className="text-sm font-medium truncate flex-1">{otherAsset.name}</span>
             </button>
-          );
+          )
         })}
 
         {remainingCount > 0 && (
@@ -363,5 +352,5 @@ export function RelationshipPreview({
         )}
       </div>
     </div>
-  );
+  )
 }

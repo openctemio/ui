@@ -1,7 +1,7 @@
-"use client";
+'use client'
 
-import { ComingSoonPage } from "@/features/shared";
-import { ClipboardCheck } from "lucide-react";
+import { ComingSoonPage } from '@/features/shared'
+import { ClipboardCheck } from 'lucide-react'
 
 export default function ComplianceReportsPage() {
   return (
@@ -11,12 +11,12 @@ export default function ComplianceReportsPage() {
       phase="Insights"
       icon={ClipboardCheck}
       features={[
-        "PCI-DSS compliance reports",
-        "SOC 2 evidence packages",
-        "ISO 27001 gap analysis",
-        "GDPR compliance status",
-        "Custom framework mapping",
+        'PCI-DSS compliance reports',
+        'SOC 2 evidence packages',
+        'ISO 27001 gap analysis',
+        'GDPR compliance status',
+        'Custom framework mapping',
       ]}
     />
-  );
+  )
 }

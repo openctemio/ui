@@ -2,4 +2,4 @@
  * Finding Types - Barrel Export
  */
 
-export * from "./finding.types";
+export * from './finding.types'

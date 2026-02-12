@@ -1,7 +1,7 @@
-"use client";
+'use client'
 
-import { ComingSoonPage } from "@/features/shared";
-import { Crown } from "lucide-react";
+import { ComingSoonPage } from '@/features/shared'
+import { Crown } from 'lucide-react'
 
 export default function ExecutiveReportsPage() {
   return (
@@ -11,12 +11,12 @@ export default function ExecutiveReportsPage() {
       phase="Insights"
       icon={Crown}
       features={[
-        "Risk posture summary",
-        "Key metrics dashboard",
-        "Trend highlights",
-        "Investment recommendations",
-        "Board-ready presentations",
+        'Risk posture summary',
+        'Key metrics dashboard',
+        'Trend highlights',
+        'Investment recommendations',
+        'Board-ready presentations',
       ]}
     />
-  );
+  )
 }

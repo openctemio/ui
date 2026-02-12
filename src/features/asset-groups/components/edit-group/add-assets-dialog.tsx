@@ -6,9 +6,9 @@
  * - Create New: Create new assets on the fly
  */
 
-"use client";
+'use client'
 
-import * as React from "react";
+import * as React from 'react'
 import {
   Dialog,
   DialogContent,
@@ -16,20 +16,20 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+} from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
+import { Card } from '@/components/ui/card'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from '@/components/ui/select'
 import {
   Search,
   Plus,
@@ -46,49 +46,49 @@ import {
   FolderPlus,
   X,
   CheckCircle2,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
-import type { Asset, AssetType } from "@/features/assets/types";
-import { ASSET_TYPE_LABELS, ASSET_TYPE_COLORS } from "@/features/assets/types";
-import { useActiveAssetTypes } from "@/features/asset-types/api/use-asset-type-api";
-import { useAssets } from "@/features/assets/hooks/use-assets";
+} from 'lucide-react'
+import { cn } from '@/lib/utils'
+import type { Asset, AssetType } from '@/features/assets/types'
+import { ASSET_TYPE_LABELS, ASSET_TYPE_COLORS } from '@/features/assets/types'
+import { useActiveAssetTypes } from '@/features/asset-types/api/use-asset-type-api'
+import { useAssets } from '@/features/assets/hooks/use-assets'
 
 /**
  * Minimal asset interface that works with both Asset and GroupAsset types
  */
 interface GroupAssetMinimal {
-  id: string;
-  name: string;
-  type: string;
-  riskScore?: number;
+  id: string
+  name: string
+  type: string
+  riskScore?: number
 }
 
 interface AddAssetsDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  groupName: string;
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  groupName: string
   /** Assets already in the group (accepts both Asset and GroupAsset types) */
-  groupAssets?: GroupAssetMinimal[];
+  groupAssets?: GroupAssetMinimal[]
   /** Called when user confirms adding assets */
-  onSubmit: (data: AddAssetsSubmitData) => Promise<void>;
+  onSubmit: (data: AddAssetsSubmitData) => Promise<void>
   /** Called when user wants to remove an asset from group */
-  onRemove?: (assetId: string) => Promise<void>;
-  isSubmitting?: boolean;
-  isRemoving?: boolean;
+  onRemove?: (assetId: string) => Promise<void>
+  isSubmitting?: boolean
+  isRemoving?: boolean
 }
 
 export interface AddAssetsSubmitData {
-  existingAssetIds: string[];
-  newAssets: NewAssetData[];
+  existingAssetIds: string[]
+  newAssets: NewAssetData[]
 }
 
 export interface NewAssetData {
-  type: string;
-  name: string;
+  type: string
+  name: string
 }
 
 function generateId(): string {
-  return `new-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+  return `new-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
 }
 
 const assetTypeIcons: Record<string, React.ReactNode> = {
@@ -102,9 +102,9 @@ const assetTypeIcons: Record<string, React.ReactNode> = {
   project: <GitBranch className="h-4 w-4" />,
   repository: <GitBranch className="h-4 w-4" />,
   database: <Database className="h-4 w-4" />,
-};
+}
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 20
 
 export function AddAssetsDialog({
   open,
@@ -117,34 +117,31 @@ export function AddAssetsDialog({
   isRemoving = false,
 }: AddAssetsDialogProps) {
   // Selection state
-  const [selectedAssetIds, setSelectedAssetIds] = React.useState<string[]>([]);
+  const [selectedAssetIds, setSelectedAssetIds] = React.useState<string[]>([])
   const [newAssets, setNewAssets] = React.useState<
     Array<{ id: string; type: string; name: string }>
-  >([]);
-  const [newAssetType, setNewAssetType] = React.useState<string>("domain");
-  const [newAssetName, setNewAssetName] = React.useState("");
-  const [removingAssetId, setRemovingAssetId] = React.useState<string | null>(null);
+  >([])
+  const [newAssetType, setNewAssetType] = React.useState<string>('domain')
+  const [newAssetName, setNewAssetName] = React.useState('')
+  const [removingAssetId, setRemovingAssetId] = React.useState<string | null>(null)
 
   // Search state
-  const [searchInput, setSearchInput] = React.useState("");
-  const [searchQuery, setSearchQuery] = React.useState("");
-  const [page, setPage] = React.useState(1);
-  const [allLoadedAssets, setAllLoadedAssets] = React.useState<Asset[]>([]);
+  const [searchInput, setSearchInput] = React.useState('')
+  const [searchQuery, setSearchQuery] = React.useState('')
+  const [page, setPage] = React.useState(1)
+  const [allLoadedAssets, setAllLoadedAssets] = React.useState<Asset[]>([])
 
   // Ref for intersection observer
-  const loadMoreRef = React.useRef<HTMLDivElement>(null);
+  const loadMoreRef = React.useRef<HTMLDivElement>(null)
 
   // Ensure groupAssets is always an array
-  const safeGroupAssets = React.useMemo(
-    () => groupAssets || [],
-    [groupAssets]
-  );
+  const safeGroupAssets = React.useMemo(() => groupAssets || [], [groupAssets])
 
   // Get group asset IDs for filtering
   const groupAssetIds = React.useMemo(
     () => new Set(safeGroupAssets.map((a) => a.id)),
     [safeGroupAssets]
-  );
+  )
 
   // Fetch assets
   const { assets, isLoading, total, totalPages } = useAssets(
@@ -155,165 +152,157 @@ export function AddAssetsDialog({
           pageSize: PAGE_SIZE,
         }
       : { page: 1, pageSize: 1 }
-  );
+  )
 
   // Debounce search input
   React.useEffect(() => {
     const timer = setTimeout(() => {
       if (searchInput !== searchQuery) {
-        setSearchQuery(searchInput);
-        setPage(1);
-        setAllLoadedAssets([]);
+        setSearchQuery(searchInput)
+        setPage(1)
+        setAllLoadedAssets([])
       }
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [searchInput, searchQuery]);
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [searchInput, searchQuery])
 
   // Accumulate assets when data changes
   React.useEffect(() => {
-    if (!open || isLoading || !assets) return;
+    if (!open || isLoading || !assets) return
 
     if (page === 1) {
-      setAllLoadedAssets(assets);
+      setAllLoadedAssets(assets)
     } else {
       setAllLoadedAssets((prev) => {
-        const existingIds = new Set(prev.map((a) => a.id));
-        const newItems = assets.filter((a) => !existingIds.has(a.id));
-        return [...prev, ...newItems];
-      });
+        const existingIds = new Set(prev.map((a) => a.id))
+        const newItems = assets.filter((a) => !existingIds.has(a.id))
+        return [...prev, ...newItems]
+      })
     }
-  }, [open, assets, isLoading, page]);
+  }, [open, assets, isLoading, page])
 
   // Intersection observer for infinite scroll
   React.useEffect(() => {
-    if (!open) return;
+    if (!open) return
 
     const observer = new IntersectionObserver(
       (entries) => {
-        const [entry] = entries;
+        const [entry] = entries
         if (entry.isIntersecting && !isLoading && page < totalPages) {
-          setPage((prev) => prev + 1);
+          setPage((prev) => prev + 1)
         }
       },
       { threshold: 0.1 }
-    );
+    )
 
-    const currentRef = loadMoreRef.current;
+    const currentRef = loadMoreRef.current
     if (currentRef) {
-      observer.observe(currentRef);
+      observer.observe(currentRef)
     }
 
     return () => {
       if (currentRef) {
-        observer.unobserve(currentRef);
+        observer.unobserve(currentRef)
       }
-    };
-  }, [open, isLoading, page, totalPages]);
+    }
+  }, [open, isLoading, page, totalPages])
 
   // Fetch asset types from API
-  const { assetTypes, isLoading: isLoadingTypes } = useActiveAssetTypes();
+  const { assetTypes, isLoading: isLoadingTypes } = useActiveAssetTypes()
 
   // Get current asset type info
   const currentAssetTypeInfo = React.useMemo(
     () => assetTypes.find((t) => t.code === newAssetType),
     [assetTypes, newAssetType]
-  );
+  )
 
   // Get placeholder for current asset type
   const currentPlaceholder =
     currentAssetTypeInfo?.pattern_placeholder ||
     currentAssetTypeInfo?.pattern_example ||
-    "Enter asset name";
+    'Enter asset name'
 
   // Validation
   const validationResult = React.useMemo(() => {
     if (!newAssetName.trim()) {
-      return { isValid: true, error: null };
+      return { isValid: true, error: null }
     }
 
-    const pattern = currentAssetTypeInfo?.pattern_regex;
+    const pattern = currentAssetTypeInfo?.pattern_regex
     if (!pattern) {
-      return { isValid: true, error: null };
+      return { isValid: true, error: null }
     }
 
     try {
-      const regex = new RegExp(pattern);
-      const isValid = regex.test(newAssetName.trim());
+      const regex = new RegExp(pattern)
+      const isValid = regex.test(newAssetName.trim())
       return {
         isValid,
-        error: isValid
-          ? null
-          : `Invalid ${currentAssetTypeInfo?.name || "asset"} format`,
-      };
+        error: isValid ? null : `Invalid ${currentAssetTypeInfo?.name || 'asset'} format`,
+      }
     } catch {
-      return { isValid: true, error: null };
+      return { isValid: true, error: null }
     }
-  }, [newAssetName, currentAssetTypeInfo]);
+  }, [newAssetName, currentAssetTypeInfo])
 
   // Helper to get asset type name
   const getAssetTypeName = React.useCallback(
     (typeCode: string) => {
-      const typeInfo = assetTypes.find((t) => t.code === typeCode);
-      return (
-        typeInfo?.name || ASSET_TYPE_LABELS[typeCode as AssetType] || typeCode
-      );
+      const typeInfo = assetTypes.find((t) => t.code === typeCode)
+      return typeInfo?.name || ASSET_TYPE_LABELS[typeCode as AssetType] || typeCode
     },
     [assetTypes]
-  );
+  )
 
   // Filter assets: available (not in group)
   const availableAssets = React.useMemo(() => {
-    return allLoadedAssets.filter((a) => !groupAssetIds.has(a.id));
-  }, [allLoadedAssets, groupAssetIds]);
+    return allLoadedAssets.filter((a) => !groupAssetIds.has(a.id))
+  }, [allLoadedAssets, groupAssetIds])
 
   // Filter group assets by search
   const filteredGroupAssets = React.useMemo(() => {
-    if (!searchInput.trim()) return safeGroupAssets;
-    const query = searchInput.toLowerCase();
+    if (!searchInput.trim()) return safeGroupAssets
+    const query = searchInput.toLowerCase()
     return safeGroupAssets.filter(
-      (a) =>
-        a.name.toLowerCase().includes(query) ||
-        a.type.toLowerCase().includes(query)
-    );
-  }, [safeGroupAssets, searchInput]);
+      (a) => a.name.toLowerCase().includes(query) || a.type.toLowerCase().includes(query)
+    )
+  }, [safeGroupAssets, searchInput])
 
   // Reset state when dialog closes
   React.useEffect(() => {
     if (!open) {
-      setSelectedAssetIds([]);
-      setNewAssets([]);
-      setNewAssetName("");
-      setSearchInput("");
-      setSearchQuery("");
-      setPage(1);
-      setAllLoadedAssets([]);
-      setRemovingAssetId(null);
+      setSelectedAssetIds([])
+      setNewAssets([])
+      setNewAssetName('')
+      setSearchInput('')
+      setSearchQuery('')
+      setPage(1)
+      setAllLoadedAssets([])
+      setRemovingAssetId(null)
     }
-  }, [open]);
+  }, [open])
 
   // Toggle asset selection
   const toggleAsset = (assetId: string) => {
     setSelectedAssetIds((prev) =>
-      prev.includes(assetId)
-        ? prev.filter((id) => id !== assetId)
-        : [...prev, assetId]
-    );
-  };
+      prev.includes(assetId) ? prev.filter((id) => id !== assetId) : [...prev, assetId]
+    )
+  }
 
   // Handle remove asset
   const handleRemoveAsset = async (assetId: string) => {
-    if (!onRemove) return;
-    setRemovingAssetId(assetId);
+    if (!onRemove) return
+    setRemovingAssetId(assetId)
     try {
-      await onRemove(assetId);
+      await onRemove(assetId)
     } finally {
-      setRemovingAssetId(null);
+      setRemovingAssetId(null)
     }
-  };
+  }
 
   // Add new asset
   const addNewAsset = () => {
-    if (!newAssetName.trim() || !validationResult.isValid) return;
+    if (!newAssetName.trim() || !validationResult.isValid) return
     setNewAssets((prev) => [
       ...prev,
       {
@@ -321,60 +310,57 @@ export function AddAssetsDialog({
         type: newAssetType,
         name: newAssetName.trim(),
       },
-    ]);
-    setNewAssetName("");
-  };
+    ])
+    setNewAssetName('')
+  }
 
   // Delete new asset
   const deleteNewAsset = (id: string) => {
-    setNewAssets((prev) => prev.filter((a) => a.id !== id));
-  };
+    setNewAssets((prev) => prev.filter((a) => a.id !== id))
+  }
 
   // Handle Enter key
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      addNewAsset();
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      addNewAsset()
     }
-  };
+  }
 
   // Submit
   const handleSubmit = async () => {
     await onSubmit({
       existingAssetIds: selectedAssetIds,
       newAssets: newAssets.map((a) => ({ type: a.type, name: a.name })),
-    });
-  };
+    })
+  }
 
-  const totalToAdd = selectedAssetIds.length + newAssets.length;
-  const hasMore = page < totalPages;
-  const showLoading = isLoading && allLoadedAssets.length === 0;
-  const isBusy = isSubmitting || isRemoving;
+  const totalToAdd = selectedAssetIds.length + newAssets.length
+  const hasMore = page < totalPages
+  const showLoading = isLoading && allLoadedAssets.length === 0
+  const isBusy = isSubmitting || isRemoving
 
   // Render asset row (supports both Asset and GroupAssetMinimal)
-  const renderAssetRow = (
-    asset: Asset | GroupAssetMinimal,
-    mode: "available" | "in-group"
-  ) => {
+  const renderAssetRow = (asset: Asset | GroupAssetMinimal, mode: 'available' | 'in-group') => {
     const colors = ASSET_TYPE_COLORS[asset.type as AssetType] || {
-      bg: "bg-gray-500/15",
-      text: "text-gray-600",
-    };
-    const isSelected = selectedAssetIds.includes(asset.id);
-    const isBeingRemoved = removingAssetId === asset.id;
+      bg: 'bg-gray-500/15',
+      text: 'text-gray-600',
+    }
+    const isSelected = selectedAssetIds.includes(asset.id)
+    const isBeingRemoved = removingAssetId === asset.id
 
-    if (mode === "in-group") {
+    if (mode === 'in-group') {
       return (
         <div
           key={asset.id}
           className={cn(
-            "flex items-center gap-3 w-full p-3 rounded-lg bg-primary/5 border border-primary/20",
-            isBeingRemoved && "opacity-50"
+            'flex items-center gap-3 w-full p-3 rounded-lg bg-primary/5 border border-primary/20',
+            isBeingRemoved && 'opacity-50'
           )}
         >
           <div
             className={cn(
-              "h-9 w-9 rounded-lg flex items-center justify-center shrink-0",
+              'h-9 w-9 rounded-lg flex items-center justify-center shrink-0',
               colors.bg
             )}
           >
@@ -383,13 +369,9 @@ export function AddAssetsDialog({
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium truncate">{asset.name}</p>
             <div className="flex items-center gap-2 mt-0.5">
-              <span className="text-xs text-muted-foreground">
-                {getAssetTypeName(asset.type)}
-              </span>
+              <span className="text-xs text-muted-foreground">{getAssetTypeName(asset.type)}</span>
               {asset.riskScore !== undefined && (
-                <span className="text-xs text-muted-foreground">
-                  Risk: {asset.riskScore}
-                </span>
+                <span className="text-xs text-muted-foreground">Risk: {asset.riskScore}</span>
               )}
             </div>
           </div>
@@ -413,7 +395,7 @@ export function AddAssetsDialog({
             </Button>
           )}
         </div>
-      );
+      )
     }
 
     // Available asset row
@@ -424,46 +406,33 @@ export function AddAssetsDialog({
         tabIndex={isBusy ? -1 : 0}
         onClick={() => !isBusy && toggleAsset(asset.id)}
         onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            if (!isBusy) toggleAsset(asset.id);
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            if (!isBusy) toggleAsset(asset.id)
           }
         }}
         className={cn(
-          "flex items-center gap-3 w-full p-3 rounded-lg text-left transition-all cursor-pointer select-none",
-          isSelected
-            ? "bg-primary/10 ring-1 ring-primary/30"
-            : "hover:bg-muted/50",
-          isBusy && "opacity-50 cursor-not-allowed"
+          'flex items-center gap-3 w-full p-3 rounded-lg text-left transition-all cursor-pointer select-none',
+          isSelected ? 'bg-primary/10 ring-1 ring-primary/30' : 'hover:bg-muted/50',
+          isBusy && 'opacity-50 cursor-not-allowed'
         )}
       >
-        <Checkbox
-          checked={isSelected}
-          tabIndex={-1}
-          className="pointer-events-none"
-        />
+        <Checkbox checked={isSelected} tabIndex={-1} className="pointer-events-none" />
         <div
-          className={cn(
-            "h-9 w-9 rounded-lg flex items-center justify-center shrink-0",
-            colors.bg
-          )}
+          className={cn('h-9 w-9 rounded-lg flex items-center justify-center shrink-0', colors.bg)}
         >
           {assetTypeIcons[asset.type] || <Server className="h-4 w-4" />}
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium truncate">{asset.name}</p>
           <div className="flex items-center gap-2 mt-0.5">
-            <span className="text-xs text-muted-foreground">
-              {getAssetTypeName(asset.type)}
-            </span>
-            <span className="text-xs text-muted-foreground">
-              Risk: {asset.riskScore}
-            </span>
+            <span className="text-xs text-muted-foreground">{getAssetTypeName(asset.type)}</span>
+            <span className="text-xs text-muted-foreground">Risk: {asset.riskScore}</span>
           </div>
         </div>
       </div>
-    );
-  };
+    )
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -476,9 +445,7 @@ export function AddAssetsDialog({
                 <FolderPlus className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <DialogTitle className="text-lg">
-                  Manage Group Assets
-                </DialogTitle>
+                <DialogTitle className="text-lg">Manage Group Assets</DialogTitle>
                 <DialogDescription className="text-sm">
                   &quot;{groupName}&quot; - {safeGroupAssets.length} in group, {total} total
                 </DialogDescription>
@@ -536,9 +503,7 @@ export function AddAssetsDialog({
                   {showLoading ? (
                     <div className="flex items-center justify-center py-12">
                       <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                      <span className="ml-2 text-sm text-muted-foreground">
-                        Loading assets...
-                      </span>
+                      <span className="ml-2 text-sm text-muted-foreground">Loading assets...</span>
                     </div>
                   ) : (
                     <>
@@ -550,9 +515,7 @@ export function AddAssetsDialog({
                             In Group ({filteredGroupAssets.length})
                           </div>
                           <div className="space-y-1">
-                            {filteredGroupAssets.map((asset) =>
-                              renderAssetRow(asset, "in-group")
-                            )}
+                            {filteredGroupAssets.map((asset) => renderAssetRow(asset, 'in-group'))}
                           </div>
                         </div>
                       )}
@@ -565,28 +528,25 @@ export function AddAssetsDialog({
                             Available ({availableAssets.length})
                           </div>
                           <div className="space-y-1">
-                            {availableAssets.map((asset) =>
-                              renderAssetRow(asset, "available")
-                            )}
+                            {availableAssets.map((asset) => renderAssetRow(asset, 'available'))}
                           </div>
                         </div>
                       )}
 
                       {/* Empty state */}
-                      {filteredGroupAssets.length === 0 &&
-                        availableAssets.length === 0 && (
-                          <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-                            <Package className="h-10 w-10 mb-3 opacity-50" />
-                            <p className="text-sm font-medium">
-                              {searchInput ? "No assets found" : "No assets available"}
-                            </p>
-                            <p className="text-xs mt-1">
-                              {searchInput
-                                ? "Try a different search term"
-                                : "Create new assets using the Create New tab"}
-                            </p>
-                          </div>
-                        )}
+                      {filteredGroupAssets.length === 0 && availableAssets.length === 0 && (
+                        <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                          <Package className="h-10 w-10 mb-3 opacity-50" />
+                          <p className="text-sm font-medium">
+                            {searchInput ? 'No assets found' : 'No assets available'}
+                          </p>
+                          <p className="text-xs mt-1">
+                            {searchInput
+                              ? 'Try a different search term'
+                              : 'Create new assets using the Create New tab'}
+                          </p>
+                        </div>
+                      )}
 
                       {/* Load more sentinel */}
                       <div ref={loadMoreRef} className="py-2">
@@ -598,11 +558,12 @@ export function AddAssetsDialog({
                             </span>
                           </div>
                         )}
-                        {!hasMore && (availableAssets.length > 0 || filteredGroupAssets.length > 0) && (
-                          <p className="text-center text-xs text-muted-foreground py-2">
-                            All assets loaded
-                          </p>
-                        )}
+                        {!hasMore &&
+                          (availableAssets.length > 0 || filteredGroupAssets.length > 0) && (
+                            <p className="text-center text-xs text-muted-foreground py-2">
+                              All assets loaded
+                            </p>
+                          )}
                       </div>
                     </>
                   )}
@@ -624,9 +585,7 @@ export function AddAssetsDialog({
                     disabled={isLoadingTypes || isBusy}
                   >
                     <SelectTrigger className="w-[140px] h-9">
-                      <SelectValue
-                        placeholder={isLoadingTypes ? "Loading..." : "Select type"}
-                      />
+                      <SelectValue placeholder={isLoadingTypes ? 'Loading...' : 'Select type'} />
                     </SelectTrigger>
                     <SelectContent>
                       {assetTypes.map((type) => (
@@ -643,19 +602,15 @@ export function AddAssetsDialog({
                     onKeyDown={handleKeyDown}
                     disabled={isBusy}
                     className={cn(
-                      "flex-1 h-9",
-                      validationResult.error &&
-                        "border-destructive focus-visible:ring-destructive"
+                      'flex-1 h-9',
+                      validationResult.error && 'border-destructive focus-visible:ring-destructive'
                     )}
                   />
                   <Button
                     type="button"
                     onClick={addNewAsset}
                     disabled={
-                      !newAssetName.trim() ||
-                      !validationResult.isValid ||
-                      isLoadingTypes ||
-                      isBusy
+                      !newAssetName.trim() || !validationResult.isValid || isLoadingTypes || isBusy
                     }
                     size="sm"
                     className="h-9 px-3"
@@ -685,17 +640,15 @@ export function AddAssetsDialog({
                   <div className="flex flex-col items-center justify-center py-12 text-muted-foreground border rounded-lg border-dashed">
                     <Plus className="h-10 w-10 mb-3 opacity-50" />
                     <p className="text-sm font-medium">No assets added yet</p>
-                    <p className="text-xs mt-1">
-                      Use the form above to add assets
-                    </p>
+                    <p className="text-xs mt-1">Use the form above to add assets</p>
                   </div>
                 ) : (
                   <div className="space-y-1.5">
                     {newAssets.map((asset) => {
                       const colors = ASSET_TYPE_COLORS[asset.type as AssetType] || {
-                        bg: "bg-gray-500/15",
-                        text: "text-gray-600",
-                      };
+                        bg: 'bg-gray-500/15',
+                        text: 'text-gray-600',
+                      }
 
                       return (
                         <div
@@ -704,18 +657,14 @@ export function AddAssetsDialog({
                         >
                           <div
                             className={cn(
-                              "h-9 w-9 rounded-lg flex items-center justify-center shrink-0",
+                              'h-9 w-9 rounded-lg flex items-center justify-center shrink-0',
                               colors.bg
                             )}
                           >
-                            {assetTypeIcons[asset.type] || (
-                              <Server className="h-4 w-4" />
-                            )}
+                            {assetTypeIcons[asset.type] || <Server className="h-4 w-4" />}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate">
-                              {asset.name}
-                            </p>
+                            <p className="text-sm font-medium truncate">{asset.name}</p>
                             <p className="text-xs text-muted-foreground">
                               {getAssetTypeName(asset.type)}
                             </p>
@@ -734,7 +683,7 @@ export function AddAssetsDialog({
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>
                         </div>
-                      );
+                      )
                     })}
                   </div>
                 )}
@@ -746,25 +695,21 @@ export function AddAssetsDialog({
                   {Object.entries(
                     newAssets.reduce(
                       (acc, asset) => {
-                        acc[asset.type] = (acc[asset.type] || 0) + 1;
-                        return acc;
+                        acc[asset.type] = (acc[asset.type] || 0) + 1
+                        return acc
                       },
                       {} as Record<string, number>
                     )
                   ).map(([type, count]) => {
                     const colors = ASSET_TYPE_COLORS[type as AssetType] || {
-                      bg: "bg-gray-500/15",
-                      text: "text-gray-600",
-                    };
+                      bg: 'bg-gray-500/15',
+                      text: 'text-gray-600',
+                    }
                     return (
-                      <Badge
-                        key={type}
-                        variant="outline"
-                        className={cn("text-xs", colors.text)}
-                      >
+                      <Badge key={type} variant="outline" className={cn('text-xs', colors.text)}>
                         {getAssetTypeName(type)}: {count}
                       </Badge>
-                    );
+                    )
                   })}
                 </div>
               )}
@@ -778,30 +723,23 @@ export function AddAssetsDialog({
             <div>
               {totalToAdd > 0 && (
                 <Badge variant="secondary">
-                  {totalToAdd} asset{totalToAdd !== 1 ? "s" : ""} to add
+                  {totalToAdd} asset{totalToAdd !== 1 ? 's' : ''} to add
                 </Badge>
               )}
             </div>
             <div className="flex items-center gap-3">
-              <Button
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-                disabled={isBusy}
-              >
-                {totalToAdd === 0 ? "Close" : "Cancel"}
+              <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isBusy}>
+                {totalToAdd === 0 ? 'Close' : 'Cancel'}
               </Button>
               {totalToAdd > 0 && (
-                <Button
-                  onClick={handleSubmit}
-                  disabled={isBusy}
-                >
+                <Button onClick={handleSubmit} disabled={isBusy}>
                   {isSubmitting ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Adding...
                     </>
                   ) : (
-                    `Add ${totalToAdd} Asset${totalToAdd !== 1 ? "s" : ""}`
+                    `Add ${totalToAdd} Asset${totalToAdd !== 1 ? 's' : ''}`
                   )}
                 </Button>
               )}
@@ -810,5 +748,5 @@ export function AddAssetsDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
+  )
 }

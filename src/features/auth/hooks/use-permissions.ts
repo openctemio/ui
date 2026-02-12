@@ -192,8 +192,7 @@ export function usePermissions(): UsePermissionsReturn {
  * Select only permissions array from store
  * Use for components that only need the permissions list
  */
-export const useUserPermissions = () =>
-  useAuthStore((state) => state.user?.permissions || [])
+export const useUserPermissions = () => useAuthStore((state) => state.user?.permissions || [])
 
 /**
  * Check if user has specific permission (selector)

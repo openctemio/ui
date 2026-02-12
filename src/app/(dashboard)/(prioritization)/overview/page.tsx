@@ -1,7 +1,7 @@
-"use client";
+'use client'
 
-import { ComingSoonPage } from "@/features/shared";
-import { BarChart3 } from "lucide-react";
+import { ComingSoonPage } from '@/features/shared'
+import { BarChart3 } from 'lucide-react'
 
 export default function RiskOverviewPage() {
   return (
@@ -11,12 +11,12 @@ export default function RiskOverviewPage() {
       phase="Prioritization"
       icon={BarChart3}
       features={[
-        "Risk score trending over time",
-        "Top risks by severity and impact",
-        "Risk distribution by asset type",
-        "Exposure summary dashboard",
-        "Risk reduction tracking",
+        'Risk score trending over time',
+        'Top risks by severity and impact',
+        'Risk distribution by asset type',
+        'Exposure summary dashboard',
+        'Risk reduction tracking',
       ]}
     />
-  );
+  )
 }

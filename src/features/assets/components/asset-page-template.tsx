@@ -64,13 +64,7 @@ export function AssetPageTemplate({
   additionalFilters,
 }: AssetPageTemplateProps) {
   // Fetch assets with type filter
-  const {
-    assets,
-    isLoading,
-    isError,
-    error,
-    mutate,
-  } = useAssets({
+  const { assets, isLoading, isError, error, mutate } = useAssets({
     types: [assetType],
     ...additionalFilters,
   })

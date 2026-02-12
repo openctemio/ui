@@ -8,15 +8,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Checkbox } from '@/components/ui/checkbox'
-import {
-  X,
-  Trash2,
-  Clock,
-  Link2,
-  Settings2,
-  Hash,
-  FileText,
-} from 'lucide-react'
+import { X, Trash2, Clock, Link2, Settings2, Hash, FileText } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { PipelineStep } from '@/lib/api'
 import type { ToolWithConfig } from '@/lib/api/tool-types'

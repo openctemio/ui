@@ -1,1 +1,1 @@
-export * from "./business-unit.schema";
+export * from './business-unit.schema'

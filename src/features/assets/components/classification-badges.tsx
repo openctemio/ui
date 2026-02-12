@@ -4,9 +4,9 @@
  * Visual badges for Asset Scope and Exposure Level classification
  */
 
-"use client";
+'use client'
 
-import * as React from "react";
+import * as React from 'react'
 import {
   Globe,
   Building2,
@@ -22,16 +22,11 @@ import {
   AlertTriangle,
   CircleDot,
   Minus,
-} from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { cn } from "@/lib/utils";
-import type { AssetScope, ExposureLevel, Criticality } from "../types";
+} from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { cn } from '@/lib/utils'
+import type { AssetScope, ExposureLevel, Criticality } from '../types'
 import {
   ASSET_SCOPE_LABELS,
   ASSET_SCOPE_DESCRIPTIONS,
@@ -42,7 +37,7 @@ import {
   CRITICALITY_LABELS,
   CRITICALITY_DESCRIPTIONS,
   CRITICALITY_COLORS,
-} from "../types";
+} from '../types'
 
 // Scope icons
 const SCOPE_ICONS: Record<AssetScope, React.ElementType> = {
@@ -52,7 +47,7 @@ const SCOPE_ICONS: Record<AssetScope, React.ElementType> = {
   partner: Users,
   vendor: Store,
   shadow: HelpCircle,
-};
+}
 
 // Exposure icons
 const EXPOSURE_ICONS: Record<ExposureLevel, React.ElementType> = {
@@ -61,7 +56,7 @@ const EXPOSURE_ICONS: Record<ExposureLevel, React.ElementType> = {
   private: EyeOff,
   isolated: Shield,
   unknown: AlertCircle,
-};
+}
 
 // Criticality icons
 const CRITICALITY_ICONS: Record<Criticality, React.ElementType> = {
@@ -69,46 +64,46 @@ const CRITICALITY_ICONS: Record<Criticality, React.ElementType> = {
   high: AlertCircle,
   medium: CircleDot,
   low: Minus,
-};
+}
 
 interface AssetScopeBadgeProps {
-  scope: AssetScope;
-  showIcon?: boolean;
-  showTooltip?: boolean;
-  size?: "sm" | "md";
-  className?: string;
+  scope: AssetScope
+  showIcon?: boolean
+  showTooltip?: boolean
+  size?: 'sm' | 'md'
+  className?: string
 }
 
 export function AssetScopeBadge({
   scope,
   showIcon = true,
   showTooltip = true,
-  size = "md",
+  size = 'md',
   className,
 }: AssetScopeBadgeProps) {
-  const colors = ASSET_SCOPE_COLORS[scope];
-  const Icon = SCOPE_ICONS[scope];
-  const label = ASSET_SCOPE_LABELS[scope];
-  const description = ASSET_SCOPE_DESCRIPTIONS[scope];
+  const colors = ASSET_SCOPE_COLORS[scope]
+  const Icon = SCOPE_ICONS[scope]
+  const label = ASSET_SCOPE_LABELS[scope]
+  const description = ASSET_SCOPE_DESCRIPTIONS[scope]
 
   const badge = (
     <Badge
       variant="outline"
       className={cn(
-        "gap-1 font-medium border",
+        'gap-1 font-medium border',
         colors.bg,
         colors.text,
         colors.border,
-        size === "sm" ? "text-xs px-1.5 py-0" : "text-xs px-2 py-0.5",
+        size === 'sm' ? 'text-xs px-1.5 py-0' : 'text-xs px-2 py-0.5',
         className
       )}
     >
-      {showIcon && <Icon className={size === "sm" ? "h-3 w-3" : "h-3.5 w-3.5"} />}
+      {showIcon && <Icon className={size === 'sm' ? 'h-3 w-3' : 'h-3.5 w-3.5'} />}
       {label}
     </Badge>
-  );
+  )
 
-  if (!showTooltip) return badge;
+  if (!showTooltip) return badge
 
   return (
     <TooltipProvider>
@@ -120,47 +115,47 @@ export function AssetScopeBadge({
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
-  );
+  )
 }
 
 interface ExposureBadgeProps {
-  exposure: ExposureLevel;
-  showIcon?: boolean;
-  showTooltip?: boolean;
-  size?: "sm" | "md";
-  className?: string;
+  exposure: ExposureLevel
+  showIcon?: boolean
+  showTooltip?: boolean
+  size?: 'sm' | 'md'
+  className?: string
 }
 
 export function ExposureBadge({
   exposure,
   showIcon = true,
   showTooltip = true,
-  size = "md",
+  size = 'md',
   className,
 }: ExposureBadgeProps) {
-  const colors = EXPOSURE_LEVEL_COLORS[exposure];
-  const Icon = EXPOSURE_ICONS[exposure];
-  const label = EXPOSURE_LEVEL_LABELS[exposure];
-  const description = EXPOSURE_LEVEL_DESCRIPTIONS[exposure];
+  const colors = EXPOSURE_LEVEL_COLORS[exposure]
+  const Icon = EXPOSURE_ICONS[exposure]
+  const label = EXPOSURE_LEVEL_LABELS[exposure]
+  const description = EXPOSURE_LEVEL_DESCRIPTIONS[exposure]
 
   const badge = (
     <Badge
       variant="outline"
       className={cn(
-        "gap-1 font-medium border",
+        'gap-1 font-medium border',
         colors.bg,
         colors.text,
         colors.border,
-        size === "sm" ? "text-xs px-1.5 py-0" : "text-xs px-2 py-0.5",
+        size === 'sm' ? 'text-xs px-1.5 py-0' : 'text-xs px-2 py-0.5',
         className
       )}
     >
-      {showIcon && <Icon className={size === "sm" ? "h-3 w-3" : "h-3.5 w-3.5"} />}
+      {showIcon && <Icon className={size === 'sm' ? 'h-3 w-3' : 'h-3.5 w-3.5'} />}
       {label}
     </Badge>
-  );
+  )
 
-  if (!showTooltip) return badge;
+  if (!showTooltip) return badge
 
   return (
     <TooltipProvider>
@@ -172,47 +167,47 @@ export function ExposureBadge({
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
-  );
+  )
 }
 
 interface CriticalityBadgeProps {
-  criticality: Criticality;
-  showIcon?: boolean;
-  showTooltip?: boolean;
-  size?: "sm" | "md";
-  className?: string;
+  criticality: Criticality
+  showIcon?: boolean
+  showTooltip?: boolean
+  size?: 'sm' | 'md'
+  className?: string
 }
 
 export function CriticalityBadge({
   criticality,
   showIcon = true,
   showTooltip = true,
-  size = "md",
+  size = 'md',
   className,
 }: CriticalityBadgeProps) {
-  const colors = CRITICALITY_COLORS[criticality];
-  const Icon = CRITICALITY_ICONS[criticality];
-  const label = CRITICALITY_LABELS[criticality];
-  const description = CRITICALITY_DESCRIPTIONS[criticality];
+  const colors = CRITICALITY_COLORS[criticality]
+  const Icon = CRITICALITY_ICONS[criticality]
+  const label = CRITICALITY_LABELS[criticality]
+  const description = CRITICALITY_DESCRIPTIONS[criticality]
 
   const badge = (
     <Badge
       variant="outline"
       className={cn(
-        "gap-1 font-medium border",
+        'gap-1 font-medium border',
         colors.bg,
         colors.text,
         colors.border,
-        size === "sm" ? "text-xs px-1.5 py-0" : "text-xs px-2 py-0.5",
+        size === 'sm' ? 'text-xs px-1.5 py-0' : 'text-xs px-2 py-0.5',
         className
       )}
     >
-      {showIcon && <Icon className={size === "sm" ? "h-3 w-3" : "h-3.5 w-3.5"} />}
+      {showIcon && <Icon className={size === 'sm' ? 'h-3 w-3' : 'h-3.5 w-3.5'} />}
       {label}
     </Badge>
-  );
+  )
 
-  if (!showTooltip) return badge;
+  if (!showTooltip) return badge
 
   return (
     <TooltipProvider>
@@ -224,17 +219,17 @@ export function CriticalityBadge({
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
-  );
+  )
 }
 
 interface ClassificationBadgesProps {
-  scope: AssetScope;
-  exposure: ExposureLevel;
-  criticality?: Criticality;
-  showIcons?: boolean;
-  showTooltips?: boolean;
-  size?: "sm" | "md";
-  className?: string;
+  scope: AssetScope
+  exposure: ExposureLevel
+  criticality?: Criticality
+  showIcons?: boolean
+  showTooltips?: boolean
+  size?: 'sm' | 'md'
+  className?: string
 }
 
 /**
@@ -246,11 +241,11 @@ export function ClassificationBadges({
   criticality,
   showIcons = true,
   showTooltips = true,
-  size = "md",
+  size = 'md',
   className,
 }: ClassificationBadgesProps) {
   return (
-    <div className={cn("flex items-center gap-1.5", className)}>
+    <div className={cn('flex items-center gap-1.5', className)}>
       {criticality && (
         <CriticalityBadge
           criticality={criticality}
@@ -259,12 +254,7 @@ export function ClassificationBadges({
           size={size}
         />
       )}
-      <AssetScopeBadge
-        scope={scope}
-        showIcon={showIcons}
-        showTooltip={showTooltips}
-        size={size}
-      />
+      <AssetScopeBadge scope={scope} showIcon={showIcons} showTooltip={showTooltips} size={size} />
       <ExposureBadge
         exposure={exposure}
         showIcon={showIcons}
@@ -272,5 +262,5 @@ export function ClassificationBadges({
         size={size}
       />
     </div>
-  );
+  )
 }

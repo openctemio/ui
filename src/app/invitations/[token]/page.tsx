@@ -5,13 +5,7 @@ import { useRouter, useParams } from 'next/navigation'
 import { Building2, Check, Loader2, X, LogIn, Clock, AlertTriangle } from 'lucide-react'
 import { toast } from 'sonner'
 
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -224,8 +218,12 @@ export default function InvitationPage() {
       <div className="min-h-screen flex items-center justify-center p-4 bg-muted/30">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
-            <div className={`mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full ${isExpired ? 'bg-yellow-500/10' : 'bg-green-500/10'}`}>
-              <StatusIcon className={`h-6 w-6 ${isExpired ? 'text-yellow-500' : 'text-green-500'}`} />
+            <div
+              className={`mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full ${isExpired ? 'bg-yellow-500/10' : 'bg-green-500/10'}`}
+            >
+              <StatusIcon
+                className={`h-6 w-6 ${isExpired ? 'text-yellow-500' : 'text-green-500'}`}
+              />
             </div>
             <CardTitle className="text-xl">Invitation {statusText}</CardTitle>
             <CardDescription>
@@ -242,7 +240,9 @@ export default function InvitationPage() {
               </div>
               <div>
                 <p className="font-medium">{invitation.tenant.name}</p>
-                <p className="text-sm text-muted-foreground capitalize">{invitation.invitation.role}</p>
+                <p className="text-sm text-muted-foreground capitalize">
+                  {invitation.invitation.role}
+                </p>
               </div>
             </div>
 
@@ -271,9 +271,7 @@ export default function InvitationPage() {
             <Building2 className="h-7 w-7 text-primary" />
           </div>
           <CardTitle className="text-xl">Team Invitation</CardTitle>
-          <CardDescription>
-            You&apos;ve been invited to join a team
-          </CardDescription>
+          <CardDescription>You&apos;ve been invited to join a team</CardDescription>
         </CardHeader>
 
         <CardContent className="space-y-5">
@@ -304,7 +302,9 @@ export default function InvitationPage() {
           <div className="space-y-2 text-sm">
             <div className="flex items-center justify-between py-2 border-b">
               <span className="text-muted-foreground">Invited by</span>
-              <span className="font-medium">{invitation?.invitation.inviter_name || 'A team member'}</span>
+              <span className="font-medium">
+                {invitation?.invitation.inviter_name || 'A team member'}
+              </span>
             </div>
             <div className="flex items-center justify-between py-2">
               <span className="text-muted-foreground">Invitation for</span>
@@ -323,12 +323,7 @@ export default function InvitationPage() {
 
           {/* Action Buttons */}
           <div className="flex flex-col gap-2">
-            <Button
-              className="w-full"
-              size="lg"
-              onClick={handleAccept}
-              disabled={isPending}
-            >
+            <Button className="w-full" size="lg" onClick={handleAccept} disabled={isPending}>
               {isPending ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
@@ -354,7 +349,11 @@ export default function InvitationPage() {
             <button
               type="button"
               className="text-primary hover:underline"
-              onClick={() => router.push(`/login?returnTo=/invitations/${token}&email=${encodeURIComponent(invitation?.invitation.email || '')}`)}
+              onClick={() =>
+                router.push(
+                  `/login?returnTo=/invitations/${token}&email=${encodeURIComponent(invitation?.invitation.email || '')}`
+                )
+              }
             >
               Log in with different account
             </button>

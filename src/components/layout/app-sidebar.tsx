@@ -1,26 +1,26 @@
-"use client";
+'use client'
 
-import { useLayout } from "@/context/layout-provider";
+import { useLayout } from '@/context/layout-provider'
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
   SidebarRail,
-} from "@/components/ui/sidebar";
+} from '@/components/ui/sidebar'
 // Use centralized sidebar data from features
-import { sidebarData } from "@/config/sidebar-data";
-import { useFilteredSidebarData } from "@/lib/permissions";
-import { NavGroup } from "./nav-group";
-import { SidebarUser } from "./sidebar-user";
-import { TeamSwitcher } from "./team-switcher";
-import { Separator } from "@/components/ui/separator";
-import { Skeleton } from "@/components/ui/skeleton";
+import { sidebarData } from '@/config/sidebar-data'
+import { useFilteredSidebarData } from '@/lib/permissions'
+import { NavGroup } from './nav-group'
+import { SidebarUser } from './sidebar-user'
+import { TeamSwitcher } from './team-switcher'
+import { Separator } from '@/components/ui/separator'
+import { Skeleton } from '@/components/ui/skeleton'
 
 export function AppSidebar() {
-  const { collapsible, variant } = useLayout();
+  const { collapsible, variant } = useLayout()
   // Filter sidebar items based on user permissions and modules
-  const { data: filteredSidebarData, isModulesLoading } = useFilteredSidebarData(sidebarData);
+  const { data: filteredSidebarData, isModulesLoading } = useFilteredSidebarData(sidebarData)
 
   return (
     <Sidebar collapsible={collapsible} variant={variant}>
@@ -44,9 +44,7 @@ export function AppSidebar() {
             ))}
           </div>
         ) : (
-          filteredSidebarData.navGroups.map((group) => (
-            <NavGroup key={group.title} {...group} />
-          ))
+          filteredSidebarData.navGroups.map((group) => <NavGroup key={group.title} {...group} />)
         )}
       </SidebarContent>
 
@@ -60,5 +58,5 @@ export function AppSidebar() {
       {/* Sidebar toggle rail */}
       <SidebarRail />
     </Sidebar>
-  );
+  )
 }

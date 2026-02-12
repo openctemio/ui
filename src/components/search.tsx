@@ -9,14 +9,11 @@ type SearchProps = {
   placeholder?: string
 }
 
-export function Search({
-  className = '',
-  placeholder = 'Search',
-}: SearchProps) {
+export function Search({ className = '', placeholder = 'Search' }: SearchProps) {
   const { setOpen } = useSearch()
   return (
     <Button
-      variant='outline'
+      variant="outline"
       className={cn(
         'bg-muted/25 group text-muted-foreground hover:bg-accent relative h-8 rounded-md text-sm font-normal shadow-none',
         // Mobile: icon only
@@ -29,13 +26,13 @@ export function Search({
       onClick={() => setOpen(true)}
     >
       <SearchIcon
-        aria-hidden='true'
-        className='sm:absolute sm:start-1.5 sm:top-1/2 sm:-translate-y-1/2'
+        aria-hidden="true"
+        className="sm:absolute sm:start-1.5 sm:top-1/2 sm:-translate-y-1/2"
         size={16}
       />
-      <span className='ms-4 hidden truncate sm:inline'>{placeholder}</span>
-      <kbd className='bg-muted group-hover:bg-accent pointer-events-none absolute end-[0.3rem] top-[0.3rem] hidden h-5 items-center gap-1 rounded border px-1.5 font-mono text-[10px] font-medium opacity-100 select-none sm:flex'>
-        <span className='text-xs'>⌘</span>K
+      <span className="ms-4 hidden truncate sm:inline">{placeholder}</span>
+      <kbd className="bg-muted group-hover:bg-accent pointer-events-none absolute end-[0.3rem] top-[0.3rem] hidden h-5 items-center gap-1 rounded border px-1.5 font-mono text-[10px] font-medium opacity-100 select-none sm:flex">
+        <span className="text-xs">⌘</span>K
       </kbd>
     </Button>
   )

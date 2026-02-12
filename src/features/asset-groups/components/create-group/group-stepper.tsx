@@ -5,24 +5,24 @@
  * 3-step flow: Basic Info -> Add Assets -> Review
  */
 
-import { cn } from "@/lib/utils";
-import { Check, FileText, Package, Eye } from "lucide-react";
+import { cn } from '@/lib/utils'
+import { Check, FileText, Package, Eye } from 'lucide-react'
 
-export type GroupWizardStep = "basic" | "add-assets" | "review";
+export type GroupWizardStep = 'basic' | 'add-assets' | 'review'
 
 interface GroupStepperProps {
-  currentStep: GroupWizardStep;
-  onStepClick?: (step: GroupWizardStep) => void;
+  currentStep: GroupWizardStep
+  onStepClick?: (step: GroupWizardStep) => void
 }
 
 const STEPS: { id: GroupWizardStep; label: string; icon: typeof FileText }[] = [
-  { id: "basic", label: "Basic Info", icon: FileText },
-  { id: "add-assets", label: "Add Assets", icon: Package },
-  { id: "review", label: "Review", icon: Eye },
-];
+  { id: 'basic', label: 'Basic Info', icon: FileText },
+  { id: 'add-assets', label: 'Add Assets', icon: Package },
+  { id: 'review', label: 'Review', icon: Eye },
+]
 
 export function GroupStepper({ currentStep, onStepClick }: GroupStepperProps) {
-  const currentIndex = STEPS.findIndex((s) => s.id === currentStep);
+  const currentIndex = STEPS.findIndex((s) => s.id === currentStep)
 
   return (
     <div className="px-6 py-5">
@@ -40,10 +40,10 @@ export function GroupStepper({ currentStep, onStepClick }: GroupStepperProps) {
         {/* Steps */}
         <div className="relative flex justify-between">
           {STEPS.map((step, index) => {
-            const isCompleted = index < currentIndex;
-            const isCurrent = index === currentIndex;
-            const isPending = index > currentIndex;
-            const StepIcon = step.icon;
+            const isCompleted = index < currentIndex
+            const isCurrent = index === currentIndex
+            const isPending = index > currentIndex
+            const StepIcon = step.icon
 
             return (
               <button
@@ -52,46 +52,48 @@ export function GroupStepper({ currentStep, onStepClick }: GroupStepperProps) {
                 onClick={() => isCompleted && onStepClick?.(step.id)}
                 disabled={!isCompleted}
                 className={cn(
-                  "flex flex-col items-center gap-2 group",
-                  isCompleted && "cursor-pointer"
+                  'flex flex-col items-center gap-2 group',
+                  isCompleted && 'cursor-pointer'
                 )}
               >
                 {/* Step circle */}
                 <div
                   className={cn(
-                    "relative z-10 flex h-8 w-8 items-center justify-center rounded-full border-2 transition-all duration-300",
-                    isCompleted && "border-primary bg-primary text-primary-foreground",
-                    isCurrent && "border-primary bg-background ring-4 ring-primary/20",
-                    isPending && "border-muted bg-background text-muted-foreground"
+                    'relative z-10 flex h-8 w-8 items-center justify-center rounded-full border-2 transition-all duration-300',
+                    isCompleted && 'border-primary bg-primary text-primary-foreground',
+                    isCurrent && 'border-primary bg-background ring-4 ring-primary/20',
+                    isPending && 'border-muted bg-background text-muted-foreground'
                   )}
                 >
                   {isCompleted ? (
                     <Check className="h-4 w-4" />
                   ) : (
-                    <StepIcon className={cn(
-                      "h-4 w-4",
-                      isCurrent && "text-primary",
-                      isPending && "text-muted-foreground"
-                    )} />
+                    <StepIcon
+                      className={cn(
+                        'h-4 w-4',
+                        isCurrent && 'text-primary',
+                        isPending && 'text-muted-foreground'
+                      )}
+                    />
                   )}
                 </div>
 
                 {/* Step label */}
                 <span
                   className={cn(
-                    "text-xs font-medium transition-colors hidden sm:block",
-                    isCompleted && "text-primary group-hover:text-primary/80",
-                    isCurrent && "text-foreground",
-                    isPending && "text-muted-foreground"
+                    'text-xs font-medium transition-colors hidden sm:block',
+                    isCompleted && 'text-primary group-hover:text-primary/80',
+                    isCurrent && 'text-foreground',
+                    isPending && 'text-muted-foreground'
                   )}
                 >
                   {step.label}
                 </span>
               </button>
-            );
+            )
           })}
         </div>
       </div>
     </div>
-  );
+  )
 }

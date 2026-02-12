@@ -24,20 +24,20 @@ import { env } from '@/lib/env'
 // ============================================
 
 export interface DynamicBadges {
-    /** Map of URL path to badge value */
-    [key: string]: string | undefined
+  /** Map of URL path to badge value */
+  [key: string]: string | undefined
 }
 
 interface DashboardStats {
-    findings: {
-        total: number
-        by_severity: Record<string, number>
-        by_status: Record<string, number>
-        overdue: number
-    }
-    assets: {
-        total: number
-    }
+  findings: {
+    total: number
+    by_severity: Record<string, number>
+    by_status: Record<string, number>
+    overdue: number
+  }
+  assets: {
+    total: number
+  }
 }
 
 // ============================================
@@ -51,21 +51,17 @@ interface DashboardStats {
  * @param shouldFetch - Whether to fetch data (based on permissions)
  */
 function useDashboardStatsForBadges(shouldFetch: boolean = true) {
-    const { currentTenant } = useTenant()
+  const { currentTenant } = useTenant()
 
-    // Only fetch when we have a tenant AND user has permission
-    const key = currentTenant?.id && shouldFetch ? '/api/v1/dashboard/stats' : null
+  // Only fetch when we have a tenant AND user has permission
+  const key = currentTenant?.id && shouldFetch ? '/api/v1/dashboard/stats' : null
 
-    return useSWR<DashboardStats>(
-        key,
-        (url: string) => get<DashboardStats>(url),
-        {
-            revalidateOnFocus: false,
-            revalidateOnReconnect: false,
-            dedupingInterval: 60000, // 60s cache - badges don't need real-time
-            errorRetryCount: 1,
-        }
-    )
+  return useSWR<DashboardStats>(key, (url: string) => get<DashboardStats>(url), {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+    dedupingInterval: 60000, // 60s cache - badges don't need real-time
+    errorRetryCount: 1,
+  })
 }
 
 /**
@@ -81,69 +77,75 @@ function useDashboardStatsForBadges(shouldFetch: boolean = true) {
  * // badges = { '/asset-groups': '12', '/findings': '24', ... }
  */
 export function useDynamicBadges(): DynamicBadges {
-    // Check if sidebar badges feature is enabled
-    const badgesEnabled = env.features.sidebarBadges
+  // Check if sidebar badges feature is enabled
+  const badgesEnabled = env.features.sidebarBadges
 
-    // Check user permissions to determine which APIs to call
-    const { can } = usePermissions()
-    const canReadGroups = can(Permission.GroupsRead)
-    const canReadFindings = can(Permission.FindingsRead)
-    const canReadCredentials = can(Permission.CredentialsRead)
-    const canReadDashboard = can(Permission.DashboardRead)
+  // Check user permissions to determine which APIs to call
+  const { can } = usePermissions()
+  const canReadGroups = can(Permission.GroupsRead)
+  const canReadFindings = can(Permission.FindingsRead)
+  const canReadCredentials = can(Permission.CredentialsRead)
+  const canReadDashboard = can(Permission.DashboardRead)
 
-    // Fetch asset group stats - only if badges enabled AND user has permission
-    const { data: assetGroupStats } = useAssetGroupStatsApi(
-        badgesEnabled && canReadGroups ? {
-            revalidateOnFocus: false,
-            dedupingInterval: 60000,
-        } : { isPaused: () => true } // Don't fetch if disabled or no permission
-    )
-
-    // Fetch dashboard stats for findings count - only if badges enabled AND user has permission
-    const { data: dashboardStats } = useDashboardStatsForBadges(badgesEnabled && canReadDashboard && canReadFindings)
-
-    // Fetch credential stats for credential leaks badge - only if badges enabled AND user has permission
-    const { data: credentialStats } = useCredentialStatsApi(
-        badgesEnabled && canReadCredentials ? {
-            revalidateOnFocus: false,
-            dedupingInterval: 60000,
-        } : { isPaused: () => true } // Don't fetch if disabled or no permission
-    )
-
-    const badges = useMemo(() => {
-        const result: DynamicBadges = {}
-
-        // Asset Groups badge - show total count
-        if (assetGroupStats?.total !== undefined && assetGroupStats.total > 0) {
-            result['/asset-groups'] = String(assetGroupStats.total)
+  // Fetch asset group stats - only if badges enabled AND user has permission
+  const { data: assetGroupStats } = useAssetGroupStatsApi(
+    badgesEnabled && canReadGroups
+      ? {
+          revalidateOnFocus: false,
+          dedupingInterval: 60000,
         }
+      : { isPaused: () => true } // Don't fetch if disabled or no permission
+  )
 
-        // Findings badge - show open findings count (exclude resolved/closed)
-        if (dashboardStats?.findings) {
-            const { by_status, total } = dashboardStats.findings
-            // Calculate open findings (total - resolved - closed)
-            const resolved = by_status?.resolved || 0
-            const closed = by_status?.closed || 0
-            const verified = by_status?.verified || 0
-            const openCount = total - resolved - closed - verified
+  // Fetch dashboard stats for findings count - only if badges enabled AND user has permission
+  const { data: dashboardStats } = useDashboardStatsForBadges(
+    badgesEnabled && canReadDashboard && canReadFindings
+  )
 
-            if (openCount > 0) {
-                result['/findings'] = String(openCount)
-            }
+  // Fetch credential stats for credential leaks badge - only if badges enabled AND user has permission
+  const { data: credentialStats } = useCredentialStatsApi(
+    badgesEnabled && canReadCredentials
+      ? {
+          revalidateOnFocus: false,
+          dedupingInterval: 60000,
         }
+      : { isPaused: () => true } // Don't fetch if disabled or no permission
+  )
 
-        // Credential Leaks badge - show active credential leak count
-        if (credentialStats?.by_state) {
-            const activeCount = credentialStats.by_state.active || 0
-            if (activeCount > 0) {
-                result['/credentials'] = String(activeCount)
-            }
-        }
+  const badges = useMemo(() => {
+    const result: DynamicBadges = {}
 
-        return result
-    }, [assetGroupStats, dashboardStats, credentialStats])
+    // Asset Groups badge - show total count
+    if (assetGroupStats?.total !== undefined && assetGroupStats.total > 0) {
+      result['/asset-groups'] = String(assetGroupStats.total)
+    }
 
-    return badges
+    // Findings badge - show open findings count (exclude resolved/closed)
+    if (dashboardStats?.findings) {
+      const { by_status, total } = dashboardStats.findings
+      // Calculate open findings (total - resolved - closed)
+      const resolved = by_status?.resolved || 0
+      const closed = by_status?.closed || 0
+      const verified = by_status?.verified || 0
+      const openCount = total - resolved - closed - verified
+
+      if (openCount > 0) {
+        result['/findings'] = String(openCount)
+      }
+    }
+
+    // Credential Leaks badge - show active credential leak count
+    if (credentialStats?.by_state) {
+      const activeCount = credentialStats.by_state.active || 0
+      if (activeCount > 0) {
+        result['/credentials'] = String(activeCount)
+      }
+    }
+
+    return result
+  }, [assetGroupStats, dashboardStats, credentialStats])
+
+  return badges
 }
 
 /**
@@ -151,14 +153,14 @@ export function useDynamicBadges(): DynamicBadges {
  * If dynamic badge exists, return it. Otherwise return static badge.
  */
 export function getBadgeValue(
-    badges: DynamicBadges,
-    url: string,
-    staticBadge?: string
+  badges: DynamicBadges,
+  url: string,
+  staticBadge?: string
 ): string | undefined {
-    // Prefer dynamic badge if available
-    if (badges[url] !== undefined) {
-        return badges[url]
-    }
-    // Fall back to static badge
-    return staticBadge
+  // Prefer dynamic badge if available
+  if (badges[url] !== undefined) {
+    return badges[url]
+  }
+  // Fall back to static badge
+  return staticBadge
 }

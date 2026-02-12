@@ -1,7 +1,7 @@
-"use client";
+'use client'
 
-import { ComingSoonPage } from "@/features/shared";
-import { Gauge } from "lucide-react";
+import { ComingSoonPage } from '@/features/shared'
+import { Gauge } from 'lucide-react'
 
 export default function ControlEffectivenessPage() {
   return (
@@ -11,12 +11,12 @@ export default function ControlEffectivenessPage() {
       phase="Validation"
       icon={Gauge}
       features={[
-        "Effectiveness scoring",
-        "Detection rate metrics",
-        "False positive analysis",
-        "Control performance trends",
-        "Optimization recommendations",
+        'Effectiveness scoring',
+        'Detection rate metrics',
+        'False positive analysis',
+        'Control performance trends',
+        'Optimization recommendations',
       ]}
     />
-  );
+  )
 }

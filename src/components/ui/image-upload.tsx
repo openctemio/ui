@@ -1,9 +1,9 @@
-"use client"
+'use client'
 
-import { useState, useRef, useCallback } from "react"
-import { Upload, X, Image as ImageIcon, Loader2 } from "lucide-react"
-import { Button } from "./button"
-import { cn } from "@/lib/utils"
+import { useState, useRef, useCallback } from 'react'
+import { Upload, X, Image as ImageIcon, Loader2 } from 'lucide-react'
+import { Button } from './button'
+import { cn } from '@/lib/utils'
 
 interface ImageUploadProps {
   value?: string
@@ -31,8 +31,8 @@ async function compressImage(
 ): Promise<string> {
   return new Promise((resolve, reject) => {
     const img = new Image()
-    const canvas = document.createElement("canvas")
-    const ctx = canvas.getContext("2d")
+    const canvas = document.createElement('canvas')
+    const ctx = canvas.getContext('2d')
 
     img.onload = () => {
       // Calculate new dimensions
@@ -52,24 +52,24 @@ async function compressImage(
       canvas.height = height
 
       if (!ctx) {
-        reject(new Error("Could not get canvas context"))
+        reject(new Error('Could not get canvas context'))
         return
       }
 
       // Draw and compress
       ctx.drawImage(img, 0, 0, width, height)
-      const dataUrl = canvas.toDataURL("image/jpeg", quality)
+      const dataUrl = canvas.toDataURL('image/jpeg', quality)
       resolve(dataUrl)
     }
 
-    img.onerror = () => reject(new Error("Failed to load image"))
+    img.onerror = () => reject(new Error('Failed to load image'))
 
     // Read file as data URL
     const reader = new FileReader()
     reader.onload = (e) => {
       img.src = e.target?.result as string
     }
-    reader.onerror = () => reject(new Error("Failed to read file"))
+    reader.onerror = () => reject(new Error('Failed to read file'))
     reader.readAsDataURL(file)
   })
 }
@@ -79,7 +79,7 @@ async function compressImage(
  */
 function getBase64SizeKB(base64: string): number {
   // Remove data URL prefix if present
-  const base64Data = base64.split(",")[1] || base64
+  const base64Data = base64.split(',')[1] || base64
   const padding = (base64Data.match(/=/g) || []).length
   return (base64Data.length * 0.75 - padding) / 1024
 }
@@ -91,10 +91,10 @@ export function ImageUpload({
   maxWidth = 200,
   maxHeight = 200,
   quality = 0.8,
-  accept = "image/png,image/jpeg,image/jpg,image/webp",
+  accept = 'image/png,image/jpeg,image/jpg,image/webp',
   className,
   disabled,
-  placeholder = "Upload image",
+  placeholder = 'Upload image',
 }: ImageUploadProps) {
   const [isProcessing, setIsProcessing] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -108,8 +108,8 @@ export function ImageUpload({
 
       try {
         // Validate file type
-        if (!file.type.startsWith("image/")) {
-          throw new Error("Please select an image file")
+        if (!file.type.startsWith('image/')) {
+          throw new Error('Please select an image file')
         }
 
         // Compress the image
@@ -136,7 +136,7 @@ export function ImageUpload({
           onChange(compressed)
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to process image")
+        setError(err instanceof Error ? err.message : 'Failed to process image')
       } finally {
         setIsProcessing(false)
       }
@@ -151,7 +151,7 @@ export function ImageUpload({
         processFile(file)
       }
       // Reset input so same file can be selected again
-      e.target.value = ""
+      e.target.value = ''
     },
     [processFile]
   )
@@ -188,7 +188,7 @@ export function ImageUpload({
   }, [])
 
   return (
-    <div className={cn("space-y-2", className)}>
+    <div className={cn('space-y-2', className)}>
       {/* Hidden file input */}
       <input
         ref={inputRef}
@@ -202,11 +202,7 @@ export function ImageUpload({
       {/* Preview or Upload area */}
       {value ? (
         <div className="relative inline-block">
-          <img
-            src={value}
-            alt="Uploaded"
-            className="h-20 w-20 rounded-lg object-cover border"
-          />
+          <img src={value} alt="Uploaded" className="h-20 w-20 rounded-lg object-cover border" />
           {!disabled && (
             <Button
               variant="destructive"
@@ -225,10 +221,12 @@ export function ImageUpload({
           onDragLeave={handleDragLeave}
           onDrop={!disabled && !isProcessing ? handleDrop : undefined}
           className={cn(
-            "flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed p-6 transition-colors",
-            isDragOver && "border-primary bg-primary/5",
-            !disabled && !isProcessing && "cursor-pointer hover:border-primary/50 hover:bg-muted/50",
-            disabled && "opacity-50 cursor-not-allowed"
+            'flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed p-6 transition-colors',
+            isDragOver && 'border-primary bg-primary/5',
+            !disabled &&
+              !isProcessing &&
+              'cursor-pointer hover:border-primary/50 hover:bg-muted/50',
+            disabled && 'opacity-50 cursor-not-allowed'
           )}
         >
           {isProcessing ? (
@@ -243,9 +241,7 @@ export function ImageUpload({
               </div>
               <div className="text-center">
                 <p className="text-sm font-medium">{placeholder}</p>
-                <p className="text-xs text-muted-foreground">
-                  Drag & drop or click to browse
-                </p>
+                <p className="text-xs text-muted-foreground">Drag & drop or click to browse</p>
                 <p className="text-xs text-muted-foreground mt-1">
                   Max {maxWidth}x{maxHeight}px, {maxSizeKB}KB
                 </p>
@@ -260,12 +256,7 @@ export function ImageUpload({
 
       {/* Change button when image exists */}
       {value && !disabled && (
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleClick}
-          disabled={isProcessing}
-        >
+        <Button variant="outline" size="sm" onClick={handleClick} disabled={isProcessing}>
           <Upload className="mr-2 h-4 w-4" />
           Change Image
         </Button>
