@@ -24,7 +24,6 @@ import type {
   CloneScanConfigRequest,
   BulkActionRequest,
   BulkActionResponse,
-  PipelineRun,
   PipelineRunWithFiltering,
   ScanSession,
   ScanSessionListResponse,

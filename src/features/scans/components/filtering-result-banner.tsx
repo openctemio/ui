@@ -5,7 +5,7 @@
  * Shows how many assets were scanned vs skipped
  */
 
-import { AlertTriangle, CheckCircle, Filter, Info, XCircle } from 'lucide-react'
+import { CheckCircle, Filter, Info, XCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
@@ -16,7 +16,7 @@ import { Button } from '@/components/ui/button'
 import { ChevronDown } from 'lucide-react'
 import { useState } from 'react'
 import type { FilteringResult } from '../types/scan.types'
-import { getCompatibilityStatus, COMPATIBILITY_STATUS_CONFIG } from '../types/scan.types'
+import { getCompatibilityStatus } from '../types/scan.types'
 import { ASSET_TYPE_LABELS } from '@/features/assets/types/asset.types'
 
 interface FilteringResultBannerProps {
@@ -42,8 +42,6 @@ export function FilteringResultBanner({
   }
 
   const status = getCompatibilityStatus(result.compatibilityPercent)
-  const config = COMPATIBILITY_STATUS_CONFIG[status]
-
   const handleDismiss = () => {
     setIsDismissed(true)
     onDismiss?.()
@@ -76,8 +74,6 @@ export function FilteringResultBanner({
       </Alert>
     )
   }
-
-  const StatusIcon = status === 'partial' ? AlertTriangle : XCircle
 
   return (
     <Alert

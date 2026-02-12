@@ -240,7 +240,6 @@ export function ActivityPanel({
         const aiMeta = activity.metadata as Record<string, unknown> | undefined
         const severity = aiMeta?.severity as string | undefined
         const riskScore = aiMeta?.risk_score as number | undefined
-        const riskLevel = aiMeta?.ai_risk_level as string | undefined
         const confidence = aiMeta?.ai_confidence as string | undefined
         const priorityRank = aiMeta?.priority_rank as number | undefined
         const recommendation = aiMeta?.ai_recommendation as string | undefined
