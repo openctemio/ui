@@ -115,9 +115,7 @@ export function getSafeLoginUrl(
  * @returns Safe logout URL
  */
 export function getSafeLogoutUrl(returnUrl?: string | null): string {
-  const safeReturnUrl = returnUrl
-    ? validateRedirectUrl(returnUrl, '/')
-    : '/'
+  const safeReturnUrl = returnUrl ? validateRedirectUrl(returnUrl, '/') : '/'
 
   return safeReturnUrl
 }
@@ -158,7 +156,7 @@ export function sanitizeUrlForDisplay(url: string): string {
 
     // Remove sensitive query parameters
     const sensitiveParams = ['token', 'access_token', 'refresh_token', 'code', 'session']
-    sensitiveParams.forEach(param => {
+    sensitiveParams.forEach((param) => {
       if (parsed.searchParams.has(param)) {
         parsed.searchParams.set(param, '***')
       }

@@ -22,9 +22,7 @@ export default function GlobalError({ error, reset }: ErrorProps) {
           An unexpected error occurred. Please try again.
         </p>
         {error.digest && (
-          <p className="text-muted-foreground mt-1 text-sm">
-            Error ID: {error.digest}
-          </p>
+          <p className="text-muted-foreground mt-1 text-sm">Error ID: {error.digest}</p>
         )}
       </div>
       <div className="flex gap-2">

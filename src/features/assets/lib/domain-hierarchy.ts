@@ -5,20 +5,20 @@
  * for displaying domains with their subdomains.
  */
 
-import type { Asset } from "../types";
+import type { Asset } from '../types'
 
 /**
  * Domain tree node representing a domain and its subdomains
  */
 export interface DomainTreeNode {
   /** The domain asset */
-  domain: Asset;
+  domain: Asset
   /** Child subdomains */
-  subdomains: DomainTreeNode[];
+  subdomains: DomainTreeNode[]
   /** Depth level (0 = root, 1 = subdomain, etc.) */
-  level: number;
+  level: number
   /** Whether this node is expanded in the UI */
-  isExpanded?: boolean;
+  isExpanded?: boolean
 }
 
 /**
@@ -26,19 +26,19 @@ export interface DomainTreeNode {
  */
 export interface DomainTableRow extends Asset {
   /** Depth level for indentation (0 = root) */
-  _level: number;
+  _level: number
   /** Whether this is a root domain */
-  _isRoot: boolean;
+  _isRoot: boolean
   /** Whether this row has children */
-  _hasChildren: boolean;
+  _hasChildren: boolean
   /** Number of subdomains */
-  _subdomainCount: number;
+  _subdomainCount: number
   /** Parent domain name (for subdomains) */
-  _parentDomain?: string;
+  _parentDomain?: string
   /** Root domain name */
-  _rootDomain: string;
+  _rootDomain: string
   /** Child domain IDs for expansion tracking */
-  _childIds: string[];
+  _childIds: string[]
 }
 
 /**
@@ -47,15 +47,41 @@ export interface DomainTableRow extends Asset {
  */
 const PUBLIC_SUFFIXES = new Set([
   // Generic TLDs
-  'com', 'net', 'org', 'edu', 'gov', 'mil', 'int',
+  'com',
+  'net',
+  'org',
+  'edu',
+  'gov',
+  'mil',
+  'int',
   // Country-code TLDs
-  'vn', 'io', 'co', 'uk', 'de', 'fr', 'jp', 'cn', 'au', 'ca', 'us',
+  'vn',
+  'io',
+  'co',
+  'uk',
+  'de',
+  'fr',
+  'jp',
+  'cn',
+  'au',
+  'ca',
+  'us',
   // Second-level TLDs
-  'com.vn', 'net.vn', 'org.vn', 'edu.vn', 'gov.vn',
-  'co.uk', 'org.uk', 'ac.uk',
-  'com.au', 'net.au', 'org.au',
-  'co.jp', 'ne.jp', 'or.jp',
-]);
+  'com.vn',
+  'net.vn',
+  'org.vn',
+  'edu.vn',
+  'gov.vn',
+  'co.uk',
+  'org.uk',
+  'ac.uk',
+  'com.au',
+  'net.au',
+  'org.au',
+  'co.jp',
+  'ne.jp',
+  'or.jp',
+])
 
 /**
  * Extract the root domain from a full domain name
@@ -69,21 +95,21 @@ const PUBLIC_SUFFIXES = new Set([
  * @returns Root domain
  */
 export function extractRootDomain(domain: string): string {
-  const parts = domain.toLowerCase().split('.');
+  const parts = domain.toLowerCase().split('.')
 
   if (parts.length <= 2) {
-    return domain.toLowerCase();
+    return domain.toLowerCase()
   }
 
   // Check for two-part TLDs (e.g., com.vn, co.uk)
-  const lastTwo = parts.slice(-2).join('.');
+  const lastTwo = parts.slice(-2).join('.')
   if (PUBLIC_SUFFIXES.has(lastTwo)) {
     // Return domain.tld.tld format (e.g., example.com.vn)
-    return parts.slice(-3).join('.');
+    return parts.slice(-3).join('.')
   }
 
   // Single TLD (e.g., .io, .com)
-  return parts.slice(-2).join('.');
+  return parts.slice(-2).join('.')
 }
 
 /**
@@ -97,21 +123,21 @@ export function extractRootDomain(domain: string): string {
  * @returns Parent domain or null if root
  */
 export function getParentDomain(domain: string): string | null {
-  const rootDomain = extractRootDomain(domain);
+  const rootDomain = extractRootDomain(domain)
 
   if (domain.toLowerCase() === rootDomain) {
-    return null;
+    return null
   }
 
-  const parts = domain.split('.');
-  const rootParts = rootDomain.split('.');
+  const parts = domain.split('.')
+  const rootParts = rootDomain.split('.')
 
   if (parts.length <= rootParts.length) {
-    return null;
+    return null
   }
 
   // Remove first part to get parent
-  return parts.slice(1).join('.');
+  return parts.slice(1).join('.')
 }
 
 /**
@@ -121,30 +147,30 @@ export function getParentDomain(domain: string): string | null {
  * @returns Depth level (0 = root)
  */
 export function getDomainLevel(domain: string): number {
-  const rootDomain = extractRootDomain(domain);
+  const rootDomain = extractRootDomain(domain)
 
   if (domain.toLowerCase() === rootDomain) {
-    return 0;
+    return 0
   }
 
-  const domainParts = domain.split('.');
-  const rootParts = rootDomain.split('.');
+  const domainParts = domain.split('.')
+  const rootParts = rootDomain.split('.')
 
-  return domainParts.length - rootParts.length;
+  return domainParts.length - rootParts.length
 }
 
 /**
  * Check if domain A is a subdomain of domain B
  */
 export function isSubdomainOf(domain: string, parent: string): boolean {
-  const domainLower = domain.toLowerCase();
-  const parentLower = parent.toLowerCase();
+  const domainLower = domain.toLowerCase()
+  const parentLower = parent.toLowerCase()
 
   if (domainLower === parentLower) {
-    return false;
+    return false
   }
 
-  return domainLower.endsWith('.' + parentLower);
+  return domainLower.endsWith('.' + parentLower)
 }
 
 /**
@@ -155,29 +181,29 @@ export function isSubdomainOf(domain: string, parent: string): boolean {
  */
 export function buildDomainTree(domains: Asset[]): DomainTreeNode[] {
   // Group domains by root domain
-  const domainMap = new Map<string, Asset[]>();
+  const domainMap = new Map<string, Asset[]>()
 
-  domains.forEach(domain => {
-    const rootDomain = extractRootDomain(domain.name);
-    const existing = domainMap.get(rootDomain) || [];
-    existing.push(domain);
-    domainMap.set(rootDomain, existing);
-  });
+  domains.forEach((domain) => {
+    const rootDomain = extractRootDomain(domain.name)
+    const existing = domainMap.get(rootDomain) || []
+    existing.push(domain)
+    domainMap.set(rootDomain, existing)
+  })
 
-  const trees: DomainTreeNode[] = [];
+  const trees: DomainTreeNode[] = []
 
   domainMap.forEach((domainList, _rootDomainName) => {
     // Sort by domain length (shorter = higher in hierarchy)
-    const sorted = [...domainList].sort((a, b) =>
-      a.name.split('.').length - b.name.split('.').length
-    );
+    const sorted = [...domainList].sort(
+      (a, b) => a.name.split('.').length - b.name.split('.').length
+    )
 
     // Find or create root domain
-    let rootAsset = sorted.find(d => extractRootDomain(d.name) === d.name.toLowerCase());
+    let rootAsset = sorted.find((d) => extractRootDomain(d.name) === d.name.toLowerCase())
 
     // If no root domain asset exists, use the shortest domain as root representative
     if (!rootAsset) {
-      rootAsset = sorted[0];
+      rootAsset = sorted[0]
     }
 
     // Build tree recursively
@@ -185,33 +211,33 @@ export function buildDomainTree(domains: Asset[]): DomainTreeNode[] {
       domain: rootAsset,
       subdomains: [],
       level: 0,
-    };
+    }
 
     // Add subdomains
-    sorted.forEach(domain => {
+    sorted.forEach((domain) => {
       if (domain.id !== rootAsset!.id) {
         const node: DomainTreeNode = {
           domain,
           subdomains: [],
           level: getDomainLevel(domain.name),
-        };
+        }
 
         // For simplicity, add all subdomains directly under root
         // In a more complex implementation, you could build nested levels
-        rootNode.subdomains.push(node);
+        rootNode.subdomains.push(node)
       }
-    });
+    })
 
     // Sort subdomains alphabetically
-    rootNode.subdomains.sort((a, b) => a.domain.name.localeCompare(b.domain.name));
+    rootNode.subdomains.sort((a, b) => a.domain.name.localeCompare(b.domain.name))
 
-    trees.push(rootNode);
-  });
+    trees.push(rootNode)
+  })
 
   // Sort trees by root domain name
-  trees.sort((a, b) => a.domain.name.localeCompare(b.domain.name));
+  trees.sort((a, b) => a.domain.name.localeCompare(b.domain.name))
 
-  return trees;
+  return trees
 }
 
 /**
@@ -221,11 +247,11 @@ export function buildDomainTree(domains: Asset[]): DomainTreeNode[] {
  * @returns Flattened array with hierarchy info for table display
  */
 export function flattenDomainTreeForTable(domains: Asset[]): DomainTableRow[] {
-  const tree = buildDomainTree(domains);
-  const rows: DomainTableRow[] = [];
+  const tree = buildDomainTree(domains)
+  const rows: DomainTableRow[] = []
 
-  tree.forEach(rootNode => {
-    const childIds = rootNode.subdomains.map(s => s.domain.id);
+  tree.forEach((rootNode) => {
+    const childIds = rootNode.subdomains.map((s) => s.domain.id)
 
     // Add root domain row
     rows.push({
@@ -236,10 +262,10 @@ export function flattenDomainTreeForTable(domains: Asset[]): DomainTableRow[] {
       _subdomainCount: rootNode.subdomains.length,
       _rootDomain: rootNode.domain.name,
       _childIds: childIds,
-    });
+    })
 
     // Add subdomain rows
-    rootNode.subdomains.forEach(subNode => {
+    rootNode.subdomains.forEach((subNode) => {
       rows.push({
         ...subNode.domain,
         _level: subNode.level,
@@ -249,38 +275,38 @@ export function flattenDomainTreeForTable(domains: Asset[]): DomainTableRow[] {
         _parentDomain: getParentDomain(subNode.domain.name) || rootNode.domain.name,
         _rootDomain: rootNode.domain.name,
         _childIds: [],
-      });
-    });
-  });
+      })
+    })
+  })
 
-  return rows;
+  return rows
 }
 
 /**
  * Get aggregate stats for a domain tree (root + subdomains)
  */
 export interface DomainTreeStats {
-  totalDomains: number;
-  totalFindings: number;
-  avgRiskScore: number;
-  maxRiskScore: number;
-  activeCount: number;
-  inactiveCount: number;
+  totalDomains: number
+  totalFindings: number
+  avgRiskScore: number
+  maxRiskScore: number
+  activeCount: number
+  inactiveCount: number
 }
 
 export function getDomainTreeStats(rootNode: DomainTreeNode): DomainTreeStats {
-  const allDomains = [rootNode.domain, ...rootNode.subdomains.map(s => s.domain)];
+  const allDomains = [rootNode.domain, ...rootNode.subdomains.map((s) => s.domain)]
 
-  const totalFindings = allDomains.reduce((sum, d) => sum + d.findingCount, 0);
-  const avgRiskScore = allDomains.reduce((sum, d) => sum + d.riskScore, 0) / allDomains.length;
-  const maxRiskScore = Math.max(...allDomains.map(d => d.riskScore));
+  const totalFindings = allDomains.reduce((sum, d) => sum + d.findingCount, 0)
+  const avgRiskScore = allDomains.reduce((sum, d) => sum + d.riskScore, 0) / allDomains.length
+  const maxRiskScore = Math.max(...allDomains.map((d) => d.riskScore))
 
   return {
     totalDomains: allDomains.length,
     totalFindings,
     avgRiskScore: Math.round(avgRiskScore),
     maxRiskScore,
-    activeCount: allDomains.filter(d => d.status === 'active').length,
-    inactiveCount: allDomains.filter(d => d.status === 'inactive').length,
-  };
+    activeCount: allDomains.filter((d) => d.status === 'active').length,
+    inactiveCount: allDomains.filter((d) => d.status === 'inactive').length,
+  }
 }

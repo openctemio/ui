@@ -1,7 +1,7 @@
-"use client";
+'use client'
 
-import { ComingSoonPage } from "@/features/shared";
-import { Shield } from "lucide-react";
+import { ComingSoonPage } from '@/features/shared'
+import { Shield } from 'lucide-react'
 
 export default function SecurityControlsPage() {
   return (
@@ -11,12 +11,12 @@ export default function SecurityControlsPage() {
       phase="Validation"
       icon={Shield}
       features={[
-        "Control inventory management",
-        "Control-to-threat mapping",
-        "Coverage gap analysis",
-        "Control maturity assessment",
-        "Framework alignment (NIST, CIS)",
+        'Control inventory management',
+        'Control-to-threat mapping',
+        'Coverage gap analysis',
+        'Control maturity assessment',
+        'Framework alignment (NIST, CIS)',
       ]}
     />
-  );
+  )
 }

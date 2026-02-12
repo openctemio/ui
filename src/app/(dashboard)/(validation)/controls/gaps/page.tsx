@@ -1,7 +1,7 @@
-"use client";
+'use client'
 
-import { ComingSoonPage } from "@/features/shared";
-import { AlertTriangle } from "lucide-react";
+import { ComingSoonPage } from '@/features/shared'
+import { AlertTriangle } from 'lucide-react'
 
 export default function ControlGapsPage() {
   return (
@@ -11,12 +11,12 @@ export default function ControlGapsPage() {
       phase="Validation"
       icon={AlertTriangle}
       features={[
-        "Gap identification by threat",
-        "Coverage heat maps",
-        "Priority recommendations",
-        "Investment planning support",
-        "Gap closure tracking",
+        'Gap identification by threat',
+        'Coverage heat maps',
+        'Priority recommendations',
+        'Investment planning support',
+        'Gap closure tracking',
       ]}
     />
-  );
+  )
 }

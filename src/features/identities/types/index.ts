@@ -4,4 +4,4 @@
  * Export all types for the Identity & Access Management feature
  */
 
-export * from "./identity.types";
+export * from './identity.types'

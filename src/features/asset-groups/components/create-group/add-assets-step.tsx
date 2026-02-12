@@ -8,176 +8,163 @@
  * Uses tabs for clear context switching
  */
 
-"use client";
+'use client'
 
-import * as React from "react";
-import {
-  Search,
-  Check,
-  X,
-  FolderOpen,
-  Plus,
-  Trash2,
-  ListChecks,
-  PlusCircle,
-} from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card } from "@/components/ui/card";
+import * as React from 'react'
+import { Search, Check, X, FolderOpen, Plus, Trash2, ListChecks, PlusCircle } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Card } from '@/components/ui/card'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { cn } from "@/lib/utils";
-import type { Asset, AssetType } from "@/features/assets/types";
-import { ASSET_TYPE_LABELS, ASSET_TYPE_COLORS } from "@/features/assets/types";
-import { useActiveAssetTypes } from "@/features/asset-types/api/use-asset-type-api";
-import type { CreateGroupFormData, NewAssetFormData } from "./types";
+} from '@/components/ui/select'
+import { cn } from '@/lib/utils'
+import type { Asset, AssetType } from '@/features/assets/types'
+import { ASSET_TYPE_LABELS, ASSET_TYPE_COLORS } from '@/features/assets/types'
+import { useActiveAssetTypes } from '@/features/asset-types/api/use-asset-type-api'
+import type { CreateGroupFormData, NewAssetFormData } from './types'
 
 interface AddAssetsStepProps {
-  data: CreateGroupFormData;
-  onChange: (data: Partial<CreateGroupFormData>) => void;
-  ungroupedAssets: Asset[];
+  data: CreateGroupFormData
+  onChange: (data: Partial<CreateGroupFormData>) => void
+  ungroupedAssets: Asset[]
 }
 
 function generateId(): string {
-  return `new-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+  return `new-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
 }
 
-export function AddAssetsStep({
-  data,
-  onChange,
-  ungroupedAssets,
-}: AddAssetsStepProps) {
-  const [searchQuery, setSearchQuery] = React.useState("");
-  const [typeFilter, setTypeFilter] = React.useState<AssetType | "all">("all");
-  const [newAssetType, setNewAssetType] = React.useState<AssetType>("domain");
-  const [newAssetName, setNewAssetName] = React.useState("");
+export function AddAssetsStep({ data, onChange, ungroupedAssets }: AddAssetsStepProps) {
+  const [searchQuery, setSearchQuery] = React.useState('')
+  const [typeFilter, setTypeFilter] = React.useState<AssetType | 'all'>('all')
+  const [newAssetType, setNewAssetType] = React.useState<AssetType>('domain')
+  const [newAssetName, setNewAssetName] = React.useState('')
 
   // Fetch asset types from API
-  const { assetTypes, isLoading: isLoadingTypes } = useActiveAssetTypes();
+  const { assetTypes, isLoading: isLoadingTypes } = useActiveAssetTypes()
 
   // Get current asset type info from API data
   const currentAssetTypeInfo = React.useMemo(
     () => assetTypes.find((t) => t.code === newAssetType),
     [assetTypes, newAssetType]
-  );
+  )
 
   // Get placeholder for current asset type
-  const currentPlaceholder = currentAssetTypeInfo?.pattern_placeholder ||
+  const currentPlaceholder =
+    currentAssetTypeInfo?.pattern_placeholder ||
     currentAssetTypeInfo?.pattern_example ||
-    "Enter asset name";
+    'Enter asset name'
 
   // Helper to get asset type name from API data
   const getAssetTypeName = React.useCallback(
     (typeCode: string) => {
-      const typeInfo = assetTypes.find((t) => t.code === typeCode);
-      return typeInfo?.name || ASSET_TYPE_LABELS[typeCode as AssetType] || typeCode;
+      const typeInfo = assetTypes.find((t) => t.code === typeCode)
+      return typeInfo?.name || ASSET_TYPE_LABELS[typeCode as AssetType] || typeCode
     },
     [assetTypes]
-  );
+  )
 
   // Validate input against pattern
   const validationResult = React.useMemo(() => {
     if (!newAssetName.trim()) {
-      return { isValid: true, error: null }; // Empty is ok (not submitted yet)
+      return { isValid: true, error: null } // Empty is ok (not submitted yet)
     }
 
-    const pattern = currentAssetTypeInfo?.pattern_regex;
+    const pattern = currentAssetTypeInfo?.pattern_regex
     if (!pattern) {
-      return { isValid: true, error: null }; // No pattern = always valid
+      return { isValid: true, error: null } // No pattern = always valid
     }
 
     try {
-      const regex = new RegExp(pattern);
-      const isValid = regex.test(newAssetName.trim());
+      const regex = new RegExp(pattern)
+      const isValid = regex.test(newAssetName.trim())
       return {
         isValid,
         error: isValid ? null : `Invalid ${currentAssetTypeInfo?.name || 'asset'} format`,
-      };
+      }
     } catch {
-      return { isValid: true, error: null }; // Invalid regex = skip validation
+      return { isValid: true, error: null } // Invalid regex = skip validation
     }
-  }, [newAssetName, currentAssetTypeInfo]);
-
+  }, [newAssetName, currentAssetTypeInfo])
 
   // Filter assets
   const filteredAssets = React.useMemo(() => {
-    let result = ungroupedAssets;
-    if (typeFilter !== "all") {
-      result = result.filter((asset) => asset.type === typeFilter);
+    let result = ungroupedAssets
+    if (typeFilter !== 'all') {
+      result = result.filter((asset) => asset.type === typeFilter)
     }
     if (searchQuery) {
-      const query = searchQuery.toLowerCase();
+      const query = searchQuery.toLowerCase()
       result = result.filter(
         (asset) =>
           asset.name.toLowerCase().includes(query) ||
           asset.description?.toLowerCase().includes(query)
-      );
+      )
     }
-    return result;
-  }, [ungroupedAssets, typeFilter, searchQuery]);
+    return result
+  }, [ungroupedAssets, typeFilter, searchQuery])
 
   // Toggle asset selection
   const toggleAsset = (assetId: string) => {
-    const isSelected = data.selectedAssetIds.includes(assetId);
+    const isSelected = data.selectedAssetIds.includes(assetId)
     onChange({
       selectedAssetIds: isSelected
         ? data.selectedAssetIds.filter((id) => id !== assetId)
         : [...data.selectedAssetIds, assetId],
-    });
-  };
+    })
+  }
 
   // Select all filtered assets
   const selectAll = () => {
-    const filteredIds = filteredAssets.map((a) => a.id);
-    const newSelection = new Set([...data.selectedAssetIds, ...filteredIds]);
-    onChange({ selectedAssetIds: Array.from(newSelection) });
-  };
+    const filteredIds = filteredAssets.map((a) => a.id)
+    const newSelection = new Set([...data.selectedAssetIds, ...filteredIds])
+    onChange({ selectedAssetIds: Array.from(newSelection) })
+  }
 
   // Deselect all
   const deselectAll = () => {
-    onChange({ selectedAssetIds: [] });
-  };
+    onChange({ selectedAssetIds: [] })
+  }
 
   // Add new asset
   const addNewAsset = () => {
-    if (!newAssetName.trim() || !validationResult.isValid) return;
+    if (!newAssetName.trim() || !validationResult.isValid) return
     const newAsset: NewAssetFormData = {
       id: generateId(),
       type: newAssetType,
       name: newAssetName.trim(),
-      description: "",
+      description: '',
       tags: [],
-    };
-    onChange({ newAssets: [...data.newAssets, newAsset] });
-    setNewAssetName("");
-  };
+    }
+    onChange({ newAssets: [...data.newAssets, newAsset] })
+    setNewAssetName('')
+  }
 
   // Delete new asset
   const deleteNewAsset = (id: string) => {
     onChange({
       newAssets: data.newAssets.filter((asset) => asset.id !== id),
-    });
-  };
+    })
+  }
 
   // Handle Enter key for quick add
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      addNewAsset();
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      addNewAsset()
     }
-  };
+  }
 
   // Total assets count
-  const totalCount = data.selectedAssetIds.length + data.newAssets.length;
+  const totalCount = data.selectedAssetIds.length + data.newAssets.length
 
   return (
     <div className="flex flex-col h-full p-6">
@@ -185,12 +172,10 @@ export function AddAssetsStep({
       <div className="flex items-center justify-between mb-4">
         <div>
           <h3 className="text-sm font-medium">Add Assets to Group</h3>
-          <p className="text-xs text-muted-foreground">
-            Select existing or create new assets
-          </p>
+          <p className="text-xs text-muted-foreground">Select existing or create new assets</p>
         </div>
-        <Badge variant={totalCount > 0 ? "default" : "secondary"}>
-          {totalCount} asset{totalCount !== 1 ? "s" : ""} added
+        <Badge variant={totalCount > 0 ? 'default' : 'secondary'}>
+          {totalCount} asset{totalCount !== 1 ? 's' : ''} added
         </Badge>
       </div>
 
@@ -232,11 +217,11 @@ export function AddAssetsStep({
             </div>
             <Select
               value={typeFilter}
-              onValueChange={(v) => setTypeFilter(v as AssetType | "all")}
+              onValueChange={(v) => setTypeFilter(v as AssetType | 'all')}
               disabled={isLoadingTypes}
             >
               <SelectTrigger className="w-[130px] h-9">
-                <SelectValue placeholder={isLoadingTypes ? "Loading..." : "All types"} />
+                <SelectValue placeholder={isLoadingTypes ? 'Loading...' : 'All types'} />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Types</SelectItem>
@@ -284,19 +269,19 @@ export function AddAssetsStep({
                 <FolderOpen className="h-8 w-8 mb-2 opacity-50" />
                 <p className="text-sm">No ungrouped assets</p>
                 <p className="text-xs">
-                  {searchQuery || typeFilter !== "all"
-                    ? "Try adjusting filters"
-                    : "Switch to Create New tab"}
+                  {searchQuery || typeFilter !== 'all'
+                    ? 'Try adjusting filters'
+                    : 'Switch to Create New tab'}
                 </p>
               </div>
             ) : (
               <div className="p-1.5 space-y-1">
                 {filteredAssets.map((asset) => {
-                  const isSelected = data.selectedAssetIds.includes(asset.id);
+                  const isSelected = data.selectedAssetIds.includes(asset.id)
                   const colors = ASSET_TYPE_COLORS[asset.type] || {
-                    bg: "bg-gray-500/15",
-                    text: "text-gray-600",
-                  };
+                    bg: 'bg-gray-500/15',
+                    text: 'text-gray-600',
+                  }
 
                   return (
                     <div
@@ -305,42 +290,35 @@ export function AddAssetsStep({
                       tabIndex={0}
                       onClick={() => toggleAsset(asset.id)}
                       onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault();
-                          toggleAsset(asset.id);
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          toggleAsset(asset.id)
                         }
                       }}
                       className={cn(
-                        "flex items-center gap-3 w-full p-2.5 rounded-md text-left transition-all cursor-pointer",
-                        isSelected
-                          ? "bg-primary/10 ring-1 ring-primary/30"
-                          : "hover:bg-muted/50"
+                        'flex items-center gap-3 w-full p-2.5 rounded-md text-left transition-all cursor-pointer',
+                        isSelected ? 'bg-primary/10 ring-1 ring-primary/30' : 'hover:bg-muted/50'
                       )}
                     >
-                      <Checkbox
-                        checked={isSelected}
-                        className="pointer-events-none"
-                      />
+                      <Checkbox checked={isSelected} className="pointer-events-none" />
                       <div
                         className={cn(
-                          "h-8 w-8 rounded-md flex items-center justify-center shrink-0",
+                          'h-8 w-8 rounded-md flex items-center justify-center shrink-0',
                           colors.bg
                         )}
                       >
-                        <span className={cn("text-xs font-bold", colors.text)}>
+                        <span className={cn('text-xs font-bold', colors.text)}>
                           {asset.type.charAt(0).toUpperCase()}
                         </span>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">
-                          {asset.name}
-                        </p>
+                        <p className="text-sm font-medium truncate">{asset.name}</p>
                         <p className="text-xs text-muted-foreground">
                           {getAssetTypeName(asset.type)}
                         </p>
                       </div>
                     </div>
-                  );
+                  )
                 })}
               </div>
             )}
@@ -358,7 +336,7 @@ export function AddAssetsStep({
                 disabled={isLoadingTypes}
               >
                 <SelectTrigger className="w-[140px] h-9">
-                  <SelectValue placeholder={isLoadingTypes ? "Loading..." : "Select type"} />
+                  <SelectValue placeholder={isLoadingTypes ? 'Loading...' : 'Select type'} />
                 </SelectTrigger>
                 <SelectContent>
                   {assetTypes.map((type) => (
@@ -374,8 +352,8 @@ export function AddAssetsStep({
                 onChange={(e) => setNewAssetName(e.target.value)}
                 onKeyDown={handleKeyDown}
                 className={cn(
-                  "flex-1 h-9",
-                  validationResult.error && "border-destructive focus-visible:ring-destructive"
+                  'flex-1 h-9',
+                  validationResult.error && 'border-destructive focus-visible:ring-destructive'
                 )}
               />
               <Button
@@ -416,9 +394,9 @@ export function AddAssetsStep({
               <div className="space-y-1.5">
                 {data.newAssets.map((asset) => {
                   const colors = ASSET_TYPE_COLORS[asset.type] || {
-                    bg: "bg-gray-500/15",
-                    text: "text-gray-600",
-                  };
+                    bg: 'bg-gray-500/15',
+                    text: 'text-gray-600',
+                  }
 
                   return (
                     <div
@@ -427,18 +405,16 @@ export function AddAssetsStep({
                     >
                       <div
                         className={cn(
-                          "h-8 w-8 rounded-md flex items-center justify-center shrink-0",
+                          'h-8 w-8 rounded-md flex items-center justify-center shrink-0',
                           colors.bg
                         )}
                       >
-                        <span className={cn("text-xs font-bold", colors.text)}>
+                        <span className={cn('text-xs font-bold', colors.text)}>
                           {asset.type.charAt(0).toUpperCase()}
                         </span>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">
-                          {asset.name}
-                        </p>
+                        <p className="text-sm font-medium truncate">{asset.name}</p>
                         <p className="text-xs text-muted-foreground">
                           {getAssetTypeName(asset.type)}
                         </p>
@@ -456,7 +432,7 @@ export function AddAssetsStep({
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     </div>
-                  );
+                  )
                 })}
               </div>
             )}
@@ -468,30 +444,26 @@ export function AddAssetsStep({
               {Object.entries(
                 data.newAssets.reduce(
                   (acc, asset) => {
-                    acc[asset.type] = (acc[asset.type] || 0) + 1;
-                    return acc;
+                    acc[asset.type] = (acc[asset.type] || 0) + 1
+                    return acc
                   },
                   {} as Record<AssetType, number>
                 )
               ).map(([type, count]) => {
                 const colors = ASSET_TYPE_COLORS[type as AssetType] || {
-                  bg: "bg-gray-500/15",
-                  text: "text-gray-600",
-                };
+                  bg: 'bg-gray-500/15',
+                  text: 'text-gray-600',
+                }
                 return (
-                  <Badge
-                    key={type}
-                    variant="outline"
-                    className={cn("text-xs", colors.text)}
-                  >
+                  <Badge key={type} variant="outline" className={cn('text-xs', colors.text)}>
                     {getAssetTypeName(type)}: {count}
                   </Badge>
-                );
+                )
               })}
             </div>
           )}
         </TabsContent>
       </Tabs>
     </div>
-  );
+  )
 }

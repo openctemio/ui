@@ -31,15 +31,11 @@ export default function DashboardError({ error, reset }: ErrorProps) {
             <AlertCircle className="h-6 w-6 text-destructive" />
           </div>
           <CardTitle>Something went wrong</CardTitle>
-          <CardDescription>
-            An error occurred while loading this page.
-          </CardDescription>
+          <CardDescription>An error occurred while loading this page.</CardDescription>
         </CardHeader>
         <CardContent className="text-center">
           {error.digest && (
-            <p className="text-muted-foreground text-sm">
-              Error ID: {error.digest}
-            </p>
+            <p className="text-muted-foreground text-sm">Error ID: {error.digest}</p>
           )}
         </CardContent>
         <CardFooter className="flex justify-center gap-2">

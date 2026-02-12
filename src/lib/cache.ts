@@ -7,7 +7,7 @@
  * @see https://nextjs.org/docs/app/api-reference/functions/unstable_cache
  */
 
-import { unstable_cache } from "next/cache";
+import { unstable_cache } from 'next/cache'
 
 /**
  * Cache duration presets (in seconds)
@@ -23,38 +23,38 @@ export const CACHE_DURATIONS = {
   VERY_LONG: 7200,
   /** 24 hours - for static reference data */
   DAY: 86400,
-} as const;
+} as const
 
 /**
  * Cache tags for invalidation
  */
 export const CACHE_TAGS = {
   // Assets
-  ASSETS: "assets",
-  DOMAINS: "assets:domains",
-  HOSTS: "assets:hosts",
-  CONTAINERS: "assets:containers",
-  CLOUD: "assets:cloud",
+  ASSETS: 'assets',
+  DOMAINS: 'assets:domains',
+  HOSTS: 'assets:hosts',
+  CONTAINERS: 'assets:containers',
+  CLOUD: 'assets:cloud',
 
   // Findings
-  FINDINGS: "findings",
-  FINDINGS_STATS: "findings:stats",
+  FINDINGS: 'findings',
+  FINDINGS_STATS: 'findings:stats',
 
   // Scans
-  SCANS: "scans",
-  ACTIVE_SCANS: "scans:active",
+  SCANS: 'scans',
+  ACTIVE_SCANS: 'scans:active',
 
   // Remediation
-  TASKS: "tasks",
-  WORKFLOWS: "workflows",
+  TASKS: 'tasks',
+  WORKFLOWS: 'workflows',
 
   // Settings
-  SETTINGS: "settings",
-  INTEGRATIONS: "integrations",
+  SETTINGS: 'settings',
+  INTEGRATIONS: 'integrations',
 
   // Reports
-  REPORTS: "reports",
-} as const;
+  REPORTS: 'reports',
+} as const
 
 /**
  * Create a cached fetch function for server-side data
@@ -75,16 +75,16 @@ export function cachedFetch<T>(
   fetchFn: () => Promise<T>,
   keyParts: string[],
   options: {
-    revalidate?: number;
-    tags?: string[];
+    revalidate?: number
+    tags?: string[]
   } = {}
 ): () => Promise<T> {
-  const { revalidate = CACHE_DURATIONS.MEDIUM, tags = [] } = options;
+  const { revalidate = CACHE_DURATIONS.MEDIUM, tags = [] } = options
 
   return unstable_cache(fetchFn, keyParts, {
     revalidate,
     tags,
-  });
+  })
 }
 
 /**
@@ -103,12 +103,12 @@ export const getCachedAssetStats = cachedFetch(
     // return res.json();
 
     // Placeholder - import from mock data for now
-    const { getAssetStats } = await import("@/features/assets");
-    return getAssetStats();
+    const { getAssetStats } = await import('@/features/assets')
+    return getAssetStats()
   },
-  ["asset-stats"],
+  ['asset-stats'],
   { revalidate: CACHE_DURATIONS.MEDIUM, tags: [CACHE_TAGS.ASSETS] }
-);
+)
 
 /**
  * Cached findings statistics fetcher
@@ -116,12 +116,12 @@ export const getCachedAssetStats = cachedFetch(
 export const getCachedFindingStats = cachedFetch(
   async () => {
     // TODO: Replace with actual API call
-    const { getFindingStats } = await import("@/features/findings");
-    return getFindingStats();
+    const { getFindingStats } = await import('@/features/findings')
+    return getFindingStats()
   },
-  ["finding-stats"],
+  ['finding-stats'],
   { revalidate: CACHE_DURATIONS.MEDIUM, tags: [CACHE_TAGS.FINDINGS_STATS] }
-);
+)
 
 /**
  * Cached scan statistics fetcher
@@ -129,12 +129,12 @@ export const getCachedFindingStats = cachedFetch(
 export const getCachedScanStats = cachedFetch(
   async () => {
     // TODO: Replace with actual API call
-    const { getScanStats } = await import("@/features/scans");
-    return getScanStats();
+    const { getScanStats } = await import('@/features/scans')
+    return getScanStats()
   },
-  ["scan-stats"],
+  ['scan-stats'],
   { revalidate: CACHE_DURATIONS.SHORT, tags: [CACHE_TAGS.SCANS] }
-);
+)
 
 /**
  * Helper to create a cached API fetcher with automatic error handling
@@ -142,37 +142,37 @@ export const getCachedScanStats = cachedFetch(
 export function createCachedApiClient<T>(
   endpoint: string,
   options: {
-    revalidate?: number;
-    tags?: string[];
-    fallback?: T;
+    revalidate?: number
+    tags?: string[]
+    fallback?: T
   } = {}
 ): () => Promise<T> {
-  const { revalidate = CACHE_DURATIONS.MEDIUM, tags = [], fallback } = options;
+  const { revalidate = CACHE_DURATIONS.MEDIUM, tags = [], fallback } = options
 
   return unstable_cache(
     async () => {
       try {
-        const baseUrl = process.env.BACKEND_API_URL || "http://localhost:8080";
+        const baseUrl = process.env.BACKEND_API_URL || 'http://localhost:8080'
         const res = await fetch(`${baseUrl}${endpoint}`, {
           headers: {
-            "Content-Type": "application/json",
+            'Content-Type': 'application/json',
           },
-        });
+        })
 
         if (!res.ok) {
-          console.error(`API error: ${res.status} ${res.statusText}`);
-          if (fallback !== undefined) return fallback;
-          throw new Error(`API error: ${res.status}`);
+          console.error(`API error: ${res.status} ${res.statusText}`)
+          if (fallback !== undefined) return fallback
+          throw new Error(`API error: ${res.status}`)
         }
 
-        return res.json();
+        return res.json()
       } catch (error) {
-        console.error(`Failed to fetch ${endpoint}:`, error);
-        if (fallback !== undefined) return fallback;
-        throw error;
+        console.error(`Failed to fetch ${endpoint}:`, error)
+        if (fallback !== undefined) return fallback
+        throw error
       }
     },
     [endpoint],
     { revalidate, tags }
-  );
+  )
 }

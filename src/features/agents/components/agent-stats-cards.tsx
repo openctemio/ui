@@ -1,40 +1,28 @@
-'use client';
+'use client'
 
-import {
-  Card,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import {
-  Bot,
-  CheckCircle,
-  AlertCircle,
-  Play,
-  Server,
-  Database,
-} from 'lucide-react';
-import type { Agent, AgentType, ExecutionMode } from '@/lib/api/agent-types';
+import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Bot, CheckCircle, AlertCircle, Play, Server, Database } from 'lucide-react'
+import type { Agent, AgentType, ExecutionMode } from '@/lib/api/agent-types'
 
 interface AgentStats {
-  total: number;
-  active: number;        // status === 'active'
-  disabled: number;      // status === 'disabled' || status === 'revoked'
-  online: number;        // health === 'online' (for active agents)
-  offline: number;       // health === 'offline' || health === 'unknown'
-  error: number;         // health === 'error'
-  byType: Record<AgentType, number>;
-  byMode: Record<ExecutionMode, number>;
+  total: number
+  active: number // status === 'active'
+  disabled: number // status === 'disabled' || status === 'revoked'
+  online: number // health === 'online' (for active agents)
+  offline: number // health === 'offline' || health === 'unknown'
+  error: number // health === 'error'
+  byType: Record<AgentType, number>
+  byMode: Record<ExecutionMode, number>
 }
 
 interface AgentStatsCardsProps {
-  agents: Agent[];
-  activeFilter: string | null;
-  onFilterChange: (filter: string | null) => void;
+  agents: Agent[]
+  activeFilter: string | null
+  onFilterChange: (filter: string | null) => void
 }
 
 function calculateAgentStats(agents: Agent[]): AgentStats {
-  const activeAgents = agents.filter((a) => a.status === 'active');
+  const activeAgents = agents.filter((a) => a.status === 'active')
 
   return {
     total: agents.length,
@@ -53,15 +41,11 @@ function calculateAgentStats(agents: Agent[]): AgentStats {
       standalone: agents.filter((a) => a.execution_mode === 'standalone').length,
       daemon: agents.filter((a) => a.execution_mode === 'daemon').length,
     },
-  };
+  }
 }
 
-export function AgentStatsCards({
-  agents,
-  activeFilter,
-  onFilterChange,
-}: AgentStatsCardsProps) {
-  const stats = calculateAgentStats(agents);
+export function AgentStatsCards({ agents, activeFilter, onFilterChange }: AgentStatsCardsProps) {
+  const stats = calculateAgentStats(agents)
 
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
@@ -86,9 +70,7 @@ export function AgentStatsCards({
         className={`cursor-pointer transition-colors hover:border-green-500 ${
           activeFilter === 'health:online' ? 'border-green-500' : ''
         }`}
-        onClick={() =>
-          onFilterChange(activeFilter === 'health:online' ? null : 'health:online')
-        }
+        onClick={() => onFilterChange(activeFilter === 'health:online' ? null : 'health:online')}
       >
         <CardHeader className="pb-2">
           <CardDescription className="flex items-center gap-2">
@@ -104,9 +86,7 @@ export function AgentStatsCards({
         className={`cursor-pointer transition-colors hover:border-red-500 ${
           activeFilter === 'health:error' ? 'border-red-500' : ''
         }`}
-        onClick={() =>
-          onFilterChange(activeFilter === 'health:error' ? null : 'health:error')
-        }
+        onClick={() => onFilterChange(activeFilter === 'health:error' ? null : 'health:error')}
       >
         <CardHeader className="pb-2">
           <CardDescription className="flex items-center gap-2">
@@ -122,9 +102,7 @@ export function AgentStatsCards({
         className={`cursor-pointer transition-colors hover:border-blue-500 ${
           activeFilter === 'mode:daemon' ? 'border-blue-500' : ''
         }`}
-        onClick={() =>
-          onFilterChange(activeFilter === 'mode:daemon' ? null : 'mode:daemon')
-        }
+        onClick={() => onFilterChange(activeFilter === 'mode:daemon' ? null : 'mode:daemon')}
       >
         <CardHeader className="pb-2">
           <CardDescription className="flex items-center gap-2">
@@ -149,9 +127,7 @@ export function AgentStatsCards({
             <Play className="h-4 w-4 text-purple-500" />
             CI/CD
           </CardDescription>
-          <CardTitle className="text-2xl text-purple-500">
-            {stats.byMode.standalone}
-          </CardTitle>
+          <CardTitle className="text-2xl text-purple-500">{stats.byMode.standalone}</CardTitle>
         </CardHeader>
       </Card>
 
@@ -160,29 +136,25 @@ export function AgentStatsCards({
         className={`cursor-pointer transition-colors hover:border-orange-500 ${
           activeFilter === 'type:collector' ? 'border-orange-500' : ''
         }`}
-        onClick={() =>
-          onFilterChange(activeFilter === 'type:collector' ? null : 'type:collector')
-        }
+        onClick={() => onFilterChange(activeFilter === 'type:collector' ? null : 'type:collector')}
       >
         <CardHeader className="pb-2">
           <CardDescription className="flex items-center gap-2">
             <Database className="h-4 w-4 text-orange-500" />
             Collectors
           </CardDescription>
-          <CardTitle className="text-2xl text-orange-500">
-            {stats.byType.collector}
-          </CardTitle>
+          <CardTitle className="text-2xl text-orange-500">{stats.byType.collector}</CardTitle>
         </CardHeader>
       </Card>
     </div>
-  );
+  )
 }
 
 /**
  * Compact stats for inline display
  */
 export function AgentStatsInline({ agents }: { agents: Agent[] }) {
-  const stats = calculateAgentStats(agents);
+  const stats = calculateAgentStats(agents)
 
   return (
     <div className="flex items-center gap-3 text-sm">
@@ -190,5 +162,5 @@ export function AgentStatsInline({ agents }: { agents: Agent[] }) {
       <span className="text-green-500">{stats.online} online</span>
       {stats.error > 0 && <span className="text-red-500">{stats.error} error</span>}
     </div>
-  );
+  )
 }

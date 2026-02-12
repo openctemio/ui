@@ -1,4 +1,4 @@
-'use client';
+'use client'
 
 /**
  * Groups API Hooks
@@ -6,9 +6,9 @@
  * SWR hooks for fetching and managing groups.
  */
 
-import useSWR from 'swr';
-import useSWRMutation from 'swr/mutation';
-import { fetcher, fetcherWithOptions } from '@/lib/api/client';
+import useSWR from 'swr'
+import useSWRMutation from 'swr/mutation'
+import { fetcher, fetcherWithOptions } from '@/lib/api/client'
 import type {
   Group,
   GroupWithDetails,
@@ -21,13 +21,13 @@ import type {
   AssignPermissionSetInput,
   GroupMember,
   GroupAsset,
-} from '../types';
-import type { PermissionSet } from '../types/permission-set.types';
+} from '../types'
+import type { PermissionSet } from '../types/permission-set.types'
 
-const API_BASE = '/api/v1/groups';
+const API_BASE = '/api/v1/groups'
 
 // Generic API response type - using Record for flexible property access
-type ApiResponse<T> = T[] | Record<string, T[] | unknown>;
+type ApiResponse<T> = T[] | Record<string, T[] | unknown>
 
 // ============================================
 // FETCH HOOKS
@@ -37,24 +37,20 @@ type ApiResponse<T> = T[] | Record<string, T[] | unknown>;
  * Fetch all groups for the current tenant
  */
 export function useGroups(filters?: GroupFilters) {
-  const params = new URLSearchParams();
-  if (filters?.type) params.set('type', filters.type);
-  if (filters?.search) params.set('search', filters.search);
+  const params = new URLSearchParams()
+  if (filters?.type) params.set('type', filters.type)
+  if (filters?.search) params.set('search', filters.search)
 
-  const queryString = params.toString();
-  const url = queryString ? `${API_BASE}?${queryString}` : API_BASE;
+  const queryString = params.toString()
+  const url = queryString ? `${API_BASE}?${queryString}` : API_BASE
 
-  const { data, error, isLoading, mutate } = useSWR<{ groups: Group[] } | Group[]>(
-    url,
-    fetcher,
-    {
-      revalidateOnFocus: false,
-      dedupingInterval: 30000,
-    }
-  );
+  const { data, error, isLoading, mutate } = useSWR<{ groups: Group[] } | Group[]>(url, fetcher, {
+    revalidateOnFocus: false,
+    dedupingInterval: 30000,
+  })
 
   // Defensive access: support both { groups: [...] } and [...]
-  const groups = Array.isArray(data) ? data : data?.groups || [];
+  const groups = Array.isArray(data) ? data : data?.groups || []
 
   return {
     groups,
@@ -62,7 +58,7 @@ export function useGroups(filters?: GroupFilters) {
     isError: !!error,
     error,
     mutate,
-  };
+  }
 }
 
 /**
@@ -76,9 +72,9 @@ export function useMyGroups() {
       revalidateOnFocus: false,
       dedupingInterval: 30000,
     }
-  );
+  )
 
-  const groups = Array.isArray(data) ? data : data?.groups || [];
+  const groups = Array.isArray(data) ? data : data?.groups || []
 
   return {
     groups,
@@ -86,19 +82,19 @@ export function useMyGroups() {
     isError: !!error,
     error,
     mutate,
-  };
+  }
 }
 
 export interface UseGroupOptions {
   /** Set to true to skip fetching (for lazy loading) */
-  skip?: boolean;
+  skip?: boolean
 }
 
 /**
  * Fetch a single group with full details
  */
 export function useGroup(groupId: string | null, options?: UseGroupOptions) {
-  const shouldFetch = !options?.skip && groupId;
+  const shouldFetch = !options?.skip && groupId
 
   const { data, error, isLoading, mutate } = useSWR<GroupWithDetails>(
     shouldFetch ? `${API_BASE}/${groupId}` : null,
@@ -107,11 +103,11 @@ export function useGroup(groupId: string | null, options?: UseGroupOptions) {
       revalidateOnFocus: false,
       dedupingInterval: 30000,
     }
-  );
+  )
 
   // Assuming single resource is always returned as the object itself based on recent fix
   // But could also support wrapped if needed, though simpler is better for single resource
-  const group = data || null;
+  const group = data || null
 
   return {
     group,
@@ -119,14 +115,14 @@ export function useGroup(groupId: string | null, options?: UseGroupOptions) {
     isError: !!error,
     error,
     mutate,
-  };
+  }
 }
 
 /**
  * Fetch group members
  */
 export function useGroupMembers(groupId: string | null, options?: UseGroupOptions) {
-  const shouldFetch = !options?.skip && groupId;
+  const shouldFetch = !options?.skip && groupId
 
   const { data, error, isLoading, mutate } = useSWR<ApiResponse<GroupMember>>(
     shouldFetch ? `${API_BASE}/${groupId}/members` : null,
@@ -135,18 +131,18 @@ export function useGroupMembers(groupId: string | null, options?: UseGroupOption
       revalidateOnFocus: false,
       dedupingInterval: 30000,
     }
-  );
+  )
 
   // Try to find the array in common locations
-  let members: GroupMember[] = [];
+  let members: GroupMember[] = []
   if (Array.isArray(data)) {
-    members = data;
+    members = data
   } else if (data?.members && Array.isArray(data.members)) {
-    members = data.members;
+    members = data.members
   } else if (data?.users && Array.isArray(data.users)) {
-    members = data.users;
+    members = data.users
   } else if (data?.data && Array.isArray(data.data)) {
-    members = data.data;
+    members = data.data
   }
 
   return {
@@ -155,14 +151,14 @@ export function useGroupMembers(groupId: string | null, options?: UseGroupOption
     isError: !!error,
     error,
     mutate,
-  };
+  }
 }
 
 /**
  * Fetch group's assigned permission sets
  */
 export function useGroupPermissionSets(groupId: string | null, options?: UseGroupOptions) {
-  const shouldFetch = !options?.skip && groupId;
+  const shouldFetch = !options?.skip && groupId
 
   const { data, error, isLoading, mutate } = useSWR<ApiResponse<PermissionSet>>(
     shouldFetch ? `${API_BASE}/${groupId}/permission-sets` : null,
@@ -171,15 +167,15 @@ export function useGroupPermissionSets(groupId: string | null, options?: UseGrou
       revalidateOnFocus: false,
       dedupingInterval: 30000,
     }
-  );
+  )
 
-  let permissionSets: PermissionSet[] = [];
+  let permissionSets: PermissionSet[] = []
   if (Array.isArray(data)) {
-    permissionSets = data;
+    permissionSets = data
   } else if (data?.permission_sets && Array.isArray(data.permission_sets)) {
-    permissionSets = data.permission_sets;
+    permissionSets = data.permission_sets
   } else if (data?.data && Array.isArray(data.data)) {
-    permissionSets = data.data;
+    permissionSets = data.data
   }
 
   return {
@@ -188,14 +184,14 @@ export function useGroupPermissionSets(groupId: string | null, options?: UseGrou
     isError: !!error,
     error,
     mutate,
-  };
+  }
 }
 
 /**
  * Fetch group's assets
  */
 export function useGroupAssets(groupId: string | null, options?: UseGroupOptions) {
-  const shouldFetch = !options?.skip && groupId;
+  const shouldFetch = !options?.skip && groupId
 
   const { data, error, isLoading, mutate } = useSWR<ApiResponse<GroupAsset>>(
     shouldFetch ? `${API_BASE}/${groupId}/assets` : null,
@@ -204,15 +200,15 @@ export function useGroupAssets(groupId: string | null, options?: UseGroupOptions
       revalidateOnFocus: false,
       dedupingInterval: 30000,
     }
-  );
+  )
 
-  let assets: GroupAsset[] = [];
+  let assets: GroupAsset[] = []
   if (Array.isArray(data)) {
-    assets = data;
+    assets = data
   } else if (data?.assets && Array.isArray(data.assets)) {
-    assets = data.assets;
+    assets = data.assets
   } else if (data?.data && Array.isArray(data.data)) {
-    assets = data.data;
+    assets = data.data
   }
 
   return {
@@ -221,7 +217,7 @@ export function useGroupAssets(groupId: string | null, options?: UseGroupOptions
     isError: !!error,
     error,
     mutate,
-  };
+  }
 }
 
 // ============================================
@@ -232,30 +228,27 @@ async function createGroupMutation(url: string, { arg }: { arg: CreateGroupInput
   return fetcherWithOptions<{ group: Group }>(url, {
     method: 'POST',
     body: JSON.stringify(arg),
-  });
+  })
 }
 
 /**
  * Hook to create a new group
  */
 export function useCreateGroup() {
-  const { trigger, isMutating, error } = useSWRMutation(
-    API_BASE,
-    createGroupMutation
-  );
+  const { trigger, isMutating, error } = useSWRMutation(API_BASE, createGroupMutation)
 
   return {
     createGroup: trigger,
     isCreating: isMutating,
     error,
-  };
+  }
 }
 
 async function updateGroupMutation(url: string, { arg }: { arg: UpdateGroupInput }) {
   return fetcherWithOptions<{ group: Group }>(url, {
     method: 'PUT',
     body: JSON.stringify(arg),
-  });
+  })
 }
 
 /**
@@ -265,19 +258,19 @@ export function useUpdateGroup(groupId: string | null) {
   const { trigger, isMutating, error } = useSWRMutation(
     groupId ? `${API_BASE}/${groupId}` : null,
     updateGroupMutation
-  );
+  )
 
   return {
     updateGroup: trigger,
     isUpdating: isMutating,
     error,
-  };
+  }
 }
 
 async function deleteGroupMutation(url: string) {
   return fetcherWithOptions<void>(url, {
     method: 'DELETE',
-  });
+  })
 }
 
 /**
@@ -287,13 +280,13 @@ export function useDeleteGroup(groupId: string | null) {
   const { trigger, isMutating, error } = useSWRMutation(
     groupId ? `${API_BASE}/${groupId}` : null,
     deleteGroupMutation
-  );
+  )
 
   return {
     deleteGroup: trigger,
     isDeleting: isMutating,
     error,
-  };
+  }
 }
 
 // ============================================
@@ -304,7 +297,7 @@ async function addMemberMutation(url: string, { arg }: { arg: AddGroupMemberInpu
   return fetcherWithOptions<void>(url, {
     method: 'POST',
     body: JSON.stringify(arg),
-  });
+  })
 }
 
 /**
@@ -314,20 +307,20 @@ export function useAddGroupMember(groupId: string | null) {
   const { trigger, isMutating, error } = useSWRMutation(
     groupId ? `${API_BASE}/${groupId}/members` : null,
     addMemberMutation
-  );
+  )
 
   return {
     addMember: trigger,
     isAdding: isMutating,
     error,
-  };
+  }
 }
 
 async function updateMemberMutation(url: string, { arg }: { arg: UpdateGroupMemberInput }) {
   return fetcherWithOptions<void>(url, {
     method: 'PUT',
     body: JSON.stringify(arg),
-  });
+  })
 }
 
 /**
@@ -337,19 +330,19 @@ export function useUpdateGroupMember(groupId: string | null, userId: string | nu
   const { trigger, isMutating, error } = useSWRMutation(
     groupId && userId ? `${API_BASE}/${groupId}/members/${userId}` : null,
     updateMemberMutation
-  );
+  )
 
   return {
     updateMember: trigger,
     isUpdating: isMutating,
     error,
-  };
+  }
 }
 
 async function removeMemberMutation(url: string) {
   return fetcherWithOptions<void>(url, {
     method: 'DELETE',
-  });
+  })
 }
 
 /**
@@ -359,13 +352,13 @@ export function useRemoveGroupMember(groupId: string | null, userId: string | nu
   const { trigger, isMutating, error } = useSWRMutation(
     groupId && userId ? `${API_BASE}/${groupId}/members/${userId}` : null,
     removeMemberMutation
-  );
+  )
 
   return {
     removeMember: trigger,
     isRemoving: isMutating,
     error,
-  };
+  }
 }
 
 // ============================================
@@ -376,7 +369,7 @@ async function assignAssetMutation(url: string, { arg }: { arg: AssignAssetInput
   return fetcherWithOptions<void>(url, {
     method: 'POST',
     body: JSON.stringify(arg),
-  });
+  })
 }
 
 /**
@@ -386,19 +379,19 @@ export function useAssignAssetToGroup(groupId: string | null) {
   const { trigger, isMutating, error } = useSWRMutation(
     groupId ? `${API_BASE}/${groupId}/assets` : null,
     assignAssetMutation
-  );
+  )
 
   return {
     assignAsset: trigger,
     isAssigning: isMutating,
     error,
-  };
+  }
 }
 
 async function unassignAssetMutation(url: string) {
   return fetcherWithOptions<void>(url, {
     method: 'DELETE',
-  });
+  })
 }
 
 /**
@@ -408,24 +401,27 @@ export function useUnassignAssetFromGroup(groupId: string | null, assetId: strin
   const { trigger, isMutating, error } = useSWRMutation(
     groupId && assetId ? `${API_BASE}/${groupId}/assets/${assetId}` : null,
     unassignAssetMutation
-  );
+  )
 
   return {
     unassignAsset: trigger,
     isUnassigning: isMutating,
     error,
-  };
+  }
 }
 
 // ============================================
 // PERMISSION SET MUTATIONS
 // ============================================
 
-async function assignPermissionSetMutation(url: string, { arg }: { arg: AssignPermissionSetInput }) {
+async function assignPermissionSetMutation(
+  url: string,
+  { arg }: { arg: AssignPermissionSetInput }
+) {
   return fetcherWithOptions<void>(url, {
     method: 'POST',
     body: JSON.stringify(arg),
-  });
+  })
 }
 
 /**
@@ -435,35 +431,38 @@ export function useAssignPermissionSetToGroup(groupId: string | null) {
   const { trigger, isMutating, error } = useSWRMutation(
     groupId ? `${API_BASE}/${groupId}/permission-sets` : null,
     assignPermissionSetMutation
-  );
+  )
 
   return {
     assignPermissionSet: trigger,
     isAssigning: isMutating,
     error,
-  };
+  }
 }
 
 async function unassignPermissionSetMutation(url: string) {
   return fetcherWithOptions<void>(url, {
     method: 'DELETE',
-  });
+  })
 }
 
 /**
  * Hook to unassign a permission set from a group
  */
-export function useUnassignPermissionSetFromGroup(groupId: string | null, permissionSetId: string | null) {
+export function useUnassignPermissionSetFromGroup(
+  groupId: string | null,
+  permissionSetId: string | null
+) {
   const { trigger, isMutating, error } = useSWRMutation(
     groupId && permissionSetId ? `${API_BASE}/${groupId}/permission-sets/${permissionSetId}` : null,
     unassignPermissionSetMutation
-  );
+  )
 
   return {
     unassignPermissionSet: trigger,
     isUnassigning: isMutating,
     error,
-  };
+  }
 }
 
 // ============================================
@@ -471,25 +470,25 @@ export function useUnassignPermissionSetFromGroup(groupId: string | null, permis
 // ============================================
 
 export function getGroupsKey(filters?: GroupFilters) {
-  const params = new URLSearchParams();
-  if (filters?.type) params.set('type', filters.type);
-  if (filters?.search) params.set('search', filters.search);
-  const queryString = params.toString();
-  return queryString ? `${API_BASE}?${queryString}` : API_BASE;
+  const params = new URLSearchParams()
+  if (filters?.type) params.set('type', filters.type)
+  if (filters?.search) params.set('search', filters.search)
+  const queryString = params.toString()
+  return queryString ? `${API_BASE}?${queryString}` : API_BASE
 }
 
 export function getGroupKey(groupId: string) {
-  return `${API_BASE}/${groupId}`;
+  return `${API_BASE}/${groupId}`
 }
 
 export function getGroupMembersKey(groupId: string) {
-  return `${API_BASE}/${groupId}/members`;
+  return `${API_BASE}/${groupId}/members`
 }
 
 export function getGroupPermissionSetsKey(groupId: string) {
-  return `${API_BASE}/${groupId}/permission-sets`;
+  return `${API_BASE}/${groupId}/permission-sets`
 }
 
 export function getGroupAssetsKey(groupId: string) {
-  return `${API_BASE}/${groupId}/assets`;
+  return `${API_BASE}/${groupId}/assets`
 }

@@ -1,7 +1,7 @@
-"use client";
+'use client'
 
-import { ComingSoonPage } from "@/features/shared";
-import { Play } from "lucide-react";
+import { ComingSoonPage } from '@/features/shared'
+import { Play } from 'lucide-react'
 
 export default function BASCampaignsPage() {
   return (
@@ -11,12 +11,12 @@ export default function BASCampaignsPage() {
       phase="Validation"
       icon={Play}
       features={[
-        "Pre-built attack playbooks",
-        "Custom campaign creation",
-        "Scheduled simulations",
-        "Multi-vector attack chains",
-        "Campaign comparison analysis",
+        'Pre-built attack playbooks',
+        'Custom campaign creation',
+        'Scheduled simulations',
+        'Multi-vector attack chains',
+        'Campaign comparison analysis',
       ]}
     />
-  );
+  )
 }

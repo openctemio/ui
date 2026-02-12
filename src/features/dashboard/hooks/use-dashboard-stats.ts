@@ -137,8 +137,6 @@ export function useDashboardStats(tenantId: string | null) {
   }
 }
 
-
-
 /**
  * Hook to get recent activity from dashboard stats
  * @param tenantId - The tenant ID or slug

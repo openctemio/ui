@@ -1,6 +1,6 @@
-'use client';
+'use client'
 
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback } from 'react'
 import {
   ColumnDef,
   flexRender,
@@ -10,11 +10,11 @@ import {
   getSortedRowModel,
   SortingState,
   useReactTable,
-} from '@tanstack/react-table';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Switch } from '@/components/ui/switch';
+} from '@tanstack/react-table'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Switch } from '@/components/ui/switch'
 import {
   Table,
   TableBody,
@@ -22,20 +22,15 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
+} from '@/components/ui/table'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
+} from '@/components/ui/dropdown-menu'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import {
   ArrowUpDown,
   ChevronLeft,
@@ -51,31 +46,31 @@ import {
   Github,
   Power,
   PowerOff,
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
+} from 'lucide-react'
+import { cn } from '@/lib/utils'
 
-import type { Tool } from '@/lib/api/tool-types';
-import type { ToolCategory } from '@/lib/api/tool-category-types';
-import { INSTALL_METHOD_DISPLAY_NAMES } from '@/lib/api/tool-types';
-import { getCategoryNameById, getCategoryDisplayNameById } from '@/lib/api/tool-category-hooks';
-import { ToolCategoryIcon, getCategoryBadgeColor } from './tool-category-icon';
+import type { Tool } from '@/lib/api/tool-types'
+import type { ToolCategory } from '@/lib/api/tool-category-types'
+import { INSTALL_METHOD_DISPLAY_NAMES } from '@/lib/api/tool-types'
+import { getCategoryNameById, getCategoryDisplayNameById } from '@/lib/api/tool-category-hooks'
+import { ToolCategoryIcon, getCategoryBadgeColor } from './tool-category-icon'
 
 interface ToolTableProps {
-  tools: Tool[];
-  categories?: ToolCategory[]; // For looking up category name from category_id
-  sorting: SortingState;
-  onSortingChange: (sorting: SortingState) => void;
-  globalFilter: string;
-  rowSelection: Record<string, boolean>;
-  onRowSelectionChange: (selection: Record<string, boolean>) => void;
-  onViewTool: (tool: Tool) => void;
-  onEditTool?: (tool: Tool) => void;
-  onDeleteTool?: (tool: Tool) => void;
-  onActivateTool?: (tool: Tool) => void;
-  onDeactivateTool?: (tool: Tool) => void;
-  onCheckUpdate?: (tool: Tool) => void;
+  tools: Tool[]
+  categories?: ToolCategory[] // For looking up category name from category_id
+  sorting: SortingState
+  onSortingChange: (sorting: SortingState) => void
+  globalFilter: string
+  rowSelection: Record<string, boolean>
+  onRowSelectionChange: (selection: Record<string, boolean>) => void
+  onViewTool: (tool: Tool) => void
+  onEditTool?: (tool: Tool) => void
+  onDeleteTool?: (tool: Tool) => void
+  onActivateTool?: (tool: Tool) => void
+  onDeactivateTool?: (tool: Tool) => void
+  onCheckUpdate?: (tool: Tool) => void
   /** When true, hides edit/delete/activate/deactivate actions (for platform tools) */
-  readOnly?: boolean;
+  readOnly?: boolean
 }
 
 export function ToolTable({
@@ -98,11 +93,11 @@ export function ToolTable({
   const getCategoryName = useCallback(
     (tool: Tool) => getCategoryNameById(categories, tool.category_id),
     [categories]
-  );
+  )
   const getCategoryDisplayName = useCallback(
     (tool: Tool) => getCategoryDisplayNameById(categories, tool.category_id),
     [categories]
-  );
+  )
   const columns: ColumnDef<Tool>[] = useMemo(
     () => [
       {
@@ -139,7 +134,7 @@ export function ToolTable({
           </Button>
         ),
         cell: ({ row }) => {
-          const tool = row.original;
+          const tool = row.original
           return (
             <div className="flex items-center gap-3">
               {tool.logo_url ? (
@@ -159,27 +154,21 @@ export function ToolTable({
                 <p className="text-xs text-muted-foreground">{tool.name}</p>
               </div>
             </div>
-          );
+          )
         },
       },
       {
         accessorKey: 'category_id',
         header: 'Category',
         cell: ({ row }) => {
-          const categoryName = getCategoryName(row.original);
-          const categoryDisplayName = getCategoryDisplayName(row.original);
+          const categoryName = getCategoryName(row.original)
+          const categoryDisplayName = getCategoryDisplayName(row.original)
           return (
-            <Badge
-              variant="outline"
-              className={cn('text-xs', getCategoryBadgeColor(categoryName))}
-            >
-              <ToolCategoryIcon
-                category={categoryName}
-                className="mr-1 h-3 w-3"
-              />
+            <Badge variant="outline" className={cn('text-xs', getCategoryBadgeColor(categoryName))}>
+              <ToolCategoryIcon category={categoryName} className="mr-1 h-3 w-3" />
               {categoryDisplayName}
             </Badge>
-          );
+          )
         },
       },
       {
@@ -195,12 +184,10 @@ export function ToolTable({
         accessorKey: 'current_version',
         header: 'Version',
         cell: ({ row }) => {
-          const tool = row.original;
+          const tool = row.original
           return (
             <div className="flex items-center gap-2">
-              <span className="text-sm">
-                {tool.current_version || '-'}
-              </span>
+              <span className="text-sm">{tool.current_version || '-'}</span>
               {tool.has_update && tool.latest_version && (
                 <Tooltip>
                   <TooltipTrigger>
@@ -216,7 +203,7 @@ export function ToolTable({
                 </Tooltip>
               )}
             </div>
-          );
+          )
         },
       },
       {
@@ -232,7 +219,7 @@ export function ToolTable({
         accessorKey: 'is_active',
         header: 'Status',
         cell: ({ row }) => {
-          const tool = row.original;
+          const tool = row.original
           // For read-only mode, show styled badge instead of switch
           if (readOnly || (!onActivateTool && !onDeactivateTool)) {
             return (
@@ -253,7 +240,7 @@ export function ToolTable({
                 />
                 {tool.is_active ? 'Active' : 'Inactive'}
               </Badge>
-            );
+            )
           }
           return (
             <div className="flex items-center gap-2">
@@ -267,13 +254,13 @@ export function ToolTable({
                 {tool.is_active ? 'Active' : 'Inactive'}
               </span>
             </div>
-          );
+          )
         },
       },
       {
         id: 'actions',
         cell: ({ row }) => {
-          const tool = row.original;
+          const tool = row.original
           return (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -300,11 +287,7 @@ export function ToolTable({
                 )}
                 {tool.github_url && (
                   <DropdownMenuItem asChild>
-                    <a
-                      href={tool.github_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
+                    <a href={tool.github_url} target="_blank" rel="noopener noreferrer">
                       <Github className="mr-2 h-4 w-4" />
                       GitHub
                     </a>
@@ -312,11 +295,7 @@ export function ToolTable({
                 )}
                 {tool.docs_url && (
                   <DropdownMenuItem asChild>
-                    <a
-                      href={tool.docs_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
+                    <a href={tool.docs_url} target="_blank" rel="noopener noreferrer">
                       <ExternalLink className="mr-2 h-4 w-4" />
                       Documentation
                     </a>
@@ -326,172 +305,172 @@ export function ToolTable({
                 {!readOnly && (onActivateTool || onDeactivateTool) && (
                   <>
                     <DropdownMenuSeparator />
-                    {tool.is_active ? (
-                      onDeactivateTool && (
-                        <DropdownMenuItem
-                          onClick={() => onDeactivateTool(tool)}
-                          className="text-amber-500"
-                        >
-                          <PowerOff className="mr-2 h-4 w-4" />
-                          Deactivate
-                        </DropdownMenuItem>
-                      )
-                    ) : (
-                      onActivateTool && (
-                        <DropdownMenuItem
-                          onClick={() => onActivateTool(tool)}
-                          className="text-green-500"
-                        >
-                          <Power className="mr-2 h-4 w-4" />
-                          Activate
-                        </DropdownMenuItem>
-                      )
-                    )}
+                    {tool.is_active
+                      ? onDeactivateTool && (
+                          <DropdownMenuItem
+                            onClick={() => onDeactivateTool(tool)}
+                            className="text-amber-500"
+                          >
+                            <PowerOff className="mr-2 h-4 w-4" />
+                            Deactivate
+                          </DropdownMenuItem>
+                        )
+                      : onActivateTool && (
+                          <DropdownMenuItem
+                            onClick={() => onActivateTool(tool)}
+                            className="text-green-500"
+                          >
+                            <Power className="mr-2 h-4 w-4" />
+                            Activate
+                          </DropdownMenuItem>
+                        )}
                   </>
                 )}
                 {!readOnly && !tool.is_builtin && onDeleteTool && (
-                  <DropdownMenuItem
-                    className="text-red-500"
-                    onClick={() => onDeleteTool(tool)}
-                  >
+                  <DropdownMenuItem className="text-red-500" onClick={() => onDeleteTool(tool)}>
                     <Trash2 className="mr-2 h-4 w-4" />
                     Delete
                   </DropdownMenuItem>
                 )}
               </DropdownMenuContent>
             </DropdownMenu>
-          );
+          )
         },
       },
     ],
-    [onViewTool, onEditTool, onDeleteTool, onActivateTool, onDeactivateTool, onCheckUpdate, readOnly, getCategoryName, getCategoryDisplayName]
-  );
+    [
+      onViewTool,
+      onEditTool,
+      onDeleteTool,
+      onActivateTool,
+      onDeactivateTool,
+      onCheckUpdate,
+      readOnly,
+      getCategoryName,
+      getCategoryDisplayName,
+    ]
+  )
 
   const table = useReactTable({
     data: tools,
     columns,
     state: { sorting, globalFilter, rowSelection },
     onSortingChange: (updater) => {
-      const newSorting = typeof updater === 'function' ? updater(sorting) : updater;
-      onSortingChange(newSorting);
+      const newSorting = typeof updater === 'function' ? updater(sorting) : updater
+      onSortingChange(newSorting)
     },
     onRowSelectionChange: (updater) => {
-      const newSelection =
-        typeof updater === 'function' ? updater(rowSelection) : updater;
-      onRowSelectionChange(newSelection);
+      const newSelection = typeof updater === 'function' ? updater(rowSelection) : updater
+      onRowSelectionChange(newSelection)
     },
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-  });
+  })
 
   return (
     <TooltipProvider>
-    <div>
-      {/* Table */}
-      <div className="overflow-x-auto rounded-md border">
-        <Table>
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id}>
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
-                  </TableHead>
-                ))}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && 'selected'}
-                  className="cursor-pointer"
-                  onClick={(e) => {
-                    if (
-                      (e.target as HTMLElement).closest('[role="checkbox"]') ||
-                      (e.target as HTMLElement).closest('[role="menuitem"]') ||
-                      (e.target as HTMLElement).closest('[data-radix-collection-item]') ||
-                      (e.target as HTMLElement).closest('button') ||
-                      (e.target as HTMLElement).closest('a')
-                    ) {
-                      return;
-                    }
-                    onViewTool(row.original);
-                  }}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </TableCell>
+      <div>
+        {/* Table */}
+        <div className="overflow-x-auto rounded-md border">
+          <Table>
+            <TableHeader>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => (
+                    <TableHead key={header.id}>
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(header.column.columnDef.header, header.getContext())}
+                    </TableHead>
                   ))}
                 </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center">
-                  No tools found.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
+              ))}
+            </TableHeader>
+            <TableBody>
+              {table.getRowModel().rows?.length ? (
+                table.getRowModel().rows.map((row) => (
+                  <TableRow
+                    key={row.id}
+                    data-state={row.getIsSelected() && 'selected'}
+                    className="cursor-pointer"
+                    onClick={(e) => {
+                      if (
+                        (e.target as HTMLElement).closest('[role="checkbox"]') ||
+                        (e.target as HTMLElement).closest('[role="menuitem"]') ||
+                        (e.target as HTMLElement).closest('[data-radix-collection-item]') ||
+                        (e.target as HTMLElement).closest('button') ||
+                        (e.target as HTMLElement).closest('a')
+                      ) {
+                        return
+                      }
+                      onViewTool(row.original)
+                    }}
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id}>
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={columns.length} className="h-24 text-center">
+                    No tools found.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
 
-      {/* Pagination */}
-      <div className="mt-4 flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
-          {table.getFilteredSelectedRowModel().rows.length} of{' '}
-          {table.getFilteredRowModel().rows.length} row(s) selected
-        </p>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.setPageIndex(0)}
-            disabled={!table.getCanPreviousPage()}
-          >
-            <ChevronsLeft className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <span className="text-sm">
-            Page {table.getState().pagination.pageIndex + 1} of{' '}
-            {table.getPageCount()}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-            disabled={!table.getCanNextPage()}
-          >
-            <ChevronsRight className="h-4 w-4" />
-          </Button>
+        {/* Pagination */}
+        <div className="mt-4 flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            {table.getFilteredSelectedRowModel().rows.length} of{' '}
+            {table.getFilteredRowModel().rows.length} row(s) selected
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => table.setPageIndex(0)}
+              disabled={!table.getCanPreviousPage()}
+            >
+              <ChevronsLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => table.previousPage()}
+              disabled={!table.getCanPreviousPage()}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <span className="text-sm">
+              Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => table.nextPage()}
+              disabled={!table.getCanNextPage()}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+              disabled={!table.getCanNextPage()}
+            >
+              <ChevronsRight className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </div>
-    </div>
     </TooltipProvider>
-  );
+  )
 }

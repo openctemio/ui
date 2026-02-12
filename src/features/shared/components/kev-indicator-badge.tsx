@@ -1,30 +1,25 @@
-"use client";
+'use client'
 
-import { Badge } from "@/components/ui/badge";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { cn } from "@/lib/utils";
-import { AlertOctagon, Calendar, Clock, Skull, ShieldAlert } from "lucide-react";
-import { formatDistanceToNow, parseISO, isPast, differenceInDays } from "date-fns";
+import { Badge } from '@/components/ui/badge'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { cn } from '@/lib/utils'
+import { AlertOctagon, Calendar, Clock, Skull, ShieldAlert } from 'lucide-react'
+import { formatDistanceToNow, parseISO, isPast, differenceInDays } from 'date-fns'
 
 interface KEVData {
-  date_added?: string;
-  due_date?: string;
-  ransomware_use?: string;
-  notes?: string;
-  is_past_due?: boolean;
+  date_added?: string
+  due_date?: string
+  ransomware_use?: string
+  notes?: string
+  is_past_due?: boolean
 }
 
 interface KEVIndicatorBadgeProps {
-  inKEV: boolean;
-  kevData?: KEVData | null;
-  size?: "sm" | "md" | "lg";
-  showDueDate?: boolean;
-  className?: string;
+  inKEV: boolean
+  kevData?: KEVData | null
+  size?: 'sm' | 'md' | 'lg'
+  showDueDate?: boolean
+  className?: string
 }
 
 /**
@@ -34,28 +29,30 @@ interface KEVIndicatorBadgeProps {
 export function KEVIndicatorBadge({
   inKEV,
   kevData,
-  size = "md",
+  size = 'md',
   showDueDate = true,
   className,
 }: KEVIndicatorBadgeProps) {
   if (!inKEV) {
-    return null;
+    return null
   }
 
   const sizeClasses = {
-    sm: "text-xs px-1.5 py-0.5",
-    md: "text-sm px-2 py-0.5",
-    lg: "text-base px-2.5 py-1",
-  };
+    sm: 'text-xs px-1.5 py-0.5',
+    md: 'text-sm px-2 py-0.5',
+    lg: 'text-base px-2.5 py-1',
+  }
 
   const iconSizes = {
-    sm: "h-3 w-3",
-    md: "h-3.5 w-3.5",
-    lg: "h-4 w-4",
-  };
+    sm: 'h-3 w-3',
+    md: 'h-3.5 w-3.5',
+    lg: 'h-4 w-4',
+  }
 
-  const isPastDue = kevData?.is_past_due || (kevData?.due_date && isPast(parseISO(kevData.due_date)));
-  const hasRansomware = kevData?.ransomware_use && kevData.ransomware_use.toLowerCase() !== "unknown";
+  const isPastDue =
+    kevData?.is_past_due || (kevData?.due_date && isPast(parseISO(kevData.due_date)))
+  const hasRansomware =
+    kevData?.ransomware_use && kevData.ransomware_use.toLowerCase() !== 'unknown'
 
   return (
     <TooltipProvider>
@@ -64,19 +61,17 @@ export function KEVIndicatorBadge({
           <Badge
             className={cn(
               isPastDue
-                ? "bg-red-600 text-white hover:bg-red-700"
-                : "bg-red-500 text-white hover:bg-red-600",
+                ? 'bg-red-600 text-white hover:bg-red-700'
+                : 'bg-red-500 text-white hover:bg-red-600',
               sizeClasses[size],
-              "gap-1 font-semibold",
+              'gap-1 font-semibold',
               className
             )}
           >
             <AlertOctagon className={iconSizes[size]} />
             KEV
-            {hasRansomware && <Skull className={cn(iconSizes[size], "ml-0.5")} />}
-            {isPastDue && showDueDate && (
-              <span className="ml-1 text-red-200">OVERDUE</span>
-            )}
+            {hasRansomware && <Skull className={cn(iconSizes[size], 'ml-0.5')} />}
+            {isPastDue && showDueDate && <span className="ml-1 text-red-200">OVERDUE</span>}
           </Badge>
         </TooltipTrigger>
         <TooltipContent side="top" className="max-w-sm">
@@ -87,7 +82,8 @@ export function KEVIndicatorBadge({
             </div>
 
             <p className="text-xs text-muted-foreground">
-              This vulnerability is being actively exploited in the wild and requires immediate attention.
+              This vulnerability is being actively exploited in the wild and requires immediate
+              attention.
             </p>
 
             {kevData?.date_added && (
@@ -100,14 +96,16 @@ export function KEVIndicatorBadge({
             )}
 
             {kevData?.due_date && (
-              <div className={cn(
-                "flex items-center gap-2 text-sm",
-                isPastDue && "text-red-500 font-medium"
-              )}>
+              <div
+                className={cn(
+                  'flex items-center gap-2 text-sm',
+                  isPastDue && 'text-red-500 font-medium'
+                )}
+              >
                 <Clock className="h-3.5 w-3.5" />
                 <span>
                   Due: {formatDistanceToNow(parseISO(kevData.due_date), { addSuffix: true })}
-                  {isPastDue && " (OVERDUE)"}
+                  {isPastDue && ' (OVERDUE)'}
                 </span>
               </div>
             )}
@@ -120,21 +118,19 @@ export function KEVIndicatorBadge({
             )}
 
             {kevData?.notes && (
-              <p className="text-xs border-t pt-2 mt-2 text-muted-foreground">
-                {kevData.notes}
-              </p>
+              <p className="text-xs border-t pt-2 mt-2 text-muted-foreground">{kevData.notes}</p>
             )}
           </div>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
-  );
+  )
 }
 
 interface KEVStatusProps {
-  inKEV: boolean;
-  kevData?: KEVData | null;
-  className?: string;
+  inKEV: boolean
+  kevData?: KEVData | null
+  className?: string
 }
 
 /**
@@ -143,21 +139,28 @@ interface KEVStatusProps {
 export function KEVStatus({ inKEV, kevData, className }: KEVStatusProps) {
   if (!inKEV) {
     return (
-      <div className={cn("flex items-center gap-2 text-muted-foreground", className)}>
+      <div className={cn('flex items-center gap-2 text-muted-foreground', className)}>
         <ShieldAlert className="h-4 w-4" />
         <span className="text-sm">Not in KEV catalog</span>
       </div>
-    );
+    )
   }
 
-  const isPastDue = kevData?.is_past_due || (kevData?.due_date && isPast(parseISO(kevData.due_date)));
+  const isPastDue =
+    kevData?.is_past_due || (kevData?.due_date && isPast(parseISO(kevData.due_date)))
   const daysUntilDue = kevData?.due_date
     ? differenceInDays(parseISO(kevData.due_date), new Date())
-    : null;
-  const hasRansomware = kevData?.ransomware_use && kevData.ransomware_use.toLowerCase() !== "unknown";
+    : null
+  const hasRansomware =
+    kevData?.ransomware_use && kevData.ransomware_use.toLowerCase() !== 'unknown'
 
   return (
-    <div className={cn("space-y-3 p-4 rounded-lg border border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/30", className)}>
+    <div
+      className={cn(
+        'space-y-3 p-4 rounded-lg border border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/30',
+        className
+      )}
+    >
       <div className="flex items-center gap-2">
         <AlertOctagon className="h-5 w-5 text-red-500" />
         <span className="font-semibold text-red-700 dark:text-red-400">
@@ -174,20 +177,22 @@ export function KEVStatus({ inKEV, kevData, className }: KEVStatusProps) {
         )}
 
         {kevData?.due_date && (
-          <div className={cn(
-            "flex items-center justify-between",
-            isPastDue && "text-red-600 dark:text-red-400 font-medium"
-          )}>
-            <span className={isPastDue ? "" : "text-muted-foreground"}>
-              Remediation Due:
-            </span>
+          <div
+            className={cn(
+              'flex items-center justify-between',
+              isPastDue && 'text-red-600 dark:text-red-400 font-medium'
+            )}
+          >
+            <span className={isPastDue ? '' : 'text-muted-foreground'}>Remediation Due:</span>
             <span>
               {new Date(kevData.due_date).toLocaleDateString()}
               {daysUntilDue !== null && (
                 <span className="ml-1">
-                  ({isPastDue
+                  (
+                  {isPastDue
                     ? `${Math.abs(daysUntilDue)} days overdue`
-                    : `${daysUntilDue} days left`})
+                    : `${daysUntilDue} days left`}
+                  )
                 </span>
               )}
             </span>
@@ -206,18 +211,16 @@ export function KEVStatus({ inKEV, kevData, className }: KEVStatusProps) {
       </div>
 
       {kevData?.notes && (
-        <p className="text-xs text-muted-foreground border-t pt-2">
-          {kevData.notes}
-        </p>
+        <p className="text-xs text-muted-foreground border-t pt-2">{kevData.notes}</p>
       )}
     </div>
-  );
+  )
 }
 
 interface KEVCompactIndicatorProps {
-  inKEV: boolean;
-  isPastDue?: boolean;
-  className?: string;
+  inKEV: boolean
+  isPastDue?: boolean
+  className?: string
 }
 
 /**
@@ -225,7 +228,7 @@ interface KEVCompactIndicatorProps {
  */
 export function KEVCompactIndicator({ inKEV, isPastDue, className }: KEVCompactIndicatorProps) {
   if (!inKEV) {
-    return null;
+    return null
   }
 
   return (
@@ -234,10 +237,8 @@ export function KEVCompactIndicator({ inKEV, isPastDue, className }: KEVCompactI
         <TooltipTrigger asChild>
           <div
             className={cn(
-              "inline-flex items-center justify-center rounded p-1",
-              isPastDue
-                ? "bg-red-600 text-white"
-                : "bg-red-500 text-white",
+              'inline-flex items-center justify-center rounded p-1',
+              isPastDue ? 'bg-red-600 text-white' : 'bg-red-500 text-white',
               className
             )}
           >
@@ -245,14 +246,12 @@ export function KEVCompactIndicator({ inKEV, isPastDue, className }: KEVCompactI
           </div>
         </TooltipTrigger>
         <TooltipContent>
-          <p className="font-medium">
-            CISA KEV {isPastDue && "(Overdue)"}
-          </p>
+          <p className="font-medium">CISA KEV {isPastDue && '(Overdue)'}</p>
           <p className="text-xs text-muted-foreground">
             Known Exploited Vulnerability - Requires immediate action
           </p>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
-  );
+  )
 }

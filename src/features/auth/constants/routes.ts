@@ -105,9 +105,7 @@ export function isPublicRoute(path: string): boolean {
     ...AUTH_ROUTES,
   })
 
-  return publicPaths.some(publicPath =>
-    path === publicPath || path.startsWith(`${publicPath}/`)
-  )
+  return publicPaths.some((publicPath) => path === publicPath || path.startsWith(`${publicPath}/`))
 }
 
 /**
@@ -116,8 +114,8 @@ export function isPublicRoute(path: string): boolean {
 export function isProtectedRoute(path: string): boolean {
   const protectedPaths = Object.values(PROTECTED_ROUTES)
 
-  return protectedPaths.some(protectedPath =>
-    path === protectedPath || path.startsWith(`${protectedPath}/`)
+  return protectedPaths.some(
+    (protectedPath) => path === protectedPath || path.startsWith(`${protectedPath}/`)
   )
 }
 
@@ -126,7 +124,7 @@ export function isProtectedRoute(path: string): boolean {
  */
 export function getReturnUrl(currentPath: string): string {
   // Don't redirect back to auth pages
-  if (Object.values(AUTH_ROUTES).some(route => currentPath.startsWith(route))) {
+  if (Object.values(AUTH_ROUTES).some((route) => currentPath.startsWith(route))) {
     return DEFAULT_LOGIN_REDIRECT
   }
 

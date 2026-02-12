@@ -2,13 +2,7 @@
 
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import {
-  Activity,
-  AlertTriangle,
-  CheckCircle,
-  Package,
-  type LucideIcon,
-} from 'lucide-react'
+import { Activity, AlertTriangle, CheckCircle, Package, type LucideIcon } from 'lucide-react'
 import type { Asset } from '../../types'
 
 export interface AssetsStatsCardsProps {

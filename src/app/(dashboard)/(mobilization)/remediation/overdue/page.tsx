@@ -1,7 +1,7 @@
-"use client";
+'use client'
 
-import { ComingSoonPage } from "@/features/shared";
-import { Timer } from "lucide-react";
+import { ComingSoonPage } from '@/features/shared'
+import { Timer } from 'lucide-react'
 
 export default function OverdueTasksPage() {
   return (
@@ -11,12 +11,12 @@ export default function OverdueTasksPage() {
       phase="Mobilization"
       icon={Timer}
       features={[
-        "Overdue task dashboard",
-        "SLA breach alerts",
-        "Escalation triggers",
-        "Root cause analysis",
-        "Aging report",
+        'Overdue task dashboard',
+        'SLA breach alerts',
+        'Escalation triggers',
+        'Root cause analysis',
+        'Aging report',
       ]}
     />
-  );
+  )
 }

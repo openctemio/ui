@@ -1,13 +1,8 @@
-'use client';
+'use client'
 
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet';
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import {
   Settings,
   Trash2,
@@ -28,38 +23,38 @@ import {
   Package,
   Layers,
   Calendar,
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { useState } from 'react';
-import type { Tool } from '@/lib/api/tool-types';
-import type { ToolCategory } from '@/lib/api/tool-category-types';
-import { INSTALL_METHOD_DISPLAY_NAMES } from '@/lib/api/tool-types';
-import { getCategoryNameById, getCategoryDisplayNameById } from '@/lib/api/tool-category-hooks';
-import { CapabilityBadge } from '@/components/capability-badge';
-import { ToolCategoryIcon, getCategoryBadgeColor } from './tool-category-icon';
+} from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { useState } from 'react'
+import type { Tool } from '@/lib/api/tool-types'
+import type { ToolCategory } from '@/lib/api/tool-category-types'
+import { INSTALL_METHOD_DISPLAY_NAMES } from '@/lib/api/tool-types'
+import { getCategoryNameById, getCategoryDisplayNameById } from '@/lib/api/tool-category-hooks'
+import { CapabilityBadge } from '@/components/capability-badge'
+import { ToolCategoryIcon, getCategoryBadgeColor } from './tool-category-icon'
 
 interface ToolDetailSheetProps {
-  tool: Tool | null;
-  categories?: ToolCategory[]; // For looking up category name from category_id
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onEdit?: (tool: Tool) => void;
-  onDelete?: (tool: Tool) => void;
-  onActivate?: (tool: Tool) => void;
-  onDeactivate?: (tool: Tool) => void;
-  onCheckUpdate?: (tool: Tool) => void;
+  tool: Tool | null
+  categories?: ToolCategory[] // For looking up category name from category_id
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onEdit?: (tool: Tool) => void
+  onDelete?: (tool: Tool) => void
+  onActivate?: (tool: Tool) => void
+  onDeactivate?: (tool: Tool) => void
+  onCheckUpdate?: (tool: Tool) => void
   /** When true, hides edit/delete/activate/deactivate actions (for platform tools) */
-  readOnly?: boolean;
+  readOnly?: boolean
 }
 
 function CommandBlock({ label, command }: { label: string; command: string }) {
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState(false)
 
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(command);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
+    await navigator.clipboard.writeText(command)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
 
   return (
     <div className="group">
@@ -95,16 +90,10 @@ function CommandBlock({ label, command }: { label: string; command: string }) {
         </Button>
       </div>
     </div>
-  );
+  )
 }
 
-function SectionHeader({
-  icon: Icon,
-  title,
-}: {
-  icon: React.ElementType;
-  title: string;
-}) {
+function SectionHeader({ icon: Icon, title }: { icon: React.ElementType; title: string }) {
   return (
     <div className="flex items-center gap-2 mb-3">
       <div className="flex h-6 w-6 items-center justify-center rounded-md bg-primary/10">
@@ -112,7 +101,7 @@ function SectionHeader({
       </div>
       <h4 className="text-sm font-semibold">{title}</h4>
     </div>
-  );
+  )
 }
 
 function InfoCard({
@@ -120,9 +109,9 @@ function InfoCard({
   value,
   icon: Icon,
 }: {
-  label: string;
-  value: React.ReactNode;
-  icon: React.ElementType;
+  label: string
+  value: React.ReactNode
+  icon: React.ElementType
 }) {
   return (
     <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 border">
@@ -134,7 +123,7 @@ function InfoCard({
         <div className="font-medium text-sm truncate">{value}</div>
       </div>
     </div>
-  );
+  )
 }
 
 export function ToolDetailSheet({
@@ -149,16 +138,16 @@ export function ToolDetailSheet({
   onCheckUpdate,
   readOnly = false,
 }: ToolDetailSheetProps) {
-  if (!tool) return null;
+  if (!tool) return null
 
   // Look up category name from category_id
-  const categoryName = getCategoryNameById(categories, tool.category_id);
-  const categoryDisplayName = getCategoryDisplayNameById(categories, tool.category_id);
+  const categoryName = getCategoryNameById(categories, tool.category_id)
+  const categoryDisplayName = getCategoryDisplayNameById(categories, tool.category_id)
 
   const hasActions =
-    !readOnly && (onActivate || onDeactivate || onEdit || onDelete || onCheckUpdate);
-  const hasCommands = tool.install_cmd || tool.version_cmd || tool.update_cmd;
-  const hasLinks = tool.docs_url || tool.github_url;
+    !readOnly && (onActivate || onDeactivate || onEdit || onDelete || onCheckUpdate)
+  const hasCommands = tool.install_cmd || tool.version_cmd || tool.update_cmd
+  const hasLinks = tool.docs_url || tool.github_url
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -184,10 +173,7 @@ export function ToolDetailSheet({
                   </div>
                 ) : (
                   <div className="h-16 w-16 rounded-2xl bg-background border-2 border-border/50 shadow-lg flex items-center justify-center">
-                    <ToolCategoryIcon
-                      category={categoryName}
-                      className="h-8 w-8 text-primary"
-                    />
+                    <ToolCategoryIcon category={categoryName} className="h-8 w-8 text-primary" />
                   </div>
                 )}
                 {/* Status indicator */}
@@ -203,12 +189,8 @@ export function ToolDetailSheet({
 
               {/* Tool Info */}
               <div className="flex-1 min-w-0 pt-1">
-                <SheetTitle className="text-xl font-bold">
-                  {tool.display_name}
-                </SheetTitle>
-                <p className="text-sm text-muted-foreground font-mono mt-0.5">
-                  {tool.name}
-                </p>
+                <SheetTitle className="text-xl font-bold">{tool.display_name}</SheetTitle>
+                <p className="text-sm text-muted-foreground font-mono mt-0.5">{tool.name}</p>
                 <div className="flex flex-wrap items-center gap-1.5 mt-3">
                   <Badge
                     variant={tool.is_active ? 'default' : 'secondary'}
@@ -320,9 +302,7 @@ export function ToolDetailSheet({
             <div className="rounded-lg bg-background border p-4">
               <div className="flex gap-3">
                 <Info className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
-                <p className="text-sm leading-relaxed text-muted-foreground">
-                  {tool.description}
-                </p>
+                <p className="text-sm leading-relaxed text-muted-foreground">{tool.description}</p>
               </div>
             </div>
           )}
@@ -337,10 +317,7 @@ export function ToolDetailSheet({
                   variant="outline"
                   className={cn('text-xs', getCategoryBadgeColor(categoryName))}
                 >
-                  <ToolCategoryIcon
-                    category={categoryName}
-                    className="mr-1 h-3 w-3"
-                  />
+                  <ToolCategoryIcon category={categoryName} className="mr-1 h-3 w-3" />
                   {categoryDisplayName}
                 </Badge>
               }
@@ -364,11 +341,7 @@ export function ToolDetailSheet({
                 </div>
               }
             />
-            <InfoCard
-              label="Type"
-              icon={Zap}
-              value={tool.is_builtin ? 'Built-in' : 'Custom'}
-            />
+            <InfoCard label="Type" icon={Zap} value={tool.is_builtin ? 'Built-in' : 'Custom'} />
           </div>
 
           {/* Commands */}
@@ -376,15 +349,11 @@ export function ToolDetailSheet({
             <div className="space-y-4">
               <SectionHeader icon={Terminal} title="Commands" />
               <div className="space-y-4">
-                {tool.install_cmd && (
-                  <CommandBlock label="Install" command={tool.install_cmd} />
-                )}
+                {tool.install_cmd && <CommandBlock label="Install" command={tool.install_cmd} />}
                 {tool.version_cmd && (
                   <CommandBlock label="Version Check" command={tool.version_cmd} />
                 )}
-                {tool.update_cmd && (
-                  <CommandBlock label="Update" command={tool.update_cmd} />
-                )}
+                {tool.update_cmd && <CommandBlock label="Update" command={tool.update_cmd} />}
               </div>
             </div>
           )}
@@ -407,11 +376,7 @@ export function ToolDetailSheet({
               <SectionHeader icon={Target} title="Supported Targets" />
               <div className="flex flex-wrap gap-2">
                 {tool.supported_targets.map((target) => (
-                  <Badge
-                    key={target}
-                    variant="secondary"
-                    className="text-xs font-normal"
-                  >
+                  <Badge key={target} variant="secondary" className="text-xs font-normal">
                     {target}
                   </Badge>
                 ))}
@@ -501,5 +466,5 @@ export function ToolDetailSheet({
         </div>
       </SheetContent>
     </Sheet>
-  );
+  )
 }

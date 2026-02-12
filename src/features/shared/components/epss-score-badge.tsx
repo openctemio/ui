@@ -1,14 +1,9 @@
-"use client";
+'use client'
 
-import { Badge } from "@/components/ui/badge";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { cn } from "@/lib/utils";
-import { TrendingUp, AlertTriangle, Shield, ShieldCheck } from "lucide-react";
+import { Badge } from '@/components/ui/badge'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { cn } from '@/lib/utils'
+import { TrendingUp, AlertTriangle, Shield, ShieldCheck } from 'lucide-react'
 
 /**
  * Get EPSS risk level based on score (0-1 scale)
@@ -19,54 +14,54 @@ import { TrendingUp, AlertTriangle, Shield, ShieldCheck } from "lucide-react";
  * - Low: <= 0.1 (lower priority)
  */
 function getEPSSLevel(score: number): {
-  label: string;
-  color: string;
-  textColor: string;
-  bgColor: string;
-  description: string;
+  label: string
+  color: string
+  textColor: string
+  bgColor: string
+  description: string
 } {
   if (score > 0.7) {
     return {
-      label: "Critical",
-      color: "bg-red-500",
-      textColor: "text-white",
-      bgColor: "bg-red-500/10",
-      description: "Very high exploitation probability. Prioritize immediately.",
-    };
+      label: 'Critical',
+      color: 'bg-red-500',
+      textColor: 'text-white',
+      bgColor: 'bg-red-500/10',
+      description: 'Very high exploitation probability. Prioritize immediately.',
+    }
   }
   if (score > 0.4) {
     return {
-      label: "High",
-      color: "bg-orange-500",
-      textColor: "text-white",
-      bgColor: "bg-orange-500/10",
-      description: "High exploitation probability. Address soon.",
-    };
+      label: 'High',
+      color: 'bg-orange-500',
+      textColor: 'text-white',
+      bgColor: 'bg-orange-500/10',
+      description: 'High exploitation probability. Address soon.',
+    }
   }
   if (score > 0.1) {
     return {
-      label: "Medium",
-      color: "bg-yellow-500",
-      textColor: "text-black",
-      bgColor: "bg-yellow-500/10",
-      description: "Moderate exploitation probability.",
-    };
+      label: 'Medium',
+      color: 'bg-yellow-500',
+      textColor: 'text-black',
+      bgColor: 'bg-yellow-500/10',
+      description: 'Moderate exploitation probability.',
+    }
   }
   return {
-    label: "Low",
-    color: "bg-green-500",
-    textColor: "text-white",
-    bgColor: "bg-green-500/10",
-    description: "Lower exploitation probability.",
-  };
+    label: 'Low',
+    color: 'bg-green-500',
+    textColor: 'text-white',
+    bgColor: 'bg-green-500/10',
+    description: 'Lower exploitation probability.',
+  }
 }
 
 interface EPSSScoreBadgeProps {
-  score: number | null | undefined;
-  percentile?: number | null;
-  showPercentile?: boolean;
-  size?: "sm" | "md" | "lg";
-  className?: string;
+  score: number | null | undefined
+  percentile?: number | null
+  showPercentile?: boolean
+  size?: 'sm' | 'md' | 'lg'
+  className?: string
 }
 
 /**
@@ -77,25 +72,25 @@ export function EPSSScoreBadge({
   score,
   percentile,
   showPercentile = false,
-  size = "md",
+  size = 'md',
   className,
 }: EPSSScoreBadgeProps) {
   if (score === null || score === undefined) {
     return (
-      <Badge variant="outline" className={cn("text-muted-foreground", className)}>
+      <Badge variant="outline" className={cn('text-muted-foreground', className)}>
         No EPSS
       </Badge>
-    );
+    )
   }
 
-  const { color, textColor, description } = getEPSSLevel(score);
-  const displayScore = (score * 100).toFixed(1);
+  const { color, textColor, description } = getEPSSLevel(score)
+  const displayScore = (score * 100).toFixed(1)
 
   const sizeClasses = {
-    sm: "text-xs px-1.5 py-0.5",
-    md: "text-sm px-2 py-0.5",
-    lg: "text-base px-2.5 py-1",
-  };
+    sm: 'text-xs px-1.5 py-0.5',
+    md: 'text-sm px-2 py-0.5',
+    lg: 'text-base px-2.5 py-1',
+  }
 
   return (
     <TooltipProvider>
@@ -123,14 +118,14 @@ export function EPSSScoreBadge({
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
-  );
+  )
 }
 
 interface EPSSScoreMeterProps {
-  score: number | null | undefined;
-  size?: "sm" | "md" | "lg";
-  showLabel?: boolean;
-  className?: string;
+  score: number | null | undefined
+  size?: 'sm' | 'md' | 'lg'
+  showLabel?: boolean
+  className?: string
 }
 
 /**
@@ -138,46 +133,44 @@ interface EPSSScoreMeterProps {
  */
 export function EPSSScoreMeter({
   score,
-  size = "md",
+  size = 'md',
   showLabel = true,
   className,
 }: EPSSScoreMeterProps) {
   if (score === null || score === undefined) {
-    return <span className="text-muted-foreground text-sm">-</span>;
+    return <span className="text-muted-foreground text-sm">-</span>
   }
 
-  const { color } = getEPSSLevel(score);
-  const percentage = score * 100;
+  const { color } = getEPSSLevel(score)
+  const percentage = score * 100
 
   const sizeConfig = {
-    sm: { height: "h-1.5", text: "text-xs", width: "w-16" },
-    md: { height: "h-2", text: "text-sm", width: "w-20" },
-    lg: { height: "h-2.5", text: "text-base", width: "w-24" },
-  };
+    sm: { height: 'h-1.5', text: 'text-xs', width: 'w-16' },
+    md: { height: 'h-2', text: 'text-sm', width: 'w-20' },
+    lg: { height: 'h-2.5', text: 'text-base', width: 'w-24' },
+  }
 
-  const { height, text, width } = sizeConfig[size];
+  const { height, text, width } = sizeConfig[size]
 
   return (
-    <div className={cn("flex items-center gap-2", className)}>
-      <div className={cn("relative rounded-full bg-muted overflow-hidden", height, width)}>
+    <div className={cn('flex items-center gap-2', className)}>
+      <div className={cn('relative rounded-full bg-muted overflow-hidden', height, width)}>
         <div
-          className={cn("absolute left-0 top-0 h-full rounded-full transition-all", color)}
+          className={cn('absolute left-0 top-0 h-full rounded-full transition-all', color)}
           style={{ width: `${Math.min(100, Math.max(0, percentage))}%` }}
         />
       </div>
       {showLabel && (
-        <span className={cn("font-medium tabular-nums", text)}>
-          {percentage.toFixed(1)}%
-        </span>
+        <span className={cn('font-medium tabular-nums', text)}>{percentage.toFixed(1)}%</span>
       )}
     </div>
-  );
+  )
 }
 
 interface EPSSIndicatorProps {
-  score: number | null | undefined;
-  compact?: boolean;
-  className?: string;
+  score: number | null | undefined
+  compact?: boolean
+  className?: string
 }
 
 /**
@@ -185,33 +178,36 @@ interface EPSSIndicatorProps {
  */
 export function EPSSIndicator({ score, compact = false, className }: EPSSIndicatorProps) {
   if (score === null || score === undefined) {
-    return null;
+    return null
   }
 
-  const { label, bgColor } = getEPSSLevel(score);
-  const Icon = score > 0.7 ? AlertTriangle : score > 0.4 ? TrendingUp : score > 0.1 ? Shield : ShieldCheck;
+  const { label, bgColor } = getEPSSLevel(score)
+  const Icon =
+    score > 0.7 ? AlertTriangle : score > 0.4 ? TrendingUp : score > 0.1 ? Shield : ShieldCheck
 
   if (compact) {
     return (
       <TooltipProvider>
         <Tooltip delayDuration={200}>
           <TooltipTrigger asChild>
-            <div className={cn("p-1 rounded", bgColor, className)}>
+            <div className={cn('p-1 rounded', bgColor, className)}>
               <Icon className="h-4 w-4" />
             </div>
           </TooltipTrigger>
           <TooltipContent>
-            <p>EPSS: {(score * 100).toFixed(1)}% ({label})</p>
+            <p>
+              EPSS: {(score * 100).toFixed(1)}% ({label})
+            </p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
-    );
+    )
   }
 
   return (
-    <div className={cn("flex items-center gap-1 px-2 py-1 rounded text-sm", bgColor, className)}>
+    <div className={cn('flex items-center gap-1 px-2 py-1 rounded text-sm', bgColor, className)}>
       <Icon className="h-4 w-4" />
       <span>{(score * 100).toFixed(1)}%</span>
     </div>
-  );
+  )
 }

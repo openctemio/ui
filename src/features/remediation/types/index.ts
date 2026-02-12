@@ -2,4 +2,4 @@
  * Remediation Types - Barrel Export
  */
 
-export * from "./remediation.types";
+export * from './remediation.types'

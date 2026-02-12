@@ -1,21 +1,21 @@
-"use client";
+'use client'
 
-import { cn } from "@/lib/utils";
-import { Check, Circle } from "lucide-react";
-import { SECURITY_PROCESS_STEPS } from "../types";
+import { cn } from '@/lib/utils'
+import { Check, Circle } from 'lucide-react'
+import { SECURITY_PROCESS_STEPS } from '../types'
 
 interface ProcessStepperProps {
-  currentStep: number;
-  className?: string;
+  currentStep: number
+  className?: string
 }
 
 export function ProcessStepper({ currentStep, className }: ProcessStepperProps) {
   return (
-    <div className={cn("w-full", className)}>
+    <div className={cn('w-full', className)}>
       <div className="flex items-center justify-between min-w-[480px] sm:min-w-0">
         {SECURITY_PROCESS_STEPS.map((step, index) => {
-          const isCompleted = index < currentStep;
-          const isCurrent = index === currentStep;
+          const isCompleted = index < currentStep
+          const isCurrent = index === currentStep
 
           return (
             <div key={step.id} className="flex flex-1 items-center">
@@ -23,12 +23,12 @@ export function ProcessStepper({ currentStep, className }: ProcessStepperProps) 
               <div className="flex flex-col items-center">
                 <div
                   className={cn(
-                    "flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-full border-2 transition-colors",
+                    'flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-full border-2 transition-colors',
                     isCompleted
-                      ? "border-primary bg-primary text-primary-foreground"
+                      ? 'border-primary bg-primary text-primary-foreground'
                       : isCurrent
-                        ? "border-primary bg-background text-primary"
-                        : "border-muted bg-background text-muted-foreground"
+                        ? 'border-primary bg-background text-primary'
+                        : 'border-muted bg-background text-muted-foreground'
                   )}
                 >
                   {isCompleted ? (
@@ -36,8 +36,8 @@ export function ProcessStepper({ currentStep, className }: ProcessStepperProps) 
                   ) : (
                     <Circle
                       className={cn(
-                        "h-2 w-2 sm:h-3 sm:w-3",
-                        isCurrent ? "fill-primary" : "fill-muted"
+                        'h-2 w-2 sm:h-3 sm:w-3',
+                        isCurrent ? 'fill-primary' : 'fill-muted'
                       )}
                     />
                   )}
@@ -45,10 +45,8 @@ export function ProcessStepper({ currentStep, className }: ProcessStepperProps) 
                 <div className="mt-1 sm:mt-2 text-center">
                   <p
                     className={cn(
-                      "text-xs sm:text-sm font-medium whitespace-nowrap",
-                      isCompleted || isCurrent
-                        ? "text-foreground"
-                        : "text-muted-foreground"
+                      'text-xs sm:text-sm font-medium whitespace-nowrap',
+                      isCompleted || isCurrent ? 'text-foreground' : 'text-muted-foreground'
                     )}
                   >
                     {step.label}
@@ -63,15 +61,15 @@ export function ProcessStepper({ currentStep, className }: ProcessStepperProps) 
               {index < SECURITY_PROCESS_STEPS.length - 1 && (
                 <div
                   className={cn(
-                    "mx-1 sm:mx-2 h-0.5 flex-1 min-w-4 sm:min-w-6",
-                    index < currentStep ? "bg-primary" : "bg-muted"
+                    'mx-1 sm:mx-2 h-0.5 flex-1 min-w-4 sm:min-w-6',
+                    index < currentStep ? 'bg-primary' : 'bg-muted'
                   )}
                 />
               )}
             </div>
-          );
+          )
         })}
       </div>
     </div>
-  );
+  )
 }

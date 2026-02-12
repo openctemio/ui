@@ -37,7 +37,7 @@ export function AssetDeleteDialog({
   bulkFindingsCount,
 }: AssetDeleteDialogProps) {
   const isBulkDelete = bulkCount !== undefined && bulkCount > 0
-  const findingsCount = isBulkDelete ? (bulkFindingsCount || 0) : (asset?.findingCount || 0)
+  const findingsCount = isBulkDelete ? bulkFindingsCount || 0 : asset?.findingCount || 0
   const hasFindings = findingsCount > 0
 
   return (
@@ -77,7 +77,10 @@ export function AssetDeleteDialog({
                   <ul className="mt-1 space-y-0.5 text-amber-700 dark:text-amber-300">
                     <li className="flex items-center gap-1.5">
                       <Shield className="h-3.5 w-3.5" />
-                      <span><strong>{findingsCount}</strong> {findingsCount === 1 ? 'finding' : 'findings'}</span>
+                      <span>
+                        <strong>{findingsCount}</strong>{' '}
+                        {findingsCount === 1 ? 'finding' : 'findings'}
+                      </span>
                     </li>
                   </ul>
                 </div>
@@ -90,13 +93,14 @@ export function AssetDeleteDialog({
             {isBulkDelete ? (
               <>
                 You are about to permanently delete <strong>{bulkCount}</strong>{' '}
-                {assetTypeName.toLowerCase()}{bulkCount > 1 ? 's' : ''} and all associated data.
-                This action cannot be undone.
+                {assetTypeName.toLowerCase()}
+                {bulkCount > 1 ? 's' : ''} and all associated data. This action cannot be undone.
               </>
             ) : (
               <>
                 This will permanently delete this {assetTypeName.toLowerCase()} and all associated
-                data including findings, scan history, and configurations. This action cannot be undone.
+                data including findings, scan history, and configurations. This action cannot be
+                undone.
               </>
             )}
           </AlertDialogDescription>

@@ -35,14 +35,13 @@ export default function DiscoveryError({ error, reset }: ErrorProps) {
             Discovery Error
           </CardTitle>
           <CardDescription>
-            Failed to load discovery data. This could be due to a network issue or service unavailability.
+            Failed to load discovery data. This could be due to a network issue or service
+            unavailability.
           </CardDescription>
         </CardHeader>
         <CardContent className="text-center">
           {error.digest && (
-            <p className="text-muted-foreground text-sm">
-              Error ID: {error.digest}
-            </p>
+            <p className="text-muted-foreground text-sm">Error ID: {error.digest}</p>
           )}
         </CardContent>
         <CardFooter className="flex justify-center gap-2">

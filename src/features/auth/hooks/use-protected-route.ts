@@ -43,12 +43,7 @@ export function useProtectedRoute(options: RouteProtectionOptions = {}) {
   const [isChecking, setIsChecking] = useState(true)
   const [isAuthorized, setIsAuthorized] = useState(false)
 
-  const {
-    roles = [],
-    requireAll = false,
-    redirectTo = AUTH_ROUTES.LOGIN,
-    authorize,
-  } = options
+  const { roles = [], requireAll = false, redirectTo = AUTH_ROUTES.LOGIN, authorize } = options
 
   useEffect(() => {
     async function checkAuthorization() {
@@ -64,9 +59,7 @@ export function useProtectedRoute(options: RouteProtectionOptions = {}) {
 
       // Check role requirements
       if (roles.length > 0) {
-        const hasRequiredRoles = requireAll
-          ? hasAllRoles(roles)
-          : hasAnyRole(roles)
+        const hasRequiredRoles = requireAll ? hasAllRoles(roles) : hasAnyRole(roles)
 
         if (!hasRequiredRoles) {
           console.warn('User does not have required roles:', roles)

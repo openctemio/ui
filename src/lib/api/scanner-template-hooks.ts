@@ -103,14 +103,10 @@ export function useScannerTemplates(
 /**
  * Fetch a single scanner template by ID
  */
-export function useScannerTemplate(
-  templateId: string | null,
-  config?: SWRConfiguration
-) {
+export function useScannerTemplate(templateId: string | null, config?: SWRConfiguration) {
   const { currentTenant } = useTenant()
 
-  const key =
-    currentTenant && templateId ? scannerTemplateEndpoints.get(templateId) : null
+  const key = currentTenant && templateId ? scannerTemplateEndpoints.get(templateId) : null
 
   return useSWR<ScannerTemplate>(key, fetchScannerTemplate, {
     ...defaultConfig,
@@ -157,9 +153,7 @@ export function useUpdateScannerTemplate(templateId: string) {
   const { currentTenant } = useTenant()
 
   return useSWRMutation(
-    currentTenant && templateId
-      ? scannerTemplateEndpoints.update(templateId)
-      : null,
+    currentTenant && templateId ? scannerTemplateEndpoints.update(templateId) : null,
     async (url: string, { arg }: { arg: UpdateScannerTemplateRequest }) => {
       return put<ScannerTemplate>(url, arg)
     }
@@ -173,9 +167,7 @@ export function useDeleteScannerTemplate(templateId: string) {
   const { currentTenant } = useTenant()
 
   return useSWRMutation(
-    currentTenant && templateId
-      ? scannerTemplateEndpoints.delete(templateId)
-      : null,
+    currentTenant && templateId ? scannerTemplateEndpoints.delete(templateId) : null,
     async (url: string) => {
       return del<void>(url)
     }
@@ -203,9 +195,7 @@ export function useDeprecateScannerTemplate(templateId: string) {
   const { currentTenant } = useTenant()
 
   return useSWRMutation(
-    currentTenant && templateId
-      ? scannerTemplateEndpoints.deprecate(templateId)
-      : null,
+    currentTenant && templateId ? scannerTemplateEndpoints.deprecate(templateId) : null,
     async (url: string) => {
       return post<ScannerTemplate>(url, {})
     }
@@ -220,9 +210,7 @@ export function useDownloadScannerTemplate(templateId: string) {
   const { currentTenant } = useTenant()
 
   return useSWRMutation(
-    currentTenant && templateId
-      ? scannerTemplateEndpoints.download(templateId)
-      : null,
+    currentTenant && templateId ? scannerTemplateEndpoints.download(templateId) : null,
     async (url: string) => {
       const response = await fetch(url)
       if (!response.ok) {
@@ -243,8 +231,7 @@ export function useDownloadScannerTemplate(templateId: string) {
 export async function invalidateScannerTemplatesCache() {
   const { mutate } = await import('swr')
   await mutate(
-    (key) =>
-      typeof key === 'string' && key.includes('/api/v1/scanner-templates'),
+    (key) => typeof key === 'string' && key.includes('/api/v1/scanner-templates'),
     undefined,
     { revalidate: true }
   )

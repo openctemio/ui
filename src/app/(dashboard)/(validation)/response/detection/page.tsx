@@ -1,7 +1,7 @@
-"use client";
+'use client'
 
-import { ComingSoonPage } from "@/features/shared";
-import { Eye } from "lucide-react";
+import { ComingSoonPage } from '@/features/shared'
+import { Eye } from 'lucide-react'
 
 export default function DetectionTestsPage() {
   return (
@@ -11,12 +11,12 @@ export default function DetectionTestsPage() {
       phase="Validation"
       icon={Eye}
       features={[
-        "Detection rule testing",
-        "Alert generation validation",
-        "SIEM integration testing",
-        "Detection coverage mapping",
-        "Blind spot identification",
+        'Detection rule testing',
+        'Alert generation validation',
+        'SIEM integration testing',
+        'Detection coverage mapping',
+        'Blind spot identification',
       ]}
     />
-  );
+  )
 }

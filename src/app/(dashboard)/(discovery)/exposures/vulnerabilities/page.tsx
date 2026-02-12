@@ -1,7 +1,7 @@
-"use client";
+'use client'
 
-import { ComingSoonPage } from "@/features/shared";
-import { Bug } from "lucide-react";
+import { ComingSoonPage } from '@/features/shared'
+import { Bug } from 'lucide-react'
 
 export default function VulnerabilitiesPage() {
   return (
@@ -11,12 +11,12 @@ export default function VulnerabilitiesPage() {
       phase="Discovery"
       icon={Bug}
       features={[
-        "CVE-based vulnerability tracking",
-        "CVSS and EPSS scoring",
-        "Exploit availability indicators",
-        "Affected asset correlation",
-        "Remediation guidance and patches",
+        'CVE-based vulnerability tracking',
+        'CVSS and EPSS scoring',
+        'Exploit availability indicators',
+        'Affected asset correlation',
+        'Remediation guidance and patches',
       ]}
     />
-  );
+  )
 }

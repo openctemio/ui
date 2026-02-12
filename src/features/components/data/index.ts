@@ -1,1 +1,1 @@
-export * from "./mock-components";
+export * from './mock-components'

@@ -1,33 +1,29 @@
-import { Skeleton } from "@/components/ui/skeleton";
+import { Skeleton } from '@/components/ui/skeleton'
 
 interface ChartSkeletonProps {
-  height?: number;
-  type?: "area" | "bar" | "pie" | "line";
+  height?: number
+  type?: 'area' | 'bar' | 'pie' | 'line'
 }
 
-export function ChartSkeleton({ height = 300, type = "area" }: ChartSkeletonProps) {
-  if (type === "pie") {
+export function ChartSkeleton({ height = 300, type = 'area' }: ChartSkeletonProps) {
+  if (type === 'pie') {
     return (
       <div className="flex items-center justify-center" style={{ height }}>
         <Skeleton className="h-48 w-48 rounded-full" />
       </div>
-    );
+    )
   }
 
-  if (type === "bar") {
+  if (type === 'bar') {
     // Fixed heights for skeleton bars to avoid impure Math.random during render
-    const barHeights = [65, 45, 80, 55, 70, 40];
+    const barHeights = [65, 45, 80, 55, 70, 40]
     return (
       <div className="flex items-end justify-around gap-2 px-4" style={{ height }}>
         {barHeights.map((h, i) => (
-          <Skeleton
-            key={i}
-            className="w-12"
-            style={{ height: `${h}%` }}
-          />
+          <Skeleton key={i} className="w-12" style={{ height: `${h}%` }} />
         ))}
       </div>
-    );
+    )
   }
 
   // Default area/line chart skeleton
@@ -44,5 +40,5 @@ export function ChartSkeleton({ height = 300, type = "area" }: ChartSkeletonProp
         ))}
       </div>
     </div>
-  );
+  )
 }

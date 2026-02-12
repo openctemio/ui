@@ -1,7 +1,7 @@
-"use client";
+'use client'
 
-import { ComingSoonPage } from "@/features/shared";
-import { Puzzle } from "lucide-react";
+import { ComingSoonPage } from '@/features/shared'
+import { Puzzle } from 'lucide-react'
 
 export default function ConnectedAppsPage() {
   return (
@@ -11,12 +11,12 @@ export default function ConnectedAppsPage() {
       phase="Settings"
       icon={Puzzle}
       features={[
-        "Integration marketplace",
-        "OAuth app management",
-        "Connection health monitoring",
-        "Data sync configuration",
-        "Integration logs and debugging",
+        'Integration marketplace',
+        'OAuth app management',
+        'Connection health monitoring',
+        'Data sync configuration',
+        'Integration logs and debugging',
       ]}
     />
-  );
+  )
 }

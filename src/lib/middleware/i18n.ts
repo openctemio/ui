@@ -49,10 +49,7 @@ export function detectLocale(req: NextRequest): string {
  * @param locale - Detected locale
  * @returns New Headers object with x-locale header
  */
-export function createHeadersWithLocale(
-  req: NextRequest,
-  locale: string
-): Headers {
+export function createHeadersWithLocale(req: NextRequest, locale: string): Headers {
   const headers = new Headers(req.headers)
   headers.set('x-locale', locale)
   return headers

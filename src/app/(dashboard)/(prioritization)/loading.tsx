@@ -1,5 +1,5 @@
-import { Skeleton } from "@/components/ui/skeleton";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Skeleton } from '@/components/ui/skeleton'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
 
 export default function PrioritizationLoading() {
   return (
@@ -64,5 +64,5 @@ export default function PrioritizationLoading() {
         </CardContent>
       </Card>
     </div>
-  );
+  )
 }

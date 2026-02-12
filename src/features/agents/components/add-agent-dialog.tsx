@@ -1,21 +1,12 @@
-"use client";
+'use client'
 
-import { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  Loader2,
-  Bot,
-  Copy,
-  Check,
-  Eye,
-  EyeOff,
-  ChevronRight,
-  ChevronLeft,
-} from "lucide-react";
-import { toast } from "sonner";
+import { useState, useEffect } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { Loader2, Bot, Copy, Check, Eye, EyeOff, ChevronRight, ChevronLeft } from 'lucide-react'
+import { toast } from 'sonner'
 
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -23,7 +14,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from '@/components/ui/dialog'
 import {
   Form,
   FormControl,
@@ -31,71 +22,67 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+} from '@/components/ui/form'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { cn } from "@/lib/utils";
+} from '@/components/ui/select'
+import { cn } from '@/lib/utils'
 
-import { AgentTypeIcon } from "./agent-type-icon";
-import { ToolSelection, type ToolOption } from "./tool-selection";
+import { AgentTypeIcon } from './agent-type-icon'
+import { ToolSelection, type ToolOption } from './tool-selection'
 import {
   createAgentSchema,
   type CreateAgentFormData,
   AGENT_TYPE_OPTIONS,
   AGENT_EXECUTION_MODE_OPTIONS,
-} from "../schemas/agent-schema";
-import { useAgentFormOptions } from "../hooks";
-import { useCreateAgent, invalidateAgentsCache } from "@/lib/api/agent-hooks";
-import type { AgentType } from "@/lib/api/agent-types";
+} from '../schemas/agent-schema'
+import { useAgentFormOptions } from '../hooks'
+import { useCreateAgent, invalidateAgentsCache } from '@/lib/api/agent-hooks'
+import type { AgentType } from '@/lib/api/agent-types'
 
 interface AddAgentDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSuccess?: () => void;
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onSuccess?: () => void
 }
 
-export function AddAgentDialog({
-  open,
-  onOpenChange,
-  onSuccess,
-}: AddAgentDialogProps) {
-  const [step, setStep] = useState<1 | 2>(1);
-  const [apiKey, setApiKey] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
-  const [showApiKey, setShowApiKey] = useState(false);
-  const [selectedTools, setSelectedTools] = useState<string[]>([]);
+export function AddAgentDialog({ open, onOpenChange, onSuccess }: AddAgentDialogProps) {
+  const [step, setStep] = useState<1 | 2>(1)
+  const [apiKey, setApiKey] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
+  const [showApiKey, setShowApiKey] = useState(false)
+  const [selectedTools, setSelectedTools] = useState<string[]>([])
 
   const {
     toolOptions,
     isLoading: isLoadingOptions,
     error: optionsError,
     getCapabilitiesForTools,
-  } = useAgentFormOptions();
+  } = useAgentFormOptions()
 
-  const { trigger: createAgent, isMutating } = useCreateAgent();
+  const { trigger: createAgent, isMutating } = useCreateAgent()
 
   const form = useForm<CreateAgentFormData>({
     resolver: zodResolver(createAgentSchema),
     defaultValues: {
-      name: "",
-      type: "worker",  // Default to daemon agent type
-      description: "",
+      name: '',
+      type: 'worker', // Default to daemon agent type
+      description: '',
       capabilities: [],
       tools: [],
-      execution_mode: "daemon",  // Default to daemon mode
+      execution_mode: 'daemon', // Default to daemon mode
     },
-  });
+  })
 
-  const watchedName = form.watch("name");
-  const watchedType = form.watch("type");
-  const canProceedToStep2 = watchedName?.trim().length > 0 && !!watchedType;
+  const watchedName = form.watch('name')
+  const watchedType = form.watch('type')
+  const canProceedToStep2 = watchedName?.trim().length > 0 && !!watchedType
 
   // Convert toolOptions to the format expected by ToolSelection
   const toolSelectionOptions: ToolOption[] = toolOptions.map((t) => ({
@@ -103,34 +90,34 @@ export function AddAgentDialog({
     label: t.label,
     description: t.description,
     category: t.category,
-  }));
+  }))
 
   // Reset state when dialog opens/closes
   useEffect(() => {
     if (open) {
-      setStep(1);
-      setApiKey(null);
-      setCopied(false);
-      setShowApiKey(false);
-      setSelectedTools([]);
-      form.reset();
+      setStep(1)
+      setApiKey(null)
+      setCopied(false)
+      setShowApiKey(false)
+      setSelectedTools([])
+      form.reset()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  }, [open])
 
   const handleNextStep = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+    e.preventDefault()
+    e.stopPropagation()
     if (canProceedToStep2) {
-      setStep(2);
+      setStep(2)
     } else {
-      form.trigger(["name", "type"]);
+      form.trigger(['name', 'type'])
     }
-  };
+  }
 
   const onSubmit = async (data: CreateAgentFormData) => {
     try {
-      const capabilities = getCapabilitiesForTools(selectedTools);
+      const capabilities = getCapabilitiesForTools(selectedTools)
 
       const result = await createAgent({
         name: data.name,
@@ -139,46 +126,44 @@ export function AddAgentDialog({
         capabilities: capabilities as never[],
         tools: selectedTools as never[],
         execution_mode: data.execution_mode,
-      });
+      })
 
-      toast.success(`Agent "${data.name}" created successfully`);
-      await invalidateAgentsCache();
+      toast.success(`Agent "${data.name}" created successfully`)
+      await invalidateAgentsCache()
 
       if (result?.api_key) {
-        setApiKey(result.api_key);
+        setApiKey(result.api_key)
       } else {
-        form.reset();
-        onOpenChange(false);
-        onSuccess?.();
+        form.reset()
+        onOpenChange(false)
+        onSuccess?.()
       }
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to create agent"
-      );
+      toast.error(error instanceof Error ? error.message : 'Failed to create agent')
     }
-  };
+  }
 
   const handleCopyApiKey = async () => {
     if (apiKey) {
-      await navigator.clipboard.writeText(apiKey);
-      setCopied(true);
-      toast.success("API key copied to clipboard");
-      setTimeout(() => setCopied(false), 2000);
+      await navigator.clipboard.writeText(apiKey)
+      setCopied(true)
+      toast.success('API key copied to clipboard')
+      setTimeout(() => setCopied(false), 2000)
     }
-  };
+  }
 
   const handleClose = () => {
-    form.reset();
-    setStep(1);
-    setApiKey(null);
-    setCopied(false);
-    setShowApiKey(false);
-    setSelectedTools([]);
-    onOpenChange(false);
+    form.reset()
+    setStep(1)
+    setApiKey(null)
+    setCopied(false)
+    setShowApiKey(false)
+    setSelectedTools([])
+    onOpenChange(false)
     if (apiKey) {
-      onSuccess?.();
+      onSuccess?.()
     }
-  };
+  }
 
   // Success view - API key display
   if (apiKey) {
@@ -211,7 +196,7 @@ export function AddAgentDialog({
                 <div className="relative flex-1">
                   <Input
                     readOnly
-                    type={showApiKey ? "text" : "password"}
+                    type={showApiKey ? 'text' : 'password'}
                     value={apiKey}
                     className="pr-10 font-mono text-sm"
                   />
@@ -245,7 +230,7 @@ export function AddAgentDialog({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    );
+    )
   }
 
   return (
@@ -258,8 +243,8 @@ export function AddAgentDialog({
           </DialogTitle>
           <DialogDescription>
             {step === 1
-              ? "Configure the basic settings for your agent"
-              : "Select the tools this agent will use"}
+              ? 'Configure the basic settings for your agent'
+              : 'Select the tools this agent will use'}
           </DialogDescription>
         </DialogHeader>
 
@@ -267,10 +252,8 @@ export function AddAgentDialog({
         <div className="flex items-center justify-center gap-2 py-2">
           <div
             className={cn(
-              "flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium",
-              step === 1
-                ? "bg-primary text-primary-foreground"
-                : "bg-muted text-muted-foreground"
+              'flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium',
+              step === 1 ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
             )}
           >
             1
@@ -278,10 +261,8 @@ export function AddAgentDialog({
           <div className="h-px w-8 bg-border" />
           <div
             className={cn(
-              "flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium",
-              step === 2
-                ? "bg-primary text-primary-foreground"
-                : "bg-muted text-muted-foreground"
+              'flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium',
+              step === 2 ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
             )}
           >
             2
@@ -340,10 +321,16 @@ export function AddAgentDialog({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      Description <span className="text-muted-foreground font-normal">(optional)</span>
+                      Description{' '}
+                      <span className="text-muted-foreground font-normal">(optional)</span>
                     </FormLabel>
                     <FormControl>
-                      <Textarea placeholder="What does this agent do?" className="resize-none" rows={2} {...field} />
+                      <Textarea
+                        placeholder="What does this agent do?"
+                        className="resize-none"
+                        rows={2}
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -362,17 +349,17 @@ export function AddAgentDialog({
                           key={option.value}
                           onClick={() => field.onChange(option.value)}
                           className={cn(
-                            "flex flex-col gap-1 rounded-lg border-2 p-3 cursor-pointer transition-colors",
+                            'flex flex-col gap-1 rounded-lg border-2 p-3 cursor-pointer transition-colors',
                             field.value === option.value
-                              ? "border-primary bg-primary/5"
-                              : "border-border hover:border-primary/50"
+                              ? 'border-primary bg-primary/5'
+                              : 'border-border hover:border-primary/50'
                           )}
                         >
                           <span className="font-medium text-sm">{option.label}</span>
                           <span className="text-xs text-muted-foreground">
-                            {option.value === "standalone"
-                              ? "Runs once per command (CI/CD)"
-                              : "Runs continuously, polling for commands"}
+                            {option.value === 'standalone'
+                              ? 'Runs once per command (CI/CD)'
+                              : 'Runs continuously, polling for commands'}
                           </span>
                         </div>
                       ))}
@@ -411,7 +398,12 @@ export function AddAgentDialog({
             </>
           ) : (
             <>
-              <Button type="button" variant="outline" onClick={() => setStep(1)} disabled={isMutating}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setStep(1)}
+                disabled={isMutating}
+              >
                 <ChevronLeft className="mr-1 h-4 w-4" />
                 Back
               </Button>
@@ -424,5 +416,5 @@ export function AddAgentDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
+  )
 }

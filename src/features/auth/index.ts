@@ -9,23 +9,13 @@
 // COMPONENTS
 // ============================================
 
-export {
-  LoginForm,
-  RegisterForm,
-  SignOutDialog,
-  SignOutButton,
-} from './components'
+export { LoginForm, RegisterForm, SignOutDialog, SignOutButton } from './components'
 
 // ============================================
 // HOOKS
 // ============================================
 
-export {
-  useAuth,
-  useProtectedRoute,
-  useRequireRoles,
-  useRequireAuth,
-} from './hooks'
+export { useAuth, useProtectedRoute, useRequireRoles, useRequireAuth } from './hooks'
 
 // ============================================
 // SERVER ACTIONS

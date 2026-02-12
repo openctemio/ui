@@ -252,9 +252,7 @@ export const REDIRECT_CONFIG = {
   /**
    * Allowed redirect domains (for security)
    */
-  ALLOWED_REDIRECT_DOMAINS: [
-    process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
-  ],
+  ALLOWED_REDIRECT_DOMAINS: [process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'],
 } as const
 
 // ============================================
@@ -303,7 +301,7 @@ export const FEATURE_FLAGS = {
 export function isAllowedRedirectDomain(url: string): boolean {
   try {
     const urlObj = new URL(url)
-    return REDIRECT_CONFIG.ALLOWED_REDIRECT_DOMAINS.some(domain => {
+    return REDIRECT_CONFIG.ALLOWED_REDIRECT_DOMAINS.some((domain) => {
       const domainObj = new URL(domain)
       return urlObj.origin === domainObj.origin
     })
