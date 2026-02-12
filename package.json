@@ -1,6 +1,6 @@
 {
   "name": "openctem-ui",
-  "version": "v0.1.0-staging",
+  "version": "v0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
