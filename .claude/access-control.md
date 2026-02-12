@@ -1,18 +1,18 @@
 # Access Control Architecture
 
-> Comprehensive guide to the 3-layer access control system in Rediver.io
+> Comprehensive guide to the 3-layer access control system in OpenCTEM
 
 ## Overview
 
-Rediver.io implements a **3-layer access control** architecture:
+OpenCTEM implements a **3-layer access control** architecture:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                    LAYER 1: LICENSING (Tenant)                   │
+│                    LAYER 1: MODULES (Tenant)                     │
 ├─────────────────────────────────────────────────────────────────┤
-│  Tenant → Plan → Modules                                        │
+│  Tenant → Enabled Modules                                        │
 │  "What modules can this tenant access?"                         │
-│  Determined by: Subscription plan (Free, Pro, Business, etc.)   │
+│  Determined by: Tenant module configuration                      │
 └─────────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────────┐
@@ -45,17 +45,13 @@ const { moduleIds, modules, eventTypes, isLoading } = useTenantModules();
 const hasFindings = moduleIds.includes('findings');
 
 // Available event types for notifications (filtered by modules)
-// e.g., ['new_finding', 'scan_completed'] based on tenant's plan
+// e.g., ['new_finding', 'scan_completed'] based on tenant's modules
 ```
 
-### Available Plans
+### Module Categories
 
-| Plan | Modules |
-|------|---------|
-| Free | Core (dashboard, assets, team) |
-| Pro | Core + Security (findings, scans) |
-| Business | Core + Security + Platform + Compliance |
-| Enterprise | All modules |
+- **Core modules** (always enabled): dashboard, assets, team, groups, roles, settings
+- **Feature modules** (configurable per tenant): findings, scans, agents, integrations, reports, components, credentials, etc.
 
 ## Layer 2: RBAC (Feature Permissions)
 

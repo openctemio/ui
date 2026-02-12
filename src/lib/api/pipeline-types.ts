@@ -127,7 +127,7 @@ export const PIPELINE_AGENT_PREFERENCE_LABELS: Record<PipelineAgentPreference, s
 export const PIPELINE_AGENT_PREFERENCE_DESCRIPTIONS: Record<PipelineAgentPreference, string> = {
   auto: 'Uses tenant agents when available, falls back to platform agents',
   tenant: 'Only uses agents deployed in your infrastructure',
-  platform: "Only uses Rediver's managed platform agents",
+  platform: "Only uses OpenCTEM's managed platform agents",
 }
 
 // ============================================

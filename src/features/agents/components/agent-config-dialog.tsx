@@ -118,7 +118,7 @@ docker run -d \\
   -e API_KEY=${apiKey || "<YOUR_API_KEY>"} \\
   -e AGENT_ID=${agent.id} \\
   ${agent.region ? `-e REGION=${agent.region} \\` : "# -e REGION=ap-southeast-1 \\  # Optional"}
-  rediverio/agent:latest \\
+  openctemio/agent:latest \\
   -daemon -config /app/agent.yaml
 `;
 

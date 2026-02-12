@@ -5,7 +5,7 @@ import './globals.css'
 import { Providers } from './providers'
 import { getDirFromLocale, defaultLocale } from '@/lib/i18n'
 
-const appName = process.env.NEXT_PUBLIC_APP_NAME || 'RediverIO'
+const appName = process.env.NEXT_PUBLIC_APP_NAME || 'OpenCTEM'
 const appDescription =
   process.env.NEXT_PUBLIC_APP_DESCRIPTION || 'Continuous Threat Exposure Management Platform'
 

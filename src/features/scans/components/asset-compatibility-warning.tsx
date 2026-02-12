@@ -15,8 +15,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Button } from '@/components/ui/button'
 import { ChevronDown } from 'lucide-react'
 import { useState } from 'react'
-import type { AssetCompatibilityPreview, CompatibilityStatus } from '../types/scan.types'
-import { getCompatibilityStatus, COMPATIBILITY_STATUS_CONFIG } from '../types/scan.types'
+import type { AssetCompatibilityPreview } from '../types/scan.types'
+import { getCompatibilityStatus } from '../types/scan.types'
 import { ASSET_TYPE_LABELS } from '@/features/assets/types/asset.types'
 
 interface AssetCompatibilityWarningProps {
@@ -33,8 +33,6 @@ export function AssetCompatibilityWarning({
 }: AssetCompatibilityWarningProps) {
   const [isOpen, setIsOpen] = useState(false)
   const status = getCompatibilityStatus(preview.compatibilityPercent)
-  const config = COMPATIBILITY_STATUS_CONFIG[status]
-
   // Don't show if fully compatible
   if (status === 'full') {
     return (

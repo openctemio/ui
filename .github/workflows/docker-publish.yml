@@ -20,8 +20,10 @@ on:
         default: staging
 
 env:
-  REGISTRY: docker.io
-  IMAGE_NAME: exploopio/ui
+  # Primary registry (GHCR - always available via GITHUB_TOKEN)
+  IMAGE_NAME: ghcr.io/openctemio/ui
+  # Secondary registry (Docker Hub - optional, requires DOCKERHUB_USERNAME/DOCKERHUB_TOKEN secrets)
+  DH_IMAGE_NAME: openctemio/ui
 
 jobs:
   # ============================================
@@ -33,8 +35,23 @@ jobs:
     outputs:
       version: ${{ steps.vars.outputs.VERSION }}
       environment: ${{ steps.vars.outputs.ENVIRONMENT }}
+      has_dockerhub: ${{ steps.check.outputs.HAS_DOCKERHUB }}
       tags: ${{ steps.vars.outputs.TAGS }}
+      dh_tags: ${{ steps.vars.outputs.DH_TAGS }}
     steps:
+      - name: Check Docker Hub credentials
+        id: check
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+        run: |
+          if [ -n "$DOCKERHUB_USERNAME" ]; then
+            echo "HAS_DOCKERHUB=true" >> $GITHUB_OUTPUT
+            echo "::notice::Docker Hub credentials found - will mirror to Docker Hub"
+          else
+            echo "HAS_DOCKERHUB=false" >> $GITHUB_OUTPUT
+            echo "::notice::No Docker Hub credentials - publishing to GHCR only"
+          fi
+
       - name: Set build variables
         id: vars
         run: |
@@ -58,8 +75,10 @@ jobs:
               VERSION="${VERSION}-staging"
             fi
             echo "TAGS=${{ env.IMAGE_NAME }}:${VERSION},${{ env.IMAGE_NAME }}:staging-latest" >> $GITHUB_OUTPUT
+            echo "DH_TAGS=${{ env.DH_IMAGE_NAME }}:${VERSION},${{ env.DH_IMAGE_NAME }}:staging-latest" >> $GITHUB_OUTPUT
           else
             echo "TAGS=${{ env.IMAGE_NAME }}:${VERSION},${{ env.IMAGE_NAME }}:latest" >> $GITHUB_OUTPUT
+            echo "DH_TAGS=${{ env.DH_IMAGE_NAME }}:${VERSION},${{ env.DH_IMAGE_NAME }}:latest" >> $GITHUB_OUTPUT
           fi
 
   # ============================================
@@ -89,11 +108,12 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Login to Docker Hub
+      - name: Login to GHCR
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push by digest
         id: build
@@ -106,11 +126,10 @@ jobs:
           outputs: type=image,name=${{ env.IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
           cache-from: type=registry,ref=${{ env.IMAGE_NAME }}:buildcache-${{ matrix.platform == 'linux/amd64' && 'amd64' || 'arm64' }}
           cache-to: type=registry,ref=${{ env.IMAGE_NAME }}:buildcache-${{ matrix.platform == 'linux/amd64' && 'amd64' || 'arm64' }},mode=max
-          # Disable attestations for faster builds (provenance/sbom add overhead)
           provenance: false
           sbom: false
           build-args: |
-            NEXT_PUBLIC_APP_URL=${{ vars.NEXT_PUBLIC_APP_URL || 'https://app.exploop.io' }}
+            NEXT_PUBLIC_APP_URL=${{ vars.NEXT_PUBLIC_APP_URL || 'https://app.openctem.io' }}
             NEXT_PUBLIC_AUTH_PROVIDER=${{ vars.NEXT_PUBLIC_AUTH_PROVIDER || 'local' }}
 
       - name: Export digest
@@ -128,12 +147,15 @@ jobs:
           retention-days: 1
 
   # ============================================
-  # Merge - Create multi-platform manifest
+  # Merge - Create multi-platform manifest on GHCR
   # ============================================
   merge:
     name: Merge Manifests
     runs-on: ubuntu-latest
     needs: [prepare, build]
+    permissions:
+      contents: read
+      packages: write
     steps:
       - name: Download digests
         uses: actions/download-artifact@v7
@@ -145,11 +167,12 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Login to Docker Hub
+      - name: Login to GHCR
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create manifest list and push
         working-directory: /tmp/digests
@@ -165,7 +188,7 @@ jobs:
 
       - name: Generate build summary
         run: |
-          echo "## Docker Image Published" >> $GITHUB_STEP_SUMMARY
+          echo "## GHCR Image Published" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Image:** \`${{ env.IMAGE_NAME }}\`" >> $GITHUB_STEP_SUMMARY
           echo "**Version:** \`${{ needs.prepare.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
@@ -175,4 +198,51 @@ jobs:
           echo "### Tags" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
           echo "${{ needs.prepare.outputs.tags }}" | tr ',' '\n' >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+  # ============================================
+  # Mirror to Docker Hub (optional)
+  # ============================================
+  # Only runs if DOCKERHUB_USERNAME and DOCKERHUB_TOKEN secrets are configured.
+  # Uses crane to copy multi-arch manifest from GHCR to Docker Hub.
+  mirror-to-dockerhub:
+    name: Mirror to Docker Hub
+    runs-on: ubuntu-latest
+    needs: [prepare, merge]
+    if: needs.prepare.outputs.has_dockerhub == 'true'
+    steps:
+      - name: Install crane
+        uses: imjasonh/setup-crane@v0.4
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Mirror image to Docker Hub
+        run: |
+          GHCR_TAGS="${{ needs.prepare.outputs.tags }}"
+          DH_TAGS="${{ needs.prepare.outputs.dh_tags }}"
+          IFS=',' read -ra SRC <<< "$GHCR_TAGS"
+          IFS=',' read -ra DST <<< "$DH_TAGS"
+          for i in "${!SRC[@]}"; do
+            echo "Copying ${SRC[$i]} -> ${DST[$i]}"
+            crane copy "${SRC[$i]}" "${DST[$i]}"
+          done
+
+      - name: Generate Docker Hub summary
+        run: |
+          echo "## Docker Hub Image Mirrored" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Tags" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "${{ needs.prepare.outputs.dh_tags }}" | tr ',' '\n' >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY

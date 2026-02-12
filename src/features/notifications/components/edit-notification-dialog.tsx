@@ -211,7 +211,7 @@ export function EditNotificationDialog({
       severity: 'CRITICAL',
       severity_emoji: '\u{1F6A8}',
       body: 'A potential SQL injection vulnerability was found in the login endpoint.',
-      url: 'https://app.rediver.io/findings/123',
+      url: 'https://app.openctem.io/findings/123',
       timestamp: new Date().toLocaleString(),
     }
 
@@ -251,7 +251,7 @@ export function EditNotificationDialog({
       smtp_username: '',
       smtp_password: '',
       from_email: '',
-      from_name: 'Rediver.io',
+      from_name: 'OpenCTEM.io',
       to_emails: '',
       use_tls: false,
       use_starttls: true,
@@ -285,7 +285,7 @@ export function EditNotificationDialog({
         smtp_username: '', // Sensitive - leave empty
         smtp_password: '', // Sensitive - leave empty
         from_email: (metadata.from_email as string) || '',
-        from_name: (metadata.from_name as string) || 'Rediver.io',
+        from_name: (metadata.from_name as string) || 'OpenCTEM.io',
         to_emails: Array.isArray(metadata.to_emails)
           ? (metadata.to_emails as string[]).join(', ')
           : '',
@@ -476,7 +476,7 @@ export function EditNotificationDialog({
                     <Label htmlFor="edit_from_name">From Name</Label>
                     <Input
                       id="edit_from_name"
-                      placeholder="Rediver.io"
+                      placeholder="OpenCTEM.io"
                       {...register('from_name')}
                     />
                   </div>
