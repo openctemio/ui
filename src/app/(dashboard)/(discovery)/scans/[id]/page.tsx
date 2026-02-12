@@ -4,10 +4,9 @@ import { useMemo } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Main } from '@/components/layout'
-import { PageHeader, StatusBadge } from '@/features/shared'
+import { StatusBadge } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Progress } from '@/components/ui/progress'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -29,7 +28,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { toast } from 'sonner'
 import { useState } from 'react'
 import {
@@ -50,7 +48,6 @@ import {
   Radar,
   Settings,
   Activity,
-  ExternalLink,
 } from 'lucide-react'
 import { Can, Permission } from '@/lib/permissions'
 import { useScanConfig, useScanSessions, invalidateScanConfigsCache } from '@/lib/api/scan-hooks'
@@ -60,7 +57,6 @@ import { scanEndpoints } from '@/lib/api/endpoints'
 import {
   SCAN_TYPE_LABELS,
   SCHEDULE_TYPE_LABELS,
-  SCAN_CONFIG_STATUS_LABELS,
   AGENT_PREFERENCE_LABELS,
   SCAN_RUN_STATUS_LABELS,
   type ScanSession,
