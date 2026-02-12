@@ -1,7 +1,7 @@
-"use client";
+'use client'
 
-import { ComingSoonPage } from "@/features/shared";
-import { Timer } from "lucide-react";
+import { ComingSoonPage } from '@/features/shared'
+import { Timer } from 'lucide-react'
 
 export default function SLAPoliciesPage() {
   return (
@@ -11,12 +11,12 @@ export default function SLAPoliciesPage() {
       phase="Settings"
       icon={Timer}
       features={[
-        "SLA policy creation",
-        "Severity-based timelines",
-        "Escalation rules",
-        "Business hours configuration",
-        "Exception handling",
+        'SLA policy creation',
+        'Severity-based timelines',
+        'Escalation rules',
+        'Business hours configuration',
+        'Exception handling',
       ]}
     />
-  );
+  )
 }

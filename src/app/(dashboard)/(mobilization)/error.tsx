@@ -40,9 +40,7 @@ export default function MobilizationError({ error, reset }: ErrorProps) {
         </CardHeader>
         <CardContent className="text-center">
           {error.digest && (
-            <p className="text-muted-foreground text-sm">
-              Error ID: {error.digest}
-            </p>
+            <p className="text-muted-foreground text-sm">Error ID: {error.digest}</p>
           )}
         </CardContent>
         <CardFooter className="flex justify-center gap-2">

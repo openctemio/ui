@@ -1,7 +1,7 @@
-"use client";
+'use client'
 
-import { ComingSoonPage } from "@/features/shared";
-import { Timer } from "lucide-react";
+import { ComingSoonPage } from '@/features/shared'
+import { Timer } from 'lucide-react'
 
 export default function SLAManagementPage() {
   return (
@@ -11,12 +11,12 @@ export default function SLAManagementPage() {
       phase="Mobilization"
       icon={Timer}
       features={[
-        "SLA policy configuration",
-        "Breach monitoring and alerts",
-        "SLA compliance reporting",
-        "Escalation rule management",
-        "Historical SLA performance",
+        'SLA policy configuration',
+        'Breach monitoring and alerts',
+        'SLA compliance reporting',
+        'Escalation rule management',
+        'Historical SLA performance',
       ]}
     />
-  );
+  )
 }

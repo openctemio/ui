@@ -1,7 +1,7 @@
-"use client";
+'use client'
 
-import { ComingSoonPage } from "@/features/shared";
-import { Timer } from "lucide-react";
+import { ComingSoonPage } from '@/features/shared'
+import { Timer } from 'lucide-react'
 
 export default function MTTRPage() {
   return (
@@ -11,12 +11,12 @@ export default function MTTRPage() {
       phase="Insights"
       icon={Timer}
       features={[
-        "MTTR by severity level",
-        "MTTR by team/owner",
-        "MTTR by vulnerability type",
-        "Benchmark comparisons",
-        "Improvement recommendations",
+        'MTTR by severity level',
+        'MTTR by team/owner',
+        'MTTR by vulnerability type',
+        'Benchmark comparisons',
+        'Improvement recommendations',
       ]}
     />
-  );
+  )
 }

@@ -1,7 +1,7 @@
-"use client";
+'use client'
 
-import { ComingSoonPage } from "@/features/shared";
-import { Gauge } from "lucide-react";
+import { ComingSoonPage } from '@/features/shared'
+import { Gauge } from 'lucide-react'
 
 export default function ExposureScoringPage() {
   return (
@@ -11,12 +11,12 @@ export default function ExposureScoringPage() {
       phase="Prioritization"
       icon={Gauge}
       features={[
-        "CVSS and EPSS integration",
-        "Business context weighting",
-        "Asset criticality factors",
-        "Threat actor targeting data",
-        "Custom scoring rules",
+        'CVSS and EPSS integration',
+        'Business context weighting',
+        'Asset criticality factors',
+        'Threat actor targeting data',
+        'Custom scoring rules',
       ]}
     />
-  );
+  )
 }

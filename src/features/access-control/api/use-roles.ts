@@ -1,4 +1,4 @@
-'use client';
+'use client'
 
 /**
  * Roles API Hooks
@@ -6,9 +6,9 @@
  * SWR hooks for fetching and managing roles.
  */
 
-import useSWR from 'swr';
-import useSWRMutation from 'swr/mutation';
-import { fetcher, fetcherWithOptions } from '@/lib/api/client';
+import useSWR from 'swr'
+import useSWRMutation from 'swr/mutation'
+import { fetcher, fetcherWithOptions } from '@/lib/api/client'
 import type {
   Role,
   RoleListResponse,
@@ -20,10 +20,10 @@ import type {
   RoleMember,
   PermissionModule,
   Permission,
-} from '../types';
+} from '../types'
 
-const API_BASE = '/api/v1/roles';
-const PERMISSIONS_BASE = '/api/v1/permissions';
+const API_BASE = '/api/v1/roles'
+const PERMISSIONS_BASE = '/api/v1/permissions'
 
 // ============================================
 // FETCH HOOKS
@@ -34,19 +34,19 @@ const PERMISSIONS_BASE = '/api/v1/permissions';
  */
 export interface RoleFiltersWithOptions extends RoleFilters {
   /** Set to true to skip fetching (for lazy loading) */
-  skip?: boolean;
+  skip?: boolean
 }
 
 export function useRoles(filters?: RoleFiltersWithOptions) {
-  const params = new URLSearchParams();
-  if (filters?.search) params.set('search', filters.search);
-  if (filters?.is_system !== undefined) params.set('is_system', String(filters.is_system));
+  const params = new URLSearchParams()
+  if (filters?.search) params.set('search', filters.search)
+  if (filters?.is_system !== undefined) params.set('is_system', String(filters.is_system))
 
-  const queryString = params.toString();
-  const url = queryString ? `${API_BASE}?${queryString}` : API_BASE;
+  const queryString = params.toString()
+  const url = queryString ? `${API_BASE}?${queryString}` : API_BASE
 
   // Support conditional fetching - pass null key to skip
-  const shouldFetch = !filters?.skip;
+  const shouldFetch = !filters?.skip
 
   const { data, error, isLoading, mutate } = useSWR<RoleListResponse | Role[]>(
     shouldFetch ? url : null,
@@ -55,14 +55,14 @@ export function useRoles(filters?: RoleFiltersWithOptions) {
       revalidateOnFocus: false,
       dedupingInterval: 30000,
     }
-  );
+  )
 
   // Defensive access: support both { roles: [...], total: N } and [...]
-  let roles: Role[] = [];
+  let roles: Role[] = []
   if (Array.isArray(data)) {
-    roles = data;
+    roles = data
   } else if (data?.roles) {
-    roles = data.roles;
+    roles = data.roles
   }
 
   return {
@@ -72,7 +72,7 @@ export function useRoles(filters?: RoleFiltersWithOptions) {
     isError: !!error,
     error,
     mutate,
-  };
+  }
 }
 
 /**
@@ -86,7 +86,7 @@ export function useRole(roleId: string | null) {
       revalidateOnFocus: false,
       dedupingInterval: 30000,
     }
-  );
+  )
 
   return {
     role: data || null,
@@ -94,7 +94,7 @@ export function useRole(roleId: string | null) {
     isError: !!error,
     error,
     mutate,
-  };
+  }
 }
 
 /**
@@ -108,14 +108,14 @@ export function useRoleMembers(roleId: string | null) {
       revalidateOnFocus: false,
       dedupingInterval: 30000,
     }
-  );
+  )
 
   // Defensive access
-  let members: RoleMember[] = [];
+  let members: RoleMember[] = []
   if (Array.isArray(data)) {
-    members = data;
+    members = data
   } else if (data?.members) {
-    members = data.members;
+    members = data.members
   }
 
   return {
@@ -124,7 +124,7 @@ export function useRoleMembers(roleId: string | null) {
     isError: !!error,
     error,
     mutate,
-  };
+  }
 }
 
 /**
@@ -138,13 +138,13 @@ export function useMyRoles() {
       revalidateOnFocus: false,
       dedupingInterval: 30000,
     }
-  );
+  )
 
-  let roles: Role[] = [];
+  let roles: Role[] = []
   if (Array.isArray(data)) {
-    roles = data;
+    roles = data
   } else if (data?.roles) {
-    roles = data.roles;
+    roles = data.roles
   }
 
   return {
@@ -153,7 +153,7 @@ export function useMyRoles() {
     isError: !!error,
     error,
     mutate,
-  };
+  }
 }
 
 /**
@@ -167,7 +167,7 @@ export function useMyPermissions() {
       revalidateOnFocus: false,
       dedupingInterval: 30000,
     }
-  );
+  )
 
   return {
     permissions: data?.permissions || [],
@@ -176,7 +176,7 @@ export function useMyPermissions() {
     isError: !!error,
     error,
     mutate,
-  };
+  }
 }
 
 /**
@@ -190,7 +190,7 @@ export function useUserRoles(userId: string | null) {
       revalidateOnFocus: false,
       dedupingInterval: 30000,
     }
-  );
+  )
 
   return {
     roles: data || [],
@@ -198,7 +198,7 @@ export function useUserRoles(userId: string | null) {
     isError: !!error,
     error,
     mutate,
-  };
+  }
 }
 
 // ============================================
@@ -217,7 +217,7 @@ export function usePermissionModules() {
       revalidateOnFocus: false,
       dedupingInterval: 60000, // Cache for 1 minute
     }
-  );
+  )
 
   return {
     modules: data || [],
@@ -225,21 +225,17 @@ export function usePermissionModules() {
     isError: !!error,
     error,
     mutate,
-  };
+  }
 }
 
 /**
  * Fetch all permissions (flat list)
  */
 export function usePermissions() {
-  const { data, error, isLoading, mutate } = useSWR<Permission[]>(
-    PERMISSIONS_BASE,
-    fetcher,
-    {
-      revalidateOnFocus: false,
-      dedupingInterval: 60000,
-    }
-  );
+  const { data, error, isLoading, mutate } = useSWR<Permission[]>(PERMISSIONS_BASE, fetcher, {
+    revalidateOnFocus: false,
+    dedupingInterval: 60000,
+  })
 
   return {
     permissions: data || [],
@@ -247,7 +243,7 @@ export function usePermissions() {
     isError: !!error,
     error,
     mutate,
-  };
+  }
 }
 
 // ============================================
@@ -258,30 +254,27 @@ async function createRoleMutation(url: string, { arg }: { arg: CreateRoleInput }
   return fetcherWithOptions<Role>(url, {
     method: 'POST',
     body: JSON.stringify(arg),
-  });
+  })
 }
 
 /**
  * Hook to create a new role
  */
 export function useCreateRole() {
-  const { trigger, isMutating, error } = useSWRMutation(
-    API_BASE,
-    createRoleMutation
-  );
+  const { trigger, isMutating, error } = useSWRMutation(API_BASE, createRoleMutation)
 
   return {
     createRole: trigger,
     isCreating: isMutating,
     error,
-  };
+  }
 }
 
 async function updateRoleMutation(url: string, { arg }: { arg: UpdateRoleInput }) {
   return fetcherWithOptions<Role>(url, {
     method: 'PUT',
     body: JSON.stringify(arg),
-  });
+  })
 }
 
 /**
@@ -291,19 +284,19 @@ export function useUpdateRole(roleId: string | null) {
   const { trigger, isMutating, error } = useSWRMutation(
     roleId ? `${API_BASE}/${roleId}` : null,
     updateRoleMutation
-  );
+  )
 
   return {
     updateRole: trigger,
     isUpdating: isMutating,
     error,
-  };
+  }
 }
 
 async function deleteRoleMutation(url: string) {
   return fetcherWithOptions<void>(url, {
     method: 'DELETE',
-  });
+  })
 }
 
 /**
@@ -313,13 +306,13 @@ export function useDeleteRole(roleId: string | null) {
   const { trigger, isMutating, error } = useSWRMutation(
     roleId ? `${API_BASE}/${roleId}` : null,
     deleteRoleMutation
-  );
+  )
 
   return {
     deleteRole: trigger,
     isDeleting: isMutating,
     error,
-  };
+  }
 }
 
 // ============================================
@@ -330,7 +323,7 @@ async function assignRoleMutation(url: string, { arg }: { arg: AssignRoleInput }
   return fetcherWithOptions<void>(url, {
     method: 'POST',
     body: JSON.stringify(arg),
-  });
+  })
 }
 
 /**
@@ -340,19 +333,19 @@ export function useAssignRole(userId: string | null) {
   const { trigger, isMutating, error } = useSWRMutation(
     userId ? `/api/v1/users/${userId}/roles` : null,
     assignRoleMutation
-  );
+  )
 
   return {
     assignRole: trigger,
     isAssigning: isMutating,
     error,
-  };
+  }
 }
 
 async function removeRoleMutation(url: string) {
   return fetcherWithOptions<void>(url, {
     method: 'DELETE',
-  });
+  })
 }
 
 /**
@@ -362,20 +355,20 @@ export function useRemoveRole(userId: string | null, roleId: string | null) {
   const { trigger, isMutating, error } = useSWRMutation(
     userId && roleId ? `/api/v1/users/${userId}/roles/${roleId}` : null,
     removeRoleMutation
-  );
+  )
 
   return {
     removeRole: trigger,
     isRemoving: isMutating,
     error,
-  };
+  }
 }
 
 async function setUserRolesMutation(url: string, { arg }: { arg: SetUserRolesInput }) {
   return fetcherWithOptions<Role[]>(url, {
     method: 'PUT',
     body: JSON.stringify(arg),
-  });
+  })
 }
 
 /**
@@ -385,13 +378,13 @@ export function useSetUserRoles(userId: string | null) {
   const { trigger, isMutating, error } = useSWRMutation(
     userId ? `/api/v1/users/${userId}/roles` : null,
     setUserRolesMutation
-  );
+  )
 
   return {
     setUserRoles: trigger,
     isSetting: isMutating,
     error,
-  };
+  }
 }
 
 // ============================================
@@ -399,13 +392,13 @@ export function useSetUserRoles(userId: string | null) {
 // ============================================
 
 export interface BulkAssignRoleMembersInput {
-  user_ids: string[];
+  user_ids: string[]
 }
 
 export interface BulkAssignRoleMembersResult {
-  success_count: number;
-  failed_count: number;
-  failed_users?: string[];
+  success_count: number
+  failed_count: number
+  failed_users?: string[]
 }
 
 async function bulkAssignRoleMembersMutation(
@@ -415,7 +408,7 @@ async function bulkAssignRoleMembersMutation(
   return fetcherWithOptions<BulkAssignRoleMembersResult>(url, {
     method: 'POST',
     body: JSON.stringify(arg),
-  });
+  })
 }
 
 /**
@@ -426,13 +419,13 @@ export function useBulkAssignRoleMembers(roleId: string | null) {
   const { trigger, isMutating, error } = useSWRMutation(
     roleId ? `${API_BASE}/${roleId}/members/bulk` : null,
     bulkAssignRoleMembersMutation
-  );
+  )
 
   return {
     bulkAssignMembers: trigger,
     isAssigning: isMutating,
     error,
-  };
+  }
 }
 
 // ============================================
@@ -440,37 +433,37 @@ export function useBulkAssignRoleMembers(roleId: string | null) {
 // ============================================
 
 export function getRolesKey(filters?: RoleFilters) {
-  const params = new URLSearchParams();
-  if (filters?.search) params.set('search', filters.search);
-  if (filters?.is_system !== undefined) params.set('is_system', String(filters.is_system));
-  const queryString = params.toString();
-  return queryString ? `${API_BASE}?${queryString}` : API_BASE;
+  const params = new URLSearchParams()
+  if (filters?.search) params.set('search', filters.search)
+  if (filters?.is_system !== undefined) params.set('is_system', String(filters.is_system))
+  const queryString = params.toString()
+  return queryString ? `${API_BASE}?${queryString}` : API_BASE
 }
 
 export function getRoleKey(roleId: string) {
-  return `${API_BASE}/${roleId}`;
+  return `${API_BASE}/${roleId}`
 }
 
 export function getRoleMembersKey(roleId: string) {
-  return `${API_BASE}/${roleId}/members`;
+  return `${API_BASE}/${roleId}/members`
 }
 
 export function getUserRolesKey(userId: string) {
-  return `/api/v1/users/${userId}/roles`;
+  return `/api/v1/users/${userId}/roles`
 }
 
 export function getMyRolesKey() {
-  return '/api/v1/me/roles';
+  return '/api/v1/me/roles'
 }
 
 export function getMyPermissionsKey() {
-  return '/api/v1/me/permissions';
+  return '/api/v1/me/permissions'
 }
 
 export function getPermissionModulesKey() {
-  return `${PERMISSIONS_BASE}/modules`;
+  return `${PERMISSIONS_BASE}/modules`
 }
 
 export function getPermissionsKey() {
-  return PERMISSIONS_BASE;
+  return PERMISSIONS_BASE
 }

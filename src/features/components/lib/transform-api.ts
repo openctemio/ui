@@ -4,7 +4,11 @@
  * Transform API responses to UI types
  */
 
-import type { ApiComponent, ApiComponentListResponse, ApiVulnerableComponent } from '../api/component-api.types'
+import type {
+  ApiComponent,
+  ApiComponentListResponse,
+  ApiVulnerableComponent,
+} from '../api/component-api.types'
 import type {
   Component,
   ComponentStats,
@@ -74,22 +78,22 @@ function detectLicenseCategory(licenseId?: string): LicenseCategory {
   const id = licenseId.toUpperCase()
 
   // Permissive licenses
-  if (['MIT', 'APACHE-2.0', 'BSD-2-CLAUSE', 'BSD-3-CLAUSE', 'ISC'].some(l => id.includes(l))) {
+  if (['MIT', 'APACHE-2.0', 'BSD-2-CLAUSE', 'BSD-3-CLAUSE', 'ISC'].some((l) => id.includes(l))) {
     return 'permissive'
   }
 
   // Strong Copyleft
-  if (['GPL-2.0', 'GPL-3.0', 'AGPL'].some(l => id.includes(l))) {
+  if (['GPL-2.0', 'GPL-3.0', 'AGPL'].some((l) => id.includes(l))) {
     return 'copyleft'
   }
 
   // Weak Copyleft
-  if (['LGPL', 'MPL', 'EPL'].some(l => id.includes(l))) {
+  if (['LGPL', 'MPL', 'EPL'].some((l) => id.includes(l))) {
     return 'weak-copyleft'
   }
 
   // Public Domain
-  if (['CC0', 'UNLICENSE'].some(l => id.includes(l))) {
+  if (['CC0', 'UNLICENSE'].some((l) => id.includes(l))) {
     return 'public-domain'
   }
 
@@ -161,25 +165,37 @@ export function transformApiComponents(response: ApiComponentListResponse): Comp
  * Calculate stats from components array
  */
 export function calculateComponentStats(components: Component[]): ComponentStats {
-  const ecosystemCounts = components.reduce((acc, c) => {
-    acc[c.ecosystem] = (acc[c.ecosystem] || 0) + 1
-    return acc
-  }, {} as Record<ComponentEcosystem, number>)
+  const ecosystemCounts = components.reduce(
+    (acc, c) => {
+      acc[c.ecosystem] = (acc[c.ecosystem] || 0) + 1
+      return acc
+    },
+    {} as Record<ComponentEcosystem, number>
+  )
 
-  const typeCounts = components.reduce((acc, c) => {
-    acc[c.type] = (acc[c.type] || 0) + 1
-    return acc
-  }, {} as Record<ComponentType, number>)
+  const typeCounts = components.reduce(
+    (acc, c) => {
+      acc[c.type] = (acc[c.type] || 0) + 1
+      return acc
+    },
+    {} as Record<ComponentType, number>
+  )
 
-  const licenseRiskCounts = components.reduce((acc, c) => {
-    acc[c.licenseRisk] = (acc[c.licenseRisk] || 0) + 1
-    return acc
-  }, {} as Record<LicenseRisk, number>)
+  const licenseRiskCounts = components.reduce(
+    (acc, c) => {
+      acc[c.licenseRisk] = (acc[c.licenseRisk] || 0) + 1
+      return acc
+    },
+    {} as Record<LicenseRisk, number>
+  )
 
-  const licenseCategoryCounts = components.reduce((acc, c) => {
-    acc[c.licenseCategory] = (acc[c.licenseCategory] || 0) + 1
-    return acc
-  }, {} as Record<LicenseCategory, number>)
+  const licenseCategoryCounts = components.reduce(
+    (acc, c) => {
+      acc[c.licenseCategory] = (acc[c.licenseCategory] || 0) + 1
+      return acc
+    },
+    {} as Record<LicenseCategory, number>
+  )
 
   const vulnTotals = components.reduce(
     (acc, c) => ({
@@ -207,9 +223,8 @@ export function calculateComponentStats(components: Component[]): ComponentStats
         c.vulnerabilityCount.high > 0 ||
         c.vulnerabilityCount.medium > 0
     ).length,
-    componentsInCisaKev: components.filter((c) =>
-      c.vulnerabilities.some((v) => v.inCisaKev)
-    ).length,
+    componentsInCisaKev: components.filter((c) => c.vulnerabilities.some((v) => v.inCisaKev))
+      .length,
     byLicenseRisk: licenseRiskCounts as Record<LicenseRisk, number>,
     byLicenseCategory: licenseCategoryCounts as Record<LicenseCategory, number>,
     outdatedComponents: components.filter((c) => c.isOutdated).length,
@@ -223,12 +238,15 @@ export function calculateComponentStats(components: Component[]): ComponentStats
  * Calculate ecosystem stats from components
  */
 export function calculateEcosystemStats(components: Component[]) {
-  const ecosystemMap = new Map<ComponentEcosystem, {
-    count: number
-    vulnerabilities: number
-    outdated: number
-    totalRisk: number
-  }>()
+  const ecosystemMap = new Map<
+    ComponentEcosystem,
+    {
+      count: number
+      vulnerabilities: number
+      outdated: number
+      totalRisk: number
+    }
+  >()
 
   components.forEach((c) => {
     const existing = ecosystemMap.get(c.ecosystem) || {
@@ -240,9 +258,7 @@ export function calculateEcosystemStats(components: Component[]) {
 
     existing.count++
     existing.vulnerabilities +=
-      c.vulnerabilityCount.critical +
-      c.vulnerabilityCount.high +
-      c.vulnerabilityCount.medium
+      c.vulnerabilityCount.critical + c.vulnerabilityCount.high + c.vulnerabilityCount.medium
     if (c.isOutdated) existing.outdated++
     existing.totalRisk += c.riskScore
 
@@ -264,7 +280,10 @@ export function calculateEcosystemStats(components: Component[]) {
  * Calculate license stats from components
  */
 export function calculateLicenseStats(components: Component[]) {
-  const licenses = new Map<string, { count: number; risk: LicenseRisk; category: LicenseCategory }>()
+  const licenses = new Map<
+    string,
+    { count: number; risk: LicenseRisk; category: LicenseCategory }
+  >()
 
   components.forEach((c) => {
     if (c.licenseId) {

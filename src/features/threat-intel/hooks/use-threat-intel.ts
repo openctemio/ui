@@ -89,7 +89,12 @@ export function useSyncStatuses(tenantId: string | null) {
         return await get<SyncStatus[]>(threatIntelEndpoints.syncStatuses())
       } catch (err: unknown) {
         // 404 means no sync status exists yet - return empty array
-        if (err && typeof err === 'object' && 'statusCode' in err && (err as { statusCode: number }).statusCode === 404) {
+        if (
+          err &&
+          typeof err === 'object' &&
+          'statusCode' in err &&
+          (err as { statusCode: number }).statusCode === 404
+        ) {
           return []
         }
         throw err
@@ -151,7 +156,9 @@ export async function setSyncEnabled(
   source: ThreatIntelSource,
   enabled: boolean
 ): Promise<SyncStatus> {
-  return put<SyncStatus>(threatIntelEndpoints.setSyncEnabled(source), { enabled } as SetSyncEnabledRequest)
+  return put<SyncStatus>(threatIntelEndpoints.setSyncEnabled(source), {
+    enabled,
+  } as SetSyncEnabledRequest)
 }
 
 // ============================================

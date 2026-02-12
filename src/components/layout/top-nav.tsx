@@ -8,47 +8,47 @@
  * - Disabled state support
  */
 
-"use client";
+'use client'
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { Menu } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+import { Menu } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from '@/components/ui/dropdown-menu'
 
 export interface TopNavLink {
   /**
    * Link title/label
    */
-  title: string;
+  title: string
 
   /**
    * Link URL
    */
-  href: string;
+  href: string
 
   /**
    * Whether the link is disabled
    * @default false
    */
-  disabled?: boolean;
+  disabled?: boolean
 }
 
 type TopNavProps = React.HTMLAttributes<HTMLElement> & {
   /**
    * Navigation links to display
    */
-  links: TopNavLink[];
-};
+  links: TopNavLink[]
+}
 
 export function TopNav({ className, links, ...props }: TopNavProps) {
-  const pathname = usePathname();
+  const pathname = usePathname()
 
   return (
     <>
@@ -63,21 +63,21 @@ export function TopNav({ className, links, ...props }: TopNavProps) {
 
           <DropdownMenuContent side="bottom" align="start">
             {links.map(({ title, href, disabled }) => {
-              const isActive = pathname === href;
+              const isActive = pathname === href
               return (
                 <DropdownMenuItem key={href} asChild>
                   <Link
                     href={href}
                     className={cn(
-                      "block w-full",
-                      isActive ? "text-primary font-medium" : "text-muted-foreground",
-                      disabled && "pointer-events-none opacity-50"
+                      'block w-full',
+                      isActive ? 'text-primary font-medium' : 'text-muted-foreground',
+                      disabled && 'pointer-events-none opacity-50'
                     )}
                   >
                     {title}
                   </Link>
                 </DropdownMenuItem>
-              );
+              )
             })}
           </DropdownMenuContent>
         </DropdownMenu>
@@ -85,29 +85,26 @@ export function TopNav({ className, links, ...props }: TopNavProps) {
 
       {/* Desktop Nav */}
       <nav
-        className={cn(
-          "hidden items-center space-x-4 lg:flex lg:space-x-4 xl:space-x-6",
-          className
-        )}
+        className={cn('hidden items-center space-x-4 lg:flex lg:space-x-4 xl:space-x-6', className)}
         {...props}
       >
         {links.map(({ title, href, disabled }) => {
-          const isActive = pathname === href;
+          const isActive = pathname === href
           return (
             <Link
               key={href}
               href={href}
               className={cn(
-                "text-sm font-medium transition-colors hover:text-primary",
-                isActive ? "text-primary" : "text-muted-foreground",
-                disabled && "pointer-events-none opacity-50"
+                'text-sm font-medium transition-colors hover:text-primary',
+                isActive ? 'text-primary' : 'text-muted-foreground',
+                disabled && 'pointer-events-none opacity-50'
               )}
             >
               {title}
             </Link>
-          );
+          )
         })}
       </nav>
     </>
-  );
+  )
 }

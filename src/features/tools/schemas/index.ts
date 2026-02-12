@@ -1,1 +1,1 @@
-export * from './tool-schema';
+export * from './tool-schema'

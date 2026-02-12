@@ -129,18 +129,17 @@ export function useMyTenants(options?: UseMyTenantsOptions) {
   const shouldFetch = isMounted && !skip
   const swrKey = shouldFetch ? userTenantEndpoints.myTenants() : null
 
-  const result = useSWR<TenantMembership[]>(
-    swrKey,
-    (url: string) => get<TenantMembership[]>(url),
-    { ...defaultConfig, ...config }
-  )
+  const result = useSWR<TenantMembership[]>(swrKey, (url: string) => get<TenantMembership[]>(url), {
+    ...defaultConfig,
+    ...config,
+  })
 
   // Return with custom isLoading that includes mount check
   // With keepPreviousData, we only show loading on initial fetch (no data yet)
   // If skipped, isLoading should be false (not loading, just not fetching)
   return {
     ...result,
-    isLoading: skip ? false : (!isMounted || (result.isLoading && !result.data)),
+    isLoading: skip ? false : !isMounted || (result.isLoading && !result.data),
   }
 }
 

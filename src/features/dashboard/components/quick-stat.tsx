@@ -1,7 +1,7 @@
 interface QuickStatProps {
-  label: string;
-  value: number;
-  subtext: string;
+  label: string
+  value: number
+  subtext: string
 }
 
 export function QuickStat({ label, value, subtext }: QuickStatProps) {
@@ -13,5 +13,5 @@ export function QuickStat({ label, value, subtext }: QuickStatProps) {
       </div>
       <span className="text-2xl font-bold">{value}</span>
     </div>
-  );
+  )
 }

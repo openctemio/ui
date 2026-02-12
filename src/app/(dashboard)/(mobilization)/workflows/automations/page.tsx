@@ -1,7 +1,7 @@
-"use client";
+'use client'
 
-import { ComingSoonPage } from "@/features/shared";
-import { Zap } from "lucide-react";
+import { ComingSoonPage } from '@/features/shared'
+import { Zap } from 'lucide-react'
 
 export default function AutomationsPage() {
   return (
@@ -11,12 +11,12 @@ export default function AutomationsPage() {
       phase="Mobilization"
       icon={Zap}
       features={[
-        "Trigger-based automations",
-        "Integration with ticketing systems",
-        "Auto-assignment rules",
-        "Notification automation",
-        "Webhook configurations",
+        'Trigger-based automations',
+        'Integration with ticketing systems',
+        'Auto-assignment rules',
+        'Notification automation',
+        'Webhook configurations',
       ]}
     />
-  );
+  )
 }

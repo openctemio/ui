@@ -114,9 +114,8 @@ export function useAssetRelationships(assetId: string | null, config?: SWRConfig
  * Create asset mutation
  */
 export function useCreateAsset() {
-  return useSWRMutation(
-    securityEndpoints.assets.create(),
-    (url, { arg }: { arg: unknown }) => post(url, arg)
+  return useSWRMutation(securityEndpoints.assets.create(), (url, { arg }: { arg: unknown }) =>
+    post(url, arg)
   )
 }
 
@@ -134,10 +133,7 @@ export function useUpdateAsset(assetId: string) {
  * Delete asset mutation
  */
 export function useDeleteAsset(assetId: string) {
-  return useSWRMutation(
-    securityEndpoints.assets.delete(assetId),
-    (url) => del(url)
-  )
+  return useSWRMutation(securityEndpoints.assets.delete(assetId), (url) => del(url))
 }
 
 // ============================================
@@ -169,9 +165,8 @@ export function useAssetGroupStats(config?: SWRConfiguration) {
 }
 
 export function useCreateAssetGroup() {
-  return useSWRMutation(
-    securityEndpoints.assetGroups.create(),
-    (url, { arg }: { arg: unknown }) => post(url, arg)
+  return useSWRMutation(securityEndpoints.assetGroups.create(), (url, { arg }: { arg: unknown }) =>
+    post(url, arg)
   )
 }
 
@@ -183,10 +178,7 @@ export function useUpdateAssetGroup(groupId: string) {
 }
 
 export function useDeleteAssetGroup(groupId: string) {
-  return useSWRMutation(
-    securityEndpoints.assetGroups.delete(groupId),
-    (url) => del(url)
-  )
+  return useSWRMutation(securityEndpoints.assetGroups.delete(groupId), (url) => del(url))
 }
 
 // ============================================
@@ -294,9 +286,8 @@ export function useFindingsBySeverity(
 }
 
 export function useCreateFinding() {
-  return useSWRMutation(
-    securityEndpoints.findings.create(),
-    (url, { arg }: { arg: unknown }) => post(url, arg)
+  return useSWRMutation(securityEndpoints.findings.create(), (url, { arg }: { arg: unknown }) =>
+    post(url, arg)
   )
 }
 
@@ -358,17 +349,13 @@ export function useScanResults(scanId: string | null, config?: SWRConfiguration)
 }
 
 export function useStartScan() {
-  return useSWRMutation(
-    securityEndpoints.scans.start(),
-    (url, { arg }: { arg: unknown }) => post(url, arg)
+  return useSWRMutation(securityEndpoints.scans.start(), (url, { arg }: { arg: unknown }) =>
+    post(url, arg)
   )
 }
 
 export function useStopScan(scanId: string) {
-  return useSWRMutation(
-    securityEndpoints.scans.stop(scanId),
-    (url) => post(url)
-  )
+  return useSWRMutation(securityEndpoints.scans.stop(scanId), (url) => post(url))
 }
 
 // ============================================
@@ -400,17 +387,13 @@ export function useRunnerStats(config?: SWRConfiguration) {
 }
 
 export function useCreateRunner() {
-  return useSWRMutation(
-    securityEndpoints.runners.create(),
-    (url, { arg }: { arg: unknown }) => post(url, arg)
+  return useSWRMutation(securityEndpoints.runners.create(), (url, { arg }: { arg: unknown }) =>
+    post(url, arg)
   )
 }
 
 export function useDeleteRunner(runnerId: string) {
-  return useSWRMutation(
-    securityEndpoints.runners.delete(runnerId),
-    (url) => del(url)
-  )
+  return useSWRMutation(securityEndpoints.runners.delete(runnerId), (url) => del(url))
 }
 
 // ============================================
@@ -492,9 +475,8 @@ export function usePriorityTasks(config?: SWRConfiguration) {
 }
 
 export function useCreateRemediationTask() {
-  return useSWRMutation(
-    securityEndpoints.remediation.create(),
-    (url, { arg }: { arg: unknown }) => post(url, arg)
+  return useSWRMutation(securityEndpoints.remediation.create(), (url, { arg }: { arg: unknown }) =>
+    post(url, arg)
   )
 }
 
@@ -647,9 +629,8 @@ export function useReport(reportId: string | null, config?: SWRConfiguration) {
 }
 
 export function useGenerateReport() {
-  return useSWRMutation(
-    securityEndpoints.reports.generate(),
-    (url, { arg }: { arg: unknown }) => post(url, arg)
+  return useSWRMutation(securityEndpoints.reports.generate(), (url, { arg }: { arg: unknown }) =>
+    post(url, arg)
   )
 }
 
@@ -682,15 +663,11 @@ export function useIntegrationTypes(config?: SWRConfiguration) {
 }
 
 export function useCreateIntegration() {
-  return useSWRMutation(
-    securityEndpoints.integrations.create(),
-    (url, { arg }: { arg: unknown }) => post(url, arg)
+  return useSWRMutation(securityEndpoints.integrations.create(), (url, { arg }: { arg: unknown }) =>
+    post(url, arg)
   )
 }
 
 export function useTestIntegration(integrationId: string) {
-  return useSWRMutation(
-    securityEndpoints.integrations.test(integrationId),
-    (url) => post(url)
-  )
+  return useSWRMutation(securityEndpoints.integrations.test(integrationId), (url) => post(url))
 }

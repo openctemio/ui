@@ -91,7 +91,10 @@ export interface UpdateMemberRoleInput {
 // ROLE DISPLAY CONFIG
 // ============================================
 
-export const ROLE_DISPLAY: Record<MemberRole, { label: string; description: string; color: string }> = {
+export const ROLE_DISPLAY: Record<
+  MemberRole,
+  { label: string; description: string; color: string }
+> = {
   owner: {
     label: 'Owner',
     description: 'Full access to all features and settings',
@@ -114,7 +117,10 @@ export const ROLE_DISPLAY: Record<MemberRole, { label: string; description: stri
   },
 }
 
-export const STATUS_DISPLAY: Record<MemberStatus, { label: string; color: string; bgColor: string }> = {
+export const STATUS_DISPLAY: Record<
+  MemberStatus,
+  { label: string; color: string; bgColor: string }
+> = {
   active: { label: 'Active', color: 'text-green-400', bgColor: 'bg-green-500/20' },
   pending: { label: 'Pending', color: 'text-yellow-400', bgColor: 'bg-yellow-500/20' },
   inactive: { label: 'Inactive', color: 'text-gray-400', bgColor: 'bg-gray-500/20' },

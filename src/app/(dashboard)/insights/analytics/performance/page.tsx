@@ -1,7 +1,7 @@
-"use client";
+'use client'
 
-import { ComingSoonPage } from "@/features/shared";
-import { BarChart3 } from "lucide-react";
+import { ComingSoonPage } from '@/features/shared'
+import { BarChart3 } from 'lucide-react'
 
 export default function TeamPerformancePage() {
   return (
@@ -11,12 +11,12 @@ export default function TeamPerformancePage() {
       phase="Insights"
       icon={BarChart3}
       features={[
-        "Team velocity metrics",
-        "Task completion rates",
-        "Quality metrics",
-        "Workload distribution",
-        "Performance benchmarking",
+        'Team velocity metrics',
+        'Task completion rates',
+        'Quality metrics',
+        'Workload distribution',
+        'Performance benchmarking',
       ]}
     />
-  );
+  )
 }

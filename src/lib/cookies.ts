@@ -47,11 +47,7 @@ export function getCookie(name: string): string | undefined {
  * ⚠️ WARNING: Cannot set HttpOnly flag from client-side JavaScript
  * For HttpOnly cookies, use server-side API route (cookies-server.ts)
  */
-export function setCookie(
-  name: string,
-  value: string,
-  options: CookieOptions = {}
-): void {
+export function setCookie(name: string, value: string, options: CookieOptions = {}): void {
   if (!isClient()) return
 
   const {
@@ -63,11 +59,7 @@ export function setCookie(
   } = options
 
   // Build cookie string with security flags
-  const cookieParts = [
-    `${name}=${encodeURIComponent(value)}`,
-    `path=${path}`,
-    `max-age=${maxAge}`,
-  ]
+  const cookieParts = [`${name}=${encodeURIComponent(value)}`, `path=${path}`, `max-age=${maxAge}`]
 
   // Add optional attributes
   if (domain) {
@@ -89,16 +81,15 @@ export function setCookie(
 /**
  * Remove a cookie by setting its max age to 0
  */
-export function removeCookie(name: string, options: Pick<CookieOptions, 'path' | 'domain'> = {}): void {
+export function removeCookie(
+  name: string,
+  options: Pick<CookieOptions, 'path' | 'domain'> = {}
+): void {
   if (!isClient()) return
 
   const { path = '/', domain } = options
 
-  const cookieParts = [
-    `${name}=`,
-    `path=${path}`,
-    `max-age=0`,
-  ]
+  const cookieParts = [`${name}=`, `path=${path}`, `max-age=0`]
 
   if (domain) {
     cookieParts.push(`domain=${domain}`)
@@ -122,8 +113,8 @@ export function getAllCookies(): Record<string, string> {
 
   const cookies: Record<string, string> = {}
 
-  document.cookie.split(';').forEach(cookie => {
-    const [name, value] = cookie.split('=').map(c => c.trim())
+  document.cookie.split(';').forEach((cookie) => {
+    const [name, value] = cookie.split('=').map((c) => c.trim())
     if (name && value) {
       cookies[name] = decodeURIComponent(value)
     }
@@ -163,14 +154,14 @@ export const authTokenCookie = {
   get: () => {
     console.warn(
       '⚠️ WARNING: Getting auth token from client-side cookie is insecure. ' +
-      'Use server-side cookies or in-memory storage instead.'
+        'Use server-side cookies or in-memory storage instead.'
     )
     return getCookie(env.auth.cookieName)
   },
   set: (_token: string) => {
     console.error(
       '[Auth] Setting auth token via client-side cookie is INSECURE and NOT ALLOWED. ' +
-      'Use server-side API route (/api/auth/set-token) instead.'
+        'Use server-side API route (/api/auth/set-token) instead.'
     )
     // Intentionally do nothing - _token is ignored for security
   },

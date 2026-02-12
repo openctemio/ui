@@ -1,7 +1,7 @@
-"use client";
+'use client'
 
-import { ComingSoonPage } from "@/features/shared";
-import { Settings2 } from "lucide-react";
+import { ComingSoonPage } from '@/features/shared'
+import { Settings2 } from 'lucide-react'
 
 export default function ScopeSettingsPage() {
   return (
@@ -11,12 +11,12 @@ export default function ScopeSettingsPage() {
       phase="Scoping"
       icon={Settings2}
       features={[
-        "Configure discovery frequency",
-        "Set asset classification rules",
-        "Define exclusion patterns",
-        "Manage discovery credentials",
-        "Configure notification thresholds",
+        'Configure discovery frequency',
+        'Set asset classification rules',
+        'Define exclusion patterns',
+        'Manage discovery credentials',
+        'Configure notification thresholds',
       ]}
     />
-  );
+  )
 }

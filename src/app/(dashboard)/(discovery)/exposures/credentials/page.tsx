@@ -1,7 +1,7 @@
-"use client";
+'use client'
 
-import { ComingSoonPage } from "@/features/shared";
-import { KeyRound } from "lucide-react";
+import { ComingSoonPage } from '@/features/shared'
+import { KeyRound } from 'lucide-react'
 
 export default function CredentialLeaksPage() {
   return (
@@ -11,12 +11,12 @@ export default function CredentialLeaksPage() {
       phase="Discovery"
       icon={KeyRound}
       features={[
-        "Dark web monitoring",
-        "Breach database integration",
-        "Employee credential monitoring",
-        "Password strength analysis",
-        "Automated password reset workflows",
+        'Dark web monitoring',
+        'Breach database integration',
+        'Employee credential monitoring',
+        'Password strength analysis',
+        'Automated password reset workflows',
       ]}
     />
-  );
+  )
 }

@@ -45,13 +45,7 @@
 
 'use client'
 
-import {
-  type ReactNode,
-  type ReactElement,
-  cloneElement,
-  isValidElement,
-  Children,
-} from 'react'
+import { type ReactNode, type ReactElement, cloneElement, isValidElement, Children } from 'react'
 import {
   useHasPermission,
   useHasAnyPermission,
@@ -59,11 +53,7 @@ import {
   useIsTenantAdmin,
 } from '../hooks/use-permissions'
 import { getPermissionLabel } from '@/lib/permissions/constants'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
 // ============================================
 // TYPES
@@ -139,10 +129,7 @@ export type PermissionGateProps =
 // HELPER: Generate tooltip message
 // ============================================
 
-function generateTooltipMessage(
-  permission: string | string[],
-  requireAll: boolean
-): string {
+function generateTooltipMessage(permission: string | string[], requireAll: boolean): string {
   if (Array.isArray(permission)) {
     const labels = permission.map(getPermissionLabel)
     if (requireAll) {
@@ -159,9 +146,7 @@ function generateTooltipMessage(
 
 function isDisableableElement(element: ReactElement): boolean {
   if (typeof element.type === 'string') {
-    return ['button', 'input', 'select', 'textarea', 'fieldset'].includes(
-      element.type
-    )
+    return ['button', 'input', 'select', 'textarea', 'fieldset'].includes(element.type)
   }
   return true
 }
@@ -195,7 +180,8 @@ function DisabledWrapper({ children, tooltip }: DisabledWrapperProps) {
 
     return cloneElement(childElement, {
       'aria-disabled': true,
-      className: `${childElement.props.className || ''} opacity-50 cursor-not-allowed pointer-events-none`.trim(),
+      className:
+        `${childElement.props.className || ''} opacity-50 cursor-not-allowed pointer-events-none`.trim(),
     })
   })
 

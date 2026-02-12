@@ -1,7 +1,7 @@
-"use client";
+'use client'
 
-import { ComingSoonPage } from "@/features/shared";
-import { ListChecks } from "lucide-react";
+import { ComingSoonPage } from '@/features/shared'
+import { ListChecks } from 'lucide-react'
 
 export default function AllTasksPage() {
   return (
@@ -11,12 +11,12 @@ export default function AllTasksPage() {
       phase="Mobilization"
       icon={ListChecks}
       features={[
-        "Task list with advanced filtering",
-        "Bulk task management",
-        "Assignment and ownership tracking",
-        "Due date and SLA monitoring",
-        "Progress tracking and updates",
+        'Task list with advanced filtering',
+        'Bulk task management',
+        'Assignment and ownership tracking',
+        'Due date and SLA monitoring',
+        'Progress tracking and updates',
       ]}
     />
-  );
+  )
 }

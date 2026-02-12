@@ -29,10 +29,23 @@ export {
 } from './constants'
 
 // Role exports
-export { Role, type RoleString, AllRoles, isValidRole, RoleHierarchy, isRoleAtLeast, RolePermissions } from './constants'
+export {
+  Role,
+  type RoleString,
+  AllRoles,
+  isValidRole,
+  RoleHierarchy,
+  isRoleAtLeast,
+  RolePermissions,
+} from './constants'
 
 // Hooks
-export { usePermissions, useHasPermission, useHasAnyPermission, useHasAllPermissions } from './hooks'
+export {
+  usePermissions,
+  useHasPermission,
+  useHasAnyPermission,
+  useHasAllPermissions,
+} from './hooks'
 
 // Components
 export { Can, Cannot, type CanProps, type CannotProps, type PermissionMode } from './can'

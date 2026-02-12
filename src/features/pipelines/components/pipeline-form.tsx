@@ -242,7 +242,10 @@ export function PipelineForm({ pipeline, onSubmit, onCancel, isSubmitting }: Pip
   const [currentStep, setCurrentStep] = useState<WizardStep>('basics')
 
   // Fetch tools for selection
-  const { data: toolsData, isLoading: toolsLoading } = useToolsWithConfig({ is_active: true, per_page: 100 })
+  const { data: toolsData, isLoading: toolsLoading } = useToolsWithConfig({
+    is_active: true,
+    per_page: 100,
+  })
 
   // Form state
   const [name, setName] = useState(pipeline?.name || '')
@@ -605,10 +608,7 @@ export function PipelineForm({ pipeline, onSubmit, onCancel, isSubmitting }: Pip
 
           <div className="space-y-3">
             {triggers.map((trigger, index) => (
-              <div
-                key={index}
-                className="flex items-start gap-3 p-3 rounded-lg border bg-muted/30"
-              >
+              <div key={index} className="flex items-start gap-3 p-3 rounded-lg border bg-muted/30">
                 <div className="flex-1 space-y-3">
                   <Select
                     value={trigger.type}
@@ -755,9 +755,7 @@ export function PipelineForm({ pipeline, onSubmit, onCancel, isSubmitting }: Pip
           <div className="flex items-center justify-between rounded-lg border p-4">
             <div className="space-y-0.5">
               <Label className="text-sm">Notify on Failure</Label>
-              <p className="text-xs text-muted-foreground">
-                Send alerts when pipeline fails
-              </p>
+              <p className="text-xs text-muted-foreground">Send alerts when pipeline fails</p>
             </div>
             <Switch checked={notifyOnFailure} onCheckedChange={setNotifyOnFailure} />
           </div>

@@ -1,1 +1,1 @@
-export * from "./crown-jewel.schema";
+export * from './crown-jewel.schema'

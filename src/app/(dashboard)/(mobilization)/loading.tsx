@@ -1,5 +1,5 @@
-import { Skeleton } from "@/components/ui/skeleton";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Skeleton } from '@/components/ui/skeleton'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
 
 export default function MobilizationLoading() {
   return (
@@ -61,5 +61,5 @@ export default function MobilizationLoading() {
         </CardContent>
       </Card>
     </div>
-  );
+  )
 }

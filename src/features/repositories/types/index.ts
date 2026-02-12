@@ -1,4 +1,4 @@
 /**
  * Repository Types - Barrel Export
  */
-export * from "./repository.types";
+export * from './repository.types'

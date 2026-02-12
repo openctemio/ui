@@ -5,9 +5,9 @@
  * Following the design patterns from AssetDetailSheet
  */
 
-"use client";
+'use client'
 
-import * as React from "react";
+import * as React from 'react'
 import {
   Package,
   ExternalLink,
@@ -19,31 +19,21 @@ import {
   CheckCircle,
   Copy,
   FileCode,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import {
-  Sheet,
-  SheetContent,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Separator } from "@/components/ui/separator";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
-import { cn } from "@/lib/utils";
-import { toast } from "sonner";
-import { EcosystemBadge } from "./ecosystem-badge";
-import { SeverityBadge } from "./severity-badge";
-import { LicenseRiskBadge, LicenseCategoryBadge } from "./license-badge";
-import { RiskScoreBadge } from "@/features/shared";
-import type { Component } from "../types";
+} from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Separator } from '@/components/ui/separator'
+import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
+import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
+import { EcosystemBadge } from './ecosystem-badge'
+import { SeverityBadge } from './severity-badge'
+import { LicenseRiskBadge, LicenseCategoryBadge } from './license-badge'
+import { RiskScoreBadge } from '@/features/shared'
+import type { Component } from '../types'
 
 // ============================================
 // Types
@@ -51,13 +41,13 @@ import type { Component } from "../types";
 
 interface ComponentDetailSheetProps {
   /** The component to display (null when sheet is closed) */
-  component: Component | null;
+  component: Component | null
 
   /** Whether the sheet is open */
-  open: boolean;
+  open: boolean
 
   /** Callback when open state changes */
-  onOpenChange: (open: boolean) => void;
+  onOpenChange: (open: boolean) => void
 }
 
 // ============================================
@@ -71,24 +61,22 @@ function StatCard({
   color,
   description,
 }: {
-  icon: React.ElementType;
-  label: string;
-  value: string | number;
-  color: string;
-  description?: string;
+  icon: React.ElementType
+  label: string
+  value: string | number
+  color: string
+  description?: string
 }) {
   return (
     <div className="rounded-lg border p-3 space-y-1">
       <div className="flex items-center gap-2 text-muted-foreground">
-        <Icon className={cn("h-4 w-4", color)} />
+        <Icon className={cn('h-4 w-4', color)} />
         <span className="text-xs font-medium">{label}</span>
       </div>
-      <p className={cn("text-lg font-bold", color)}>{value}</p>
-      {description && (
-        <p className="text-xs text-muted-foreground">{description}</p>
-      )}
+      <p className={cn('text-lg font-bold', color)}>{value}</p>
+      {description && <p className="text-xs text-muted-foreground">{description}</p>}
     </div>
-  );
+  )
 }
 
 function InfoRow({ label, children }: { label: string; children: React.ReactNode }) {
@@ -97,69 +85,65 @@ function InfoRow({ label, children }: { label: string; children: React.ReactNode
       <span className="text-sm text-muted-foreground">{label}</span>
       <div className="flex items-center gap-2">{children}</div>
     </div>
-  );
+  )
 }
 
 // ============================================
 // Component
 // ============================================
 
-export function ComponentDetailSheet({
-  component,
-  open,
-  onOpenChange,
-}: ComponentDetailSheetProps) {
-  const [activeTab, setActiveTab] = React.useState("overview");
+export function ComponentDetailSheet({ component, open, onOpenChange }: ComponentDetailSheetProps) {
+  const [activeTab, setActiveTab] = React.useState('overview')
 
   // Reset tab when component changes
   React.useEffect(() => {
     if (component) {
-      setActiveTab("overview");
+      setActiveTab('overview')
     }
-  }, [component]);
+  }, [component])
 
-  if (!component) return null;
+  if (!component) return null
 
-  const hasVulnerabilities = component.vulnerabilities.length > 0;
+  const hasVulnerabilities = component.vulnerabilities.length > 0
   const totalVulns =
     component.vulnerabilityCount.critical +
     component.vulnerabilityCount.high +
     component.vulnerabilityCount.medium +
-    component.vulnerabilityCount.low;
+    component.vulnerabilityCount.low
 
   const handleCopyPurl = () => {
-    navigator.clipboard.writeText(component.purl);
-    toast.success("PURL copied to clipboard");
-  };
+    navigator.clipboard.writeText(component.purl)
+    toast.success('PURL copied to clipboard')
+  }
 
   // Determine gradient color based on risk
   const gradientFrom =
     component.riskScore >= 70
-      ? "from-red-500/20"
+      ? 'from-red-500/20'
       : component.riskScore >= 40
-        ? "from-orange-500/20"
-        : "from-blue-500/20";
+        ? 'from-orange-500/20'
+        : 'from-blue-500/20'
 
   const gradientVia =
     component.riskScore >= 70
-      ? "via-red-500/10"
+      ? 'via-red-500/10'
       : component.riskScore >= 40
-        ? "via-orange-500/10"
-        : "via-blue-500/10";
+        ? 'via-orange-500/10'
+        : 'via-blue-500/10'
 
   const iconColor =
     component.riskScore >= 70
-      ? "text-red-500"
+      ? 'text-red-500'
       : component.riskScore >= 40
-        ? "text-orange-500"
-        : "text-blue-500";
+        ? 'text-orange-500'
+        : 'text-blue-500'
 
   const iconBgColor =
     component.riskScore >= 70
-      ? "bg-red-500/20"
+      ? 'bg-red-500/20'
       : component.riskScore >= 40
-        ? "bg-orange-500/20"
-        : "bg-blue-500/20";
+        ? 'bg-orange-500/20'
+        : 'bg-blue-500/20'
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -171,7 +155,7 @@ export function ComponentDetailSheet({
         {/* Header with gradient */}
         <div
           className={cn(
-            "px-6 pt-6 pb-4 bg-gradient-to-br to-transparent",
+            'px-6 pt-6 pb-4 bg-gradient-to-br to-transparent',
             gradientFrom,
             gradientVia
           )}
@@ -179,11 +163,11 @@ export function ComponentDetailSheet({
           <div className="flex items-start gap-3 mb-3">
             <div
               className={cn(
-                "h-12 w-12 rounded-xl flex items-center justify-center shrink-0",
+                'h-12 w-12 rounded-xl flex items-center justify-center shrink-0',
                 iconBgColor
               )}
             >
-              <Package className={cn("h-6 w-6", iconColor)} />
+              <Package className={cn('h-6 w-6', iconColor)} />
             </div>
             <div className="flex-1 min-w-0">
               <h2 className="text-xl font-bold truncate">{component.name}</h2>
@@ -193,7 +177,9 @@ export function ComponentDetailSheet({
                 </Badge>
                 <EcosystemBadge ecosystem={component.ecosystem} />
                 {component.isDirect ? (
-                  <Badge variant="secondary" className="text-xs">Direct</Badge>
+                  <Badge variant="secondary" className="text-xs">
+                    Direct
+                  </Badge>
                 ) : (
                   <Badge variant="outline" className="text-xs gap-1">
                     <GitBranch className="h-3 w-3" />
@@ -226,7 +212,7 @@ export function ComponentDetailSheet({
               <Button
                 size="sm"
                 variant="secondary"
-                onClick={() => window.open(component.homepage, "_blank")}
+                onClick={() => window.open(component.homepage, '_blank')}
               >
                 <ExternalLink className="mr-2 h-4 w-4" />
                 Homepage
@@ -236,7 +222,7 @@ export function ComponentDetailSheet({
               <Button
                 size="sm"
                 variant="secondary"
-                onClick={() => window.open(component.repositoryUrl, "_blank")}
+                onClick={() => window.open(component.repositoryUrl, '_blank')}
               >
                 <GitBranch className="mr-2 h-4 w-4" />
                 Repository
@@ -275,32 +261,30 @@ export function ComponentDetailSheet({
                 value={`${component.riskScore}/100`}
                 color={
                   component.riskScore >= 70
-                    ? "text-red-500"
+                    ? 'text-red-500'
                     : component.riskScore >= 40
-                      ? "text-orange-500"
-                      : "text-green-500"
+                      ? 'text-orange-500'
+                      : 'text-green-500'
                 }
                 description={
                   component.riskScore >= 70
-                    ? "Critical risk"
+                    ? 'Critical risk'
                     : component.riskScore >= 40
-                      ? "Medium risk"
-                      : "Low risk"
+                      ? 'Medium risk'
+                      : 'Low risk'
                 }
               />
               <StatCard
                 icon={AlertTriangle}
                 label="Vulnerabilities"
                 value={totalVulns}
-                color={
-                  totalVulns > 0 ? "text-red-500" : "text-green-500"
-                }
+                color={totalVulns > 0 ? 'text-red-500' : 'text-green-500'}
                 description={
                   component.vulnerabilityCount.critical > 0
                     ? `${component.vulnerabilityCount.critical} critical`
                     : totalVulns > 0
-                      ? "No critical"
-                      : "No issues"
+                      ? 'No critical'
+                      : 'No issues'
                 }
               />
             </div>
@@ -309,9 +293,7 @@ export function ComponentDetailSheet({
             {component.description && (
               <Card>
                 <CardContent className="pt-4">
-                  <p className="text-sm text-muted-foreground">
-                    {component.description}
-                  </p>
+                  <p className="text-sm text-muted-foreground">{component.description}</p>
                 </CardContent>
               </Card>
             )}
@@ -326,7 +308,7 @@ export function ComponentDetailSheet({
               </CardHeader>
               <CardContent className="space-y-2">
                 <InfoRow label="License">
-                  <span className="font-mono text-sm">{component.licenseId || "Unknown"}</span>
+                  <span className="font-mono text-sm">{component.licenseId || 'Unknown'}</span>
                 </InfoRow>
                 <Separator />
                 <InfoRow label="Category">
@@ -416,16 +398,32 @@ export function ComponentDetailSheet({
                   <CardContent className="pt-4">
                     <div className="grid grid-cols-4 gap-2 text-center">
                       {[
-                        { label: "Critical", count: component.vulnerabilityCount.critical, color: "text-red-600 bg-red-500" },
-                        { label: "High", count: component.vulnerabilityCount.high, color: "text-orange-600 bg-orange-500" },
-                        { label: "Medium", count: component.vulnerabilityCount.medium, color: "text-yellow-600 bg-yellow-500" },
-                        { label: "Low", count: component.vulnerabilityCount.low, color: "text-blue-600 bg-blue-500" },
+                        {
+                          label: 'Critical',
+                          count: component.vulnerabilityCount.critical,
+                          color: 'text-red-600 bg-red-500',
+                        },
+                        {
+                          label: 'High',
+                          count: component.vulnerabilityCount.high,
+                          color: 'text-orange-600 bg-orange-500',
+                        },
+                        {
+                          label: 'Medium',
+                          count: component.vulnerabilityCount.medium,
+                          color: 'text-yellow-600 bg-yellow-500',
+                        },
+                        {
+                          label: 'Low',
+                          count: component.vulnerabilityCount.low,
+                          color: 'text-blue-600 bg-blue-500',
+                        },
                       ].map((item) => (
                         <div key={item.label}>
                           <div
                             className={cn(
-                              "text-2xl font-bold",
-                              item.count > 0 ? item.color.split(" ")[0] : "text-muted-foreground"
+                              'text-2xl font-bold',
+                              item.count > 0 ? item.color.split(' ')[0] : 'text-muted-foreground'
                             )}
                           >
                             {item.count}
@@ -442,19 +440,16 @@ export function ComponentDetailSheet({
                   {component.vulnerabilities.map((vuln) => (
                     <Card
                       key={vuln.id}
-                      className={cn(
-                        "overflow-hidden",
-                        vuln.inCisaKev && "border-red-500/50"
-                      )}
+                      className={cn('overflow-hidden', vuln.inCisaKev && 'border-red-500/50')}
                     >
                       {/* Severity indicator bar */}
                       <div
                         className={cn(
-                          "h-1",
-                          vuln.severity === "critical" && "bg-red-500",
-                          vuln.severity === "high" && "bg-orange-500",
-                          vuln.severity === "medium" && "bg-yellow-500",
-                          vuln.severity === "low" && "bg-blue-500"
+                          'h-1',
+                          vuln.severity === 'critical' && 'bg-red-500',
+                          vuln.severity === 'high' && 'bg-orange-500',
+                          vuln.severity === 'medium' && 'bg-yellow-500',
+                          vuln.severity === 'low' && 'bg-blue-500'
                         )}
                       />
                       <CardContent className="pt-4">
@@ -465,9 +460,7 @@ export function ComponentDetailSheet({
                             </Badge>
                             <SeverityBadge severity={vuln.severity} />
                             {vuln.inCisaKev && (
-                              <Badge className="bg-red-600 text-white text-xs">
-                                CISA KEV
-                              </Badge>
+                              <Badge className="bg-red-600 text-white text-xs">CISA KEV</Badge>
                             )}
                           </div>
                           {vuln.cvssScore && (
@@ -518,9 +511,7 @@ export function ComponentDetailSheet({
                   <CardTitle className="text-sm">
                     Found in {component.sourceCount} location(s)
                   </CardTitle>
-                  <CardDescription>
-                    Assets where this component was discovered
-                  </CardDescription>
+                  <CardDescription>Assets where this component was discovered</CardDescription>
                 </CardHeader>
               </Card>
 
@@ -532,9 +523,7 @@ export function ComponentDetailSheet({
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2 mb-1">
                             <FileCode className="h-4 w-4 text-muted-foreground shrink-0" />
-                            <span className="font-medium truncate">
-                              {source.assetName}
-                            </span>
+                            <span className="font-medium truncate">{source.assetName}</span>
                           </div>
                           <code className="text-xs text-muted-foreground font-mono block truncate">
                             {source.filePath}
@@ -569,5 +558,5 @@ export function ComponentDetailSheet({
         </Tabs>
       </SheetContent>
     </Sheet>
-  );
+  )
 }

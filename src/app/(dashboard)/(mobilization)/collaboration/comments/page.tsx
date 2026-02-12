@@ -1,7 +1,7 @@
-"use client";
+'use client'
 
-import { ComingSoonPage } from "@/features/shared";
-import { MessageSquare } from "lucide-react";
+import { ComingSoonPage } from '@/features/shared'
+import { MessageSquare } from 'lucide-react'
 
 export default function CommentsPage() {
   return (
@@ -11,12 +11,12 @@ export default function CommentsPage() {
       phase="Mobilization"
       icon={MessageSquare}
       features={[
-        "Threaded discussions",
-        "Mentions and notifications",
-        "Attachment support",
-        "Activity timeline",
-        "Search across comments",
+        'Threaded discussions',
+        'Mentions and notifications',
+        'Attachment support',
+        'Activity timeline',
+        'Search across comments',
       ]}
     />
-  );
+  )
 }

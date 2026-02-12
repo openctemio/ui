@@ -1,1 +1,1 @@
-export * from './agent-schema';
+export * from './agent-schema'

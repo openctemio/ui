@@ -45,9 +45,7 @@ export const passwordSchema = z
 /**
  * Confirm password field validator
  */
-export const confirmPasswordSchema = z
-  .string()
-  .min(1, 'Please confirm your password')
+export const confirmPasswordSchema = z.string().min(1, 'Please confirm your password')
 
 // ============================================
 // LOGIN SCHEMA

@@ -1,13 +1,13 @@
-'use client';
+'use client'
 
-import { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { toast } from 'sonner';
-import { Loader2, Plus, X, ChevronDown, ChevronRight, Terminal, Tag } from 'lucide-react';
-import type { Tool } from '@/lib/api/tool-types';
+import { useState, useEffect } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { toast } from 'sonner'
+import { Loader2, Plus, X, ChevronDown, ChevronRight, Terminal, Tag } from 'lucide-react'
+import type { Tool } from '@/lib/api/tool-types'
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -15,7 +15,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from '@/components/ui/dialog'
 import {
   Form,
   FormControl,
@@ -23,68 +23,56 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
+} from '@/components/ui/form'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible';
+} from '@/components/ui/select'
+import { Badge } from '@/components/ui/badge'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 
 import {
   useCreateCustomTool,
   useUpdateCustomTool,
   invalidateCustomToolsCache,
-} from '@/lib/api/tool-hooks';
-import {
-  useAllToolCategories,
-  getCategoryNameById,
-} from '@/lib/api/tool-category-hooks';
+} from '@/lib/api/tool-hooks'
+import { useAllToolCategories, getCategoryNameById } from '@/lib/api/tool-category-hooks'
 import {
   createToolSchema,
   type CreateToolFormData,
   CATEGORY_OPTIONS,
   INSTALL_METHOD_OPTIONS,
-} from '../schemas/tool-schema';
-import { ToolCategoryIcon } from './tool-category-icon';
+} from '../schemas/tool-schema'
+import { ToolCategoryIcon } from './tool-category-icon'
 
 interface AddToolDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSuccess?: () => void;
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onSuccess?: () => void
   /** Tool to edit - if provided, dialog is in edit mode */
-  tool?: Tool | null;
+  tool?: Tool | null
 }
 
-export function AddToolDialog({
-  open,
-  onOpenChange,
-  onSuccess,
-  tool,
-}: AddToolDialogProps) {
-  const [tagInput, setTagInput] = useState('');
-  const [capabilityInput, setCapabilityInput] = useState('');
-  const [targetInput, setTargetInput] = useState('');
-  const [formatInput, setFormatInput] = useState('');
-  const [commandsOpen, setCommandsOpen] = useState(false);
-  const [metadataOpen, setMetadataOpen] = useState(false);
+export function AddToolDialog({ open, onOpenChange, onSuccess, tool }: AddToolDialogProps) {
+  const [tagInput, setTagInput] = useState('')
+  const [capabilityInput, setCapabilityInput] = useState('')
+  const [targetInput, setTargetInput] = useState('')
+  const [formatInput, setFormatInput] = useState('')
+  const [commandsOpen, setCommandsOpen] = useState(false)
+  const [metadataOpen, setMetadataOpen] = useState(false)
 
-  const isEditMode = !!tool;
+  const isEditMode = !!tool
 
-  const { trigger: createTool, isMutating: isCreating } = useCreateCustomTool();
-  const { trigger: updateTool, isMutating: isUpdating } = useUpdateCustomTool(tool?.id || '');
-  const { data: categoriesData } = useAllToolCategories();
+  const { trigger: createTool, isMutating: isCreating } = useCreateCustomTool()
+  const { trigger: updateTool, isMutating: isUpdating } = useUpdateCustomTool(tool?.id || '')
+  const { data: categoriesData } = useAllToolCategories()
 
-  const isMutating = isCreating || isUpdating;
+  const isMutating = isCreating || isUpdating
 
   const form = useForm<CreateToolFormData>({
     resolver: zodResolver(createToolSchema),
@@ -106,18 +94,18 @@ export function AddToolDialog({
       output_formats: [],
       tags: [],
     },
-  });
+  })
 
   // Populate form when editing
   useEffect(() => {
     if (tool && open) {
       // Look up category name from category_id
-      const categoryName = getCategoryNameById(categoriesData?.items, tool.category_id);
+      const categoryName = getCategoryNameById(categoriesData?.items, tool.category_id)
       form.reset({
         name: tool.name,
         display_name: tool.display_name,
         description: tool.description || '',
-        category: categoryName as typeof CATEGORY_OPTIONS[number]['value'] | undefined,
+        category: categoryName as (typeof CATEGORY_OPTIONS)[number]['value'] | undefined,
         install_method: tool.install_method,
         install_cmd: tool.install_cmd || '',
         update_cmd: tool.update_cmd || '',
@@ -130,10 +118,10 @@ export function AddToolDialog({
         supported_targets: tool.supported_targets || [],
         output_formats: tool.output_formats || [],
         tags: tool.tags || [],
-      });
+      })
       // Expand sections if they have data
       if (tool.install_cmd || tool.update_cmd || tool.version_cmd) {
-        setCommandsOpen(true);
+        setCommandsOpen(true)
       }
       if (
         (tool.capabilities?.length ?? 0) > 0 ||
@@ -144,10 +132,10 @@ export function AddToolDialog({
         tool.github_url ||
         tool.logo_url
       ) {
-        setMetadataOpen(true);
+        setMetadataOpen(true)
       }
     }
-  }, [tool, open, form, categoriesData]);
+  }, [tool, open, form, categoriesData])
 
   const handleSubmit = async (data: CreateToolFormData) => {
     try {
@@ -168,60 +156,60 @@ export function AddToolDialog({
         supported_targets: data.supported_targets,
         output_formats: data.output_formats,
         tags: data.tags,
-      };
-
-      if (isEditMode) {
-        await updateTool(payload);
-        toast.success(`Tool "${data.display_name || data.name}" updated`);
-      } else {
-        await createTool(payload);
-        toast.success(`Tool "${data.display_name || data.name}" created`);
       }
 
-      await invalidateCustomToolsCache();
-      form.reset();
-      setCommandsOpen(false);
-      setMetadataOpen(false);
-      onOpenChange(false);
-      onSuccess?.();
+      if (isEditMode) {
+        await updateTool(payload)
+        toast.success(`Tool "${data.display_name || data.name}" updated`)
+      } else {
+        await createTool(payload)
+        toast.success(`Tool "${data.display_name || data.name}" created`)
+      }
+
+      await invalidateCustomToolsCache()
+      form.reset()
+      setCommandsOpen(false)
+      setMetadataOpen(false)
+      onOpenChange(false)
+      onSuccess?.()
     } catch (err) {
       toast.error(
         err instanceof Error ? err.message : `Failed to ${isEditMode ? 'update' : 'create'} tool`
-      );
+      )
     }
-  };
+  }
 
   const addArrayItem = (
     fieldName: 'tags' | 'capabilities' | 'supported_targets' | 'output_formats',
     value: string,
     setter: (v: string) => void
   ) => {
-    const currentValue = form.getValues(fieldName) || [];
+    const currentValue = form.getValues(fieldName) || []
     if (value.trim() && !currentValue.includes(value.trim())) {
-      form.setValue(fieldName, [...currentValue, value.trim()]);
+      form.setValue(fieldName, [...currentValue, value.trim()])
     }
-    setter('');
-  };
+    setter('')
+  }
 
   const removeArrayItem = (
     fieldName: 'tags' | 'capabilities' | 'supported_targets' | 'output_formats',
     item: string
   ) => {
-    const currentValue = form.getValues(fieldName) || [];
+    const currentValue = form.getValues(fieldName) || []
     form.setValue(
       fieldName,
       currentValue.filter((v) => v !== item)
-    );
-  };
+    )
+  }
 
   const handleOpenChange = (newOpen: boolean) => {
     if (!newOpen) {
-      form.reset();
-      setCommandsOpen(false);
-      setMetadataOpen(false);
+      form.reset()
+      setCommandsOpen(false)
+      setMetadataOpen(false)
     }
-    onOpenChange(newOpen);
-  };
+    onOpenChange(newOpen)
+  }
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -236,7 +224,10 @@ export function AddToolDialog({
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="flex flex-col flex-1 overflow-hidden">
+          <form
+            onSubmit={form.handleSubmit(handleSubmit)}
+            className="flex flex-col flex-1 overflow-hidden"
+          >
             <div className="flex-1 overflow-y-auto pr-2 space-y-5">
               {/* Required Fields Section */}
               <div className="space-y-4">
@@ -248,11 +239,7 @@ export function AddToolDialog({
                       <FormItem>
                         <FormLabel>Name *</FormLabel>
                         <FormControl>
-                          <Input
-                            {...field}
-                            placeholder="semgrep"
-                            className="font-mono"
-                          />
+                          <Input {...field} placeholder="semgrep" className="font-mono" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -281,10 +268,7 @@ export function AddToolDialog({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Category *</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                        >
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Select category" />
@@ -294,10 +278,7 @@ export function AddToolDialog({
                             {CATEGORY_OPTIONS.map((option) => (
                               <SelectItem key={option.value} value={option.value}>
                                 <div className="flex items-center gap-2">
-                                  <ToolCategoryIcon
-                                    category={option.value}
-                                    className="h-4 w-4"
-                                  />
+                                  <ToolCategoryIcon category={option.value} className="h-4 w-4" />
                                   <span>{option.label}</span>
                                 </div>
                               </SelectItem>
@@ -315,10 +296,7 @@ export function AddToolDialog({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Install Method *</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                        >
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Select method" />
@@ -365,11 +343,7 @@ export function AddToolDialog({
                       <FormItem>
                         <FormLabel>GitHub URL</FormLabel>
                         <FormControl>
-                          <Input
-                            {...field}
-                            type="url"
-                            placeholder="https://github.com/..."
-                          />
+                          <Input {...field} type="url" placeholder="https://github.com/..." />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -383,11 +357,7 @@ export function AddToolDialog({
                       <FormItem>
                         <FormLabel>Docs URL</FormLabel>
                         <FormControl>
-                          <Input
-                            {...field}
-                            type="url"
-                            placeholder="https://docs.example.com"
-                          />
+                          <Input {...field} type="url" placeholder="https://docs.example.com" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -525,8 +495,8 @@ export function AddToolDialog({
                         className="flex-1"
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') {
-                            e.preventDefault();
-                            addArrayItem('tags', tagInput, setTagInput);
+                            e.preventDefault()
+                            addArrayItem('tags', tagInput, setTagInput)
                           }
                         }}
                       />
@@ -568,8 +538,8 @@ export function AddToolDialog({
                         className="flex-1"
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') {
-                            e.preventDefault();
-                            addArrayItem('capabilities', capabilityInput, setCapabilityInput);
+                            e.preventDefault()
+                            addArrayItem('capabilities', capabilityInput, setCapabilityInput)
                           }
                         }}
                       />
@@ -613,8 +583,8 @@ export function AddToolDialog({
                         className="flex-1"
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') {
-                            e.preventDefault();
-                            addArrayItem('supported_targets', targetInput, setTargetInput);
+                            e.preventDefault()
+                            addArrayItem('supported_targets', targetInput, setTargetInput)
                           }
                         }}
                       />
@@ -658,8 +628,8 @@ export function AddToolDialog({
                         className="flex-1"
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') {
-                            e.preventDefault();
-                            addArrayItem('output_formats', formatInput, setFormatInput);
+                            e.preventDefault()
+                            addArrayItem('output_formats', formatInput, setFormatInput)
                           }
                         }}
                       />
@@ -667,9 +637,7 @@ export function AddToolDialog({
                         type="button"
                         variant="outline"
                         size="icon"
-                        onClick={() =>
-                          addArrayItem('output_formats', formatInput, setFormatInput)
-                        }
+                        onClick={() => addArrayItem('output_formats', formatInput, setFormatInput)}
                       >
                         <Plus className="h-4 w-4" />
                       </Button>
@@ -700,11 +668,7 @@ export function AddToolDialog({
                       <FormItem>
                         <FormLabel>Logo URL</FormLabel>
                         <FormControl>
-                          <Input
-                            {...field}
-                            type="url"
-                            placeholder="https://example.com/logo.png"
-                          />
+                          <Input {...field} type="url" placeholder="https://example.com/logo.png" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -732,5 +696,5 @@ export function AddToolDialog({
         </Form>
       </DialogContent>
     </Dialog>
-  );
+  )
 }

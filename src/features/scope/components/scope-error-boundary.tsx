@@ -1,19 +1,19 @@
-"use client";
+'use client'
 
-import { Component, type ReactNode } from "react";
-import { AlertTriangle, RefreshCw } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Component, type ReactNode } from 'react'
+import { AlertTriangle, RefreshCw } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
 
 interface ScopeErrorBoundaryProps {
-  children: ReactNode;
-  fallback?: ReactNode;
-  onError?: (error: Error, errorInfo: React.ErrorInfo) => void;
+  children: ReactNode
+  fallback?: ReactNode
+  onError?: (error: Error, errorInfo: React.ErrorInfo) => void
 }
 
 interface ScopeErrorBoundaryState {
-  hasError: boolean;
-  error: Error | null;
+  hasError: boolean
+  error: Error | null
 }
 
 /**
@@ -30,32 +30,32 @@ export class ScopeErrorBoundary extends Component<
   ScopeErrorBoundaryState
 > {
   constructor(props: ScopeErrorBoundaryProps) {
-    super(props);
-    this.state = { hasError: false, error: null };
+    super(props)
+    this.state = { hasError: false, error: null }
   }
 
   static getDerivedStateFromError(error: Error): ScopeErrorBoundaryState {
-    return { hasError: true, error };
+    return { hasError: true, error }
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     // Log error for debugging
-    console.error("[ScopeErrorBoundary] Error caught:", error);
-    console.error("[ScopeErrorBoundary] Component stack:", errorInfo.componentStack);
+    console.error('[ScopeErrorBoundary] Error caught:', error)
+    console.error('[ScopeErrorBoundary] Component stack:', errorInfo.componentStack)
 
     // Call custom error handler if provided
-    this.props.onError?.(error, errorInfo);
+    this.props.onError?.(error, errorInfo)
   }
 
   handleReset = () => {
-    this.setState({ hasError: false, error: null });
-  };
+    this.setState({ hasError: false, error: null })
+  }
 
   render() {
     if (this.state.hasError) {
       // Render custom fallback if provided
       if (this.props.fallback) {
-        return this.props.fallback;
+        return this.props.fallback
       }
 
       // Default fallback UI
@@ -64,28 +64,21 @@ export class ScopeErrorBoundary extends Component<
           <CardContent className="flex items-center gap-3 p-3">
             <AlertTriangle className="h-4 w-4 text-destructive" />
             <div className="flex-1">
-              <p className="text-sm font-medium text-destructive">
-                Failed to load scope data
-              </p>
+              <p className="text-sm font-medium text-destructive">Failed to load scope data</p>
               <p className="text-xs text-muted-foreground">
-                {this.state.error?.message || "An unexpected error occurred"}
+                {this.state.error?.message || 'An unexpected error occurred'}
               </p>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={this.handleReset}
-              className="h-7"
-            >
+            <Button variant="outline" size="sm" onClick={this.handleReset} className="h-7">
               <RefreshCw className="mr-1 h-3 w-3" />
               Retry
             </Button>
           </CardContent>
         </Card>
-      );
+      )
     }
 
-    return this.props.children;
+    return this.props.children
   }
 }
 
@@ -98,16 +91,16 @@ export class ScopeBadgeErrorBoundary extends Component<
   { hasError: boolean }
 > {
   constructor(props: { children: ReactNode }) {
-    super(props);
-    this.state = { hasError: false };
+    super(props)
+    this.state = { hasError: false }
   }
 
   static getDerivedStateFromError(): { hasError: boolean } {
-    return { hasError: true };
+    return { hasError: true }
   }
 
   componentDidCatch(error: Error) {
-    console.error("[ScopeBadgeErrorBoundary] Error:", error.message);
+    console.error('[ScopeBadgeErrorBoundary] Error:', error.message)
   }
 
   render() {
@@ -117,10 +110,10 @@ export class ScopeBadgeErrorBoundary extends Component<
           <AlertTriangle className="h-3 w-3" />
           Error
         </span>
-      );
+      )
     }
 
-    return this.props.children;
+    return this.props.children
   }
 }
 
@@ -136,6 +129,6 @@ export function withScopeErrorBoundary<P extends object>(
       <ScopeErrorBoundary fallback={fallback}>
         <WrappedComponent {...props} />
       </ScopeErrorBoundary>
-    );
-  };
+    )
+  }
 }
