@@ -34,7 +34,7 @@ describe('emailSchema', () => {
       'user123@test-domain.com',
     ]
 
-    validEmails.forEach(email => {
+    validEmails.forEach((email) => {
       expect(() => emailSchema.parse(email)).not.toThrow()
     })
   })
@@ -52,7 +52,7 @@ describe('emailSchema', () => {
       'user @example.com',
     ]
 
-    invalidEmails.forEach(email => {
+    invalidEmails.forEach((email) => {
       expect(() => emailSchema.parse(email)).toThrow('Please enter a valid email address')
     })
   })
@@ -60,14 +60,9 @@ describe('emailSchema', () => {
 
 describe('passwordSchema', () => {
   it('should accept valid passwords (8+ characters)', () => {
-    const validPasswords = [
-      'password123',
-      'MyP@ssw0rd',
-      'abcdefgh',
-      'verylongpassword123',
-    ]
+    const validPasswords = ['password123', 'MyP@ssw0rd', 'abcdefgh', 'verylongpassword123']
 
-    validPasswords.forEach(password => {
+    validPasswords.forEach((password) => {
       expect(() => passwordSchema.parse(password)).not.toThrow()
     })
   })
@@ -79,7 +74,7 @@ describe('passwordSchema', () => {
   it('should reject passwords shorter than 8 characters', () => {
     const shortPasswords = ['pass', 'test', '1234567', 'abc']
 
-    shortPasswords.forEach(password => {
+    shortPasswords.forEach((password) => {
       expect(() => passwordSchema.parse(password)).toThrow(
         'Password must be at least 8 characters long'
       )
@@ -94,9 +89,7 @@ describe('confirmPasswordSchema', () => {
   })
 
   it('should reject empty string', () => {
-    expect(() => confirmPasswordSchema.parse('')).toThrow(
-      'Please confirm your password'
-    )
+    expect(() => confirmPasswordSchema.parse('')).toThrow('Please confirm your password')
   })
 })
 
@@ -146,6 +139,8 @@ describe('loginSchema', () => {
 describe('registerSchema', () => {
   it('should accept valid registration data', () => {
     const validData = {
+      firstName: 'John',
+      lastName: 'Doe',
       email: 'test@example.com',
       password: 'password123',
       confirmPassword: 'password123',
@@ -156,6 +151,8 @@ describe('registerSchema', () => {
 
   it('should reject when passwords do not match', () => {
     const invalidData = {
+      firstName: 'John',
+      lastName: 'Doe',
       email: 'test@example.com',
       password: 'password123',
       confirmPassword: 'different123',
@@ -166,6 +163,8 @@ describe('registerSchema', () => {
 
   it('should reject invalid email', () => {
     const invalidData = {
+      firstName: 'John',
+      lastName: 'Doe',
       email: 'invalid-email',
       password: 'password123',
       confirmPassword: 'password123',
@@ -176,6 +175,8 @@ describe('registerSchema', () => {
 
   it('should reject short password', () => {
     const invalidData = {
+      firstName: 'John',
+      lastName: 'Doe',
       email: 'test@example.com',
       password: 'short',
       confirmPassword: 'short',
@@ -188,8 +189,10 @@ describe('registerSchema', () => {
     expect(() => registerSchema.parse({})).toThrow()
     expect(() =>
       registerSchema.parse({
+        firstName: 'John',
+        lastName: 'Doe',
         email: 'test@example.com',
-        password: 'password123'
+        password: 'password123',
       })
     ).toThrow()
   })
