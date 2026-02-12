@@ -96,16 +96,7 @@ function groupToolsByCategory(tools: ToolWithConfig[]): Map<string, ToolWithConf
   const groups = new Map<string, ToolWithConfig[]>()
 
   // Define category display order (slug -> display name fallback)
-  const categoryOrder = [
-    'sast',
-    'sca',
-    'dast',
-    'secrets',
-    'iac',
-    'container',
-    'recon',
-    'osint',
-  ]
+  const categoryOrder = ['sast', 'sca', 'dast', 'secrets', 'iac', 'container', 'recon', 'osint']
 
   // First pass: collect all unique categories and their display names
   const categoryDisplayNames = new Map<string, string>()
@@ -162,7 +153,11 @@ export function NodePalette({ onDragStart, position = 'right' }: NodePaletteProp
   const { getDisplayName: getCapabilityDisplayName } = useCapabilityMetadata()
 
   // Fetch tools from API
-  const { data: toolsData, isLoading, error } = useToolsWithConfig({
+  const {
+    data: toolsData,
+    isLoading,
+    error,
+  } = useToolsWithConfig({
     is_active: true,
     per_page: 100,
   })
@@ -186,7 +181,10 @@ export function NodePalette({ onDragStart, position = 'right' }: NodePaletteProp
     // Store tool data for drop handler
     event.dataTransfer.setData('application/reactflow', 'scanner')
     event.dataTransfer.setData('application/node-label', tool.display_name || tool.name)
-    event.dataTransfer.setData('application/node-capabilities', JSON.stringify(tool.capabilities || []))
+    event.dataTransfer.setData(
+      'application/node-capabilities',
+      JSON.stringify(tool.capabilities || [])
+    )
     event.dataTransfer.setData('application/tool-name', tool.name)
     event.dataTransfer.setData('application/tool-id', tool.id)
     // Pass category color for node styling
@@ -315,9 +313,7 @@ export function NodePalette({ onDragStart, position = 'right' }: NodePaletteProp
                     <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
                   )}
                   <span className="truncate">{category}</span>
-                  <span className="ml-auto text-xs text-muted-foreground">
-                    {tools.length}
-                  </span>
+                  <span className="ml-auto text-xs text-muted-foreground">{tools.length}</span>
                 </button>
 
                 {/* Tools in Category */}
@@ -363,15 +359,22 @@ export function NodePalette({ onDragStart, position = 'right' }: NodePaletteProp
                                 isAvailable ? iconBg : 'bg-muted'
                               )}
                             >
-                              <Icon className={cn('h-4 w-4', isAvailable ? 'text-white' : 'text-muted-foreground')} />
+                              <Icon
+                                className={cn(
+                                  'h-4 w-4',
+                                  isAvailable ? 'text-white' : 'text-muted-foreground'
+                                )}
+                              />
                             </div>
                           )}
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-1">
-                              <span className={cn(
-                                'text-xs font-medium leading-tight truncate',
-                                !isAvailable && 'text-muted-foreground'
-                              )}>
+                              <span
+                                className={cn(
+                                  'text-xs font-medium leading-tight truncate',
+                                  !isAvailable && 'text-muted-foreground'
+                                )}
+                              >
                                 {tool.display_name || tool.name}
                               </span>
                               {/* Show badge for platform vs custom tools */}
@@ -395,7 +398,10 @@ export function NodePalette({ onDragStart, position = 'right' }: NodePaletteProp
                             </div>
                             {tool.capabilities && tool.capabilities.length > 0 && (
                               <span className="text-[10px] text-muted-foreground leading-tight">
-                                {tool.capabilities.slice(0, 2).map(c => getCapabilityDisplayName(c)).join(', ')}
+                                {tool.capabilities
+                                  .slice(0, 2)
+                                  .map((c) => getCapabilityDisplayName(c))
+                                  .join(', ')}
                                 {tool.capabilities.length > 2 && '...'}
                               </span>
                             )}

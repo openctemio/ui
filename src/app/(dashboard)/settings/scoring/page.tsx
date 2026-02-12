@@ -1,7 +1,7 @@
-"use client";
+'use client'
 
-import { ComingSoonPage } from "@/features/shared";
-import { Gauge } from "lucide-react";
+import { ComingSoonPage } from '@/features/shared'
+import { Gauge } from 'lucide-react'
 
 export default function ScoringRulesPage() {
   return (
@@ -11,12 +11,12 @@ export default function ScoringRulesPage() {
       phase="Settings"
       icon={Gauge}
       features={[
-        "Custom scoring formulas",
-        "Weight factor configuration",
-        "Business context scoring",
-        "Asset criticality weights",
-        "Threat intelligence factors",
+        'Custom scoring formulas',
+        'Weight factor configuration',
+        'Business context scoring',
+        'Asset criticality weights',
+        'Threat intelligence factors',
       ]}
     />
-  );
+  )
 }

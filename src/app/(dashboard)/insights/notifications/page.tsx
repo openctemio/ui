@@ -1,7 +1,7 @@
-"use client";
+'use client'
 
-import { ComingSoonPage } from "@/features/shared";
-import { Bell } from "lucide-react";
+import { ComingSoonPage } from '@/features/shared'
+import { Bell } from 'lucide-react'
 
 export default function NotificationsPage() {
   return (
@@ -11,12 +11,12 @@ export default function NotificationsPage() {
       phase="Insights"
       icon={Bell}
       features={[
-        "Custom alert rules",
-        "Multi-channel delivery (email, Slack, Teams)",
-        "Alert prioritization",
-        "Notification history",
-        "Alert suppression rules",
+        'Custom alert rules',
+        'Multi-channel delivery (email, Slack, Teams)',
+        'Alert prioritization',
+        'Notification history',
+        'Alert suppression rules',
       ]}
     />
-  );
+  )
 }

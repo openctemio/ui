@@ -96,19 +96,17 @@ function calculateAutoLayout(steps: PipelineStep[]): Map<string, { x: number; y:
 
   // Build dependency map: step_key -> step
   const stepsByKey = new Map<string, PipelineStep>()
-  steps.forEach(step => stepsByKey.set(step.step_key, step))
+  steps.forEach((step) => stepsByKey.set(step.step_key, step))
 
   // Calculate level (column) for each step using BFS
   const levels = new Map<string, number>()
 
   // Find root steps (no dependencies)
-  const rootSteps = steps.filter(
-    step => !step.depends_on || step.depends_on.length === 0
-  )
+  const rootSteps = steps.filter((step) => !step.depends_on || step.depends_on.length === 0)
 
   // BFS to assign levels
   const queue: { stepKey: string; level: number }[] = []
-  rootSteps.forEach(step => {
+  rootSteps.forEach((step) => {
     queue.push({ stepKey: step.step_key, level: 0 })
     levels.set(step.step_key, 0)
   })
@@ -117,7 +115,7 @@ function calculateAutoLayout(steps: PipelineStep[]): Map<string, { x: number; y:
     const { stepKey, level } = queue.shift()!
 
     // Find steps that depend on this step
-    steps.forEach(step => {
+    steps.forEach((step) => {
       if (step.depends_on?.includes(stepKey)) {
         const currentLevel = levels.get(step.step_key)
         const newLevel = level + 1
@@ -132,7 +130,7 @@ function calculateAutoLayout(steps: PipelineStep[]): Map<string, { x: number; y:
   }
 
   // Handle steps with no level assigned (orphans or cycles)
-  steps.forEach(step => {
+  steps.forEach((step) => {
     if (!levels.has(step.step_key)) {
       levels.set(step.step_key, 0)
     }
@@ -140,7 +138,7 @@ function calculateAutoLayout(steps: PipelineStep[]): Map<string, { x: number; y:
 
   // Group steps by level
   const levelGroups = new Map<number, PipelineStep[]>()
-  steps.forEach(step => {
+  steps.forEach((step) => {
     const level = levels.get(step.step_key) || 0
     if (!levelGroups.has(level)) {
       levelGroups.set(level, [])
@@ -169,9 +167,7 @@ function stepsToEdges(steps: PipelineStep[]): Edge[] {
   const edges: Edge[] = []
 
   // Find root nodes (steps with no dependencies)
-  const rootSteps = steps.filter(
-    (step) => !step.depends_on || step.depends_on.length === 0
-  )
+  const rootSteps = steps.filter((step) => !step.depends_on || step.depends_on.length === 0)
 
   // Connect Start node to root steps
   rootSteps.forEach((step) => {
@@ -217,8 +213,7 @@ function stepsToEdges(steps: PipelineStep[]): Edge[] {
   // Find leaf nodes (steps that no other step depends on)
   const leafSteps = steps.filter((step) => {
     return !steps.some(
-      (otherStep) =>
-        otherStep.depends_on && otherStep.depends_on.includes(step.step_key)
+      (otherStep) => otherStep.depends_on && otherStep.depends_on.includes(step.step_key)
     )
   })
 
@@ -286,9 +281,9 @@ function WorkflowBuilderInner({
   // Calculate default End node position based on steps (fallback if no saved position)
   const calculateDefaultEndPosition = (stepsData: PipelineStep[]) => {
     const autoPositions = calculateAutoLayout(stepsData)
-    const allX = stepsData.map(s => {
+    const allX = stepsData.map((s) => {
       const hasValidPosition = s.ui_position?.x !== undefined
-      return hasValidPosition ? s.ui_position!.x : (autoPositions.get(s.id)?.x || 200)
+      return hasValidPosition ? s.ui_position!.x : autoPositions.get(s.id)?.x || 200
     })
     const maxX = allX.length > 0 ? Math.max(...allX) : START_X + 100
     return { x: maxX + NODE_WIDTH + HORIZONTAL_GAP, y: START_Y + 50 }
@@ -301,35 +296,37 @@ function WorkflowBuilderInner({
     end: initialEndPosition || calculateDefaultEndPosition(steps),
   }))
 
-
   // Build all nodes including Start/End
-  const buildAllNodes = useCallback((
-    scannerNodes: WorkflowNode[],
-    startPos: { x: number; y: number },
-    endPos: { x: number; y: number }
-  ): WorkflowNode[] => {
-    const startNode: WorkflowNode = {
-      id: START_NODE_ID,
-      type: 'start',
-      position: startPos,
-      data: { label: 'Start' },
-      draggable: !readOnly,
-      selectable: false,
-      deletable: false,
-    }
+  const buildAllNodes = useCallback(
+    (
+      scannerNodes: WorkflowNode[],
+      startPos: { x: number; y: number },
+      endPos: { x: number; y: number }
+    ): WorkflowNode[] => {
+      const startNode: WorkflowNode = {
+        id: START_NODE_ID,
+        type: 'start',
+        position: startPos,
+        data: { label: 'Start' },
+        draggable: !readOnly,
+        selectable: false,
+        deletable: false,
+      }
 
-    const endNode: WorkflowNode = {
-      id: END_NODE_ID,
-      type: 'end',
-      position: endPos,
-      data: { label: 'End' },
-      draggable: !readOnly,
-      selectable: false,
-      deletable: false,
-    }
+      const endNode: WorkflowNode = {
+        id: END_NODE_ID,
+        type: 'end',
+        position: endPos,
+        data: { label: 'End' },
+        draggable: !readOnly,
+        selectable: false,
+        deletable: false,
+      }
 
-    return [startNode, ...scannerNodes, endNode]
-  }, [readOnly])
+      return [startNode, ...scannerNodes, endNode]
+    },
+    [readOnly]
+  )
 
   // Initialize nodes - just start/end, scanner nodes will be added by useEffect
   const initialNodes = useMemo(() => {
@@ -345,8 +342,8 @@ function WorkflowBuilderInner({
   // This is the single source of truth for node data updates
   useEffect(() => {
     setNodes((currentNodes) => {
-      const currentStart = currentNodes.find(n => n.id === START_NODE_ID)
-      const currentEnd = currentNodes.find(n => n.id === END_NODE_ID)
+      const currentStart = currentNodes.find((n) => n.id === START_NODE_ID)
+      const currentEnd = currentNodes.find((n) => n.id === END_NODE_ID)
 
       const startPos = currentStart?.position || startEndPositions.start
       const endPos = currentEnd?.position || startEndPositions.end
@@ -355,15 +352,18 @@ function WorkflowBuilderInner({
       const autoPositions = calculateAutoLayout(steps)
       const scannerNodes: WorkflowNode[] = steps.map((step) => {
         // Preserve current position if node exists, otherwise use saved or auto position
-        const existingNode = currentNodes.find(n => n.id === step.id)
-        const hasValidPosition = step.ui_position?.x !== undefined && step.ui_position?.y !== undefined
+        const existingNode = currentNodes.find((n) => n.id === step.id)
+        const hasValidPosition =
+          step.ui_position?.x !== undefined && step.ui_position?.y !== undefined
         const autoPos = autoPositions.get(step.id) || { x: 200, y: START_Y }
-        const position = existingNode?.position || (hasValidPosition ? { x: step.ui_position!.x, y: step.ui_position!.y } : autoPos)
+        const position =
+          existingNode?.position ||
+          (hasValidPosition ? { x: step.ui_position!.x, y: step.ui_position!.y } : autoPos)
 
         // Build available steps for this node (exclude itself)
         const availableStepsForThis = steps
-          .filter(s => s.id !== step.id)
-          .map(s => ({ stepKey: s.step_key, name: s.name }))
+          .filter((s) => s.id !== step.id)
+          .map((s) => ({ stepKey: s.step_key, name: s.name }))
 
         // Create a unique key based on data that should trigger re-render
         const dataKey = `${step.tool || ''}-${JSON.stringify(step.capabilities || [])}`
@@ -387,26 +387,28 @@ function WorkflowBuilderInner({
             availableTools: availableTools,
             availableSteps: availableStepsForThis,
             // Add callbacks if not readOnly
-            ...(!readOnly && onStepUpdate ? {
-              onLabelChange: (label: string) => {
-                onStepUpdate(step.id, { name: label })
-              },
-              onToolChange: (tool: string) => {
-                // Find the selected tool's capabilities and update both tool and capabilities
-                const selectedTool = availableTools.find(t => t.name === tool)
-                const capabilities = selectedTool?.capabilities || []
-                onStepUpdate(step.id, { tool, capabilities })
-              },
-              onDescriptionChange: (description: string) => {
-                onStepUpdate(step.id, { description })
-              },
-              onStepKeyChange: (step_key: string) => {
-                onStepUpdate(step.id, { step_key })
-              },
-              onTimeoutChange: (timeout_seconds: number) => {
-                onStepUpdate(step.id, { timeout_seconds })
-              },
-            } : {}),
+            ...(!readOnly && onStepUpdate
+              ? {
+                  onLabelChange: (label: string) => {
+                    onStepUpdate(step.id, { name: label })
+                  },
+                  onToolChange: (tool: string) => {
+                    // Find the selected tool's capabilities and update both tool and capabilities
+                    const selectedTool = availableTools.find((t) => t.name === tool)
+                    const capabilities = selectedTool?.capabilities || []
+                    onStepUpdate(step.id, { tool, capabilities })
+                  },
+                  onDescriptionChange: (description: string) => {
+                    onStepUpdate(step.id, { description })
+                  },
+                  onStepKeyChange: (step_key: string) => {
+                    onStepUpdate(step.id, { step_key })
+                  },
+                  onTimeoutChange: (timeout_seconds: number) => {
+                    onStepUpdate(step.id, { timeout_seconds })
+                  },
+                }
+              : {}),
           },
           draggable: !readOnly,
           selectable: true,
@@ -420,10 +422,20 @@ function WorkflowBuilderInner({
 
     // Force update node internals to trigger re-render of node components
     // This is needed because ReactFlow caches node components and may not re-render when only data changes
-    steps.forEach(step => {
+    steps.forEach((step) => {
       updateNodeInternals(step.id)
     })
-  }, [steps, availableTools, readOnly, onStepUpdate, setNodes, setEdges, buildAllNodes, startEndPositions, updateNodeInternals])
+  }, [
+    steps,
+    availableTools,
+    readOnly,
+    onStepUpdate,
+    setNodes,
+    setEdges,
+    buildAllNodes,
+    startEndPositions,
+    updateNodeInternals,
+  ])
 
   // Define node types
   const nodeTypes: NodeTypes = useMemo(
@@ -454,11 +466,11 @@ function WorkflowBuilderInner({
           // Save Start/End positions to state and notify parent
           if (change.id === START_NODE_ID) {
             const newPos = { x: change.position.x, y: change.position.y }
-            setStartEndPositions(prev => ({ ...prev, start: newPos }))
+            setStartEndPositions((prev) => ({ ...prev, start: newPos }))
             onStartPositionChange?.(newPos)
           } else if (change.id === END_NODE_ID) {
             const newPos = { x: change.position.x, y: change.position.y }
-            setStartEndPositions(prev => ({ ...prev, end: newPos }))
+            setStartEndPositions((prev) => ({ ...prev, end: newPos }))
             onEndPositionChange?.(newPos)
           } else if (onNodePositionChange && !readOnly) {
             // Notify parent of scanner node position changes
@@ -479,7 +491,14 @@ function WorkflowBuilderInner({
         })
       }
     },
-    [setNodes, onNodePositionChange, onStartPositionChange, onEndPositionChange, onNodeDelete, readOnly]
+    [
+      setNodes,
+      onNodePositionChange,
+      onStartPositionChange,
+      onEndPositionChange,
+      onNodeDelete,
+      readOnly,
+    ]
   )
 
   // Handle edge changes
@@ -491,10 +510,7 @@ function WorkflowBuilderInner({
           if (change.type === 'remove') {
             const edge = edges.find((e) => e.id === change.id)
             if (edge) {
-              return (
-                edge.source !== START_NODE_ID &&
-                edge.target !== END_NODE_ID
-              )
+              return edge.source !== START_NODE_ID && edge.target !== END_NODE_ID
             }
           }
           return true
@@ -592,16 +608,13 @@ function WorkflowBuilderInner({
   )
 
   // Handle node selection (just for highlighting)
-  const onNodeClick = useCallback(
-    (_: React.MouseEvent, node: Node) => {
-      // Don't select start/end nodes
-      if (node.id === START_NODE_ID || node.id === END_NODE_ID) {
-        return
-      }
-      setSelectedNodeId(node.id)
-    },
-    []
-  )
+  const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
+    // Don't select start/end nodes
+    if (node.id === START_NODE_ID || node.id === END_NODE_ID) {
+      return
+    }
+    setSelectedNodeId(node.id)
+  }, [])
 
   // Handle canvas click (deselect)
   const onPaneClick = useCallback(() => {
@@ -650,9 +663,8 @@ function WorkflowBuilderInner({
 
       // Don't delete node if user is typing in an input or textarea
       const target = event.target as HTMLElement
-      const isEditing = target.tagName === 'INPUT' ||
-        target.tagName === 'TEXTAREA' ||
-        target.isContentEditable
+      const isEditing =
+        target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable
 
       if (
         (event.key === 'Delete' || event.key === 'Backspace') &&

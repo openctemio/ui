@@ -112,7 +112,8 @@ export const VALIDATION_MESSAGES = {
 export const AUTH_CONFIRMATION_MESSAGES = {
   LOGOUT: {
     TITLE: 'Sign out',
-    DESCRIPTION: 'Are you sure you want to sign out? You will need to sign in again to access your account.',
+    DESCRIPTION:
+      'Are you sure you want to sign out? You will need to sign in again to access your account.',
     CONFIRM: 'Sign out',
     CANCEL: 'Cancel',
   },
@@ -152,8 +153,10 @@ export function getAuthErrorMessage(error: unknown): string {
  */
 export function isNetworkError(error: unknown): boolean {
   if (error instanceof Error) {
-    return error.message.toLowerCase().includes('network') ||
-           error.message.toLowerCase().includes('fetch')
+    return (
+      error.message.toLowerCase().includes('network') ||
+      error.message.toLowerCase().includes('fetch')
+    )
   }
   return false
 }
@@ -164,10 +167,12 @@ export function isNetworkError(error: unknown): boolean {
 export function isAuthError(error: unknown): boolean {
   if (error instanceof Error) {
     const message = error.message.toLowerCase()
-    return message.includes('unauthorized') ||
-           message.includes('unauthenticated') ||
-           message.includes('token') ||
-           message.includes('session')
+    return (
+      message.includes('unauthorized') ||
+      message.includes('unauthenticated') ||
+      message.includes('token') ||
+      message.includes('session')
+    )
   }
   return false
 }

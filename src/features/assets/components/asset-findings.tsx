@@ -1,7 +1,7 @@
-"use client";
+'use client'
 
-import * as React from "react";
-import Link from "next/link";
+import * as React from 'react'
+import Link from 'next/link'
 import {
   AlertCircle,
   AlertTriangle,
@@ -13,113 +13,108 @@ import {
   KeyRound,
   Settings2,
   Shield,
-} from "lucide-react";
+} from 'lucide-react'
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
-import { cn } from "@/lib/utils";
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Separator } from '@/components/ui/separator'
+import { cn } from '@/lib/utils'
 
-import type { AssetFinding } from "../types/asset.types";
-import { getAssetFindings } from "../lib/mock-data";
+import type { AssetFinding } from '../types/asset.types'
+import { getAssetFindings } from '../lib/mock-data'
 
 interface AssetFindingsProps {
-  assetId: string;
-  assetName?: string;
-  className?: string;
+  assetId: string
+  assetName?: string
+  className?: string
 }
 
 const severityConfig: Record<
-  AssetFinding["severity"],
+  AssetFinding['severity'],
   { label: string; color: string; bgColor: string; icon: React.ElementType }
 > = {
   critical: {
-    label: "Critical",
-    color: "text-red-700",
-    bgColor: "bg-red-100",
+    label: 'Critical',
+    color: 'text-red-700',
+    bgColor: 'bg-red-100',
     icon: AlertCircle,
   },
   high: {
-    label: "High",
-    color: "text-orange-700",
-    bgColor: "bg-orange-100",
+    label: 'High',
+    color: 'text-orange-700',
+    bgColor: 'bg-orange-100',
     icon: AlertTriangle,
   },
   medium: {
-    label: "Medium",
-    color: "text-yellow-700",
-    bgColor: "bg-yellow-100",
+    label: 'Medium',
+    color: 'text-yellow-700',
+    bgColor: 'bg-yellow-100',
     icon: AlertTriangle,
   },
   low: {
-    label: "Low",
-    color: "text-blue-700",
-    bgColor: "bg-blue-100",
+    label: 'Low',
+    color: 'text-blue-700',
+    bgColor: 'bg-blue-100',
     icon: Info,
   },
   info: {
-    label: "Info",
-    color: "text-gray-700",
-    bgColor: "bg-gray-100",
+    label: 'Info',
+    color: 'text-gray-700',
+    bgColor: 'bg-gray-100',
     icon: Info,
   },
-};
+}
 
-const typeConfig: Record<
-  AssetFinding["type"],
-  { label: string; icon: React.ElementType }
-> = {
-  vulnerability: { label: "Vulnerability", icon: Bug },
-  misconfiguration: { label: "Misconfiguration", icon: Settings2 },
-  exposure: { label: "Exposure", icon: ExternalLink },
-  secret: { label: "Secret", icon: KeyRound },
-  compliance: { label: "Compliance", icon: Shield },
-};
+const typeConfig: Record<AssetFinding['type'], { label: string; icon: React.ElementType }> = {
+  vulnerability: { label: 'Vulnerability', icon: Bug },
+  misconfiguration: { label: 'Misconfiguration', icon: Settings2 },
+  exposure: { label: 'Exposure', icon: ExternalLink },
+  secret: { label: 'Secret', icon: KeyRound },
+  compliance: { label: 'Compliance', icon: Shield },
+}
 
 const statusConfig: Record<
-  AssetFinding["status"],
-  { label: string; variant: "default" | "secondary" | "destructive" | "outline" }
+  AssetFinding['status'],
+  { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }
 > = {
-  open: { label: "Open", variant: "destructive" },
-  in_progress: { label: "In Progress", variant: "default" },
-  resolved: { label: "Resolved", variant: "secondary" },
-  accepted: { label: "Accepted", variant: "outline" },
-  false_positive: { label: "False Positive", variant: "outline" },
-};
+  open: { label: 'Open', variant: 'destructive' },
+  in_progress: { label: 'In Progress', variant: 'default' },
+  resolved: { label: 'Resolved', variant: 'secondary' },
+  accepted: { label: 'Accepted', variant: 'outline' },
+  false_positive: { label: 'False Positive', variant: 'outline' },
+}
 
 export function AssetFindings({ assetId, className }: AssetFindingsProps) {
-  const [findings, setFindings] = React.useState<AssetFinding[]>([]);
+  const [findings, setFindings] = React.useState<AssetFinding[]>([])
 
   React.useEffect(() => {
-    const data = getAssetFindings(assetId);
-    setFindings(data);
-  }, [assetId]);
+    const data = getAssetFindings(assetId)
+    setFindings(data)
+  }, [assetId])
 
   const severityCounts = React.useMemo(() => {
     return {
-      critical: findings.filter((f) => f.severity === "critical").length,
-      high: findings.filter((f) => f.severity === "high").length,
-      medium: findings.filter((f) => f.severity === "medium").length,
-      low: findings.filter((f) => f.severity === "low").length,
-      info: findings.filter((f) => f.severity === "info").length,
-    };
-  }, [findings]);
+      critical: findings.filter((f) => f.severity === 'critical').length,
+      high: findings.filter((f) => f.severity === 'high').length,
+      medium: findings.filter((f) => f.severity === 'medium').length,
+      low: findings.filter((f) => f.severity === 'low').length,
+      info: findings.filter((f) => f.severity === 'info').length,
+    }
+  }, [findings])
 
   if (findings.length === 0) {
     return (
-      <div className={cn("flex flex-col items-center justify-center py-8 text-center", className)}>
+      <div className={cn('flex flex-col items-center justify-center py-8 text-center', className)}>
         <Shield className="h-12 w-12 text-green-500 mb-3" />
         <h3 className="font-medium">No Findings</h3>
-        <p className="text-sm text-muted-foreground mt-1">
-          This asset has no security findings.
-        </p>
+        <p className="text-sm text-muted-foreground mt-1">This asset has no security findings.</p>
       </div>
-    );
+    )
   }
 
   return (
-    <div className={cn("space-y-4", className)}>
+    <div className={cn('space-y-4', className)}>
       {/* Severity Summary */}
       <div className="flex flex-wrap gap-2">
         {severityCounts.critical > 0 && (
@@ -154,11 +149,11 @@ export function AssetFindings({ assetId, className }: AssetFindingsProps) {
       <ScrollArea className="h-[400px] pr-4">
         <div className="space-y-3">
           {findings.map((finding) => {
-            const severity = severityConfig[finding.severity];
-            const type = typeConfig[finding.type];
-            const status = statusConfig[finding.status];
-            const SeverityIcon = severity.icon;
-            const TypeIcon = type.icon;
+            const severity = severityConfig[finding.severity]
+            const type = typeConfig[finding.type]
+            const status = statusConfig[finding.status]
+            const SeverityIcon = severity.icon
+            const TypeIcon = type.icon
 
             return (
               <div
@@ -166,8 +161,8 @@ export function AssetFindings({ assetId, className }: AssetFindingsProps) {
                 className="p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
               >
                 <div className="flex items-start gap-3">
-                  <div className={cn("p-2 rounded-lg", severity.bgColor)}>
-                    <SeverityIcon className={cn("h-4 w-4", severity.color)} />
+                  <div className={cn('p-2 rounded-lg', severity.bgColor)}>
+                    <SeverityIcon className={cn('h-4 w-4', severity.color)} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -192,12 +187,8 @@ export function AssetFindings({ assetId, className }: AssetFindingsProps) {
                       {finding.cvssScore && (
                         <span className="font-medium">CVSS: {finding.cvssScore}</span>
                       )}
-                      {finding.rule && (
-                        <span className="font-mono">{finding.rule}</span>
-                      )}
-                      <span>
-                        First seen: {new Date(finding.firstSeen).toLocaleDateString()}
-                      </span>
+                      {finding.rule && <span className="font-mono">{finding.rule}</span>}
+                      <span>First seen: {new Date(finding.firstSeen).toLocaleDateString()}</span>
                     </div>
 
                     {/* Remediation Preview */}
@@ -217,7 +208,7 @@ export function AssetFindings({ assetId, className }: AssetFindingsProps) {
                   </Link>
                 </div>
               </div>
-            );
+            )
           })}
         </div>
       </ScrollArea>
@@ -233,5 +224,5 @@ export function AssetFindings({ assetId, className }: AssetFindingsProps) {
         </Link>
       </div>
     </div>
-  );
+  )
 }

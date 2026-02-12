@@ -143,13 +143,33 @@ export const SESSION_TIMEOUT_OPTIONS = [
 ] as const
 
 export const WEBHOOK_EVENTS: { value: WebhookEvent; label: string; description: string }[] = [
-  { value: 'finding.created', label: 'Finding Created', description: 'When a new vulnerability finding is created' },
-  { value: 'finding.resolved', label: 'Finding Resolved', description: 'When a finding is marked as resolved' },
+  {
+    value: 'finding.created',
+    label: 'Finding Created',
+    description: 'When a new vulnerability finding is created',
+  },
+  {
+    value: 'finding.resolved',
+    label: 'Finding Resolved',
+    description: 'When a finding is marked as resolved',
+  },
   { value: 'finding.updated', label: 'Finding Updated', description: 'When a finding is updated' },
-  { value: 'scan.completed', label: 'Scan Completed', description: 'When a security scan completes' },
+  {
+    value: 'scan.completed',
+    label: 'Scan Completed',
+    description: 'When a security scan completes',
+  },
   { value: 'scan.failed', label: 'Scan Failed', description: 'When a security scan fails' },
-  { value: 'asset.discovered', label: 'Asset Discovered', description: 'When a new asset is discovered' },
+  {
+    value: 'asset.discovered',
+    label: 'Asset Discovered',
+    description: 'When a new asset is discovered',
+  },
   { value: 'asset.updated', label: 'Asset Updated', description: 'When an asset is updated' },
-  { value: 'member.joined', label: 'Member Joined', description: 'When a new member joins the team' },
+  {
+    value: 'member.joined',
+    label: 'Member Joined',
+    description: 'When a new member joins the team',
+  },
   { value: 'member.removed', label: 'Member Removed', description: 'When a member is removed' },
 ]

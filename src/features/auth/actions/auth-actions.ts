@@ -273,7 +273,7 @@ export async function refreshTokenAction(): Promise<RefreshTokenResult> {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Cookie': `${env.auth.refreshCookieName}=${refreshToken}`,
+        Cookie: `${env.auth.refreshCookieName}=${refreshToken}`,
       },
       credentials: 'include',
     })

@@ -1,7 +1,7 @@
-"use client";
+'use client'
 
-import { ComingSoonPage } from "@/features/shared";
-import { FileWarning } from "lucide-react";
+import { ComingSoonPage } from '@/features/shared'
+import { FileWarning } from 'lucide-react'
 
 export default function TicketingIntegrationPage() {
   return (
@@ -11,12 +11,12 @@ export default function TicketingIntegrationPage() {
       phase="Settings"
       icon={FileWarning}
       features={[
-        "Jira Cloud/Server integration",
-        "ServiceNow integration",
-        "Ticket field mapping",
-        "Bi-directional sync",
-        "Custom workflow triggers",
+        'Jira Cloud/Server integration',
+        'ServiceNow integration',
+        'Ticket field mapping',
+        'Bi-directional sync',
+        'Custom workflow triggers',
       ]}
     />
-  );
+  )
 }

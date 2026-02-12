@@ -7,9 +7,9 @@
  * Asset management is handled separately in the Assets tab for better UX.
  */
 
-"use client";
+'use client'
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -17,19 +17,15 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import { ScrollArea } from "@/components/ui/scroll-area";
+} from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { Badge } from '@/components/ui/badge'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   Building2,
   User,
@@ -47,129 +43,119 @@ import {
   FlaskConical,
   Loader2,
   Pencil,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
-import type { Environment, Criticality } from "@/features/shared/types";
-import type { AssetGroup } from "../../types";
+} from 'lucide-react'
+import { cn } from '@/lib/utils'
+import type { Environment, Criticality } from '@/features/shared/types'
+import type { AssetGroup } from '../../types'
 
 interface EditGroupDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  group: AssetGroup;
-  onSubmit: (data: EditGroupFormData) => Promise<void>;
-  isSubmitting?: boolean;
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  group: AssetGroup
+  onSubmit: (data: EditGroupFormData) => Promise<void>
+  isSubmitting?: boolean
 }
 
 export interface EditGroupFormData {
-  name: string;
-  description: string;
-  environment: Environment;
-  criticality: Criticality;
-  businessUnit: string;
-  owner: string;
-  ownerEmail: string;
-  tags: string[];
+  name: string
+  description: string
+  environment: Environment
+  criticality: Criticality
+  businessUnit: string
+  owner: string
+  ownerEmail: string
+  tags: string[]
 }
 
 const ENVIRONMENTS: {
-  value: Environment;
-  label: string;
-  icon: typeof Server;
-  color: string;
+  value: Environment
+  label: string
+  icon: typeof Server
+  color: string
 }[] = [
   {
-    value: "production",
-    label: "Production",
+    value: 'production',
+    label: 'Production',
     icon: Server,
-    color:
-      "text-red-500 border-red-200 bg-red-50 dark:bg-red-950/30 dark:border-red-900",
+    color: 'text-red-500 border-red-200 bg-red-50 dark:bg-red-950/30 dark:border-red-900',
   },
   {
-    value: "staging",
-    label: "Staging",
+    value: 'staging',
+    label: 'Staging',
     icon: FlaskConical,
     color:
-      "text-yellow-600 border-yellow-200 bg-yellow-50 dark:bg-yellow-950/30 dark:border-yellow-900",
+      'text-yellow-600 border-yellow-200 bg-yellow-50 dark:bg-yellow-950/30 dark:border-yellow-900',
   },
   {
-    value: "development",
-    label: "Development",
+    value: 'development',
+    label: 'Development',
     icon: Code,
-    color:
-      "text-blue-500 border-blue-200 bg-blue-50 dark:bg-blue-950/30 dark:border-blue-900",
+    color: 'text-blue-500 border-blue-200 bg-blue-50 dark:bg-blue-950/30 dark:border-blue-900',
   },
   {
-    value: "testing",
-    label: "Testing",
+    value: 'testing',
+    label: 'Testing',
     icon: TestTube,
-    color:
-      "text-green-500 border-green-200 bg-green-50 dark:bg-green-950/30 dark:border-green-900",
+    color: 'text-green-500 border-green-200 bg-green-50 dark:bg-green-950/30 dark:border-green-900',
   },
-];
+]
 
 const CRITICALITIES: {
-  value: Criticality;
-  label: string;
-  description: string;
-  icon: typeof AlertTriangle;
-  color: string;
-  bgColor: string;
+  value: Criticality
+  label: string
+  description: string
+  icon: typeof AlertTriangle
+  color: string
+  bgColor: string
 }[] = [
   {
-    value: "critical",
-    label: "Critical",
-    description: "Business critical - immediate response",
+    value: 'critical',
+    label: 'Critical',
+    description: 'Business critical - immediate response',
     icon: AlertTriangle,
-    color: "text-red-600 dark:text-red-400",
+    color: 'text-red-600 dark:text-red-400',
     bgColor:
-      "border-red-200 bg-red-50/50 hover:bg-red-50 dark:border-red-900 dark:bg-red-950/20 dark:hover:bg-red-950/40",
+      'border-red-200 bg-red-50/50 hover:bg-red-50 dark:border-red-900 dark:bg-red-950/20 dark:hover:bg-red-950/40',
   },
   {
-    value: "high",
-    label: "High",
-    description: "Important functions - prioritized",
+    value: 'high',
+    label: 'High',
+    description: 'Important functions - prioritized',
     icon: AlertCircle,
-    color: "text-orange-600 dark:text-orange-400",
+    color: 'text-orange-600 dark:text-orange-400',
     bgColor:
-      "border-orange-200 bg-orange-50/50 hover:bg-orange-50 dark:border-orange-900 dark:bg-orange-950/20 dark:hover:bg-orange-950/40",
+      'border-orange-200 bg-orange-50/50 hover:bg-orange-50 dark:border-orange-900 dark:bg-orange-950/20 dark:hover:bg-orange-950/40',
   },
   {
-    value: "medium",
-    label: "Medium",
-    description: "Standard operations - normal",
+    value: 'medium',
+    label: 'Medium',
+    description: 'Standard operations - normal',
     icon: Info,
-    color: "text-yellow-600 dark:text-yellow-400",
+    color: 'text-yellow-600 dark:text-yellow-400',
     bgColor:
-      "border-yellow-200 bg-yellow-50/50 hover:bg-yellow-50 dark:border-yellow-900 dark:bg-yellow-950/20 dark:hover:bg-yellow-950/40",
+      'border-yellow-200 bg-yellow-50/50 hover:bg-yellow-50 dark:border-yellow-900 dark:bg-yellow-950/20 dark:hover:bg-yellow-950/40',
   },
   {
-    value: "low",
-    label: "Low",
-    description: "Non-essential - scheduled",
+    value: 'low',
+    label: 'Low',
+    description: 'Non-essential - scheduled',
     icon: MinusCircle,
-    color: "text-slate-500 dark:text-slate-400",
+    color: 'text-slate-500 dark:text-slate-400',
     bgColor:
-      "border-slate-200 bg-slate-50/50 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950/20 dark:hover:bg-slate-900/40",
+      'border-slate-200 bg-slate-50/50 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950/20 dark:hover:bg-slate-900/40',
   },
-];
+]
 
 const SUGGESTED_BUSINESS_UNITS = [
-  "Technology & Engineering",
-  "Platform Engineering",
-  "Infrastructure & Operations",
-  "Digital Commerce",
-  "Finance",
-  "Human Resources",
-];
+  'Technology & Engineering',
+  'Platform Engineering',
+  'Infrastructure & Operations',
+  'Digital Commerce',
+  'Finance',
+  'Human Resources',
+]
 
-const SUGGESTED_TAGS = [
-  "tier-1",
-  "tier-2",
-  "customer-facing",
-  "internal",
-  "pci-dss",
-  "gdpr",
-];
+const SUGGESTED_TAGS = ['tier-1', 'tier-2', 'customer-facing', 'internal', 'pci-dss', 'gdpr']
 
 export function EditGroupDialog({
   open,
@@ -179,69 +165,69 @@ export function EditGroupDialog({
   isSubmitting = false,
 }: EditGroupDialogProps) {
   const [formData, setFormData] = useState<EditGroupFormData>({
-    name: "",
-    description: "",
-    environment: "production",
-    criticality: "medium",
-    businessUnit: "",
-    owner: "",
-    ownerEmail: "",
+    name: '',
+    description: '',
+    environment: 'production',
+    criticality: 'medium',
+    businessUnit: '',
+    owner: '',
+    ownerEmail: '',
     tags: [],
-  });
-  const [tagInput, setTagInput] = useState("");
-  const [businessContextOpen, setBusinessContextOpen] = useState(false);
+  })
+  const [tagInput, setTagInput] = useState('')
+  const [businessContextOpen, setBusinessContextOpen] = useState(false)
 
   // Sync form data when group changes or dialog opens
   useEffect(() => {
     if (open && group) {
       setFormData({
         name: group.name,
-        description: group.description || "",
+        description: group.description || '',
         environment: group.environment as Environment,
         criticality: group.criticality as Criticality,
-        businessUnit: group.businessUnit || "",
-        owner: group.owner || "",
-        ownerEmail: group.ownerEmail || "",
+        businessUnit: group.businessUnit || '',
+        owner: group.owner || '',
+        ownerEmail: group.ownerEmail || '',
         tags: group.tags || [],
-      });
+      })
       // Auto-expand business context if has data
       setBusinessContextOpen(
         !!(group.businessUnit || group.owner || group.ownerEmail || group.tags?.length)
-      );
+      )
     }
-  }, [open, group]);
+  }, [open, group])
 
   const handleAddTag = useCallback(
     (tag: string) => {
-      const normalizedTag = tag.trim().toLowerCase();
+      const normalizedTag = tag.trim().toLowerCase()
       if (normalizedTag && !formData.tags.includes(normalizedTag)) {
-        setFormData((prev) => ({ ...prev, tags: [...prev.tags, normalizedTag] }));
+        setFormData((prev) => ({ ...prev, tags: [...prev.tags, normalizedTag] }))
       }
-      setTagInput("");
+      setTagInput('')
     },
     [formData.tags]
-  );
+  )
 
   const handleRemoveTag = useCallback((tagToRemove: string) => {
     setFormData((prev) => ({
       ...prev,
       tags: prev.tags.filter((t) => t !== tagToRemove),
-    }));
-  }, []);
+    }))
+  }, [])
 
   const handleTagKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
-      if (e.key === "Enter" || e.key === ",") {
-        e.preventDefault();
-        handleAddTag(tagInput);
+      if (e.key === 'Enter' || e.key === ',') {
+        e.preventDefault()
+        handleAddTag(tagInput)
       }
     },
     [tagInput, handleAddTag]
-  );
+  )
 
   const handleSubmit = async () => {
-    await onSubmit(formData);
-  };
+    await onSubmit(formData)
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -285,9 +271,7 @@ export function EditGroupDialog({
                     id="edit-name"
                     placeholder="e.g., Payment Gateway Services"
                     value={formData.name}
-                    onChange={(e) =>
-                      setFormData((prev) => ({ ...prev, name: e.target.value }))
-                    }
+                    onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
                     disabled={isSubmitting}
                   />
                 </div>
@@ -318,33 +302,26 @@ export function EditGroupDialog({
               <CardContent>
                 <div className="grid grid-cols-4 gap-2">
                   {ENVIRONMENTS.map((env) => {
-                    const Icon = env.icon;
-                    const isSelected = formData.environment === env.value;
+                    const Icon = env.icon
+                    const isSelected = formData.environment === env.value
                     return (
                       <button
                         key={env.value}
                         type="button"
-                        onClick={() =>
-                          setFormData((prev) => ({ ...prev, environment: env.value }))
-                        }
+                        onClick={() => setFormData((prev) => ({ ...prev, environment: env.value }))}
                         disabled={isSubmitting}
                         className={cn(
-                          "flex flex-col items-center gap-1.5 rounded-lg border-2 p-2.5 transition-all",
+                          'flex flex-col items-center gap-1.5 rounded-lg border-2 p-2.5 transition-all',
                           isSelected
-                            ? cn(env.color, "border-current ring-1 ring-current/20")
-                            : "border-muted bg-muted/30 hover:bg-muted/50 text-muted-foreground hover:text-foreground",
-                          isSubmitting && "opacity-50 cursor-not-allowed"
+                            ? cn(env.color, 'border-current ring-1 ring-current/20')
+                            : 'border-muted bg-muted/30 hover:bg-muted/50 text-muted-foreground hover:text-foreground',
+                          isSubmitting && 'opacity-50 cursor-not-allowed'
                         )}
                       >
-                        <Icon
-                          className={cn(
-                            "h-4 w-4",
-                            isSelected && env.color.split(" ")[0]
-                          )}
-                        />
+                        <Icon className={cn('h-4 w-4', isSelected && env.color.split(' ')[0])} />
                         <span className="text-xs font-medium">{env.label}</span>
                       </button>
-                    );
+                    )
                   })}
                 </div>
               </CardContent>
@@ -358,8 +335,8 @@ export function EditGroupDialog({
               <CardContent>
                 <div className="grid grid-cols-2 gap-2">
                   {CRITICALITIES.map((crit) => {
-                    const Icon = crit.icon;
-                    const isSelected = formData.criticality === crit.value;
+                    const Icon = crit.icon
+                    const isSelected = formData.criticality === crit.value
                     return (
                       <button
                         key={crit.value}
@@ -369,17 +346,17 @@ export function EditGroupDialog({
                         }
                         disabled={isSubmitting}
                         className={cn(
-                          "flex items-start gap-2.5 rounded-lg border-2 p-2.5 text-left transition-all",
+                          'flex items-start gap-2.5 rounded-lg border-2 p-2.5 text-left transition-all',
                           isSelected
-                            ? cn(crit.bgColor, "ring-1 ring-current/20")
-                            : "border-muted hover:border-muted-foreground/30",
-                          isSubmitting && "opacity-50 cursor-not-allowed"
+                            ? cn(crit.bgColor, 'ring-1 ring-current/20')
+                            : 'border-muted hover:border-muted-foreground/30',
+                          isSubmitting && 'opacity-50 cursor-not-allowed'
                         )}
                       >
                         <div
                           className={cn(
-                            "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full",
-                            isSelected ? crit.color : "text-muted-foreground"
+                            'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full',
+                            isSelected ? crit.color : 'text-muted-foreground'
                           )}
                         >
                           <Icon className="h-3.5 w-3.5" />
@@ -387,8 +364,8 @@ export function EditGroupDialog({
                         <div className="flex-1 min-w-0">
                           <div
                             className={cn(
-                              "font-medium text-sm",
-                              isSelected ? crit.color : "text-foreground"
+                              'font-medium text-sm',
+                              isSelected ? crit.color : 'text-foreground'
                             )}
                           >
                             {crit.label}
@@ -400,16 +377,16 @@ export function EditGroupDialog({
                         {isSelected && (
                           <div
                             className={cn(
-                              "h-2 w-2 rounded-full shrink-0 mt-1",
-                              crit.color.includes("red") && "bg-red-500",
-                              crit.color.includes("orange") && "bg-orange-500",
-                              crit.color.includes("yellow") && "bg-yellow-500",
-                              crit.color.includes("slate") && "bg-slate-400"
+                              'h-2 w-2 rounded-full shrink-0 mt-1',
+                              crit.color.includes('red') && 'bg-red-500',
+                              crit.color.includes('orange') && 'bg-orange-500',
+                              crit.color.includes('yellow') && 'bg-yellow-500',
+                              crit.color.includes('slate') && 'bg-slate-400'
                             )}
                           />
                         )}
                       </button>
-                    );
+                    )
                   })}
                 </div>
               </CardContent>
@@ -432,8 +409,8 @@ export function EditGroupDialog({
                       </div>
                       <ChevronDown
                         className={cn(
-                          "h-4 w-4 text-muted-foreground transition-transform duration-200",
-                          businessContextOpen && "rotate-180"
+                          'h-4 w-4 text-muted-foreground transition-transform duration-200',
+                          businessContextOpen && 'rotate-180'
                         )}
                       />
                     </CardTitle>
@@ -451,16 +428,16 @@ export function EditGroupDialog({
                         {SUGGESTED_BUSINESS_UNITS.map((bu) => (
                           <Badge
                             key={bu}
-                            variant={formData.businessUnit === bu ? "default" : "outline"}
+                            variant={formData.businessUnit === bu ? 'default' : 'outline'}
                             className={cn(
-                              "cursor-pointer transition-colors text-xs",
-                              formData.businessUnit === bu ? "" : "hover:bg-muted",
-                              isSubmitting && "pointer-events-none opacity-50"
+                              'cursor-pointer transition-colors text-xs',
+                              formData.businessUnit === bu ? '' : 'hover:bg-muted',
+                              isSubmitting && 'pointer-events-none opacity-50'
                             )}
                             onClick={() =>
                               setFormData((prev) => ({
                                 ...prev,
-                                businessUnit: prev.businessUnit === bu ? "" : bu,
+                                businessUnit: prev.businessUnit === bu ? '' : bu,
                               }))
                             }
                           >
@@ -472,7 +449,7 @@ export function EditGroupDialog({
                         placeholder="Or enter custom..."
                         value={
                           SUGGESTED_BUSINESS_UNITS.includes(formData.businessUnit)
-                            ? ""
+                            ? ''
                             : formData.businessUnit
                         }
                         onChange={(e) =>
@@ -567,8 +544,8 @@ export function EditGroupDialog({
                               key={tag}
                               variant="outline"
                               className={cn(
-                                "cursor-pointer hover:bg-primary/10 hover:text-primary hover:border-primary/30 text-xs transition-colors",
-                                isSubmitting && "pointer-events-none opacity-50"
+                                'cursor-pointer hover:bg-primary/10 hover:text-primary hover:border-primary/30 text-xs transition-colors',
+                                isSubmitting && 'pointer-events-none opacity-50'
                               )}
                               onClick={() => handleAddTag(tag)}
                             >
@@ -586,28 +563,21 @@ export function EditGroupDialog({
 
         {/* Footer */}
         <DialogFooter className="border-t bg-muted/30 px-6 py-4">
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={isSubmitting}
-          >
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
             Cancel
           </Button>
-          <Button
-            onClick={handleSubmit}
-            disabled={!formData.name.trim() || isSubmitting}
-          >
+          <Button onClick={handleSubmit} disabled={!formData.name.trim() || isSubmitting}>
             {isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Saving...
               </>
             ) : (
-              "Save Changes"
+              'Save Changes'
             )}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
+  )
 }

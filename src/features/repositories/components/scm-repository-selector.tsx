@@ -1,6 +1,6 @@
-"use client";
+'use client'
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback } from 'react'
 import {
   Search,
   Loader2,
@@ -11,48 +11,39 @@ import {
   Check,
   ChevronLeft,
   AlertCircle,
-} from "lucide-react";
+} from 'lucide-react'
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Label } from '@/components/ui/label'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
-import { cn } from "@/lib/utils";
+} from '@/components/ui/select'
+import { Separator } from '@/components/ui/separator'
+import { cn } from '@/lib/utils'
 
-import { ProviderIcon } from "@/features/scm-connections/components/provider-icon";
-import {
-  useSCMRepositories,
-  type SCMRepository,
-} from "../hooks/use-repositories";
-import {
-  CRITICALITY_OPTIONS,
-  SCOPE_OPTIONS,
-} from "../schemas/repository.schema";
-import type { SCMConnection } from "../types/repository.types";
+import { ProviderIcon } from '@/features/scm-connections/components/provider-icon'
+import { useSCMRepositories, type SCMRepository } from '../hooks/use-repositories'
+import { CRITICALITY_OPTIONS, SCOPE_OPTIONS } from '../schemas/repository.schema'
+import type { SCMConnection } from '../types/repository.types'
 
 interface SCMRepositorySelectorProps {
-  connection: SCMConnection;
-  onBack: () => void;
-  onImport: (
-    repositories: SCMRepository[],
-    options: ImportOptions
-  ) => Promise<void>;
-  isImporting?: boolean;
+  connection: SCMConnection
+  onBack: () => void
+  onImport: (repositories: SCMRepository[], options: ImportOptions) => Promise<void>
+  isImporting?: boolean
 }
 
 interface ImportOptions {
-  criticality: string;
-  scope: string;
-  scanEnabled: boolean;
+  criticality: string
+  scope: string
+  scanEnabled: boolean
 }
 
 export function SCMRepositorySelector({
@@ -61,81 +52,77 @@ export function SCMRepositorySelector({
   onImport,
   isImporting = false,
 }: SCMRepositorySelectorProps) {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [page, setPage] = useState(1);
-  const [selectedRepos, setSelectedRepos] = useState<Set<string>>(new Set());
+  const [searchQuery, setSearchQuery] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [page, setPage] = useState(1)
+  const [selectedRepos, setSelectedRepos] = useState<Set<string>>(new Set())
 
   // Import options
-  const [criticality, setCriticality] = useState("medium");
-  const [scope, setScope] = useState("internal");
-  const [scanEnabled, setScanEnabled] = useState(true);
+  const [criticality, setCriticality] = useState('medium')
+  const [scope, setScope] = useState('internal')
+  const [scanEnabled, setScanEnabled] = useState(true)
 
   // Debounce search
   const handleSearchChange = useCallback((value: string) => {
-    setSearchQuery(value);
-    setPage(1);
+    setSearchQuery(value)
+    setPage(1)
     // Simple debounce using setTimeout
     const handler = setTimeout(() => {
-      setDebouncedSearch(value);
-    }, 300);
-    return () => clearTimeout(handler);
-  }, []);
+      setDebouncedSearch(value)
+    }, 300)
+    return () => clearTimeout(handler)
+  }, [])
 
-  const {
-    data,
-    isLoading,
-    error,
-  } = useSCMRepositories(connection.id, {
+  const { data, isLoading, error } = useSCMRepositories(connection.id, {
     search: debouncedSearch,
     page,
     perPage: 30,
-  });
+  })
 
-  const repositories = useMemo(() => data?.repositories || [], [data?.repositories]);
-  const hasMore = data?.has_more || false;
-  const total = data?.total || 0;
+  const repositories = useMemo(() => data?.repositories || [], [data?.repositories])
+  const hasMore = data?.has_more || false
+  const total = data?.total || 0
 
   // Select/deselect handlers
   const toggleSelectAll = useCallback(() => {
     if (selectedRepos.size === repositories.length) {
-      setSelectedRepos(new Set());
+      setSelectedRepos(new Set())
     } else {
-      setSelectedRepos(new Set(repositories.map((r) => r.id)));
+      setSelectedRepos(new Set(repositories.map((r) => r.id)))
     }
-  }, [repositories, selectedRepos.size]);
+  }, [repositories, selectedRepos.size])
 
   const toggleSelect = useCallback((repoId: string) => {
     setSelectedRepos((prev) => {
-      const newSet = new Set(prev);
+      const newSet = new Set(prev)
       if (newSet.has(repoId)) {
-        newSet.delete(repoId);
+        newSet.delete(repoId)
       } else {
-        newSet.add(repoId);
+        newSet.add(repoId)
       }
-      return newSet;
-    });
-  }, []);
+      return newSet
+    })
+  }, [])
 
   const selectedRepositories = useMemo(
     () => repositories.filter((r) => selectedRepos.has(r.id)),
     [repositories, selectedRepos]
-  );
+  )
 
   const handleImport = async () => {
     await onImport(selectedRepositories, {
       criticality,
       scope,
       scanEnabled,
-    });
-  };
+    })
+  }
 
   const formatSize = (sizeInKB: number): string => {
-    if (sizeInKB < 1024) return `${sizeInKB} KB`;
-    const sizeInMB = sizeInKB / 1024;
-    if (sizeInMB < 1024) return `${sizeInMB.toFixed(1)} MB`;
-    return `${(sizeInMB / 1024).toFixed(1)} GB`;
-  };
+    if (sizeInKB < 1024) return `${sizeInKB} KB`
+    const sizeInMB = sizeInKB / 1024
+    if (sizeInMB < 1024) return `${sizeInMB.toFixed(1)} MB`
+    return `${(sizeInMB / 1024).toFixed(1)} GB`
+  }
 
   return (
     <div className="space-y-4">
@@ -175,22 +162,16 @@ export function SCMRepositorySelector({
           <div className="flex items-center gap-2">
             <Checkbox
               id="select-all"
-              checked={
-                repositories.length > 0 &&
-                selectedRepos.size === repositories.length
-              }
+              checked={repositories.length > 0 && selectedRepos.size === repositories.length}
               onCheckedChange={toggleSelectAll}
               disabled={repositories.length === 0}
             />
-            <Label
-              htmlFor="select-all"
-              className="text-sm font-medium cursor-pointer"
-            >
+            <Label htmlFor="select-all" className="text-sm font-medium cursor-pointer">
               Select All
             </Label>
           </div>
           <span className="text-sm text-muted-foreground">
-            {total > 0 ? `${total} repositories` : "No repositories"}
+            {total > 0 ? `${total} repositories` : 'No repositories'}
           </span>
         </div>
 
@@ -203,19 +184,15 @@ export function SCMRepositorySelector({
           ) : error ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <AlertCircle className="h-8 w-8 text-destructive mb-2" />
-              <p className="text-sm text-muted-foreground">
-                Failed to load repositories
-              </p>
+              <p className="text-sm text-muted-foreground">Failed to load repositories</p>
               <p className="text-xs text-muted-foreground mt-1">
-                {error.message || "Please try again"}
+                {error.message || 'Please try again'}
               </p>
             </div>
           ) : repositories.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <p className="text-sm text-muted-foreground">
-                {debouncedSearch
-                  ? "No repositories match your search"
-                  : "No repositories found"}
+                {debouncedSearch ? 'No repositories match your search' : 'No repositories found'}
               </p>
             </div>
           ) : (
@@ -223,10 +200,8 @@ export function SCMRepositorySelector({
               <div
                 key={repo.id}
                 className={cn(
-                  "flex items-center gap-3 px-4 py-3 border-b last:border-b-0 cursor-pointer transition-colors",
-                  selectedRepos.has(repo.id)
-                    ? "bg-primary/5"
-                    : "hover:bg-muted/50"
+                  'flex items-center gap-3 px-4 py-3 border-b last:border-b-0 cursor-pointer transition-colors',
+                  selectedRepos.has(repo.id) ? 'bg-primary/5' : 'hover:bg-muted/50'
                 )}
                 onClick={() => toggleSelect(repo.id)}
               >
@@ -279,9 +254,7 @@ export function SCMRepositorySelector({
                     <span>{formatSize(repo.size)}</span>
                   </div>
                 </div>
-                {selectedRepos.has(repo.id) && (
-                  <Check className="h-4 w-4 text-primary shrink-0" />
-                )}
+                {selectedRepos.has(repo.id) && <Check className="h-4 w-4 text-primary shrink-0" />}
               </div>
             ))
           )}
@@ -290,11 +263,7 @@ export function SCMRepositorySelector({
         {/* Load more */}
         {hasMore && !isLoading && (
           <div className="flex justify-center border-t py-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setPage((p) => p + 1)}
-            >
+            <Button variant="ghost" size="sm" onClick={() => setPage((p) => p + 1)}>
               Load more
             </Button>
           </div>
@@ -355,48 +324,43 @@ export function SCMRepositorySelector({
 
       {/* Footer */}
       <div className="flex items-center justify-between pt-2">
-        <Badge variant="secondary">
-          {selectedRepos.size} selected
-        </Badge>
+        <Badge variant="secondary">{selectedRepos.size} selected</Badge>
         <div className="flex gap-2">
           <Button variant="outline" onClick={onBack}>
             Cancel
           </Button>
-          <Button
-            onClick={handleImport}
-            disabled={selectedRepos.size === 0 || isImporting}
-          >
+          <Button onClick={handleImport} disabled={selectedRepos.size === 0 || isImporting}>
             {isImporting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Import {selectedRepos.size > 0 ? selectedRepos.size : ""} Repositories
+            Import {selectedRepos.size > 0 ? selectedRepos.size : ''} Repositories
           </Button>
         </div>
       </div>
     </div>
-  );
+  )
 }
 
 // Simple language color mapping
 function getLanguageColor(language: string): string {
   const colors: Record<string, string> = {
-    TypeScript: "#3178c6",
-    JavaScript: "#f1e05a",
-    Python: "#3572A5",
-    Go: "#00ADD8",
-    Rust: "#dea584",
-    Java: "#b07219",
-    Ruby: "#701516",
-    PHP: "#4F5D95",
-    "C#": "#178600",
-    "C++": "#f34b7d",
-    C: "#555555",
-    Swift: "#F05138",
-    Kotlin: "#A97BFF",
-    Scala: "#c22d40",
-    Shell: "#89e051",
-    HTML: "#e34c26",
-    CSS: "#563d7c",
-    Vue: "#41b883",
-    Svelte: "#ff3e00",
-  };
-  return colors[language] || "#8b949e";
+    TypeScript: '#3178c6',
+    JavaScript: '#f1e05a',
+    Python: '#3572A5',
+    Go: '#00ADD8',
+    Rust: '#dea584',
+    Java: '#b07219',
+    Ruby: '#701516',
+    PHP: '#4F5D95',
+    'C#': '#178600',
+    'C++': '#f34b7d',
+    C: '#555555',
+    Swift: '#F05138',
+    Kotlin: '#A97BFF',
+    Scala: '#c22d40',
+    Shell: '#89e051',
+    HTML: '#e34c26',
+    CSS: '#563d7c',
+    Vue: '#41b883',
+    Svelte: '#ff3e00',
+  }
+  return colors[language] || '#8b949e'
 }

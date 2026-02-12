@@ -1,1 +1,1 @@
-export * from "./compliance.types";
+export * from './compliance.types'

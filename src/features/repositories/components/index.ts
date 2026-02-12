@@ -1,1 +1,1 @@
-export { AddRepositoryDialog } from "./add-repository-dialog";
+export { AddRepositoryDialog } from './add-repository-dialog'

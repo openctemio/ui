@@ -1,1 +1,1 @@
-export * from "./compliance.schema";
+export * from './compliance.schema'

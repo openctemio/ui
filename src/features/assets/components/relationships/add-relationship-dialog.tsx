@@ -1,4 +1,4 @@
-"use client";
+'use client'
 
 /**
  * Add Relationship Dialog Component
@@ -6,9 +6,9 @@
  * Dialog for creating new relationships between assets
  */
 
-import * as React from "react";
-import { Search, Link2, ArrowRight, AlertCircle } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import * as React from 'react'
+import { Search, Link2, ArrowRight, AlertCircle } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -16,57 +16,57 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Slider } from "@/components/ui/slider";
-import { cn } from "@/lib/utils";
+} from '@/components/ui/select'
+import { Badge } from '@/components/ui/badge'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Slider } from '@/components/ui/slider'
+import { cn } from '@/lib/utils'
 import type {
   RelationshipType,
   ExtendedAssetType,
   CreateRelationshipInput,
   RelationshipConfidence,
-} from "../../types";
+} from '../../types'
 import {
   RELATIONSHIP_LABELS,
   EXTENDED_ASSET_TYPE_LABELS,
   getValidRelationshipTypes,
   getValidTargetTypes,
   isValidRelationship,
-} from "../../types";
+} from '../../types'
 
 // ============================================
 // Types
 // ============================================
 
 export interface AssetOption {
-  id: string;
-  name: string;
-  type: ExtendedAssetType;
-  description?: string;
+  id: string
+  name: string
+  type: ExtendedAssetType
+  description?: string
 }
 
 interface AddRelationshipDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  open: boolean
+  onOpenChange: (open: boolean) => void
   /** Current asset (source of the relationship) */
-  sourceAsset: AssetOption;
+  sourceAsset: AssetOption
   /** Available assets to select as target */
-  availableAssets: AssetOption[];
+  availableAssets: AssetOption[]
   /** Called when relationship is created */
-  onSubmit: (input: CreateRelationshipInput) => void;
+  onSubmit: (input: CreateRelationshipInput) => void
   /** Loading state */
-  isLoading?: boolean;
+  isLoading?: boolean
 }
 
 // ============================================
@@ -74,27 +74,27 @@ interface AddRelationshipDialogProps {
 // ============================================
 
 const ASSET_TYPE_COLORS: Record<string, { bg: string; text: string }> = {
-  domain: { bg: "bg-blue-500/20", text: "text-blue-500" },
-  website: { bg: "bg-green-500/20", text: "text-green-500" },
-  service: { bg: "bg-purple-500/20", text: "text-purple-500" },
-  project: { bg: "bg-orange-500/20", text: "text-orange-500" },
-  repository: { bg: "bg-orange-500/20", text: "text-orange-500" }, // @deprecated
-  cloud: { bg: "bg-cyan-500/20", text: "text-cyan-500" },
-  credential: { bg: "bg-red-500/20", text: "text-red-500" },
-  host: { bg: "bg-slate-500/20", text: "text-slate-500" },
-  container: { bg: "bg-indigo-500/20", text: "text-indigo-500" },
-  database: { bg: "bg-yellow-500/20", text: "text-yellow-500" },
-  mobile: { bg: "bg-pink-500/20", text: "text-pink-500" },
-  api: { bg: "bg-emerald-500/20", text: "text-emerald-500" },
-  k8s_cluster: { bg: "bg-blue-600/20", text: "text-blue-600" },
-  k8s_workload: { bg: "bg-blue-400/20", text: "text-blue-400" },
-  container_image: { bg: "bg-violet-500/20", text: "text-violet-500" },
-  api_collection: { bg: "bg-teal-500/20", text: "text-teal-500" },
-  api_endpoint: { bg: "bg-teal-400/20", text: "text-teal-400" },
-  network: { bg: "bg-gray-500/20", text: "text-gray-500" },
-  load_balancer: { bg: "bg-amber-500/20", text: "text-amber-500" },
-  identity_provider: { bg: "bg-rose-500/20", text: "text-rose-500" },
-};
+  domain: { bg: 'bg-blue-500/20', text: 'text-blue-500' },
+  website: { bg: 'bg-green-500/20', text: 'text-green-500' },
+  service: { bg: 'bg-purple-500/20', text: 'text-purple-500' },
+  project: { bg: 'bg-orange-500/20', text: 'text-orange-500' },
+  repository: { bg: 'bg-orange-500/20', text: 'text-orange-500' }, // @deprecated
+  cloud: { bg: 'bg-cyan-500/20', text: 'text-cyan-500' },
+  credential: { bg: 'bg-red-500/20', text: 'text-red-500' },
+  host: { bg: 'bg-slate-500/20', text: 'text-slate-500' },
+  container: { bg: 'bg-indigo-500/20', text: 'text-indigo-500' },
+  database: { bg: 'bg-yellow-500/20', text: 'text-yellow-500' },
+  mobile: { bg: 'bg-pink-500/20', text: 'text-pink-500' },
+  api: { bg: 'bg-emerald-500/20', text: 'text-emerald-500' },
+  k8s_cluster: { bg: 'bg-blue-600/20', text: 'text-blue-600' },
+  k8s_workload: { bg: 'bg-blue-400/20', text: 'text-blue-400' },
+  container_image: { bg: 'bg-violet-500/20', text: 'text-violet-500' },
+  api_collection: { bg: 'bg-teal-500/20', text: 'text-teal-500' },
+  api_endpoint: { bg: 'bg-teal-400/20', text: 'text-teal-400' },
+  network: { bg: 'bg-gray-500/20', text: 'text-gray-500' },
+  load_balancer: { bg: 'bg-amber-500/20', text: 'text-amber-500' },
+  identity_provider: { bg: 'bg-rose-500/20', text: 'text-rose-500' },
+}
 
 // ============================================
 // Asset Selector Item
@@ -106,27 +106,27 @@ function AssetSelectorItem({
   onClick,
   disabled,
 }: {
-  asset: AssetOption;
-  selected: boolean;
-  onClick: () => void;
-  disabled?: boolean;
+  asset: AssetOption
+  selected: boolean
+  onClick: () => void
+  disabled?: boolean
 }) {
-  const colors = ASSET_TYPE_COLORS[asset.type] || { bg: "bg-gray-500/20", text: "text-gray-500" };
+  const colors = ASSET_TYPE_COLORS[asset.type] || { bg: 'bg-gray-500/20', text: 'text-gray-500' }
 
   return (
     <button
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        "flex items-center gap-3 w-full p-3 rounded-lg border text-left transition-colors",
-        selected
-          ? "border-primary bg-primary/5"
-          : "border-transparent hover:bg-accent/50",
-        disabled && "opacity-50 cursor-not-allowed"
+        'flex items-center gap-3 w-full p-3 rounded-lg border text-left transition-colors',
+        selected ? 'border-primary bg-primary/5' : 'border-transparent hover:bg-accent/50',
+        disabled && 'opacity-50 cursor-not-allowed'
       )}
     >
-      <div className={cn("h-9 w-9 rounded-lg flex items-center justify-center shrink-0", colors.bg)}>
-        <Link2 className={cn("h-4 w-4", colors.text)} />
+      <div
+        className={cn('h-9 w-9 rounded-lg flex items-center justify-center shrink-0', colors.bg)}
+      >
+        <Link2 className={cn('h-4 w-4', colors.text)} />
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium truncate">{asset.name}</p>
@@ -148,7 +148,7 @@ function AssetSelectorItem({
         </div>
       )}
     </button>
-  );
+  )
 }
 
 // ============================================
@@ -164,82 +164,81 @@ export function AddRelationshipDialog({
   isLoading = false,
 }: AddRelationshipDialogProps) {
   // Form state
-  const [relationshipType, setRelationshipType] = React.useState<RelationshipType | "">("");
-  const [targetAssetId, setTargetAssetId] = React.useState<string>("");
-  const [description, setDescription] = React.useState("");
-  const [confidence, setConfidence] = React.useState<RelationshipConfidence>("medium");
-  const [impactWeight, setImpactWeight] = React.useState(5);
-  const [searchQuery, setSearchQuery] = React.useState("");
+  const [relationshipType, setRelationshipType] = React.useState<RelationshipType | ''>('')
+  const [targetAssetId, setTargetAssetId] = React.useState<string>('')
+  const [description, setDescription] = React.useState('')
+  const [confidence, setConfidence] = React.useState<RelationshipConfidence>('medium')
+  const [impactWeight, setImpactWeight] = React.useState(5)
+  const [searchQuery, setSearchQuery] = React.useState('')
 
   // Get valid relationship types for source asset
   const validRelationshipTypes = React.useMemo(
     () => getValidRelationshipTypes(sourceAsset.type),
     [sourceAsset.type]
-  );
+  )
 
   // Get valid target types based on selected relationship
   const validTargetTypes = React.useMemo(() => {
-    if (!relationshipType) return [];
-    return getValidTargetTypes(relationshipType as RelationshipType, sourceAsset.type);
-  }, [relationshipType, sourceAsset.type]);
+    if (!relationshipType) return []
+    return getValidTargetTypes(relationshipType as RelationshipType, sourceAsset.type)
+  }, [relationshipType, sourceAsset.type])
 
   // Filter available assets based on valid target types and search
   const filteredAssets = React.useMemo(() => {
-    let result = availableAssets;
+    let result = availableAssets
 
     // Filter by valid target types if relationship is selected
     if (validTargetTypes.length > 0) {
-      result = result.filter((asset) => validTargetTypes.includes(asset.type));
+      result = result.filter((asset) => validTargetTypes.includes(asset.type))
     }
 
     // Filter by search
     if (searchQuery) {
-      const query = searchQuery.toLowerCase();
+      const query = searchQuery.toLowerCase()
       result = result.filter(
         (asset) =>
-          asset.name.toLowerCase().includes(query) ||
-          asset.type.toLowerCase().includes(query)
-      );
+          asset.name.toLowerCase().includes(query) || asset.type.toLowerCase().includes(query)
+      )
     }
 
     // Exclude source asset
-    result = result.filter((asset) => asset.id !== sourceAsset.id);
+    result = result.filter((asset) => asset.id !== sourceAsset.id)
 
-    return result;
-  }, [availableAssets, validTargetTypes, searchQuery, sourceAsset.id]);
+    return result
+  }, [availableAssets, validTargetTypes, searchQuery, sourceAsset.id])
 
   // Selected target asset
   const selectedTarget = React.useMemo(
     () => availableAssets.find((a) => a.id === targetAssetId),
     [availableAssets, targetAssetId]
-  );
+  )
 
   // Validation
   const isValid = React.useMemo(() => {
-    if (!relationshipType || !targetAssetId) return false;
-    if (!selectedTarget) return false;
+    if (!relationshipType || !targetAssetId) return false
+    if (!selectedTarget) return false
     return isValidRelationship(
       relationshipType as RelationshipType,
       sourceAsset.type,
       selectedTarget.type
-    );
-  }, [relationshipType, targetAssetId, selectedTarget, sourceAsset.type]);
+    )
+  }, [relationshipType, targetAssetId, selectedTarget, sourceAsset.type])
 
   // Reset form when dialog closes
   React.useEffect(() => {
     if (!open) {
-      setRelationshipType("");
-      setTargetAssetId("");
-      setDescription("");
-      setConfidence("medium");
-      setImpactWeight(5);
-      setSearchQuery("");
+      setRelationshipType('')
+      setTargetAssetId('')
+      setDescription('')
+      setConfidence('medium')
+      setImpactWeight(5)
+      setSearchQuery('')
     }
-  }, [open]);
+  }, [open])
 
   // Handle submit
   const handleSubmit = () => {
-    if (!isValid || !relationshipType) return;
+    if (!isValid || !relationshipType) return
 
     onSubmit({
       type: relationshipType as RelationshipType,
@@ -247,31 +246,34 @@ export function AddRelationshipDialog({
       targetAssetId,
       description: description || undefined,
       confidence,
-      discoveryMethod: "manual",
+      discoveryMethod: 'manual',
       impactWeight,
-    });
-  };
+    })
+  }
 
   const sourceColors = ASSET_TYPE_COLORS[sourceAsset.type] || {
-    bg: "bg-gray-500/20",
-    text: "text-gray-500",
-  };
+    bg: 'bg-gray-500/20',
+    text: 'text-gray-500',
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>Add Relationship</DialogTitle>
-          <DialogDescription>
-            Create a new relationship from {sourceAsset.name}
-          </DialogDescription>
+          <DialogDescription>Create a new relationship from {sourceAsset.name}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6 py-4">
           {/* Source Asset Preview */}
           <div className="flex items-center gap-3 p-3 rounded-lg border bg-muted/30">
-            <div className={cn("h-10 w-10 rounded-lg flex items-center justify-center", sourceColors.bg)}>
-              <Link2 className={cn("h-5 w-5", sourceColors.text)} />
+            <div
+              className={cn(
+                'h-10 w-10 rounded-lg flex items-center justify-center',
+                sourceColors.bg
+              )}
+            >
+              <Link2 className={cn('h-5 w-5', sourceColors.text)} />
             </div>
             <div className="flex-1">
               <p className="text-sm font-medium">{sourceAsset.name}</p>
@@ -287,8 +289,8 @@ export function AddRelationshipDialog({
             <Select
               value={relationshipType}
               onValueChange={(v) => {
-                setRelationshipType(v as RelationshipType);
-                setTargetAssetId(""); // Reset target when type changes
+                setRelationshipType(v as RelationshipType)
+                setTargetAssetId('') // Reset target when type changes
               }}
             >
               <SelectTrigger>
@@ -296,17 +298,15 @@ export function AddRelationshipDialog({
               </SelectTrigger>
               <SelectContent>
                 {validRelationshipTypes.map((type) => {
-                  const labels = RELATIONSHIP_LABELS[type];
+                  const labels = RELATIONSHIP_LABELS[type]
                   return (
                     <SelectItem key={type} value={type}>
                       <div className="flex flex-col">
                         <span>{labels.direct}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {labels.description}
-                        </span>
+                        <span className="text-xs text-muted-foreground">{labels.description}</span>
                       </div>
                     </SelectItem>
-                  );
+                  )
                 })}
               </SelectContent>
             </Select>
@@ -321,9 +321,7 @@ export function AddRelationshipDialog({
                 {RELATIONSHIP_LABELS[relationshipType as RelationshipType]?.direct}
               </Badge>
               <ArrowRight className="h-4 w-4 text-muted-foreground" />
-              <Badge variant="secondary">
-                {selectedTarget?.name || "Select target..."}
-              </Badge>
+              <Badge variant="secondary">{selectedTarget?.name || 'Select target...'}</Badge>
             </div>
           )}
 
@@ -353,7 +351,8 @@ export function AddRelationshipDialog({
                       <p className="text-sm">No compatible assets found</p>
                       {validTargetTypes.length > 0 && (
                         <p className="text-xs mt-1">
-                          Looking for: {validTargetTypes.map((t) => EXTENDED_ASSET_TYPE_LABELS[t]).join(", ")}
+                          Looking for:{' '}
+                          {validTargetTypes.map((t) => EXTENDED_ASSET_TYPE_LABELS[t]).join(', ')}
                         </p>
                       )}
                     </div>
@@ -428,10 +427,10 @@ export function AddRelationshipDialog({
             Cancel
           </Button>
           <Button onClick={handleSubmit} disabled={!isValid || isLoading}>
-            {isLoading ? "Creating..." : "Create Relationship"}
+            {isLoading ? 'Creating...' : 'Create Relationship'}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
+  )
 }

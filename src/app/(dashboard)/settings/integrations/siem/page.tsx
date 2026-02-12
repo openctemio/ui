@@ -1,7 +1,7 @@
-"use client";
+'use client'
 
-import { ComingSoonPage } from "@/features/shared";
-import { Shield } from "lucide-react";
+import { ComingSoonPage } from '@/features/shared'
+import { Shield } from 'lucide-react'
 
 export default function SIEMIntegrationPage() {
   return (
@@ -11,12 +11,12 @@ export default function SIEMIntegrationPage() {
       phase="Settings"
       icon={Shield}
       features={[
-        "Splunk integration",
-        "Microsoft Sentinel integration",
-        "SOAR playbook triggers",
-        "Event forwarding",
-        "Alert correlation",
+        'Splunk integration',
+        'Microsoft Sentinel integration',
+        'SOAR playbook triggers',
+        'Event forwarding',
+        'Alert correlation',
       ]}
     />
-  );
+  )
 }

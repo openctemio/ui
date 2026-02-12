@@ -78,9 +78,7 @@ export default function AuthError({ error, reset }: ErrorProps) {
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
             <CardTitle>Session Expired</CardTitle>
-            <CardDescription>
-              Redirecting to login...
-            </CardDescription>
+            <CardDescription>Redirecting to login...</CardDescription>
           </CardHeader>
         </Card>
       </div>
@@ -95,15 +93,11 @@ export default function AuthError({ error, reset }: ErrorProps) {
             <AlertCircle className="h-6 w-6 text-destructive" />
           </div>
           <CardTitle>Authentication Error</CardTitle>
-          <CardDescription>
-            Something went wrong during authentication.
-          </CardDescription>
+          <CardDescription>Something went wrong during authentication.</CardDescription>
         </CardHeader>
         <CardContent className="text-center">
           {error.digest && (
-            <p className="text-muted-foreground text-sm">
-              Error ID: {error.digest}
-            </p>
+            <p className="text-muted-foreground text-sm">Error ID: {error.digest}</p>
           )}
         </CardContent>
         <CardFooter className="flex justify-center gap-2">

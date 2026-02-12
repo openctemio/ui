@@ -1,15 +1,10 @@
-'use client';
+'use client'
 
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { Progress } from '@/components/ui/progress'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import {
   MoreHorizontal,
   Cpu,
@@ -22,25 +17,25 @@ import {
   Settings,
   Power,
   PowerOff,
-} from 'lucide-react';
+} from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { cn } from '@/lib/utils';
-import type { Agent } from '@/lib/api/agent-types';
-import { AgentTypeIcon, AGENT_TYPE_COLORS } from './agent-type-icon';
+} from '@/components/ui/dropdown-menu'
+import { cn } from '@/lib/utils'
+import type { Agent } from '@/lib/api/agent-types'
+import { AgentTypeIcon, AGENT_TYPE_COLORS } from './agent-type-icon'
 
 interface AgentMonitoringCardProps {
-  agent: Agent;
-  onEdit: (agent: Agent) => void;
-  onViewConfig: (agent: Agent) => void;
-  onActivate: (agent: Agent) => void;
-  onDeactivate: (agent: Agent) => void;
-  onViewDetails: (agent: Agent) => void;
+  agent: Agent
+  onEdit: (agent: Agent) => void
+  onViewConfig: (agent: Agent) => void
+  onActivate: (agent: Agent) => void
+  onDeactivate: (agent: Agent) => void
+  onViewDetails: (agent: Agent) => void
 }
 
 // Note: Online status now comes from the health field in Agent type
@@ -48,15 +43,15 @@ interface AgentMonitoringCardProps {
 
 // Format uptime from last_seen_at
 function formatUptime(lastSeenAt?: string): string {
-  if (!lastSeenAt) return '—';
-  const lastSeen = new Date(lastSeenAt);
-  const now = new Date();
-  const diffMs = now.getTime() - lastSeen.getTime();
+  if (!lastSeenAt) return '—'
+  const lastSeen = new Date(lastSeenAt)
+  const now = new Date()
+  const diffMs = now.getTime() - lastSeen.getTime()
 
-  if (diffMs < 60000) return 'Just now';
-  if (diffMs < 3600000) return `${Math.floor(diffMs / 60000)}m ago`;
-  if (diffMs < 86400000) return `${Math.floor(diffMs / 3600000)}h ago`;
-  return `${Math.floor(diffMs / 86400000)}d ago`;
+  if (diffMs < 60000) return 'Just now'
+  if (diffMs < 3600000) return `${Math.floor(diffMs / 60000)}m ago`
+  if (diffMs < 86400000) return `${Math.floor(diffMs / 3600000)}h ago`
+  return `${Math.floor(diffMs / 86400000)}d ago`
 }
 
 export function AgentMonitoringCard({
@@ -68,19 +63,19 @@ export function AgentMonitoringCard({
   onViewDetails,
 }: AgentMonitoringCardProps) {
   // Use health field from backend (heartbeat-based)
-  const isOnline = agent.status === 'active' && agent.health === 'online';
-  const isActive = agent.status === 'active';
-  const hasError = agent.health === 'error';
+  const isOnline = agent.status === 'active' && agent.health === 'online'
+  const isActive = agent.status === 'active'
+  const hasError = agent.health === 'error'
 
   // Mock metrics - will be replaced when backend supports
   // These could come from agent.metadata or a separate metrics endpoint
   // Using deterministic hash based on agent ID for consistent display
-  const hash = agent.id.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
+  const hash = agent.id.split('').reduce((a, b) => a + b.charCodeAt(0), 0)
   const metrics = {
     cpu: (hash % 60) + 20,
     memory: (hash % 50) + 30,
     activeJobs: agent.status === 'active' ? (hash % 5) + 1 : 0,
-  };
+  }
 
   return (
     <Card
@@ -143,18 +138,12 @@ export function AgentMonitoringCard({
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               {agent.status === 'disabled' || agent.status === 'revoked' ? (
-                <DropdownMenuItem
-                  onClick={() => onActivate(agent)}
-                  className="text-green-500"
-                >
+                <DropdownMenuItem onClick={() => onActivate(agent)} className="text-green-500">
                   <Power className="mr-2 h-4 w-4" />
                   Activate
                 </DropdownMenuItem>
               ) : agent.status === 'active' ? (
-                <DropdownMenuItem
-                  onClick={() => onDeactivate(agent)}
-                  className="text-amber-500"
-                >
+                <DropdownMenuItem onClick={() => onDeactivate(agent)} className="text-amber-500">
                   <PowerOff className="mr-2 h-4 w-4" />
                   Deactivate
                 </DropdownMenuItem>
@@ -169,9 +158,7 @@ export function AgentMonitoringCard({
             variant="secondary"
             className={cn(
               'text-xs',
-              isOnline
-                ? 'bg-green-500/10 text-green-500'
-                : 'bg-gray-500/10 text-gray-500'
+              isOnline ? 'bg-green-500/10 text-green-500' : 'bg-gray-500/10 text-gray-500'
             )}
           >
             {isOnline ? (
@@ -212,9 +199,7 @@ export function AgentMonitoringCard({
                   )}
                 />
               </div>
-              <span className="text-xs text-muted-foreground w-10 text-right">
-                {metrics.cpu}%
-              </span>
+              <span className="text-xs text-muted-foreground w-10 text-right">{metrics.cpu}%</span>
             </div>
             <div className="flex items-center gap-2">
               <HardDrive className="h-3 w-3 text-muted-foreground" />
@@ -258,14 +243,13 @@ export function AgentMonitoringCard({
                 </span>
               </TooltipTrigger>
               <TooltipContent>
-                Last seen: {agent.last_seen_at
-                  ? new Date(agent.last_seen_at).toLocaleString()
-                  : 'Never'}
+                Last seen:{' '}
+                {agent.last_seen_at ? new Date(agent.last_seen_at).toLocaleString() : 'Never'}
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
         </div>
       </CardContent>
     </Card>
-  );
+  )
 }

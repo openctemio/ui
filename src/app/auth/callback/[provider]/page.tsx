@@ -8,7 +8,10 @@
 import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
 
-import { handleOAuthCallback, type SocialProvider } from '@/features/auth/actions/social-auth-actions'
+import {
+  handleOAuthCallback,
+  type SocialProvider,
+} from '@/features/auth/actions/social-auth-actions'
 
 // ============================================
 // TYPES
@@ -40,10 +43,7 @@ function isValidProvider(provider: string): provider is SocialProvider {
 // PAGE COMPONENT
 // ============================================
 
-export default async function OAuthCallbackPage({
-  params,
-  searchParams,
-}: OAuthCallbackPageProps) {
+export default async function OAuthCallbackPage({ params, searchParams }: OAuthCallbackPageProps) {
   const { provider } = await params
   const { code, state, error, error_description } = await searchParams
 

@@ -1,7 +1,7 @@
-"use client";
+'use client'
 
-import { ComingSoonPage } from "@/features/shared";
-import { Users } from "lucide-react";
+import { ComingSoonPage } from '@/features/shared'
+import { Users } from 'lucide-react'
 
 export default function AssignmentsPage() {
   return (
@@ -11,12 +11,12 @@ export default function AssignmentsPage() {
       phase="Mobilization"
       icon={Users}
       features={[
-        "Bulk assignment management",
-        "Assignment history",
-        "Workload balancing",
-        "Skill-based routing",
-        "Assignment notifications",
+        'Bulk assignment management',
+        'Assignment history',
+        'Workload balancing',
+        'Skill-based routing',
+        'Assignment notifications',
       ]}
     />
-  );
+  )
 }

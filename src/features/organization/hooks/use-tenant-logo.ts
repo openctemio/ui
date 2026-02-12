@@ -191,7 +191,7 @@ export function clearAllLogoCaches(): void {
         keysToRemove.push(key)
       }
     }
-    keysToRemove.forEach(key => localStorage.removeItem(key))
+    keysToRemove.forEach((key) => localStorage.removeItem(key))
   } catch {
     // Ignore errors
   }

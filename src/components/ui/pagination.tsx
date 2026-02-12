@@ -1,31 +1,26 @@
-"use client";
+'use client'
 
-import * as React from "react";
-import { Button } from "@/components/ui/button";
+import * as React from 'react'
+import { Button } from '@/components/ui/button'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import {
-  ChevronLeft,
-  ChevronRight,
-  ChevronsLeft,
-  ChevronsRight,
-} from "lucide-react";
+} from '@/components/ui/select'
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react'
 
 interface PaginationProps {
-  currentPage: number;
-  totalPages: number;
-  pageSize: number;
-  totalItems: number;
-  onPageChange: (page: number) => void;
-  onPageSizeChange?: (pageSize: number) => void;
-  pageSizeOptions?: number[];
-  showPageSizeSelector?: boolean;
-  className?: string;
+  currentPage: number
+  totalPages: number
+  pageSize: number
+  totalItems: number
+  onPageChange: (page: number) => void
+  onPageSizeChange?: (pageSize: number) => void
+  pageSizeOptions?: number[]
+  showPageSizeSelector?: boolean
+  className?: string
 }
 
 export function Pagination({
@@ -39,23 +34,24 @@ export function Pagination({
   showPageSizeSelector = true,
   className,
 }: PaginationProps) {
-  const startItem = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
-  const endItem = Math.min(currentPage * pageSize, totalItems);
+  const startItem = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1
+  const endItem = Math.min(currentPage * pageSize, totalItems)
 
-  const canPreviousPage = currentPage > 1;
-  const canNextPage = currentPage < totalPages;
+  const canPreviousPage = currentPage > 1
+  const canNextPage = currentPage < totalPages
 
   return (
-    <div className={`flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between ${className || ""}`}>
+    <div
+      className={`flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between ${className || ''}`}
+    >
       {/* Row count info */}
       <div className="text-sm text-muted-foreground">
-        Showing{" "}
-        <span className="font-medium">{startItem}</span>
-        {" - "}
+        Showing <span className="font-medium">{startItem}</span>
+        {' - '}
         <span className="font-medium">{endItem}</span>
-        {" of "}
+        {' of '}
         <span className="font-medium">{totalItems}</span>
-        {" results"}
+        {' results'}
       </div>
 
       {/* Pagination controls */}
@@ -67,7 +63,7 @@ export function Pagination({
             <Select
               value={`${pageSize}`}
               onValueChange={(value) => {
-                onPageSizeChange(Number(value));
+                onPageSizeChange(Number(value))
               }}
             >
               <SelectTrigger className="h-8 w-[70px]">
@@ -134,5 +130,5 @@ export function Pagination({
         </div>
       </div>
     </div>
-  );
+  )
 }

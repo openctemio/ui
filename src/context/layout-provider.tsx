@@ -1,4 +1,4 @@
-"use client"
+'use client'
 
 import { createContext, useContext, useState } from 'react'
 import { getCookie, setCookie } from '@/lib/cookies'
@@ -46,11 +46,7 @@ export function LayoutProvider({ children }: LayoutProviderProps) {
 
   const setCollapsible = (newCollapsible: Collapsible) => {
     _setCollapsible(newCollapsible)
-    setCookie(
-      LAYOUT_COLLAPSIBLE_COOKIE_NAME,
-      newCollapsible,
-      { maxAge: LAYOUT_COOKIE_MAX_AGE }
-    )
+    setCookie(LAYOUT_COLLAPSIBLE_COOKIE_NAME, newCollapsible, { maxAge: LAYOUT_COOKIE_MAX_AGE })
   }
 
   const setVariant = (newVariant: Variant) => {

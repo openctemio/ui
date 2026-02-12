@@ -1,10 +1,7 @@
 'use client'
 
 import { useState, useCallback, useEffect, useMemo } from 'react'
-import {
-  Dialog,
-  DialogContent,
-} from '@/components/ui/dialog'
+import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -17,14 +14,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import {
-  Save,
-  X,
-  Cloud,
-  Server,
-  Loader2,
-  AlertTriangle,
-} from 'lucide-react'
+import { Save, X, Cloud, Server, Loader2, AlertTriangle } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { WorkflowBuilder, type AvailableTool } from './workflow-builder'
@@ -129,9 +119,7 @@ export function VisualBuilderDialog({
   // Handle inline step updates (from node editing or panel)
   const handleStepUpdate = useCallback((stepId: string, updates: Partial<PipelineStep>) => {
     setLocalSteps((prev) =>
-      prev.map((step) =>
-        step.id === stepId ? { ...step, ...updates } : step
-      )
+      prev.map((step) => (step.id === stepId ? { ...step, ...updates } : step))
     )
     setHasChanges(true)
   }, [])
@@ -150,16 +138,20 @@ export function VisualBuilderDialog({
   // Handle node position change
   const handleNodePositionChange = useCallback((stepId: string, position: UIPosition) => {
     setLocalSteps((prev) =>
-      prev.map((step) =>
-        step.id === stepId ? { ...step, ui_position: position } : step
-      )
+      prev.map((step) => (step.id === stepId ? { ...step, ui_position: position } : step))
     )
     setHasChanges(true)
   }, [])
 
   // Handle add node from palette
   const handleAddNode = useCallback(
-    (data: { nodeType: string; position: { x: number; y: number }; label?: string; capabilities?: string[]; toolName?: string }) => {
+    (data: {
+      nodeType: string
+      position: { x: number; y: number }
+      label?: string
+      capabilities?: string[]
+      toolName?: string
+    }) => {
       const { nodeType, position, label, capabilities, toolName } = data
       const stepName = label || `New ${nodeType.charAt(0).toUpperCase() + nodeType.slice(1)}`
       // Use tool name for step_key if available (more meaningful), otherwise use step name
@@ -209,9 +201,7 @@ export function VisualBuilderDialog({
       // Remove from depends_on of other steps
       return newSteps.map((step) => ({
         ...step,
-        depends_on: (step.depends_on || []).filter(
-          (d) => d !== stepToDelete?.step_key
-        ),
+        depends_on: (step.depends_on || []).filter((d) => d !== stepToDelete?.step_key),
         order: newSteps.indexOf(step) + 1,
       }))
     })
@@ -226,7 +216,6 @@ export function VisualBuilderDialog({
 
     toast.success('Step deleted')
   }, [deleteStepId, localSteps, selectedStepId])
-
 
   // Handle save
   const handleSave = async () => {
@@ -286,11 +275,7 @@ export function VisualBuilderDialog({
                 </Badge>
               )}
               {!isReadOnly && (
-                <Button
-                  size="sm"
-                  onClick={handleSave}
-                  disabled={!hasChanges || isSaving}
-                >
+                <Button size="sm" onClick={handleSave} disabled={!hasChanges || isSaving}>
                   {isSaving ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   ) : (
@@ -299,11 +284,7 @@ export function VisualBuilderDialog({
                   Save
                 </Button>
               )}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => handleOpenChange(false)}
-              >
+              <Button variant="ghost" size="sm" onClick={() => handleOpenChange(false)}>
                 <X className="h-4 w-4" />
               </Button>
             </div>
@@ -344,8 +325,8 @@ export function VisualBuilderDialog({
               Delete Step
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this step? This action cannot be
-              undone. Any dependencies on this step will be removed.
+              Are you sure you want to delete this step? This action cannot be undone. Any
+              dependencies on this step will be removed.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -366,15 +347,12 @@ export function VisualBuilderDialog({
           <AlertDialogHeader>
             <AlertDialogTitle>Unsaved Changes</AlertDialogTitle>
             <AlertDialogDescription>
-              You have unsaved changes. Are you sure you want to close without
-              saving?
+              You have unsaved changes. Are you sure you want to close without saving?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Continue Editing</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDiscardChanges}>
-              Discard Changes
-            </AlertDialogAction>
+            <AlertDialogAction onClick={handleDiscardChanges}>Discard Changes</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

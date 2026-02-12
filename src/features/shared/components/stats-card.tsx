@@ -1,41 +1,37 @@
-"use client";
+'use client'
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
-import type { LucideIcon } from "lucide-react";
-import { TrendingDown, TrendingUp, Minus } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { cn } from '@/lib/utils'
+import type { LucideIcon } from 'lucide-react'
+import { TrendingDown, TrendingUp, Minus } from 'lucide-react'
 
 interface StatsCardProps {
-  title: string;
-  value: string | number;
-  change?: string;
-  changeType?: "positive" | "negative" | "neutral";
-  icon?: LucideIcon;
-  description?: string;
-  className?: string;
+  title: string
+  value: string | number
+  change?: string
+  changeType?: 'positive' | 'negative' | 'neutral'
+  icon?: LucideIcon
+  description?: string
+  className?: string
 }
 
 export function StatsCard({
   title,
   value,
   change,
-  changeType = "neutral",
+  changeType = 'neutral',
   icon: Icon,
   description,
   className,
 }: StatsCardProps) {
   const changeColors = {
-    positive: "text-green-500",
-    negative: "text-red-500",
-    neutral: "text-muted-foreground",
-  };
+    positive: 'text-green-500',
+    negative: 'text-red-500',
+    neutral: 'text-muted-foreground',
+  }
 
   const TrendIcon =
-    changeType === "positive"
-      ? TrendingUp
-      : changeType === "negative"
-        ? TrendingDown
-        : Minus;
+    changeType === 'positive' ? TrendingUp : changeType === 'negative' ? TrendingDown : Minus
 
   return (
     <Card className={cn(className)}>
@@ -49,22 +45,14 @@ export function StatsCard({
           <div className="flex items-center gap-1">
             {change && (
               <>
-                <TrendIcon
-                  className={cn("h-3 w-3", changeColors[changeType])}
-                />
-                <span className={cn("text-xs", changeColors[changeType])}>
-                  {change}
-                </span>
+                <TrendIcon className={cn('h-3 w-3', changeColors[changeType])} />
+                <span className={cn('text-xs', changeColors[changeType])}>{change}</span>
               </>
             )}
-            {description && (
-              <span className="text-muted-foreground text-xs">
-                {description}
-              </span>
-            )}
+            {description && <span className="text-muted-foreground text-xs">{description}</span>}
           </div>
         )}
       </CardContent>
     </Card>
-  );
+  )
 }
