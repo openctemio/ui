@@ -1,7 +1,7 @@
-"use client";
+'use client'
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { cn } from '@/lib/utils'
 import {
   Activity,
   AlertOctagon,
@@ -12,27 +12,23 @@ import {
   Shield,
   ShieldCheck,
   Clock,
-} from "lucide-react";
-import type { EPSSStats, KEVStats } from "@/lib/api/threatintel-types";
+} from 'lucide-react'
+import type { EPSSStats, KEVStats } from '@/lib/api/threatintel-types'
 
 interface EPSSStatsCardsProps {
-  stats: EPSSStats;
-  isLoading?: boolean;
-  className?: string;
+  stats: EPSSStats
+  isLoading?: boolean
+  className?: string
 }
 
 /**
  * EPSS Stats Cards - Overview of EPSS scoring statistics
  */
-export function EPSSStatsCards({
-  stats,
-  isLoading,
-  className,
-}: EPSSStatsCardsProps) {
+export function EPSSStatsCards({ stats, isLoading, className }: EPSSStatsCardsProps) {
   // Handle loading or missing data
   if (isLoading || !stats) {
     return (
-      <div className={cn("grid gap-4 md:grid-cols-2 lg:grid-cols-4", className)}>
+      <div className={cn('grid gap-4 md:grid-cols-2 lg:grid-cols-4', className)}>
         {[...Array(4)].map((_, i) => (
           <Card key={i}>
             <CardContent className="pt-6">
@@ -44,88 +40,81 @@ export function EPSSStatsCards({
           </Card>
         ))}
       </div>
-    );
+    )
   }
 
   const cards = [
     {
-      title: "Total CVEs Tracked",
+      title: 'Total CVEs Tracked',
       value: (stats.total_scores ?? 0).toLocaleString(),
       icon: Activity,
-      color: "text-blue-500",
-      bgColor: "bg-blue-500/10",
+      color: 'text-blue-500',
+      bgColor: 'bg-blue-500/10',
     },
     {
-      title: "Critical Risk",
+      title: 'Critical Risk',
       value: (stats.critical_risk_count ?? 0).toLocaleString(),
-      subtitle: "EPSS > 30%",
+      subtitle: 'EPSS > 30%',
       icon: AlertOctagon,
-      color: "text-red-500",
-      bgColor: "bg-red-500/10",
+      color: 'text-red-500',
+      bgColor: 'bg-red-500/10',
     },
     {
-      title: "High Risk",
+      title: 'High Risk',
       value: (stats.high_risk_count ?? 0).toLocaleString(),
-      subtitle: "EPSS > 10%",
+      subtitle: 'EPSS > 10%',
       icon: AlertTriangle,
-      color: "text-orange-500",
-      bgColor: "bg-orange-500/10",
+      color: 'text-orange-500',
+      bgColor: 'bg-orange-500/10',
     },
     {
-      title: "High Risk Rate",
-      value: stats.total_scores > 0
-        ? `${((stats.high_risk_count / stats.total_scores) * 100).toFixed(2)}%`
-        : "N/A",
+      title: 'High Risk Rate',
+      value:
+        stats.total_scores > 0
+          ? `${((stats.high_risk_count / stats.total_scores) * 100).toFixed(2)}%`
+          : 'N/A',
       icon: TrendingUp,
-      color: "text-purple-500",
-      bgColor: "bg-purple-500/10",
+      color: 'text-purple-500',
+      bgColor: 'bg-purple-500/10',
     },
-  ];
+  ]
 
   return (
-    <div className={cn("grid gap-4 md:grid-cols-2 lg:grid-cols-4", className)}>
+    <div className={cn('grid gap-4 md:grid-cols-2 lg:grid-cols-4', className)}>
       {cards.map((card) => (
         <Card key={card.title}>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">
-                  {card.title}
-                </p>
+                <p className="text-sm font-medium text-muted-foreground">{card.title}</p>
                 <p className="text-2xl font-bold">{card.value}</p>
-                {card.subtitle && (
-                  <p className="text-xs text-muted-foreground">{card.subtitle}</p>
-                )}
+                {card.subtitle && <p className="text-xs text-muted-foreground">{card.subtitle}</p>}
               </div>
-              <div className={cn("p-3 rounded-full", card.bgColor)}>
-                <card.icon className={cn("h-5 w-5", card.color)} />
+              <div className={cn('p-3 rounded-full', card.bgColor)}>
+                <card.icon className={cn('h-5 w-5', card.color)} />
               </div>
             </div>
           </CardContent>
         </Card>
       ))}
     </div>
-  );
+  )
 }
 
 interface KEVStatsCardsProps {
-  stats: KEVStats;
-  isLoading?: boolean;
-  className?: string;
+  stats: KEVStats
+  isLoading?: boolean
+  className?: string
 }
 
 /**
  * KEV Stats Cards - Overview of CISA KEV statistics
  */
-export function KEVStatsCards({
-  stats,
-  isLoading,
-  className,
-}: KEVStatsCardsProps) {
+export function KEVStatsCards({ stats, isLoading, className }: KEVStatsCardsProps) {
   // Handle loading or missing data
   if (isLoading || !stats) {
     return (
-      <div className={cn("grid gap-4 md:grid-cols-2 lg:grid-cols-4", className)}>
+      <div className={cn('grid gap-4 md:grid-cols-2 lg:grid-cols-4', className)}>
         {[...Array(4)].map((_, i) => (
           <Card key={i}>
             <CardContent className="pt-6">
@@ -137,73 +126,69 @@ export function KEVStatsCards({
           </Card>
         ))}
       </div>
-    );
+    )
   }
 
   const cards = [
     {
-      title: "Total KEV Entries",
+      title: 'Total KEV Entries',
       value: (stats.total_entries ?? 0).toLocaleString(),
       icon: Shield,
-      color: "text-blue-500",
-      bgColor: "bg-blue-500/10",
+      color: 'text-blue-500',
+      bgColor: 'bg-blue-500/10',
     },
     {
-      title: "Past Due",
+      title: 'Past Due',
       value: (stats.past_due_count ?? 0).toLocaleString(),
-      subtitle: "Requires immediate action",
+      subtitle: 'Requires immediate action',
       icon: AlertOctagon,
-      color: "text-red-500",
-      bgColor: "bg-red-500/10",
+      color: 'text-red-500',
+      bgColor: 'bg-red-500/10',
     },
     {
-      title: "Added Last 30 Days",
+      title: 'Added Last 30 Days',
       value: (stats.recently_added_last_30_days ?? 0).toLocaleString(),
       icon: Calendar,
-      color: "text-yellow-500",
-      bgColor: "bg-yellow-500/10",
+      color: 'text-yellow-500',
+      bgColor: 'bg-yellow-500/10',
     },
     {
-      title: "Ransomware Related",
+      title: 'Ransomware Related',
       value: (stats.ransomware_related_count ?? 0).toLocaleString(),
       icon: Skull,
-      color: "text-purple-500",
-      bgColor: "bg-purple-500/10",
+      color: 'text-purple-500',
+      bgColor: 'bg-purple-500/10',
     },
-  ];
+  ]
 
   return (
-    <div className={cn("grid gap-4 md:grid-cols-2 lg:grid-cols-4", className)}>
+    <div className={cn('grid gap-4 md:grid-cols-2 lg:grid-cols-4', className)}>
       {cards.map((card) => (
         <Card key={card.title}>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">
-                  {card.title}
-                </p>
+                <p className="text-sm font-medium text-muted-foreground">{card.title}</p>
                 <p className="text-2xl font-bold">{card.value}</p>
-                {card.subtitle && (
-                  <p className="text-xs text-muted-foreground">{card.subtitle}</p>
-                )}
+                {card.subtitle && <p className="text-xs text-muted-foreground">{card.subtitle}</p>}
               </div>
-              <div className={cn("p-3 rounded-full", card.bgColor)}>
-                <card.icon className={cn("h-5 w-5", card.color)} />
+              <div className={cn('p-3 rounded-full', card.bgColor)}>
+                <card.icon className={cn('h-5 w-5', card.color)} />
               </div>
             </div>
           </CardContent>
         </Card>
       ))}
     </div>
-  );
+  )
 }
 
 interface ThreatIntelOverviewProps {
-  epssStats: EPSSStats;
-  kevStats: KEVStats;
-  lastSyncAt?: string;
-  isLoading?: boolean;
-  className?: string;
+  epssStats: EPSSStats
+  kevStats: KEVStats
+  lastSyncAt?: string
+  isLoading?: boolean
+  className?: string
 }
 
 /**
@@ -217,7 +202,7 @@ export function ThreatIntelOverview({
   className,
 }: ThreatIntelOverviewProps) {
   return (
-    <div className={cn("space-y-6", className)}>
+    <div className={cn('space-y-6', className)}>
       {/* Header with last sync info */}
       <div className="flex items-center justify-between">
         <div>
@@ -281,7 +266,7 @@ export function ThreatIntelOverview({
         </Card>
       </div>
     </div>
-  );
+  )
 }
 
 function EPSSRiskDistribution({ stats }: { stats: EPSSStats }) {
@@ -295,53 +280,55 @@ function EPSSRiskDistribution({ stats }: { stats: EPSSStats }) {
           </div>
         ))}
       </div>
-    );
+    )
   }
 
-  const total = stats.total_scores || 1;
-  const lowRisk = total - (stats.high_risk_count ?? 0);
+  const total = stats.total_scores || 1
+  const lowRisk = total - (stats.high_risk_count ?? 0)
   const distribution = [
     {
-      label: "Critical (>30%)",
+      label: 'Critical (>30%)',
       count: stats.critical_risk_count ?? 0,
-      color: "bg-red-500",
-      textColor: "text-red-600",
+      color: 'bg-red-500',
+      textColor: 'text-red-600',
     },
     {
-      label: "High (>10%)",
+      label: 'High (>10%)',
       count: stats.high_risk_count ?? 0,
-      color: "bg-orange-500",
-      textColor: "text-orange-600",
+      color: 'bg-orange-500',
+      textColor: 'text-orange-600',
     },
     {
-      label: "Low (<10%)",
+      label: 'Low (<10%)',
       count: Math.max(0, lowRisk),
-      color: "bg-green-500",
-      textColor: "text-green-600",
+      color: 'bg-green-500',
+      textColor: 'text-green-600',
     },
-  ];
+  ]
 
   return (
     <div className="space-y-3">
       {distribution.map(({ label, count, color, textColor }) => {
-        const percentage = ((count / total) * 100).toFixed(1);
+        const percentage = ((count / total) * 100).toFixed(1)
         return (
           <div key={label} className="space-y-1">
             <div className="flex items-center justify-between text-sm">
               <span className={textColor}>{label}</span>
-              <span className="font-medium">{count.toLocaleString()} ({percentage}%)</span>
+              <span className="font-medium">
+                {count.toLocaleString()} ({percentage}%)
+              </span>
             </div>
             <div className="h-2 rounded-full bg-muted overflow-hidden">
               <div
-                className={cn("h-full rounded-full transition-all", color)}
+                className={cn('h-full rounded-full transition-all', color)}
                 style={{ width: `${Math.min(parseFloat(percentage), 100)}%` }}
               />
             </div>
           </div>
-        );
+        )
       })}
     </div>
-  );
+  )
 }
 
 function KEVRemediationStatus({ stats }: { stats: KEVStats }) {
@@ -356,49 +343,49 @@ function KEVRemediationStatus({ stats }: { stats: KEVStats }) {
           </div>
         ))}
       </div>
-    );
+    )
   }
 
-  const total = stats.total_entries || 1;
-  const overdue = stats.past_due_count ?? 0;
-  const recentlyAdded = stats.recently_added_last_30_days ?? 0;
-  const onTrack = total - overdue;
+  const total = stats.total_entries || 1
+  const overdue = stats.past_due_count ?? 0
+  const recentlyAdded = stats.recently_added_last_30_days ?? 0
+  const onTrack = total - overdue
 
   const statuses = [
     {
-      label: "Past Due",
+      label: 'Past Due',
       count: overdue,
       icon: AlertOctagon,
-      color: "text-red-600",
-      bgColor: "bg-red-100 dark:bg-red-900/30",
+      color: 'text-red-600',
+      bgColor: 'bg-red-100 dark:bg-red-900/30',
     },
     {
-      label: "New (30 Days)",
+      label: 'New (30 Days)',
       count: recentlyAdded,
       icon: Calendar,
-      color: "text-yellow-600",
-      bgColor: "bg-yellow-100 dark:bg-yellow-900/30",
+      color: 'text-yellow-600',
+      bgColor: 'bg-yellow-100 dark:bg-yellow-900/30',
     },
     {
-      label: "On Track",
+      label: 'On Track',
       count: Math.max(0, onTrack),
       icon: ShieldCheck,
-      color: "text-green-600",
-      bgColor: "bg-green-100 dark:bg-green-900/30",
+      color: 'text-green-600',
+      bgColor: 'bg-green-100 dark:bg-green-900/30',
     },
-  ];
+  ]
 
   return (
     <div className="grid grid-cols-3 gap-4">
       {statuses.map(({ label, count, icon: Icon, color, bgColor }) => (
         <div key={label} className="text-center">
-          <div className={cn("mx-auto mb-2 p-2 rounded-full w-fit", bgColor)}>
-            <Icon className={cn("h-5 w-5", color)} />
+          <div className={cn('mx-auto mb-2 p-2 rounded-full w-fit', bgColor)}>
+            <Icon className={cn('h-5 w-5', color)} />
           </div>
           <p className="text-2xl font-bold">{count.toLocaleString()}</p>
           <p className="text-xs text-muted-foreground">{label}</p>
         </div>
       ))}
     </div>
-  );
+  )
 }

@@ -31,7 +31,15 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Loader2, type LucideIcon, Package } from 'lucide-react'
-import type { Asset, AssetType, Criticality, AssetScope, ExposureLevel, CreateAssetInput, UpdateAssetInput } from '../../types'
+import type {
+  Asset,
+  AssetType,
+  Criticality,
+  AssetScope,
+  ExposureLevel,
+  CreateAssetInput,
+  UpdateAssetInput,
+} from '../../types'
 
 // Form schema with required fields
 const formSchema = z.object({

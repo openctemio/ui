@@ -1,7 +1,7 @@
-"use client";
+'use client'
 
-import { ComingSoonPage } from "@/features/shared";
-import { Route } from "lucide-react";
+import { ComingSoonPage } from '@/features/shared'
+import { Route } from 'lucide-react'
 
 export default function AttackPathAnalysisPage() {
   return (
@@ -11,12 +11,12 @@ export default function AttackPathAnalysisPage() {
       phase="Prioritization"
       icon={Route}
       features={[
-        "Critical path identification",
-        "Choke point prioritization",
-        "Blast radius analysis",
-        "Fix effectiveness scoring",
-        "Path-based risk ranking",
+        'Critical path identification',
+        'Choke point prioritization',
+        'Blast radius analysis',
+        'Fix effectiveness scoring',
+        'Path-based risk ranking',
       ]}
     />
-  );
+  )
 }

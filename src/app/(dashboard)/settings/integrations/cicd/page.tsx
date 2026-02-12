@@ -1,7 +1,7 @@
-"use client";
+'use client'
 
-import { ComingSoonPage } from "@/features/shared";
-import { GitBranch } from "lucide-react";
+import { ComingSoonPage } from '@/features/shared'
+import { GitBranch } from 'lucide-react'
 
 export default function CICDIntegrationPage() {
   return (
@@ -11,12 +11,12 @@ export default function CICDIntegrationPage() {
       phase="Settings"
       icon={GitBranch}
       features={[
-        "GitHub Actions integration",
-        "GitLab CI integration",
-        "Jenkins plugin",
-        "Pipeline security gates",
-        "Build artifact scanning",
+        'GitHub Actions integration',
+        'GitLab CI integration',
+        'Jenkins plugin',
+        'Pipeline security gates',
+        'Build artifact scanning',
       ]}
     />
-  );
+  )
 }

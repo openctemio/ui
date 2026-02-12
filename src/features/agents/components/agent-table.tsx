@@ -1,6 +1,6 @@
-'use client';
+'use client'
 
-import { useMemo } from 'react';
+import { useMemo } from 'react'
 import {
   ColumnDef,
   flexRender,
@@ -10,11 +10,11 @@ import {
   getSortedRowModel,
   SortingState,
   useReactTable,
-} from '@tanstack/react-table';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Progress } from '@/components/ui/progress';
+} from '@tanstack/react-table'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Progress } from '@/components/ui/progress'
 import {
   Table,
   TableBody,
@@ -22,14 +22,14 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
+} from '@/components/ui/table'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+} from '@/components/ui/dropdown-menu'
 import {
   ArrowUpDown,
   ChevronLeft,
@@ -48,32 +48,32 @@ import {
   PowerOff,
   Globe,
   Zap,
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Can, Permission } from '@/lib/permissions';
+} from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { Can, Permission } from '@/lib/permissions'
 
-import type { Agent } from '@/lib/api/agent-types';
-import { AgentTypeIcon, AGENT_TYPE_LABELS, AGENT_TYPE_COLORS } from './agent-type-icon';
+import type { Agent } from '@/lib/api/agent-types'
+import { AgentTypeIcon, AGENT_TYPE_LABELS, AGENT_TYPE_COLORS } from './agent-type-icon'
 
 interface AgentTableProps {
-  agents: Agent[];
-  sorting: SortingState;
-  onSortingChange: (sorting: SortingState) => void;
-  globalFilter: string;
-  rowSelection: Record<string, boolean>;
-  onRowSelectionChange: (selection: Record<string, boolean>) => void;
-  onViewAgent: (agent: Agent) => void;
-  onEditAgent: (agent: Agent) => void;
-  onActivateAgent: (agent: Agent) => void;
-  onDeactivateAgent: (agent: Agent) => void;
-  onDeleteAgent: (agent: Agent) => void;
-  onRegenerateKey: (agent: Agent) => void;
+  agents: Agent[]
+  sorting: SortingState
+  onSortingChange: (sorting: SortingState) => void
+  globalFilter: string
+  rowSelection: Record<string, boolean>
+  onRowSelectionChange: (selection: Record<string, boolean>) => void
+  onViewAgent: (agent: Agent) => void
+  onEditAgent: (agent: Agent) => void
+  onActivateAgent: (agent: Agent) => void
+  onDeactivateAgent: (agent: Agent) => void
+  onDeleteAgent: (agent: Agent) => void
+  onRegenerateKey: (agent: Agent) => void
 }
 
 // Check if agent is online using the health field from backend
 function _isAgentOnline(agent: Agent): boolean {
-  if (agent.status !== 'active') return false;
-  return agent.health === 'online';
+  if (agent.status !== 'active') return false
+  return agent.health === 'online'
 }
 
 export function AgentTable({
@@ -126,7 +126,7 @@ export function AgentTable({
           </Button>
         ),
         cell: ({ row }) => {
-          const agent = row.original;
+          const agent = row.original
           return (
             <div className="flex items-center gap-3">
               <AgentTypeIcon type={agent.type} className="h-5 w-5" />
@@ -137,26 +137,26 @@ export function AgentTable({
                 </p>
               </div>
             </div>
-          );
+          )
         },
       },
       {
         accessorKey: 'type',
         header: 'Type',
         cell: ({ row }) => {
-          const agent = row.original;
+          const agent = row.original
           return (
             <Badge variant="outline" className={AGENT_TYPE_COLORS[agent.type]}>
               {AGENT_TYPE_LABELS[agent.type]}
             </Badge>
-          );
+          )
         },
       },
       {
         accessorKey: 'status',
         header: 'Status',
         cell: ({ row }) => {
-          const agent = row.original;
+          const agent = row.original
 
           // Check admin status first
           if (agent.status === 'disabled') {
@@ -165,7 +165,7 @@ export function AgentTable({
                 <XCircle className="h-3.5 w-3.5" />
                 Disabled
               </Badge>
-            );
+            )
           }
 
           if (agent.status === 'revoked') {
@@ -174,7 +174,7 @@ export function AgentTable({
                 <XCircle className="h-3.5 w-3.5" />
                 Revoked
               </Badge>
-            );
+            )
           }
 
           // For active agents, show health status
@@ -184,7 +184,7 @@ export function AgentTable({
                 <AlertCircle className="h-3.5 w-3.5" />
                 Error
               </Badge>
-            );
+            )
           }
 
           if (agent.health === 'online') {
@@ -193,7 +193,7 @@ export function AgentTable({
                 <CheckCircle className="h-3.5 w-3.5" />
                 Online
               </Badge>
-            );
+            )
           }
 
           // offline or unknown
@@ -202,10 +202,10 @@ export function AgentTable({
               <XCircle className="h-3.5 w-3.5" />
               Offline
             </Badge>
-          );
+          )
         },
       },
-    ];
+    ]
 
     // Add remaining columns
     baseColumns.push(
@@ -222,49 +222,47 @@ export function AgentTable({
           </Button>
         ),
         cell: ({ row }) => {
-          const agent = row.original;
-          const activeJobs = agent.active_jobs || 0;
+          const agent = row.original
+          const activeJobs = agent.active_jobs || 0
           return (
             <span className="flex items-center gap-1.5 text-sm font-medium">
               <Zap
                 className={cn(
                   'h-4 w-4',
-                  activeJobs > 0
-                    ? 'text-amber-500 fill-amber-500/20'
-                    : 'text-gray-400'
+                  activeJobs > 0 ? 'text-amber-500 fill-amber-500/20' : 'text-gray-400'
                 )}
               />
               {activeJobs}
             </span>
-          );
+          )
         },
       },
       {
         id: 'cpuUsage',
         header: 'CPU',
         cell: ({ row }) => {
-          const agent = row.original;
-          const cpuPercent = agent.cpu_percent || 0;
+          const agent = row.original
+          const cpuPercent = agent.cpu_percent || 0
           return (
             <div className="flex items-center gap-2 w-24">
               <span className="text-xs w-8">{cpuPercent.toFixed(0)}%</span>
               <Progress value={cpuPercent} className="h-1.5 flex-1" />
             </div>
-          );
+          )
         },
       },
       {
         id: 'memoryUsage',
         header: 'Memory',
         cell: ({ row }) => {
-          const agent = row.original;
-          const memoryPercent = agent.memory_percent || 0;
+          const agent = row.original
+          const memoryPercent = agent.memory_percent || 0
           return (
             <div className="flex items-center gap-2 w-24">
               <span className="text-xs w-8">{memoryPercent.toFixed(0)}%</span>
               <Progress value={memoryPercent} className="h-1.5 flex-1" />
             </div>
-          );
+          )
         },
       },
       {
@@ -280,20 +278,20 @@ export function AgentTable({
         id: 'region',
         header: 'Region',
         cell: ({ row }) => {
-          const agent = row.original;
-          const region = agent.region || agent.labels?.region || agent.labels?.env || 'local';
+          const agent = row.original
+          const region = agent.region || agent.labels?.region || agent.labels?.env || 'local'
           return (
             <span className="flex items-center gap-1 text-sm">
               <Globe className="h-3 w-3 text-muted-foreground" />
               {region}
             </span>
-          );
+          )
         },
       },
       {
         id: 'actions',
         cell: ({ row }) => {
-          const agent = row.original;
+          const agent = row.original
 
           return (
             <DropdownMenu>
@@ -337,42 +335,38 @@ export function AgentTable({
                 </Can>
                 <Can permission={Permission.AgentsDelete}>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    className="text-red-500"
-                    onClick={() => onDeleteAgent(agent)}
-                  >
+                  <DropdownMenuItem className="text-red-500" onClick={() => onDeleteAgent(agent)}>
                     <Trash2 className="mr-2 h-4 w-4" />
                     Delete
                   </DropdownMenuItem>
                 </Can>
               </DropdownMenuContent>
             </DropdownMenu>
-          );
+          )
         },
       }
-    );
+    )
 
-    return baseColumns;
-  }, [onViewAgent, onEditAgent, onActivateAgent, onDeactivateAgent, onDeleteAgent, onRegenerateKey]);
+    return baseColumns
+  }, [onViewAgent, onEditAgent, onActivateAgent, onDeactivateAgent, onDeleteAgent, onRegenerateKey])
 
   const table = useReactTable({
     data: agents,
     columns,
     state: { sorting, globalFilter, rowSelection },
     onSortingChange: (updater) => {
-      const newSorting = typeof updater === 'function' ? updater(sorting) : updater;
-      onSortingChange(newSorting);
+      const newSorting = typeof updater === 'function' ? updater(sorting) : updater
+      onSortingChange(newSorting)
     },
     onRowSelectionChange: (updater) => {
-      const newSelection =
-        typeof updater === 'function' ? updater(rowSelection) : updater;
-      onRowSelectionChange(newSelection);
+      const newSelection = typeof updater === 'function' ? updater(rowSelection) : updater
+      onRowSelectionChange(newSelection)
     },
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-  });
+  })
 
   return (
     <div>
@@ -386,10 +380,7 @@ export function AgentTable({
                   <TableHead key={header.id}>
                     {header.isPlaceholder
                       ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
+                      : flexRender(header.column.columnDef.header, header.getContext())}
                   </TableHead>
                 ))}
               </TableRow>
@@ -411,9 +402,9 @@ export function AgentTable({
                       (e.target as HTMLElement).closest('button') ||
                       (e.target as HTMLElement).closest('a')
                     ) {
-                      return;
+                      return
                     }
-                    onViewAgent(row.original);
+                    onViewAgent(row.original)
                   }}
                 >
                   {row.getVisibleCells().map((cell) => (
@@ -458,8 +449,7 @@ export function AgentTable({
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <span className="text-sm">
-            Page {table.getState().pagination.pageIndex + 1} of{' '}
-            {table.getPageCount()}
+            Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
           </span>
           <Button
             variant="outline"
@@ -480,5 +470,5 @@ export function AgentTable({
         </div>
       </div>
     </div>
-  );
+  )
 }

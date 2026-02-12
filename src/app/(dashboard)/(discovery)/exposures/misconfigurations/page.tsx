@@ -1,7 +1,7 @@
-"use client";
+'use client'
 
-import { ComingSoonPage } from "@/features/shared";
-import { Settings2 } from "lucide-react";
+import { ComingSoonPage } from '@/features/shared'
+import { Settings2 } from 'lucide-react'
 
 export default function MisconfigurationsPage() {
   return (
@@ -11,12 +11,12 @@ export default function MisconfigurationsPage() {
       phase="Discovery"
       icon={Settings2}
       features={[
-        "Cloud security posture management",
-        "CIS benchmark compliance",
-        "Infrastructure as Code scanning",
-        "Default credential detection",
-        "Insecure protocol usage",
+        'Cloud security posture management',
+        'CIS benchmark compliance',
+        'Infrastructure as Code scanning',
+        'Default credential detection',
+        'Insecure protocol usage',
       ]}
     />
-  );
+  )
 }

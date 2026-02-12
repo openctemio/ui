@@ -395,7 +395,8 @@ export default function AuditLogPage() {
                         <TableHead
                           className="w-[180px] cursor-pointer hover:bg-muted/50 transition-colors"
                           onClick={() => {
-                            const isAsc = filters.sort_by === 'logged_at' && filters.sort_order === 'asc'
+                            const isAsc =
+                              filters.sort_by === 'logged_at' && filters.sort_order === 'asc'
                             setFilters({
                               ...filters,
                               sort_by: 'logged_at',
@@ -406,7 +407,9 @@ export default function AuditLogPage() {
                           <div className="flex items-center gap-1">
                             Time
                             {filters.sort_by === 'logged_at' && (
-                              <ArrowUpDown className={`h-3 w-3 ${filters.sort_order === 'asc' ? 'rotate-180' : ''}`} />
+                              <ArrowUpDown
+                                className={`h-3 w-3 ${filters.sort_order === 'asc' ? 'rotate-180' : ''}`}
+                              />
                             )}
                             {!filters.sort_by && <ArrowUpDown className="h-3 w-3 opacity-50" />}
                           </div>
@@ -417,7 +420,8 @@ export default function AuditLogPage() {
                         <TableHead
                           className="cursor-pointer hover:bg-muted/50 transition-colors"
                           onClick={() => {
-                            const isAsc = filters.sort_by === 'action' && filters.sort_order === 'asc'
+                            const isAsc =
+                              filters.sort_by === 'action' && filters.sort_order === 'asc'
                             setFilters({
                               ...filters,
                               sort_by: 'action',
@@ -428,14 +432,17 @@ export default function AuditLogPage() {
                           <div className="flex items-center gap-1">
                             Action
                             {filters.sort_by === 'action' && (
-                              <ArrowUpDown className={`h-3 w-3 ${filters.sort_order === 'asc' ? 'rotate-180' : ''}`} />
+                              <ArrowUpDown
+                                className={`h-3 w-3 ${filters.sort_order === 'asc' ? 'rotate-180' : ''}`}
+                              />
                             )}
                           </div>
                         </TableHead>
                         <TableHead
                           className="cursor-pointer hover:bg-muted/50 transition-colors"
                           onClick={() => {
-                            const isAsc = filters.sort_by === 'resource_type' && filters.sort_order === 'asc'
+                            const isAsc =
+                              filters.sort_by === 'resource_type' && filters.sort_order === 'asc'
                             setFilters({
                               ...filters,
                               sort_by: 'resource_type',
@@ -446,14 +453,17 @@ export default function AuditLogPage() {
                           <div className="flex items-center gap-1">
                             Resource
                             {filters.sort_by === 'resource_type' && (
-                              <ArrowUpDown className={`h-3 w-3 ${filters.sort_order === 'asc' ? 'rotate-180' : ''}`} />
+                              <ArrowUpDown
+                                className={`h-3 w-3 ${filters.sort_order === 'asc' ? 'rotate-180' : ''}`}
+                              />
                             )}
                           </div>
                         </TableHead>
                         <TableHead
                           className="w-[100px] cursor-pointer hover:bg-muted/50 transition-colors"
                           onClick={() => {
-                            const isAsc = filters.sort_by === 'result' && filters.sort_order === 'asc'
+                            const isAsc =
+                              filters.sort_by === 'result' && filters.sort_order === 'asc'
                             setFilters({
                               ...filters,
                               sort_by: 'result',
@@ -464,14 +474,17 @@ export default function AuditLogPage() {
                           <div className="flex items-center gap-1">
                             Result
                             {filters.sort_by === 'result' && (
-                              <ArrowUpDown className={`h-3 w-3 ${filters.sort_order === 'asc' ? 'rotate-180' : ''}`} />
+                              <ArrowUpDown
+                                className={`h-3 w-3 ${filters.sort_order === 'asc' ? 'rotate-180' : ''}`}
+                              />
                             )}
                           </div>
                         </TableHead>
                         <TableHead
                           className="w-[100px] cursor-pointer hover:bg-muted/50 transition-colors"
                           onClick={() => {
-                            const isAsc = filters.sort_by === 'severity' && filters.sort_order === 'asc'
+                            const isAsc =
+                              filters.sort_by === 'severity' && filters.sort_order === 'asc'
                             setFilters({
                               ...filters,
                               sort_by: 'severity',
@@ -482,7 +495,9 @@ export default function AuditLogPage() {
                           <div className="flex items-center gap-1">
                             Severity
                             {filters.sort_by === 'severity' && (
-                              <ArrowUpDown className={`h-3 w-3 ${filters.sort_order === 'asc' ? 'rotate-180' : ''}`} />
+                              <ArrowUpDown
+                                className={`h-3 w-3 ${filters.sort_order === 'asc' ? 'rotate-180' : ''}`}
+                              />
                             )}
                           </div>
                         </TableHead>
@@ -642,7 +657,9 @@ export default function AuditLogPage() {
                           />
                         )
                       })()}
-                      <h2 className="text-xl font-semibold leading-none">{formatAction(selectedLog.action)}</h2>
+                      <h2 className="text-xl font-semibold leading-none">
+                        {formatAction(selectedLog.action)}
+                      </h2>
                     </div>
                     <p className="text-sm text-muted-foreground">{selectedLog.message}</p>
                   </div>
@@ -678,7 +695,10 @@ export default function AuditLogPage() {
                         </AvatarFallback>
                       </Avatar>
                       <div className="overflow-hidden">
-                        <p className="font-medium text-sm truncate" title={selectedLog.actor_email || 'System'}>
+                        <p
+                          className="font-medium text-sm truncate"
+                          title={selectedLog.actor_email || 'System'}
+                        >
                           {selectedLog.actor_email || 'System'}
                         </p>
                         {selectedLog.actor_ip && (
@@ -703,7 +723,7 @@ export default function AuditLogPage() {
                           weekday: 'short',
                           year: 'numeric',
                           month: 'short',
-                          day: 'numeric'
+                          day: 'numeric',
                         })}
                       </p>
                       <p className="text-xs text-muted-foreground font-mono">
@@ -751,8 +771,13 @@ export default function AuditLogPage() {
                       <div className="rounded-lg border divide-y">
                         {Object.entries(selectedLog.changes.field_changes).map(
                           ([field, change]) => (
-                            <div key={field} className="p-3 text-sm grid grid-cols-[1fr,2fr] gap-4 items-center">
-                              <span className="font-medium text-muted-foreground break-all">{field}</span>
+                            <div
+                              key={field}
+                              className="p-3 text-sm grid grid-cols-[1fr,2fr] gap-4 items-center"
+                            >
+                              <span className="font-medium text-muted-foreground break-all">
+                                {field}
+                              </span>
                               <div className="flex items-center gap-2 flex-wrap">
                                 <span className="inline-flex items-center rounded-md bg-red-50 px-2 py-1 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-600/10 dark:bg-red-400/10 dark:text-red-400 mb-1 sm:mb-0">
                                   {String(change.old)}
@@ -779,7 +804,9 @@ export default function AuditLogPage() {
                       <dl className="grid grid-cols-1 gap-x-4 gap-y-4 sm:grid-cols-2">
                         {Object.entries(selectedLog.metadata).map(([key, value]) => (
                           <div key={key} className="sm:col-span-1">
-                            <dt className="text-xs font-medium text-muted-foreground mb-1">{key}</dt>
+                            <dt className="text-xs font-medium text-muted-foreground mb-1">
+                              {key}
+                            </dt>
                             <dd className="text-sm font-mono break-all">
                               {typeof value === 'object' ? JSON.stringify(value) : String(value)}
                             </dd>
@@ -820,7 +847,11 @@ function CopyButton({ value }: { value: string }) {
 
   return (
     <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onCopy}>
-      {copied ? <CheckCircle className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3 text-muted-foreground" />}
+      {copied ? (
+        <CheckCircle className="h-3 w-3 text-green-500" />
+      ) : (
+        <Copy className="h-3 w-3 text-muted-foreground" />
+      )}
     </Button>
   )
 }

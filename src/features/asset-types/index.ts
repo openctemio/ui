@@ -5,7 +5,7 @@ export type {
   ApiAssetTypeListResponse,
   ApiAssetTypeCategoryListResponse,
   AssetTypeFilter,
-} from "./api/asset-type-api.types";
+} from './api/asset-type-api.types'
 
 // API hooks
 export {
@@ -15,4 +15,4 @@ export {
   useAssetType,
   useScopeTypeConfigs,
   assetTypeToScopeConfig,
-} from "./api/use-asset-type-api";
+} from './api/use-asset-type-api'

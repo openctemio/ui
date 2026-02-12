@@ -43,10 +43,7 @@ function AllTheProviders({ children }: AllTheProvidersProps) {
  * @example
  * renderWithProviders(<MyComponent />)
  */
-export function renderWithProviders(
-  ui: ReactElement,
-  options?: Omit<RenderOptions, 'wrapper'>
-) {
+export function renderWithProviders(ui: ReactElement, options?: Omit<RenderOptions, 'wrapper'>) {
   return render(ui, { wrapper: AllTheProviders, ...options })
 }
 
@@ -99,7 +96,7 @@ export async function waitFor(
     if (Date.now() - startTime > timeout) {
       throw new Error('Timeout waiting for condition')
     }
-    await new Promise(resolve => setTimeout(resolve, interval))
+    await new Promise((resolve) => setTimeout(resolve, interval))
   }
 }
 
@@ -107,7 +104,7 @@ export async function waitFor(
  * Sleep for a specified duration
  */
 export function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms))
+  return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
 // ============================================

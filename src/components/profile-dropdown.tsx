@@ -2,16 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import {
-  Bell,
-  Building2,
-  History,
-  LogOut,
-  Settings,
-  Shield,
-  User,
-  Users,
-} from 'lucide-react'
+import { Bell, Building2, History, LogOut, Settings, Shield, User, Users } from 'lucide-react'
 import useDialogState from '@/hooks/use-dialog-state'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'

@@ -46,10 +46,7 @@ export interface TenantResponse {
   updated_at: string
 }
 
-async function updateTenant(
-  url: string,
-  { arg }: { arg: UpdateTenantInput }
-) {
+async function updateTenant(url: string, { arg }: { arg: UpdateTenantInput }) {
   return fetcherWithOptions<TenantResponse>(url, {
     method: 'PATCH',
     body: JSON.stringify(arg),
@@ -109,10 +106,7 @@ export function useTenantSettings(tenantIdOrSlug: string | undefined) {
 // UPDATE GENERAL SETTINGS
 // ============================================
 
-async function updateGeneralSettings(
-  url: string,
-  { arg }: { arg: UpdateGeneralSettingsInput }
-) {
+async function updateGeneralSettings(url: string, { arg }: { arg: UpdateGeneralSettingsInput }) {
   return fetcherWithOptions<TenantSettings>(url, {
     method: 'PATCH',
     body: JSON.stringify(arg),
@@ -139,10 +133,7 @@ export function useUpdateGeneralSettings(tenantIdOrSlug: string | undefined) {
 // UPDATE SECURITY SETTINGS
 // ============================================
 
-async function updateSecuritySettings(
-  url: string,
-  { arg }: { arg: UpdateSecuritySettingsInput }
-) {
+async function updateSecuritySettings(url: string, { arg }: { arg: UpdateSecuritySettingsInput }) {
   return fetcherWithOptions<TenantSettings>(url, {
     method: 'PATCH',
     body: JSON.stringify(arg),
@@ -169,10 +160,7 @@ export function useUpdateSecuritySettings(tenantIdOrSlug: string | undefined) {
 // UPDATE API SETTINGS
 // ============================================
 
-async function updateAPISettings(
-  url: string,
-  { arg }: { arg: UpdateAPISettingsInput }
-) {
+async function updateAPISettings(url: string, { arg }: { arg: UpdateAPISettingsInput }) {
   return fetcherWithOptions<TenantSettings>(url, {
     method: 'PATCH',
     body: JSON.stringify(arg),
@@ -199,10 +187,7 @@ export function useUpdateAPISettings(tenantIdOrSlug: string | undefined) {
 // UPDATE BRANDING SETTINGS
 // ============================================
 
-async function updateBrandingSettings(
-  url: string,
-  { arg }: { arg: UpdateBrandingSettingsInput }
-) {
+async function updateBrandingSettings(url: string, { arg }: { arg: UpdateBrandingSettingsInput }) {
   return fetcherWithOptions<TenantSettings>(url, {
     method: 'PATCH',
     body: JSON.stringify(arg),

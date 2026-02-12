@@ -232,11 +232,7 @@ export function LoginForm({
 
         {/* Submit Button */}
         <Button className="mt-2" disabled={isLoading} type="submit">
-          {isPending ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <LogIn className="h-4 w-4" />
-          )}
+          {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogIn className="h-4 w-4" />}
           Sign in
         </Button>
 

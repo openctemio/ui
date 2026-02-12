@@ -1,7 +1,7 @@
-"use client";
+'use client'
 
-import { ComingSoonPage } from "@/features/shared";
-import { Fingerprint } from "lucide-react";
+import { ComingSoonPage } from '@/features/shared'
+import { Fingerprint } from 'lucide-react'
 
 export default function IdentityRisksPage() {
   return (
@@ -11,12 +11,12 @@ export default function IdentityRisksPage() {
       phase="Discovery"
       icon={Fingerprint}
       features={[
-        "Weak password detection",
-        "MFA coverage analysis",
-        "Stale account identification",
-        "Permission drift detection",
-        "Identity attack path analysis",
+        'Weak password detection',
+        'MFA coverage analysis',
+        'Stale account identification',
+        'Permission drift detection',
+        'Identity attack path analysis',
       ]}
     />
-  );
+  )
 }

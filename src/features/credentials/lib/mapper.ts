@@ -55,7 +55,8 @@ export function mapCredentialToAsset(credential: ApiCredential): Asset {
     type: 'credential',
     name: credential.identifier,
     description: `${credential.credential_type} from ${credential.source}`,
-    criticality: credential.severity === 'critical' || credential.severity === 'high' ? 'critical' : 'high',
+    criticality:
+      credential.severity === 'critical' || credential.severity === 'high' ? 'critical' : 'high',
     status: stateToStatus[credential.state] || 'active',
     scope: 'internal',
     exposure: 'public',

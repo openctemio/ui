@@ -91,7 +91,7 @@ export type AuditAction =
   | 'agent.revoked'
   | 'agent.key_regenerated'
   | 'agent.connected'
-  | 'agent.disconnected';
+  | 'agent.disconnected'
 
 /**
  * Resource types - maps to backend audit.ResourceType
@@ -112,17 +112,17 @@ export type AuditResourceType =
   | 'asset'
   | 'settings'
   | 'token'
-  | 'agent';
+  | 'agent'
 
 /**
  * Audit result - maps to backend audit.Result
  */
-export type AuditResult = 'success' | 'failure' | 'denied';
+export type AuditResult = 'success' | 'failure' | 'denied'
 
 /**
  * Audit severity - maps to backend audit.Severity
  */
-export type AuditSeverity = 'low' | 'medium' | 'high' | 'critical';
+export type AuditSeverity = 'low' | 'medium' | 'high' | 'critical'
 
 // ============================================
 // ENTITIES
@@ -132,30 +132,30 @@ export type AuditSeverity = 'low' | 'medium' | 'high' | 'critical';
  * Changes object for tracking before/after values
  */
 export interface AuditChanges {
-  before?: Record<string, unknown>;
-  after?: Record<string, unknown>;
+  before?: Record<string, unknown>
+  after?: Record<string, unknown>
 }
 
 /**
  * Audit log entity - maps to backend AuditLogResponse
  */
 export interface AuditLog {
-  id: string;
-  tenant_id?: string;
-  actor_id?: string;
-  actor_email: string;
-  actor_ip?: string;
-  action: AuditAction;
-  resource_type: AuditResourceType;
-  resource_id: string;
-  resource_name?: string;
-  changes?: AuditChanges;
-  result: AuditResult;
-  severity: AuditSeverity;
-  message: string;
-  metadata?: Record<string, unknown>;
-  request_id?: string;
-  timestamp: string;
+  id: string
+  tenant_id?: string
+  actor_id?: string
+  actor_email: string
+  actor_ip?: string
+  action: AuditAction
+  resource_type: AuditResourceType
+  resource_id: string
+  resource_name?: string
+  changes?: AuditChanges
+  result: AuditResult
+  severity: AuditSeverity
+  message: string
+  metadata?: Record<string, unknown>
+  request_id?: string
+  timestamp: string
 }
 
 // ============================================
@@ -166,27 +166,27 @@ export interface AuditLog {
  * Audit log list response
  */
 export interface AuditLogListResponse {
-  items: AuditLog[];
-  total: number;
-  page: number;
-  page_size: number;
+  items: AuditLog[]
+  total: number
+  page: number
+  page_size: number
 }
 
 /**
  * Audit log list filters
  */
 export interface AuditLogListFilters {
-  resource_type?: AuditResourceType;
-  resource_id?: string;
-  action?: AuditAction;
-  actor_id?: string;
-  result?: AuditResult;
-  severity?: AuditSeverity;
-  from_date?: string;
-  to_date?: string;
-  search?: string;
-  page?: number;
-  page_size?: number;
+  resource_type?: AuditResourceType
+  resource_id?: string
+  action?: AuditAction
+  actor_id?: string
+  result?: AuditResult
+  severity?: AuditSeverity
+  from_date?: string
+  to_date?: string
+  search?: string
+  page?: number
+  page_size?: number
 }
 
 // ============================================
@@ -197,14 +197,14 @@ export interface AuditLogListFilters {
  * Audit log statistics
  */
 export interface AuditLogStats {
-  total_logs: number;
-  logs_today: number;
-  logs_this_week: number;
-  logs_this_month: number;
-  by_action: Record<string, number>;
-  by_resource_type: Record<string, number>;
-  by_result: Record<string, number>;
-  by_severity: Record<string, number>;
+  total_logs: number
+  logs_today: number
+  logs_this_week: number
+  logs_this_month: number
+  by_action: Record<string, number>
+  by_resource_type: Record<string, number>
+  by_result: Record<string, number>
+  by_severity: Record<string, number>
 }
 
 // ============================================
@@ -295,8 +295,8 @@ export function getActionLabel(action: AuditAction): string {
     'agent.key_regenerated': 'API Key Regenerated',
     'agent.connected': 'Agent Connected',
     'agent.disconnected': 'Agent Disconnected',
-  };
-  return labels[action] || action;
+  }
+  return labels[action] || action
 }
 
 /**
@@ -308,8 +308,8 @@ export function getSeverityColor(severity: AuditSeverity): string {
     medium: 'bg-blue-500/10 text-blue-500',
     high: 'bg-amber-500/10 text-amber-500',
     critical: 'bg-red-500/10 text-red-500',
-  };
-  return colors[severity] || colors.low;
+  }
+  return colors[severity] || colors.low
 }
 
 /**
@@ -320,14 +320,14 @@ export function getResultColor(result: AuditResult): string {
     success: 'bg-green-500/10 text-green-500',
     failure: 'bg-red-500/10 text-red-500',
     denied: 'bg-amber-500/10 text-amber-500',
-  };
-  return colors[result] || colors.success;
+  }
+  return colors[result] || colors.success
 }
 
 /**
  * Get action category from action string
  */
 export function getActionCategory(action: AuditAction): string {
-  const [category] = action.split('.');
-  return category;
+  const [category] = action.split('.')
+  return category
 }

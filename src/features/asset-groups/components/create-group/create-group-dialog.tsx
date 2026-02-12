@@ -7,41 +7,38 @@
  * 3. Review - Summary before creation
  */
 
-"use client";
+'use client'
 
-import { useState } from "react";
+import { useState } from 'react'
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
-import { ChevronLeft, ChevronRight, Loader2, FolderPlus, Layers } from "lucide-react";
+} from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import { toast } from 'sonner'
+import { ChevronLeft, ChevronRight, Loader2, FolderPlus, Layers } from 'lucide-react'
 
-import { GroupStepper, type GroupWizardStep } from "./group-stepper";
-import { BasicInfoStep } from "./basic-info-step";
-import { AddAssetsStep } from "./add-assets-step";
-import { ReviewStep } from "./review-step";
-import {
-  DEFAULT_CREATE_GROUP_FORM,
-  type CreateGroupFormData,
-} from "./types";
-import type { Asset } from "@/features/assets/types";
-import type { CreateAssetGroupInput, CreateAssetInGroupInput } from "../../types";
+import { GroupStepper, type GroupWizardStep } from './group-stepper'
+import { BasicInfoStep } from './basic-info-step'
+import { AddAssetsStep } from './add-assets-step'
+import { ReviewStep } from './review-step'
+import { DEFAULT_CREATE_GROUP_FORM, type CreateGroupFormData } from './types'
+import type { Asset } from '@/features/assets/types'
+import type { CreateAssetGroupInput, CreateAssetInGroupInput } from '../../types'
 
 interface CreateGroupDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  open: boolean
+  onOpenChange: (open: boolean) => void
   /** Available ungrouped assets to select from */
-  ungroupedAssets: Asset[];
+  ungroupedAssets: Asset[]
   /** Called when group is created */
-  onSubmit?: (input: CreateAssetGroupInput) => void | Promise<void>;
+  onSubmit?: (input: CreateAssetGroupInput) => void | Promise<void>
 }
 
-const STEPS: GroupWizardStep[] = ["basic", "add-assets", "review"];
+const STEPS: GroupWizardStep[] = ['basic', 'add-assets', 'review']
 
 export function CreateGroupDialog({
   open,
@@ -49,75 +46,71 @@ export function CreateGroupDialog({
   ungroupedAssets,
   onSubmit,
 }: CreateGroupDialogProps) {
-  const [currentStep, setCurrentStep] = useState<GroupWizardStep>("basic");
-  const [formData, setFormData] = useState<CreateGroupFormData>(
-    DEFAULT_CREATE_GROUP_FORM
-  );
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [currentStep, setCurrentStep] = useState<GroupWizardStep>('basic')
+  const [formData, setFormData] = useState<CreateGroupFormData>(DEFAULT_CREATE_GROUP_FORM)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const currentStepIndex = STEPS.indexOf(currentStep);
-  const isFirstStep = currentStepIndex === 0;
-  const isLastStep = currentStepIndex === STEPS.length - 1;
+  const currentStepIndex = STEPS.indexOf(currentStep)
+  const isFirstStep = currentStepIndex === 0
+  const isLastStep = currentStepIndex === STEPS.length - 1
 
   const handleDataChange = (data: Partial<CreateGroupFormData>) => {
-    setFormData((prev) => ({ ...prev, ...data }));
-  };
+    setFormData((prev) => ({ ...prev, ...data }))
+  }
 
   const validateCurrentStep = (): boolean => {
     switch (currentStep) {
-      case "basic":
+      case 'basic':
         if (!formData.name.trim()) {
-          toast.error("Please enter a group name");
-          return false;
+          toast.error('Please enter a group name')
+          return false
         }
-        return true;
-      case "add-assets":
+        return true
+      case 'add-assets':
         // Validate new assets have names
-        const invalidAssets = formData.newAssets.filter(
-          (asset) => !asset.name.trim()
-        );
+        const invalidAssets = formData.newAssets.filter((asset) => !asset.name.trim())
         if (invalidAssets.length > 0) {
-          toast.error("Please provide names for all new assets");
-          return false;
+          toast.error('Please provide names for all new assets')
+          return false
         }
-        return true;
-      case "review":
+        return true
+      case 'review':
         // Final validation
         if (!formData.name.trim()) {
-          toast.error("Group name is required");
-          return false;
+          toast.error('Group name is required')
+          return false
         }
-        return true;
+        return true
       default:
-        return true;
+        return true
     }
-  };
+  }
 
   const handleNext = () => {
-    if (!validateCurrentStep()) return;
+    if (!validateCurrentStep()) return
 
     if (!isLastStep) {
-      setCurrentStep(STEPS[currentStepIndex + 1]);
+      setCurrentStep(STEPS[currentStepIndex + 1])
     }
-  };
+  }
 
   const handleBack = () => {
     if (!isFirstStep) {
-      setCurrentStep(STEPS[currentStepIndex - 1]);
+      setCurrentStep(STEPS[currentStepIndex - 1])
     }
-  };
+  }
 
   const handleStepClick = (step: GroupWizardStep) => {
-    const stepIndex = STEPS.indexOf(step);
+    const stepIndex = STEPS.indexOf(step)
     if (stepIndex < currentStepIndex) {
-      setCurrentStep(step);
+      setCurrentStep(step)
     }
-  };
+  }
 
   const handleSubmit = async () => {
-    if (!validateCurrentStep()) return;
+    if (!validateCurrentStep()) return
 
-    setIsSubmitting(true);
+    setIsSubmitting(true)
     try {
       // Transform form data to API input
       const input: CreateAssetGroupInput = {
@@ -132,9 +125,7 @@ export function CreateGroupDialog({
         tags: formData.tags.length > 0 ? formData.tags : undefined,
         // Assets
         existingAssetIds:
-          formData.selectedAssetIds.length > 0
-            ? formData.selectedAssetIds
-            : undefined,
+          formData.selectedAssetIds.length > 0 ? formData.selectedAssetIds : undefined,
         newAssets:
           formData.newAssets.length > 0
             ? formData.newAssets.map(
@@ -146,68 +137,65 @@ export function CreateGroupDialog({
                 })
               )
             : undefined,
-      };
+      }
 
       // Call submit handler
-      await onSubmit?.(input);
+      await onSubmit?.(input)
 
-      const totalAssets =
-        formData.selectedAssetIds.length + formData.newAssets.length;
+      const totalAssets = formData.selectedAssetIds.length + formData.newAssets.length
       toast.success(
         `Group "${formData.name}" created successfully${
-          totalAssets > 0 ? ` with ${totalAssets} assets` : ""
+          totalAssets > 0 ? ` with ${totalAssets} assets` : ''
         }`
-      );
+      )
 
       // Reset and close
-      setFormData(DEFAULT_CREATE_GROUP_FORM);
-      setCurrentStep("basic");
-      onOpenChange(false);
+      setFormData(DEFAULT_CREATE_GROUP_FORM)
+      setCurrentStep('basic')
+      onOpenChange(false)
     } catch {
-      toast.error("Failed to create group. Please try again.");
+      toast.error('Failed to create group. Please try again.')
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
-  };
+  }
 
   const handleClose = () => {
-    setFormData(DEFAULT_CREATE_GROUP_FORM);
-    setCurrentStep("basic");
-    onOpenChange(false);
-  };
+    setFormData(DEFAULT_CREATE_GROUP_FORM)
+    setCurrentStep('basic')
+    onOpenChange(false)
+  }
 
   const renderStep = () => {
     switch (currentStep) {
-      case "basic":
-        return <BasicInfoStep data={formData} onChange={handleDataChange} />;
-      case "add-assets":
+      case 'basic':
+        return <BasicInfoStep data={formData} onChange={handleDataChange} />
+      case 'add-assets':
         return (
           <AddAssetsStep
             data={formData}
             onChange={handleDataChange}
             ungroupedAssets={ungroupedAssets}
           />
-        );
-      case "review":
-        return (
-          <ReviewStep data={formData} ungroupedAssets={ungroupedAssets} />
-        );
+        )
+      case 'review':
+        return <ReviewStep data={formData} ungroupedAssets={ungroupedAssets} />
       default:
-        return null;
+        return null
     }
-  };
+  }
 
   // Get step-specific button labels
   const getNextButtonLabel = () => {
     switch (currentStep) {
-      case "basic":
-        return "Add Assets";
-      case "add-assets":
-        return "Review";
+      case 'basic':
+        return 'Add Assets'
+      case 'add-assets':
+        return 'Review'
       default:
-        return "Next";
+        return 'Next'
     }
-  };
+  }
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -233,9 +221,7 @@ export function CreateGroupDialog({
         </div>
 
         {/* Step Content */}
-        <div className="max-h-[50vh] overflow-y-auto overflow-x-hidden">
-          {renderStep()}
-        </div>
+        <div className="max-h-[50vh] overflow-y-auto overflow-x-hidden">{renderStep()}</div>
 
         {/* Footer */}
         <div className="flex items-center justify-between border-t bg-muted/30 px-6 py-4">
@@ -295,5 +281,5 @@ export function CreateGroupDialog({
         </div>
       </DialogContent>
     </Dialog>
-  );
+  )
 }

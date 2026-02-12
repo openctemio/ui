@@ -22,10 +22,7 @@ import { env } from '@/lib/env'
 import { setServerCookie } from '@/lib/cookies-server'
 import { authEndpoints } from '@/lib/api/endpoints'
 
-import type {
-  AuthSuccessResponse,
-  AuthErrorResponse,
-} from '../schemas/auth.schema'
+import type { AuthSuccessResponse, AuthErrorResponse } from '../schemas/auth.schema'
 
 // ============================================
 // TYPES
@@ -66,10 +63,7 @@ function getBackendUrl(): string {
   return process.env.BACKEND_API_URL || 'http://localhost:8080'
 }
 
-async function backendFetch<T>(
-  endpoint: string,
-  options: RequestInit = {}
-): Promise<T> {
+async function backendFetch<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const baseUrl = getBackendUrl()
   const url = `${baseUrl}${endpoint}`
 
@@ -183,17 +177,14 @@ export async function handleOAuthCallback(
     cookieStore.delete('oauth_redirect')
 
     // Exchange authorization code for tokens via backend
-    const data = await backendFetch<OAuthCallbackResult>(
-      authEndpoints.oauthCallback(provider),
-      {
-        method: 'POST',
-        body: JSON.stringify({
-          code,
-          state,
-          redirect_uri: `${env.app.url}/auth/callback/${provider}`,
-        }),
-      }
-    )
+    const data = await backendFetch<OAuthCallbackResult>(authEndpoints.oauthCallback(provider), {
+      method: 'POST',
+      body: JSON.stringify({
+        code,
+        state,
+        redirect_uri: `${env.app.url}/auth/callback/${provider}`,
+      }),
+    })
 
     // Store tokens in HttpOnly cookies
     await setServerCookie(env.auth.cookieName, data.access_token, {
@@ -263,14 +254,13 @@ export interface ProviderInfo {
 /**
  * Get list of available OAuth providers from backend
  */
-export async function getAvailableProviders(): Promise<AuthSuccessResponse<ProviderInfo[]> | AuthErrorResponse> {
+export async function getAvailableProviders(): Promise<
+  AuthSuccessResponse<ProviderInfo[]> | AuthErrorResponse
+> {
   try {
-    const data = await backendFetch<{ providers: ProviderInfo[] }>(
-      `${authEndpoints.info()}`,
-      {
-        method: 'GET',
-      }
-    )
+    const data = await backendFetch<{ providers: ProviderInfo[] }>(`${authEndpoints.info()}`, {
+      method: 'GET',
+    })
 
     return {
       success: true,

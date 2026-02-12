@@ -5,73 +5,69 @@
  * Supports K8sCluster, K8sWorkload, and ContainerImage types
  */
 
-"use client";
+'use client'
 
-import * as React from "react";
-import { Pencil } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import {
-  Sheet,
-  SheetContent,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
-import { cn } from "@/lib/utils";
-import { AssetFindings } from "./asset-findings";
-import type { K8sCluster, K8sWorkload, ContainerImage } from "../types/asset.types";
+import * as React from 'react'
+import { Pencil } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
+import { cn } from '@/lib/utils'
+import { AssetFindings } from './asset-findings'
+import type { K8sCluster, K8sWorkload, ContainerImage } from '../types/asset.types'
 
 // ============================================
 // Types
 // ============================================
 
-type ContainerAsset = K8sCluster | K8sWorkload | ContainerImage;
+type ContainerAsset = K8sCluster | K8sWorkload | ContainerImage
 
 interface ContainerDetailSheetProps<T extends ContainerAsset> {
   /** The asset to display (null when sheet is closed) */
-  asset: T | null;
+  asset: T | null
 
   /** Whether the sheet is open */
-  open: boolean;
+  open: boolean
 
   /** Callback when open state changes */
-  onOpenChange: (open: boolean) => void;
+  onOpenChange: (open: boolean) => void
 
   /** Icon component to display in header */
-  icon: React.ElementType;
+  icon: React.ElementType
 
   /** Icon color class (e.g., "text-teal-500") */
-  iconColor: string;
+  iconColor: string
 
   /** Gradient start color class (e.g., "from-teal-500/20") */
-  gradientFrom: string;
+  gradientFrom: string
 
   /** Gradient via color class (optional, e.g., "via-teal-500/10") */
-  gradientVia?: string;
+  gradientVia?: string
 
   /** Callback when Edit button is clicked */
-  onEdit: () => void;
+  onEdit: () => void
 
   /** Additional quick action buttons (rendered after Edit button) */
-  quickActions?: React.ReactNode;
+  quickActions?: React.ReactNode
 
   /** Custom overview section content */
-  overviewContent?: React.ReactNode;
+  overviewContent?: React.ReactNode
 
   /** Subtitle shown below name */
-  subtitle?: string;
+  subtitle?: string
 
   /** Asset type label for display (e.g., "Cluster", "Workload", "Image") */
-  assetTypeName: string;
+  assetTypeName: string
 
   /** Status badge component/element to display in header */
-  statusBadge?: React.ReactNode;
+  statusBadge?: React.ReactNode
 
   /** Whether to show Findings tab (default: true) */
-  showFindingsTab?: boolean;
+  showFindingsTab?: boolean
 
   /** Finding count for tab label */
-  findingCount?: number;
+  findingCount?: number
 }
 
 // ============================================
@@ -85,7 +81,7 @@ export function ContainerDetailSheet<T extends ContainerAsset>({
   icon: Icon,
   iconColor,
   gradientFrom,
-  gradientVia = "via-transparent",
+  gradientVia = 'via-transparent',
   onEdit,
   quickActions,
   overviewContent,
@@ -95,10 +91,10 @@ export function ContainerDetailSheet<T extends ContainerAsset>({
   showFindingsTab = true,
   findingCount = 0,
 }: ContainerDetailSheetProps<T>) {
-  if (!asset) return null;
+  if (!asset) return null
 
   // Calculate icon background color from text color
-  const iconBgColor = iconColor.replace("text-", "bg-").replace(/(\d+)$/, "$1/20");
+  const iconBgColor = iconColor.replace('text-', 'bg-').replace(/(\d+)$/, '$1/20')
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -110,27 +106,20 @@ export function ContainerDetailSheet<T extends ContainerAsset>({
         {/* Header */}
         <div
           className={cn(
-            "px-6 pt-6 pb-4 bg-gradient-to-br to-transparent",
+            'px-6 pt-6 pb-4 bg-gradient-to-br to-transparent',
             gradientFrom,
             gradientVia
           )}
         >
           <div className="flex items-center gap-3 mb-3">
             <div
-              className={cn(
-                "h-12 w-12 rounded-xl flex items-center justify-center",
-                iconBgColor
-              )}
+              className={cn('h-12 w-12 rounded-xl flex items-center justify-center', iconBgColor)}
             >
-              <Icon className={cn("h-6 w-6", iconColor)} />
+              <Icon className={cn('h-6 w-6', iconColor)} />
             </div>
             <div className="flex-1 min-w-0">
               <h2 className="text-xl font-bold truncate">{asset.name}</h2>
-              {subtitle && (
-                <p className="text-sm text-muted-foreground truncate">
-                  {subtitle}
-                </p>
-              )}
+              {subtitle && <p className="text-sm text-muted-foreground truncate">{subtitle}</p>}
             </div>
             {statusBadge}
           </div>
@@ -164,11 +153,9 @@ export function ContainerDetailSheet<T extends ContainerAsset>({
             </TabsContent>
           </Tabs>
         ) : (
-          <div className="px-6 pb-6 space-y-4">
-            {overviewContent}
-          </div>
+          <div className="px-6 pb-6 space-y-4">{overviewContent}</div>
         )}
       </SheetContent>
     </Sheet>
-  );
+  )
 }

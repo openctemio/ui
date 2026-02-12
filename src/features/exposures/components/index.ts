@@ -4,12 +4,12 @@ export {
   ExposureSeverityBreakdown,
   ExposureStateBreakdown,
   ExposureTrendIndicator,
-} from "./exposure-stats-cards";
+} from './exposure-stats-cards'
 
-export { ExposureTable } from "./exposure-table";
+export { ExposureTable } from './exposure-table'
 
 export {
   ExposureActionDialog,
   ExposureQuickActions,
   ExposureBulkActions,
-} from "./exposure-state-actions";
+} from './exposure-state-actions'

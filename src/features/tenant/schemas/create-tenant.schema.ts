@@ -28,10 +28,7 @@ export const createTenantSchema = z.object({
     .refine((val) => !val.includes('--'), {
       message: 'URL slug cannot contain consecutive hyphens',
     }),
-  description: z
-    .string()
-    .max(500, 'Description must be at most 500 characters')
-    .optional(),
+  description: z.string().max(500, 'Description must be at most 500 characters').optional(),
 })
 
 export type CreateTenantInput = z.infer<typeof createTenantSchema>
@@ -44,8 +41,8 @@ export function generateSlug(name: string): string {
     .toLowerCase()
     .trim()
     .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
-    .replace(/\s+/g, '-')         // Replace spaces with hyphens
-    .replace(/-+/g, '-')          // Replace multiple hyphens with single
-    .replace(/^-+|-+$/g, '')      // Trim hyphens from start/end
-    .slice(0, 50)                 // Max length
+    .replace(/\s+/g, '-') // Replace spaces with hyphens
+    .replace(/-+/g, '-') // Replace multiple hyphens with single
+    .replace(/^-+|-+$/g, '') // Trim hyphens from start/end
+    .slice(0, 50) // Max length
 }

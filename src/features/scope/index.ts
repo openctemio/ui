@@ -6,22 +6,22 @@
  */
 
 // Types
-export * from "./types";
+export * from './types'
 
 // API Types and Hooks
-export * from "./api";
+export * from './api'
 
 // Utilities
-export * from "./lib/scope-matcher";
+export * from './lib/scope-matcher'
 
 // Mock Data (for development)
-export * from "./lib/mock-scope-data";
+export * from './lib/mock-scope-data'
 
 // Components
-export { ScopeBadge, ScopeBadgeSimple } from "./components/scope-badge";
-export { ScopeCoverageCard, ScopeCoverageInline } from "./components/scope-coverage-card";
+export { ScopeBadge, ScopeBadgeSimple } from './components/scope-badge'
+export { ScopeCoverageCard, ScopeCoverageInline } from './components/scope-coverage-card'
 export {
   ScopeErrorBoundary,
   ScopeBadgeErrorBoundary,
   withScopeErrorBoundary,
-} from "./components/scope-error-boundary";
+} from './components/scope-error-boundary'

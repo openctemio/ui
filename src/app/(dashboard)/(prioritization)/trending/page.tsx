@@ -1,7 +1,7 @@
-"use client";
+'use client'
 
-import { ComingSoonPage } from "@/features/shared";
-import { TrendingUp } from "lucide-react";
+import { ComingSoonPage } from '@/features/shared'
+import { TrendingUp } from 'lucide-react'
 
 export default function TrendingRisksPage() {
   return (
@@ -11,12 +11,12 @@ export default function TrendingRisksPage() {
       phase="Prioritization"
       icon={TrendingUp}
       features={[
-        "New vulnerability tracking",
-        "Risk velocity metrics",
-        "Emerging threat patterns",
-        "Industry-specific trends",
-        "Predictive risk analysis",
+        'New vulnerability tracking',
+        'Risk velocity metrics',
+        'Emerging threat patterns',
+        'Industry-specific trends',
+        'Predictive risk analysis',
       ]}
     />
-  );
+  )
 }

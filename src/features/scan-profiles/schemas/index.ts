@@ -1,1 +1,1 @@
-export * from './scan-profile-schema';
+export * from './scan-profile-schema'

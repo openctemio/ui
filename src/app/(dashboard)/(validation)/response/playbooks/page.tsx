@@ -1,7 +1,7 @@
-"use client";
+'use client'
 
-import { ComingSoonPage } from "@/features/shared";
-import { FileText } from "lucide-react";
+import { ComingSoonPage } from '@/features/shared'
+import { FileText } from 'lucide-react'
 
 export default function PlaybookTestsPage() {
   return (
@@ -11,12 +11,12 @@ export default function PlaybookTestsPage() {
       phase="Validation"
       icon={FileText}
       features={[
-        "Playbook execution testing",
-        "Tabletop exercise management",
-        "Response procedure validation",
-        "Communication flow testing",
-        "Improvement recommendations",
+        'Playbook execution testing',
+        'Tabletop exercise management',
+        'Response procedure validation',
+        'Communication flow testing',
+        'Improvement recommendations',
       ]}
     />
-  );
+  )
 }
