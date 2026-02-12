@@ -117,11 +117,9 @@ export function clearWebSocketToken(): void {
 
 // Start pre-fetching token AND connecting immediately if cross-origin
 // This runs during module load, before React renders
-let earlyConnectionPromise: Promise<void> | null = null
-
 if (typeof window !== 'undefined' && isCrossOrigin()) {
   console.log('[WebSocket] Pre-fetching token (module load)')
-  earlyConnectionPromise = (async () => {
+  void (async () => {
     const token = await fetchToken()
     if (token) {
       console.log('[WebSocket] Token ready, can connect immediately when provider mounts')
