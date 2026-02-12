@@ -1,6 +1,12 @@
 import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
-import { nanoid } from 'nanoid'
+import { nanoid, customAlphabet } from 'nanoid'
+
+// Alphabet without '-' to avoid breaking slug-nanoid format when splitting by '-'
+const stepKeyId = customAlphabet(
+  'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_',
+  8
+)
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -50,7 +56,7 @@ export function slugify(text: string, maxLength: number = 40): string {
  */
 export function generateStepKey(name: string): string {
   const slug = slugify(name, 40)
-  const suffix = nanoid(8) // Increased from 6 to 8 for better collision resistance
+  const suffix = stepKeyId() // Custom alphabet without '-' to preserve slug-nanoid format
   return slug ? `${slug}-${suffix}` : `step-${suffix}`
 }
 
