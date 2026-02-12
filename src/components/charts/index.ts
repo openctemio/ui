@@ -5,4 +5,4 @@
  * Uses dynamic imports to reduce initial bundle size.
  */
 
-export * from "./lazy-charts";
+export * from './lazy-charts'

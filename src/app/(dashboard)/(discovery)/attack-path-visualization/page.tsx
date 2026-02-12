@@ -1,7 +1,7 @@
-"use client";
+'use client'
 
-import { ComingSoonPage } from "@/features/shared";
-import { Route } from "lucide-react";
+import { ComingSoonPage } from '@/features/shared'
+import { Route } from 'lucide-react'
 
 export default function AttackPathsPage() {
   return (
@@ -11,12 +11,12 @@ export default function AttackPathsPage() {
       phase="Discovery"
       icon={Route}
       features={[
-        "Attack graph visualization",
-        "Path to crown jewels analysis",
-        "Lateral movement mapping",
-        "Blast radius calculation",
-        "Choke point identification",
+        'Attack graph visualization',
+        'Path to crown jewels analysis',
+        'Lateral movement mapping',
+        'Blast radius calculation',
+        'Choke point identification',
       ]}
     />
-  );
+  )
 }

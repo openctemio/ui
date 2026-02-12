@@ -1,7 +1,7 @@
-"use client";
+'use client'
 
-import { ComingSoonPage } from "@/features/shared";
-import { Cpu } from "lucide-react";
+import { ComingSoonPage } from '@/features/shared'
+import { Cpu } from 'lucide-react'
 
 export default function TechnicalReportsPage() {
   return (
@@ -11,12 +11,12 @@ export default function TechnicalReportsPage() {
       phase="Insights"
       icon={Cpu}
       features={[
-        "Detailed vulnerability reports",
-        "Technical remediation guidance",
-        "Configuration reports",
-        "Asset inventory reports",
-        "Custom report builder",
+        'Detailed vulnerability reports',
+        'Technical remediation guidance',
+        'Configuration reports',
+        'Asset inventory reports',
+        'Custom report builder',
       ]}
     />
-  );
+  )
 }

@@ -1,7 +1,7 @@
-"use client";
+'use client'
 
-import { ComingSoonPage } from "@/features/shared";
-import { Eye } from "lucide-react";
+import { ComingSoonPage } from '@/features/shared'
+import { Eye } from 'lucide-react'
 
 export default function ShadowITPage() {
   return (
@@ -11,12 +11,12 @@ export default function ShadowITPage() {
       phase="Discovery"
       icon={Eye}
       features={[
-        "SaaS application discovery",
-        "Unsanctioned cloud service detection",
-        "Browser extension monitoring",
-        "Data sharing risk analysis",
-        "Shadow IT risk scoring",
+        'SaaS application discovery',
+        'Unsanctioned cloud service detection',
+        'Browser extension monitoring',
+        'Data sharing risk analysis',
+        'Shadow IT risk scoring',
       ]}
     />
-  );
+  )
 }

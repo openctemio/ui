@@ -1,8 +1,8 @@
 // Hooks
-export { useAttackSurfaceStats } from "./hooks/use-attack-surface";
+export { useAttackSurfaceStats } from './hooks/use-attack-surface'
 export type {
   AttackSurfaceStats,
   AssetTypeBreakdown,
   ExposedService,
   AssetChange,
-} from "./hooks/use-attack-surface";
+} from './hooks/use-attack-surface'

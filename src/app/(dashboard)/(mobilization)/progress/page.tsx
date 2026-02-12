@@ -1,7 +1,7 @@
-"use client";
+'use client'
 
-import { ComingSoonPage } from "@/features/shared";
-import { TrendingUp } from "lucide-react";
+import { ComingSoonPage } from '@/features/shared'
+import { TrendingUp } from 'lucide-react'
 
 export default function ProgressTrackingPage() {
   return (
@@ -11,12 +11,12 @@ export default function ProgressTrackingPage() {
       phase="Mobilization"
       icon={TrendingUp}
       features={[
-        "Remediation velocity metrics",
-        "Backlog trend analysis",
-        "Team performance dashboards",
-        "Goal tracking and forecasting",
-        "Executive summary views",
+        'Remediation velocity metrics',
+        'Backlog trend analysis',
+        'Team performance dashboards',
+        'Goal tracking and forecasting',
+        'Executive summary views',
       ]}
     />
-  );
+  )
 }

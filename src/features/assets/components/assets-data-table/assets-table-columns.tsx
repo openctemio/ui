@@ -170,9 +170,7 @@ export function createAssetColumns(
       cell: ({ row }) => {
         const count = row.original.findingCount
         if (count === 0) return <span className="text-muted-foreground">0</span>
-        return (
-          <Badge variant={count > 5 ? 'destructive' : 'secondary'}>{count}</Badge>
-        )
+        return <Badge variant={count > 5 ? 'destructive' : 'secondary'}>{count}</Badge>
       },
     })
   }

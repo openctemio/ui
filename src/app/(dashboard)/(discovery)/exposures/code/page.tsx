@@ -1,7 +1,7 @@
-"use client";
+'use client'
 
-import { ComingSoonPage } from "@/features/shared";
-import { FileCode } from "lucide-react";
+import { ComingSoonPage } from '@/features/shared'
+import { FileCode } from 'lucide-react'
 
 export default function CodeIssuesPage() {
   return (
@@ -11,12 +11,12 @@ export default function CodeIssuesPage() {
       phase="Discovery"
       icon={FileCode}
       features={[
-        "SAST integration and findings",
-        "Code vulnerability patterns",
-        "Dependency vulnerability analysis",
-        "License compliance issues",
-        "Code quality metrics",
+        'SAST integration and findings',
+        'Code vulnerability patterns',
+        'Dependency vulnerability analysis',
+        'License compliance issues',
+        'Code quality metrics',
       ]}
     />
-  );
+  )
 }

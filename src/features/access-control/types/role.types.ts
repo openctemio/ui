@@ -10,116 +10,116 @@
  * Role entity
  */
 export interface Role {
-  id: string;
-  tenant_id?: string;
-  slug: string;
-  name: string;
-  description: string;
-  is_system: boolean;
-  hierarchy_level: number;
-  has_full_data_access: boolean;
-  permissions: string[];
-  permission_count: number;
-  members_count?: number; // Number of users assigned to this role
-  created_at: string;
-  updated_at: string;
+  id: string
+  tenant_id?: string
+  slug: string
+  name: string
+  description: string
+  is_system: boolean
+  hierarchy_level: number
+  has_full_data_access: boolean
+  permissions: string[]
+  permission_count: number
+  members_count?: number // Number of users assigned to this role
+  created_at: string
+  updated_at: string
 }
 
 /**
  * User role assignment
  */
 export interface UserRole {
-  id: string;
-  user_id: string;
-  tenant_id: string;
-  role_id: string;
-  role: Role;
-  assigned_at: string;
-  assigned_by?: string;
+  id: string
+  user_id: string
+  tenant_id: string
+  role_id: string
+  role: Role
+  assigned_at: string
+  assigned_by?: string
 }
 
 /**
  * Role member - a user assigned to a role
  */
 export interface RoleMember {
-  id: string;
-  user_id: string;
-  tenant_id: string;
-  role_id: string;
-  assigned_at: string;
-  assigned_by?: string;
+  id: string
+  user_id: string
+  tenant_id: string
+  role_id: string
+  assigned_at: string
+  assigned_by?: string
   // User details (populated from join)
-  name?: string;
-  email?: string;
-  avatar_url?: string;
+  name?: string
+  email?: string
+  avatar_url?: string
 }
 
 /**
  * Permission module - groups related permissions
  */
 export interface PermissionModule {
-  id: string;
-  name: string;
-  description: string;
-  icon: string;
-  display_order: number;
-  is_active: boolean;
-  permissions: Permission[];
+  id: string
+  name: string
+  description: string
+  icon: string
+  display_order: number
+  is_active: boolean
+  permissions: Permission[]
 }
 
 /**
  * Individual permission
  */
 export interface Permission {
-  id: string;
-  module_id: string;
-  name: string;
-  description: string;
-  is_active: boolean;
+  id: string
+  module_id: string
+  name: string
+  description: string
+  is_active: boolean
 }
 
 /**
  * Input types for API operations
  */
 export interface CreateRoleInput {
-  slug: string;
-  name: string;
-  description?: string;
-  hierarchy_level?: number;
-  has_full_data_access?: boolean;
-  permissions?: string[];
+  slug: string
+  name: string
+  description?: string
+  hierarchy_level?: number
+  has_full_data_access?: boolean
+  permissions?: string[]
 }
 
 export interface UpdateRoleInput {
-  name?: string;
-  description?: string;
-  hierarchy_level?: number;
-  has_full_data_access?: boolean;
-  permissions?: string[];
+  name?: string
+  description?: string
+  hierarchy_level?: number
+  has_full_data_access?: boolean
+  permissions?: string[]
 }
 
 export interface AssignRoleInput {
-  role_id: string;
+  role_id: string
 }
 
 export interface SetUserRolesInput {
-  role_ids: string[];
+  role_ids: string[]
 }
 
 /**
  * Filter options for listing roles
  */
 export interface RoleFilters {
-  search?: string;
-  is_system?: boolean;
+  search?: string
+  is_system?: boolean
 }
 
 /**
  * Role list response from API
  */
 export interface RoleListResponse {
-  roles: Role[];
-  total: number;
+  roles: Role[]
+  total: number
 }
 
 /**
@@ -130,19 +130,22 @@ export const SystemRoleSlugs = {
   ADMIN: 'admin',
   MEMBER: 'member',
   VIEWER: 'viewer',
-} as const;
+} as const
 
-export type SystemRoleSlug = (typeof SystemRoleSlugs)[keyof typeof SystemRoleSlugs];
+export type SystemRoleSlug = (typeof SystemRoleSlugs)[keyof typeof SystemRoleSlugs]
 
 /**
  * Role display configuration
  */
-export const RoleTypeConfig: Record<string, {
-  label: string;
-  description: string;
-  color: string;
-  bgColor: string;
-}> = {
+export const RoleTypeConfig: Record<
+  string,
+  {
+    label: string
+    description: string
+    color: string
+    bgColor: string
+  }
+> = {
   owner: {
     label: 'Owner',
     description: 'Full access to all features and settings',
@@ -173,14 +176,14 @@ export const RoleTypeConfig: Record<string, {
     color: 'text-purple-500',
     bgColor: 'bg-purple-500/10',
   },
-};
+}
 
 /**
  * Get role display config by slug
  */
 export function getRoleConfig(slug: string, isSystem: boolean) {
   if (isSystem && RoleTypeConfig[slug]) {
-    return RoleTypeConfig[slug];
+    return RoleTypeConfig[slug]
   }
-  return RoleTypeConfig.custom;
+  return RoleTypeConfig.custom
 }

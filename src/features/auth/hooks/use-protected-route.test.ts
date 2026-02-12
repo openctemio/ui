@@ -92,9 +92,7 @@ describe('useProtectedRoute', () => {
       renderHook(() => useProtectedRoute())
 
       await waitFor(() => {
-        expect(mockRouter.replace).toHaveBeenCalledWith(
-          expect.stringContaining('/login')
-        )
+        expect(mockRouter.replace).toHaveBeenCalledWith(expect.stringContaining('/login'))
       })
     })
 
@@ -117,9 +115,7 @@ describe('useProtectedRoute', () => {
       renderHook(() => useProtectedRoute())
 
       await waitFor(() => {
-        expect(mockRouter.replace).toHaveBeenCalledWith(
-          expect.stringContaining('redirect=')
-        )
+        expect(mockRouter.replace).toHaveBeenCalledWith(expect.stringContaining('redirect='))
       })
     })
   })
@@ -143,9 +139,7 @@ describe('useProtectedRoute', () => {
         hasRole: vi.fn(),
       })
 
-      const { result } = renderHook(() =>
-        useProtectedRoute({ roles: ['admin'] })
-      )
+      const { result } = renderHook(() => useProtectedRoute({ roles: ['admin'] }))
 
       await waitFor(() => {
         expect(result.current.isAuthorized).toBe(true)
@@ -168,9 +162,7 @@ describe('useProtectedRoute', () => {
         hasRole: vi.fn(),
       })
 
-      renderHook(() =>
-        useProtectedRoute({ roles: ['superadmin'] })
-      )
+      renderHook(() => useProtectedRoute({ roles: ['superadmin'] }))
 
       await waitFor(() => {
         expect(mockRouter.replace).toHaveBeenCalledWith('/unauthorized')
@@ -178,9 +170,7 @@ describe('useProtectedRoute', () => {
     })
 
     it('should check all roles when requireAll is true', async () => {
-      const hasAllRoles = vi.fn((roles) =>
-        roles.every((r: string) => mockUser.roles.includes(r))
-      )
+      const hasAllRoles = vi.fn((roles) => roles.every((r: string) => mockUser.roles.includes(r)))
 
       vi.mocked(useAuth).mockReturnValue({
         isAuthenticated: true,
@@ -208,9 +198,7 @@ describe('useProtectedRoute', () => {
     })
 
     it('should check any role when requireAll is false', async () => {
-      const hasAnyRole = vi.fn((roles) =>
-        roles.some((r: string) => mockUser.roles.includes(r))
-      )
+      const hasAnyRole = vi.fn((roles) => roles.some((r: string) => mockUser.roles.includes(r)))
 
       vi.mocked(useAuth).mockReturnValue({
         isAuthenticated: true,
@@ -259,9 +247,7 @@ describe('useProtectedRoute', () => {
 
       const authorize = vi.fn(() => Promise.resolve(true))
 
-      const { result } = renderHook(() =>
-        useProtectedRoute({ authorize })
-      )
+      const { result } = renderHook(() => useProtectedRoute({ authorize }))
 
       await waitFor(() => {
         expect(result.current.isAuthorized).toBe(true)
@@ -337,14 +323,10 @@ describe('useProtectedRoute', () => {
         hasRole: vi.fn(),
       })
 
-      renderHook(() =>
-        useProtectedRoute({ redirectTo: '/custom-login' })
-      )
+      renderHook(() => useProtectedRoute({ redirectTo: '/custom-login' }))
 
       await waitFor(() => {
-        expect(mockRouter.replace).toHaveBeenCalledWith(
-          expect.stringContaining('/custom-login')
-        )
+        expect(mockRouter.replace).toHaveBeenCalledWith(expect.stringContaining('/custom-login'))
       })
     })
   })
@@ -448,9 +430,7 @@ describe('useRequireRoles', () => {
       hasRole: vi.fn(),
     })
 
-    const { result } = renderHook(() =>
-      useRequireRoles(['admin', 'moderator'], true)
-    )
+    const { result } = renderHook(() => useRequireRoles(['admin', 'moderator'], true))
 
     await waitFor(() => {
       expect(result.current.isChecking).toBe(false)

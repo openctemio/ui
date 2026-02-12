@@ -4,13 +4,13 @@
  * Zod validation schemas for Tool Registry
  */
 
-import { z } from 'zod';
+import { z } from 'zod'
 import {
   TOOL_CATEGORIES,
   INSTALL_METHODS,
   type ToolCategory,
   type InstallMethod,
-} from '@/lib/api/tool-types';
+} from '@/lib/api/tool-types'
 
 // ============================================
 // CONSTANTS
@@ -25,7 +25,7 @@ export const CATEGORY_OPTIONS: { value: ToolCategory; label: string; description
   { value: 'container', label: 'Container', description: 'Container Security' },
   { value: 'recon', label: 'Recon', description: 'Reconnaissance' },
   { value: 'osint', label: 'OSINT', description: 'Open Source Intelligence' },
-];
+]
 
 export const INSTALL_METHOD_OPTIONS: { value: InstallMethod; label: string }[] = [
   { value: 'go', label: 'Go Install' },
@@ -33,7 +33,7 @@ export const INSTALL_METHOD_OPTIONS: { value: InstallMethod; label: string }[] =
   { value: 'npm', label: 'NPM Install' },
   { value: 'docker', label: 'Docker Pull' },
   { value: 'binary', label: 'Binary Download' },
-];
+]
 
 // ============================================
 // SCHEMAS
@@ -62,10 +62,7 @@ export const createToolSchema = z.object({
   install_cmd: z.string().max(500, 'Install command must be 500 characters or less').optional(),
   update_cmd: z.string().max(500, 'Update command must be 500 characters or less').optional(),
   version_cmd: z.string().max(500, 'Version command must be 500 characters or less').optional(),
-  version_regex: z
-    .string()
-    .max(200, 'Version regex must be 200 characters or less')
-    .optional(),
+  version_regex: z.string().max(200, 'Version regex must be 200 characters or less').optional(),
   docs_url: z.string().url('Must be a valid URL').or(z.literal('')).optional(),
   github_url: z.string().url('Must be a valid URL').or(z.literal('')).optional(),
   logo_url: z.string().url('Must be a valid URL').or(z.literal('')).optional(),
@@ -73,9 +70,9 @@ export const createToolSchema = z.object({
   supported_targets: z.array(z.string()).optional(),
   output_formats: z.array(z.string()).optional(),
   tags: z.array(z.string()).optional(),
-});
+})
 
-export type CreateToolFormData = z.infer<typeof createToolSchema>;
+export type CreateToolFormData = z.infer<typeof createToolSchema>
 
 /**
  * Update tool form schema
@@ -90,10 +87,7 @@ export const updateToolSchema = z.object({
   install_cmd: z.string().max(500, 'Install command must be 500 characters or less').optional(),
   update_cmd: z.string().max(500, 'Update command must be 500 characters or less').optional(),
   version_cmd: z.string().max(500, 'Version command must be 500 characters or less').optional(),
-  version_regex: z
-    .string()
-    .max(200, 'Version regex must be 200 characters or less')
-    .optional(),
+  version_regex: z.string().max(200, 'Version regex must be 200 characters or less').optional(),
   docs_url: z.string().url('Must be a valid URL').or(z.literal('')).optional(),
   github_url: z.string().url('Must be a valid URL').or(z.literal('')).optional(),
   logo_url: z.string().url('Must be a valid URL').or(z.literal('')).optional(),
@@ -101,9 +95,9 @@ export const updateToolSchema = z.object({
   supported_targets: z.array(z.string()).optional(),
   output_formats: z.array(z.string()).optional(),
   tags: z.array(z.string()).optional(),
-});
+})
 
-export type UpdateToolFormData = z.infer<typeof updateToolSchema>;
+export type UpdateToolFormData = z.infer<typeof updateToolSchema>
 
 /**
  * Tenant tool config form schema
@@ -111,6 +105,6 @@ export type UpdateToolFormData = z.infer<typeof updateToolSchema>;
 export const tenantToolConfigSchema = z.object({
   is_enabled: z.boolean(),
   config: z.record(z.string(), z.unknown()).optional(),
-});
+})
 
-export type TenantToolConfigFormData = z.infer<typeof tenantToolConfigSchema>;
+export type TenantToolConfigFormData = z.infer<typeof tenantToolConfigSchema>

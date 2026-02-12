@@ -191,8 +191,7 @@ export const componentEndpoints = {
     `${SECURITY_API_BASE.COMPONENTS}/${componentId}/vulnerabilities`,
 
   // Get component sources (where it's used)
-  sources: (componentId: string) =>
-    `${SECURITY_API_BASE.COMPONENTS}/${componentId}/sources`,
+  sources: (componentId: string) => `${SECURITY_API_BASE.COMPONENTS}/${componentId}/sources`,
 
   // Get component statistics
   stats: () => `${SECURITY_API_BASE.COMPONENTS}/stats`,
@@ -409,7 +408,9 @@ export const pentestEndpoints = {
 // ============================================
 
 export const remediationEndpoints = {
-  list: (filters?: PaginationParams & { status?: string; priority?: string; assignee?: string }) => {
+  list: (
+    filters?: PaginationParams & { status?: string; priority?: string; assignee?: string }
+  ) => {
     const queryString = filters ? buildQueryString(filters as Record<string, unknown>) : ''
     return `${SECURITY_API_BASE.REMEDIATION}${queryString}`
   },

@@ -1,7 +1,7 @@
-"use client";
+'use client'
 
-import { ComingSoonPage } from "@/features/shared";
-import { FileText } from "lucide-react";
+import { ComingSoonPage } from '@/features/shared'
+import { FileText } from 'lucide-react'
 
 export default function WorkflowTemplatesPage() {
   return (
@@ -11,12 +11,12 @@ export default function WorkflowTemplatesPage() {
       phase="Mobilization"
       icon={FileText}
       features={[
-        "Template library",
-        "Custom template creation",
-        "Stage and approval configuration",
-        "Template versioning",
-        "Template sharing across teams",
+        'Template library',
+        'Custom template creation',
+        'Stage and approval configuration',
+        'Template versioning',
+        'Template sharing across teams',
       ]}
     />
-  );
+  )
 }

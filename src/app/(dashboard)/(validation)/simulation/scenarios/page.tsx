@@ -1,7 +1,7 @@
-"use client";
+'use client'
 
-import { ComingSoonPage } from "@/features/shared";
-import { Route } from "lucide-react";
+import { ComingSoonPage } from '@/features/shared'
+import { Route } from 'lucide-react'
 
 export default function AttackScenariosPage() {
   return (
@@ -11,12 +11,12 @@ export default function AttackScenariosPage() {
       phase="Validation"
       icon={Route}
       features={[
-        "MITRE ATT&CK mapping",
-        "Threat actor emulation",
-        "Kill chain coverage",
-        "Custom scenario builder",
-        "Scenario effectiveness metrics",
+        'MITRE ATT&CK mapping',
+        'Threat actor emulation',
+        'Kill chain coverage',
+        'Custom scenario builder',
+        'Scenario effectiveness metrics',
       ]}
     />
-  );
+  )
 }

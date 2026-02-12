@@ -1,4 +1,4 @@
-'use client';
+'use client'
 
 /**
  * Tenant Permission Modules Hook
@@ -11,9 +11,9 @@
  * permissions since they don't have access to that module.
  */
 
-import { useMemo } from 'react';
-import { usePermissionModules } from './use-roles';
-import { useTenantModules } from '@/features/integrations/api/use-tenant-modules';
+import { useMemo } from 'react'
+import { usePermissionModules } from './use-roles'
+import { useTenantModules } from '@/features/integrations/api/use-tenant-modules'
 // Note: PermissionModule is re-exported from usePermissionModules, no need to import here
 
 /**
@@ -144,7 +144,7 @@ const PERMISSION_TO_LICENSE_MODULE: Record<string, string> = {
   assignment_rules: 'team',
   workflows: 'findings',
   billing: 'settings',
-};
+}
 
 /**
  * Check if a permission module is available based on tenant's enabled modules
@@ -152,21 +152,21 @@ const PERMISSION_TO_LICENSE_MODULE: Record<string, string> = {
  */
 function isModuleAvailable(permissionModuleId: string, enabledModuleIds: string[]): boolean {
   // Direct lookup first
-  let licenseModuleId = PERMISSION_TO_LICENSE_MODULE[permissionModuleId];
+  let licenseModuleId = PERMISSION_TO_LICENSE_MODULE[permissionModuleId]
 
   // If not found, try looking up just the first part (for hierarchical permissions)
   // e.g., "integrations:scm:read" -> try "integrations"
   if (!licenseModuleId && permissionModuleId.includes(':')) {
-    const basePart = permissionModuleId.split(':')[0];
-    licenseModuleId = PERMISSION_TO_LICENSE_MODULE[basePart];
+    const basePart = permissionModuleId.split(':')[0]
+    licenseModuleId = PERMISSION_TO_LICENSE_MODULE[basePart]
   }
 
   // If no mapping exists, assume it's available (fail open for unknown modules)
   if (!licenseModuleId) {
-    return true;
+    return true
   }
 
-  return enabledModuleIds.includes(licenseModuleId);
+  return enabledModuleIds.includes(licenseModuleId)
 }
 
 /**
@@ -184,28 +184,32 @@ function isModuleAvailable(permissionModuleId: string, enabledModuleIds: string[
  * ```
  */
 export function useTenantPermissionModules(filterByPlan: boolean = true) {
-  const { modules: allModules, isLoading: modulesLoading, error: modulesError } = usePermissionModules();
-  const { moduleIds: enabledModuleIds, isLoading: tenantModulesLoading } = useTenantModules();
+  const {
+    modules: allModules,
+    isLoading: modulesLoading,
+    error: modulesError,
+  } = usePermissionModules()
+  const { moduleIds: enabledModuleIds, isLoading: tenantModulesLoading } = useTenantModules()
 
   const filteredModules = useMemo(() => {
     // If not filtering or tenant modules not loaded yet, return all (but still filter empty modules)
     if (!filterByPlan || tenantModulesLoading || enabledModuleIds.length === 0) {
       // Still filter out modules with no permissions
-      return allModules.filter((module) => module.permissions.length > 0);
+      return allModules.filter((module) => module.permissions.length > 0)
     }
 
     // Filter modules based on tenant's enabled modules AND has permissions
     return allModules.filter(
       (module) => module.permissions.length > 0 && isModuleAvailable(module.id, enabledModuleIds)
-    );
-  }, [allModules, enabledModuleIds, filterByPlan, tenantModulesLoading]);
+    )
+  }, [allModules, enabledModuleIds, filterByPlan, tenantModulesLoading])
 
   // Calculate stats
   const totalPermissions = useMemo(() => {
-    return filteredModules.reduce((sum, m) => sum + m.permissions.length, 0);
-  }, [filteredModules]);
+    return filteredModules.reduce((sum, m) => sum + m.permissions.length, 0)
+  }, [filteredModules])
 
-  const hiddenModulesCount = allModules.length - filteredModules.length;
+  const hiddenModulesCount = allModules.length - filteredModules.length
 
   return {
     /** Filtered permission modules based on tenant's plan */
@@ -222,7 +226,7 @@ export function useTenantPermissionModules(filterByPlan: boolean = true) {
     isLoading: modulesLoading || tenantModulesLoading,
     /** Error if any */
     error: modulesError,
-  };
+  }
 }
 
 /**
@@ -243,20 +247,22 @@ export function filterPermissionsByTenantModules(
 ): string[] {
   return permissionIds.filter((permId) => {
     // Extract module ID from permission
-    const parts = permId.split(':');
-    const moduleId = parts[0];
+    const parts = permId.split(':')
+    const moduleId = parts[0]
 
     // For 3-part permissions (module:subfeature:action), also check subfeature
     // e.g., 'integrations:scm:read' -> check both 'integrations' and 'scm'
     if (parts.length === 3) {
-      const subfeature = parts[1];
+      const subfeature = parts[1]
       // Check if either the module or subfeature is available
-      return isModuleAvailable(moduleId, enabledModuleIds) ||
-             isModuleAvailable(subfeature, enabledModuleIds);
+      return (
+        isModuleAvailable(moduleId, enabledModuleIds) ||
+        isModuleAvailable(subfeature, enabledModuleIds)
+      )
     }
 
-    return isModuleAvailable(moduleId, enabledModuleIds);
-  });
+    return isModuleAvailable(moduleId, enabledModuleIds)
+  })
 }
 
 /**
@@ -266,7 +272,7 @@ export function filterPermissionsByTenantModules(
  * @returns Available and total permission counts
  */
 export function useFilteredPermissionCount(permissions: string[]) {
-  const { moduleIds: enabledModuleIds, isLoading } = useTenantModules();
+  const { moduleIds: enabledModuleIds, isLoading } = useTenantModules()
 
   const counts = useMemo(() => {
     if (isLoading || enabledModuleIds.length === 0) {
@@ -274,19 +280,19 @@ export function useFilteredPermissionCount(permissions: string[]) {
         available: permissions.length,
         total: permissions.length,
         hidden: 0,
-      };
+      }
     }
 
-    const available = filterPermissionsByTenantModules(permissions, enabledModuleIds);
+    const available = filterPermissionsByTenantModules(permissions, enabledModuleIds)
     return {
       available: available.length,
       total: permissions.length,
       hidden: permissions.length - available.length,
-    };
-  }, [permissions, enabledModuleIds, isLoading]);
+    }
+  }, [permissions, enabledModuleIds, isLoading])
 
   return {
     ...counts,
     isLoading,
-  };
+  }
 }

@@ -1,7 +1,7 @@
-"use client";
+'use client'
 
-import { ComingSoonPage } from "@/features/shared";
-import { Play } from "lucide-react";
+import { ComingSoonPage } from '@/features/shared'
+import { Play } from 'lucide-react'
 
 export default function ActiveWorkflowsPage() {
   return (
@@ -11,12 +11,12 @@ export default function ActiveWorkflowsPage() {
       phase="Mobilization"
       icon={Play}
       features={[
-        "Real-time workflow status",
-        "Stage progression tracking",
-        "Approval queue management",
-        "Workflow pause/resume",
-        "Exception handling",
+        'Real-time workflow status',
+        'Stage progression tracking',
+        'Approval queue management',
+        'Workflow pause/resume',
+        'Exception handling',
       ]}
     />
-  );
+  )
 }

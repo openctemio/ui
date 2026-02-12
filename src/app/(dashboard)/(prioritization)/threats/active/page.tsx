@@ -1,7 +1,7 @@
-"use client";
+'use client'
 
-import { ComingSoonPage } from "@/features/shared";
-import { Flame } from "lucide-react";
+import { ComingSoonPage } from '@/features/shared'
+import { Flame } from 'lucide-react'
 
 export default function ActiveThreatsPage() {
   return (
@@ -11,12 +11,12 @@ export default function ActiveThreatsPage() {
       phase="Prioritization"
       icon={Flame}
       features={[
-        "CISA KEV integration",
-        "Active exploitation alerts",
-        "Threat actor campaign tracking",
-        "Zero-day monitoring",
-        "Ransomware threat intelligence",
+        'CISA KEV integration',
+        'Active exploitation alerts',
+        'Threat actor campaign tracking',
+        'Zero-day monitoring',
+        'Ransomware threat intelligence',
       ]}
     />
-  );
+  )
 }

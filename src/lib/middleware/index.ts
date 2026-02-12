@@ -10,12 +10,7 @@
  */
 
 // Configuration
-export {
-  PUBLIC_ROUTES,
-  API_PREFIX,
-  MIDDLEWARE_MATCHER_REFERENCE,
-  type PublicRoute,
-} from './config'
+export { PUBLIC_ROUTES, API_PREFIX, MIDDLEWARE_MATCHER_REFERENCE, type PublicRoute } from './config'
 
 // Authentication
 export {
@@ -28,8 +23,4 @@ export {
 } from './auth'
 
 // Internationalization
-export {
-  detectLocale,
-  createHeadersWithLocale,
-  handleI18n,
-} from './i18n'
+export { detectLocale, createHeadersWithLocale, handleI18n } from './i18n'

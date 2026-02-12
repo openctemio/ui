@@ -1,7 +1,7 @@
-"use client";
+'use client'
 
-import { ComingSoonPage } from "@/features/shared";
-import { KeyRound } from "lucide-react";
+import { ComingSoonPage } from '@/features/shared'
+import { KeyRound } from 'lucide-react'
 
 export default function APIKeysPage() {
   return (
@@ -11,12 +11,12 @@ export default function APIKeysPage() {
       phase="Settings"
       icon={KeyRound}
       features={[
-        "API key generation",
-        "Scope and permission control",
-        "Key rotation",
-        "Usage analytics",
-        "Rate limit configuration",
+        'API key generation',
+        'Scope and permission control',
+        'Key rotation',
+        'Usage analytics',
+        'Rate limit configuration',
       ]}
     />
-  );
+  )
 }

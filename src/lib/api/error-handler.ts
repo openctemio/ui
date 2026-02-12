@@ -158,12 +158,13 @@ export function handleApiError(
   } = options
 
   // Convert to ApiClientError if needed
-  const apiError = error instanceof ApiClientError
-    ? error
-    : new ApiClientError(
-        error instanceof Error ? error.message : fallbackMessage,
-        'UNKNOWN_ERROR'
-      )
+  const apiError =
+    error instanceof ApiClientError
+      ? error
+      : new ApiClientError(
+          error instanceof Error ? error.message : fallbackMessage,
+          'UNKNOWN_ERROR'
+        )
 
   // Get user-friendly message
   const message = getUserFriendlyMessage(apiError, customMessages, fallbackMessage)
@@ -371,9 +372,7 @@ export async function retryWithBackoff<T>(
     try {
       return await fn()
     } catch (error) {
-      const apiError = error instanceof ApiClientError
-        ? error
-        : new ApiClientError('Unknown error')
+      const apiError = error instanceof ApiClientError ? error : new ApiClientError('Unknown error')
 
       lastError = apiError
 
@@ -389,7 +388,7 @@ export async function retryWithBackoff<T>(
 
       // Wait before retrying
       const delay = getRetryDelay(apiError, attempt + 1)
-      await new Promise(resolve => setTimeout(resolve, delay))
+      await new Promise((resolve) => setTimeout(resolve, delay))
     }
   }
 
@@ -403,9 +402,7 @@ export async function retryWithBackoff<T>(
 /**
  * Extract validation errors from API error
  */
-export function extractValidationErrors(
-  error: ApiClientError
-): Record<string, string> | null {
+export function extractValidationErrors(error: ApiClientError): Record<string, string> | null {
   if (!error.isValidationError() || !error.details) {
     return null
   }
@@ -452,7 +449,10 @@ export function extractValidationErrors(
  * }
  * ```
  */
-export function getErrorMessage(error: unknown, fallback: string = 'An unexpected error occurred'): string {
+export function getErrorMessage(
+  error: unknown,
+  fallback: string = 'An unexpected error occurred'
+): string {
   // Handle ApiClientError
   if (error instanceof ApiClientError) {
     // If message is technical/long, try to get a friendlier version
@@ -466,7 +466,7 @@ export function getErrorMessage(error: unknown, fallback: string = 'An unexpecte
       if (Array.isArray((error.details as Record<string, unknown>).errors)) {
         const errors = (error.details as { errors: { field: string; message: string }[] }).errors
         if (errors.length > 0) {
-          return errors.map(e => e.message).join('. ')
+          return errors.map((e) => e.message).join('. ')
         }
       }
 

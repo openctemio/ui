@@ -1,12 +1,12 @@
-"use client";
+'use client'
 
-import { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2, Settings } from "lucide-react";
-import { toast } from "sonner";
+import { useState, useEffect } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { Loader2, Settings } from 'lucide-react'
+import { toast } from 'sonner'
 
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -14,7 +14,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from '@/components/ui/dialog'
 import {
   Form,
   FormControl,
@@ -22,58 +22,53 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { cn } from "@/lib/utils";
+} from '@/components/ui/form'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { cn } from '@/lib/utils'
 
-import { ToolSelection, type ToolOption } from "./tool-selection";
+import { ToolSelection, type ToolOption } from './tool-selection'
 import {
   updateAgentSchema,
   type UpdateAgentFormData,
   AGENT_STATUS_OPTIONS,
   AGENT_EXECUTION_MODE_OPTIONS,
-} from "../schemas/agent-schema";
-import { useAgentFormOptions } from "../hooks";
-import { useUpdateAgent, invalidateAgentsCache } from "@/lib/api/agent-hooks";
-import type { Agent } from "@/lib/api/agent-types";
+} from '../schemas/agent-schema'
+import { useAgentFormOptions } from '../hooks'
+import { useUpdateAgent, invalidateAgentsCache } from '@/lib/api/agent-hooks'
+import type { Agent } from '@/lib/api/agent-types'
 
 interface EditAgentDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  agent: Agent;
-  onSuccess?: () => void;
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  agent: Agent
+  onSuccess?: () => void
 }
 
-export function EditAgentDialog({
-  open,
-  onOpenChange,
-  agent,
-  onSuccess,
-}: EditAgentDialogProps) {
-  const [selectedTools, setSelectedTools] = useState<string[]>([]);
+export function EditAgentDialog({ open, onOpenChange, agent, onSuccess }: EditAgentDialogProps) {
+  const [selectedTools, setSelectedTools] = useState<string[]>([])
 
   const {
     toolOptions,
     isLoading: isLoadingOptions,
     error: optionsError,
     getCapabilitiesForTools,
-  } = useAgentFormOptions();
+  } = useAgentFormOptions()
 
-  const { trigger: updateAgent, isMutating } = useUpdateAgent(agent.id);
+  const { trigger: updateAgent, isMutating } = useUpdateAgent(agent.id)
 
   const form = useForm<UpdateAgentFormData>({
     resolver: zodResolver(updateAgentSchema),
     defaultValues: {
       name: agent.name,
-      description: agent.description || "",
+      description: agent.description || '',
       capabilities: agent.capabilities || [],
       tools: agent.tools || [],
       execution_mode: agent.execution_mode,
       status: agent.status,
     },
-  });
+  })
 
   // Convert toolOptions to the format expected by ToolSelection
   const toolSelectionOptions: ToolOption[] = toolOptions.map((t) => ({
@@ -81,27 +76,27 @@ export function EditAgentDialog({
     label: t.label,
     description: t.description,
     category: t.category,
-  }));
+  }))
 
   // Reset state when dialog opens
   useEffect(() => {
     if (open) {
-      setSelectedTools(agent.tools || []);
+      setSelectedTools(agent.tools || [])
       form.reset({
         name: agent.name,
-        description: agent.description || "",
+        description: agent.description || '',
         capabilities: agent.capabilities || [],
         tools: agent.tools || [],
         execution_mode: agent.execution_mode,
         status: agent.status,
-      });
+      })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, agent.id]);
+  }, [open, agent.id])
 
   const onSubmit = async (data: UpdateAgentFormData) => {
     try {
-      const capabilities = getCapabilitiesForTools(selectedTools);
+      const capabilities = getCapabilitiesForTools(selectedTools)
 
       await updateAgent({
         name: data.name,
@@ -110,24 +105,22 @@ export function EditAgentDialog({
         tools: selectedTools as never[],
         execution_mode: data.execution_mode,
         status: data.status,
-      });
+      })
 
-      toast.success(`Agent "${data.name || agent.name}" updated successfully`);
-      await invalidateAgentsCache();
-      onOpenChange(false);
-      onSuccess?.();
+      toast.success(`Agent "${data.name || agent.name}" updated successfully`)
+      await invalidateAgentsCache()
+      onOpenChange(false)
+      onSuccess?.()
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to update agent"
-      );
+      toast.error(error instanceof Error ? error.message : 'Failed to update agent')
     }
-  };
+  }
 
   const handleClose = () => {
-    form.reset();
-    setSelectedTools([]);
-    onOpenChange(false);
-  };
+    form.reset()
+    setSelectedTools([])
+    onOpenChange(false)
+  }
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -179,10 +172,16 @@ export function EditAgentDialog({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>
-                        Description <span className="text-muted-foreground font-normal">(optional)</span>
+                        Description{' '}
+                        <span className="text-muted-foreground font-normal">(optional)</span>
                       </FormLabel>
                       <FormControl>
-                        <Textarea placeholder="What does this agent do?" className="resize-none" rows={2} {...field} />
+                        <Textarea
+                          placeholder="What does this agent do?"
+                          className="resize-none"
+                          rows={2}
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -197,16 +196,16 @@ export function EditAgentDialog({
                       <FormLabel>Status</FormLabel>
                       <div className="grid grid-cols-3 gap-2">
                         {AGENT_STATUS_OPTIONS.filter((opt) =>
-                          ["active", "inactive", "pending"].includes(opt.value)
+                          ['active', 'inactive', 'pending'].includes(opt.value)
                         ).map((option) => (
                           <div
                             key={option.value}
                             onClick={() => field.onChange(option.value)}
                             className={cn(
-                              "flex items-center justify-center rounded-lg border-2 p-2.5 cursor-pointer transition-colors text-sm",
+                              'flex items-center justify-center rounded-lg border-2 p-2.5 cursor-pointer transition-colors text-sm',
                               field.value === option.value
-                                ? "border-primary bg-primary/5 font-medium"
-                                : "border-border hover:border-primary/50"
+                                ? 'border-primary bg-primary/5 font-medium'
+                                : 'border-border hover:border-primary/50'
                             )}
                           >
                             {option.label}
@@ -230,17 +229,17 @@ export function EditAgentDialog({
                             key={option.value}
                             onClick={() => field.onChange(option.value)}
                             className={cn(
-                              "flex flex-col gap-1 rounded-lg border-2 p-3 cursor-pointer transition-colors",
+                              'flex flex-col gap-1 rounded-lg border-2 p-3 cursor-pointer transition-colors',
                               field.value === option.value
-                                ? "border-primary bg-primary/5"
-                                : "border-border hover:border-primary/50"
+                                ? 'border-primary bg-primary/5'
+                                : 'border-border hover:border-primary/50'
                             )}
                           >
                             <span className="font-medium text-sm">{option.label}</span>
                             <span className="text-xs text-muted-foreground">
-                              {option.value === "standalone"
-                                ? "Runs once per command (CI/CD)"
-                                : "Runs continuously, polling for commands"}
+                              {option.value === 'standalone'
+                                ? 'Runs once per command (CI/CD)'
+                                : 'Runs continuously, polling for commands'}
                             </span>
                           </div>
                         ))}
@@ -276,5 +275,5 @@ export function EditAgentDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
+  )
 }

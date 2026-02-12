@@ -6,13 +6,13 @@
  */
 
 // Types
-export * from './types';
+export * from './types'
 
 // API hooks and actions
-export * from './api';
+export * from './api'
 
 // Components
-export * from './components';
+export * from './components'
 
 // Utilities
-export * from './lib';
+export * from './lib'

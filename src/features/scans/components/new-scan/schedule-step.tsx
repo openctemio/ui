@@ -4,24 +4,24 @@
  * Step 4: Configure when to run and notifications
  */
 
-"use client";
+'use client'
 
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from '@/components/ui/label'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import type { NewScanFormData, ScheduleFrequency } from "../../types";
-import { FREQUENCY_OPTIONS, DAY_OPTIONS, TIME_OPTIONS } from "../../types";
+} from '@/components/ui/select'
+import type { NewScanFormData, ScheduleFrequency } from '../../types'
+import { FREQUENCY_OPTIONS, DAY_OPTIONS, TIME_OPTIONS } from '../../types'
 
 interface ScheduleStepProps {
-  data: NewScanFormData;
-  onChange: (data: Partial<NewScanFormData>) => void;
+  data: NewScanFormData
+  onChange: (data: Partial<NewScanFormData>) => void
 }
 
 export function ScheduleStep({ data, onChange }: ScheduleStepProps) {
@@ -31,8 +31,8 @@ export function ScheduleStep({ data, onChange }: ScheduleStepProps) {
         ...data.schedule,
         runImmediately,
       },
-    });
-  };
+    })
+  }
 
   const handleFrequencyChange = (frequency: ScheduleFrequency) => {
     onChange({
@@ -40,8 +40,8 @@ export function ScheduleStep({ data, onChange }: ScheduleStepProps) {
         ...data.schedule,
         frequency,
       },
-    });
-  };
+    })
+  }
 
   const handleDayChange = (dayOfWeek: string) => {
     onChange({
@@ -49,8 +49,8 @@ export function ScheduleStep({ data, onChange }: ScheduleStepProps) {
         ...data.schedule,
         dayOfWeek: parseInt(dayOfWeek, 10),
       },
-    });
-  };
+    })
+  }
 
   const handleTimeChange = (time: string) => {
     onChange({
@@ -58,11 +58,11 @@ export function ScheduleStep({ data, onChange }: ScheduleStepProps) {
         ...data.schedule,
         time,
       },
-    });
-  };
+    })
+  }
 
   const handleNotificationChange = (
-    field: "notifyOnComplete" | "autoCreateTasks",
+    field: 'notifyOnComplete' | 'autoCreateTasks',
     checked: boolean
   ) => {
     onChange({
@@ -70,8 +70,8 @@ export function ScheduleStep({ data, onChange }: ScheduleStepProps) {
         ...data.notifications,
         [field]: checked,
       },
-    });
-  };
+    })
+  }
 
   return (
     <div className="space-y-6 p-4">
@@ -79,17 +79,15 @@ export function ScheduleStep({ data, onChange }: ScheduleStepProps) {
       <div className="space-y-3">
         <Label>When to run?</Label>
         <RadioGroup
-          value={data.schedule.runImmediately ? "now" : "later"}
-          onValueChange={(value) =>
-            handleRunImmediatelyChange(value === "now")
-          }
+          value={data.schedule.runImmediately ? 'now' : 'later'}
+          onValueChange={(value) => handleRunImmediatelyChange(value === 'now')}
           className="space-y-3"
         >
           <div
             className={`flex items-center space-x-3 rounded-lg border p-4 transition-colors ${
               data.schedule.runImmediately
-                ? "border-primary bg-primary/5"
-                : "border-border hover:border-primary/50"
+                ? 'border-primary bg-primary/5'
+                : 'border-border hover:border-primary/50'
             }`}
           >
             <RadioGroupItem value="now" id="run-now" />
@@ -101,8 +99,8 @@ export function ScheduleStep({ data, onChange }: ScheduleStepProps) {
           <div
             className={`space-y-4 rounded-lg border p-4 transition-colors ${
               !data.schedule.runImmediately
-                ? "border-primary bg-primary/5"
-                : "border-border hover:border-primary/50"
+                ? 'border-primary bg-primary/5'
+                : 'border-border hover:border-primary/50'
             }`}
           >
             <div className="flex items-center space-x-3">
@@ -121,9 +119,7 @@ export function ScheduleStep({ data, onChange }: ScheduleStepProps) {
                   </Label>
                   <Select
                     value={data.schedule.frequency}
-                    onValueChange={(value: ScheduleFrequency) =>
-                      handleFrequencyChange(value)
-                    }
+                    onValueChange={(value: ScheduleFrequency) => handleFrequencyChange(value)}
                   >
                     <SelectTrigger id="frequency">
                       <SelectValue placeholder="Select frequency" />
@@ -139,7 +135,7 @@ export function ScheduleStep({ data, onChange }: ScheduleStepProps) {
                 </div>
 
                 {/* Day (for weekly) */}
-                {data.schedule.frequency === "weekly" && (
+                {data.schedule.frequency === 'weekly' && (
                   <div className="space-y-2">
                     <Label htmlFor="day" className="text-sm">
                       Day
@@ -153,10 +149,7 @@ export function ScheduleStep({ data, onChange }: ScheduleStepProps) {
                       </SelectTrigger>
                       <SelectContent>
                         {DAY_OPTIONS.map((option) => (
-                          <SelectItem
-                            key={option.value}
-                            value={option.value.toString()}
-                          >
+                          <SelectItem key={option.value} value={option.value.toString()}>
                             {option.label}
                           </SelectItem>
                         ))}
@@ -170,10 +163,7 @@ export function ScheduleStep({ data, onChange }: ScheduleStepProps) {
                   <Label htmlFor="time" className="text-sm">
                     Time
                   </Label>
-                  <Select
-                    value={data.schedule.time}
-                    onValueChange={handleTimeChange}
-                  >
+                  <Select value={data.schedule.time} onValueChange={handleTimeChange}>
                     <SelectTrigger id="time">
                       <SelectValue placeholder="Select time" />
                     </SelectTrigger>
@@ -201,15 +191,12 @@ export function ScheduleStep({ data, onChange }: ScheduleStepProps) {
               id="notify-complete"
               checked={data.notifications.notifyOnComplete}
               onCheckedChange={(checked) =>
-                handleNotificationChange("notifyOnComplete", checked as boolean)
+                handleNotificationChange('notifyOnComplete', checked as boolean)
               }
               className="mt-0.5"
             />
             <div className="flex-1">
-              <Label
-                htmlFor="notify-complete"
-                className="cursor-pointer font-medium"
-              >
+              <Label htmlFor="notify-complete" className="cursor-pointer font-medium">
                 Send notification when complete
               </Label>
               <p className="text-muted-foreground text-xs">
@@ -223,25 +210,21 @@ export function ScheduleStep({ data, onChange }: ScheduleStepProps) {
               id="auto-tasks"
               checked={data.notifications.autoCreateTasks}
               onCheckedChange={(checked) =>
-                handleNotificationChange("autoCreateTasks", checked as boolean)
+                handleNotificationChange('autoCreateTasks', checked as boolean)
               }
               className="mt-0.5"
             />
             <div className="flex-1">
-              <Label
-                htmlFor="auto-tasks"
-                className="cursor-pointer font-medium"
-              >
+              <Label htmlFor="auto-tasks" className="cursor-pointer font-medium">
                 Auto-create tasks for critical findings
               </Label>
               <p className="text-muted-foreground text-xs">
-                Automatically create remediation tasks for critical and high
-                severity findings
+                Automatically create remediation tasks for critical and high severity findings
               </p>
             </div>
           </div>
         </div>
       </div>
     </div>
-  );
+  )
 }

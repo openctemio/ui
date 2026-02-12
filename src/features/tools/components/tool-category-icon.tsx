@@ -1,4 +1,4 @@
-'use client';
+'use client'
 
 import {
   Code,
@@ -10,13 +10,13 @@ import {
   Search,
   Eye,
   type LucideIcon,
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
-import type { ToolCategory } from '@/lib/api/tool-types';
+} from 'lucide-react'
+import { cn } from '@/lib/utils'
+import type { ToolCategory } from '@/lib/api/tool-types'
 
 interface ToolCategoryIconProps {
-  category: string; // Accept any string to support custom categories
-  className?: string;
+  category: string // Accept any string to support custom categories
+  className?: string
 }
 
 // Icons for builtin categories
@@ -29,7 +29,7 @@ const categoryIcons: Record<string, LucideIcon> = {
   container: Container,
   recon: Search,
   osint: Eye,
-};
+}
 
 // Colors for builtin categories
 const categoryColors: Record<string, string> = {
@@ -41,7 +41,7 @@ const categoryColors: Record<string, string> = {
   container: 'text-cyan-500',
   recon: 'text-amber-500',
   osint: 'text-pink-500',
-};
+}
 
 export const CATEGORY_LABELS: Record<ToolCategory, string> = {
   sast: 'SAST',
@@ -52,7 +52,7 @@ export const CATEGORY_LABELS: Record<ToolCategory, string> = {
   container: 'Container',
   recon: 'Recon',
   osint: 'OSINT',
-};
+}
 
 export const CATEGORY_DESCRIPTIONS: Record<ToolCategory, string> = {
   sast: 'Static Application Security Testing',
@@ -63,17 +63,17 @@ export const CATEGORY_DESCRIPTIONS: Record<ToolCategory, string> = {
   container: 'Container Security',
   recon: 'Reconnaissance',
   osint: 'Open Source Intelligence',
-};
+}
 
 export function ToolCategoryIcon({ category, className }: ToolCategoryIconProps) {
-  const Icon = categoryIcons[category] || Code;
-  const colorClass = categoryColors[category] || 'text-muted-foreground';
+  const Icon = categoryIcons[category] || Code
+  const colorClass = categoryColors[category] || 'text-muted-foreground'
 
-  return <Icon className={cn(colorClass, className)} />;
+  return <Icon className={cn(colorClass, className)} />
 }
 
 export function getCategoryColor(category: string): string {
-  return categoryColors[category] || 'text-muted-foreground';
+  return categoryColors[category] || 'text-muted-foreground'
 }
 
 export function getCategoryBadgeColor(category: string): string {
@@ -86,6 +86,6 @@ export function getCategoryBadgeColor(category: string): string {
     container: 'bg-cyan-500/10 text-cyan-500 border-cyan-500/30',
     recon: 'bg-amber-500/10 text-amber-500 border-amber-500/30',
     osint: 'bg-pink-500/10 text-pink-500 border-pink-500/30',
-  };
-  return colors[category] || 'bg-muted text-muted-foreground';
+  }
+  return colors[category] || 'bg-muted text-muted-foreground'
 }

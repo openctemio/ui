@@ -1,20 +1,14 @@
-"use client";
+'use client'
 
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { Target, Ban, HelpCircle, TrendingUp } from "lucide-react";
-import type { ScopeCoverage } from "../types";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Progress } from '@/components/ui/progress'
+import { Target, Ban, HelpCircle, TrendingUp } from 'lucide-react'
+import type { ScopeCoverage } from '../types'
 
 interface ScopeCoverageCardProps {
-  coverage: ScopeCoverage;
-  title?: string;
-  showBreakdown?: boolean;
+  coverage: ScopeCoverage
+  title?: string
+  showBreakdown?: boolean
 }
 
 /**
@@ -22,30 +16,24 @@ interface ScopeCoverageCardProps {
  */
 export function ScopeCoverageCard({
   coverage,
-  title = "Scope Coverage",
+  title = 'Scope Coverage',
   showBreakdown = true,
 }: ScopeCoverageCardProps) {
-  const {
-    totalAssets,
-    inScopeAssets,
-    excludedAssets,
-    uncoveredAssets,
-    coveragePercent,
-    byType,
-  } = coverage;
+  const { totalAssets, inScopeAssets, excludedAssets, uncoveredAssets, coveragePercent, byType } =
+    coverage
 
   // Color based on coverage percentage
   const getCoverageColor = (percent: number) => {
-    if (percent >= 80) return "text-green-500";
-    if (percent >= 50) return "text-yellow-500";
-    return "text-red-500";
-  };
+    if (percent >= 80) return 'text-green-500'
+    if (percent >= 50) return 'text-yellow-500'
+    return 'text-red-500'
+  }
 
   const getProgressColor = (percent: number) => {
-    if (percent >= 80) return "bg-green-500";
-    if (percent >= 50) return "bg-yellow-500";
-    return "bg-red-500";
-  };
+    if (percent >= 80) return 'bg-green-500'
+    if (percent >= 50) return 'bg-yellow-500'
+    return 'bg-red-500'
+  }
 
   return (
     <Card>
@@ -111,13 +99,11 @@ export function ScopeCoverageCard({
             <div className="space-y-1">
               {Object.entries(byType).map(([type, stats]) => {
                 const typePercent =
-                  stats.total > 0
-                    ? Math.round((stats.inScope / stats.total) * 100)
-                    : 0;
+                  stats.total > 0 ? Math.round((stats.inScope / stats.total) * 100) : 0
                 return (
                   <div key={type} className="flex items-center gap-2 text-xs">
                     <span className="w-24 truncate capitalize text-muted-foreground">
-                      {type.replace(/_/g, " ")}
+                      {type.replace(/_/g, ' ')}
                     </span>
                     <div className="flex-1">
                       <div className="h-1.5 w-full rounded-full bg-gray-200 dark:bg-gray-700">
@@ -131,14 +117,14 @@ export function ScopeCoverageCard({
                       {stats.inScope}/{stats.total}
                     </span>
                   </div>
-                );
+                )
               })}
             </div>
           </div>
         )}
       </CardContent>
     </Card>
-  );
+  )
 }
 
 /**
@@ -149,17 +135,17 @@ export function ScopeCoverageInline({
   total,
   excluded = 0,
 }: {
-  inScope: number;
-  total: number;
-  excluded?: number;
+  inScope: number
+  total: number
+  excluded?: number
 }) {
-  const percent = total > 0 ? Math.round((inScope / total) * 100) : 0;
+  const percent = total > 0 ? Math.round((inScope / total) * 100) : 0
 
   const getColor = (p: number) => {
-    if (p >= 80) return "text-green-500";
-    if (p >= 50) return "text-yellow-500";
-    return "text-red-500";
-  };
+    if (p >= 80) return 'text-green-500'
+    if (p >= 50) return 'text-yellow-500'
+    return 'text-red-500'
+  }
 
   return (
     <div className="flex items-center gap-2 text-sm">
@@ -169,5 +155,5 @@ export function ScopeCoverageInline({
         {excluded > 0 && `, ${excluded} excluded`})
       </span>
     </div>
-  );
+  )
 }

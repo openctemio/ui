@@ -1,7 +1,7 @@
-"use client";
+'use client'
 
-import { ComingSoonPage } from "@/features/shared";
-import { BarChart3 } from "lucide-react";
+import { ComingSoonPage } from '@/features/shared'
+import { BarChart3 } from 'lucide-react'
 
 export default function SimulationResultsPage() {
   return (
@@ -11,12 +11,12 @@ export default function SimulationResultsPage() {
       phase="Validation"
       icon={BarChart3}
       features={[
-        "Detection rate metrics",
-        "Prevention effectiveness",
-        "Time to detect analysis",
-        "Gap identification",
-        "Trend analysis over time",
+        'Detection rate metrics',
+        'Prevention effectiveness',
+        'Time to detect analysis',
+        'Gap identification',
+        'Trend analysis over time',
       ]}
     />
-  );
+  )
 }

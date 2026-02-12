@@ -1,7 +1,7 @@
-"use client";
+'use client'
 
-import { ComingSoonPage } from "@/features/shared";
-import { Clock } from "lucide-react";
+import { ComingSoonPage } from '@/features/shared'
+import { Clock } from 'lucide-react'
 
 export default function PendingReviewPage() {
   return (
@@ -11,12 +11,12 @@ export default function PendingReviewPage() {
       phase="Mobilization"
       icon={Clock}
       features={[
-        "Review queue dashboard",
-        "Approval workflow",
-        "Batch review actions",
-        "Escalation for stale requests",
-        "Review SLA tracking",
+        'Review queue dashboard',
+        'Approval workflow',
+        'Batch review actions',
+        'Escalation for stale requests',
+        'Review SLA tracking',
       ]}
     />
-  );
+  )
 }

@@ -9,10 +9,7 @@
 import useSWRMutation from 'swr/mutation'
 import { post } from '@/lib/api/client'
 import { invalidateMyTenantsCache } from '@/lib/api/user-tenant-hooks'
-import type {
-  CreateTenantRequest,
-  CreateTenantResponse,
-} from './tenant-api.types'
+import type { CreateTenantRequest, CreateTenantResponse } from './tenant-api.types'
 
 // ============================================
 // ENDPOINTS

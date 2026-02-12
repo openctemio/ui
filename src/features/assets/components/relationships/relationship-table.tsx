@@ -1,4 +1,4 @@
-"use client";
+'use client'
 
 /**
  * Relationship Table Component
@@ -6,7 +6,7 @@
  * Displays a table of asset relationships with filtering and sorting
  */
 
-import * as React from "react";
+import * as React from 'react'
 import {
   ArrowUpDown,
   ArrowRight,
@@ -19,17 +19,17 @@ import {
   Pencil,
   Trash2,
   ExternalLink,
-} from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+} from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from '@/components/ui/select'
 import {
   Table,
   TableBody,
@@ -37,48 +37,40 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from '@/components/ui/table'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { cn } from "@/lib/utils";
+} from '@/components/ui/dropdown-menu'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { cn } from '@/lib/utils'
 import type {
   AssetRelationship,
   RelationshipType,
   RelationshipDirection,
   ExtendedAssetType,
-} from "../../types";
-import {
-  RELATIONSHIP_LABELS,
-  EXTENDED_ASSET_TYPE_LABELS,
-} from "../../types";
+} from '../../types'
+import { RELATIONSHIP_LABELS, EXTENDED_ASSET_TYPE_LABELS } from '../../types'
 
 // ============================================
 // Types
 // ============================================
 
-type SortField = "type" | "target" | "source" | "confidence" | "impactWeight" | "updatedAt";
-type SortDirection = "asc" | "desc";
+type SortField = 'type' | 'target' | 'source' | 'confidence' | 'impactWeight' | 'updatedAt'
+type SortDirection = 'asc' | 'desc'
 
 interface RelationshipTableProps {
-  relationships: AssetRelationship[];
+  relationships: AssetRelationship[]
   /** Current asset ID to determine direction */
-  currentAssetId?: string;
-  onEdit?: (relationship: AssetRelationship) => void;
-  onDelete?: (relationship: AssetRelationship) => void;
-  onViewAsset?: (assetId: string) => void;
-  onAddNew?: () => void;
-  className?: string;
+  currentAssetId?: string
+  onEdit?: (relationship: AssetRelationship) => void
+  onDelete?: (relationship: AssetRelationship) => void
+  onViewAsset?: (assetId: string) => void
+  onAddNew?: () => void
+  className?: string
 }
 
 // ============================================
@@ -86,40 +78,40 @@ interface RelationshipTableProps {
 // ============================================
 
 const CONFIDENCE_COLORS = {
-  high: "bg-green-500/20 text-green-600 border-green-500/30",
-  medium: "bg-yellow-500/20 text-yellow-600 border-yellow-500/30",
-  low: "bg-red-500/20 text-red-600 border-red-500/30",
-};
+  high: 'bg-green-500/20 text-green-600 border-green-500/30',
+  medium: 'bg-yellow-500/20 text-yellow-600 border-yellow-500/30',
+  low: 'bg-red-500/20 text-red-600 border-red-500/30',
+}
 
 const ASSET_TYPE_COLORS: Record<string, { bg: string; text: string }> = {
-  domain: { bg: "bg-blue-500/20", text: "text-blue-500" },
-  website: { bg: "bg-green-500/20", text: "text-green-500" },
-  service: { bg: "bg-purple-500/20", text: "text-purple-500" },
-  project: { bg: "bg-orange-500/20", text: "text-orange-500" },
-  repository: { bg: "bg-orange-500/20", text: "text-orange-500" }, // @deprecated
-  cloud: { bg: "bg-cyan-500/20", text: "text-cyan-500" },
-  credential: { bg: "bg-red-500/20", text: "text-red-500" },
-  host: { bg: "bg-slate-500/20", text: "text-slate-500" },
-  container: { bg: "bg-indigo-500/20", text: "text-indigo-500" },
-  database: { bg: "bg-yellow-500/20", text: "text-yellow-500" },
-  mobile: { bg: "bg-pink-500/20", text: "text-pink-500" },
-  api: { bg: "bg-emerald-500/20", text: "text-emerald-500" },
-  k8s_cluster: { bg: "bg-blue-600/20", text: "text-blue-600" },
-  k8s_workload: { bg: "bg-blue-400/20", text: "text-blue-400" },
-  container_image: { bg: "bg-violet-500/20", text: "text-violet-500" },
-  api_collection: { bg: "bg-teal-500/20", text: "text-teal-500" },
-  api_endpoint: { bg: "bg-teal-400/20", text: "text-teal-400" },
-  network: { bg: "bg-gray-500/20", text: "text-gray-500" },
-  load_balancer: { bg: "bg-amber-500/20", text: "text-amber-500" },
-  identity_provider: { bg: "bg-rose-500/20", text: "text-rose-500" },
-};
+  domain: { bg: 'bg-blue-500/20', text: 'text-blue-500' },
+  website: { bg: 'bg-green-500/20', text: 'text-green-500' },
+  service: { bg: 'bg-purple-500/20', text: 'text-purple-500' },
+  project: { bg: 'bg-orange-500/20', text: 'text-orange-500' },
+  repository: { bg: 'bg-orange-500/20', text: 'text-orange-500' }, // @deprecated
+  cloud: { bg: 'bg-cyan-500/20', text: 'text-cyan-500' },
+  credential: { bg: 'bg-red-500/20', text: 'text-red-500' },
+  host: { bg: 'bg-slate-500/20', text: 'text-slate-500' },
+  container: { bg: 'bg-indigo-500/20', text: 'text-indigo-500' },
+  database: { bg: 'bg-yellow-500/20', text: 'text-yellow-500' },
+  mobile: { bg: 'bg-pink-500/20', text: 'text-pink-500' },
+  api: { bg: 'bg-emerald-500/20', text: 'text-emerald-500' },
+  k8s_cluster: { bg: 'bg-blue-600/20', text: 'text-blue-600' },
+  k8s_workload: { bg: 'bg-blue-400/20', text: 'text-blue-400' },
+  container_image: { bg: 'bg-violet-500/20', text: 'text-violet-500' },
+  api_collection: { bg: 'bg-teal-500/20', text: 'text-teal-500' },
+  api_endpoint: { bg: 'bg-teal-400/20', text: 'text-teal-400' },
+  network: { bg: 'bg-gray-500/20', text: 'text-gray-500' },
+  load_balancer: { bg: 'bg-amber-500/20', text: 'text-amber-500' },
+  identity_provider: { bg: 'bg-rose-500/20', text: 'text-rose-500' },
+}
 
 function ImpactBars({ weight }: { weight: number }) {
   const getColor = () => {
-    if (weight >= 8) return "bg-red-500";
-    if (weight >= 5) return "bg-yellow-500";
-    return "bg-green-500";
-  };
+    if (weight >= 8) return 'bg-red-500'
+    if (weight >= 5) return 'bg-yellow-500'
+    return 'bg-green-500'
+  }
 
   return (
     <TooltipProvider>
@@ -130,8 +122,8 @@ function ImpactBars({ weight }: { weight: number }) {
               <div
                 key={i}
                 className={cn(
-                  "h-3 w-1.5 rounded-sm",
-                  i < Math.ceil(weight / 2) ? getColor() : "bg-muted"
+                  'h-3 w-1.5 rounded-sm',
+                  i < Math.ceil(weight / 2) ? getColor() : 'bg-muted'
                 )}
               />
             ))}
@@ -142,7 +134,7 @@ function ImpactBars({ weight }: { weight: number }) {
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
-  );
+  )
 }
 
 function AssetCell({
@@ -150,27 +142,24 @@ function AssetCell({
   type,
   onClick,
 }: {
-  name: string;
-  type: ExtendedAssetType;
-  onClick?: () => void;
+  name: string
+  type: ExtendedAssetType
+  onClick?: () => void
 }) {
-  const colors = ASSET_TYPE_COLORS[type] || { bg: "bg-gray-500/20", text: "text-gray-500" };
-  const typeLabel = EXTENDED_ASSET_TYPE_LABELS[type] || type;
+  const colors = ASSET_TYPE_COLORS[type] || { bg: 'bg-gray-500/20', text: 'text-gray-500' }
+  const typeLabel = EXTENDED_ASSET_TYPE_LABELS[type] || type
 
   return (
-    <button
-      onClick={onClick}
-      className="flex items-center gap-2 hover:underline text-left"
-    >
-      <div className={cn("h-7 w-7 rounded flex items-center justify-center shrink-0", colors.bg)}>
-        <Link2 className={cn("h-3.5 w-3.5", colors.text)} />
+    <button onClick={onClick} className="flex items-center gap-2 hover:underline text-left">
+      <div className={cn('h-7 w-7 rounded flex items-center justify-center shrink-0', colors.bg)}>
+        <Link2 className={cn('h-3.5 w-3.5', colors.text)} />
       </div>
       <div className="min-w-0">
         <p className="text-sm font-medium truncate max-w-[150px]">{name}</p>
         <p className="text-xs text-muted-foreground">{typeLabel}</p>
       </div>
     </button>
-  );
+  )
 }
 
 // Sort Button Component (moved outside to avoid React Compiler error)
@@ -180,23 +169,23 @@ function SortButton({
   onSort,
   currentField,
 }: {
-  field: SortField;
-  children: React.ReactNode;
-  onSort: (field: SortField) => void;
-  currentField?: SortField;
+  field: SortField
+  children: React.ReactNode
+  onSort: (field: SortField) => void
+  currentField?: SortField
 }) {
-  const isActive = currentField === field;
+  const isActive = currentField === field
   return (
     <Button
       variant="ghost"
       size="sm"
-      className={`-ml-3 h-8 data-[state=open]:bg-accent ${isActive ? "text-primary" : ""}`}
+      className={`-ml-3 h-8 data-[state=open]:bg-accent ${isActive ? 'text-primary' : ''}`}
       onClick={() => onSort(field)}
     >
       {children}
-      <ArrowUpDown className={`ml-2 h-4 w-4 ${isActive ? "text-primary" : ""}`} />
+      <ArrowUpDown className={`ml-2 h-4 w-4 ${isActive ? 'text-primary' : ''}`} />
     </Button>
-  );
+  )
 }
 
 // Helper function to determine direction
@@ -204,8 +193,8 @@ function getRelationshipDirection(
   rel: AssetRelationship,
   currentAssetId?: string
 ): RelationshipDirection {
-  if (!currentAssetId) return "outgoing";
-  return rel.sourceAssetId === currentAssetId ? "outgoing" : "incoming";
+  if (!currentAssetId) return 'outgoing'
+  return rel.sourceAssetId === currentAssetId ? 'outgoing' : 'incoming'
 }
 
 // ============================================
@@ -221,88 +210,94 @@ export function RelationshipTable({
   onAddNew,
   className,
 }: RelationshipTableProps) {
-  const [searchQuery, setSearchQuery] = React.useState("");
-  const [typeFilter, setTypeFilter] = React.useState<RelationshipType | "all">("all");
-  const [directionFilter, setDirectionFilter] = React.useState<RelationshipDirection | "all">("all");
-  const [sortField, setSortField] = React.useState<SortField>("updatedAt");
-  const [sortDirection, setSortDirection] = React.useState<SortDirection>("desc");
+  const [searchQuery, setSearchQuery] = React.useState('')
+  const [typeFilter, setTypeFilter] = React.useState<RelationshipType | 'all'>('all')
+  const [directionFilter, setDirectionFilter] = React.useState<RelationshipDirection | 'all'>('all')
+  const [sortField, setSortField] = React.useState<SortField>('updatedAt')
+  const [sortDirection, setSortDirection] = React.useState<SortDirection>('desc')
 
   // Get unique relationship types
   const relationshipTypes = React.useMemo(() => {
-    const types = new Set(relationships.map((r) => r.type));
-    return Array.from(types);
-  }, [relationships]);
+    const types = new Set(relationships.map((r) => r.type))
+    return Array.from(types)
+  }, [relationships])
 
   // Filter and sort relationships
   const filteredRelationships = React.useMemo(() => {
-    let result = [...relationships];
+    let result = [...relationships]
 
     // Search filter
     if (searchQuery) {
-      const query = searchQuery.toLowerCase();
+      const query = searchQuery.toLowerCase()
       result = result.filter(
         (r) =>
           r.sourceAssetName.toLowerCase().includes(query) ||
           r.targetAssetName.toLowerCase().includes(query) ||
           r.description?.toLowerCase().includes(query) ||
           r.type.toLowerCase().includes(query)
-      );
+      )
     }
 
     // Type filter
-    if (typeFilter !== "all") {
-      result = result.filter((r) => r.type === typeFilter);
+    if (typeFilter !== 'all') {
+      result = result.filter((r) => r.type === typeFilter)
     }
 
     // Direction filter
-    if (directionFilter !== "all" && currentAssetId) {
-      result = result.filter(
-        (r) => getRelationshipDirection(r, currentAssetId) === directionFilter
-      );
+    if (directionFilter !== 'all' && currentAssetId) {
+      result = result.filter((r) => getRelationshipDirection(r, currentAssetId) === directionFilter)
     }
 
     // Sort
     result.sort((a, b) => {
-      let comparison = 0;
+      let comparison = 0
       switch (sortField) {
-        case "type":
-          comparison = a.type.localeCompare(b.type);
-          break;
-        case "source":
-          comparison = a.sourceAssetName.localeCompare(b.sourceAssetName);
-          break;
-        case "target":
-          comparison = a.targetAssetName.localeCompare(b.targetAssetName);
-          break;
-        case "confidence": {
-          const confOrder = { high: 3, medium: 2, low: 1 };
-          comparison = confOrder[a.confidence] - confOrder[b.confidence];
-          break;
+        case 'type':
+          comparison = a.type.localeCompare(b.type)
+          break
+        case 'source':
+          comparison = a.sourceAssetName.localeCompare(b.sourceAssetName)
+          break
+        case 'target':
+          comparison = a.targetAssetName.localeCompare(b.targetAssetName)
+          break
+        case 'confidence': {
+          const confOrder = { high: 3, medium: 2, low: 1 }
+          comparison = confOrder[a.confidence] - confOrder[b.confidence]
+          break
         }
-        case "impactWeight":
-          comparison = a.impactWeight - b.impactWeight;
-          break;
-        case "updatedAt":
-          comparison = new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime();
-          break;
+        case 'impactWeight':
+          comparison = a.impactWeight - b.impactWeight
+          break
+        case 'updatedAt':
+          comparison = new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime()
+          break
       }
-      return sortDirection === "asc" ? comparison : -comparison;
-    });
+      return sortDirection === 'asc' ? comparison : -comparison
+    })
 
-    return result;
-  }, [relationships, searchQuery, typeFilter, directionFilter, sortField, sortDirection, currentAssetId]);
+    return result
+  }, [
+    relationships,
+    searchQuery,
+    typeFilter,
+    directionFilter,
+    sortField,
+    sortDirection,
+    currentAssetId,
+  ])
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
-      setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
+      setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'))
     } else {
-      setSortField(field);
-      setSortDirection("asc");
+      setSortField(field)
+      setSortDirection('asc')
     }
-  };
+  }
 
   return (
-    <div className={cn("space-y-4", className)}>
+    <div className={cn('space-y-4', className)}>
       {/* Toolbar */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
@@ -317,7 +312,7 @@ export function RelationshipTable({
         <div className="flex gap-2">
           <Select
             value={typeFilter}
-            onValueChange={(v) => setTypeFilter(v as RelationshipType | "all")}
+            onValueChange={(v) => setTypeFilter(v as RelationshipType | 'all')}
           >
             <SelectTrigger className="w-[160px]">
               <Filter className="mr-2 h-4 w-4" />
@@ -336,7 +331,7 @@ export function RelationshipTable({
           {currentAssetId && (
             <Select
               value={directionFilter}
-              onValueChange={(v) => setDirectionFilter(v as RelationshipDirection | "all")}
+              onValueChange={(v) => setDirectionFilter(v as RelationshipDirection | 'all')}
             >
               <SelectTrigger className="w-[140px]">
                 <SelectValue placeholder="Direction" />
@@ -363,24 +358,32 @@ export function RelationshipTable({
         <Table>
           <TableHeader>
             <TableRow>
-              {currentAssetId && (
-                <TableHead className="w-[60px]">Dir</TableHead>
-              )}
+              {currentAssetId && <TableHead className="w-[60px]">Dir</TableHead>}
               <TableHead>
-                <SortButton field="type" currentField={sortField} onSort={handleSort}>Type</SortButton>
+                <SortButton field="type" currentField={sortField} onSort={handleSort}>
+                  Type
+                </SortButton>
               </TableHead>
               <TableHead>
-                <SortButton field="source" currentField={sortField} onSort={handleSort}>Source</SortButton>
+                <SortButton field="source" currentField={sortField} onSort={handleSort}>
+                  Source
+                </SortButton>
               </TableHead>
               <TableHead className="w-[40px]"></TableHead>
               <TableHead>
-                <SortButton field="target" currentField={sortField} onSort={handleSort}>Target</SortButton>
+                <SortButton field="target" currentField={sortField} onSort={handleSort}>
+                  Target
+                </SortButton>
               </TableHead>
               <TableHead>
-                <SortButton field="confidence" currentField={sortField} onSort={handleSort}>Confidence</SortButton>
+                <SortButton field="confidence" currentField={sortField} onSort={handleSort}>
+                  Confidence
+                </SortButton>
               </TableHead>
               <TableHead>
-                <SortButton field="impactWeight" currentField={sortField} onSort={handleSort}>Impact</SortButton>
+                <SortButton field="impactWeight" currentField={sortField} onSort={handleSort}>
+                  Impact
+                </SortButton>
               </TableHead>
               <TableHead className="w-[50px]"></TableHead>
             </TableRow>
@@ -397,14 +400,14 @@ export function RelationshipTable({
               </TableRow>
             ) : (
               filteredRelationships.map((relationship) => {
-                const direction = getRelationshipDirection(relationship, currentAssetId);
-                const labels = RELATIONSHIP_LABELS[relationship.type];
+                const direction = getRelationshipDirection(relationship, currentAssetId)
+                const labels = RELATIONSHIP_LABELS[relationship.type]
 
                 return (
                   <TableRow key={relationship.id}>
                     {currentAssetId && (
                       <TableCell>
-                        {direction === "outgoing" ? (
+                        {direction === 'outgoing' ? (
                           <ArrowRight className="h-4 w-4 text-blue-500" />
                         ) : (
                           <ArrowLeft className="h-4 w-4 text-green-500" />
@@ -413,7 +416,7 @@ export function RelationshipTable({
                     )}
                     <TableCell>
                       <Badge variant="secondary" className="text-xs">
-                        {direction === "outgoing" ? labels.direct : labels.inverse}
+                        {direction === 'outgoing' ? labels.direct : labels.inverse}
                       </Badge>
                     </TableCell>
                     <TableCell>
@@ -436,7 +439,7 @@ export function RelationshipTable({
                     <TableCell>
                       <Badge
                         variant="outline"
-                        className={cn("text-xs", CONFIDENCE_COLORS[relationship.confidence])}
+                        className={cn('text-xs', CONFIDENCE_COLORS[relationship.confidence])}
                       >
                         {relationship.confidence}
                       </Badge>
@@ -480,7 +483,7 @@ export function RelationshipTable({
                       </DropdownMenu>
                     </TableCell>
                   </TableRow>
-                );
+                )
               })
             )}
           </TableBody>
@@ -506,5 +509,5 @@ export function RelationshipTable({
         )}
       </div>
     </div>
-  );
+  )
 }

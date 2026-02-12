@@ -7,7 +7,7 @@ export {
   SCMConnectionsSection,
   ProviderIcon,
   SCM_PROVIDER_COLORS,
-} from "./components";
+} from './components'
 
 // Schemas
 export {
@@ -18,4 +18,4 @@ export {
   AUTH_TYPE_OPTIONS,
   DEFAULT_BASE_URLS,
   type CreateSCMConnectionFormData,
-} from "./schemas";
+} from './schemas'

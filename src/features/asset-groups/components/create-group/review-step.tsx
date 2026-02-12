@@ -4,9 +4,9 @@
  * Final step to review all group settings before creation
  */
 
-"use client";
+'use client'
 
-import * as React from "react";
+import * as React from 'react'
 import {
   FolderOpen,
   Server,
@@ -16,79 +16,79 @@ import {
   Building2,
   User,
   Tags,
-} from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
-import { cn } from "@/lib/utils";
-import type { Asset, AssetType } from "@/features/assets/types";
-import { ASSET_TYPE_LABELS, ASSET_TYPE_COLORS } from "@/features/assets/types";
-import type { CreateGroupFormData } from "./types";
+} from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Separator } from '@/components/ui/separator'
+import { cn } from '@/lib/utils'
+import type { Asset, AssetType } from '@/features/assets/types'
+import { ASSET_TYPE_LABELS, ASSET_TYPE_COLORS } from '@/features/assets/types'
+import type { CreateGroupFormData } from './types'
 
 interface ReviewStepProps {
-  data: CreateGroupFormData;
-  ungroupedAssets: Asset[];
+  data: CreateGroupFormData
+  ungroupedAssets: Asset[]
 }
 
 const ENVIRONMENT_LABELS = {
-  production: "Production",
-  staging: "Staging",
-  development: "Development",
-  testing: "Testing",
-};
+  production: 'Production',
+  staging: 'Staging',
+  development: 'Development',
+  testing: 'Testing',
+}
 
 const CRITICALITY_CONFIG = {
-  critical: { label: "Critical", color: "bg-red-500" },
-  high: { label: "High", color: "bg-orange-500" },
-  medium: { label: "Medium", color: "bg-yellow-500" },
-  low: { label: "Low", color: "bg-blue-500" },
-};
+  critical: { label: 'Critical', color: 'bg-red-500' },
+  high: { label: 'High', color: 'bg-orange-500' },
+  medium: { label: 'Medium', color: 'bg-yellow-500' },
+  low: { label: 'Low', color: 'bg-blue-500' },
+}
 
 export function ReviewStep({ data, ungroupedAssets }: ReviewStepProps) {
   // Get selected assets details
   const selectedAssets = React.useMemo(
     () => ungroupedAssets.filter((a) => data.selectedAssetIds.includes(a.id)),
     [ungroupedAssets, data.selectedAssetIds]
-  );
+  )
 
   // Calculate totals
-  const totalAssets = selectedAssets.length + data.newAssets.length;
+  const totalAssets = selectedAssets.length + data.newAssets.length
 
   // Group assets by type for summary
   const assetsByType = React.useMemo(() => {
-    const counts: Partial<Record<AssetType, { existing: number; new: number }>> = {};
+    const counts: Partial<Record<AssetType, { existing: number; new: number }>> = {}
 
     selectedAssets.forEach((asset) => {
       if (!counts[asset.type]) {
-        counts[asset.type] = { existing: 0, new: 0 };
+        counts[asset.type] = { existing: 0, new: 0 }
       }
-      counts[asset.type]!.existing++;
-    });
+      counts[asset.type]!.existing++
+    })
 
     data.newAssets.forEach((asset) => {
       if (!counts[asset.type]) {
-        counts[asset.type] = { existing: 0, new: 0 };
+        counts[asset.type] = { existing: 0, new: 0 }
       }
-      counts[asset.type]!.new++;
-    });
+      counts[asset.type]!.new++
+    })
 
     return Object.entries(counts).filter(
       ([, value]) => value && (value.existing > 0 || value.new > 0)
-    );
-  }, [selectedAssets, data.newAssets]);
+    )
+  }, [selectedAssets, data.newAssets])
 
   // Validation warnings
-  const warnings: string[] = [];
+  const warnings: string[] = []
   if (!data.name.trim()) {
-    warnings.push("Group name is required");
+    warnings.push('Group name is required')
   }
   data.newAssets.forEach((asset, index) => {
     if (!asset.name.trim()) {
-      warnings.push(`New asset ${index + 1} is missing a name`);
+      warnings.push(`New asset ${index + 1} is missing a name`)
     }
-  });
+  })
 
-  const critConfig = CRITICALITY_CONFIG[data.criticality];
+  const critConfig = CRITICALITY_CONFIG[data.criticality]
 
   return (
     <div className="flex flex-col h-full p-6 space-y-4">
@@ -137,9 +137,9 @@ export function ReviewStep({ data, ungroupedAssets }: ReviewStepProps) {
                 <FolderOpen className="h-6 w-6 text-primary" />
               </div>
               <div>
-                <h4 className="font-semibold">{data.name || "Unnamed Group"}</h4>
+                <h4 className="font-semibold">{data.name || 'Unnamed Group'}</h4>
                 <p className="text-sm text-muted-foreground">
-                  {data.description || "No description"}
+                  {data.description || 'No description'}
                 </p>
               </div>
             </div>
@@ -147,15 +147,11 @@ export function ReviewStep({ data, ungroupedAssets }: ReviewStepProps) {
             <div className="grid grid-cols-2 gap-4 mb-4">
               <div>
                 <p className="text-xs text-muted-foreground mb-1">Environment</p>
-                <Badge variant="outline">
-                  {ENVIRONMENT_LABELS[data.environment]}
-                </Badge>
+                <Badge variant="outline">{ENVIRONMENT_LABELS[data.environment]}</Badge>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground mb-1">Criticality</p>
-                <Badge className={cn(critConfig.color, "text-white")}>
-                  {critConfig.label}
-                </Badge>
+                <Badge className={cn(critConfig.color, 'text-white')}>{critConfig.label}</Badge>
               </div>
             </div>
 
@@ -222,24 +218,22 @@ export function ReviewStep({ data, ungroupedAssets }: ReviewStepProps) {
                     </div>
                     <div className="flex flex-wrap gap-1">
                       {selectedAssets.slice(0, 8).map((asset) => {
-                        const colors = ASSET_TYPE_COLORS[asset.type];
+                        const colors = ASSET_TYPE_COLORS[asset.type]
                         return (
                           <Badge
                             key={asset.id}
                             variant="secondary"
-                            className={cn("gap-1", colors.bg)}
+                            className={cn('gap-1', colors.bg)}
                           >
-                            <span className={cn("text-xs", colors.text)}>
+                            <span className={cn('text-xs', colors.text)}>
                               {asset.type.charAt(0).toUpperCase()}
                             </span>
                             {asset.name}
                           </Badge>
-                        );
+                        )
                       })}
                       {selectedAssets.length > 8 && (
-                        <Badge variant="outline">
-                          +{selectedAssets.length - 8} more
-                        </Badge>
+                        <Badge variant="outline">+{selectedAssets.length - 8} more</Badge>
                       )}
                     </div>
                   </div>
@@ -257,24 +251,22 @@ export function ReviewStep({ data, ungroupedAssets }: ReviewStepProps) {
                     </div>
                     <div className="flex flex-wrap gap-1">
                       {data.newAssets.slice(0, 8).map((asset) => {
-                        const colors = ASSET_TYPE_COLORS[asset.type];
+                        const colors = ASSET_TYPE_COLORS[asset.type]
                         return (
                           <Badge
                             key={asset.id}
                             variant="secondary"
-                            className={cn("gap-1", colors.bg)}
+                            className={cn('gap-1', colors.bg)}
                           >
-                            <span className={cn("text-xs", colors.text)}>
+                            <span className={cn('text-xs', colors.text)}>
                               {asset.type.charAt(0).toUpperCase()}
                             </span>
-                            {asset.name || "Unnamed"}
+                            {asset.name || 'Unnamed'}
                           </Badge>
-                        );
+                        )
                       })}
                       {data.newAssets.length > 8 && (
-                        <Badge variant="outline">
-                          +{data.newAssets.length - 8} more
-                        </Badge>
+                        <Badge variant="outline">+{data.newAssets.length - 8} more</Badge>
                       )}
                     </div>
                   </div>
@@ -283,28 +275,21 @@ export function ReviewStep({ data, ungroupedAssets }: ReviewStepProps) {
                 {/* By type breakdown */}
                 {assetsByType.length > 0 && (
                   <div className="rounded-lg bg-muted/50 p-3">
-                    <p className="text-xs text-muted-foreground mb-2">
-                      Breakdown by type:
-                    </p>
+                    <p className="text-xs text-muted-foreground mb-2">Breakdown by type:</p>
                     <div className="grid grid-cols-2 gap-2">
                       {assetsByType.map(([type, counts]) => {
-                        const colors = ASSET_TYPE_COLORS[type as AssetType];
-                        const total = counts.existing + counts.new;
+                        const colors = ASSET_TYPE_COLORS[type as AssetType]
+                        const total = counts.existing + counts.new
                         return (
-                          <div
-                            key={type}
-                            className="flex items-center justify-between text-sm"
-                          >
+                          <div key={type} className="flex items-center justify-between text-sm">
                             <div className="flex items-center gap-2">
                               <div
                                 className={cn(
-                                  "h-6 w-6 rounded flex items-center justify-center",
+                                  'h-6 w-6 rounded flex items-center justify-center',
                                   colors.bg
                                 )}
                               >
-                                <span
-                                  className={cn("text-xs font-bold", colors.text)}
-                                >
+                                <span className={cn('text-xs font-bold', colors.text)}>
                                   {type.charAt(0).toUpperCase()}
                                 </span>
                               </div>
@@ -313,13 +298,11 @@ export function ReviewStep({ data, ungroupedAssets }: ReviewStepProps) {
                             <span className="text-muted-foreground">
                               {total}
                               {counts.new > 0 && (
-                                <span className="text-xs ml-1 text-green-500">
-                                  (+{counts.new})
-                                </span>
+                                <span className="text-xs ml-1 text-green-500">(+{counts.new})</span>
                               )}
                             </span>
                           </div>
-                        );
+                        )
                       })}
                     </div>
                   </div>
@@ -330,5 +313,5 @@ export function ReviewStep({ data, ungroupedAssets }: ReviewStepProps) {
         </div>
       </ScrollArea>
     </div>
-  );
+  )
 }

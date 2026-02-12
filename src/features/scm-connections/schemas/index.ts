@@ -1,1 +1,1 @@
-export * from "./scm-connection.schema";
+export * from './scm-connection.schema'

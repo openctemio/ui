@@ -1,9 +1,9 @@
-"use client"
+'use client'
 
-import { createContext, useContext } from "react"
-import { DirectionProvider as RdxDirProvider } from "@radix-ui/react-direction"
+import { createContext, useContext } from 'react'
+import { DirectionProvider as RdxDirProvider } from '@radix-ui/react-direction'
 
-export type Direction = "ltr" | "rtl"
+export type Direction = 'ltr' | 'rtl'
 
 type DirectionContextValue = {
   dir: Direction
@@ -27,6 +27,6 @@ export function DirectionProvider({
 
 export function useDirection() {
   const ctx = useContext(DirectionContext)
-  if (!ctx) throw new Error("useDirection must be used within a DirectionProvider")
+  if (!ctx) throw new Error('useDirection must be used within a DirectionProvider')
   return ctx
 }

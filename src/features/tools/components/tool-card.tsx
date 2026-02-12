@@ -1,22 +1,16 @@
-'use client';
+'use client'
 
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Switch } from '@/components/ui/switch';
+} from '@/components/ui/dropdown-menu'
+import { Switch } from '@/components/ui/switch'
 import {
   MoreHorizontal,
   Eye,
@@ -27,28 +21,28 @@ import {
   Github,
   Power,
   PowerOff,
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Can, Permission, useHasPermission } from '@/lib/permissions';
-import type { Tool } from '@/lib/api/tool-types';
-import type { ToolCategory } from '@/lib/api/tool-category-types';
-import { getCategoryNameById, getCategoryDisplayNameById } from '@/lib/api/tool-category-hooks';
-import { ToolCategoryIcon, getCategoryBadgeColor } from './tool-category-icon';
-import { INSTALL_METHOD_DISPLAY_NAMES } from '@/lib/api/tool-types';
+} from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { Can, Permission, useHasPermission } from '@/lib/permissions'
+import type { Tool } from '@/lib/api/tool-types'
+import type { ToolCategory } from '@/lib/api/tool-category-types'
+import { getCategoryNameById, getCategoryDisplayNameById } from '@/lib/api/tool-category-hooks'
+import { ToolCategoryIcon, getCategoryBadgeColor } from './tool-category-icon'
+import { INSTALL_METHOD_DISPLAY_NAMES } from '@/lib/api/tool-types'
 
 interface ToolCardProps {
-  tool: Tool;
-  categories?: ToolCategory[]; // For looking up category name from category_id
-  selected?: boolean;
-  onSelect?: () => void;
-  onView?: (tool: Tool) => void;
-  onEdit?: (tool: Tool) => void;
-  onDelete?: (tool: Tool) => void;
-  onActivate?: (tool: Tool) => void;
-  onDeactivate?: (tool: Tool) => void;
-  onCheckUpdate?: (tool: Tool) => void;
+  tool: Tool
+  categories?: ToolCategory[] // For looking up category name from category_id
+  selected?: boolean
+  onSelect?: () => void
+  onView?: (tool: Tool) => void
+  onEdit?: (tool: Tool) => void
+  onDelete?: (tool: Tool) => void
+  onActivate?: (tool: Tool) => void
+  onDeactivate?: (tool: Tool) => void
+  onCheckUpdate?: (tool: Tool) => void
   /** When true, hides edit/delete/activate/deactivate actions (for platform tools) */
-  readOnly?: boolean;
+  readOnly?: boolean
 }
 
 export function ToolCard({
@@ -65,9 +59,9 @@ export function ToolCard({
   readOnly = false,
 }: ToolCardProps) {
   // Look up category name from category_id
-  const categoryName = getCategoryNameById(categories, tool.category_id);
-  const categoryDisplayName = getCategoryDisplayNameById(categories, tool.category_id);
-  const canWriteTools = useHasPermission(Permission.ToolsWrite);
+  const categoryName = getCategoryNameById(categories, tool.category_id)
+  const categoryDisplayName = getCategoryDisplayNameById(categories, tool.category_id)
+  const canWriteTools = useHasPermission(Permission.ToolsWrite)
   return (
     <Card
       className={cn(
@@ -109,9 +103,7 @@ export function ToolCard({
               <CardDescription className="text-xs">
                 {tool.name}
                 {tool.current_version && (
-                  <span className="ml-1 text-muted-foreground">
-                    v{tool.current_version}
-                  </span>
+                  <span className="ml-1 text-muted-foreground">v{tool.current_version}</span>
                 )}
               </CardDescription>
             </div>
@@ -148,11 +140,7 @@ export function ToolCard({
               )}
               {tool.github_url && (
                 <DropdownMenuItem asChild>
-                  <a
-                    href={tool.github_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
+                  <a href={tool.github_url} target="_blank" rel="noopener noreferrer">
                     <Github className="mr-2 h-4 w-4" />
                     GitHub
                   </a>
@@ -160,11 +148,7 @@ export function ToolCard({
               )}
               {tool.docs_url && (
                 <DropdownMenuItem asChild>
-                  <a
-                    href={tool.docs_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
+                  <a href={tool.docs_url} target="_blank" rel="noopener noreferrer">
                     <ExternalLink className="mr-2 h-4 w-4" />
                     Documentation
                   </a>
@@ -174,35 +158,30 @@ export function ToolCard({
               {!readOnly && (onActivate || onDeactivate) && (
                 <Can permission={Permission.ToolsWrite}>
                   <DropdownMenuSeparator />
-                  {tool.is_active ? (
-                    onDeactivate && (
-                      <DropdownMenuItem
-                        onClick={() => onDeactivate(tool)}
-                        className="text-amber-500"
-                      >
-                        <PowerOff className="mr-2 h-4 w-4" />
-                        Deactivate
-                      </DropdownMenuItem>
-                    )
-                  ) : (
-                    onActivate && (
-                      <DropdownMenuItem
-                        onClick={() => onActivate(tool)}
-                        className="text-green-500"
-                      >
-                        <Power className="mr-2 h-4 w-4" />
-                        Activate
-                      </DropdownMenuItem>
-                    )
-                  )}
+                  {tool.is_active
+                    ? onDeactivate && (
+                        <DropdownMenuItem
+                          onClick={() => onDeactivate(tool)}
+                          className="text-amber-500"
+                        >
+                          <PowerOff className="mr-2 h-4 w-4" />
+                          Deactivate
+                        </DropdownMenuItem>
+                      )
+                    : onActivate && (
+                        <DropdownMenuItem
+                          onClick={() => onActivate(tool)}
+                          className="text-green-500"
+                        >
+                          <Power className="mr-2 h-4 w-4" />
+                          Activate
+                        </DropdownMenuItem>
+                      )}
                 </Can>
               )}
               {!readOnly && !tool.is_builtin && onDelete && (
                 <Can permission={Permission.ToolsDelete}>
-                  <DropdownMenuItem
-                    onClick={() => onDelete(tool)}
-                    className="text-red-500"
-                  >
+                  <DropdownMenuItem onClick={() => onDelete(tool)} className="text-red-500">
                     <Trash2 className="mr-2 h-4 w-4" />
                     Delete
                   </DropdownMenuItem>
@@ -214,16 +193,11 @@ export function ToolCard({
       </CardHeader>
       <CardContent className="space-y-3">
         {tool.description && (
-          <p className="line-clamp-2 text-sm text-muted-foreground">
-            {tool.description}
-          </p>
+          <p className="line-clamp-2 text-sm text-muted-foreground">{tool.description}</p>
         )}
 
         <div className="flex flex-wrap gap-1.5">
-          <Badge
-            variant="outline"
-            className={cn('text-xs', getCategoryBadgeColor(categoryName))}
-          >
+          <Badge variant="outline" className={cn('text-xs', getCategoryBadgeColor(categoryName))}>
             {categoryDisplayName}
           </Badge>
           <Badge variant="secondary" className="text-xs">
@@ -256,9 +230,7 @@ export function ToolCard({
               </span>
               <Switch
                 checked={tool.is_active}
-                onCheckedChange={() =>
-                  tool.is_active ? onDeactivate?.(tool) : onActivate?.(tool)
-                }
+                onCheckedChange={() => (tool.is_active ? onDeactivate?.(tool) : onActivate?.(tool))}
                 onClick={(e) => e.stopPropagation()}
                 disabled={!canWriteTools}
               />
@@ -282,5 +254,5 @@ export function ToolCard({
         )}
       </CardContent>
     </Card>
-  );
+  )
 }

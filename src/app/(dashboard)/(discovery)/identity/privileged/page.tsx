@@ -1,7 +1,7 @@
-"use client";
+'use client'
 
-import { ComingSoonPage } from "@/features/shared";
-import { Crown } from "lucide-react";
+import { ComingSoonPage } from '@/features/shared'
+import { Crown } from 'lucide-react'
 
 export default function PrivilegedAccessPage() {
   return (
@@ -11,12 +11,12 @@ export default function PrivilegedAccessPage() {
       phase="Discovery"
       icon={Crown}
       features={[
-        "Admin account inventory",
-        "Privilege escalation paths",
-        "Service account management",
-        "Just-in-time access tracking",
-        "Privileged session monitoring",
+        'Admin account inventory',
+        'Privilege escalation paths',
+        'Service account management',
+        'Just-in-time access tracking',
+        'Privileged session monitoring',
       ]}
     />
-  );
+  )
 }

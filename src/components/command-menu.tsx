@@ -1,4 +1,4 @@
-"use client"
+'use client'
 
 import React from 'react'
 import { useRouter } from 'next/navigation'
@@ -37,14 +37,14 @@ export function CommandMenu() {
 
   return (
     <CommandDialog modal open={open} onOpenChange={setOpen}>
-      <CommandInput placeholder='Type a command or search...' />
+      <CommandInput placeholder="Type a command or search..." />
       <CommandList>
-        <ScrollArea type='hover' className='h-72 pe-1'>
+        <ScrollArea type="hover" className="h-72 pe-1">
           <CommandEmpty>No results found.</CommandEmpty>
           {filteredSidebarData.navGroups.map((group) => (
             <CommandGroup key={group.title} heading={group.title}>
               {group.items.map((navItem, i) => {
-                if ("url" in navItem)
+                if ('url' in navItem)
                   return (
                     <CommandItem
                       key={`${navItem.url}-${i}`}
@@ -53,8 +53,8 @@ export function CommandMenu() {
                         runCommand(() => router.push(navItem.url.toString()))
                       }}
                     >
-                      <div className='flex size-4 items-center justify-center'>
-                        <ArrowRight className='text-muted-foreground/80 size-2' />
+                      <div className="flex size-4 items-center justify-center">
+                        <ArrowRight className="text-muted-foreground/80 size-2" />
                       </div>
                       {navItem.title}
                     </CommandItem>
@@ -68,8 +68,8 @@ export function CommandMenu() {
                       runCommand(() => router.push(subItem.url.toString()))
                     }}
                   >
-                    <div className='flex size-4 items-center justify-center'>
-                      <ArrowRight className='text-muted-foreground/80 size-2' />
+                    <div className="flex size-4 items-center justify-center">
+                      <ArrowRight className="text-muted-foreground/80 size-2" />
                     </div>
                     {navItem.title} <ChevronRight /> {subItem.title}
                   </CommandItem>
@@ -78,12 +78,12 @@ export function CommandMenu() {
             </CommandGroup>
           ))}
           <CommandSeparator />
-          <CommandGroup heading='Theme'>
+          <CommandGroup heading="Theme">
             <CommandItem onSelect={() => runCommand(() => setTheme('light'))}>
               <Sun /> <span>Light</span>
             </CommandItem>
             <CommandItem onSelect={() => runCommand(() => setTheme('dark'))}>
-              <Moon className='scale-90' />
+              <Moon className="scale-90" />
               <span>Dark</span>
             </CommandItem>
             <CommandItem onSelect={() => runCommand(() => setTheme('system'))}>

@@ -121,10 +121,7 @@ export type {
 /**
  * Server action types
  */
-export type {
-  HandleCallbackInput,
-  RefreshTokenResult,
-} from '../actions/auth-actions'
+export type { HandleCallbackInput, RefreshTokenResult } from '../actions/auth-actions'
 
 // ============================================
 // COMPONENT PROP TYPES

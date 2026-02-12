@@ -1,1 +1,1 @@
-export * from "./repository.schema";
+export * from './repository.schema'

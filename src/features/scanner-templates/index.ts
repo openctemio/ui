@@ -1,1 +1,1 @@
-export { ScannerTemplatesSection, AddScannerTemplateDialog } from './components';
+export { ScannerTemplatesSection, AddScannerTemplateDialog } from './components'

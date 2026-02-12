@@ -68,13 +68,24 @@ export async function setServerCookie(
   }
 
   // Debug: Log cookie setting
-  console.log('[setServerCookie] Setting cookie:', name, 'value length:', value.length, 'options:', JSON.stringify(finalOptions))
+  console.log(
+    '[setServerCookie] Setting cookie:',
+    name,
+    'value length:',
+    value.length,
+    'options:',
+    JSON.stringify(finalOptions)
+  )
 
   cookieStore.set(name, value, finalOptions)
 
   // Verify the cookie was set
   const verifyValue = cookieStore.get(name)?.value
-  console.log('[setServerCookie] Verify cookie after set:', name, verifyValue ? `set (length: ${verifyValue.length})` : 'NOT SET')
+  console.log(
+    '[setServerCookie] Verify cookie after set:',
+    name,
+    verifyValue ? `set (length: ${verifyValue.length})` : 'NOT SET'
+  )
 }
 
 /**
@@ -119,7 +130,7 @@ export async function getAllServerCookies(): Promise<Map<string, string>> {
   const cookieStore = await cookies()
   const allCookies = new Map<string, string>()
 
-  cookieStore.getAll().forEach(cookie => {
+  cookieStore.getAll().forEach((cookie) => {
     allCookies.set(cookie.name, cookie.value)
   })
 

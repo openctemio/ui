@@ -122,7 +122,9 @@ export function transformApiGroupFinding(api: ApiGroupFinding): GroupFinding {
 /**
  * Transform frontend CreateAssetGroupInput to API input
  */
-export function transformCreateAssetGroupInput(input: CreateAssetGroupInput): CreateAssetGroupApiInput {
+export function transformCreateAssetGroupInput(
+  input: CreateAssetGroupInput
+): CreateAssetGroupApiInput {
   return {
     name: input.name,
     description: input.description,
@@ -149,7 +151,9 @@ export function transformCreateAssetGroupInput(input: CreateAssetGroupInput): Cr
 /**
  * Transform frontend UpdateAssetGroupInput to API input
  */
-export function transformUpdateAssetGroupInput(input: UpdateAssetGroupInput): UpdateAssetGroupApiInput {
+export function transformUpdateAssetGroupInput(
+  input: UpdateAssetGroupInput
+): UpdateAssetGroupApiInput {
   return {
     name: input.name,
     description: input.description,

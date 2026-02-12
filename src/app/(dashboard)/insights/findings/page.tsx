@@ -1,7 +1,7 @@
-"use client";
+'use client'
 
-import { ComingSoonPage } from "@/features/shared";
-import { FileWarning } from "lucide-react";
+import { ComingSoonPage } from '@/features/shared'
+import { FileWarning } from 'lucide-react'
 
 export default function FindingsPage() {
   return (
@@ -11,12 +11,12 @@ export default function FindingsPage() {
       phase="Insights"
       icon={FileWarning}
       features={[
-        "Unified findings dashboard",
-        "Advanced filtering and search",
-        "Finding deduplication",
-        "Severity and status tracking",
-        "Export and sharing options",
+        'Unified findings dashboard',
+        'Advanced filtering and search',
+        'Finding deduplication',
+        'Severity and status tracking',
+        'Export and sharing options',
       ]}
     />
-  );
+  )
 }
