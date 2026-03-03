@@ -194,7 +194,6 @@ export const EXTENDED_ASSET_TYPE_LABELS: Record<ExtendedAssetType, string> = {
   serverless: 'Serverless',
   // Base asset types - Infrastructure
   host: 'Host',
-  server: 'Server',
   container: 'Container',
   database: 'Database',
   network: 'Network',

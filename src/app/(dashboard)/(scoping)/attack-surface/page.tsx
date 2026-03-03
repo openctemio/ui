@@ -19,7 +19,6 @@ import {
   Layers,
   Network,
   Eye,
-  Database,
 } from 'lucide-react'
 import { useAttackSurfaceStats } from '@/features/attack-surface'
 import { formatDistanceToNow } from 'date-fns'
@@ -32,7 +31,6 @@ const assetTypeIcons: Record<string, { icon: LucideIcon; color: string }> = {
   service: { icon: Server, color: 'text-green-400' },
   repository: { icon: GitBranch, color: 'text-orange-400' },
   cloud: { icon: Cloud, color: 'text-cyan-400' },
-  server: { icon: Database, color: 'text-pink-400' },
 }
 
 // Asset type display names
@@ -42,7 +40,6 @@ const assetTypeNames: Record<string, string> = {
   service: 'Services',
   repository: 'Repositories',
   cloud: 'Cloud Assets',
-  server: 'Servers',
 }
 
 // Risk/criticality config for styling

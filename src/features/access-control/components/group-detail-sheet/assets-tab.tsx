@@ -44,7 +44,6 @@ export function AssetsTab({ assets, isLoading, onAddAsset, onRemoveAsset }: Asse
         return <Globe className="h-4 w-4 text-blue-500" />
       case 'repository':
         return <Database className="h-4 w-4 text-purple-500" />
-      case 'server':
       case 'host':
         return <Server className="h-4 w-4 text-green-500" />
       case 'cloud':
