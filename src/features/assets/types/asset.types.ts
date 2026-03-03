@@ -39,7 +39,6 @@ export type AssetType =
   | 'serverless'
   // Infrastructure
   | 'host'
-  | 'server' // Physical/virtual servers
   | 'container'
   | 'database'
   | 'network'
@@ -83,7 +82,7 @@ export const ASSET_TYPE_CATEGORIES: Record<
   infrastructure: {
     label: 'Infrastructure',
     description: 'Servers, containers, and network infrastructure',
-    types: ['host', 'server', 'container', 'database', 'network'],
+    types: ['host', 'container', 'database', 'network'],
   },
   code: {
     label: 'Code & CI/CD',
@@ -200,7 +199,6 @@ export const ASSET_TYPE_LABELS: Record<AssetType, string> = {
   serverless: 'Serverless',
   // Infrastructure
   host: 'Host',
-  server: 'Server',
   container: 'Container',
   database: 'Database',
   network: 'Network',
@@ -228,7 +226,6 @@ export const ASSET_TYPE_ICONS: Record<AssetType, string> = {
   storage: 'HardDrive',
   serverless: 'Cpu',
   host: 'Server',
-  server: 'Server',
   container: 'Boxes',
   database: 'Database',
   network: 'Network',
@@ -254,7 +251,6 @@ export const ASSET_TYPE_DESCRIPTIONS: Record<AssetType, string> = {
   storage: 'S3 buckets, Azure Blobs, GCS buckets',
   serverless: 'Lambda functions, Cloud Functions, Cloud Run',
   host: 'Physical and virtual servers',
-  server: 'Physical and virtual servers',
   container: 'Docker and Kubernetes workloads',
   database: 'Database instances and clusters',
   network: 'VPCs, firewalls, load balancers',
@@ -287,7 +283,6 @@ export const ASSET_TYPE_COLORS: Record<AssetType, { bg: string; text: string }> 
   serverless: { bg: 'bg-violet-500/15', text: 'text-violet-600' },
   // Infrastructure
   host: { bg: 'bg-slate-500/15', text: 'text-slate-600' },
-  server: { bg: 'bg-slate-500/15', text: 'text-slate-600' },
   container: { bg: 'bg-teal-500/15', text: 'text-teal-600' },
   database: { bg: 'bg-emerald-500/15', text: 'text-emerald-600' },
   network: { bg: 'bg-rose-500/15', text: 'text-rose-600' },

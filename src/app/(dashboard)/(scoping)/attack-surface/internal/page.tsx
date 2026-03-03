@@ -73,7 +73,7 @@ import { Can, Permission } from '@/lib/permissions'
 
 type AssetStatus = 'online' | 'offline' | 'unknown'
 type RiskLevel = 'critical' | 'high' | 'medium' | 'low'
-type AssetType = 'server' | 'workstation' | 'network_device' | 'database' | 'storage'
+type AssetType = 'host' | 'workstation' | 'network_device' | 'database' | 'storage'
 type NetworkZone = 'dmz' | 'internal' | 'restricted' | 'guest'
 
 interface InternalAsset {
@@ -106,7 +106,7 @@ const mockInternalAssets: InternalAsset[] = [
   {
     id: 'int-001',
     hostname: 'dc01.internal.tcb.vn',
-    type: 'server',
+    type: 'host',
     ipAddress: '10.0.1.10',
     macAddress: '00:1A:2B:3C:4D:5E',
     networkZone: 'internal',
@@ -143,7 +143,7 @@ const mockInternalAssets: InternalAsset[] = [
   {
     id: 'int-003',
     hostname: 'web-internal.tcb.vn',
-    type: 'server',
+    type: 'host',
     ipAddress: '10.0.3.30',
     networkZone: 'dmz',
     vlan: 'VLAN 30',
@@ -244,7 +244,7 @@ const mockInternalAssets: InternalAsset[] = [
   {
     id: 'int-009',
     hostname: 'legacy-app01',
-    type: 'server',
+    type: 'host',
     ipAddress: '10.0.5.100',
     networkZone: 'internal',
     vlan: 'VLAN 50',
@@ -262,7 +262,7 @@ const mockInternalAssets: InternalAsset[] = [
   {
     id: 'int-010',
     hostname: 'backup-srv01',
-    type: 'server',
+    type: 'host',
     ipAddress: '10.0.6.60',
     networkZone: 'restricted',
     vlan: 'VLAN 60',
@@ -299,7 +299,7 @@ const zoneColors: Record<NetworkZone, string> = {
 }
 
 const typeIcons: Record<AssetType, React.ElementType> = {
-  server: Server,
+  host: Server,
   workstation: MonitorSmartphone,
   network_device: Router,
   database: Database,
@@ -318,7 +318,7 @@ export default function InternalSurfacePage() {
 
   const [formData, setFormData] = useState({
     hostname: '',
-    type: 'server' as AssetType,
+    type: 'host' as AssetType,
     ipAddress: '',
     macAddress: '',
     networkZone: 'internal' as NetworkZone,
@@ -365,7 +365,7 @@ export default function InternalSurfacePage() {
   const resetForm = () => {
     setFormData({
       hostname: '',
-      type: 'server',
+      type: 'host',
       ipAddress: '',
       macAddress: '',
       networkZone: 'internal',
@@ -481,7 +481,7 @@ export default function InternalSurfacePage() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="server">Server</SelectItem>
+              <SelectItem value="host">Host</SelectItem>
               <SelectItem value="workstation">Workstation</SelectItem>
               <SelectItem value="network_device">Network Device</SelectItem>
               <SelectItem value="database">Database</SelectItem>
@@ -737,7 +737,7 @@ export default function InternalSurfacePage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Types</SelectItem>
-                    <SelectItem value="server">Server</SelectItem>
+                    <SelectItem value="host">Host</SelectItem>
                     <SelectItem value="workstation">Workstation</SelectItem>
                     <SelectItem value="network_device">Network Device</SelectItem>
                     <SelectItem value="database">Database</SelectItem>

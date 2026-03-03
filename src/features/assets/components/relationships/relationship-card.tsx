@@ -54,7 +54,6 @@ const EXTENDED_ASSET_TYPE_COLORS: Record<ExtendedAssetType, { bg: string; text: 
   serverless: { bg: 'bg-violet-500/20', text: 'text-violet-500' },
   // Infrastructure
   host: { bg: 'bg-slate-500/20', text: 'text-slate-500' },
-  server: { bg: 'bg-slate-400/20', text: 'text-slate-400' },
   container: { bg: 'bg-indigo-500/20', text: 'text-indigo-500' },
   database: { bg: 'bg-yellow-500/20', text: 'text-yellow-500' },
   network: { bg: 'bg-gray-500/20', text: 'text-gray-500' },
