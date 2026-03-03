@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import { Main } from '@/components/layout'
 import { PageHeader } from '@/features/shared'
 import { Can, Permission, useHasPermission } from '@/lib/permissions'
@@ -66,6 +66,7 @@ import {
   Link,
   Loader2,
 } from 'lucide-react'
+import { Pagination } from '@/components/ui/pagination'
 import { toast } from 'sonner'
 import {
   type ScopeTargetType,
@@ -237,11 +238,38 @@ export default function ScopeConfigPage() {
 
   // Search & filter states
   const [targetSearch, setTargetSearch] = useState('')
+  const [debouncedTargetSearch, setDebouncedTargetSearch] = useState('')
   const [targetTypeFilter, setTargetTypeFilter] = useState<string>('all')
   const [exclusionSearch, setExclusionSearch] = useState('')
+  const [debouncedExclusionSearch, setDebouncedExclusionSearch] = useState('')
   const [exclusionTypeFilter, setExclusionTypeFilter] = useState<string>('all')
   const [scheduleSearch, setScheduleSearch] = useState('')
+  const [debouncedScheduleSearch, setDebouncedScheduleSearch] = useState('')
   const [scheduleTypeFilter, setScheduleTypeFilter] = useState<string>('all')
+
+  // Debounce search inputs (300ms)
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedTargetSearch(targetSearch), 300)
+    return () => clearTimeout(timer)
+  }, [targetSearch])
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedExclusionSearch(exclusionSearch), 300)
+    return () => clearTimeout(timer)
+  }, [exclusionSearch])
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedScheduleSearch(scheduleSearch), 300)
+    return () => clearTimeout(timer)
+  }, [scheduleSearch])
+
+  // Pagination states
+  const [targetPage, setTargetPage] = useState(1)
+  const [targetPerPage, setTargetPerPage] = useState(20)
+  const [exclusionPage, setExclusionPage] = useState(1)
+  const [exclusionPerPage, setExclusionPerPage] = useState(20)
+  const [schedulePage, setSchedulePage] = useState(1)
+  const [schedulePerPage, setSchedulePerPage] = useState(20)
 
   // Validation error state
   const [validationError, setValidationError] = useState<string | null>(null)
@@ -262,6 +290,8 @@ export default function ScopeConfigPage() {
     type: 'domain' as ScopeTargetType,
     pattern: '',
     description: '',
+    priority: 0,
+    tags: [] as string[],
   })
 
   const [exclusionForm, setExclusionForm] = useState({
@@ -278,20 +308,26 @@ export default function ScopeConfigPage() {
     time: '',
   })
 
-  // API hooks for fetching data
+  // API hooks for fetching data (using debounced search values)
   const { data: targetsData, isLoading: targetsLoading } = useScopeTargetsApi({
-    search: targetSearch || undefined,
+    search: debouncedTargetSearch || undefined,
     target_type: targetTypeFilter !== 'all' ? targetTypeFilter : undefined,
+    page: targetPage,
+    per_page: targetPerPage,
   })
 
   const { data: exclusionsData, isLoading: exclusionsLoading } = useScopeExclusionsApi({
-    search: exclusionSearch || undefined,
+    search: debouncedExclusionSearch || undefined,
     exclusion_type: exclusionTypeFilter !== 'all' ? exclusionTypeFilter : undefined,
+    page: exclusionPage,
+    per_page: exclusionPerPage,
   })
 
   const { data: schedulesData, isLoading: schedulesLoading } = useScanSchedulesApi({
-    search: scheduleSearch || undefined,
+    search: debouncedScheduleSearch || undefined,
     scan_type: scheduleTypeFilter !== 'all' ? (scheduleTypeFilter as ScanType) : undefined,
+    page: schedulePage,
+    per_page: schedulePerPage,
   })
 
   const { data: statsData, isLoading: statsLoading } = useScopeStatsApi()
@@ -416,7 +452,7 @@ export default function ScopeConfigPage() {
 
   // Target handlers
   const resetTargetForm = () => {
-    setTargetForm({ type: 'domain', pattern: '', description: '' })
+    setTargetForm({ type: 'domain', pattern: '', description: '', priority: 0, tags: [] })
     setValidationError(null)
   }
 
@@ -435,13 +471,18 @@ export default function ScopeConfigPage() {
     }
 
     try {
-      await createTarget({
+      const result = await createTarget({
         target_type: targetForm.type,
         pattern: targetForm.pattern,
         description: targetForm.description,
       })
       await invalidateScopeCache()
       toast.success('Target added successfully')
+      // Show overlap warnings if any
+      const warnings = (result as unknown as { warnings?: string[] })?.warnings
+      if (warnings && warnings.length > 0) {
+        warnings.forEach((w) => toast.warning(w))
+      }
       setIsAddTargetOpen(false)
       resetTargetForm()
     } catch (err) {
@@ -468,6 +509,8 @@ export default function ScopeConfigPage() {
     try {
       await updateTarget({
         description: targetForm.description,
+        priority: targetForm.priority,
+        tags: targetForm.tags,
       })
       await invalidateScopeCache()
       toast.success('Target updated successfully')
@@ -495,6 +538,8 @@ export default function ScopeConfigPage() {
       type: target.target_type as ScopeTargetType,
       pattern: target.pattern,
       description: target.description,
+      priority: target.priority ?? 0,
+      tags: target.tags ?? [],
     })
     setEditTarget(target)
   }
@@ -683,8 +728,15 @@ export default function ScopeConfigPage() {
     setEditSchedule(schedule)
   }
 
-  const handleRunNow = (schedule: ApiScanSchedule) => {
-    toast.success(`Started: ${schedule.name}`)
+  const handleRunNow = async (schedule: ApiScanSchedule) => {
+    try {
+      await post(`/api/v1/scope/schedules/${schedule.id}/run`, {})
+      await invalidateScanSchedulesCache()
+      await invalidateScopeStatsCache()
+      toast.success(`Started: ${schedule.name}`)
+    } catch {
+      toast.error(`Failed to run schedule: ${schedule.name}`)
+    }
   }
 
   // Get pattern placeholder and help text from shared config
@@ -982,13 +1034,15 @@ export default function ScopeConfigPage() {
         <Tabs defaultValue="targets" className="mt-6">
           <TabsList>
             <TabsTrigger value="targets">
-              In-Scope Targets ({targetsLoading ? '...' : targets.length})
+              In-Scope Targets ({targetsLoading ? '...' : (targetsData?.total ?? targets.length)})
             </TabsTrigger>
             <TabsTrigger value="exclusions">
-              Exclusions ({exclusionsLoading ? '...' : exclusions.length})
+              Exclusions ({exclusionsLoading ? '...' : (exclusionsData?.total ?? exclusions.length)}
+              )
             </TabsTrigger>
             <TabsTrigger value="schedules">
-              Scan Schedules ({schedulesLoading ? '...' : schedules.length})
+              Scan Schedules (
+              {schedulesLoading ? '...' : (schedulesData?.total ?? schedules.length)})
             </TabsTrigger>
           </TabsList>
 
@@ -1017,11 +1071,20 @@ export default function ScopeConfigPage() {
                     <Input
                       placeholder="Search targets..."
                       value={targetSearch}
-                      onChange={(e) => setTargetSearch(e.target.value)}
+                      onChange={(e) => {
+                        setTargetSearch(e.target.value)
+                        setTargetPage(1)
+                      }}
                       className="pl-9"
                     />
                   </div>
-                  <Select value={targetTypeFilter} onValueChange={setTargetTypeFilter}>
+                  <Select
+                    value={targetTypeFilter}
+                    onValueChange={(v) => {
+                      setTargetTypeFilter(v)
+                      setTargetPage(1)
+                    }}
+                  >
                     <SelectTrigger className="w-[180px]">
                       <SelectValue placeholder="Filter by type" />
                     </SelectTrigger>
@@ -1065,8 +1128,8 @@ export default function ScopeConfigPage() {
                       <TableRow>
                         <TableCell colSpan={6} className="text-muted-foreground py-8 text-center">
                           {targetSearch || targetTypeFilter !== 'all'
-                            ? 'No targets match your search criteria'
-                            : 'No targets configured'}
+                            ? `No results found for '${targetSearch || targetTypeFilter}'`
+                            : "No targets configured yet. Click 'Add Target' to get started."}
                         </TableCell>
                       </TableRow>
                     ) : (
@@ -1138,6 +1201,20 @@ export default function ScopeConfigPage() {
                     )}
                   </TableBody>
                 </Table>
+                {targetsData && targetsData.total_pages > 1 && (
+                  <Pagination
+                    currentPage={targetsData.page}
+                    totalPages={targetsData.total_pages}
+                    pageSize={targetPerPage}
+                    totalItems={targetsData.total}
+                    onPageChange={setTargetPage}
+                    onPageSizeChange={(size) => {
+                      setTargetPerPage(size)
+                      setTargetPage(1)
+                    }}
+                    className="mt-4"
+                  />
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -1167,11 +1244,20 @@ export default function ScopeConfigPage() {
                     <Input
                       placeholder="Search exclusions..."
                       value={exclusionSearch}
-                      onChange={(e) => setExclusionSearch(e.target.value)}
+                      onChange={(e) => {
+                        setExclusionSearch(e.target.value)
+                        setExclusionPage(1)
+                      }}
                       className="pl-9"
                     />
                   </div>
-                  <Select value={exclusionTypeFilter} onValueChange={setExclusionTypeFilter}>
+                  <Select
+                    value={exclusionTypeFilter}
+                    onValueChange={(v) => {
+                      setExclusionTypeFilter(v)
+                      setExclusionPage(1)
+                    }}
+                  >
                     <SelectTrigger className="w-[180px]">
                       <SelectValue placeholder="Filter by type" />
                     </SelectTrigger>
@@ -1215,8 +1301,8 @@ export default function ScopeConfigPage() {
                       <TableRow>
                         <TableCell colSpan={6} className="text-muted-foreground py-8 text-center">
                           {exclusionSearch || exclusionTypeFilter !== 'all'
-                            ? 'No exclusions match your search criteria'
-                            : 'No exclusions configured'}
+                            ? `No results found for '${exclusionSearch || exclusionTypeFilter}'`
+                            : "No exclusions configured yet. Click 'Add Exclusion' to get started."}
                         </TableCell>
                       </TableRow>
                     ) : (
@@ -1290,6 +1376,20 @@ export default function ScopeConfigPage() {
                     )}
                   </TableBody>
                 </Table>
+                {exclusionsData && exclusionsData.total_pages > 1 && (
+                  <Pagination
+                    currentPage={exclusionsData.page}
+                    totalPages={exclusionsData.total_pages}
+                    pageSize={exclusionPerPage}
+                    totalItems={exclusionsData.total}
+                    onPageChange={setExclusionPage}
+                    onPageSizeChange={(size) => {
+                      setExclusionPerPage(size)
+                      setExclusionPage(1)
+                    }}
+                    className="mt-4"
+                  />
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -1317,11 +1417,20 @@ export default function ScopeConfigPage() {
                     <Input
                       placeholder="Search schedules..."
                       value={scheduleSearch}
-                      onChange={(e) => setScheduleSearch(e.target.value)}
+                      onChange={(e) => {
+                        setScheduleSearch(e.target.value)
+                        setSchedulePage(1)
+                      }}
                       className="pl-9"
                     />
                   </div>
-                  <Select value={scheduleTypeFilter} onValueChange={setScheduleTypeFilter}>
+                  <Select
+                    value={scheduleTypeFilter}
+                    onValueChange={(v) => {
+                      setScheduleTypeFilter(v)
+                      setSchedulePage(1)
+                    }}
+                  >
                     <SelectTrigger className="w-[180px]">
                       <SelectValue placeholder="Filter by type" />
                     </SelectTrigger>
@@ -1356,8 +1465,8 @@ export default function ScopeConfigPage() {
                       <TableRow>
                         <TableCell colSpan={7} className="text-muted-foreground py-8 text-center">
                           {scheduleSearch || scheduleTypeFilter !== 'all'
-                            ? 'No schedules match your search criteria'
-                            : 'No schedules configured'}
+                            ? `No results found for '${scheduleSearch || scheduleTypeFilter}'`
+                            : "No schedules configured yet. Click 'Add Schedule' to get started."}
                         </TableCell>
                       </TableRow>
                     ) : (
@@ -1458,6 +1567,20 @@ export default function ScopeConfigPage() {
                     )}
                   </TableBody>
                 </Table>
+                {schedulesData && schedulesData.total_pages > 1 && (
+                  <Pagination
+                    currentPage={schedulesData.page}
+                    totalPages={schedulesData.total_pages}
+                    pageSize={schedulePerPage}
+                    totalItems={schedulesData.total}
+                    onPageChange={setSchedulePage}
+                    onPageSizeChange={(size) => {
+                      setSchedulePerPage(size)
+                      setSchedulePage(1)
+                    }}
+                    className="mt-4"
+                  />
+                )}
               </CardContent>
             </Card>
           </TabsContent>
