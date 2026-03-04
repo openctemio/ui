@@ -81,8 +81,10 @@ import {
   Calendar,
   Layers,
   Copy,
+  Pencil,
   Tag,
   Settings,
+  Zap,
   Loader2,
   Download,
   FileJson,
@@ -120,7 +122,13 @@ import type {
   ScanType as ApiScanType,
   ScheduleType,
 } from '@/lib/api/scan-types'
-import { PlatformUsageCard, NewScanDialog, CloneScanDialog } from '@/features/scans/components'
+import {
+  PlatformUsageCard,
+  NewScanDialog,
+  CloneScanDialog,
+  EditScanDialog,
+  QuickScanDialog,
+} from '@/features/scans/components'
 import { SCAN_RUN_STATUS_LABELS } from '@/lib/api/scan-types'
 
 // ============================================
@@ -233,10 +241,12 @@ function formatNextRun(nextRunAt?: string): string | null {
 export default function ScansPage() {
   const [mainTab, setMainTab] = useState<'configurations' | 'runs'>('configurations')
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [quickScanOpen, setQuickScanOpen] = useState(false)
 
   return (
     <>
       <NewScanDialog open={dialogOpen} onOpenChange={setDialogOpen} />
+      <QuickScanDialog open={quickScanOpen} onOpenChange={setQuickScanOpen} />
       <Main>
         <PageHeader
           title="Scan Management"
@@ -247,10 +257,16 @@ export default function ScansPage() {
           }
         >
           <Can permission={Permission.ScansWrite} mode="disable">
-            <Button onClick={() => setDialogOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              New Scan
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setQuickScanOpen(true)}>
+                <Zap className="mr-2 h-4 w-4" />
+                Quick Scan
+              </Button>
+              <Button onClick={() => setDialogOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                New Scan
+              </Button>
+            </div>
           </Can>
         </PageHeader>
 
@@ -366,12 +382,11 @@ function StatusToggleCell({ config, onToggle }: StatusToggleCellProps) {
 // CONFIG ACTIONS CELL (simplified - no hooks to prevent re-renders)
 // ============================================
 
+type ConfigAction = 'trigger' | 'pause' | 'activate' | 'delete' | 'clone' | 'edit'
+
 interface ConfigActionsCellProps {
   config: ScanConfig
-  onAction: (
-    action: 'trigger' | 'pause' | 'activate' | 'delete' | 'clone',
-    config: ScanConfig
-  ) => void
+  onAction: (action: ConfigAction, config: ScanConfig) => void
 }
 
 function ConfigActionsCell({ config, onAction }: ConfigActionsCellProps) {
@@ -389,6 +404,12 @@ function ConfigActionsCell({ config, onAction }: ConfigActionsCellProps) {
             View Details
           </Link>
         </DropdownMenuItem>
+        <Can permission={Permission.ScansWrite}>
+          <DropdownMenuItem onClick={() => onAction('edit', config)}>
+            <Pencil className="mr-2 h-4 w-4" />
+            Edit
+          </DropdownMenuItem>
+        </Can>
         <DropdownMenuItem onClick={() => onAction('trigger', config)}>
           <Play className="mr-2 h-4 w-4" />
           Trigger Scan
@@ -440,6 +461,8 @@ function ConfigurationsTab() {
   const [isDeleting, setIsDeleting] = useState(false)
   const [cloneDialogOpen, setCloneDialogOpen] = useState(false)
   const [configToClone, setConfigToClone] = useState<ScanConfig | null>(null)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [configToEdit, setConfigToEdit] = useState<ScanConfig | null>(null)
 
   // Memoize filter object to prevent unnecessary re-renders
   const filters = useMemo(
@@ -521,46 +544,50 @@ function ConfigurationsTab() {
     await invalidateScanConfigsCache()
   }, [])
 
-  const handleAction = useCallback(
-    async (action: 'trigger' | 'pause' | 'activate' | 'delete' | 'clone', config: ScanConfig) => {
-      // For delete, show confirmation dialog first
-      if (action === 'delete') {
-        setConfigToDelete(config)
-        setDeleteConfirmOpen(true)
-        return
-      }
+  const handleAction = useCallback(async (action: ConfigAction, config: ScanConfig) => {
+    // For delete, show confirmation dialog first
+    if (action === 'delete') {
+      setConfigToDelete(config)
+      setDeleteConfirmOpen(true)
+      return
+    }
 
-      // For clone, show clone dialog
-      if (action === 'clone') {
-        setConfigToClone(config)
-        setCloneDialogOpen(true)
-        return
-      }
+    // For clone, show clone dialog
+    if (action === 'clone') {
+      setConfigToClone(config)
+      setCloneDialogOpen(true)
+      return
+    }
 
-      try {
-        switch (action) {
-          case 'trigger':
-            await post(scanEndpoints.trigger(config.id), {})
-            toast.success(`Scan "${config.name}" triggered successfully`)
-            break
-          case 'pause':
-            await post(scanEndpoints.pause(config.id), {})
-            toast.success(`Scan "${config.name}" paused`)
-            break
-          case 'activate':
-            await post(scanEndpoints.activate(config.id), {})
-            toast.success(`Scan "${config.name}" activated`)
-            break
-        }
-        // Invalidate caches to refresh the list
-        await invalidateScanConfigsCache()
-      } catch (error) {
-        console.error(`Failed to ${action} scan:`, error)
-        toast.error(getErrorMessage(error, `Failed to ${action} scan "${config.name}"`))
+    // For edit, show edit dialog
+    if (action === 'edit') {
+      setConfigToEdit(config)
+      setEditDialogOpen(true)
+      return
+    }
+
+    try {
+      switch (action) {
+        case 'trigger':
+          await post(scanEndpoints.trigger(config.id), {})
+          toast.success(`Scan "${config.name}" triggered successfully`)
+          break
+        case 'pause':
+          await post(scanEndpoints.pause(config.id), {})
+          toast.success(`Scan "${config.name}" paused`)
+          break
+        case 'activate':
+          await post(scanEndpoints.activate(config.id), {})
+          toast.success(`Scan "${config.name}" activated`)
+          break
       }
-    },
-    []
-  )
+      // Invalidate caches to refresh the list
+      await invalidateScanConfigsCache()
+    } catch (error) {
+      console.error(`Failed to ${action} scan:`, error)
+      toast.error(getErrorMessage(error, `Failed to ${action} scan "${config.name}"`))
+    }
+  }, [])
 
   const handleConfirmDelete = useCallback(async () => {
     if (!configToDelete) return
@@ -1279,6 +1306,16 @@ function ConfigurationsTab() {
         scan={configToClone}
         open={cloneDialogOpen}
         onOpenChange={setCloneDialogOpen}
+      />
+
+      {/* Edit Scan Dialog */}
+      <EditScanDialog
+        scanConfig={configToEdit}
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        onSuccess={() => {
+          setConfigToEdit(null)
+        }}
       />
     </>
   )
