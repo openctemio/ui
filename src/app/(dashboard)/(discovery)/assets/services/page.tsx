@@ -125,6 +125,20 @@ const commonPorts = [
   { port: 21, name: 'FTP' },
 ]
 
+// Common technologies for quick selection
+const commonTechnologies = [
+  'Nginx',
+  'Apache',
+  'Node.js',
+  'OpenSSH',
+  'MySQL',
+  'PostgreSQL',
+  'Redis',
+  'Docker',
+  'Kubernetes',
+  'HAProxy',
+]
+
 // Empty form state
 const emptyServiceForm = {
   name: '',
@@ -135,6 +149,7 @@ const emptyServiceForm = {
   version: '',
   banner: '',
   tags: '',
+  technology: '',
 }
 
 export default function ServicesPage() {
@@ -291,6 +306,28 @@ export default function ServicesPage() {
       ),
     },
     {
+      id: 'technology',
+      header: 'Technology',
+      cell: ({ row }) => {
+        const tech = row.original.metadata.technology || []
+        if (tech.length === 0) return <span className="text-muted-foreground">-</span>
+        return (
+          <div className="flex flex-wrap gap-1 max-w-[150px]">
+            {tech.slice(0, 2).map((t) => (
+              <Badge key={t} variant="outline" className="text-xs">
+                {t}
+              </Badge>
+            ))}
+            {tech.length > 2 && (
+              <Badge variant="outline" className="text-xs">
+                +{tech.length - 2}
+              </Badge>
+            )}
+          </div>
+        )
+      },
+    },
+    {
       accessorKey: 'status',
       header: 'Status',
       cell: ({ row }) => <StatusBadge status={row.original.status} />,
@@ -436,6 +473,7 @@ export default function ServicesPage() {
       version: service.metadata.version || '',
       banner: service.metadata.banner || '',
       tags: service.tags?.join(', ') || '',
+      technology: service.metadata.technology?.join(', ') || '',
     })
     setSelectedService(service)
     setEditDialogOpen(true)
@@ -535,13 +573,23 @@ export default function ServicesPage() {
 
   const handleExport = () => {
     const csv = [
-      ['Name', 'Port', 'Protocol', 'Version', 'Status', 'Risk Score', 'Findings'].join(','),
+      [
+        'Name',
+        'Port',
+        'Protocol',
+        'Version',
+        'Technologies',
+        'Status',
+        'Risk Score',
+        'Findings',
+      ].join(','),
       ...services.map((s) =>
         [
           s.name,
           s.metadata.port,
           s.metadata.protocol || 'tcp',
           s.metadata.version || '',
+          (s.metadata.technology || []).join(';'),
           s.status,
           s.riskScore,
           s.findingCount,
@@ -878,29 +926,44 @@ export default function ServicesPage() {
         }
         overviewContent={
           selectedService && (
-            <div className="rounded-xl border p-4 bg-card space-y-3">
-              <SectionTitle>Service Information</SectionTitle>
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <p className="text-muted-foreground">Protocol</p>
-                  <Badge variant="secondary">
-                    {selectedService.metadata.protocol?.toUpperCase() || 'TCP'}
-                  </Badge>
+            <>
+              <div className="rounded-xl border p-4 bg-card space-y-3">
+                <SectionTitle>Service Information</SectionTitle>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">Protocol</p>
+                    <Badge variant="secondary">
+                      {selectedService.metadata.protocol?.toUpperCase() || 'TCP'}
+                    </Badge>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Version</p>
+                    <p className="font-medium">{selectedService.metadata.version || '-'}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-muted-foreground">Version</p>
-                  <p className="font-medium">{selectedService.metadata.version || '-'}</p>
-                </div>
+                {selectedService.metadata.banner && (
+                  <div>
+                    <p className="text-muted-foreground text-sm mb-1">Banner</p>
+                    <code className="block text-xs bg-muted p-2 rounded overflow-x-auto">
+                      {selectedService.metadata.banner}
+                    </code>
+                  </div>
+                )}
               </div>
-              {selectedService.metadata.banner && (
-                <div>
-                  <p className="text-muted-foreground text-sm mb-1">Banner</p>
-                  <code className="block text-xs bg-muted p-2 rounded overflow-x-auto">
-                    {selectedService.metadata.banner}
-                  </code>
-                </div>
-              )}
-            </div>
+              {selectedService.metadata.technology &&
+                selectedService.metadata.technology.length > 0 && (
+                  <div className="rounded-xl border p-4 bg-card">
+                    <SectionTitle>Technology Stack</SectionTitle>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedService.metadata.technology.map((tech) => (
+                        <Badge key={tech} variant="secondary">
+                          {tech}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+            </>
           )
         }
       />
@@ -981,6 +1044,40 @@ export default function ServicesPage() {
                 value={formData.version}
                 onChange={(e) => setFormData({ ...formData, version: e.target.value })}
               />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="technology">Technology (comma separated)</Label>
+              <Input
+                id="technology"
+                placeholder="Nginx, Node.js, React"
+                value={formData.technology}
+                onChange={(e) => setFormData({ ...formData, technology: e.target.value })}
+              />
+              <div className="flex flex-wrap gap-1 mt-1">
+                {commonTechnologies.slice(0, 6).map((tech) => (
+                  <Button
+                    key={tech}
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-6 text-xs"
+                    onClick={() => {
+                      const current = formData.technology
+                        .split(',')
+                        .map((s) => s.trim())
+                        .filter(Boolean)
+                      if (!current.includes(tech)) {
+                        setFormData({
+                          ...formData,
+                          technology: [...current, tech].join(', '),
+                        })
+                      }
+                    }}
+                  >
+                    {tech}
+                  </Button>
+                ))}
+              </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="banner">Banner</Label>
@@ -1083,6 +1180,15 @@ export default function ServicesPage() {
                 placeholder="e.g., OpenSSH 8.4"
                 value={formData.version}
                 onChange={(e) => setFormData({ ...formData, version: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-technology">Technology (comma separated)</Label>
+              <Input
+                id="edit-technology"
+                placeholder="Nginx, Node.js, React"
+                value={formData.technology}
+                onChange={(e) => setFormData({ ...formData, technology: e.target.value })}
               />
             </div>
             <div className="space-y-2">
