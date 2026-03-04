@@ -518,3 +518,55 @@ export async function invalidateVulnerabilitiesCache() {
     revalidate: true,
   })
 }
+
+// ============================================
+// APPROVAL HOOKS
+// ============================================
+
+/**
+ * Request approval for a finding status change
+ */
+export function useRequestApproval(findingId: string) {
+  const { currentTenant } = useTenant()
+
+  return useSWRMutation(
+    currentTenant ? `/api/v1/findings/${findingId}/approvals` : null,
+    async (
+      url: string,
+      { arg }: { arg: { requested_status: string; justification: string; expires_at?: string } }
+    ) => {
+      const response = await post(url, arg)
+      return response
+    }
+  )
+}
+
+/**
+ * Approve a pending approval
+ */
+export function useApproveStatus(approvalId: string) {
+  const { currentTenant } = useTenant()
+
+  return useSWRMutation(
+    currentTenant ? `/api/v1/approvals/${approvalId}/approve` : null,
+    async (url: string) => {
+      const response = await post(url, {})
+      return response
+    }
+  )
+}
+
+/**
+ * Reject a pending approval
+ */
+export function useRejectApproval(approvalId: string) {
+  const { currentTenant } = useTenant()
+
+  return useSWRMutation(
+    currentTenant ? `/api/v1/approvals/${approvalId}/reject` : null,
+    async (url: string, { arg }: { arg: { reason: string } }) => {
+      const response = await post(url, arg)
+      return response
+    }
+  )
+}

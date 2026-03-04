@@ -29,7 +29,7 @@ import type {
  * Set to true when GET /api/v1/platform/stats is implemented on backend
  * TODO: Remove this flag after backend implementation
  */
-const PLATFORM_STATS_ENABLED = false
+const PLATFORM_STATS_ENABLED = true
 
 // ============================================
 // SWR CONFIGURATION
