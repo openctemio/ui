@@ -32,6 +32,7 @@ import type {
   AddCommentInput,
   UpdateCommentInput,
 } from './finding-api.types'
+import type { ApiApproval } from '../types/finding.types'
 
 // ============================================
 // SWR CONFIGURATION
@@ -567,6 +568,44 @@ export function useRejectApproval(approvalId: string) {
     async (url: string, { arg }: { arg: { reason: string } }) => {
       const response = await post(url, arg)
       return response
+    }
+  )
+}
+
+/**
+ * List pending approvals for the current tenant (paginated)
+ */
+export function usePendingApprovals(page = 1, perPage = 20) {
+  const { currentTenant } = useTenant()
+  return useSWR<{ data: ApiApproval[]; total: number; page: number; per_page: number }>(
+    currentTenant ? `/api/v1/approvals?page=${page}&per_page=${perPage}` : null,
+    get,
+    { ...defaultConfig, refreshInterval: 30000 }
+  )
+}
+
+/**
+ * List approvals for a specific finding
+ */
+export function useFindingApprovals(findingId: string | undefined) {
+  const { currentTenant } = useTenant()
+  return useSWR<ApiApproval[]>(
+    currentTenant && findingId ? `/api/v1/findings/${findingId}/approvals` : null,
+    get,
+    defaultConfig
+  )
+}
+
+/**
+ * Cancel own approval request
+ */
+export function useCancelApproval(approvalId: string) {
+  const { currentTenant } = useTenant()
+
+  return useSWRMutation(
+    currentTenant ? `/api/v1/approvals/${approvalId}/cancel` : null,
+    async (url: string) => {
+      return post(url, {})
     }
   )
 }
