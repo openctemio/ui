@@ -497,6 +497,13 @@ export const sidebarData: SidebarData = {
           module: 'findings',
         },
         {
+          title: 'Approvals',
+          url: '/findings/approvals',
+          icon: ClipboardList,
+          permission: Permission.FindingsRead,
+          module: 'findings',
+        },
+        {
           title: 'Reports',
           url: '/reports',
           icon: FileText,

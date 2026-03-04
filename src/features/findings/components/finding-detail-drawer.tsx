@@ -17,6 +17,7 @@ import { Separator } from '@/components/ui/separator'
 import { Progress } from '@/components/ui/progress'
 import { Textarea } from '@/components/ui/textarea'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -38,13 +39,17 @@ import {
   Route,
   LogIn,
   ArrowRight,
+  ShieldCheck,
+  ChevronDown,
 } from 'lucide-react'
 import {
   DATA_FLOW_LOCATION_CONFIG,
   SEVERITY_CONFIG,
   FINDING_STATUS_CONFIG,
+  APPROVAL_STATUS_CONFIG,
   requiresApproval,
 } from '../types'
+import type { ApiApproval, ApprovalStatus } from '../types'
 import { CodeHighlighter } from './detail/code-highlighter'
 import type {
   Finding,
@@ -60,6 +65,7 @@ import {
   useAssignFindingApi,
   useUnassignFindingApi,
   invalidateFindingsCache,
+  useFindingApprovals,
 } from '../api/use-findings-api'
 import { AssigneeSelect } from './assignee-select'
 import { StatusSelect } from './status-select'
@@ -217,6 +223,14 @@ export function FindingDetailDrawer({
   const { trigger: unassignUser, isMutating: isUnassigning } = useUnassignFindingApi(
     finding?.id || ''
   )
+
+  // Fetch approval history
+  const shouldFetchApprovals =
+    open && finding?.id && (finding.status === 'false_positive' || finding.status === 'accepted')
+  const { data: findingApprovals } = useFindingApprovals(
+    shouldFetchApprovals ? finding?.id : undefined
+  )
+  const [approvalHistoryOpen, setApprovalHistoryOpen] = useState(false)
 
   // Reset local state when finding changes (drawer opens with new finding)
   useEffect(() => {
@@ -569,6 +583,76 @@ export function FindingDetailDrawer({
                     {finding.description}
                   </p>
                 </div>
+
+                {/* Approval History - show if there are approvals or status requires approval */}
+                {findingApprovals && findingApprovals.length > 0 && (
+                  <>
+                    <Separator />
+                    <Collapsible open={approvalHistoryOpen} onOpenChange={setApprovalHistoryOpen}>
+                      <CollapsibleTrigger className="flex w-full items-center justify-between">
+                        <h4 className="flex items-center gap-2 text-sm font-semibold">
+                          <ShieldCheck className="h-4 w-4" />
+                          Approval History
+                        </h4>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="secondary" className="text-xs">
+                            {findingApprovals.length}
+                          </Badge>
+                          <ChevronDown
+                            className={`h-4 w-4 text-muted-foreground transition-transform ${
+                              approvalHistoryOpen ? 'rotate-180' : ''
+                            }`}
+                          />
+                        </div>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
+                        <div className="mt-3 space-y-2">
+                          {findingApprovals.map((approval: ApiApproval) => {
+                            const statusConfig =
+                              APPROVAL_STATUS_CONFIG[approval.status as ApprovalStatus]
+                            return (
+                              <div
+                                key={approval.id}
+                                className="rounded-md border p-2.5 text-xs space-y-1"
+                              >
+                                <div className="flex items-center justify-between">
+                                  <Badge variant="outline" className="text-[10px]">
+                                    {statusConfig?.label ?? approval.status}
+                                  </Badge>
+                                  <span className="text-muted-foreground">
+                                    {new Date(approval.created_at).toLocaleDateString('en-US', {
+                                      month: 'short',
+                                      day: 'numeric',
+                                      year: 'numeric',
+                                    })}
+                                  </span>
+                                </div>
+                                <div className="text-muted-foreground">
+                                  Requested:{' '}
+                                  <span className="font-medium text-foreground">
+                                    {FINDING_STATUS_CONFIG[
+                                      approval.requested_status as FindingStatus
+                                    ]?.label ?? approval.requested_status}
+                                  </span>
+                                </div>
+                                {approval.justification && (
+                                  <p className="text-muted-foreground line-clamp-2">
+                                    {approval.justification}
+                                  </p>
+                                )}
+                                {approval.rejection_reason && (
+                                  <p className="text-red-500 line-clamp-2">
+                                    Reason: {approval.rejection_reason}
+                                  </p>
+                                )}
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </CollapsibleContent>
+                    </Collapsible>
+                  </>
+                )}
 
                 {/* Code Evidence - show if evidence exists or filePath exists */}
                 {(finding.evidence.length > 0 || finding.filePath) && (
