@@ -18,6 +18,7 @@ import {
   Database,
   Server,
   Cloud,
+  Layers,
 } from 'lucide-react'
 import { type GroupAsset } from '@/features/access-control'
 import { useState } from 'react'
@@ -26,10 +27,17 @@ interface AssetsTabProps {
   assets: GroupAsset[]
   isLoading: boolean
   onAddAsset: () => void
+  onBulkAddAssets: () => void
   onRemoveAsset: (id: string, name: string) => void
 }
 
-export function AssetsTab({ assets, isLoading, onAddAsset, onRemoveAsset }: AssetsTabProps) {
+export function AssetsTab({
+  assets,
+  isLoading,
+  onAddAsset,
+  onBulkAddAssets,
+  onRemoveAsset,
+}: AssetsTabProps) {
   const [searchQuery, setSearchQuery] = useState('')
 
   const filteredAssets = assets.filter(
@@ -57,10 +65,16 @@ export function AssetsTab({ assets, isLoading, onAddAsset, onRemoveAsset }: Asse
     <div className="mt-4">
       <div className="flex items-center justify-between mb-4">
         <h4 className="text-sm font-medium">Assigned Assets ({assets.length})</h4>
-        <Button size="sm" onClick={onAddAsset}>
-          <Plus className="mr-2 h-4 w-4" />
-          Assign Asset
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" onClick={onBulkAddAssets}>
+            <Layers className="mr-2 h-4 w-4" />
+            Bulk Add
+          </Button>
+          <Button size="sm" onClick={onAddAsset}>
+            <Plus className="mr-2 h-4 w-4" />
+            Assign Asset
+          </Button>
+        </div>
       </div>
 
       <div className="relative mb-4">

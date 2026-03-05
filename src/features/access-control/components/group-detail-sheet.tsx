@@ -40,6 +40,7 @@ import {
   ErrorDisplay,
   AddMemberDialog,
   AddAssetDialog,
+  BulkAddAssetsDialog,
 } from './group-detail-sheet/index'
 
 interface GroupDetailSheetProps {
@@ -84,6 +85,7 @@ export function GroupDetailSheet({ groupId, open, onOpenChange, onUpdate }: Grou
   const [editForm, setEditForm] = useState({ name: '', description: '' })
   const [addMemberDialogOpen, setAddMemberDialogOpen] = useState(false)
   const [addAssetDialogOpen, setAddAssetDialogOpen] = useState(false)
+  const [bulkAddAssetsDialogOpen, setBulkAddAssetsDialogOpen] = useState(false)
   const [memberToRemove, setMemberToRemove] = useState<{ userId: string; name: string } | null>(
     null
   )
@@ -333,6 +335,7 @@ export function GroupDetailSheet({ groupId, open, onOpenChange, onUpdate }: Grou
                       assets={assets}
                       isLoading={assetsLoading}
                       onAddAsset={() => setAddAssetDialogOpen(true)}
+                      onBulkAddAssets={() => setBulkAddAssetsDialogOpen(true)}
                       onRemoveAsset={(id, name) => setAssetToRemove({ id, name })}
                     />
                   </TabsContent>
@@ -365,6 +368,18 @@ export function GroupDetailSheet({ groupId, open, onOpenChange, onUpdate }: Grou
         isAssigning={isAssigningAsset}
         onAssign={handleAssignAsset}
         existingAssets={assets}
+      />
+
+      <BulkAddAssetsDialog
+        groupId={groupId}
+        open={bulkAddAssetsDialogOpen}
+        onOpenChange={setBulkAddAssetsDialogOpen}
+        existingAssets={assets}
+        onSuccess={() => {
+          mutateAssets()
+          mutateGroup()
+          onUpdate?.()
+        }}
       />
 
       {/* Remove Member Confirmation */}
