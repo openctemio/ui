@@ -131,7 +131,7 @@ export function AssetsDataTable({
   const [globalFilter, setGlobalFilter] = useState('')
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
   const [statusFilter, setStatusFilter] = useState<string | null>(null)
-  const [tagFilter, setTagFilter] = useState<string | null>(null)
+  const [tagFilters, setTagFilters] = useState<string[]>([])
 
   // Dialog states
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null)
@@ -152,18 +152,18 @@ export function AssetsDataTable({
 
   // Filter data by status and tags
   const filteredAssets = useMemo(() => {
-    if (!statusFilter && !tagFilter) return assets
+    if (!statusFilter && tagFilters.length === 0) return assets
     let data = assets
     if (statusFilter === 'with_findings') {
       data = data.filter((a) => a.findingCount > 0)
     } else if (statusFilter) {
       data = data.filter((a) => a.status === statusFilter)
     }
-    if (tagFilter) {
-      data = data.filter((a) => a.tags?.includes(tagFilter))
+    if (tagFilters.length > 0) {
+      data = data.filter((a) => tagFilters.every((tag) => a.tags?.includes(tag)))
     }
     return data
-  }, [assets, statusFilter, tagFilter])
+  }, [assets, statusFilter, tagFilters])
 
   // Create columns
   const columns = useMemo(
@@ -379,33 +379,51 @@ export function AssetsDataTable({
           {/* Tag filter */}
           {tagSuggestions.length > 0 && (
             <Select
-              value={tagFilter || '_all'}
-              onValueChange={(v) => setTagFilter(v === '_all' ? null : v)}
+              value="_add"
+              onValueChange={(v) => {
+                if (v !== '_add' && !tagFilters.includes(v)) {
+                  setTagFilters([...tagFilters, v])
+                }
+              }}
             >
               <SelectTrigger className="w-[160px]">
                 <SelectValue placeholder="Filter by tag" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="_all">All tags</SelectItem>
-                {tagSuggestions.map((tag) => (
-                  <SelectItem key={tag} value={tag}>
-                    {tag}
-                  </SelectItem>
-                ))}
+                <SelectItem value="_add" disabled>
+                  Filter by tag
+                </SelectItem>
+                {tagSuggestions
+                  .filter((tag) => !tagFilters.includes(tag))
+                  .map((tag) => (
+                    <SelectItem key={tag} value={tag}>
+                      {tag}
+                    </SelectItem>
+                  ))}
               </SelectContent>
             </Select>
           )}
-          {tagFilter && (
-            <Badge variant="secondary" className="gap-1 pl-2 pr-1">
-              {tagFilter}
+          {tagFilters.map((tag) => (
+            <Badge key={tag} variant="secondary" className="gap-1 pl-2 pr-1">
+              {tag}
               <button
                 type="button"
-                onClick={() => setTagFilter(null)}
+                onClick={() => setTagFilters(tagFilters.filter((t) => t !== tag))}
                 className="ml-0.5 rounded-full p-0.5 hover:bg-destructive/20 hover:text-destructive transition-colors"
+                aria-label={`Remove tag filter ${tag}`}
               >
                 <X className="h-3 w-3" />
               </button>
             </Badge>
+          ))}
+          {tagFilters.length > 1 && (
+            <button
+              type="button"
+              onClick={() => setTagFilters([])}
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Clear all
+            </button>
           )}
         </div>
 
