@@ -154,21 +154,20 @@ function TierStatItem({ tier, stats }: { tier: PlatformAgentTier; stats?: TierSt
 
 /**
  * Card shown when platform stats feature is coming soon (API not yet implemented)
+ * Matches StatsCard layout for consistent grid height
  */
 function PlatformAgentsComingSoonCard({ className }: { className?: string }) {
   return (
     <Card className={cn('border-dashed', className)}>
-      <CardHeader className="pb-2">
-        <CardTitle className="flex items-center gap-2 text-sm font-medium">
-          <Zap className="h-4 w-4 text-muted-foreground" />
-          Platform Agents
-        </CardTitle>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-sm font-medium">Platform Agents</CardTitle>
+        <Zap className="h-4 w-4 text-muted-foreground" />
       </CardHeader>
       <CardContent>
-        <p className="mb-2 text-sm text-muted-foreground">Cloud-hosted scanning infrastructure</p>
-        <div className="flex items-center gap-2 rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
-          <Clock className="h-3.5 w-3.5" />
-          Coming soon
+        <div className="text-2xl font-bold text-muted-foreground">--</div>
+        <div className="flex items-center gap-1">
+          <Clock className="h-3 w-3 text-muted-foreground" />
+          <span className="text-xs text-muted-foreground">Coming soon</span>
         </div>
       </CardContent>
     </Card>
@@ -177,25 +176,19 @@ function PlatformAgentsComingSoonCard({ className }: { className?: string }) {
 
 /**
  * Card shown when platform agents are disabled for the tenant
+ * Matches StatsCard layout for consistent grid height
  */
 function PlatformAgentsDisabledCard({ className }: { className?: string }) {
   return (
     <Card className={cn('border-dashed', className)}>
-      <CardHeader className="pb-2">
-        <CardTitle className="flex items-center gap-2 text-sm font-medium">
-          <Zap className="h-4 w-4 text-muted-foreground" />
-          Platform Agents
-        </CardTitle>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-sm font-medium">Platform Agents</CardTitle>
+        <Zap className="h-4 w-4 text-muted-foreground" />
       </CardHeader>
       <CardContent>
-        <p className="mb-3 text-sm text-muted-foreground">
-          Platform agents are not available on your current plan. Upgrade to access cloud-hosted
-          scanning infrastructure.
-        </p>
-        <div className="flex gap-2">
-          {PLATFORM_AGENT_TIERS.map((tier) => (
-            <TierBadge key={tier} tier={tier} showIcon size="sm" />
-          ))}
+        <div className="text-2xl font-bold text-muted-foreground">0</div>
+        <div className="flex items-center gap-1">
+          <span className="text-xs text-muted-foreground">Not available on current plan</span>
         </div>
       </CardContent>
     </Card>
@@ -208,33 +201,13 @@ function PlatformAgentsDisabledCard({ className }: { className?: string }) {
 function PlatformStatsCardSkeleton({ className }: { className?: string }) {
   return (
     <Card className={className}>
-      <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
-          <Skeleton className="h-5 w-32" />
-          <Skeleton className="h-5 w-20" />
-        </div>
-        <Skeleton className="mt-1 h-4 w-48" />
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <Skeleton className="h-4 w-24" />
+        <Skeleton className="h-4 w-4" />
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <div className="flex justify-between">
-            <Skeleton className="h-4 w-20" />
-            <Skeleton className="h-4 w-12" />
-          </div>
-          <Skeleton className="h-2 w-full" />
-        </div>
-        <div className="flex justify-between">
-          <Skeleton className="h-4 w-16" />
-          <Skeleton className="h-4 w-8" />
-        </div>
-        <div className="border-t pt-4">
-          <Skeleton className="mb-2 h-3 w-24" />
-          <div className="grid grid-cols-3 gap-2">
-            <Skeleton className="h-16 w-full" />
-            <Skeleton className="h-16 w-full" />
-            <Skeleton className="h-16 w-full" />
-          </div>
-        </div>
+      <CardContent>
+        <Skeleton className="mb-2 h-8 w-16" />
+        <Skeleton className="h-3 w-20" />
       </CardContent>
     </Card>
   )

@@ -24,3 +24,5 @@ export {
   archiveAsset,
 } from './use-assets'
 export type { AssetStatsData, AssetSearchFilters } from './use-assets'
+
+export { useAssetTags } from './use-asset-tags'

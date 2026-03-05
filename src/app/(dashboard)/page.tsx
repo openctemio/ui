@@ -42,17 +42,6 @@ const SEVERITY_COLORS: Record<string, string> = {
   info: '#6b7280',
 }
 
-// TODO: Replace with real API data when endpoint is available
-// API endpoint needed: GET /api/v1/analytics/finding-trend?period=6m
-const MOCK_FINDING_TRENDS = [
-  { date: 'Jul', critical: 4, high: 12, medium: 18, low: 25 },
-  { date: 'Aug', critical: 3, high: 15, medium: 22, low: 28 },
-  { date: 'Sep', critical: 5, high: 14, medium: 20, low: 24 },
-  { date: 'Oct', critical: 6, high: 18, medium: 25, low: 30 },
-  { date: 'Nov', critical: 4, high: 16, medium: 23, low: 27 },
-  { date: 'Dec', critical: 3, high: 12, medium: 19, low: 22 },
-]
-
 // Inline skeleton for stats cards section
 function StatsCardsSkeleton() {
   return (
@@ -147,23 +136,55 @@ export default function Dashboard() {
   const { currentTenant } = useTenant()
   const { stats, isLoading, error } = useDashboardStats(currentTenant?.id || null)
 
+  // Safely access stats maps (defensive against malformed API response)
+  const findingsByStatus = stats.findings.byStatus || {}
+  const findingsBySeverity = stats.findings.bySeverity || {}
+  const assetsByType = stats.assets.byType || {}
+
   // Calculate active findings count
-  const activeFindings = Object.entries(stats.findings.byStatus)
+  const activeFindings = Object.entries(findingsByStatus)
     .filter(([status]) => !['resolved', 'closed', 'false_positive'].includes(status))
     .reduce((sum, [, count]) => sum + count, 0)
 
   // Prepare severity distribution for pie chart
-  const severityData = Object.entries(stats.findings.bySeverity).map(([name, value]) => ({
+  const severityData = Object.entries(findingsBySeverity).map(([name, value]) => ({
     name: name.charAt(0).toUpperCase() + name.slice(1),
     value,
     color: SEVERITY_COLORS[name.toLowerCase()] || '#6b7280',
   }))
 
   // Prepare asset distribution for bar chart
-  const assetDistribution = Object.entries(stats.assets.byType).map(([name, count]) => ({
+  const assetDistribution = Object.entries(assetsByType).map(([name, count]) => ({
     name: name.charAt(0).toUpperCase() + name.slice(1).replace(/_/g, ' '),
     count,
   }))
+
+  // Derive CTEM process step from real data
+  // 0: Scoping (no assets yet)
+  // 1: Discovery (has assets, no findings)
+  // 2: Prioritization (has findings with severity)
+  // 3: Validation (has findings in triaged/confirmed/accepted status)
+  // 4: Mobilization (has findings in resolved/closed status)
+  const resolvedStatuses = ['resolved', 'closed', 'remediated']
+  const triagedStatuses = ['confirmed', 'accepted', 'in_progress', 'triaged']
+  const hasAssets = stats.assets.total > 0
+  const hasFindings = stats.findings.total > 0
+  const hasTriagedFindings = Object.entries(findingsByStatus).some(
+    ([status, count]) => triagedStatuses.includes(status) && count > 0
+  )
+  const hasResolvedFindings = Object.entries(findingsByStatus).some(
+    ([status, count]) => resolvedStatuses.includes(status) && count > 0
+  )
+
+  const ctemStep = !hasAssets
+    ? 0
+    : !hasFindings
+      ? 1
+      : !hasTriagedFindings
+        ? 2
+        : !hasResolvedFindings
+          ? 3
+          : 4
 
   return (
     <>
@@ -234,7 +255,7 @@ export default function Dashboard() {
               <CardDescription>Continuous Threat Exposure Management lifecycle</CardDescription>
             </CardHeader>
             <CardContent>
-              <ProcessStepper currentStep={1} />
+              <ProcessStepper currentStep={ctemStep} />
             </CardContent>
           </Card>
         </section>
@@ -312,62 +333,68 @@ export default function Dashboard() {
         ) : (
           !error && (
             <section className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-7">
-              {/* Findings Trend Chart - TODO: Replace MOCK_FINDING_TRENDS with real API data */}
+              {/* Findings Trend Chart */}
               <Card className="col-span-1 lg:col-span-4">
                 <CardHeader>
                   <CardTitle>Findings Trend</CardTitle>
                   <CardDescription>Security findings over the last 6 months</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <AreaChart data={MOCK_FINDING_TRENDS}>
-                      <XAxis
-                        dataKey="date"
-                        tick={{ fontSize: 12 }}
-                        tickLine={false}
-                        axisLine={false}
-                      />
-                      <YAxis tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
-                      <Tooltip />
-                      <Legend />
-                      <Area
-                        type="monotone"
-                        dataKey="critical"
-                        stackId="1"
-                        stroke="#ef4444"
-                        fill="#ef4444"
-                        fillOpacity={0.8}
-                        name="Critical"
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="high"
-                        stackId="1"
-                        stroke="#f97316"
-                        fill="#f97316"
-                        fillOpacity={0.8}
-                        name="High"
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="medium"
-                        stackId="1"
-                        stroke="#eab308"
-                        fill="#eab308"
-                        fillOpacity={0.8}
-                        name="Medium"
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="low"
-                        stackId="1"
-                        stroke="#3b82f6"
-                        fill="#3b82f6"
-                        fillOpacity={0.8}
-                        name="Low"
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
+                  {stats.findingTrend.length > 0 ? (
+                    <ResponsiveContainer width="100%" height={300}>
+                      <AreaChart data={stats.findingTrend}>
+                        <XAxis
+                          dataKey="date"
+                          tick={{ fontSize: 12 }}
+                          tickLine={false}
+                          axisLine={false}
+                        />
+                        <YAxis tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
+                        <Tooltip />
+                        <Legend />
+                        <Area
+                          type="monotone"
+                          dataKey="critical"
+                          stackId="1"
+                          stroke="#ef4444"
+                          fill="#ef4444"
+                          fillOpacity={0.8}
+                          name="Critical"
+                        />
+                        <Area
+                          type="monotone"
+                          dataKey="high"
+                          stackId="1"
+                          stroke="#f97316"
+                          fill="#f97316"
+                          fillOpacity={0.8}
+                          name="High"
+                        />
+                        <Area
+                          type="monotone"
+                          dataKey="medium"
+                          stackId="1"
+                          stroke="#eab308"
+                          fill="#eab308"
+                          fillOpacity={0.8}
+                          name="Medium"
+                        />
+                        <Area
+                          type="monotone"
+                          dataKey="low"
+                          stackId="1"
+                          stroke="#3b82f6"
+                          fill="#3b82f6"
+                          fillOpacity={0.8}
+                          name="Low"
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="flex h-[300px] items-center justify-center">
+                      <p className="text-muted-foreground">No findings trend data</p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
