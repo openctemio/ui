@@ -114,6 +114,12 @@ interface AssetDetailSheetProps<T extends Asset> {
 
   /** Whether to show relationship preview in overview tab (default: true if relationships provided) */
   showRelationshipPreview?: boolean
+
+  /** Callback when tags are updated inline */
+  onUpdateTags?: (tags: string[]) => Promise<void>
+
+  /** Available tag suggestions for autocomplete */
+  tagSuggestions?: string[]
 }
 
 // ============================================
@@ -147,6 +153,8 @@ export function AssetDetailSheet<T extends Asset>({
   onDeleteRelationship,
   onNavigateToAsset,
   showRelationshipPreview,
+  onUpdateTags,
+  tagSuggestions,
 }: AssetDetailSheetProps<T>) {
   const [activeTab, setActiveTab] = React.useState('overview')
 
@@ -266,7 +274,7 @@ export function AssetDetailSheet<T extends Asset>({
               />
             )}
 
-            <TagsSection tags={asset.tags} />
+            <TagsSection tags={asset.tags} suggestions={tagSuggestions} onSave={onUpdateTags} />
           </TabsContent>
 
           {/* Extra Tabs */}
