@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { X } from 'lucide-react'
@@ -23,6 +23,8 @@ export function TagInput({
   disabled = false,
 }: TagInputProps) {
   const [input, setInput] = useState('')
+  const [focused, setFocused] = useState(false)
+  const blurTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
   const handleAdd = useCallback(
     (tag: string) => {
@@ -59,10 +61,22 @@ export function TagInput({
     [input, handleAdd, handleRemove, value]
   )
 
+  const handleFocus = useCallback(() => {
+    clearTimeout(blurTimeoutRef.current)
+    setFocused(true)
+  }, [])
+
+  const handleBlur = useCallback(() => {
+    // Delay blur so clicking a suggestion doesn't close the list
+    blurTimeoutRef.current = setTimeout(() => setFocused(false), 150)
+  }, [])
+
   const filteredSuggestions = suggestions
     .filter((s) => !value.includes(s))
     .filter((s) => !input || s.toLowerCase().includes(input.toLowerCase()))
     .slice(0, 6)
+
+  const showSuggestions = focused && filteredSuggestions.length > 0
 
   return (
     <div className="space-y-2">
@@ -76,6 +90,7 @@ export function TagInput({
                   type="button"
                   onClick={() => handleRemove(tag)}
                   className="ml-0.5 rounded-full p-0.5 hover:bg-destructive/20 hover:text-destructive transition-colors"
+                  aria-label={`Remove tag ${tag}`}
                 >
                   <X className="h-3 w-3" />
                 </button>
@@ -95,14 +110,17 @@ export function TagInput({
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
+                onFocus={handleFocus}
+                onBlur={handleBlur}
               />
-              {filteredSuggestions.length > 0 && (
-                <div className="flex flex-wrap gap-1">
+              {showSuggestions && (
+                <div className="flex flex-wrap gap-1" role="listbox" aria-label="Tag suggestions">
                   <span className="text-xs text-muted-foreground mr-1 py-0.5">Suggestions:</span>
                   {filteredSuggestions.map((tag) => (
                     <Badge
                       key={tag}
                       variant="outline"
+                      role="option"
                       className="cursor-pointer hover:bg-primary/10 hover:text-primary hover:border-primary/30 text-xs transition-colors"
                       onClick={() => handleAdd(tag)}
                     >
