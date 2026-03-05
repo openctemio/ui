@@ -41,7 +41,6 @@ import { env } from '@/lib/env'
 const BACKEND_URL =
   process.env.BACKEND_API_URL?.replace('localhost', '127.0.0.1') || 'http://127.0.0.1:8080'
 const ACCESS_TOKEN_COOKIE = env.auth.cookieName
-const TENANT_COOKIE = env.cookies.tenant
 
 // ============================================
 // ROUTE HANDLERS
