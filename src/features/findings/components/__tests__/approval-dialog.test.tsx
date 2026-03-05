@@ -154,10 +154,10 @@ describe('ApprovalDialog', () => {
       expect(screen.getByText('0/2000 characters')).toBeInTheDocument()
     })
 
-    it('shows submit and cancel buttons', () => {
+    it('shows review and cancel buttons', () => {
       render(<ApprovalDialog {...defaultProps} />)
 
-      expect(screen.getByText('Submit for Approval')).toBeInTheDocument()
+      expect(screen.getByText('Review')).toBeInTheDocument()
       expect(screen.getByText('Cancel')).toBeInTheDocument()
     })
   })
@@ -167,33 +167,33 @@ describe('ApprovalDialog', () => {
   // ============================================
 
   describe('submit button state', () => {
-    it('submit button is disabled when justification is empty', () => {
+    it('review button is disabled when justification is empty', () => {
       render(<ApprovalDialog {...defaultProps} />)
 
-      const submitButton = screen.getByText('Submit for Approval')
-      expect(submitButton).toBeDisabled()
+      const reviewButton = screen.getByText('Review')
+      expect(reviewButton).toBeDisabled()
     })
 
-    it('submit button is disabled when justification is only whitespace', async () => {
+    it('review button is disabled when justification is only whitespace', async () => {
       const user = userEvent.setup()
       render(<ApprovalDialog {...defaultProps} />)
 
       const textarea = screen.getByLabelText('Justification')
       await user.type(textarea, '   ')
 
-      const submitButton = screen.getByText('Submit for Approval')
-      expect(submitButton).toBeDisabled()
+      const reviewButton = screen.getByText('Review')
+      expect(reviewButton).toBeDisabled()
     })
 
-    it('submit button is enabled when justification has text', async () => {
+    it('review button is enabled when justification has text', async () => {
       const user = userEvent.setup()
       render(<ApprovalDialog {...defaultProps} />)
 
       const textarea = screen.getByLabelText('Justification')
       await user.type(textarea, 'This is a valid justification')
 
-      const submitButton = screen.getByText('Submit for Approval')
-      expect(submitButton).toBeEnabled()
+      const reviewButton = screen.getByText('Review')
+      expect(reviewButton).toBeEnabled()
     })
   })
 
@@ -231,6 +231,11 @@ describe('ApprovalDialog', () => {
       const textarea = screen.getByLabelText('Justification')
       await user.type(textarea, 'This is a justified reason')
 
+      // Step 1: Click Review to go to confirmation step
+      const reviewButton = screen.getByText('Review')
+      await user.click(reviewButton)
+
+      // Step 2: Click Submit for Approval on confirmation step
       const submitButton = screen.getByText('Submit for Approval')
       await user.click(submitButton)
 
