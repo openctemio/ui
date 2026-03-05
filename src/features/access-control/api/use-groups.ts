@@ -21,6 +21,8 @@ import type {
   AssignPermissionSetInput,
   GroupMember,
   GroupAsset,
+  BulkAssignAssetsInput,
+  BulkAssignAssetsResult,
 } from '../types'
 import type { PermissionSet } from '../types/permission-set.types'
 
@@ -406,6 +408,33 @@ export function useUnassignAssetFromGroup(groupId: string | null, assetId: strin
   return {
     unassignAsset: trigger,
     isUnassigning: isMutating,
+    error,
+  }
+}
+
+// ============================================
+// BULK ASSET MUTATIONS
+// ============================================
+
+async function bulkAssignAssetsMutation(url: string, { arg }: { arg: BulkAssignAssetsInput }) {
+  return fetcherWithOptions<BulkAssignAssetsResult>(url, {
+    method: 'POST',
+    body: JSON.stringify(arg),
+  })
+}
+
+/**
+ * Hook to bulk assign assets to a group
+ */
+export function useBulkAssignAssets(groupId: string | null) {
+  const { trigger, isMutating, error } = useSWRMutation(
+    groupId ? `${API_BASE}/${groupId}/assets/bulk` : null,
+    bulkAssignAssetsMutation
+  )
+
+  return {
+    bulkAssignAssets: trigger,
+    isAssigning: isMutating,
     error,
   }
 }

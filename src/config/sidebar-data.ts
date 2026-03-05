@@ -609,6 +609,12 @@ export const sidebarData: SidebarData = {
               permission: Permission.GroupsRead,
             },
             {
+              title: 'Assignment Rules',
+              url: '/settings/access-control/assignment-rules',
+              icon: GitBranch,
+              permission: Permission.AssignmentRulesRead,
+            },
+            {
               title: 'Audit Log',
               url: '/settings/audit',
               icon: History,
