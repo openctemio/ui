@@ -559,6 +559,7 @@ export function AssetsDataTable({
               size="icon"
               onClick={() => table.setPageIndex(0)}
               disabled={!table.getCanPreviousPage()}
+              aria-label="Go to first page"
             >
               <ChevronsLeft className="h-4 w-4" />
             </Button>
@@ -567,6 +568,7 @@ export function AssetsDataTable({
               size="icon"
               onClick={() => table.previousPage()}
               disabled={!table.getCanPreviousPage()}
+              aria-label="Go to previous page"
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
@@ -578,6 +580,7 @@ export function AssetsDataTable({
               size="icon"
               onClick={() => table.nextPage()}
               disabled={!table.getCanNextPage()}
+              aria-label="Go to next page"
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
@@ -586,6 +589,7 @@ export function AssetsDataTable({
               size="icon"
               onClick={() => table.setPageIndex(table.getPageCount() - 1)}
               disabled={!table.getCanNextPage()}
+              aria-label="Go to last page"
             >
               <ChevronsRight className="h-4 w-4" />
             </Button>

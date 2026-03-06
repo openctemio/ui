@@ -130,7 +130,7 @@ export function AssetFindings({ assetId, className }: AssetFindingsProps) {
           </div>
         )}
         {severityCounts.medium > 0 && (
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-yellow-100 text-yellow-700 text-sm font-medium">
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-yellow-100 text-yellow-900 text-sm font-medium">
             <AlertTriangle className="h-3.5 w-3.5" />
             {severityCounts.medium} Medium
           </div>
