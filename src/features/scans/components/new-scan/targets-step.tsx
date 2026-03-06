@@ -652,7 +652,7 @@ export function TargetsStep({ data, onChange }: TargetsStepProps) {
                   {validationStats.warning > 0 && (
                     <Badge
                       variant="secondary"
-                      className="bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
+                      className="bg-yellow-100 text-yellow-900 dark:bg-yellow-900/30 dark:text-yellow-400"
                     >
                       {validationStats.warning} warning
                     </Badge>

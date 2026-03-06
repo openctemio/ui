@@ -108,7 +108,7 @@ const stateConfig: Record<ExposureState, { label: string; className: string }> =
   },
   accepted: {
     label: 'Accepted',
-    className: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
+    className: 'bg-yellow-100 text-yellow-900 dark:bg-yellow-900/30 dark:text-yellow-400',
   },
   false_positive: {
     label: 'False Positive',

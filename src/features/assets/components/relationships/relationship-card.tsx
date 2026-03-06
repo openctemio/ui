@@ -83,7 +83,7 @@ function ConfidenceBadge({ confidence }: { confidence: AssetRelationship['confid
   const variants = {
     high: { className: 'bg-green-500/20 text-green-600 border-green-500/30', label: 'High' },
     medium: { className: 'bg-yellow-500/20 text-yellow-600 border-yellow-500/30', label: 'Medium' },
-    low: { className: 'bg-red-500/20 text-red-600 border-red-500/30', label: 'Low' },
+    low: { className: 'bg-blue-500/20 text-blue-600 border-blue-500/30', label: 'Low' },
   }
 
   const variant = variants[confidence]
