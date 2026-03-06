@@ -181,7 +181,7 @@ export function AssignmentRuleDetailSheet({
         { method: 'POST' }
       )
       if (result) {
-        toast.success(`Rule matched ${result.total_matched} asset(s)`)
+        toast.success(`Rule matched ${result.matching_findings} finding(s)`)
       }
     } catch (error) {
       toast.error(getErrorMessage(error, 'Failed to test rule'))
@@ -193,8 +193,10 @@ export function AssignmentRuleDetailSheet({
   const conditionLabels: Record<string, string> = {
     asset_type: 'Asset Type',
     finding_severity: 'Finding Severity',
-    asset_status: 'Asset Status',
-    asset_criticality: 'Asset Criticality',
+    finding_type: 'Finding Type',
+    finding_source: 'Finding Source',
+    asset_tags: 'Asset Tags',
+    file_path_pattern: 'File Path Pattern',
   }
 
   return (
@@ -352,20 +354,29 @@ export function AssignmentRuleDetailSheet({
                     <p className="text-sm text-muted-foreground">No conditions defined</p>
                   ) : (
                     <div className="space-y-2">
-                      {Object.entries(assignmentRule.conditions).map(([key, values]) => (
-                        <div key={key} className="flex items-start gap-2">
-                          <span className="text-sm text-muted-foreground min-w-[120px]">
-                            {conditionLabels[key] || key}:
-                          </span>
-                          <div className="flex flex-wrap gap-1">
-                            {values.map((v) => (
-                              <Badge key={v} variant="outline" className="text-xs">
-                                {v}
-                              </Badge>
-                            ))}
+                      {Object.entries(assignmentRule.conditions).map(([key, value]) => {
+                        if (!value || (Array.isArray(value) && value.length === 0)) return null
+                        return (
+                          <div key={key} className="flex items-start gap-2">
+                            <span className="text-sm text-muted-foreground min-w-[120px]">
+                              {conditionLabels[key] || key}:
+                            </span>
+                            <div className="flex flex-wrap gap-1">
+                              {Array.isArray(value) ? (
+                                value.map((v) => (
+                                  <Badge key={v} variant="outline" className="text-xs">
+                                    {v}
+                                  </Badge>
+                                ))
+                              ) : (
+                                <Badge variant="outline" className="text-xs">
+                                  {String(value)}
+                                </Badge>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        )
+                      })}
                     </div>
                   )}
                 </div>

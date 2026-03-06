@@ -37,6 +37,7 @@ import {
   OverviewTab,
   MembersTab,
   AssetsTab,
+  ScopeRulesTab,
   ErrorDisplay,
   AddMemberDialog,
   AddAssetDialog,
@@ -315,6 +316,9 @@ export function GroupDetailSheet({ groupId, open, onOpenChange, onUpdate }: Grou
                     <TabsTrigger value="assets" className="flex-1">
                       Assets
                     </TabsTrigger>
+                    <TabsTrigger value="scope-rules" className="flex-1">
+                      Scope Rules
+                    </TabsTrigger>
                   </TabsList>
 
                   <TabsContent value="overview">
@@ -338,6 +342,10 @@ export function GroupDetailSheet({ groupId, open, onOpenChange, onUpdate }: Grou
                       onBulkAddAssets={() => setBulkAddAssetsDialogOpen(true)}
                       onRemoveAsset={(id, name) => setAssetToRemove({ id, name })}
                     />
+                  </TabsContent>
+
+                  <TabsContent value="scope-rules">
+                    <ScopeRulesTab groupId={groupId} />
                   </TabsContent>
                 </Tabs>
               </div>

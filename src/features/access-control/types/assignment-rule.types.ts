@@ -1,5 +1,19 @@
 import type { AssetOwnershipType } from './group.types'
 
+export interface AssignmentConditions {
+  asset_type?: string[]
+  finding_severity?: string[]
+  finding_type?: string[]
+  finding_source?: string[]
+  asset_tags?: string[]
+  file_path_pattern?: string
+}
+
+export interface AssignmentOptions {
+  notify_group?: boolean
+  set_finding_priority?: string
+}
+
 export interface AssignmentRule {
   id: string
   name: string
@@ -7,8 +21,8 @@ export interface AssignmentRule {
   priority: number
   target_group_id: string
   target_group_name?: string
-  conditions: Record<string, string[]>
-  options: Record<string, unknown>
+  conditions: AssignmentConditions
+  options: AssignmentOptions
   is_active: boolean
   created_by: string
   created_at: string
@@ -20,8 +34,8 @@ export interface CreateAssignmentRuleInput {
   description?: string
   priority: number
   target_group_id: string
-  conditions: Record<string, string[]>
-  options?: Record<string, unknown>
+  conditions: AssignmentConditions
+  options?: AssignmentOptions
 }
 
 export interface UpdateAssignmentRuleInput {
@@ -29,15 +43,25 @@ export interface UpdateAssignmentRuleInput {
   description?: string
   priority?: number
   target_group_id?: string
-  conditions?: Record<string, string[]>
-  options?: Record<string, unknown>
+  conditions?: AssignmentConditions
+  options?: AssignmentOptions
   is_active?: boolean
+}
+
+export interface TestRuleFindingSummary {
+  id: string
+  severity: string
+  source: string
+  tool_name: string
+  message: string
 }
 
 export interface TestRuleResult {
   rule_id: string
-  matched_assets: { id: string; name: string; type: string }[]
-  total_matched: number
+  rule_name: string
+  matching_findings: number
+  target_group_id: string
+  sample_findings?: TestRuleFindingSummary[]
 }
 
 export interface AssignmentRuleFilters {
