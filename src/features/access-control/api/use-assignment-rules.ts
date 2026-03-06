@@ -34,13 +34,19 @@ export function useAssignmentRules(filters?: AssignmentRuleFilters) {
   const queryString = params.toString()
   const url = queryString ? `${API_BASE}?${queryString}` : API_BASE
 
-  const { data, error, isLoading, mutate } = useSWR<{ rules: AssignmentRule[] }>(url, fetcher, {
+  const { data, error, isLoading, mutate } = useSWR<{
+    rules: AssignmentRule[]
+    total_count: number
+    limit: number
+    offset: number
+  }>(url, fetcher, {
     revalidateOnFocus: false,
     dedupingInterval: 30000,
   })
 
   return {
     assignmentRules: data?.rules || [],
+    totalCount: data?.total_count || 0,
     isLoading,
     isError: !!error,
     error,
@@ -75,7 +81,7 @@ export function useAssignmentRule(ruleId: string | null) {
 // ============================================
 
 async function createRuleMutation(url: string, { arg }: { arg: CreateAssignmentRuleInput }) {
-  return fetcherWithOptions<{ assignment_rule: AssignmentRule }>(url, {
+  return fetcherWithOptions<AssignmentRule>(url, {
     method: 'POST',
     body: JSON.stringify(arg),
   })
@@ -95,7 +101,7 @@ export function useCreateAssignmentRule() {
 }
 
 async function updateRuleMutation(url: string, { arg }: { arg: UpdateAssignmentRuleInput }) {
-  return fetcherWithOptions<{ assignment_rule: AssignmentRule }>(url, {
+  return fetcherWithOptions<AssignmentRule>(url, {
     method: 'PUT',
     body: JSON.stringify(arg),
   })
@@ -168,7 +174,7 @@ export function useTestAssignmentRule(ruleId: string | null) {
 export function getAssignmentRulesKey(filters?: AssignmentRuleFilters) {
   const params = new URLSearchParams()
   if (filters?.search) params.set('search', filters.search)
-  if (filters?.is_active !== undefined) params.set('is_active', String(filters.is_active))
+  if (filters?.is_active !== undefined) params.set('active', String(filters.is_active))
   const queryString = params.toString()
   return queryString ? `${API_BASE}?${queryString}` : API_BASE
 }

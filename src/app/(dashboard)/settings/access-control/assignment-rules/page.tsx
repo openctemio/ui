@@ -95,8 +95,10 @@ const typeFilters: { value: FilterType; label: string; icon: React.ReactNode }[]
 const CONDITION_LABELS: Record<string, string> = {
   asset_type: 'Asset Type',
   finding_severity: 'Severity',
-  asset_status: 'Status',
-  asset_criticality: 'Criticality',
+  finding_type: 'Finding Type',
+  finding_source: 'Source',
+  asset_tags: 'Tags',
+  file_path_pattern: 'File Path',
 }
 
 const CONDITION_OPTIONS: Record<string, string[]> = {
@@ -250,15 +252,18 @@ export default function AssignmentRulesPage() {
       header: 'Conditions',
       cell: ({ row }) => {
         const conditions = row.original.conditions || {}
-        const keys = Object.keys(conditions)
-        if (keys.length === 0) {
+        const entries = Object.entries(conditions).filter(
+          ([, v]) => v !== undefined && v !== '' && (!Array.isArray(v) || v.length > 0)
+        )
+        if (entries.length === 0) {
           return <span className="text-xs text-muted-foreground">No conditions</span>
         }
         return (
           <div className="flex flex-wrap gap-1">
-            {keys.map((key) => (
+            {entries.map(([key, value]) => (
               <Badge key={key} variant="outline" className="text-xs">
-                {CONDITION_LABELS[key] || key}: {conditions[key].join(', ')}
+                {CONDITION_LABELS[key] || key}:{' '}
+                {Array.isArray(value) ? value.join(', ') : String(value)}
               </Badge>
             ))}
           </div>
@@ -297,12 +302,12 @@ export default function AssignmentRulesPage() {
                 <DropdownMenuItem
                   onClick={async () => {
                     try {
-                      const result = await fetcherWithOptions<{ total_matched: number }>(
+                      const result = await fetcherWithOptions<{ matching_findings: number }>(
                         `/api/v1/assignment-rules/${rule.id}/test`,
                         { method: 'POST' }
                       )
                       if (result) {
-                        toast.success(`Rule matched ${result.total_matched} asset(s)`)
+                        toast.success(`Rule matched ${result.matching_findings} finding(s)`)
                       }
                     } catch (error) {
                       toast.error(getErrorMessage(error, 'Failed to test rule'))
