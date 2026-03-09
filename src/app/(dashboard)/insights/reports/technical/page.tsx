@@ -39,14 +39,7 @@ import {
   Filter,
   BarChart3,
 } from 'lucide-react'
-
-const SEVERITY_COLORS: Record<string, string> = {
-  critical: '#dc2626',
-  high: '#ea580c',
-  medium: '#ca8a04',
-  low: '#2563eb',
-  info: '#6b7280',
-}
+import { SEVERITY_CHART_COLORS as SEVERITY_COLORS } from '@/lib/severity-colors'
 
 function SeverityBreakdownBar({
   severity,
@@ -242,7 +235,7 @@ export default function TechnicalReportsPage() {
                   severity={severity}
                   count={count}
                   total={stats.findings.total}
-                  color={SEVERITY_COLORS[severity] || '#6b7280'}
+                  color={(SEVERITY_COLORS as Record<string, string>)[severity] || '#6b7280'}
                 />
               ))}
             </div>
