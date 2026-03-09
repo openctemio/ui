@@ -72,6 +72,8 @@ import {
 } from '@/components/ui/select'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from 'sonner'
+import { useAssetExport, type ExportFieldConfig } from '@/features/assets/hooks/use-asset-export'
+import { useDebounce } from '@/hooks/use-debounce'
 import {
   Plus,
   Webhook,
@@ -158,7 +160,8 @@ export default function ApisPage() {
   const [apis, setApis] = useState<Api[]>(getApis())
   const [selectedApi, setSelectedApi] = useState<Api | null>(null)
   const [sorting, setSorting] = useState<SortingState>([])
-  const [globalFilter, setGlobalFilter] = useState('')
+  const [searchValue, setSearchValue] = useState('')
+  const globalFilter = useDebounce(searchValue, 300)
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all')
   const [rowSelection, setRowSelection] = useState({})
@@ -239,6 +242,24 @@ export default function ApisPage() {
     }))
     return calculateScopeCoverage(assets, scopeTargets, scopeExclusions)
   }, [apis, scopeTargets, scopeExclusions])
+
+  // CSV export
+  const exportFields: ExportFieldConfig<Api>[] = useMemo(
+    () => [
+      { header: 'Name', accessor: (a) => a.name },
+      { header: 'Type', accessor: (a) => a.type },
+      { header: 'Base URL', accessor: (a) => a.baseUrl },
+      { header: 'Version', accessor: (a) => a.version ?? '' },
+      { header: 'Auth Type', accessor: (a) => a.authType },
+      { header: 'Status', accessor: (a) => a.status },
+      { header: 'Endpoints', accessor: (a) => a.endpointCount },
+      { header: 'Risk Score', accessor: (a) => a.riskScore },
+      { header: 'Findings', accessor: (a) => a.findingCount },
+    ],
+    []
+  )
+
+  const { handleExport } = useAssetExport(apis, exportFields, 'apis')
 
   // Table columns
   const columns: ColumnDef<Api>[] = [
@@ -451,7 +472,6 @@ export default function ApisPage() {
     columns,
     state: { sorting, globalFilter, rowSelection },
     onSortingChange: setSorting,
-    onGlobalFilterChange: setGlobalFilter,
     onRowSelectionChange: setRowSelection,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -573,43 +593,6 @@ export default function ApisPage() {
     toast.success(`Deleted ${selectedIds.length} APIs`)
   }
 
-  const handleExport = () => {
-    const csv = [
-      [
-        'Name',
-        'Type',
-        'Base URL',
-        'Version',
-        'Auth Type',
-        'Status',
-        'Endpoints',
-        'Risk Score',
-        'Findings',
-      ].join(','),
-      ...apis.map((a) =>
-        [
-          a.name,
-          a.type,
-          a.baseUrl,
-          a.version || '',
-          a.authType,
-          a.status,
-          a.endpointCount,
-          a.riskScore,
-          a.findingCount,
-        ].join(',')
-      ),
-    ].join('\n')
-
-    const blob = new Blob([csv], { type: 'text/csv' })
-    const url = URL.createObjectURL(blob)
-    const anchor = document.createElement('a')
-    anchor.href = url
-    anchor.download = 'apis.csv'
-    anchor.click()
-    toast.success('APIs exported')
-  }
-
   const formatNumber = (num: number) => {
     if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`
     if (num >= 1000) return `${(num / 1000).toFixed(1)}K`
@@ -683,7 +666,7 @@ export default function ApisPage() {
           </Card>
         </div>
 
-        {/* Scope Coverage Card */}
+        {/* Scope Status Card */}
         <div className="mt-4">
           <ScopeCoverageCard coverage={scopeCoverage} showBreakdown={false} />
         </div>
@@ -737,8 +720,8 @@ export default function ApisPage() {
                 <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search APIs..."
-                  value={globalFilter}
-                  onChange={(e) => setGlobalFilter(e.target.value)}
+                  value={searchValue}
+                  onChange={(e) => setSearchValue(e.target.value)}
                   className="pl-9"
                 />
               </div>

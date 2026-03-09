@@ -183,7 +183,7 @@ export default function ScopeConfigurationPage() {
             ) : (
               <div className="space-y-4">
                 <div className="rounded-lg bg-muted/50 p-4">
-                  <p className="text-sm font-medium">Managed Asset Coverage</p>
+                  <p className="text-sm font-medium">Scope Completeness</p>
                   <Progress value={managedRatio} className="mt-2 h-2" />
                   <p className="mt-1 text-xs text-muted-foreground">
                     {managedRatio}% of assets are actively managed within scope
@@ -199,8 +199,8 @@ export default function ScopeConfigurationPage() {
                     <p className="font-medium">Scope Completeness</p>
                     <p className="text-sm text-muted-foreground">
                       {managedRatio < 80
-                        ? `${100 - managedRatio}% of assets are unmanaged. Review scope rules to ensure complete coverage.`
-                        : 'Asset scope coverage is above target threshold.'}
+                        ? `${100 - managedRatio}% of assets are unmanaged. Review scope rules to improve scope completeness.`
+                        : 'Asset scope completeness is above target threshold.'}
                     </p>
                   </div>
                 </div>
@@ -211,7 +211,7 @@ export default function ScopeConfigurationPage() {
                     <p className="text-sm text-muted-foreground">
                       {stats.repositories.total > 0
                         ? `${stats.repositories.total} repositories are linked. ${stats.repositories.withFindings} have active findings within scope.`
-                        : 'Connect repositories to expand scope coverage for code assets.'}
+                        : 'Connect repositories to expand scope for code assets.'}
                     </p>
                   </div>
                 </div>
