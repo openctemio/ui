@@ -1010,7 +1010,7 @@ export default function ScopeConfigPage() {
             <CardHeader className="pb-2">
               <CardDescription className="flex items-center gap-2">
                 <Shield className="h-4 w-4" />
-                Coverage
+                Scope Status
               </CardDescription>
               {statsLoading ? (
                 <Skeleton className="h-9 w-16" />

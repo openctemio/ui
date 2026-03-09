@@ -12,11 +12,13 @@ interface ScopeCoverageCardProps {
 }
 
 /**
- * ScopeCoverageCard - Displays scope coverage statistics
+ * ScopeCoverageCard - Displays scope status statistics
+ * Shows how many assets are matched by scope rules (in scope / excluded / not scoped).
+ * Note: "Scope Status" avoids confusion with scan coverage or vulnerability coverage.
  */
 export function ScopeCoverageCard({
   coverage,
-  title = 'Scope Coverage',
+  title = 'Scope Status',
   showBreakdown = true,
 }: ScopeCoverageCardProps) {
   const { totalAssets, inScopeAssets, excludedAssets, uncoveredAssets, coveragePercent, byType } =
@@ -88,7 +90,7 @@ export function ScopeCoverageCard({
               <HelpCircle className="h-3 w-3" />
               <span className="text-lg font-semibold">{uncoveredAssets}</span>
             </div>
-            <p className="text-xs text-muted-foreground">Uncovered</p>
+            <p className="text-xs text-muted-foreground">Not Scoped</p>
           </div>
         </div>
 

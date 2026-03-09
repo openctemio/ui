@@ -12,7 +12,9 @@ interface ScopeBadgeProps {
 
 /**
  * ScopeBadge - Displays scope status for an asset
- * Shows whether an asset is in scope, excluded, or not covered
+ * Shows whether an asset is in scope, excluded, or not scoped.
+ * "Not Scoped" means the asset doesn't match any scope rules — distinct from
+ * "not scanned" (scan coverage) or "no findings" (vulnerability coverage).
  */
 export function ScopeBadge({ match, showDetails = true }: ScopeBadgeProps) {
   const { matchedTargets, matchedExclusions, inScope } = match
@@ -59,7 +61,7 @@ export function ScopeBadge({ match, showDetails = true }: ScopeBadgeProps) {
       variant: 'outline' as const,
       className: 'border-gray-500/50 bg-gray-500/10 text-gray-500',
       icon: <HelpCircle className="mr-1 h-3 w-3" />,
-      label: 'Uncovered',
+      label: 'Not Scoped',
       tooltip: 'Not matched by any scope rules',
     }
   }
@@ -128,7 +130,7 @@ export function ScopeBadgeSimple({ inScope, excluded }: { inScope: boolean; excl
   return (
     <Badge variant="outline" className="border-gray-500/50 bg-gray-500/10 text-gray-500">
       <HelpCircle className="mr-1 h-3 w-3" />
-      Uncovered
+      Not Scoped
     </Badge>
   )
 }

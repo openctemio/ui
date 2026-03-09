@@ -113,6 +113,8 @@ import {
   SYNC_STATUS_LABELS,
 } from '@/features/repositories'
 import { useSCMConnections } from '@/features/repositories/hooks/use-repositories'
+import { useAssetExport, type ExportFieldConfig } from '@/features/assets/hooks/use-asset-export'
+import { useDebounce } from '@/hooks/use-debounce'
 import type { AssetWithRepository } from '@/features/assets/types/asset.types'
 import type { Status } from '@/features/shared/types'
 
@@ -581,6 +583,9 @@ export default function RepositoriesPage() {
   const [providerFilter, setProviderFilter] = useState<ProviderFilter>('all')
   const [rowSelection, setRowSelection] = useState({})
 
+  // Debounce search input for API calls (300ms)
+  const debouncedSearch = useDebounce(globalFilter, 300)
+
   // Dialog states
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [repositoryToDelete, setRepositoryToDelete] = useState<Repository | null>(null)
@@ -604,15 +609,15 @@ export default function RepositoriesPage() {
     const filters: RepositoryFilters = {
       perPage: 100,
     }
-    if (globalFilter) filters.search = globalFilter
+    if (debouncedSearch) filters.search = debouncedSearch
     if (statusFilter !== 'all') filters.statuses = [statusFilter]
     if (providerFilter !== 'all') filters.scmProviders = [providerFilter]
     return filters
-  }, [globalFilter, statusFilter, providerFilter])
+  }, [debouncedSearch, statusFilter, providerFilter])
 
   // Check if we need a separate filtered call (only when filters are active)
   const needsFilteredCall =
-    statusFilter !== 'all' || providerFilter !== 'all' || globalFilter !== ''
+    statusFilter !== 'all' || providerFilter !== 'all' || debouncedSearch !== ''
 
   // Fetch filtered data using real API hooks (only when filters are active)
   const {
@@ -1240,40 +1245,22 @@ export default function RepositoriesPage() {
     }
   }, [mutateRepos, table])
 
-  const handleExport = useCallback(() => {
-    const csv = [
-      [
-        'Name',
-        'Provider',
-        'Visibility',
-        'Language',
-        'Risk Score',
-        'Findings',
-        'Quality Gate',
-        'Status',
-      ].join(','),
-      ...repositories.map((p) =>
-        [
-          p.name,
-          p.scm_provider,
-          p.visibility,
-          p.primary_language || '',
-          p.risk_score,
-          p.findings_summary.total,
-          p.quality_gate_status,
-          p.status,
-        ].join(',')
-      ),
-    ].join('\n')
+  // CSV export using shared hook (sanitized, BOM for Excel)
+  const exportFields: ExportFieldConfig<Repository>[] = useMemo(
+    () => [
+      { header: 'Name', accessor: (r) => r.name },
+      { header: 'Provider', accessor: (r) => r.scm_provider },
+      { header: 'Visibility', accessor: (r) => r.visibility },
+      { header: 'Language', accessor: (r) => r.primary_language || '' },
+      { header: 'Risk Score', accessor: (r) => r.risk_score },
+      { header: 'Findings', accessor: (r) => r.findings_summary.total },
+      { header: 'Quality Gate', accessor: (r) => r.quality_gate_status },
+      { header: 'Status', accessor: (r) => r.status },
+    ],
+    []
+  )
 
-    const blob = new Blob([csv], { type: 'text/csv' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'repositories.csv'
-    a.click()
-    toast.success('Repositories exported')
-  }, [repositories])
+  const { handleExport } = useAssetExport(repositories, exportFields, 'repositories')
 
   // Error state component
   if (hasError) {

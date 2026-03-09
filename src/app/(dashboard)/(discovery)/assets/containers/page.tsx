@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import {
   ColumnDef,
   flexRender,
@@ -107,6 +107,8 @@ import {
   getActiveScopeExclusions,
   type ScopeMatchResult,
 } from '@/features/scope'
+import { useAssetExport, type ExportFieldConfig } from '@/features/assets/hooks/use-asset-export'
+import { useDebounce } from '@/hooks/use-debounce'
 
 // Status colors and labels
 const clusterStatusConfig: Record<
@@ -193,6 +195,42 @@ const defaultImageForm: ImageFormData = {
   registry: 'docker.io',
 }
 
+// Export field configurations for useAssetExport
+const clusterExportFields: ExportFieldConfig<K8sCluster>[] = [
+  { header: 'Name', accessor: (c) => c.name },
+  { header: 'Provider', accessor: (c) => c.provider },
+  { header: 'Version', accessor: (c) => c.version },
+  { header: 'Nodes', accessor: (c) => c.nodeCount },
+  { header: 'Workloads', accessor: (c) => c.workloadCount },
+  { header: 'Pods', accessor: (c) => c.podCount },
+  { header: 'Status', accessor: (c) => c.status },
+  { header: 'Risk Score', accessor: (c) => c.riskScore },
+]
+
+const workloadExportFields: ExportFieldConfig<K8sWorkload>[] = [
+  { header: 'Name', accessor: (w) => w.name },
+  { header: 'Type', accessor: (w) => w.type },
+  { header: 'Cluster', accessor: (w) => w.clusterName },
+  { header: 'Namespace', accessor: (w) => w.namespace },
+  { header: 'Replicas', accessor: (w) => `${w.readyReplicas}/${w.replicas}` },
+  { header: 'Status', accessor: (w) => w.status },
+  { header: 'Findings', accessor: (w) => w.findingCount },
+  { header: 'Risk Score', accessor: (w) => w.riskScore },
+]
+
+const imageExportFields: ExportFieldConfig<ContainerImage>[] = [
+  { header: 'Image', accessor: (i) => i.name },
+  { header: 'Tag', accessor: (i) => i.tag },
+  { header: 'Registry', accessor: (i) => i.registry },
+  { header: 'Size (MB)', accessor: (i) => i.size },
+  { header: 'Workloads', accessor: (i) => i.workloadCount },
+  { header: 'Critical', accessor: (i) => i.vulnerabilities.critical },
+  { header: 'High', accessor: (i) => i.vulnerabilities.high },
+  { header: 'Medium', accessor: (i) => i.vulnerabilities.medium },
+  { header: 'Low', accessor: (i) => i.vulnerabilities.low },
+  { header: 'Risk Score', accessor: (i) => i.riskScore },
+]
+
 export default function KubernetesPage() {
   // Main tab state
   const [mainTab, setMainTab] = useState<MainTab>('clusters')
@@ -205,7 +243,8 @@ export default function KubernetesPage() {
   // Filter states
   const [clusterFilter, setClusterFilter] = useState<ClusterFilter>('all')
   const [workloadTypeFilter, setWorkloadTypeFilter] = useState<WorkloadTypeFilter>('all')
-  const [globalFilter, setGlobalFilter] = useState('')
+  const [searchInput, setSearchInput] = useState('')
+  const globalFilter = useDebounce(searchInput, 300)
 
   // Table states
   const [clusterSorting, setClusterSorting] = useState<SortingState>([])
@@ -294,6 +333,29 @@ export default function KubernetesPage() {
     }
     return data
   }, [workloads, clusterFilter, workloadTypeFilter])
+
+  // CSV exports via shared hook (sanitized CSV, BOM, blob cleanup)
+  const { handleExport: exportClusters } = useAssetExport(
+    clusters,
+    clusterExportFields,
+    'kubernetes-clusters'
+  )
+  const { handleExport: exportWorkloads } = useAssetExport(
+    filteredWorkloads,
+    workloadExportFields,
+    'kubernetes-workloads'
+  )
+  const { handleExport: exportImages } = useAssetExport(
+    images,
+    imageExportFields,
+    'kubernetes-images'
+  )
+
+  const handleExport = useCallback(() => {
+    if (mainTab === 'clusters') exportClusters()
+    else if (mainTab === 'workloads') exportWorkloads()
+    else exportImages()
+  }, [mainTab, exportClusters, exportWorkloads, exportImages])
 
   // CRUD handlers - Clusters
   const handleAddCluster = () => {
@@ -1088,7 +1150,6 @@ export default function KubernetesPage() {
     columns: clusterColumns,
     state: { sorting: clusterSorting, globalFilter, rowSelection: clusterSelection },
     onSortingChange: setClusterSorting,
-    onGlobalFilterChange: setGlobalFilter,
     onRowSelectionChange: setClusterSelection,
     getRowId: (row) => row.id,
     getCoreRowModel: getCoreRowModel(),
@@ -1102,7 +1163,6 @@ export default function KubernetesPage() {
     columns: workloadColumns,
     state: { sorting: workloadSorting, globalFilter, rowSelection: workloadSelection },
     onSortingChange: setWorkloadSorting,
-    onGlobalFilterChange: setGlobalFilter,
     onRowSelectionChange: setWorkloadSelection,
     getRowId: (row) => row.id,
     getCoreRowModel: getCoreRowModel(),
@@ -1116,7 +1176,6 @@ export default function KubernetesPage() {
     columns: imageColumns,
     state: { sorting: imageSorting, globalFilter, rowSelection: imageSelection },
     onSortingChange: setImageSorting,
-    onGlobalFilterChange: setGlobalFilter,
     onRowSelectionChange: setImageSelection,
     getRowId: (row) => row.id,
     getCoreRowModel: getCoreRowModel(),
@@ -1124,91 +1183,6 @@ export default function KubernetesPage() {
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
   })
-
-  // Export handler
-  const handleExport = () => {
-    let csv = ''
-    if (mainTab === 'clusters') {
-      csv = [
-        ['Name', 'Provider', 'Version', 'Nodes', 'Workloads', 'Pods', 'Status', 'Risk Score'].join(
-          ','
-        ),
-        ...clusters.map((c) =>
-          [
-            c.name,
-            c.provider,
-            c.version,
-            c.nodeCount,
-            c.workloadCount,
-            c.podCount,
-            c.status,
-            c.riskScore,
-          ].join(',')
-        ),
-      ].join('\n')
-    } else if (mainTab === 'workloads') {
-      csv = [
-        [
-          'Name',
-          'Type',
-          'Cluster',
-          'Namespace',
-          'Replicas',
-          'Status',
-          'Findings',
-          'Risk Score',
-        ].join(','),
-        ...filteredWorkloads.map((w) =>
-          [
-            w.name,
-            w.type,
-            w.clusterName,
-            w.namespace,
-            `${w.readyReplicas}/${w.replicas}`,
-            w.status,
-            w.findingCount,
-            w.riskScore,
-          ].join(',')
-        ),
-      ].join('\n')
-    } else {
-      csv = [
-        [
-          'Image',
-          'Tag',
-          'Registry',
-          'Size (MB)',
-          'Workloads',
-          'Critical',
-          'High',
-          'Medium',
-          'Low',
-          'Risk Score',
-        ].join(','),
-        ...images.map((i) =>
-          [
-            i.name,
-            i.tag,
-            i.registry,
-            i.size,
-            i.workloadCount,
-            i.vulnerabilities.critical,
-            i.vulnerabilities.high,
-            i.vulnerabilities.medium,
-            i.vulnerabilities.low,
-            i.riskScore,
-          ].join(',')
-        ),
-      ].join('\n')
-    }
-    const blob = new Blob([csv], { type: 'text/csv' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `kubernetes-${mainTab}.csv`
-    a.click()
-    toast.success(`${mainTab} exported`)
-  }
 
   // Get add button config based on current tab
   const getAddButtonConfig = () => {
@@ -1419,13 +1393,9 @@ export default function KubernetesPage() {
           </Card>
         </div>
 
-        {/* Scope Coverage Card */}
+        {/* Scope Status Card */}
         <div className="mt-4">
-          <ScopeCoverageCard
-            coverage={scopeCoverage}
-            title="Scope Coverage"
-            showBreakdown={false}
-          />
+          <ScopeCoverageCard coverage={scopeCoverage} title="Scope Status" showBreakdown={false} />
         </div>
 
         {/* Main Content */}
@@ -1464,8 +1434,8 @@ export default function KubernetesPage() {
                 <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder={`Search ${mainTab}...`}
-                  value={globalFilter}
-                  onChange={(e) => setGlobalFilter(e.target.value)}
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
                   className="pl-9"
                 />
               </div>
