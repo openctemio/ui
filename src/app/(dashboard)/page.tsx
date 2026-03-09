@@ -32,15 +32,7 @@ import {
 } from '@/components/charts'
 import { Skeleton } from '@/components/ui/skeleton'
 import { PlatformStatsCard } from '@/features/platform'
-
-// Severity colors for charts
-const SEVERITY_COLORS: Record<string, string> = {
-  critical: '#ef4444',
-  high: '#f97316',
-  medium: '#eab308',
-  low: '#3b82f6',
-  info: '#6b7280',
-}
+import { SEVERITY_CHART_COLORS as SEVERITY_COLORS } from '@/lib/severity-colors'
 
 // Inline skeleton for stats cards section
 function StatsCardsSkeleton() {
@@ -150,7 +142,7 @@ export default function Dashboard() {
   const severityData = Object.entries(findingsBySeverity).map(([name, value]) => ({
     name: name.charAt(0).toUpperCase() + name.slice(1),
     value,
-    color: SEVERITY_COLORS[name.toLowerCase()] || '#6b7280',
+    color: (SEVERITY_COLORS as Record<string, string>)[name.toLowerCase()] || '#6b7280',
   }))
 
   // Prepare asset distribution for bar chart
