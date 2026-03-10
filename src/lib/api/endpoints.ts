@@ -348,6 +348,30 @@ export const tenantEndpoints = {
    */
   updateBrandingSettings: (tenantIdOrSlug: string) =>
     `${API_BASE.TENANTS}/${tenantIdOrSlug}/settings/branding`,
+
+  /**
+   * Risk scoring settings
+   */
+  riskScoringSettings: (tenantIdOrSlug: string) =>
+    `${API_BASE.TENANTS}/${tenantIdOrSlug}/settings/risk-scoring`,
+
+  /**
+   * Preview risk scoring changes
+   */
+  riskScoringPreview: (tenantIdOrSlug: string) =>
+    `${API_BASE.TENANTS}/${tenantIdOrSlug}/settings/risk-scoring/preview`,
+
+  /**
+   * Recalculate risk scores
+   */
+  riskScoringRecalculate: (tenantIdOrSlug: string) =>
+    `${API_BASE.TENANTS}/${tenantIdOrSlug}/settings/risk-scoring/recalculate`,
+
+  /**
+   * Risk scoring presets
+   */
+  riskScoringPresets: (tenantIdOrSlug: string) =>
+    `${API_BASE.TENANTS}/${tenantIdOrSlug}/settings/risk-scoring/presets`,
 } as const
 
 // ============================================
