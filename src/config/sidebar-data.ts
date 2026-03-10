@@ -621,6 +621,13 @@ export const sidebarData: SidebarData = {
               // Requires audit:read permission (core feature - no module required)
               permission: Permission.AuditRead,
             },
+            {
+              title: 'Risk Scoring',
+              url: '/settings/scoring',
+              icon: Scale,
+              // Requires team:update permission (admin-level configuration)
+              permission: Permission.TeamUpdate,
+            },
           ],
         },
         {
