@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo, useCallback } from 'react'
+import Link from 'next/link'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { ColumnDef } from '@tanstack/react-table'
 import { Main } from '@/components/layout'
@@ -35,6 +36,7 @@ import {
   AlertCircle,
   Loader2,
   Route,
+  ClipboardList,
 } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import {
@@ -630,6 +632,12 @@ export default function FindingsPage() {
           }
         >
           <div className="flex flex-wrap items-center gap-2">
+            <Link href="/findings/approvals">
+              <Button variant="outline" size="sm">
+                <ClipboardList className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Approvals</span>
+              </Button>
+            </Link>
             <Button
               variant="outline"
               size="sm"

@@ -149,10 +149,9 @@ const ASSET_TYPE_TO_SUBMODULE: Record<string, string> = {
   application: 'services', // Maps to services sub-module
   endpoint: 'apis', // Maps to apis sub-module
   cloud_account: 'cloud-accounts',
-  compute: 'compute',
   storage: 'storage',
   serverless: 'serverless',
-  cloud: 'cloud',
+  cloud: 'cloud-resources',
   host: 'hosts',
   container: 'containers',
   database: 'databases',

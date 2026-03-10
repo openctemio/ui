@@ -372,6 +372,17 @@ export const tenantEndpoints = {
    */
   riskScoringPresets: (tenantIdOrSlug: string) =>
     `${API_BASE.TENANTS}/${tenantIdOrSlug}/settings/risk-scoring/presets`,
+
+  /**
+   * Module management
+   */
+  modules: (tenantIdOrSlug: string) => `${API_BASE.TENANTS}/${tenantIdOrSlug}/settings/modules`,
+
+  /**
+   * Reset modules to defaults
+   */
+  modulesReset: (tenantIdOrSlug: string) =>
+    `${API_BASE.TENANTS}/${tenantIdOrSlug}/settings/modules/reset`,
 } as const
 
 // ============================================
