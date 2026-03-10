@@ -29,6 +29,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
 import { getErrorMessage } from '@/lib/api/error-handler'
@@ -44,6 +45,7 @@ import {
   ChevronsRight,
   AlertCircle,
   Package,
+  X,
   type LucideIcon,
 } from 'lucide-react'
 import { AssetsStatsCards } from './assets-stats-cards'
@@ -52,6 +54,7 @@ import { AssetDeleteDialog } from './asset-delete-dialog'
 import { createAssetColumns, type AssetColumnConfig } from './assets-table-columns'
 import { AssetDetailSheet } from '../asset-detail-sheet'
 import type { Asset, AssetType, CreateAssetInput, UpdateAssetInput } from '../../types'
+import { useAssetTags, updateAsset as updateAssetApi } from '../../hooks'
 
 export interface AssetsDataTableProps {
   // Data
@@ -128,6 +131,7 @@ export function AssetsDataTable({
   const [globalFilter, setGlobalFilter] = useState('')
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
   const [statusFilter, setStatusFilter] = useState<string | null>(null)
+  const [tagFilters, setTagFilters] = useState<string[]>([])
 
   // Dialog states
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null)
@@ -143,16 +147,23 @@ export function AssetsDataTable({
   const [isUpdating, setIsUpdating] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
 
-  // Filter data by status
+  // Tag suggestions for autocomplete
+  const { tags: tagSuggestions } = useAssetTags()
+
+  // Filter data by status and tags
   const filteredAssets = useMemo(() => {
-    let data = [...assets]
+    if (!statusFilter && tagFilters.length === 0) return assets
+    let data = assets
     if (statusFilter === 'with_findings') {
       data = data.filter((a) => a.findingCount > 0)
     } else if (statusFilter) {
       data = data.filter((a) => a.status === statusFilter)
     }
+    if (tagFilters.length > 0) {
+      data = data.filter((a) => tagFilters.every((tag) => a.tags?.includes(tag)))
+    }
     return data
-  }, [assets, statusFilter])
+  }, [assets, statusFilter, tagFilters])
 
   // Create columns
   const columns = useMemo(
@@ -281,6 +292,20 @@ export function AssetsDataTable({
     }
   }, [onBulkDelete, selectedRows, selectedCount, assetTypeName, onRefresh])
 
+  const handleUpdateTags = useCallback(
+    async (tags: string[]) => {
+      if (!selectedAsset) return
+      try {
+        await updateAssetApi(selectedAsset.id, { tags })
+        toast.success('Tags updated')
+        onRefresh?.()
+      } catch (err) {
+        toast.error(getErrorMessage(err, 'Failed to update tags'))
+      }
+    },
+    [selectedAsset, onRefresh]
+  )
+
   const handleExport = useCallback(() => {
     const data = filteredAssets.map((asset) => ({
       name: asset.name,
@@ -350,6 +375,55 @@ export function AssetsDataTable({
                 className="pl-9"
               />
             </div>
+          )}
+          {/* Tag filter */}
+          {tagSuggestions.length > 0 && (
+            <Select
+              value="_add"
+              onValueChange={(v) => {
+                if (v !== '_add' && !tagFilters.includes(v)) {
+                  setTagFilters([...tagFilters, v])
+                }
+              }}
+            >
+              <SelectTrigger className="w-[160px]">
+                <SelectValue placeholder="Filter by tag" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="_add" disabled>
+                  Filter by tag
+                </SelectItem>
+                {tagSuggestions
+                  .filter((tag) => !tagFilters.includes(tag))
+                  .map((tag) => (
+                    <SelectItem key={tag} value={tag}>
+                      {tag}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+          )}
+          {tagFilters.map((tag) => (
+            <Badge key={tag} variant="secondary" className="gap-1 pl-2 pr-1">
+              {tag}
+              <button
+                type="button"
+                onClick={() => setTagFilters(tagFilters.filter((t) => t !== tag))}
+                className="ml-0.5 rounded-full p-0.5 hover:bg-destructive/20 hover:text-destructive transition-colors"
+                aria-label={`Remove tag filter ${tag}`}
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          ))}
+          {tagFilters.length > 1 && (
+            <button
+              type="button"
+              onClick={() => setTagFilters([])}
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Clear all
+            </button>
           )}
         </div>
 
@@ -485,6 +559,7 @@ export function AssetsDataTable({
               size="icon"
               onClick={() => table.setPageIndex(0)}
               disabled={!table.getCanPreviousPage()}
+              aria-label="Go to first page"
             >
               <ChevronsLeft className="h-4 w-4" />
             </Button>
@@ -493,6 +568,7 @@ export function AssetsDataTable({
               size="icon"
               onClick={() => table.previousPage()}
               disabled={!table.getCanPreviousPage()}
+              aria-label="Go to previous page"
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
@@ -504,6 +580,7 @@ export function AssetsDataTable({
               size="icon"
               onClick={() => table.nextPage()}
               disabled={!table.getCanNextPage()}
+              aria-label="Go to next page"
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
@@ -512,6 +589,7 @@ export function AssetsDataTable({
               size="icon"
               onClick={() => table.setPageIndex(table.getPageCount() - 1)}
               disabled={!table.getCanNextPage()}
+              aria-label="Go to last page"
             >
               <ChevronsRight className="h-4 w-4" />
             </Button>
@@ -542,6 +620,8 @@ export function AssetsDataTable({
         iconColor="text-primary"
         gradientFrom="from-primary/20"
         assetTypeName={assetTypeName}
+        onUpdateTags={handleUpdateTags}
+        tagSuggestions={tagSuggestions}
       />
 
       {/* Add Dialog */}

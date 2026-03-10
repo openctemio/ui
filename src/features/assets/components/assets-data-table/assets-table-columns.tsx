@@ -31,6 +31,7 @@ export interface AssetColumnConfig {
   showClassification?: boolean
   showFindings?: boolean
   showRiskScore?: boolean
+  showTags?: boolean
   showActions?: boolean
   showCreatedAt?: boolean
   showLastSeen?: boolean
@@ -52,6 +53,7 @@ const defaultConfig: AssetColumnConfig = {
   showClassification: true,
   showFindings: true,
   showRiskScore: true,
+  showTags: false,
   showActions: true,
 }
 
@@ -190,6 +192,37 @@ export function createAssetColumns(
         </Button>
       ),
       cell: ({ row }) => <RiskScoreBadge score={row.original.riskScore} size="sm" />,
+    })
+  }
+
+  // Tags column
+  if (mergedConfig.showTags) {
+    columns.push({
+      id: 'tags',
+      header: 'Tags',
+      cell: ({ row }) => {
+        const tags = row.original.tags
+        if (!tags || tags.length === 0) {
+          return <span className="text-muted-foreground">-</span>
+        }
+        const visible = tags.slice(0, 3)
+        const remaining = tags.length - visible.length
+        return (
+          <div className="flex flex-wrap gap-1">
+            {visible.map((tag) => (
+              <Badge key={tag} variant="secondary" className="text-xs">
+                {tag}
+              </Badge>
+            ))}
+            {remaining > 0 && (
+              <Badge variant="outline" className="text-xs">
+                +{remaining}
+              </Badge>
+            )}
+          </div>
+        )
+      },
+      enableSorting: false,
     })
   }
 

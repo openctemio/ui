@@ -497,6 +497,13 @@ export const sidebarData: SidebarData = {
           module: 'findings',
         },
         {
+          title: 'Approvals',
+          url: '/findings/approvals',
+          icon: ClipboardList,
+          permission: Permission.FindingsRead,
+          module: 'findings',
+        },
+        {
           title: 'Reports',
           url: '/reports',
           icon: FileText,
@@ -600,6 +607,12 @@ export const sidebarData: SidebarData = {
               icon: FolderKey,
               // Requires groups:read permission (RBAC-based access)
               permission: Permission.GroupsRead,
+            },
+            {
+              title: 'Assignment Rules',
+              url: '/settings/access-control/assignment-rules',
+              icon: GitBranch,
+              permission: Permission.AssignmentRulesRead,
             },
             {
               title: 'Audit Log',

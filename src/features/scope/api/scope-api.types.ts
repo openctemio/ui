@@ -138,8 +138,17 @@ export interface ApiScopeStats {
 
 export interface ApiCheckScopeResponse {
   in_scope: boolean
-  matched_targets: string[]
-  matched_exclusions: string[]
+  excluded: boolean
+  matched_target_ids: string[]
+  matched_exclusion_ids: string[]
+}
+
+/**
+ * Input for checking if a value is in scope
+ */
+export interface CheckScopeInput {
+  asset_type: string
+  value: string
 }
 
 // ============================================

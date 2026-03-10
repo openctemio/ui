@@ -27,7 +27,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Separator } from '@/components/ui/separator'
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
-import { cn } from '@/lib/utils'
+import { cn, sanitizeExternalUrl } from '@/lib/utils'
 import { toast } from 'sonner'
 import { EcosystemBadge } from './ecosystem-badge'
 import { SeverityBadge } from './severity-badge'
@@ -212,7 +212,13 @@ export function ComponentDetailSheet({ component, open, onOpenChange }: Componen
               <Button
                 size="sm"
                 variant="secondary"
-                onClick={() => window.open(component.homepage, '_blank')}
+                onClick={() =>
+                  window.open(
+                    sanitizeExternalUrl(component.homepage!),
+                    '_blank',
+                    'noopener,noreferrer'
+                  )
+                }
               >
                 <ExternalLink className="mr-2 h-4 w-4" />
                 Homepage
@@ -222,7 +228,13 @@ export function ComponentDetailSheet({ component, open, onOpenChange }: Componen
               <Button
                 size="sm"
                 variant="secondary"
-                onClick={() => window.open(component.repositoryUrl, '_blank')}
+                onClick={() =>
+                  window.open(
+                    sanitizeExternalUrl(component.repositoryUrl!),
+                    '_blank',
+                    'noopener,noreferrer'
+                  )
+                }
               >
                 <GitBranch className="mr-2 h-4 w-4" />
                 Repository

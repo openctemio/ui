@@ -113,6 +113,7 @@ export const Permission = {
   FindingsStatus: 'findings:status',
   FindingsExport: 'findings:export',
   FindingsBulkUpdate: 'findings:bulk_update',
+  FindingsApprove: 'findings:approve',
 
   // Exposures (findings:exposures:*)
   ExposuresRead: 'findings:exposures:read',
@@ -542,6 +543,7 @@ export const PermissionLabels: Partial<Record<PermissionString, string>> = {
   [Permission.FindingsStatus]: 'Change Finding Status',
   [Permission.FindingsExport]: 'Export Findings',
   [Permission.FindingsBulkUpdate]: 'Bulk Update Findings',
+  [Permission.FindingsApprove]: 'Approve Findings',
   [Permission.ExposuresRead]: 'View Exposures',
   [Permission.ExposuresWrite]: 'Manage Exposures',
   [Permission.ExposuresDelete]: 'Delete Exposures',
@@ -721,6 +723,7 @@ export const RolePermissions: Record<RoleString, PermissionString[]> = {
     Permission.FindingsStatus,
     Permission.FindingsExport,
     Permission.FindingsBulkUpdate,
+    Permission.FindingsApprove,
     Permission.ExposuresRead,
     Permission.ExposuresWrite,
     Permission.ExposuresDelete,
@@ -863,6 +866,7 @@ export const RolePermissions: Record<RoleString, PermissionString[]> = {
     Permission.FindingsStatus,
     Permission.FindingsExport,
     Permission.FindingsBulkUpdate,
+    Permission.FindingsApprove,
     Permission.ExposuresRead,
     Permission.ExposuresWrite,
     Permission.ExposuresDelete,

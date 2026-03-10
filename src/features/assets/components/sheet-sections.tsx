@@ -15,10 +15,14 @@ import {
   Check,
   Key,
   AlertTriangle,
+  Pencil,
+  Save,
+  X,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { TagInput } from '@/components/ui/tag-input'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -260,22 +264,84 @@ export function MetadataRow({ label, value, children, colSpan }: MetadataRowProp
 
 interface TagsSectionProps {
   tags?: string[]
+  suggestions?: string[]
+  onSave?: (tags: string[]) => Promise<void>
   className?: string
 }
 
-export function TagsSection({ tags, className }: TagsSectionProps) {
-  if (!tags || tags.length === 0) return null
+export function TagsSection({ tags, suggestions, onSave, className }: TagsSectionProps) {
+  const [editing, setEditing] = React.useState(false)
+  const [editTags, setEditTags] = React.useState<string[]>([])
+  const [saving, setSaving] = React.useState(false)
+
+  const startEditing = () => {
+    setEditTags(tags || [])
+    setEditing(true)
+  }
+
+  const cancelEditing = () => {
+    setEditing(false)
+    setEditTags([])
+  }
+
+  const handleSave = async () => {
+    if (!onSave) return
+    setSaving(true)
+    try {
+      await onSave(editTags)
+      setEditing(false)
+    } catch (err) {
+      toast.error(getErrorMessage(err))
+    } finally {
+      setSaving(false)
+    }
+  }
 
   return (
     <div className={cn('rounded-xl border p-4 bg-card', className)}>
-      <h4 className="text-sm font-medium mb-2">Tags</h4>
-      <div className="flex flex-wrap gap-1">
-        {tags.map((tag) => (
-          <Badge key={tag} variant="secondary">
-            {tag}
-          </Badge>
-        ))}
+      <div className="flex items-center justify-between mb-2">
+        <h4 className="text-sm font-medium">Tags</h4>
+        {onSave && !editing && (
+          <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={startEditing}>
+            <Pencil className="h-3.5 w-3.5" />
+          </Button>
+        )}
+        {editing && (
+          <div className="flex gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 w-6 p-0"
+              onClick={handleSave}
+              disabled={saving}
+            >
+              <Save className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 w-6 p-0"
+              onClick={cancelEditing}
+              disabled={saving}
+            >
+              <X className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        )}
       </div>
+      {editing ? (
+        <TagInput value={editTags} onChange={setEditTags} suggestions={suggestions} maxTags={20} />
+      ) : tags && tags.length > 0 ? (
+        <div className="flex flex-wrap gap-1">
+          {tags.map((tag) => (
+            <Badge key={tag} variant="secondary">
+              {tag}
+            </Badge>
+          ))}
+        </div>
+      ) : (
+        <p className="text-sm text-muted-foreground">No tags</p>
+      )}
     </div>
   )
 }

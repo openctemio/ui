@@ -33,12 +33,31 @@ interface ActivityItem {
   timestamp: string
 }
 
+interface FindingTrendPoint {
+  date: string
+  critical: number
+  high: number
+  medium: number
+  low: number
+  info: number
+}
+
 // Backend dashboard stats response
 interface DashboardStatsResponse {
   assets: AssetStats
   findings: FindingStats
   repositories: RepositoryStats
   recent_activity: ActivityItem[]
+  finding_trend: FindingTrendPoint[]
+}
+
+export interface FindingTrend {
+  date: string
+  critical: number
+  high: number
+  medium: number
+  low: number
+  info: number
 }
 
 // Normalized dashboard stats (camelCase for frontend)
@@ -61,6 +80,7 @@ export interface DashboardStats {
     withFindings: number
   }
   recentActivity: ActivityItem[]
+  findingTrend: FindingTrend[]
 }
 
 // Transform backend response to frontend format
@@ -84,6 +104,7 @@ function transformStats(response: DashboardStatsResponse): DashboardStats {
       withFindings: response.repositories.with_findings,
     },
     recentActivity: response.recent_activity || [],
+    findingTrend: response.finding_trend || [],
   }
 }
 
@@ -107,6 +128,7 @@ const emptyStats: DashboardStats = {
     withFindings: 0,
   },
   recentActivity: [],
+  findingTrend: [],
 }
 
 /**

@@ -218,7 +218,7 @@ function SyncStatusBadge({ status }: { status: SyncStatus['last_sync_status'] })
     pending: {
       label: 'Pending',
       icon: Clock,
-      className: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
+      className: 'bg-yellow-100 text-yellow-900 dark:bg-yellow-900/30 dark:text-yellow-400',
     },
     never: {
       label: 'Never synced',

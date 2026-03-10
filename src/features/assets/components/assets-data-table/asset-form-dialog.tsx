@@ -30,6 +30,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { TagInput } from '@/components/ui/tag-input'
 import { Loader2, type LucideIcon, Package } from 'lucide-react'
 import type {
   Asset,
@@ -40,6 +41,7 @@ import type {
   CreateAssetInput,
   UpdateAssetInput,
 } from '../../types'
+import { useAssetTags } from '../../hooks'
 
 // Form schema with required fields
 const formSchema = z.object({
@@ -48,7 +50,7 @@ const formSchema = z.object({
   criticality: z.enum(['critical', 'high', 'medium', 'low']),
   scope: z.enum(['internal', 'external', 'cloud', 'partner', 'vendor', 'shadow']),
   exposure: z.enum(['public', 'restricted', 'private', 'isolated', 'unknown']),
-  tags: z.string().optional(),
+  tags: z.array(z.string().min(1).max(50)).max(20).optional(),
 })
 
 type FormValues = z.infer<typeof formSchema>
@@ -95,7 +97,7 @@ const DEFAULT_VALUES: FormValues = {
   criticality: 'medium',
   scope: 'internal',
   exposure: 'unknown',
-  tags: '',
+  tags: [],
 }
 
 export function AssetFormDialog({
@@ -114,6 +116,8 @@ export function AssetFormDialog({
     defaultValues: DEFAULT_VALUES,
   })
 
+  const { tags: suggestedTags } = useAssetTags(undefined, open)
+
   // Reset form when dialog opens/closes or asset changes
   useEffect(() => {
     if (open && mode === 'edit' && asset) {
@@ -123,7 +127,7 @@ export function AssetFormDialog({
         criticality: asset.criticality,
         scope: asset.scope,
         exposure: asset.exposure,
-        tags: asset.tags?.join(', ') || '',
+        tags: asset.tags || [],
       })
     } else if (open && mode === 'create') {
       form.reset(DEFAULT_VALUES)
@@ -131,10 +135,7 @@ export function AssetFormDialog({
   }, [open, mode, asset, form])
 
   const handleFormSubmit = async (values: FormValues) => {
-    const tags = values.tags
-      ?.split(',')
-      .map((t) => t.trim())
-      .filter(Boolean)
+    const tags = (values.tags || []).filter(Boolean)
 
     if (mode === 'create') {
       await onSubmit({
@@ -296,7 +297,13 @@ export function AssetFormDialog({
                 <FormItem>
                   <FormLabel>Tags</FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter tags separated by commas" {...field} />
+                    <TagInput
+                      value={field.value || []}
+                      onChange={field.onChange}
+                      suggestions={suggestedTags}
+                      placeholder="Type a tag and press Enter..."
+                      maxTags={20}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

@@ -37,12 +37,12 @@ OpenCTEM implements a **3-layer access control** architecture:
 ### Hook: useTenantModules
 
 ```typescript
-import { useTenantModules } from '@/features/integrations/api/use-tenant-modules';
+import { useTenantModules } from '@/features/integrations/api/use-tenant-modules'
 
-const { moduleIds, modules, eventTypes, isLoading } = useTenantModules();
+const { moduleIds, modules, eventTypes, isLoading } = useTenantModules()
 
 // Check if tenant has a module
-const hasFindings = moduleIds.includes('findings');
+const hasFindings = moduleIds.includes('findings')
 
 // Available event types for notifications (filtered by modules)
 // e.g., ['new_finding', 'scan_completed'] based on tenant's modules
@@ -61,14 +61,15 @@ const hasFindings = moduleIds.includes('findings');
 
 Determines user's organizational status within a tenant.
 
-| Level | isAdmin JWT | Permissions in JWT | Description |
-|-------|-------------|-------------------|-------------|
-| **Owner** | ✅ true | nil | Full access including owner-only operations. Cannot be removed. |
-| **Admin** | ✅ true | nil | Almost full access. Cannot do owner-only operations. |
-| **Member** | ❌ false | ~42 permissions | Standard read/write access. Permissions from RBAC roles. |
-| **Viewer** | ❌ false | ~25 permissions | Read-only access. Permissions from RBAC roles. |
+| Level      | isAdmin JWT | Permissions in JWT | Description                                                     |
+| ---------- | ----------- | ------------------ | --------------------------------------------------------------- |
+| **Owner**  | ✅ true     | nil                | Full access including owner-only operations. Cannot be removed. |
+| **Admin**  | ✅ true     | nil                | Almost full access. Cannot do owner-only operations.            |
+| **Member** | ❌ false    | ~42 permissions    | Standard read/write access. Permissions from RBAC roles.        |
+| **Viewer** | ❌ false    | ~25 permissions    | Read-only access. Permissions from RBAC roles.                  |
 
 **Key Points:**
+
 - **Owner** has ALL permissions - bypass all permission checks
 - **Admin** has almost all permissions - bypass general permission checks, but NOT owner-only operations
 - **Member/Viewer** - permissions checked from JWT (included in token)
@@ -89,16 +90,19 @@ Define what actions users can perform. Users can have multiple roles.
 **This is the ONLY source of permissions** (except Owner who has full access).
 
 **System Roles (predefined):**
+
 - `Administrator` (115 permissions) - Full administrative access
 - `Member` (49 permissions) - Standard read/write access
 - `Viewer` (38 permissions) - Read-only access
 
 **Custom Roles:**
+
 - Created by tenant admins
 - Can have any combination of permissions
 - Examples: "Security Analyst", "Developer", "Compliance Officer"
 
 **Permission Resolution:**
+
 ```
 User's Effective Permissions = Union of all assigned Role permissions
 
@@ -106,6 +110,7 @@ Owner Exception: Owners have ALL permissions regardless of roles
 ```
 
 **Invitation Flow (Simplified):**
+
 ```
 Admin invites user@example.com
     ↓
@@ -138,6 +143,7 @@ Organize users and control access to **data** (assets, findings).
 | `custom` | Other use cases |
 
 **Group Features:**
+
 - **Members**: Users in the group (with role: admin, member)
 - **Assets**: Assets owned by the group (primary, shared ownership)
 - **Data Scope**: Members can only see data related to group's assets
@@ -151,34 +157,37 @@ Permissions follow a hierarchical naming pattern:
 ```
 
 Examples:
+
 - `integrations:scm:read` - View SCM connections
 - `assets:groups:write` - Manage asset groups
 - `team:roles:assign` - Assign roles to users
 
 For simpler permissions:
+
 ```
 {module}:{action}
 ```
 
 Examples:
+
 - `dashboard:read`, `assets:read`, `findings:write`
 
 ## Permission Categories
 
 The system has 150+ granular permissions organized in modules:
 
-| Module | Permissions | Description |
-|--------|-------------|-------------|
-| **Assets** | `assets:read`, `assets:groups:write`, `assets:repositories:read` | Asset management |
-| **Findings** | `findings:read`, `findings:vulnerabilities:write`, `findings:remediation:read` | Vulnerability management |
-| **Scans** | `scans:read`, `scans:profiles:write`, `scans:execute` | Security scanning |
-| **Team** | `team:read`, `team:members:invite`, `team:groups:members` | Team management |
-| **Integrations** | `integrations:scm:read`, `integrations:notifications:write` | External integrations |
-| **Settings** | `settings:billing:read`, `settings:sla:write` | Tenant settings |
-| **Reports** | `reports:read`, `reports:write` | Reporting |
-| **Agents** | `agents:read`, `agents:commands:write` | Agent management |
-| **Audit** | `audit:read` | Audit log access |
-| **Settings** | `settings:read`, `settings:write` | Tenant settings |
+| Module           | Permissions                                                                    | Description              |
+| ---------------- | ------------------------------------------------------------------------------ | ------------------------ |
+| **Assets**       | `assets:read`, `assets:groups:write`, `assets:repositories:read`               | Asset management         |
+| **Findings**     | `findings:read`, `findings:vulnerabilities:write`, `findings:remediation:read` | Vulnerability management |
+| **Scans**        | `scans:read`, `scans:profiles:write`, `scans:execute`                          | Security scanning        |
+| **Team**         | `team:read`, `team:members:invite`, `team:groups:members`                      | Team management          |
+| **Integrations** | `integrations:scm:read`, `integrations:notifications:write`                    | External integrations    |
+| **Settings**     | `settings:billing:read`, `settings:sla:write`                                  | Tenant settings          |
+| **Reports**      | `reports:read`, `reports:write`                                                | Reporting                |
+| **Agents**       | `agents:read`, `agents:commands:write`                                         | Agent management         |
+| **Audit**        | `audit:read`                                                                   | Audit log access         |
+| **Settings**     | `settings:read`, `settings:write`                                              | Tenant settings          |
 
 ## Data Flow
 
@@ -269,13 +278,14 @@ GET    /api/v1/me/assets                # Get current user's accessible assets
 
 Permissions are handled differently based on role to keep JWT under 4KB browser cookie limit:
 
-| Role | JWT Size | Permission Source |
-|------|----------|-------------------|
-| Owner/Admin | ~500B | Bypass all checks (isAdmin=true in JWT) |
-| Member | ~1.5KB | Permissions array in JWT (~42 permissions) |
-| Viewer | ~1KB | Permissions array in JWT (~25 permissions) |
+| Role        | JWT Size | Permission Source                          |
+| ----------- | -------- | ------------------------------------------ |
+| Owner/Admin | ~500B    | Bypass all checks (isAdmin=true in JWT)    |
+| Member      | ~1.5KB   | Permissions array in JWT (~42 permissions) |
+| Viewer      | ~1KB     | Permissions array in JWT (~25 permissions) |
 
 **Flow:**
+
 ```
 Login → Token Exchange → JWT contains:
     - isAdmin: true (for owner/admin) OR
@@ -291,9 +301,9 @@ Login → Token Exchange → JWT contains:
 // ============================================
 // PERMISSION CHECKING (from JWT)
 // ============================================
-import { usePermissions, Permission, Can } from '@/lib/permissions';
+import { usePermissions, Permission, Can } from '@/lib/permissions'
 
-const { can, canAny, canAll, permissions, isOwner, isAdmin } = usePermissions();
+const { can, canAny, canAll, permissions, isOwner, isAdmin } = usePermissions()
 
 // Single permission check (Owner/Admin bypass automatically)
 if (can(Permission.AssetsWrite)) {
@@ -327,18 +337,18 @@ if (isAdmin()) {
 // ============================================
 // RBAC MANAGEMENT (Admin features)
 // ============================================
-import { useRoles, useUserRoles, useSetUserRoles } from '@/features/access-control';
+import { useRoles, useUserRoles, useSetUserRoles } from '@/features/access-control'
 
-const { roles } = useRoles();                    // All roles
-const { roles: userRoles } = useUserRoles(userId); // User's assigned roles
-const { setUserRoles } = useSetUserRoles(userId);  // Assign roles to user
+const { roles } = useRoles() // All roles
+const { roles: userRoles } = useUserRoles(userId) // User's assigned roles
+const { setUserRoles } = useSetUserRoles(userId) // Assign roles to user
 
 // Groups
-import { useGroups, useGroupMembers, useGroupAssets } from '@/features/access-control';
+import { useGroups, useGroupMembers, useGroupAssets } from '@/features/access-control'
 
-const { groups } = useGroups();
-const { members } = useGroupMembers(groupId);
-const { assets } = useGroupAssets(groupId);
+const { groups } = useGroups()
+const { members } = useGroupMembers(groupId)
+const { assets } = useGroupAssets(groupId)
 ```
 
 ### Permission-Gated API Hooks
@@ -355,14 +365,14 @@ export function useAssets(tenantId: string | null, filters?: AssetSearchFilters)
   const shouldFetch = tenantId && canReadAssets
 
   const { data, error, isLoading, mutate } = useSWR<AssetListResponse>(
-    shouldFetch ? ['assets', tenantId, filters] : null,  // null key = no fetch
+    shouldFetch ? ['assets', tenantId, filters] : null, // null key = no fetch
     () => get<AssetListResponse>(assetEndpoints.list(filters)),
     { revalidateOnFocus: false }
   )
 
   return {
     assets: data?.data || [],
-    isLoading: shouldFetch ? isLoading : false,  // Not loading if no permission
+    isLoading: shouldFetch ? isLoading : false, // Not loading if no permission
     error,
     mutate,
   }
@@ -371,19 +381,19 @@ export function useAssets(tenantId: string | null, filters?: AssetSearchFilters)
 
 **Hooks with permission checks:**
 
-| Hook | Required Permission |
-|------|---------------------|
-| `useAssets`, `useAssetStats` | `assets:read` |
-| `useFindings`, `useFindingStats` | `findings:read` |
-| `useExposures`, `useExposureStats` | `findings:read` |
-| `useComponents`, `useComponentStats` | `assets:components:read` |
-| `useAssetGroups`, `useGroupAssets` | `assets:groups:read` |
+| Hook                                 | Required Permission             |
+| ------------------------------------ | ------------------------------- |
+| `useAssets`, `useAssetStats`         | `assets:read`                   |
+| `useFindings`, `useFindingStats`     | `findings:read`                 |
+| `useExposures`, `useExposureStats`   | `findings:read`                 |
+| `useComponents`, `useComponentStats` | `assets:components:read`        |
+| `useAssetGroups`, `useGroupAssets`   | `assets:groups:read`            |
 | `useThreatIntelStats`, `useKEVStats` | `findings:vulnerabilities:read` |
-| `useDashboardStats` | `dashboard:read` |
-| `useMembers`, `useMemberStats` | `team:members:read` |
-| `useTenantSettings` | `team:read` |
-| `useRepositories` | `assets:repositories:read` |
-| `useSCMConnections` | `integrations:scm:read` |
+| `useDashboardStats`                  | `dashboard:read`                |
+| `useMembers`, `useMemberStats`       | `team:members:read`             |
+| `useTenantSettings`                  | `team:read`                     |
+| `useRepositories`                    | `assets:repositories:read`      |
+| `useSCMConnections`                  | `integrations:scm:read`         |
 
 ### Permission Guard Components
 
@@ -424,6 +434,7 @@ import { Can, Permission } from '@/lib/permissions';
 ```
 
 **Disable Mode Behavior:**
+
 - Adds `disabled`, `aria-disabled="true"` attributes to children
 - Wraps in a div that blocks `onClick` and `onMouseDown` events
 - Shows tooltip explaining why the action is disabled
@@ -452,13 +463,13 @@ import { PermissionGate } from '@/features/auth/components/permission-gate';
 
 **Mode Selection Guide:**
 
-| Use Case | Mode | Example |
-|----------|------|---------|
-| Navigation/Menu items | `hide` (default) | Sidebar links |
-| Action buttons with Links | `disable` | Quick action buttons (New Scan, View Reports) |
-| Destructive actions | `disable` | Delete, Remove buttons |
-| Critical features | `disable` with custom tooltip | Billing, Admin settings |
-| Dropdown menu items | `hide` | Context menu actions |
+| Use Case                  | Mode                          | Example                                       |
+| ------------------------- | ----------------------------- | --------------------------------------------- |
+| Navigation/Menu items     | `hide` (default)              | Sidebar links                                 |
+| Action buttons with Links | `disable`                     | Quick action buttons (New Scan, View Reports) |
+| Destructive actions       | `disable`                     | Delete, Remove buttons                        |
+| Critical features         | `disable` with custom tooltip | Billing, Admin settings                       |
+| Dropdown menu items       | `hide`                        | Context menu actions                          |
 
 ### Sidebar Permission Filtering
 
@@ -475,11 +486,12 @@ Sidebar menu items are automatically filtered based on user permissions:
 ```
 
 **Filtering Logic:**
+
 ```typescript
 // In sidebar component
-const filteredItems = items.filter(item => {
-  if (!item.permission) return true  // No permission = always show
-  return can(item.permission)         // Check permission
+const filteredItems = items.filter((item) => {
+  if (!item.permission) return true // No permission = always show
+  return can(item.permission) // Check permission
 })
 ```
 
@@ -615,4 +627,66 @@ CREATE TABLE asset_owners (
 
 ---
 
-**Last Updated**: 2026-01-22
+## Scope Rules (Dynamic Asset-to-Group Scoping)
+
+Scope Rules automatically assign assets to groups based on asset tags or asset group membership.
+
+**Location:** `src/features/access-control/components/group-detail-sheet/`
+
+| File                    | Purpose                                  |
+| ----------------------- | ---------------------------------------- |
+| `scope-rules-tab.tsx`   | List/search/preview/delete scope rules   |
+| `scope-rule-dialog.tsx` | Create/edit dialog with tag autocomplete |
+
+**Hooks:** `src/features/access-control/api/use-scope-rules.ts`
+
+```tsx
+// List scope rules for a group
+const { scopeRules, isLoading, mutate } = useScopeRules(groupId)
+
+// Create
+const { createScopeRule, isCreating } = useCreateScopeRule(groupId)
+await createScopeRule({
+  name: 'Production Assets',
+  rule_type: 'tag_match',
+  match_tags: ['production'],
+  match_logic: 'any',
+  ownership_type: 'primary',
+  priority: 10,
+  is_active: true,
+})
+
+// Preview (dry run)
+const { previewScopeRule } = usePreviewScopeRule(groupId, ruleId)
+const result = await previewScopeRule()
+// { matching_assets: 45, already_assigned: 30, would_add: 15 }
+
+// Reconcile (re-evaluate all rules)
+const { reconcileGroup } = useReconcileGroup(groupId)
+await reconcileGroup()
+```
+
+**Types:** `src/features/access-control/types/scope-rule.types.ts`
+
+## Assignment Rules (Finding Triage Routing)
+
+Assignment Rules automatically route findings to groups for triage based on finding properties.
+
+**Location:** `src/features/access-control/components/assignment-rule-detail-sheet.tsx`
+**Page:** `src/app/(dashboard)/settings/access-control/assignment-rules/page.tsx`
+
+**Hooks:** `src/features/access-control/api/use-assignment-rules.ts`
+
+**Types:** `src/features/access-control/types/assignment-rule.types.ts`
+
+**Permissions Required:**
+
+- `assignmentRules:read` - View rules
+- `assignmentRules:write` - Create/update rules
+- `assignmentRules:delete` - Delete rules
+
+See `api/docs/architecture/access-control-rules.md` for complete backend documentation.
+
+---
+
+**Last Updated**: 2026-03-05

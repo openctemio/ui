@@ -36,7 +36,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import { cn } from '@/lib/utils'
+import { cn, sanitizeExternalUrl } from '@/lib/utils'
 import { getErrorMessage } from '@/lib/api/error-handler'
 
 import { ProviderIcon, SCM_PROVIDER_COLORS } from './provider-icon'
@@ -200,7 +200,8 @@ export function SCMConnectionCard({
                           url = `${connection.base_url}/${org}`
                         }
                       }
-                      window.open(url, '_blank')
+                      if (url)
+                        window.open(sanitizeExternalUrl(url), '_blank', 'noopener,noreferrer')
                     }}
                   >
                     <ExternalLink className="mr-2 h-4 w-4" />

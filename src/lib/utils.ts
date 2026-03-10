@@ -74,6 +74,20 @@ export function generateTempStepId(): string {
   return `temp-${nanoid(12)}`
 }
 
+/**
+ * Sanitize an external URL to prevent XSS via javascript: or data: protocols.
+ * Only allows http: and https: protocols. Returns '#' for anything else.
+ */
+export function sanitizeExternalUrl(url: string): string {
+  try {
+    const parsed = new URL(url.startsWith('http') ? url : `https://${url}`)
+    if (parsed.protocol === 'http:' || parsed.protocol === 'https:') return parsed.href
+    return '#'
+  } catch {
+    return '#'
+  }
+}
+
 export function sleep(ms: number = 1000) {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
