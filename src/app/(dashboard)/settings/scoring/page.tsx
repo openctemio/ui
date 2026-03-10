@@ -396,11 +396,18 @@ export default function ScoringConfigurationPage() {
                   </div>
                 </button>
               ))}
-              {config.preset === 'custom' && (
-                <div className="flex items-center justify-center rounded-lg border border-dashed p-3">
-                  <Badge variant="secondary">Custom</Badge>
+              <div
+                className={`rounded-lg border p-3 text-left transition-colors ${
+                  config.preset === 'custom'
+                    ? 'border-primary bg-primary/5'
+                    : 'hover:border-muted-foreground/30 border-transparent'
+                }`}
+              >
+                <div className="text-sm font-medium">Custom</div>
+                <div className="text-muted-foreground mt-0.5 text-xs">
+                  Manually configured values
                 </div>
-              )}
+              </div>
             </div>
           </CardContent>
         </Card>
