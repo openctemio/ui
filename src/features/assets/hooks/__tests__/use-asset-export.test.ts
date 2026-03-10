@@ -152,6 +152,28 @@ describe('useAssetExport', () => {
       expect(getCsvContent()).toContain("'\rinjection")
     })
 
+    it('prefixes cells with space-prefixed formula characters to prevent injection', () => {
+      const data = [{ id: '1', name: '  =CMD()', value: 0, description: null }]
+      const { result } = renderHook(() => useAssetExport(data, fields, 'test'))
+
+      act(() => {
+        result.current.handleExport()
+      })
+
+      expect(getCsvContent()).toContain("'  =CMD()")
+    })
+
+    it('prefixes cells with tab-then-formula to prevent injection', () => {
+      const data = [{ id: '1', name: ' \t+1234', value: 0, description: null }]
+      const { result } = renderHook(() => useAssetExport(data, fields, 'test'))
+
+      act(() => {
+        result.current.handleExport()
+      })
+
+      expect(getCsvContent()).toContain("' \t+1234")
+    })
+
     it('wraps cells containing commas in double quotes', () => {
       const data = [{ id: '1', name: 'hello, world', value: 0, description: null }]
       const { result } = renderHook(() => useAssetExport(data, fields, 'test'))

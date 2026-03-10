@@ -41,6 +41,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import {
   Select,
   SelectContent,
@@ -63,8 +64,6 @@ import {
   ChevronsLeft,
   ChevronsRight,
   Download,
-  Shield,
-  AlertTriangle,
   Copy,
 } from 'lucide-react'
 import { useAssets, getAssetRelationships, type Asset } from '@/features/assets'
@@ -74,12 +73,17 @@ import {
   ScopeCoverageCard,
   getScopeMatchesForAsset,
   calculateScopeCoverage,
-  getActiveScopeTargets,
-  getActiveScopeExclusions,
+  useScopeTargetsApi,
+  useScopeExclusionsApi,
   type ScopeMatchResult,
+  type ScopeTarget,
+  type ScopeExclusion,
+  type ScopeTargetType,
+  type ScopeTargetStatus,
 } from '@/features/scope'
+import type { ApiScopeTarget, ApiScopeExclusion } from '@/features/scope/api/scope-api.types'
 import { useDebounce } from '@/hooks/use-debounce'
-import type { Status } from '@/features/shared/types'
+// Status filter is now string-based to support custom status values
 import type { AssetType } from '../types'
 import type { AssetPageConfig } from '../types/page-config.types'
 import { useAssetCRUD } from '../hooks/use-asset-crud'
@@ -88,9 +92,45 @@ import { useAssetExport } from '../hooks/use-asset-export'
 import { AssetFormDialogShared } from './asset-form-dialog-shared'
 import { AssetDeleteDialogShared } from './asset-delete-dialog-shared'
 
-type StatusFilter = Status | 'all'
+type StatusFilter = string
 
-const statusFilters: { value: StatusFilter; label: string }[] = [
+const PRIORITY_MAP: Record<number, 'critical' | 'high' | 'medium' | 'low'> = {
+  1: 'critical',
+  2: 'high',
+  3: 'medium',
+  4: 'low',
+}
+
+function transformApiTarget(api: ApiScopeTarget): ScopeTarget {
+  return {
+    id: api.id,
+    type: api.target_type as ScopeTargetType,
+    pattern: api.pattern,
+    description: api.description,
+    status: api.status as ScopeTargetStatus,
+    priority: PRIORITY_MAP[api.priority],
+    tags: api.tags,
+    addedAt: api.created_at,
+    addedBy: api.created_by,
+    updatedAt: api.updated_at,
+  }
+}
+
+function transformApiExclusion(api: ApiScopeExclusion): ScopeExclusion {
+  return {
+    id: api.id,
+    type: api.exclusion_type as ScopeTargetType,
+    pattern: api.pattern,
+    reason: api.reason,
+    status: api.status as ScopeTargetStatus,
+    expiresAt: api.expires_at,
+    approvedBy: api.approved_by,
+    addedAt: api.created_at,
+    addedBy: api.created_by,
+  }
+}
+
+const defaultStatusFilters: { value: string; label: string }[] = [
   { value: 'all', label: 'All' },
   { value: 'active', label: 'Active' },
   { value: 'inactive', label: 'Inactive' },
@@ -114,7 +154,7 @@ export function AssetPage({ config }: AssetPageProps) {
   // Apply optional data transform (e.g., domain tree flattening)
   const transformedAssets = useMemo(
     () => (config.dataTransform ? config.dataTransform(assets) : assets),
-    [assets, config.dataTransform]
+    [assets, config]
   )
 
   // Shared hooks
@@ -128,14 +168,23 @@ export function AssetPage({ config }: AssetPageProps) {
       ? [{ id: config.defaultSort.field, desc: config.defaultSort.direction === 'desc' }]
       : []
   )
-  const [globalFilter, setGlobalFilter] = useState('')
+  const [searchValue, setSearchValue] = useState('')
+  const globalFilter = useDebounce(searchValue, 300)
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
-  const [customFilterValue, setCustomFilterValue] = useState('all')
+  const [customFilterValues, setCustomFilterValues] = useState<Record<string, string>>({})
   const [rowSelection, setRowSelection] = useState({})
 
-  // Scope integration
-  const scopeTargets = useMemo(() => getActiveScopeTargets(), [])
-  const scopeExclusions = useMemo(() => getActiveScopeExclusions(), [])
+  // Scope integration — real API data
+  const { data: scopeTargetsData } = useScopeTargetsApi({ status: 'active', per_page: 500 })
+  const { data: scopeExclusionsData } = useScopeExclusionsApi({ status: 'active', per_page: 500 })
+  const scopeTargets = useMemo(
+    () => (scopeTargetsData?.data ?? []).map(transformApiTarget),
+    [scopeTargetsData]
+  )
+  const scopeExclusions = useMemo(
+    () => (scopeExclusionsData?.data ?? []).map(transformApiExclusion),
+    [scopeExclusionsData]
+  )
   const scopeMatchesMap = useMemo(() => {
     const map = new Map<string, ScopeMatchResult>()
     if (!transformedAssets?.length) return map
@@ -166,28 +215,42 @@ export function AssetPage({ config }: AssetPageProps) {
     [transformedAssets, scopeTargets, scopeExclusions]
   )
 
+  // Resolve filters: customFilters[] takes priority, fallback to single customFilter
+  const resolvedFilters = useMemo(
+    () => config.customFilters ?? (config.customFilter ? [config.customFilter] : []),
+    [config.customFilters, config.customFilter]
+  )
+
+  // Resolve status filter options
+  const statusFilterOptions = useMemo(
+    () => config.statusFilters ?? defaultStatusFilters,
+    [config.statusFilters]
+  )
+
   // Filter data
   const filteredData = useMemo(() => {
     let data = [...(transformedAssets ?? [])]
     if (statusFilter !== 'all') {
       data = data.filter((a) => a.status === statusFilter)
     }
-    if (config.customFilter && customFilterValue !== 'all') {
-      data = data.filter((a) => config.customFilter!.filterFn(a, customFilterValue))
+    for (const filter of resolvedFilters) {
+      const value = customFilterValues[filter.label] ?? 'all'
+      if (value !== 'all') {
+        data = data.filter((a) => filter.filterFn(a, value))
+      }
     }
     return data
-  }, [transformedAssets, statusFilter, customFilterValue, config.customFilter])
+  }, [transformedAssets, statusFilter, customFilterValues, resolvedFilters])
 
-  // Status counts
-  const statusCounts = useMemo(
-    () => ({
-      all: transformedAssets.length,
-      active: transformedAssets.filter((a) => a.status === 'active').length,
-      inactive: transformedAssets.filter((a) => a.status === 'inactive').length,
-      pending: transformedAssets.filter((a) => a.status === 'pending').length,
-    }),
-    [transformedAssets]
-  )
+  // Status counts — single pass O(n)
+  const statusCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: transformedAssets.length }
+    for (const asset of transformedAssets) {
+      const s = asset.status
+      counts[s] = (counts[s] ?? 0) + 1
+    }
+    return counts
+  }, [transformedAssets])
 
   // Copy handler
   const handleCopy = useCallback(
@@ -237,13 +300,31 @@ export function AssetPage({ config }: AssetPageProps) {
     async (data: Record<string, unknown>) => {
       if (!dialogs.selectedAsset) return false
       const tags = (data.tags as string[] | undefined) ?? []
+      delete data.tags
+
+      // Collect metadata and top-level fields (same logic as create)
+      const metadata: Record<string, unknown> = {}
+      const topLevel: Record<string, unknown> = {}
+
+      for (const field of config.formFields) {
+        if (field.name === 'name' || field.name === 'description' || field.name === 'tags') continue
+        if (data[field.name] === undefined) continue
+        if (field.isMetadata) {
+          metadata[field.name] = data[field.name]
+        } else {
+          topLevel[field.name] = data[field.name]
+        }
+      }
+
       return crud.handleUpdate(dialogs.selectedAsset.id, {
         name: String(data.name ?? ''),
         description: String(data.description ?? ''),
         tags,
+        ...(Object.keys(metadata).length > 0 ? { metadata } : {}),
+        ...topLevel,
       })
     },
-    [crud, dialogs.selectedAsset]
+    [crud, dialogs.selectedAsset, config.formFields]
   )
 
   // Build columns: select + name + type-specific + status + classification + findings + risk + scope + actions
@@ -325,17 +406,38 @@ export function AssetPage({ config }: AssetPageProps) {
         cell: ({ row }) => {
           const tags = row.original.tags
           if (!tags?.length) return <span className="text-muted-foreground">-</span>
+          const visible = tags.slice(0, 2)
+          const remaining = tags.slice(2)
           return (
-            <div className="flex flex-wrap gap-1 max-w-[150px]">
-              {tags.slice(0, 2).map((tag) => (
-                <Badge key={tag} variant="outline" className="text-xs px-1.5 py-0">
+            <div className="flex flex-wrap gap-1 max-w-[180px]">
+              {visible.map((tag) => (
+                <Badge
+                  key={tag}
+                  variant="outline"
+                  className="text-xs px-1.5 py-0 truncate max-w-[80px]"
+                >
                   {tag}
                 </Badge>
               ))}
-              {tags.length > 2 && (
-                <Badge variant="outline" className="text-xs px-1.5 py-0">
-                  +{tags.length - 2}
-                </Badge>
+              {remaining.length > 0 && (
+                <TooltipProvider delayDuration={200}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Badge variant="secondary" className="text-xs px-1.5 py-0 cursor-default">
+                        +{remaining.length}
+                      </Badge>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="max-w-[240px]">
+                      <div className="flex flex-wrap gap-1">
+                        {remaining.map((tag) => (
+                          <Badge key={tag} variant="outline" className="text-xs px-1.5 py-0">
+                            {tag}
+                          </Badge>
+                        ))}
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               )}
             </div>
           )
@@ -356,7 +458,13 @@ export function AssetPage({ config }: AssetPageProps) {
         ),
         cell: ({ row }) => {
           const count = row.original.findingCount
-          if (count === 0) return <span className="text-muted-foreground">0</span>
+          if (count === 0) {
+            return (
+              <Badge variant="outline" className="text-muted-foreground">
+                0
+              </Badge>
+            )
+          }
           return <Badge variant={count > 5 ? 'destructive' : 'secondary'}>{count}</Badge>
         },
       },
@@ -434,6 +542,22 @@ export function AssetPage({ config }: AssetPageProps) {
                     {config.copyAction.label}
                   </DropdownMenuItem>
                 )}
+                {config.rowActions?.map((action) => {
+                  if (action.permission && !can(action.permission)) return null
+                  const ActionIcon = action.icon
+                  return (
+                    <DropdownMenuItem
+                      key={action.label}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        action.onClick(asset)
+                      }}
+                    >
+                      <ActionIcon className="mr-2 h-4 w-4" />
+                      {action.label}
+                    </DropdownMenuItem>
+                  )
+                })}
                 <Can permission={Permission.AssetsDelete}>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
@@ -453,14 +577,13 @@ export function AssetPage({ config }: AssetPageProps) {
         },
       },
     ]
-  }, [config, scopeMatchesMap, dialogs, handleCopy])
+  }, [config, scopeMatchesMap, dialogs, handleCopy, can])
 
   const table = useReactTable({
     data: filteredData,
     columns,
     state: { sorting, globalFilter, rowSelection },
     onSortingChange: setSorting,
-    onGlobalFilterChange: setGlobalFilter,
     onRowSelectionChange: setRowSelection,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -547,6 +670,13 @@ export function AssetPage({ config }: AssetPageProps) {
           <ScopeCoverageCard coverage={scopeCoverage} showBreakdown={false} />
         </div>
 
+        {/* Optional header content (banners, alerts) */}
+        {config.headerContent && (
+          <div className="mt-4">
+            <config.headerContent assets={transformedAssets} />
+          </div>
+        )}
+
         {/* Table */}
         <Card className="mt-6">
           <CardHeader>
@@ -560,32 +690,38 @@ export function AssetPage({ config }: AssetPageProps) {
                   onValueChange={(v) => setStatusFilter(v as StatusFilter)}
                 >
                   <TabsList>
-                    {statusFilters.map((f) => (
+                    {statusFilterOptions.map((f) => (
                       <TabsTrigger key={f.value} value={f.value} className="text-xs">
                         {f.label}
                         <Badge variant="secondary" className="ml-1.5 px-1.5 py-0 text-xs">
-                          {statusCounts[f.value as keyof typeof statusCounts] ?? 0}
+                          {statusCounts[f.value] ?? 0}
                         </Badge>
                       </TabsTrigger>
                     ))}
                   </TabsList>
                 </Tabs>
 
-                {config.customFilter && (
-                  <Select value={customFilterValue} onValueChange={setCustomFilterValue}>
+                {resolvedFilters.map((filter) => (
+                  <Select
+                    key={filter.label}
+                    value={customFilterValues[filter.label] ?? 'all'}
+                    onValueChange={(v) =>
+                      setCustomFilterValues((prev) => ({ ...prev, [filter.label]: v }))
+                    }
+                  >
                     <SelectTrigger className="w-[150px]">
-                      <SelectValue placeholder={config.customFilter.label} />
+                      <SelectValue placeholder={filter.label} />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All</SelectItem>
-                      {config.customFilter.options.map((opt) => (
+                      {filter.options.map((opt) => (
                         <SelectItem key={opt.value} value={opt.value}>
                           {opt.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                )}
+                ))}
               </div>
 
               <div className="flex items-center gap-2">
@@ -593,8 +729,8 @@ export function AssetPage({ config }: AssetPageProps) {
                   <SearchIcon className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
                     placeholder={`Search ${config.labelPlural.toLowerCase()}...`}
-                    value={globalFilter}
-                    onChange={(e) => setGlobalFilter(e.target.value)}
+                    value={searchValue}
+                    onChange={(e) => setSearchValue(e.target.value)}
                     className="pl-8"
                   />
                 </div>
@@ -607,6 +743,23 @@ export function AssetPage({ config }: AssetPageProps) {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent>
+                      {config.bulkActions?.map((action) => {
+                        if (action.permission && !can(action.permission)) return null
+                        const BulkIcon = action.icon
+                        return (
+                          <DropdownMenuItem
+                            key={action.label}
+                            className={action.variant === 'destructive' ? 'text-red-400' : ''}
+                            onClick={() => {
+                              const assets = table.getSelectedRowModel().rows.map((r) => r.original)
+                              action.onClick(assets)
+                            }}
+                          >
+                            <BulkIcon className="mr-2 h-4 w-4" />
+                            {action.label}
+                          </DropdownMenuItem>
+                        )
+                      })}
                       <Can permission={Permission.AssetsDelete}>
                         <DropdownMenuItem className="text-red-400" onClick={handleBulkDelete}>
                           <Trash2 className="mr-2 h-4 w-4" />
@@ -728,6 +881,15 @@ export function AssetPage({ config }: AssetPageProps) {
         gradientVia={config.gradientVia}
         assetTypeName={config.label}
         relationships={selectedAsset ? getAssetRelationships(selectedAsset.id) : []}
+        extraTabs={
+          selectedAsset && config.detailTabs
+            ? config.detailTabs.map((tab) => ({
+                value: tab.id,
+                label: tab.label,
+                content: tab.render(selectedAsset),
+              }))
+            : undefined
+        }
         onEdit={() => selectedAsset && dialogs.openEdit(selectedAsset)}
         onDelete={() => {
           if (selectedAsset) {

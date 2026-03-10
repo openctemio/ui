@@ -80,6 +80,7 @@ interface BackendAsset {
   tenant_id?: string
   name: string
   type: string // Backend uses "type" in JSON
+  provider?: string // SCM provider or asset source
   criticality: string // low, medium, high, critical
   status: string // active, inactive, archived
   scope: string // internal, external, cloud, partner, vendor, shadow
@@ -93,6 +94,7 @@ interface BackendAsset {
   last_seen: string
   created_at: string
   updated_at: string
+  repository?: BackendRepositoryExtension
 }
 
 // Transform backend asset to frontend format
@@ -101,6 +103,7 @@ function transformAsset(backend: BackendAsset): Asset {
     id: backend.id,
     name: backend.name,
     type: backend.type as AssetType,
+    provider: backend.provider,
     criticality: backend.criticality as Criticality,
     status: backend.status as 'active' | 'inactive' | 'archived',
     description: backend.description,
@@ -114,6 +117,7 @@ function transformAsset(backend: BackendAsset): Asset {
     lastSeen: backend.last_seen,
     createdAt: backend.created_at,
     updatedAt: backend.updated_at,
+    repository: backend.repository ? transformRepositoryExtension(backend.repository) : undefined,
   }
 }
 
@@ -416,14 +420,25 @@ export async function deleteAsset(assetId: string): Promise<void> {
 
 /**
  * Bulk delete multiple assets
- * Deletes assets sequentially to avoid overwhelming the server
+ * Deletes assets in batches with a concurrency limit.
+ * Uses Promise.allSettled to preserve partial failure info.
  */
 export async function bulkDeleteAssets(assetIds: string[]): Promise<void> {
-  // Delete assets in parallel with a concurrency limit
   const BATCH_SIZE = 5
+  const failedIds: string[] = []
+
   for (let i = 0; i < assetIds.length; i += BATCH_SIZE) {
     const batch = assetIds.slice(i, i + BATCH_SIZE)
-    await Promise.all(batch.map((id) => del(endpoints.assets.delete(id))))
+    const results = await Promise.allSettled(batch.map((id) => del(endpoints.assets.delete(id))))
+    results.forEach((result, idx) => {
+      if (result.status === 'rejected') {
+        failedIds.push(batch[idx])
+      }
+    })
+  }
+
+  if (failedIds.length > 0) {
+    throw new Error(`Failed to delete ${failedIds.length} of ${assetIds.length} assets`)
   }
 }
 

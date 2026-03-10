@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -46,7 +46,7 @@ function getInitialValues(
     if (asset) {
       const raw = field.isMetadata
         ? (asset.metadata as Record<string, unknown>)?.[field.name]
-        : (asset as unknown as Record<string, unknown>)[field.name]
+        : (asset[field.name as keyof typeof asset] as unknown)
       if (field.type === 'boolean') {
         values[field.name] = raw === true
       } else if (field.type === 'tags' && Array.isArray(raw)) {
@@ -76,11 +76,13 @@ export function AssetFormDialogShared({
     getInitialValues(fields, asset)
   )
   const [groupId, setGroupId] = useState(asset?.groupId || '')
+  const [errors, setErrors] = useState<Record<string, string>>({})
 
   useEffect(() => {
     if (open) {
       setFormData(getInitialValues(fields, asset))
       setGroupId(asset?.groupId || '')
+      setErrors({})
     }
   }, [open, asset, fields])
 
@@ -88,16 +90,42 @@ export function AssetFormDialogShared({
     setFormData((prev) => ({ ...prev, [name]: value }))
   }, [])
 
+  // Validate required fields
+  const validate = useCallback((): boolean => {
+    const newErrors: Record<string, string> = {}
+    for (const field of fields) {
+      if (!field.required) continue
+      const raw = formData[field.name]
+      if (field.type === 'boolean') continue // booleans always have a value
+      if (raw === undefined || raw === '' || raw === null) {
+        newErrors[field.name] = `${field.label} is required`
+      }
+    }
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }, [fields, formData])
+
+  // Tags dedup and length validation
+  const sanitizeTags = useCallback((raw: string): string[] => {
+    return [
+      ...new Set(
+        raw
+          .split(',')
+          .map((s) => s.trim().slice(0, 100))
+          .filter(Boolean)
+      ),
+    ]
+  }, [])
+
   const handleSubmit = async () => {
+    if (!validate()) return
+
     const data: Record<string, unknown> = {}
 
     for (const field of fields) {
       const raw = formData[field.name]
       if (field.type === 'tags' && typeof raw === 'string') {
-        data[field.name] = raw
-          .split(',')
-          .map((s) => s.trim())
-          .filter(Boolean)
+        data[field.name] = sanitizeTags(raw)
       } else if (field.type === 'number' && typeof raw === 'string') {
         data[field.name] = raw ? Number(raw) : undefined
       } else {
@@ -114,6 +142,15 @@ export function AssetFormDialogShared({
       onOpenChange(false)
     }
   }
+
+  // Check if form is valid (for disabling submit button)
+  const hasRequiredEmpty = useMemo(() => {
+    return fields.some((f) => {
+      if (!f.required || f.type === 'boolean') return false
+      const raw = formData[f.name]
+      return raw === undefined || raw === '' || raw === null
+    })
+  }, [fields, formData])
 
   const renderField = (field: FormFieldConfig) => {
     const value = formData[field.name]
@@ -180,6 +217,7 @@ export function AssetFormDialogShared({
             value={String(value ?? '')}
             onChange={(e) => handleChange(field.name, e.target.value)}
             placeholder={field.placeholder || 'Comma-separated values'}
+            maxLength={500}
           />
         )
 
@@ -190,6 +228,7 @@ export function AssetFormDialogShared({
             value={String(value ?? '')}
             onChange={(e) => handleChange(field.name, e.target.value)}
             placeholder={field.placeholder}
+            maxLength={255}
           />
         )
     }
@@ -213,6 +252,9 @@ export function AssetFormDialogShared({
                 </Label>
               )}
               <div className="mt-1.5">{renderField(field)}</div>
+              {errors[field.name] && (
+                <p className="text-xs text-red-500 mt-1">{errors[field.name]}</p>
+              )}
             </div>
           ))}
 
@@ -230,7 +272,7 @@ export function AssetFormDialogShared({
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
             Cancel
           </Button>
-          <Button onClick={handleSubmit} disabled={isSubmitting}>
+          <Button onClick={handleSubmit} disabled={isSubmitting || hasRequiredEmpty}>
             {isSubmitting ? 'Saving...' : asset ? 'Save Changes' : 'Create'}
           </Button>
         </DialogFooter>

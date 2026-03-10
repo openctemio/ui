@@ -20,7 +20,8 @@ export interface ExportFieldConfig<T> {
 function sanitizeCsvCell(value: unknown): string {
   const str = String(value ?? '')
   // Prevent formula injection (OWASP CSV injection)
-  if (/^[=+\-@\t\r]/.test(str)) return `'${str}`
+  // Check for dangerous chars including after leading whitespace
+  if (/^\s*[=+\-@\t\r]/.test(str)) return `'${str}`
   // Escape quotes and wrap if contains delimiters
   if (str.includes(',') || str.includes('"') || str.includes('\n')) {
     return `"${str.replace(/"/g, '""')}"`
