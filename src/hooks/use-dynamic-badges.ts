@@ -14,7 +14,6 @@ import { useMemo } from 'react'
 import useSWR from 'swr'
 import { get } from '@/lib/api/client'
 import { useTenant } from '@/context/tenant-provider'
-import { useAssetGroupStatsApi } from '@/features/asset-groups/api'
 import { useCredentialStatsApi } from '@/features/credentials/api'
 import { usePermissions, Permission } from '@/lib/permissions'
 import { env } from '@/lib/env'
@@ -82,20 +81,9 @@ export function useDynamicBadges(): DynamicBadges {
 
   // Check user permissions to determine which APIs to call
   const { can } = usePermissions()
-  const canReadGroups = can(Permission.GroupsRead)
   const canReadFindings = can(Permission.FindingsRead)
   const canReadCredentials = can(Permission.CredentialsRead)
   const canReadDashboard = can(Permission.DashboardRead)
-
-  // Fetch asset group stats - only if badges enabled AND user has permission
-  const { data: assetGroupStats } = useAssetGroupStatsApi(
-    badgesEnabled && canReadGroups
-      ? {
-          revalidateOnFocus: false,
-          dedupingInterval: 60000,
-        }
-      : { isPaused: () => true } // Don't fetch if disabled or no permission
-  )
 
   // Fetch dashboard stats for findings count - only if badges enabled AND user has permission
   const { data: dashboardStats } = useDashboardStatsForBadges(
@@ -114,11 +102,6 @@ export function useDynamicBadges(): DynamicBadges {
 
   const badges = useMemo(() => {
     const result: DynamicBadges = {}
-
-    // Asset Groups badge - show total count
-    if (assetGroupStats?.total !== undefined && assetGroupStats.total > 0) {
-      result['/asset-groups'] = String(assetGroupStats.total)
-    }
 
     // Findings badge - show open findings count (exclude resolved/closed)
     if (dashboardStats?.findings) {
@@ -143,7 +126,7 @@ export function useDynamicBadges(): DynamicBadges {
     }
 
     return result
-  }, [assetGroupStats, dashboardStats, credentialStats])
+  }, [dashboardStats, credentialStats])
 
   return badges
 }
