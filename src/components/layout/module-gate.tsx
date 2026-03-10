@@ -67,7 +67,8 @@ export function ModuleGate({
     // If parent has sub-modules configured, check visibility
     if (parentSubModules.length > 0) {
       const subModule = parentSubModules.find((m) => m.slug === subModuleSlug)
-      if (subModule && (!subModule.is_active || subModule.release_status === 'disabled')) {
+      // Block if sub-module not found (filtered out by API because disabled) OR explicitly disabled
+      if (!subModule || !subModule.is_active || subModule.release_status === 'disabled') {
         return (
           <ModuleDisabledPage
             message="This feature is not enabled for your organization."
