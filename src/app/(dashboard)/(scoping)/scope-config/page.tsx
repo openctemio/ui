@@ -8,6 +8,22 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
+import { Progress } from '@/components/ui/progress'
+import {
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from '@/components/charts'
+import { useDashboardStats } from '@/features/dashboard/hooks/use-dashboard-stats'
+import { useTenant } from '@/context/tenant-provider'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -59,6 +75,9 @@ import {
   Play,
   Search as SearchIcon,
   AlertTriangle,
+  CheckCircle2,
+  Info,
+  BarChart3,
   Database,
   Box,
   Mail,
@@ -99,6 +118,16 @@ import {
 } from '@/features/scope'
 import { post } from '@/lib/api/client'
 import { getErrorMessage } from '@/lib/api/error-handler'
+
+const OVERVIEW_COLORS = [
+  '#3b82f6',
+  '#8b5cf6',
+  '#06b6d4',
+  '#22c55e',
+  '#f97316',
+  '#ef4444',
+  '#eab308',
+]
 
 // Use shared validation from scope feature types
 const validatePattern = (
@@ -235,6 +264,27 @@ function TableSkeleton() {
 export default function ScopeConfigPage() {
   // Permission check for write operations
   const canWriteScope = useHasPermission(Permission.ScopeWrite)
+
+  // Dashboard stats for Overview tab
+  const { currentTenant } = useTenant()
+  const { stats: dashboardStats, isLoading: dashboardLoading } = useDashboardStats(
+    currentTenant?.id || null
+  )
+
+  const assetTypeData = useMemo(() => {
+    return Object.entries(dashboardStats.assets.byType).map(([name, value], index) => ({
+      name: name.charAt(0).toUpperCase() + name.slice(1).replace(/_/g, ' '),
+      value,
+      color: OVERVIEW_COLORS[index % OVERVIEW_COLORS.length],
+    }))
+  }, [dashboardStats.assets.byType])
+
+  const assetStatusData = useMemo(() => {
+    return Object.entries(dashboardStats.assets.byStatus).map(([name, value]) => ({
+      name: name.charAt(0).toUpperCase() + name.slice(1).replace(/_/g, ' '),
+      value,
+    }))
+  }, [dashboardStats.assets.byStatus])
 
   // Search & filter states
   const [targetSearch, setTargetSearch] = useState('')
@@ -1031,20 +1081,171 @@ export default function ScopeConfigPage() {
         </div>
 
         {/* Tabs */}
-        <Tabs defaultValue="targets" className="mt-6">
-          <TabsList>
-            <TabsTrigger value="targets">
-              In-Scope Targets ({targetsLoading ? '...' : (targetsData?.total ?? targets.length)})
-            </TabsTrigger>
-            <TabsTrigger value="exclusions">
-              Exclusions ({exclusionsLoading ? '...' : (exclusionsData?.total ?? exclusions.length)}
-              )
-            </TabsTrigger>
-            <TabsTrigger value="schedules">
-              Scan Schedules (
-              {schedulesLoading ? '...' : (schedulesData?.total ?? schedules.length)})
-            </TabsTrigger>
-          </TabsList>
+        <Tabs defaultValue="overview" className="mt-6">
+          <div className="overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
+            <TabsList>
+              <TabsTrigger value="overview">
+                <BarChart3 className="mr-1.5 h-3.5 w-3.5" />
+                Overview
+              </TabsTrigger>
+              <TabsTrigger value="targets">
+                In-Scope Targets ({targetsLoading ? '...' : (targetsData?.total ?? targets.length)})
+              </TabsTrigger>
+              <TabsTrigger value="exclusions">
+                Exclusions (
+                {exclusionsLoading ? '...' : (exclusionsData?.total ?? exclusions.length)})
+              </TabsTrigger>
+              <TabsTrigger value="schedules">
+                Scan Schedules (
+                {schedulesLoading ? '...' : (schedulesData?.total ?? schedules.length)})
+              </TabsTrigger>
+            </TabsList>
+          </div>
+
+          {/* Overview */}
+          <TabsContent value="overview">
+            {dashboardLoading ? (
+              <div className="grid gap-6 lg:grid-cols-2">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <Skeleton key={i} className="h-80 w-full rounded-xl" />
+                ))}
+              </div>
+            ) : (
+              <div className="grid gap-6 lg:grid-cols-2">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Scope by Asset Type</CardTitle>
+                    <CardDescription>
+                      Distribution of scoped assets across categories
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {assetTypeData.length === 0 ? (
+                      <div className="flex h-48 items-center justify-center text-muted-foreground">
+                        No asset types configured
+                      </div>
+                    ) : (
+                      <ResponsiveContainer width="100%" height={280}>
+                        <PieChart>
+                          <Pie
+                            data={assetTypeData}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={60}
+                            outerRadius={100}
+                            dataKey="value"
+                            nameKey="name"
+                            paddingAngle={2}
+                          >
+                            {assetTypeData.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.color} />
+                            ))}
+                          </Pie>
+                          <Tooltip />
+                          <Legend />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    )}
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Asset Status Distribution</CardTitle>
+                    <CardDescription>Current management status of scoped assets</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {assetStatusData.length === 0 ? (
+                      <div className="flex h-48 items-center justify-center text-muted-foreground">
+                        No status data available
+                      </div>
+                    ) : (
+                      <ResponsiveContainer width="100%" height={280}>
+                        <BarChart data={assetStatusData}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="name" fontSize={12} />
+                          <YAxis fontSize={12} />
+                          <Tooltip />
+                          <Bar dataKey="value" fill="#6366f1" radius={[4, 4, 0, 0]} name="Assets" />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    )}
+                  </CardContent>
+                </Card>
+
+                <Card className="lg:col-span-2">
+                  <CardHeader>
+                    <CardTitle>Scope Configuration Insights</CardTitle>
+                    <CardDescription>
+                      Recommendations for optimizing scope boundaries
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {stats.targets === 0 && dashboardStats.assets.total === 0 ? (
+                      <div className="flex h-32 items-center justify-center text-muted-foreground">
+                        No targets configured. Add targets to begin scoping.
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        <div className="rounded-lg bg-muted/50 p-4">
+                          <div className="flex items-center justify-between">
+                            <p className="text-sm font-medium">Scope Coverage</p>
+                            <span className="text-sm font-semibold">
+                              {stats.activeTargets} / {stats.targets} targets active
+                            </span>
+                          </div>
+                          <Progress value={stats.coverage} className="mt-2 h-2" />
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {stats.coverage}% scope coverage — {stats.exclusions} exclusion
+                            {stats.exclusions !== 1 ? 's' : ''}, {stats.activeSchedules} active
+                            schedule{stats.activeSchedules !== 1 ? 's' : ''}
+                          </p>
+                        </div>
+                        <div className="flex items-start gap-3 rounded-lg border p-4">
+                          {stats.coverage < 80 ? (
+                            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-yellow-500" />
+                          ) : (
+                            <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-green-500" />
+                          )}
+                          <div>
+                            <p className="font-medium">Target Coverage</p>
+                            <p className="text-sm text-muted-foreground">
+                              {stats.coverage < 80
+                                ? `Only ${stats.activeTargets} of ${stats.targets} targets are active. Activate more targets to improve coverage.`
+                                : 'Scope coverage is above target threshold. All active targets are being scanned.'}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-3 rounded-lg border p-4">
+                          <Info className="mt-0.5 h-5 w-5 shrink-0 text-blue-500" />
+                          <div>
+                            <p className="font-medium">Repository Integration</p>
+                            <p className="text-sm text-muted-foreground">
+                              {dashboardStats.repositories.total > 0
+                                ? `${dashboardStats.repositories.total} repositories linked. ${dashboardStats.repositories.withFindings} have active findings.`
+                                : 'Connect repositories to expand scope for code assets.'}
+                            </p>
+                          </div>
+                        </div>
+                        {stats.activeSchedules === 0 && stats.targets > 0 && (
+                          <div className="flex items-start gap-3 rounded-lg border border-yellow-500/30 p-4">
+                            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-yellow-500" />
+                            <div>
+                              <p className="font-medium">No Active Schedules</p>
+                              <p className="text-sm text-muted-foreground">
+                                You have {stats.targets} targets but no active scan schedules.
+                                Create a schedule to automate scanning.
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+          </TabsContent>
 
           {/* In-Scope Targets */}
           <TabsContent value="targets">
