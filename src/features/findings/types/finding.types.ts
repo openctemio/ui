@@ -916,6 +916,42 @@ export interface FindingStats {
 }
 
 // ============================================
+// APPROVAL TYPES
+// ============================================
+
+/**
+ * Approval entity from API
+ */
+export interface ApiApproval {
+  id: string
+  tenant_id: string
+  finding_id: string
+  requested_status: string
+  requested_by: string
+  justification: string
+  approved_by?: string
+  approved_at?: string
+  rejected_by?: string
+  rejected_at?: string
+  rejection_reason?: string
+  status: 'pending' | 'approved' | 'rejected' | 'canceled'
+  expires_at?: string
+  created_at: string
+}
+
+export type ApprovalStatus = 'pending' | 'approved' | 'rejected' | 'canceled'
+
+export const APPROVAL_STATUS_CONFIG: Record<
+  ApprovalStatus,
+  { label: string; variant: 'warning' | 'success' | 'destructive' | 'secondary' }
+> = {
+  pending: { label: 'Pending', variant: 'warning' },
+  approved: { label: 'Approved', variant: 'success' },
+  rejected: { label: 'Rejected', variant: 'destructive' },
+  canceled: { label: 'Canceled', variant: 'secondary' },
+}
+
+// ============================================
 // ASSIGNABLE USERS (for dropdowns)
 // ============================================
 

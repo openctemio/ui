@@ -80,7 +80,7 @@ interface RelationshipTableProps {
 const CONFIDENCE_COLORS = {
   high: 'bg-green-500/20 text-green-600 border-green-500/30',
   medium: 'bg-yellow-500/20 text-yellow-600 border-yellow-500/30',
-  low: 'bg-red-500/20 text-red-600 border-red-500/30',
+  low: 'bg-blue-500/20 text-blue-600 border-blue-500/30',
 }
 
 const ASSET_TYPE_COLORS: Record<string, { bg: string; text: string }> = {

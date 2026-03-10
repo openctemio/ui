@@ -134,7 +134,7 @@ export interface ScopeMatchResult {
 }
 
 /**
- * Scope Coverage Stats
+ * Scope Status Stats (how many assets match scope rules)
  */
 export interface ScopeCoverage {
   totalAssets: number

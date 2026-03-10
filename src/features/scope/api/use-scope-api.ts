@@ -23,6 +23,7 @@ import type {
   ApiScanScheduleListResponse,
   ApiScopeStats,
   ApiCheckScopeResponse,
+  CheckScopeInput,
   ScopeTargetFilters,
   ScopeExclusionFilters,
   ScanScheduleFilters,
@@ -248,6 +249,34 @@ export function useDeleteScopeTargetApi(targetId: string) {
 }
 
 /**
+ * Activate a scope target
+ */
+export function useActivateTargetApi(targetId: string) {
+  const { currentTenant } = useTenant()
+
+  return useSWRMutation(
+    currentTenant && targetId ? `${BASE_URL}/targets/${targetId}/activate` : null,
+    async (url: string) => {
+      return post<ApiScopeTarget>(url, {})
+    }
+  )
+}
+
+/**
+ * Deactivate a scope target
+ */
+export function useDeactivateTargetApi(targetId: string) {
+  const { currentTenant } = useTenant()
+
+  return useSWRMutation(
+    currentTenant && targetId ? `${BASE_URL}/targets/${targetId}/deactivate` : null,
+    async (url: string) => {
+      return post<ApiScopeTarget>(url, {})
+    }
+  )
+}
+
+/**
  * Bulk delete scope targets
  */
 export function useBulkDeleteTargetsApi() {
@@ -347,6 +376,48 @@ export function useDeleteScopeExclusionApi(exclusionId: string) {
 }
 
 /**
+ * Approve a scope exclusion
+ */
+export function useApproveExclusionApi(exclusionId: string) {
+  const { currentTenant } = useTenant()
+
+  return useSWRMutation(
+    currentTenant && exclusionId ? `${BASE_URL}/exclusions/${exclusionId}/approve` : null,
+    async (url: string) => {
+      return post<ApiScopeExclusion>(url, {})
+    }
+  )
+}
+
+/**
+ * Activate a scope exclusion
+ */
+export function useActivateExclusionApi(exclusionId: string) {
+  const { currentTenant } = useTenant()
+
+  return useSWRMutation(
+    currentTenant && exclusionId ? `${BASE_URL}/exclusions/${exclusionId}/activate` : null,
+    async (url: string) => {
+      return post<ApiScopeExclusion>(url, {})
+    }
+  )
+}
+
+/**
+ * Deactivate a scope exclusion
+ */
+export function useDeactivateExclusionApi(exclusionId: string) {
+  const { currentTenant } = useTenant()
+
+  return useSWRMutation(
+    currentTenant && exclusionId ? `${BASE_URL}/exclusions/${exclusionId}/deactivate` : null,
+    async (url: string) => {
+      return post<ApiScopeExclusion>(url, {})
+    }
+  )
+}
+
+/**
  * Bulk delete scope exclusions
  */
 export function useBulkDeleteExclusionsApi() {
@@ -429,6 +500,48 @@ export function useDeleteScanScheduleApi(scheduleId: string) {
 }
 
 /**
+ * Enable a scan schedule
+ */
+export function useEnableScheduleApi(scheduleId: string) {
+  const { currentTenant } = useTenant()
+
+  return useSWRMutation(
+    currentTenant && scheduleId ? `${BASE_URL}/schedules/${scheduleId}/enable` : null,
+    async (url: string) => {
+      return post<ApiScanSchedule>(url, {})
+    }
+  )
+}
+
+/**
+ * Disable a scan schedule
+ */
+export function useDisableScheduleApi(scheduleId: string) {
+  const { currentTenant } = useTenant()
+
+  return useSWRMutation(
+    currentTenant && scheduleId ? `${BASE_URL}/schedules/${scheduleId}/disable` : null,
+    async (url: string) => {
+      return post<ApiScanSchedule>(url, {})
+    }
+  )
+}
+
+/**
+ * Run a scan schedule immediately
+ */
+export function useRunScheduleNowApi(scheduleId: string) {
+  const { currentTenant } = useTenant()
+
+  return useSWRMutation(
+    currentTenant && scheduleId ? `${BASE_URL}/schedules/${scheduleId}/run` : null,
+    async (url: string) => {
+      return post<ApiScanSchedule>(url, {})
+    }
+  )
+}
+
+/**
  * Bulk delete scan schedules
  */
 export function useBulkDeleteSchedulesApi() {
@@ -469,11 +582,8 @@ export function useCheckScopeApi() {
 
   return useSWRMutation(
     currentTenant ? `${BASE_URL}/check` : null,
-    async (url: string, { arg }: { arg: { type: string; value: string } }) => {
-      const params = new URLSearchParams()
-      params.set('type', arg.type)
-      params.set('value', arg.value)
-      return get<ApiCheckScopeResponse>(`${url}?${params.toString()}`)
+    async (url: string, { arg }: { arg: CheckScopeInput }) => {
+      return post<ApiCheckScopeResponse>(url, arg)
     }
   )
 }

@@ -23,4 +23,4 @@ export {
 // ============================================
 
 export { useDashboardStats, useRecentActivity } from './hooks/use-dashboard-stats'
-export type { DashboardStats } from './hooks/use-dashboard-stats'
+export type { DashboardStats, FindingTrend } from './hooks/use-dashboard-stats'

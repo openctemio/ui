@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { getErrorMessage } from '@/lib/api/error-handler'
+import { sanitizeExternalUrl } from '@/lib/utils'
 import { useTenant } from '@/context/tenant-provider'
 import { useCVEEnrichment } from '@/features/threat-intel/hooks'
 import { EPSSScoreBadge } from '@/features/shared/components/epss-score-badge'
@@ -32,6 +33,7 @@ import type { Severity } from '@/features/shared/types'
 import { AssigneeSelect } from '../assignee-select'
 import { StatusSelect } from '../status-select'
 import { SeveritySelect } from '../severity-select'
+import { ApprovalDialog } from '../approval-dialog'
 
 // Human-readable source labels
 const SOURCE_LABELS: Record<FindingSource, string> = {
@@ -81,6 +83,9 @@ export function FindingHeader({
   const [assigneeState, setAssigneeState] = useState(finding.assignee)
   const { currentTenant } = useTenant()
   const [isCollapsed, setIsCollapsed] = useState(false)
+  const [isCompact, setIsCompact] = useState(false)
+  const [approvalDialogOpen, setApprovalDialogOpen] = useState(false)
+  const [approvalTargetStatus, setApprovalTargetStatus] = useState<FindingStatus | null>(null)
 
   // Sync local state when finding prop changes (after SWR revalidation)
   useEffect(() => {
@@ -124,10 +129,8 @@ export function FindingHeader({
 
     // Check if status requires approval
     if (requiresApproval(newStatus)) {
-      // TODO: Open approval dialog instead of direct status change
-      toast.info(
-        `${FINDING_STATUS_CONFIG[newStatus].label} requires approval. Feature coming soon.`
-      )
+      setApprovalTargetStatus(newStatus)
+      setApprovalDialogOpen(true)
       return
     }
 
@@ -415,11 +418,7 @@ export function FindingHeader({
                 <span className="text-muted-foreground">Repo:</span>
                 {finding.assets[0].url ? (
                   <a
-                    href={
-                      finding.assets[0].url.startsWith('http')
-                        ? finding.assets[0].url
-                        : `https://${finding.assets[0].url}`
-                    }
+                    href={sanitizeExternalUrl(finding.assets[0].url)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="font-medium text-foreground hover:text-primary hover:underline flex items-center gap-1 truncate"
@@ -436,200 +435,234 @@ export function FindingHeader({
         )}
       </div>
 
-      {/* Desktop: Full header (unchanged) */}
+      {/* Desktop: Full header with compact toggle */}
       <div className="hidden sm:block space-y-2">
-        {/* Row 1: Classification badges (left) + Status badges (right) - 2 column grid */}
-        <div className="text-muted-foreground grid grid-cols-2 gap-2 text-sm">
-          {/* Left: Classification badges */}
-          <div className="flex items-center gap-2 flex-wrap">
-            {/* Source type badge - always show */}
-            <Badge variant="outline" className="text-xs uppercase">
-              {SOURCE_LABELS[finding.source] || finding.source}
-            </Badge>
-            {/* CVE if available */}
+        {isCompact ? (
+          /* Compact mode: single row with key info */
+          <div className="flex items-center gap-2 text-sm">
+            <h1 className="text-base font-bold leading-tight truncate max-w-[400px]">
+              {finding.title}
+            </h1>
+            <StatusSelect value={status} onChange={handleStatusChange} loading={isUpdatingStatus} />
+            <SeveritySelect
+              value={severity}
+              onChange={handleSeverityChange}
+              loading={isUpdatingSeverity}
+              cvss={finding.cvss}
+              showIcon={false}
+            />
             {finding.cve && (
               <Badge variant="outline" className="text-xs">
                 {finding.cve}
               </Badge>
             )}
-            {/* CWE if available */}
-            {finding.cwe && (
-              <Badge variant="outline" className="text-xs">
-                {finding.cwe}
-              </Badge>
-            )}
-            {/* Vulnerability class badges - show if no CVE/CWE */}
-            {!finding.cve &&
-              !finding.cwe &&
-              finding.vulnerabilityClass &&
-              finding.vulnerabilityClass.slice(0, 2).map((cls) => (
-                <Badge key={cls} variant="secondary" className="text-xs">
-                  {cls}
+            <div className="flex-1" />
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsCompact(false)}
+              className="shrink-0 h-7 w-7 p-0"
+              aria-label="Expand header"
+            >
+              <ChevronDown className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        ) : (
+          /* Full mode */
+          <>
+            {/* Row 1: Classification badges (left) + Status badges + Compact toggle (right) */}
+            <div className="text-muted-foreground grid grid-cols-2 gap-2 text-sm">
+              {/* Left: Classification badges */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <Badge variant="outline" className="text-xs uppercase">
+                  {SOURCE_LABELS[finding.source] || finding.source}
                 </Badge>
-              ))}
-            {/* EPSS Score Badge */}
-            {epss && (
-              <EPSSScoreBadge
-                score={epss.score}
-                percentile={epss.percentile}
-                showPercentile
-                size="sm"
+                {finding.cve && (
+                  <Badge variant="outline" className="text-xs">
+                    {finding.cve}
+                  </Badge>
+                )}
+                {finding.cwe && (
+                  <Badge variant="outline" className="text-xs">
+                    {finding.cwe}
+                  </Badge>
+                )}
+                {!finding.cve &&
+                  !finding.cwe &&
+                  finding.vulnerabilityClass &&
+                  finding.vulnerabilityClass.slice(0, 2).map((cls) => (
+                    <Badge key={cls} variant="secondary" className="text-xs">
+                      {cls}
+                    </Badge>
+                  ))}
+                {epss && (
+                  <EPSSScoreBadge
+                    score={epss.score}
+                    percentile={epss.percentile}
+                    showPercentile
+                    size="sm"
+                  />
+                )}
+                {finding.cve && (
+                  <KEVIndicatorBadge
+                    inKEV={!!kev}
+                    kevData={
+                      kev
+                        ? {
+                            date_added: kev.date_added,
+                            due_date: kev.due_date,
+                            ransomware_use: kev.known_ransomware_campaign_use,
+                            notes: kev.notes,
+                          }
+                        : null
+                    }
+                    size="sm"
+                  />
+                )}
+              </div>
+
+              {/* Right: Status badges + compact toggle */}
+              <div className="flex items-center gap-2 flex-wrap justify-end">
+                {finding.isTriaged && (
+                  <Badge
+                    variant="outline"
+                    className="text-xs border-green-500/50 text-green-400 gap-1"
+                  >
+                    <CheckCircle2 className="h-3 w-3" />
+                    Triaged
+                  </Badge>
+                )}
+                {finding.slaStatus && finding.slaStatus !== 'not_applicable' && (
+                  <Badge
+                    variant="outline"
+                    className={`text-xs gap-1 ${
+                      finding.slaStatus === 'breached'
+                        ? 'border-red-500/50 text-red-400'
+                        : finding.slaStatus === 'at_risk'
+                          ? 'border-yellow-500/50 text-yellow-400'
+                          : 'border-green-500/50 text-green-400'
+                    }`}
+                  >
+                    {finding.slaStatus === 'breached' ? (
+                      <AlertTriangle className="h-3 w-3" />
+                    ) : (
+                      <Clock className="h-3 w-3" />
+                    )}
+                    SLA:{' '}
+                    {finding.slaStatus === 'on_track'
+                      ? 'On Track'
+                      : finding.slaStatus === 'at_risk'
+                        ? 'At Risk'
+                        : 'Breached'}
+                  </Badge>
+                )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsCompact(true)}
+                  className="shrink-0 h-7 w-7 p-0"
+                  aria-label="Compact header"
+                >
+                  <ChevronUp className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Row 2: Title */}
+            <h1 className="text-xl font-bold leading-tight">{finding.title}</h1>
+
+            {/* Row 3: Status + Severity + Meta (combined) */}
+            <div className="flex flex-wrap items-center gap-2 text-sm">
+              <StatusSelect
+                value={status}
+                onChange={handleStatusChange}
+                loading={isUpdatingStatus}
               />
-            )}
-            {/* KEV Indicator Badge - only show if has CVE */}
-            {finding.cve && (
-              <KEVIndicatorBadge
-                inKEV={!!kev}
-                kevData={
-                  kev
+              <SeveritySelect
+                value={severity}
+                onChange={handleSeverityChange}
+                loading={isUpdatingSeverity}
+                cvss={finding.cvss}
+              />
+              <div className="h-4 w-px bg-border" />
+              <AssigneeSelect
+                value={
+                  assignee
                     ? {
-                        date_added: kev.date_added,
-                        due_date: kev.due_date,
-                        ransomware_use: kev.known_ransomware_campaign_use,
-                        notes: kev.notes,
+                        id: assignee.id,
+                        name: assignee.name,
+                        email: assignee.email,
+                        role: assignee.role,
                       }
                     : null
                 }
-                size="sm"
-              />
-            )}
-          </div>
-
-          {/* Right: Status badges - align to end */}
-          <div className="flex items-center gap-2 flex-wrap justify-end">
-            {/* Triaged Badge */}
-            {finding.isTriaged && (
-              <Badge variant="outline" className="text-xs border-green-500/50 text-green-400 gap-1">
-                <CheckCircle2 className="h-3 w-3" />
-                Triaged
-              </Badge>
-            )}
-            {/* SLA Status Badge */}
-            {finding.slaStatus && finding.slaStatus !== 'not_applicable' && (
-              <Badge
-                variant="outline"
-                className={`text-xs gap-1 ${
-                  finding.slaStatus === 'breached'
-                    ? 'border-red-500/50 text-red-400'
-                    : finding.slaStatus === 'at_risk'
-                      ? 'border-yellow-500/50 text-yellow-400'
-                      : 'border-green-500/50 text-green-400'
-                }`}
-              >
-                {finding.slaStatus === 'breached' ? (
-                  <AlertTriangle className="h-3 w-3" />
-                ) : (
-                  <Clock className="h-3 w-3" />
-                )}
-                SLA:{' '}
-                {finding.slaStatus === 'on_track'
-                  ? 'On Track'
-                  : finding.slaStatus === 'at_risk'
-                    ? 'At Risk'
-                    : 'Breached'}
-              </Badge>
-            )}
-          </div>
-        </div>
-
-        {/* Row 2: Title */}
-        <h1 className="text-xl font-bold leading-tight">{finding.title}</h1>
-
-        {/* Row 3: Status + Severity + Meta (combined) */}
-        <div className="flex flex-wrap items-center gap-2 text-sm">
-          {/* Status Select */}
-          <StatusSelect value={status} onChange={handleStatusChange} loading={isUpdatingStatus} />
-
-          {/* Severity Select */}
-          <SeveritySelect
-            value={severity}
-            onChange={handleSeverityChange}
-            loading={isUpdatingSeverity}
-            cvss={finding.cvss}
-          />
-
-          {/* Divider */}
-          <div className="h-4 w-px bg-border" />
-
-          {/* Assignee Select with Search */}
-          <AssigneeSelect
-            value={
-              assignee
-                ? {
-                    id: assignee.id,
-                    name: assignee.name,
-                    email: assignee.email,
-                    role: assignee.role,
+                onChange={(user) => {
+                  if (user) {
+                    handleAssigneeChange(user.id, user.name, user.email)
+                  } else {
+                    handleAssigneeChange(null)
                   }
-                : null
-            }
-            onChange={(user) => {
-              if (user) {
-                handleAssigneeChange(user.id, user.name, user.email)
-              } else {
-                handleAssigneeChange(null)
-              }
-            }}
-            loading={isAssigning || isUnassigning}
-            variant="ghost"
-            showFullName
-            placeholder="Unassigned"
-          />
+                }}
+                loading={isAssigning || isUnassigning}
+                variant="ghost"
+                showFullName
+                placeholder="Unassigned"
+              />
+              <div className="h-4 w-px bg-border" />
+              <AITriageButton
+                findingId={finding.id}
+                variant="ai"
+                size="sm"
+                onTriageCompleted={onTriageCompleted}
+              />
+              <div className="text-muted-foreground flex items-center gap-1">
+                <Calendar className="h-3.5 w-3.5" />
+                <span>{formatDate(finding.discoveredAt)}</span>
+              </div>
+              <div className="text-muted-foreground flex items-center gap-1">
+                <ExternalLink className="h-3.5 w-3.5" />
+                <span>{SOURCE_LABELS[finding.source] || finding.source}</span>
+                {finding.scanner && <span className="text-xs">({finding.scanner})</span>}
+              </div>
+            </div>
 
-          {/* Divider */}
-          <div className="h-4 w-px bg-border" />
-
-          {/* AI Triage Button */}
-          <AITriageButton
-            findingId={finding.id}
-            variant="ai"
-            size="sm"
-            onTriageCompleted={onTriageCompleted}
-          />
-
-          {/* Discovered Date - inline */}
-          <div className="text-muted-foreground flex items-center gap-1">
-            <Calendar className="h-3.5 w-3.5" />
-            <span>{formatDate(finding.discoveredAt)}</span>
-          </div>
-
-          {/* Source - inline */}
-          <div className="text-muted-foreground flex items-center gap-1">
-            <ExternalLink className="h-3.5 w-3.5" />
-            <span>{SOURCE_LABELS[finding.source] || finding.source}</span>
-            {finding.scanner && <span className="text-xs">({finding.scanner})</span>}
-          </div>
-        </div>
-
-        {/* Row 4: Primary Repository with full URL */}
-        {finding.assets.length > 0 && (
-          <div className="flex items-center gap-2 text-sm">
-            <span className="text-muted-foreground">Repository:</span>
-            {finding.assets[0].url ? (
-              <a
-                href={
-                  finding.assets[0].url.startsWith('http')
-                    ? finding.assets[0].url
-                    : `https://${finding.assets[0].url}`
-                }
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-medium text-foreground hover:text-primary hover:underline flex items-center gap-1"
-              >
-                {finding.assets[0].url}
-                <ExternalLink className="h-3 w-3" />
-              </a>
-            ) : (
-              <span className="font-medium">{finding.assets[0].name}</span>
+            {/* Row 4: Primary Repository with full URL */}
+            {finding.assets.length > 0 && (
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-muted-foreground">Repository:</span>
+                {finding.assets[0].url ? (
+                  <a
+                    href={sanitizeExternalUrl(finding.assets[0].url)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-medium text-foreground hover:text-primary hover:underline flex items-center gap-1"
+                  >
+                    {finding.assets[0].url}
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                ) : (
+                  <span className="font-medium">{finding.assets[0].name}</span>
+                )}
+                {finding.assets.length > 1 && (
+                  <Badge variant="outline" className="text-xs">
+                    +{finding.assets.length - 1} more
+                  </Badge>
+                )}
+              </div>
             )}
-            {finding.assets.length > 1 && (
-              <Badge variant="outline" className="text-xs">
-                +{finding.assets.length - 1} more
-              </Badge>
-            )}
-          </div>
+          </>
         )}
       </div>
+
+      {/* Approval Dialog */}
+      {approvalTargetStatus && (
+        <ApprovalDialog
+          findingId={finding.id}
+          targetStatus={approvalTargetStatus}
+          open={approvalDialogOpen}
+          onOpenChange={setApprovalDialogOpen}
+        />
+      )}
     </div>
   )
 }
