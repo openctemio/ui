@@ -53,14 +53,29 @@ export interface AssetPageConfig {
   /** Export field configuration */
   exportFields: ExportFieldConfig<Asset>[]
 
-  /** Optional: additional type-specific filter */
+  /** Optional: additional type-specific filter (single) */
   customFilter?: CustomFilterConfig
+
+  /** Optional: multiple additional filters (overrides customFilter if set) */
+  customFilters?: CustomFilterConfig[]
 
   /** Optional: copy action in row dropdown */
   copyAction?: {
     label: string
     getValue: (asset: Asset) => string
   }
+
+  /** Optional: custom row actions in dropdown menu (before delete) */
+  rowActions?: RowActionConfig[]
+
+  /** Optional: custom bulk actions in selection dropdown (before delete) */
+  bulkActions?: BulkActionConfig[]
+
+  /** Optional: extra tabs in detail sheet (between Overview and Findings) */
+  detailTabs?: DetailTabConfig[]
+
+  /** Optional: custom status filter values (overrides default active/inactive/pending) */
+  statusFilters?: { value: string; label: string }[]
 
   /** Default sort field and direction */
   defaultSort?: { field: string; direction: 'asc' | 'desc' }
@@ -70,6 +85,9 @@ export interface AssetPageConfig {
 
   /** Optional: transform fetched assets before rendering (e.g., tree flattening) */
   dataTransform?: (assets: Asset[]) => Asset[]
+
+  /** Optional: pre-table content (e.g., banners, alerts) */
+  headerContent?: React.ComponentType<{ assets: Asset[] }>
 }
 
 /** Form field configuration */
@@ -138,4 +156,31 @@ export interface CustomFilterConfig {
   label: string
   options: { label: string; value: string }[]
   filterFn: (asset: Asset, value: string) => boolean
+}
+
+/** Row action config (appears in row dropdown menu) */
+export interface RowActionConfig {
+  label: string
+  icon: React.ComponentType<{ className?: string }>
+  onClick: (asset: Asset) => void | Promise<void>
+  /** Optional: permission required to see this action */
+  permission?: string
+}
+
+/** Bulk action config (appears when rows are selected) */
+export interface BulkActionConfig {
+  label: string
+  icon: React.ComponentType<{ className?: string }>
+  onClick: (assets: Asset[]) => void | Promise<void>
+  /** Optional: variant for styling */
+  variant?: 'default' | 'destructive'
+  /** Optional: permission required to see this action */
+  permission?: string
+}
+
+/** Detail tab config (extra tabs in detail sheet) */
+export interface DetailTabConfig {
+  id: string
+  label: string
+  render: (asset: Asset) => React.ReactNode
 }

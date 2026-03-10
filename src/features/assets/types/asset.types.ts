@@ -464,6 +464,14 @@ export interface AssetMetadata {
   documentationUrl?: string
   openApiSpec?: boolean
   rateLimit?: number
+  rateLimitEnabled?: boolean
+  corsEnabled?: boolean
+  tlsVersion?: string
+  owner?: string
+  team?: string
+  requestsPerDay?: number
+  avgResponseTime?: number
+  errorRate?: number
   lastActivity?: string
 
   // ============================================
@@ -697,12 +705,15 @@ export interface Asset {
   findingCount: number
   groupId?: string // Optional - asset can be ungrouped
   groupName?: string
+  provider?: string // SCM provider or asset source (github, gitlab, etc.)
   metadata: AssetMetadata
   tags?: string[]
   firstSeen: string
   lastSeen: string
   createdAt: string
   updatedAt: string
+  /** Repository extension (populated for type=repository) */
+  repository?: RepositoryExtension
 }
 
 /**

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo, useCallback } from 'react'
+import { sanitizeExternalUrl } from '@/lib/utils'
 import {
   ColumnDef,
   flexRender,
@@ -276,14 +277,30 @@ export function ComponentTable({ data, onViewDetails }: ComponentTableProps) {
                 {component.homepage && (
                   <>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => window.open(component.homepage, '_blank')}>
+                    <DropdownMenuItem
+                      onClick={() =>
+                        window.open(
+                          sanitizeExternalUrl(component.homepage!),
+                          '_blank',
+                          'noopener,noreferrer'
+                        )
+                      }
+                    >
                       <ExternalLink className="mr-2 h-4 w-4" />
                       Open Homepage
                     </DropdownMenuItem>
                   </>
                 )}
                 {component.repositoryUrl && (
-                  <DropdownMenuItem onClick={() => window.open(component.repositoryUrl, '_blank')}>
+                  <DropdownMenuItem
+                    onClick={() =>
+                      window.open(
+                        sanitizeExternalUrl(component.repositoryUrl!),
+                        '_blank',
+                        'noopener,noreferrer'
+                      )
+                    }
+                  >
                     <ExternalLink className="mr-2 h-4 w-4" />
                     Open Repository
                   </DropdownMenuItem>
