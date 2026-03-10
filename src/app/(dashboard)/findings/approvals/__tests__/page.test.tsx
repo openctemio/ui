@@ -1,24 +1,29 @@
 /**
  * Approvals Page Tests
  *
- * Tests for the approval requests queue page:
+ * Tests for the redesigned approval requests page:
  * - Loading state shows skeleton
+ * - Error state shows full-page error with retry
  * - Empty state shows message
- * - Table renders with mock data
- * - Status badges show correct labels
- * - Actions dropdown renders
+ * - Stats cards render with counts (CardHeader/CardTitle pattern)
+ * - Tab filtering with counts
+ * - DataTable renders with data
+ * - Back link to findings page
+ * - Refresh button
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 
 // ============================================
 // MOCKS
 // ============================================
 
 const mockMutate = vi.fn()
+const mockTriggerApprove = vi.fn()
+const mockTriggerReject = vi.fn()
+const mockTriggerCancel = vi.fn()
 
-// Mock the approval API hooks
 vi.mock('@/features/findings/api/use-findings-api', () => ({
   usePendingApprovals: vi.fn(() => ({
     data: null,
@@ -27,20 +32,19 @@ vi.mock('@/features/findings/api/use-findings-api', () => ({
     mutate: mockMutate,
   })),
   useApproveStatus: vi.fn(() => ({
-    trigger: vi.fn(),
+    trigger: mockTriggerApprove,
     isMutating: false,
   })),
   useRejectApproval: vi.fn(() => ({
-    trigger: vi.fn(),
+    trigger: mockTriggerReject,
     isMutating: false,
   })),
   useCancelApproval: vi.fn(() => ({
-    trigger: vi.fn(),
+    trigger: mockTriggerCancel,
     isMutating: false,
   })),
 }))
 
-// Mock the findings types
 vi.mock('@/features/findings/types', () => ({
   APPROVAL_STATUS_CONFIG: {
     pending: { label: 'Pending', variant: 'warning' },
@@ -49,74 +53,93 @@ vi.mock('@/features/findings/types', () => ({
     canceled: { label: 'Canceled', variant: 'secondary' },
   },
   FINDING_STATUS_CONFIG: {
-    new: { label: 'New', color: '', bgColor: '', textColor: '', icon: '', category: 'open' },
-    confirmed: {
-      label: 'Confirmed',
-      color: '',
-      bgColor: '',
-      textColor: '',
-      icon: '',
-      category: 'open',
-    },
-    in_progress: {
-      label: 'In Progress',
-      color: '',
-      bgColor: '',
-      textColor: '',
-      icon: '',
-      category: 'in_progress',
-    },
-    resolved: {
-      label: 'Resolved',
-      color: '',
-      bgColor: '',
-      textColor: '',
-      icon: '',
-      category: 'closed',
-    },
     false_positive: {
       label: 'False Positive',
-      color: '',
-      bgColor: '',
-      textColor: '',
+      color: 'border-slate-500/50',
+      bgColor: 'bg-slate-500/20',
+      textColor: 'text-slate-400',
       icon: '',
       category: 'closed',
+      requiresApproval: true,
     },
     accepted: {
       label: 'Risk Accepted',
-      color: '',
-      bgColor: '',
-      textColor: '',
+      color: 'border-amber-500/50',
+      bgColor: 'bg-amber-500/20',
+      textColor: 'text-amber-400',
       icon: '',
       category: 'closed',
-    },
-    duplicate: {
-      label: 'Duplicate',
-      color: '',
-      bgColor: '',
-      textColor: '',
-      icon: '',
-      category: 'closed',
+      requiresApproval: true,
     },
   },
 }))
 
-// Mock sonner toast
 vi.mock('sonner', () => ({
-  toast: {
-    success: vi.fn(),
-    error: vi.fn(),
-  },
+  toast: { success: vi.fn(), error: vi.fn() },
 }))
 
-// Mock error handler
 vi.mock('@/lib/api/error-handler', () => ({
   getErrorMessage: vi.fn((_error, fallback) => fallback || 'Error'),
 }))
 
-// Mock cn utility
 vi.mock('@/lib/utils', () => ({
   cn: (...args: unknown[]) => args.filter(Boolean).join(' '),
+}))
+
+vi.mock('@/features/shared/components/page-header', () => ({
+  PageHeader: ({
+    title,
+    description,
+    children,
+  }: {
+    title: string
+    description?: string
+    children?: React.ReactNode
+  }) => (
+    <div data-testid="page-header">
+      <h1>{title}</h1>
+      {description && <p>{description}</p>}
+      {children}
+    </div>
+  ),
+}))
+
+vi.mock('@/features/shared/components/data-table/data-table', () => ({
+  DataTable: ({
+    data,
+    emptyMessage,
+    emptyDescription,
+  }: {
+    data: unknown[]
+    emptyMessage?: string
+    emptyDescription?: string
+    columns: unknown[]
+    searchPlaceholder?: string
+    searchKey?: string
+    showColumnToggle?: boolean
+    pageSize?: number
+  }) => (
+    <div data-testid="data-table">
+      {data.length === 0 ? (
+        <div>
+          <p>{emptyMessage}</p>
+          <p>{emptyDescription}</p>
+        </div>
+      ) : (
+        <div data-testid="table-rows">
+          {data.map((item: unknown, i: number) => (
+            <div key={i} data-testid="table-row">
+              {JSON.stringify(item)}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  ),
+}))
+
+vi.mock('@/features/shared/components/data-table/data-table-column-header', () => ({
+  DataTableColumnHeader: ({ title }: { title: string }) => <span>{title}</span>,
 }))
 
 // Import after mocks
@@ -134,7 +157,7 @@ const mockApprovals = [
     finding_id: 'finding-abc123def456',
     requested_status: 'false_positive',
     requested_by: 'user-1',
-    justification: 'This is a false positive because the code path is unreachable in production.',
+    justification: 'Code path is unreachable in production.',
     status: 'pending' as const,
     created_at: '2026-03-01T10:00:00Z',
   },
@@ -144,7 +167,7 @@ const mockApprovals = [
     finding_id: 'finding-xyz789abc012',
     requested_status: 'accepted',
     requested_by: 'user-2',
-    justification: 'Risk accepted for legacy system that will be decommissioned next quarter.',
+    justification: 'Risk accepted - legacy decommissioning.',
     status: 'approved' as const,
     approved_by: 'user-3',
     approved_at: '2026-03-02T12:00:00Z',
@@ -158,13 +181,29 @@ const mockApprovals = [
     requested_status: 'false_positive',
     requested_by: 'user-1',
     justification: 'Test environment only.',
-    rejection_reason: 'Insufficient justification for production environment.',
     status: 'rejected' as const,
     rejected_by: 'user-3',
     rejected_at: '2026-03-02T14:00:00Z',
     created_at: '2026-03-01T12:00:00Z',
   },
 ]
+
+function mockHook(
+  overrides: Partial<{
+    data: { data: typeof mockApprovals; total: number; page: number; per_page: number } | null
+    isLoading: boolean
+    error: Error | undefined
+  }> = {}
+) {
+  vi.mocked(usePendingApprovals).mockReturnValue({
+    data: null,
+    isLoading: false,
+    error: undefined,
+    mutate: mockMutate,
+    isValidating: false,
+    ...overrides,
+  } as ReturnType<typeof usePendingApprovals>)
+}
 
 // ============================================
 // TESTS
@@ -176,24 +215,72 @@ describe('ApprovalsPage', () => {
   })
 
   // ============================================
+  // PAGE HEADER & NAVIGATION
+  // ============================================
+
+  describe('page header', () => {
+    it('renders the page title', () => {
+      mockHook({ data: { data: [], total: 0, page: 1, per_page: 500 } })
+      render(<ApprovalsPage />)
+      expect(screen.getByText('Approval Requests')).toBeInTheDocument()
+    })
+
+    it('renders description with counts', () => {
+      mockHook({ data: { data: mockApprovals, total: 3, page: 1, per_page: 500 } })
+      render(<ApprovalsPage />)
+      expect(screen.getByText('3 total requests - 1 pending review')).toBeInTheDocument()
+    })
+
+    it('shows loading description while fetching', () => {
+      mockHook({ isLoading: true })
+      render(<ApprovalsPage />)
+      expect(screen.getByText('Loading approvals...')).toBeInTheDocument()
+    })
+
+    it('renders back link to findings page', () => {
+      mockHook({ data: { data: [], total: 0, page: 1, per_page: 500 } })
+      render(<ApprovalsPage />)
+      const backLink = screen.getByText('Back to Findings')
+      expect(backLink.closest('a')).toHaveAttribute('href', '/findings')
+    })
+
+    it('renders refresh button', () => {
+      mockHook({ data: { data: [], total: 0, page: 1, per_page: 500 } })
+      render(<ApprovalsPage />)
+      expect(screen.getByText('Refresh')).toBeInTheDocument()
+    })
+  })
+
+  // ============================================
   // LOADING STATE
   // ============================================
 
   describe('loading state', () => {
     it('shows skeleton when loading', () => {
-      vi.mocked(usePendingApprovals).mockReturnValue({
-        data: undefined,
-        isLoading: true,
-        error: undefined,
-        mutate: mockMutate,
-        isValidating: false,
-      } as ReturnType<typeof usePendingApprovals>)
-
+      mockHook({ isLoading: true })
       const { container } = render(<ApprovalsPage />)
-
-      // Skeleton elements should be present
       const skeletons = container.querySelectorAll('[data-slot="skeleton"]')
       expect(skeletons.length).toBeGreaterThan(0)
+    })
+  })
+
+  // ============================================
+  // ERROR STATE
+  // ============================================
+
+  describe('error state', () => {
+    it('shows full-page error with retry button', () => {
+      mockHook({ error: new Error('Network error') })
+      render(<ApprovalsPage />)
+      expect(screen.getByText('Failed to load approvals')).toBeInTheDocument()
+      expect(screen.getByText('Retry')).toBeInTheDocument()
+    })
+
+    it('calls mutate when retry is clicked', () => {
+      mockHook({ error: new Error('Network error') })
+      render(<ApprovalsPage />)
+      fireEvent.click(screen.getByText('Retry'))
+      expect(mockMutate).toHaveBeenCalled()
     })
   })
 
@@ -202,18 +289,52 @@ describe('ApprovalsPage', () => {
   // ============================================
 
   describe('empty state', () => {
-    it('shows "No pending approvals" when no data', () => {
-      vi.mocked(usePendingApprovals).mockReturnValue({
-        data: { data: [], total: 0, page: 1, per_page: 20 },
-        isLoading: false,
-        error: undefined,
-        mutate: mockMutate,
-        isValidating: false,
-      } as ReturnType<typeof usePendingApprovals>)
+    it('shows empty message when no approvals', () => {
+      mockHook({ data: { data: [], total: 0, page: 1, per_page: 500 } })
+      render(<ApprovalsPage />)
+      expect(screen.getByText('No approval requests')).toBeInTheDocument()
+    })
+  })
 
+  // ============================================
+  // STATS CARDS
+  // ============================================
+
+  describe('stats cards', () => {
+    it('renders stats with CardDescription labels', () => {
+      mockHook({ data: { data: mockApprovals, total: 3, page: 1, per_page: 500 } })
       render(<ApprovalsPage />)
 
-      expect(screen.getByText('No pending approvals')).toBeInTheDocument()
+      // CardDescription labels (with icons)
+      expect(screen.getByText('Pending')).toBeInTheDocument()
+      expect(screen.getByText('Total')).toBeInTheDocument()
+    })
+
+    it('renders correct counts', () => {
+      mockHook({ data: { data: mockApprovals, total: 3, page: 1, per_page: 500 } })
+      render(<ApprovalsPage />)
+
+      // Counts appear as CardTitle values - "1" for pending, "1" for approved, etc.
+      // Use getAllByText since counts appear in both cards and tabs
+      expect(screen.getAllByText('1').length).toBeGreaterThanOrEqual(1)
+      expect(screen.getAllByText('3').length).toBeGreaterThanOrEqual(1)
+    })
+  })
+
+  // ============================================
+  // TABS
+  // ============================================
+
+  describe('tabs', () => {
+    it('renders status filter tabs with counts', () => {
+      mockHook({ data: { data: mockApprovals, total: 3, page: 1, per_page: 500 } })
+      render(<ApprovalsPage />)
+
+      expect(screen.getByRole('tab', { name: /All \(3\)/i })).toBeInTheDocument()
+      expect(screen.getByRole('tab', { name: /Pending \(1\)/i })).toBeInTheDocument()
+      expect(screen.getByRole('tab', { name: /Approved \(1\)/i })).toBeInTheDocument()
+      expect(screen.getByRole('tab', { name: /Rejected \(1\)/i })).toBeInTheDocument()
+      expect(screen.getByRole('tab', { name: /Canceled \(0\)/i })).toBeInTheDocument()
     })
   })
 
@@ -222,98 +343,26 @@ describe('ApprovalsPage', () => {
   // ============================================
 
   describe('table rendering', () => {
-    it('renders approval rows when data is present', () => {
-      vi.mocked(usePendingApprovals).mockReturnValue({
-        data: { data: mockApprovals, total: 3, page: 1, per_page: 20 },
-        isLoading: false,
-        error: undefined,
-        mutate: mockMutate,
-        isValidating: false,
-      } as ReturnType<typeof usePendingApprovals>)
-
+    it('renders DataTable with all approval data', () => {
+      mockHook({ data: { data: mockApprovals, total: 3, page: 1, per_page: 500 } })
       render(<ApprovalsPage />)
 
-      // Table headers should be visible
-      expect(screen.getByText('Status')).toBeInTheDocument()
-      expect(screen.getByText('Finding')).toBeInTheDocument()
-      expect(screen.getByText('Requested Status')).toBeInTheDocument()
-      expect(screen.getByText('Justification')).toBeInTheDocument()
-    })
-
-    it('renders status badges with correct labels', () => {
-      vi.mocked(usePendingApprovals).mockReturnValue({
-        data: { data: mockApprovals, total: 3, page: 1, per_page: 20 },
-        isLoading: false,
-        error: undefined,
-        mutate: mockMutate,
-        isValidating: false,
-      } as ReturnType<typeof usePendingApprovals>)
-
-      render(<ApprovalsPage />)
-
-      expect(screen.getByText('Pending')).toBeInTheDocument()
-      expect(screen.getByText('Approved')).toBeInTheDocument()
-      expect(screen.getByText('Rejected')).toBeInTheDocument()
-    })
-
-    it('renders requested status labels', () => {
-      vi.mocked(usePendingApprovals).mockReturnValue({
-        data: { data: mockApprovals, total: 3, page: 1, per_page: 20 },
-        isLoading: false,
-        error: undefined,
-        mutate: mockMutate,
-        isValidating: false,
-      } as ReturnType<typeof usePendingApprovals>)
-
-      render(<ApprovalsPage />)
-
-      // Two approvals have requested_status 'false_positive', so use getAllByText
-      const falsePositiveLabels = screen.getAllByText('False Positive')
-      expect(falsePositiveLabels.length).toBe(2)
-      expect(screen.getByText('Risk Accepted')).toBeInTheDocument()
+      expect(screen.getByTestId('data-table')).toBeInTheDocument()
+      const rows = screen.getAllByTestId('table-row')
+      expect(rows).toHaveLength(3)
     })
   })
 
   // ============================================
-  // ACTIONS DROPDOWN
+  // REFRESH
   // ============================================
 
-  describe('actions dropdown', () => {
-    it('renders actions button for pending approvals', () => {
-      const pendingOnly = [mockApprovals[0]]
-      vi.mocked(usePendingApprovals).mockReturnValue({
-        data: { data: pendingOnly, total: 1, page: 1, per_page: 20 },
-        isLoading: false,
-        error: undefined,
-        mutate: mockMutate,
-        isValidating: false,
-      } as ReturnType<typeof usePendingApprovals>)
-
-      const { container } = render(<ApprovalsPage />)
-
-      // There should be an actions button (the MoreHorizontal trigger)
-      const actionButtons = container.querySelectorAll('button')
-      expect(actionButtons.length).toBeGreaterThan(0)
-    })
-  })
-
-  // ============================================
-  // PAGE HEADER
-  // ============================================
-
-  describe('page header', () => {
-    it('renders the page title', () => {
-      vi.mocked(usePendingApprovals).mockReturnValue({
-        data: { data: [], total: 0, page: 1, per_page: 20 },
-        isLoading: false,
-        error: undefined,
-        mutate: mockMutate,
-        isValidating: false,
-      } as ReturnType<typeof usePendingApprovals>)
-
+  describe('refresh', () => {
+    it('calls mutate when refresh button is clicked', () => {
+      mockHook({ data: { data: [], total: 0, page: 1, per_page: 500 } })
       render(<ApprovalsPage />)
-
-      expect(screen.getByText('Approval Requests')).toBeInTheDocument()
+      fireEvent.click(screen.getByText('Refresh'))
+      expect(mockMutate).toHaveBeenCalled()
     })
   })
 })

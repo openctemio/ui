@@ -116,9 +116,13 @@ export function useTenantModules() {
     async (url: string) => {
       try {
         return await get<TenantModulesResponse>(url)
-      } catch {
-        // Return empty data if endpoint not available
-        // This allows the UI to gracefully degrade
+      } catch (err: unknown) {
+        // Return empty data for 404 (OSS edition without licensing API)
+        // For other errors, still degrade gracefully but log for debugging
+        const status = (err as { status?: number })?.status
+        if (status && status !== 404) {
+          console.warn('[useTenantModules] API error:', status)
+        }
         return {
           module_ids: [],
           modules: [],
