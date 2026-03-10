@@ -80,12 +80,31 @@ export const SEVERITY_CONFIG = {
   },
 } as const
 
-// Risk level configuration
-export const getRiskLevel = (score: number) => {
-  if (score >= 80) return { label: 'Critical', color: 'bg-red-500', textColor: 'text-white' }
-  if (score >= 60) return { label: 'High', color: 'bg-orange-500', textColor: 'text-white' }
-  if (score >= 40) return { label: 'Medium', color: 'bg-yellow-500', textColor: 'text-black' }
-  if (score >= 20) return { label: 'Low', color: 'bg-blue-500', textColor: 'text-white' }
+// Risk level thresholds interface
+export interface RiskLevelThresholds {
+  critical_min: number
+  high_min: number
+  medium_min: number
+  low_min: number
+}
+
+// Default risk level thresholds
+export const DEFAULT_RISK_LEVELS: RiskLevelThresholds = {
+  critical_min: 80,
+  high_min: 60,
+  medium_min: 40,
+  low_min: 20,
+}
+
+// Risk level configuration — supports optional custom thresholds
+export const getRiskLevel = (score: number, thresholds?: RiskLevelThresholds) => {
+  const t = thresholds ?? DEFAULT_RISK_LEVELS
+  if (score >= t.critical_min)
+    return { label: 'Critical', color: 'bg-red-500', textColor: 'text-white' }
+  if (score >= t.high_min) return { label: 'High', color: 'bg-orange-500', textColor: 'text-white' }
+  if (score >= t.medium_min)
+    return { label: 'Medium', color: 'bg-yellow-500', textColor: 'text-black' }
+  if (score >= t.low_min) return { label: 'Low', color: 'bg-blue-500', textColor: 'text-white' }
   return { label: 'Info', color: 'bg-green-500', textColor: 'text-white' }
 }
 
