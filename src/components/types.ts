@@ -52,12 +52,14 @@ type BaseNavItem = {
    */
   module?: string
   /**
-   * Asset module key for visibility control.
-   * Used to filter Asset Inventory items based on development status.
-   * Example: 'domains', 'websites', 'mobile'
-   * @see src/config/asset-modules.ts
+   * Sub-module key for visibility control.
+   * Maps to sub-module slug in the modules API response.
+   * When the parent collapsible has a `module` property, this key is matched
+   * against sub-modules of that parent to determine visibility.
+   * Items without this key are always shown (e.g., "Overview" items).
+   * Example: 'domains', 'scm', 'notifications'
    */
-  assetModuleKey?: string
+  subModuleKey?: string
   /**
    * Release status of this item (set dynamically based on module status from backend)
    * - released: Normal, clickable
