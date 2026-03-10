@@ -69,6 +69,47 @@ function LoadingSkeleton() {
   )
 }
 
+// Visual stacked bar showing weight distribution
+function WeightDistributionBar({
+  weights,
+}: {
+  weights: { exposure: number; criticality: number; findings: number; ctem: number }
+}) {
+  const segments = [
+    { key: 'exposure', label: 'Exposure', color: '#ef4444', value: weights.exposure },
+    { key: 'criticality', label: 'Criticality', color: '#f97316', value: weights.criticality },
+    { key: 'findings', label: 'Findings', color: '#eab308', value: weights.findings },
+    { key: 'ctem', label: 'CTEM', color: '#3b82f6', value: weights.ctem },
+  ]
+
+  return (
+    <div className="space-y-2">
+      <div className="flex h-3 w-full overflow-hidden rounded-full">
+        {segments.map((seg) =>
+          seg.value > 0 ? (
+            <div
+              key={seg.key}
+              className="transition-all duration-200"
+              style={{ width: `${seg.value}%`, backgroundColor: seg.color }}
+              title={`${seg.label}: ${seg.value}%`}
+            />
+          ) : null
+        )}
+      </div>
+      <div className="flex flex-wrap gap-x-4 gap-y-1">
+        {segments.map((seg) => (
+          <div key={seg.key} className="flex items-center gap-1.5 text-xs">
+            <div className="h-2 w-2 rounded-full" style={{ backgroundColor: seg.color }} />
+            <span className="text-muted-foreground">
+              {seg.label}: {seg.value}%
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function WeightSlider({
   label,
   value,
@@ -99,6 +140,16 @@ function WeightSlider({
       </div>
     </div>
   )
+}
+
+// Preset descriptions for user context
+const PRESET_DESCRIPTIONS: Record<string, string> = {
+  legacy: 'Original formula (backward compatible)',
+  default: 'Balanced for general-purpose use',
+  banking: 'High criticality + CTEM, PII-focused',
+  healthcare: 'Highest CTEM weight, PHI + HIPAA',
+  ecommerce: 'Highest exposure, public-facing apps',
+  government: 'High compliance + restricted data',
 }
 
 function NumberInput({
@@ -166,6 +217,52 @@ export default function ScoringConfigurationPage() {
     []
   )
 
+  // Smart weight update: auto-redistribute remaining weight to other components
+  const updateWeight = useCallback(
+    (key: keyof RiskScoringSettings['weights'], newValue: number) => {
+      updateConfig((prev) => {
+        const weights = { ...prev.weights }
+        const oldValue = weights[key]
+        const delta = newValue - oldValue
+        if (delta === 0) return prev
+
+        weights[key] = newValue
+
+        // Distribute -delta proportionally among the other 3 keys
+        const otherKeys = (['exposure', 'criticality', 'findings', 'ctem'] as const).filter(
+          (k) => k !== key
+        )
+        const otherSum = otherKeys.reduce((s, k) => s + weights[k], 0)
+
+        if (otherSum > 0) {
+          let remaining = -delta
+          for (let i = 0; i < otherKeys.length; i++) {
+            const k = otherKeys[i]
+            if (i === otherKeys.length - 1) {
+              // Last key gets whatever is left to avoid rounding drift
+              weights[k] = Math.max(0, Math.min(100, weights[k] + remaining))
+            } else {
+              const share = Math.round((weights[k] / otherSum) * -delta)
+              const adjusted = Math.max(0, Math.min(100, weights[k] + share))
+              remaining -= adjusted - weights[k]
+              weights[k] = adjusted
+            }
+          }
+        } else {
+          // All others are 0 — split equally
+          const each = Math.floor((100 - newValue) / otherKeys.length)
+          otherKeys.forEach((k, i) => {
+            weights[k] =
+              i === otherKeys.length - 1 ? 100 - newValue - each * (otherKeys.length - 1) : each
+          })
+        }
+
+        return { ...prev, weights }
+      })
+    },
+    [updateConfig]
+  )
+
   const handleSave = async () => {
     if (!config) return
     try {
@@ -219,6 +316,16 @@ export default function ScoringConfigurationPage() {
     }
   }
 
+  // Warn on navigation with unsaved changes
+  useEffect(() => {
+    if (!isDirty) return
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+    }
+    window.addEventListener('beforeunload', handler)
+    return () => window.removeEventListener('beforeunload', handler)
+  }, [isDirty])
+
   if (isLoading || !config) {
     return <LoadingSkeleton />
   }
@@ -229,6 +336,12 @@ export default function ScoringConfigurationPage() {
     config.weights.findings +
     config.weights.ctem
   const isWeightValid = weightSum === 100
+
+  // Risk level threshold ordering validation
+  const { critical_min, high_min, medium_min, low_min } = config.risk_levels
+  const isThresholdValid =
+    critical_min > high_min && high_min > medium_min && medium_min > low_min && low_min > 0
+  const canSave = isDirty && isWeightValid && isThresholdValid && !isUpdating
 
   return (
     <Main>
@@ -241,7 +354,7 @@ export default function ScoringConfigurationPage() {
             <RotateCcw className="h-4 w-4" />
             Reset
           </Button>
-          <Button onClick={handleSave} disabled={!isDirty || !isWeightValid || isUpdating}>
+          <Button onClick={handleSave} disabled={!canSave}>
             {isUpdating ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
@@ -263,21 +376,30 @@ export default function ScoringConfigurationPage() {
             <CardDescription>Start from a preset optimized for your industry</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-wrap gap-2">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
               {presets.map((preset) => (
-                <Button
+                <button
                   key={preset.name}
-                  variant={config.preset === preset.name ? 'default' : 'outline'}
-                  size="sm"
+                  type="button"
                   onClick={() => handlePresetSelect(preset.name)}
+                  className={`rounded-lg border p-3 text-left transition-colors ${
+                    config.preset === preset.name
+                      ? 'border-primary bg-primary/5'
+                      : 'hover:border-muted-foreground/30 border-transparent'
+                  }`}
                 >
-                  {preset.name.charAt(0).toUpperCase() + preset.name.slice(1)}
-                </Button>
+                  <div className="text-sm font-medium">
+                    {preset.name.charAt(0).toUpperCase() + preset.name.slice(1)}
+                  </div>
+                  <div className="text-muted-foreground mt-0.5 text-xs">
+                    {PRESET_DESCRIPTIONS[preset.name] || ''}
+                  </div>
+                </button>
               ))}
               {config.preset === 'custom' && (
-                <Badge variant="secondary" className="self-center">
-                  Custom
-                </Badge>
+                <div className="flex items-center justify-center rounded-lg border border-dashed p-3">
+                  <Badge variant="secondary">Custom</Badge>
+                </div>
               )}
             </div>
           </CardContent>
@@ -293,43 +415,33 @@ export default function ScoringConfigurationPage() {
               Component Weights
             </CardTitle>
             <CardDescription>
-              Adjust the weight of each factor. Must sum to 100%.
-              {!isWeightValid && (
-                <span className="ml-2 font-medium text-red-500">
-                  Sum: {weightSum}% (must be 100%)
-                </span>
-              )}
+              Adjust the weight of each factor. Weights auto-balance to 100%.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            <WeightDistributionBar weights={config.weights} />
             <WeightSlider
               label="Exposure"
               value={config.weights.exposure}
-              onChange={(v) =>
-                updateConfig((c) => ({ ...c, weights: { ...c.weights, exposure: v } }))
-              }
+              onChange={(v) => updateWeight('exposure', v)}
               color="#ef4444"
             />
             <WeightSlider
               label="Criticality"
               value={config.weights.criticality}
-              onChange={(v) =>
-                updateConfig((c) => ({ ...c, weights: { ...c.weights, criticality: v } }))
-              }
+              onChange={(v) => updateWeight('criticality', v)}
               color="#f97316"
             />
             <WeightSlider
               label="Findings"
               value={config.weights.findings}
-              onChange={(v) =>
-                updateConfig((c) => ({ ...c, weights: { ...c.weights, findings: v } }))
-              }
+              onChange={(v) => updateWeight('findings', v)}
               color="#eab308"
             />
             <WeightSlider
               label="CTEM"
               value={config.weights.ctem}
-              onChange={(v) => updateConfig((c) => ({ ...c, weights: { ...c.weights, ctem: v } }))}
+              onChange={(v) => updateWeight('ctem', v)}
               color="#3b82f6"
             />
             {!config.ctem_points.enabled && config.weights.ctem > 0 && (
@@ -564,18 +676,20 @@ export default function ScoringConfigurationPage() {
               </Select>
             </div>
             <div className="grid grid-cols-2 gap-2">
-              <NumberInput
-                label="Per-finding points"
-                value={config.finding_impact.per_finding_points}
-                onChange={(v) =>
-                  updateConfig((c) => ({
-                    ...c,
-                    finding_impact: { ...c.finding_impact, per_finding_points: v },
-                  }))
-                }
-                min={1}
-                max={50}
-              />
+              {config.finding_impact.mode === 'count' && (
+                <NumberInput
+                  label="Per-finding points"
+                  value={config.finding_impact.per_finding_points}
+                  onChange={(v) =>
+                    updateConfig((c) => ({
+                      ...c,
+                      finding_impact: { ...c.finding_impact, per_finding_points: v },
+                    }))
+                  }
+                  min={1}
+                  max={50}
+                />
+              )}
               <NumberInput
                 label="Finding cap"
                 value={config.finding_impact.finding_cap}
@@ -749,7 +863,14 @@ export default function ScoringConfigurationPage() {
               <Shield className="h-5 w-5" />
               Risk Level Thresholds
             </CardTitle>
-            <CardDescription>Minimum score (1-100) for each risk level</CardDescription>
+            <CardDescription>
+              Minimum score (1-100) for each risk level. Must be in descending order.
+              {!isThresholdValid && isDirty && (
+                <span className="mt-1 block font-medium text-red-500">
+                  Thresholds must be ordered: Critical &gt; High &gt; Medium &gt; Low &gt; 0
+                </span>
+              )}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-4 gap-2">
