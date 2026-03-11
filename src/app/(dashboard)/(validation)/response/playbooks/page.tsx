@@ -23,16 +23,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from '@/components/charts'
-import { cn } from '@/lib/utils'
-import {
-  BookOpen,
-  FileText,
-  ListChecks,
-  Timer,
-  CheckCircle2,
-  AlertTriangle,
-  ArrowRight,
-} from 'lucide-react'
+import { BookOpen, FileText, ListChecks, Timer, ArrowRight } from 'lucide-react'
 
 const SEVERITY_COLORS: Record<string, string> = {
   critical: '#ef4444',

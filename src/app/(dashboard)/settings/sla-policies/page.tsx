@@ -23,8 +23,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from '@/components/charts'
-import { cn } from '@/lib/utils'
-import { Timer, Clock, AlertTriangle, Target, CheckCircle2, XCircle, Info } from 'lucide-react'
+import { Timer, Clock, AlertTriangle, Target, CheckCircle2, XCircle } from 'lucide-react'
 
 const SEVERITY_COLORS: Record<string, string> = {
   critical: '#ef4444',

@@ -32,7 +32,6 @@ import {
   Shield,
   AlertTriangle,
   TrendingUp,
-  TrendingDown,
   Target,
   BarChart3,
   Gauge,

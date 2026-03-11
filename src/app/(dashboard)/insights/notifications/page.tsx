@@ -23,8 +23,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from '@/components/charts'
-import { cn } from '@/lib/utils'
-import { Bell, Send, Mail, Activity, CheckCircle2, AlertTriangle, ArrowRight } from 'lucide-react'
+import { Bell, Send, Mail, Activity, ArrowRight } from 'lucide-react'
 
 const SEVERITY_COLORS: Record<string, string> = {
   critical: '#ef4444',
