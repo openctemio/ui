@@ -2,7 +2,6 @@
 
 import { Badge } from '@/components/ui/badge'
 import { Server, Network, CheckCircle, AlertTriangle, Shield } from 'lucide-react'
-import type { Asset } from '@/features/assets'
 import type { AssetPageConfig } from '@/features/assets/types/page-config.types'
 
 export const servicesConfig: AssetPageConfig = {

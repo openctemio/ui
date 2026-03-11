@@ -53,7 +53,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { toast } from 'sonner'
 import { getErrorMessage } from '@/lib/api/error-handler'
-import { get, post, put, del } from '@/lib/api/client'
+import { post, put, del } from '@/lib/api/client'
 import { useTenant } from '@/context/tenant-provider'
 import {
   useTenantSettings,

@@ -71,7 +71,7 @@ export default function TasksByTeamPage() {
   const { stats, isLoading } = useDashboardStats(currentTenant?.id || null)
 
   const totalAssets = stats.assets.total || 0
-  const assetTypes = stats.assets.byType || {}
+  const assetTypes = useMemo(() => stats.assets.byType || {}, [stats.assets.byType])
   const assetTypeCount = Object.keys(assetTypes).length
   const reposTotal = stats.repositories.total || 0
   const reposWithFindings = stats.repositories.withFindings || 0

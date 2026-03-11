@@ -17,7 +17,6 @@ import {
   useHasAnyPermission,
   useHasAllPermissions,
 } from '../permission-gate'
-import { usePermissions } from '@/context/permission-provider'
 
 // ============================================
 // MOCKS
