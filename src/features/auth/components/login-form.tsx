@@ -8,12 +8,12 @@
 
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useEffect, useState, useTransition } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Loader2, LogIn } from 'lucide-react'
+import { KeyRound, Loader2, LogIn } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { cn } from '@/lib/utils'
@@ -35,6 +35,11 @@ import { loginSchema, type LoginInput } from '../schemas/auth.schema'
 import { loginAction } from '../actions/local-auth-actions'
 import { initiateSocialLogin, type SocialProvider } from '../actions/social-auth-actions'
 
+// SSO imports
+import { useTenantSSOProviders } from '@/features/sso/api/use-sso-api'
+import { initiateSSOLogin } from '@/features/sso/actions/sso-auth-actions'
+import { getProviderLabel, type SSOProviderType } from '@/features/sso/types/sso.types'
+
 // ============================================
 // TYPES
 // ============================================
@@ -51,6 +56,12 @@ interface LoginFormProps extends React.HTMLAttributes<HTMLFormElement> {
    * @default true
    */
   showSocialLogin?: boolean
+
+  /**
+   * Organization slug for SSO login (?org= parameter)
+   * When set, fetches and displays tenant-specific SSO providers
+   */
+  orgSlug?: string
 }
 
 // ============================================
@@ -75,19 +86,25 @@ export function LoginForm({
   className,
   redirectTo = '/',
   showSocialLogin = true,
+  orgSlug,
   ...props
 }: LoginFormProps) {
   const [isPending, startTransition] = useTransition()
   const [loadingProvider, setLoadingProvider] = useState<SocialProvider | null>(null)
+  const [loadingSSOProvider, setLoadingSSOProvider] = useState<SSOProviderType | null>(null)
   const router = useRouter()
   const searchParams = useSearchParams()
 
-  // Check for error from OAuth callback
+  // Fetch tenant-specific SSO providers when ?org= is present
+  const { data: ssoProviders } = useTenantSSOProviders(orgSlug ?? null)
+
+  // Check for error from OAuth/SSO callback
   const errorParam = searchParams.get('error')
-  if (errorParam) {
-    // Show error toast once
-    toast.error(errorParam)
-  }
+  useEffect(() => {
+    if (errorParam) {
+      toast.error(errorParam)
+    }
+  }, [errorParam])
 
   // Form setup with centralized schema
   const form = useForm<LoginInput>({
@@ -172,7 +189,22 @@ export function LoginForm({
     }
   }
 
-  const isLoading = isPending || loadingProvider !== null
+  /**
+   * Handle SSO login (Entra ID, Okta, Google Workspace)
+   */
+  async function handleSSOLogin(provider: SSOProviderType) {
+    if (!orgSlug) return
+    setLoadingSSOProvider(provider)
+    try {
+      await initiateSSOLogin(provider, orgSlug, redirectTo)
+    } catch (error) {
+      setLoadingSSOProvider(null)
+      console.error(`SSO login error (${provider}):`, error)
+      toast.error(`Failed to sign in with ${getProviderLabel(provider)}. Please try again.`)
+    }
+  }
+
+  const isLoading = isPending || loadingProvider !== null || loadingSSOProvider !== null
 
   return (
     <Form {...form}>
@@ -264,6 +296,40 @@ export function LoginForm({
                     <provider.icon className="h-4 w-4" />
                   )}
                   <span className="sr-only">{provider.name}</span>
+                </Button>
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* SSO Providers (when ?org= parameter is present) */}
+        {orgSlug && ssoProviders && ssoProviders.length > 0 && (
+          <>
+            <div className="relative my-2">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background text-muted-foreground px-2">Organization SSO</span>
+              </div>
+            </div>
+
+            <div className="grid gap-2">
+              {ssoProviders.map((provider) => (
+                <Button
+                  key={provider.id}
+                  variant="outline"
+                  type="button"
+                  disabled={isLoading}
+                  onClick={() => handleSSOLogin(provider.provider)}
+                  className="w-full"
+                >
+                  {loadingSSOProvider === provider.provider ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <KeyRound className="mr-2 h-4 w-4" />
+                  )}
+                  Sign in with {provider.display_name}
                 </Button>
               ))}
             </div>
