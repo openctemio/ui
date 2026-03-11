@@ -11,7 +11,6 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Progress } from '@/components/ui/progress'
-import { cn } from '@/lib/utils'
 import {
   GitBranch,
   Plus,
@@ -20,7 +19,6 @@ import {
   Clock,
   GitPullRequest,
   Shield,
-  AlertTriangle,
   Settings,
   Play,
   BarChart3,
@@ -176,7 +174,7 @@ function EmptyState() {
 
 export default function CICDIntegrationPage() {
   const { currentTenant } = useTenant()
-  const { stats, isLoading } = useDashboardStats(currentTenant?.id || null)
+  const { isLoading } = useDashboardStats(currentTenant?.id || null)
 
   const summaryStats = useMemo(() => {
     const active = PLACEHOLDER_PIPELINES.filter((p) => p.status === 'active').length

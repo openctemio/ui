@@ -166,7 +166,7 @@ export default function ApprovalsPage() {
     selectedApproval?.id ?? ''
   )
 
-  const allApprovals = data?.data ?? []
+  const allApprovals = useMemo(() => data?.data ?? [], [data?.data])
 
   // Compute counts from single fetch
   const counts = useMemo(() => {

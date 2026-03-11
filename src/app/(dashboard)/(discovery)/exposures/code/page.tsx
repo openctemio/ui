@@ -40,15 +40,6 @@ const SEVERITY_LABELS: Record<string, string> = {
   info: 'Info',
 }
 
-const SEVERITY_BADGE_VARIANTS: Record<string, 'destructive' | 'default' | 'secondary' | 'outline'> =
-  {
-    critical: 'destructive',
-    high: 'destructive',
-    medium: 'default',
-    low: 'secondary',
-    info: 'outline',
-  }
-
 const SEVERITY_ORDER = ['critical', 'high', 'medium', 'low', 'info'] as const
 
 function LoadingSkeleton() {

@@ -9,7 +9,6 @@ import { useTenant } from '@/context/tenant-provider'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Progress } from '@/components/ui/progress'
 import {
   BarChart,
   Bar,
@@ -23,10 +22,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from '@/components/charts'
-import { cn } from '@/lib/utils'
-import { Play, Pause, CheckCircle2, AlertCircle, Clock, Activity, ArrowRight } from 'lucide-react'
-
-const WORKFLOW_STATUS_COLORS = ['#22c55e', '#3b82f6', '#eab308', '#ef4444']
+import { Play, CheckCircle2, Clock, Activity, ArrowRight } from 'lucide-react'
 
 export default function ActiveWorkflowsPage() {
   const { currentTenant } = useTenant()

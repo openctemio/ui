@@ -11,12 +11,9 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Progress } from '@/components/ui/progress'
-import { cn } from '@/lib/utils'
 import {
   Ticket,
   Plus,
-  CheckCircle,
-  XCircle,
   Clock,
   ArrowLeftRight,
   Settings,
@@ -24,7 +21,6 @@ import {
   FileText,
   RefreshCw,
   Link2,
-  Unlink,
 } from 'lucide-react'
 
 interface TicketingConnection {
