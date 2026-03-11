@@ -15,7 +15,7 @@ import { env } from '@/lib/env'
 import { LoginForm } from '@/features/auth/components/login-form'
 
 interface LoginPageProps {
-  searchParams: Promise<{ redirect?: string; returnTo?: string }>
+  searchParams: Promise<{ redirect?: string; returnTo?: string; org?: string; error?: string }>
 }
 
 export default async function SignIn({ searchParams }: LoginPageProps) {
@@ -63,7 +63,7 @@ export default async function SignIn({ searchParams }: LoginPageProps) {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <LoginForm redirectTo={redirectTo} />
+        <LoginForm redirectTo={redirectTo} orgSlug={params.org} />
       </CardContent>
       <CardFooter>
         <p className="text-muted-foreground px-8 text-center text-sm">
