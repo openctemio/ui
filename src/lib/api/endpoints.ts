@@ -132,6 +132,26 @@ export const authEndpoints = {
    * @param provider - OAuth provider (google, github, microsoft)
    */
   oauthCallback: (provider: string) => `${API_BASE.AUTH}/oauth/${provider}/callback`,
+
+  // Per-tenant SSO endpoints (public)
+  /**
+   * List active SSO providers for a tenant
+   * @param orgSlug - Tenant slug (org identifier)
+   */
+  ssoProviders: (orgSlug: string) =>
+    `${API_BASE.AUTH}/sso/providers?org=${encodeURIComponent(orgSlug)}`,
+
+  /**
+   * Get SSO authorization URL
+   * @param provider - SSO provider (entra_id, okta, google_workspace)
+   */
+  ssoAuthorize: (provider: string) => `${API_BASE.AUTH}/sso/${provider}/authorize`,
+
+  /**
+   * SSO callback endpoint
+   * @param provider - SSO provider (entra_id, okta, google_workspace)
+   */
+  ssoCallback: (provider: string) => `${API_BASE.AUTH}/sso/${provider}/callback`,
 } as const
 
 // ============================================
