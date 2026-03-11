@@ -111,6 +111,17 @@ export default function ResetPasswordPage() {
             {error && (
               <div className="bg-destructive/10 text-destructive rounded-md p-3 text-sm">
                 {error}
+                {(error.toLowerCase().includes('expired') ||
+                  error.toLowerCase().includes('invalid')) && (
+                  <div className="mt-2">
+                    <Link
+                      href="/forgot-password"
+                      className="text-primary underline underline-offset-4 hover:text-primary/80 text-sm"
+                    >
+                      Request a new reset link
+                    </Link>
+                  </div>
+                )}
               </div>
             )}
 
