@@ -3,14 +3,16 @@
 /**
  * Risk Scoring Context Provider
  *
- * Loads tenant-specific risk level thresholds from the API and provides them
- * via context so that risk score components (RiskScoreBadge, RiskScoreMeter,
+ * Reads tenant-specific risk level thresholds from bootstrap data and provides
+ * them via context so that risk score components (RiskScoreBadge, RiskScoreMeter,
  * RiskScoreGauge) display labels consistent with the configured scoring engine.
+ *
+ * NOTE: Risk levels are included in the bootstrap API response (/api/v1/me/bootstrap)
+ * to avoid an extra API call on page load.
  */
 
 import * as React from 'react'
-import { useTenant } from '@/context/tenant-provider'
-import { useRiskScoringSettings } from '@/features/organization/api/use-risk-scoring-settings'
+import { useBootstrapRiskLevels } from '@/context/bootstrap-provider'
 import type { RiskLevelThresholds } from '@/features/shared/types/common.types'
 import { DEFAULT_RISK_LEVELS } from '@/features/shared/types/common.types'
 
@@ -37,18 +39,17 @@ const RiskScoringContext = React.createContext<RiskScoringContextValue>({
 // ============================================
 
 export function RiskScoringProvider({ children }: { children: React.ReactNode }) {
-  const { currentTenant } = useTenant()
-  const { settings, isLoading } = useRiskScoringSettings(currentTenant?.id)
+  const { riskLevels, isLoading } = useBootstrapRiskLevels()
 
   const thresholds = React.useMemo<RiskLevelThresholds>(() => {
-    if (!settings?.risk_levels) return DEFAULT_RISK_LEVELS
+    if (!riskLevels) return DEFAULT_RISK_LEVELS
     return {
-      critical_min: settings.risk_levels.critical_min,
-      high_min: settings.risk_levels.high_min,
-      medium_min: settings.risk_levels.medium_min,
-      low_min: settings.risk_levels.low_min,
+      critical_min: riskLevels.critical_min,
+      high_min: riskLevels.high_min,
+      medium_min: riskLevels.medium_min,
+      low_min: riskLevels.low_min,
     }
-  }, [settings])
+  }, [riskLevels])
 
   const value = React.useMemo<RiskScoringContextValue>(
     () => ({ thresholds, isLoading }),

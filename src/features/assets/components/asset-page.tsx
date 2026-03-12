@@ -91,6 +91,7 @@ import { useAssetDialogs } from '../hooks/use-asset-dialogs'
 import { useAssetExport } from '../hooks/use-asset-export'
 import { AssetFormDialogShared } from './asset-form-dialog-shared'
 import { AssetDeleteDialogShared } from './asset-delete-dialog-shared'
+import { AssetOwnersTab } from './asset-owners-tab'
 
 type StatusFilter = string
 
@@ -882,12 +883,19 @@ export function AssetPage({ config }: AssetPageProps) {
         assetTypeName={config.label}
         relationships={selectedAsset ? getAssetRelationships(selectedAsset.id) : []}
         extraTabs={
-          selectedAsset && config.detailTabs
-            ? config.detailTabs.map((tab) => ({
-                value: tab.id,
-                label: tab.label,
-                content: tab.render(selectedAsset),
-              }))
+          selectedAsset
+            ? [
+                {
+                  value: 'owners',
+                  label: 'Owners',
+                  content: <AssetOwnersTab assetId={selectedAsset.id} />,
+                },
+                ...(config.detailTabs?.map((tab) => ({
+                  value: tab.id,
+                  label: tab.label,
+                  content: tab.render(selectedAsset),
+                })) ?? []),
+              ]
             : undefined
         }
         onEdit={() => selectedAsset && dialogs.openEdit(selectedAsset)}

@@ -39,8 +39,13 @@ export function useRiskScoringSettings(tenantIdOrSlug: string | undefined) {
 // UPDATE RISK SCORING SETTINGS
 // ============================================
 
+interface UpdateRiskScoringResponse {
+  config: RiskScoringSettings
+  assets_updated: number
+}
+
 async function updateRiskScoring(url: string, { arg }: { arg: RiskScoringSettings }) {
-  return fetcherWithOptions<RiskScoringSettings>(url, {
+  return fetcherWithOptions<UpdateRiskScoringResponse>(url, {
     method: 'PATCH',
     body: JSON.stringify(arg),
   })

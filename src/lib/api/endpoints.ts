@@ -111,12 +111,6 @@ export const authEndpoints = {
    */
   createFirstTeam: () => `${API_BASE.AUTH}/create-first-team`,
 
-  /**
-   * Get short-lived WebSocket token for cross-origin WebSocket connections
-   * Required when frontend and backend are on different ports (development)
-   */
-  wsToken: () => `${API_BASE.AUTH}/ws-token`,
-
   // ============================================
   // SOCIAL/OAUTH AUTH
   // ============================================
@@ -518,6 +512,32 @@ export const assetEndpoints = {
    * high_risk_count, findings_total, risk_score_avg
    */
   stats: () => `${API_BASE.ASSETS}/stats`,
+
+  // ============================================
+  // ASSET OWNERS
+  // ============================================
+
+  /**
+   * List owners of an asset
+   */
+  listOwners: (assetId: string) => `${API_BASE.ASSETS}/${assetId}/owners`,
+
+  /**
+   * Add an owner to an asset
+   */
+  addOwner: (assetId: string) => `${API_BASE.ASSETS}/${assetId}/owners`,
+
+  /**
+   * Update an owner's type
+   */
+  updateOwner: (assetId: string, ownerId: string) =>
+    `${API_BASE.ASSETS}/${assetId}/owners/${ownerId}`,
+
+  /**
+   * Remove an owner from an asset
+   */
+  removeOwner: (assetId: string, ownerId: string) =>
+    `${API_BASE.ASSETS}/${assetId}/owners/${ownerId}`,
 } as const
 
 // ============================================
