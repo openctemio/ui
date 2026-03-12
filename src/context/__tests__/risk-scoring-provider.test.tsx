@@ -22,19 +22,10 @@ const mockSettings = {
   },
 }
 
-vi.mock('@/context/tenant-provider', () => ({
-  useTenant: vi.fn(() => ({
-    currentTenant: { id: 'tenant-123', name: 'Test' },
-  })),
-}))
-
-vi.mock('@/features/organization/api/use-risk-scoring-settings', () => ({
-  useRiskScoringSettings: vi.fn(() => ({
-    settings: mockSettings,
+vi.mock('@/context/bootstrap-provider', () => ({
+  useBootstrapRiskLevels: vi.fn(() => ({
+    riskLevels: mockSettings.risk_levels,
     isLoading: false,
-    isError: false,
-    error: undefined,
-    mutate: vi.fn(),
   })),
 }))
 
@@ -80,15 +71,11 @@ describe('RiskScoringProvider with no settings', () => {
   })
 
   it('falls back to default thresholds when settings are undefined', async () => {
-    // Override the mock to return no settings
-    const { useRiskScoringSettings } =
-      await import('@/features/organization/api/use-risk-scoring-settings')
-    vi.mocked(useRiskScoringSettings).mockReturnValue({
-      settings: undefined,
+    // Override the mock to return no risk levels
+    const { useBootstrapRiskLevels } = await import('@/context/bootstrap-provider')
+    vi.mocked(useBootstrapRiskLevels).mockReturnValue({
+      riskLevels: null,
       isLoading: false,
-      isError: false,
-      error: undefined,
-      mutate: vi.fn(),
     })
 
     const { RiskScoringProvider, useRiskThresholds } = await import('../risk-scoring-provider')
