@@ -1938,6 +1938,40 @@ export const platformEndpoints = {
 } as const
 
 // ============================================
+// NOTIFICATION ENDPOINTS
+// ============================================
+
+/**
+ * User notification endpoints (in-app notifications)
+ */
+export const notificationEndpoints = {
+  /**
+   * List notifications for current user
+   */
+  list: () => '/api/v1/notifications',
+
+  /**
+   * Get unread notification count
+   */
+  unreadCount: () => '/api/v1/notifications/unread-count',
+
+  /**
+   * Mark a single notification as read
+   */
+  markAsRead: (id: string) => `/api/v1/notifications/${id}/read`,
+
+  /**
+   * Mark all notifications as read
+   */
+  markAllAsRead: () => '/api/v1/notifications/read-all',
+
+  /**
+   * Get/update notification preferences
+   */
+  preferences: () => '/api/v1/notifications/preferences',
+} as const
+
+// ============================================
 // ENDPOINT COLLECTIONS
 // ============================================
 
@@ -1974,6 +2008,7 @@ export const endpoints = {
   workflows: workflowEndpoints,
   workflowRuns: workflowRunEndpoints,
   platform: platformEndpoints,
+  notifications: notificationEndpoints,
 } as const
 
 /**
@@ -2009,4 +2044,5 @@ export {
   workflowEndpoints as workflows,
   workflowRunEndpoints as workflowRuns,
   platformEndpoints as platform,
+  notificationEndpoints as notifications,
 }
