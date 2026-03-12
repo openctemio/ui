@@ -194,6 +194,7 @@ export default function ScoringConfigurationPage() {
   const [config, setConfig] = useState<RiskScoringSettings | null>(null)
   const [isDirty, setIsDirty] = useState(false)
   const [previewItems, setPreviewItems] = useState<RiskScorePreviewItem[] | null>(null)
+  const [previewTotalAssets, setPreviewTotalAssets] = useState<number>(0)
 
   // Initialize form from API data
   useEffect(() => {
@@ -212,6 +213,7 @@ export default function ScoringConfigurationPage() {
       })
       setIsDirty(true)
       setPreviewItems(null)
+      setPreviewTotalAssets(0)
     },
     []
   )
@@ -279,6 +281,7 @@ export default function ScoringConfigurationPage() {
       setConfig(settings)
       setIsDirty(false)
       setPreviewItems(null)
+      setPreviewTotalAssets(0)
     }
   }
 
@@ -288,6 +291,7 @@ export default function ScoringConfigurationPage() {
       setConfig(preset.config)
       setIsDirty(true)
       setPreviewItems(null)
+      setPreviewTotalAssets(0)
     }
   }
 
@@ -297,6 +301,7 @@ export default function ScoringConfigurationPage() {
       const result = await previewChanges(config)
       if (result) {
         setPreviewItems(result.assets)
+        setPreviewTotalAssets(result.total_assets)
       }
     } catch (err) {
       toast.error(getErrorMessage(err))
@@ -946,33 +951,42 @@ export default function ScoringConfigurationPage() {
               Preview Impact
             </Button>
             {previewItems && previewItems.length > 0 && (
-              <div className="max-h-64 overflow-auto rounded border">
-                <table className="w-full text-sm">
-                  <thead className="bg-muted/50 sticky top-0">
-                    <tr>
-                      <th className="p-2 text-left font-medium">Asset</th>
-                      <th className="p-2 text-right font-medium">Current</th>
-                      <th className="p-2 text-right font-medium">New</th>
-                      <th className="p-2 text-right font-medium">Delta</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {previewItems.map((item) => (
-                      <tr key={item.asset_id} className="border-t">
-                        <td className="p-2 truncate max-w-[200px]">{item.asset_name}</td>
-                        <td className="p-2 text-right">{item.current_score}</td>
-                        <td className="p-2 text-right">{item.new_score}</td>
-                        <td
-                          className={`p-2 text-right font-medium ${item.delta > 0 ? 'text-red-500' : item.delta < 0 ? 'text-green-500' : ''}`}
-                        >
-                          {item.delta > 0 ? '+' : ''}
-                          {item.delta}
-                        </td>
+              <>
+                <p className="text-muted-foreground mb-2 text-xs">
+                  Showing {previewItems.length} sampled assets out of{' '}
+                  {previewTotalAssets.toLocaleString()} total (top risk, bottom risk, and random
+                  sample).
+                </p>
+                <div className="max-h-64 overflow-auto rounded border">
+                  <table className="w-full text-sm">
+                    <thead className="bg-muted/50 sticky top-0">
+                      <tr>
+                        <th className="p-2 text-left font-medium">Asset</th>
+                        <th className="p-2 text-left font-medium">Type</th>
+                        <th className="p-2 text-right font-medium">Current</th>
+                        <th className="p-2 text-right font-medium">New</th>
+                        <th className="p-2 text-right font-medium">Delta</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {previewItems.map((item) => (
+                        <tr key={item.asset_id} className="border-t">
+                          <td className="max-w-[180px] truncate p-2">{item.asset_name}</td>
+                          <td className="text-muted-foreground p-2 text-xs">{item.asset_type}</td>
+                          <td className="p-2 text-right">{item.current_score}</td>
+                          <td className="p-2 text-right">{item.new_score}</td>
+                          <td
+                            className={`p-2 text-right font-medium ${item.delta > 0 ? 'text-red-500' : item.delta < 0 ? 'text-green-500' : ''}`}
+                          >
+                            {item.delta > 0 ? '+' : ''}
+                            {item.delta}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
             {previewItems && previewItems.length === 0 && (
               <p className="text-muted-foreground text-sm">No assets to preview.</p>
