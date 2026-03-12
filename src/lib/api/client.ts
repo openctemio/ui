@@ -360,9 +360,15 @@ export async function apiClient<T = unknown>(
   } catch (error) {
     clearTimeout(timeoutId)
 
-    // Log the actual error for debugging (only in development)
+    // Re-throw ApiClientError without logging — callers are responsible
+    // for handling HTTP errors (404, 403, etc.) appropriately.
+    if (error instanceof ApiClientError) {
+      throw error
+    }
+
+    // Log only unexpected errors (network, timeout, parse) in development
     if (process.env.NODE_ENV === 'development') {
-      console.error('[API Client] Caught error:', error)
+      console.error('[API Client] Unexpected error:', error)
     }
 
     // Handle timeout
@@ -375,11 +381,6 @@ export async function apiClient<T = unknown>(
       throw new ApiClientError('Network error - please check your connection', 'NETWORK_ERROR', 0, {
         originalError: error.message,
       })
-    }
-
-    // Re-throw ApiClientError
-    if (error instanceof ApiClientError) {
-      throw error
     }
 
     // Handle unknown errors - preserve original error message if available
