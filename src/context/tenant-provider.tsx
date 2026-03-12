@@ -10,7 +10,7 @@
 'use client'
 
 import * as React from 'react'
-import { useRouter } from 'next/navigation'
+// useRouter removed — globalMutate handles revalidation without router.refresh()
 import { useSWRConfig } from 'swr'
 import { useMyTenants, invalidateMyTenantsCache } from '@/lib/api/user-tenant-hooks'
 import type { TenantMembership, TenantRole } from '@/lib/api/user-tenant-types'
@@ -89,7 +89,7 @@ function readTenantFromCookie(): { tenant: CurrentTenant | null; hasCookie: bool
 }
 
 export function TenantProvider({ children }: TenantProviderProps) {
-  const router = useRouter()
+  // router removed — see switchTeam for explanation
   const { mutate: globalMutate } = useSWRConfig()
 
   // Start with null, read from cookie in useLayoutEffect to avoid hydration mismatch
@@ -227,14 +227,15 @@ export function TenantProvider({ children }: TenantProviderProps) {
 
         // Clear all SWR caches to force refetch with new tenant context
         // This invalidates all cached data so components will refetch
+        // Note: We don't call router.refresh() here because globalMutate
+        // already triggers revalidation for all SWR hooks. Adding router.refresh()
+        // would cause double-fetch and cascade of API calls that can trigger
+        // race conditions with token refresh and permission sync.
         await globalMutate(
           () => true, // Match all keys
           undefined, // Clear data
           { revalidate: true } // Trigger revalidation
         )
-
-        // Also refresh server components
-        router.refresh()
 
         console.log('[TenantProvider] Switched to team:', newTenant.name)
       } catch (error) {
@@ -244,7 +245,7 @@ export function TenantProvider({ children }: TenantProviderProps) {
         setIsSwitching(false)
       }
     },
-    [currentTenant, tenants, isSwitching, router, globalMutate]
+    [currentTenant, tenants, isSwitching, globalMutate]
   )
 
   // Refresh tenants

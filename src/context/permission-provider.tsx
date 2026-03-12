@@ -384,14 +384,25 @@ export function PermissionProvider({ children }: PermissionProviderProps) {
   }, [tenantId, fetchPermissions])
 
   // Handle stale detection from API responses (via custom event)
+  // Debounced: if multiple stale events fire in quick succession, only handle once
   React.useEffect(() => {
+    let staleTimeout: ReturnType<typeof setTimeout> | null = null
+
     const handleStale = () => {
       setIsStale(true)
-      refreshPermissions()
+      // Debounce: wait 1s before refreshing (in case multiple stale events fire)
+      if (staleTimeout) clearTimeout(staleTimeout)
+      staleTimeout = setTimeout(() => {
+        refreshPermissions()
+        staleTimeout = null
+      }, 1000)
     }
 
     window.addEventListener('permission-stale', handleStale)
-    return () => window.removeEventListener('permission-stale', handleStale)
+    return () => {
+      window.removeEventListener('permission-stale', handleStale)
+      if (staleTimeout) clearTimeout(staleTimeout)
+    }
   }, [refreshPermissions])
 
   // Permission check functions
