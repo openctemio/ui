@@ -12,10 +12,12 @@ import {
   WebSocketClient,
   initWebSocketClient,
   destroyWebSocketClient,
+  getWebSocketClient,
   type ConnectionState,
   type ChannelType,
   makeChannel,
 } from '@/lib/websocket'
+import { useWebSocket } from '@/context/websocket-provider'
 import { env } from '@/lib/env'
 
 // ============================================
@@ -176,6 +178,7 @@ interface UseChannelReturn<T> {
  */
 export function useChannel<T = unknown>(options: UseChannelOptions<T>): UseChannelReturn<T> {
   const { channelType, channelId, enabled = true, onData } = options
+  const { isConnected } = useWebSocket()
 
   const [data, setData] = useState<T | null>(null)
   const [isSubscribed, setIsSubscribed] = useState(false)
@@ -186,28 +189,25 @@ export function useChannel<T = unknown>(options: UseChannelOptions<T>): UseChann
     callbackRef.current = onData
   }, [onData])
 
-  // Subscribe/unsubscribe when channel changes
+  // Subscribe/unsubscribe when channel changes or connection state changes
   useEffect(() => {
     if (!enabled || !channelId) {
       setIsSubscribed(false)
       return
     }
 
-    const channel = makeChannel(channelType, channelId)
-
-    // Get the global client (if initialized)
+    // Wait for WebSocket client to be initialized and connected
     let client: WebSocketClient | null = null
     try {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { getWebSocketClient } = require('@/lib/websocket')
       client = getWebSocketClient()
     } catch {
-      // Client not initialized yet
-      console.log('[useChannel] WebSocket client not initialized')
+      // Client not initialized yet — will retry when isConnected changes
       return
     }
 
     if (!client) return
+
+    const channel = makeChannel(channelType, channelId)
 
     const handleData = (eventData: T) => {
       setData(eventData)
@@ -232,7 +232,7 @@ export function useChannel<T = unknown>(options: UseChannelOptions<T>): UseChann
       })
       setIsSubscribed(false)
     }
-  }, [channelType, channelId, enabled])
+  }, [channelType, channelId, enabled, isConnected])
 
   const clearData = useCallback(() => {
     setData(null)
