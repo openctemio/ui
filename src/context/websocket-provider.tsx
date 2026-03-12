@@ -4,9 +4,9 @@
  * WebSocket Provider
  *
  * Provides global WebSocket connection for real-time updates.
- * For cross-origin connections (dev), fetches token via Next.js API route.
- *
- * OPTIMIZATION: Pre-fetches token during module load to minimize connection delay.
+ * Authentication uses httpOnly cookies — browser automatically sends
+ * the auth_token cookie during WebSocket handshake (same domain, any port).
+ * No need for token query params or extra API calls.
  */
 
 import { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react'
@@ -40,91 +40,20 @@ const WebSocketContext = createContext<WebSocketContextValue | null>(null)
 function buildWsUrl(): string {
   if (typeof window === 'undefined') return ''
 
-  const apiBaseUrl =
-    process.env.NEXT_PUBLIC_WS_BASE_URL || env.api.wsBaseUrl || window.location.origin
-
-  const wsProtocol = apiBaseUrl.startsWith('https') ? 'wss' : 'ws'
-  const wsHost = apiBaseUrl.replace(/^https?:\/\//, '')
-  return `${wsProtocol}://${wsHost}/api/v1/ws`
-}
-
-function isCrossOrigin(): boolean {
-  if (typeof window === 'undefined') return false
-
-  const apiBaseUrl = process.env.NEXT_PUBLIC_WS_BASE_URL || env.api.wsBaseUrl || ''
-  if (!apiBaseUrl) return false
-
-  try {
-    const wsUrl = new URL(apiBaseUrl)
-    const currentUrl = new URL(window.location.origin)
-    return wsUrl.host !== currentUrl.host
-  } catch {
-    return false
-  }
-}
-
-// ============================================
-// TOKEN CACHE (module-level for fast access)
-// ============================================
-
-let cachedToken: string | null = null
-let tokenFetchPromise: Promise<string | null> | null = null
-
-/** Fetch and cache token for cross-origin WebSocket connections */
-async function fetchToken(): Promise<string | null> {
-  // Return cached token if available
-  if (cachedToken) {
-    console.log('[WebSocket] Using cached token')
-    return cachedToken
+  // Priority: explicit WS URL > derive from current hostname + API port
+  const explicitUrl = process.env.NEXT_PUBLIC_WS_BASE_URL || env.api.wsBaseUrl
+  if (explicitUrl) {
+    const wsProtocol = explicitUrl.startsWith('https') ? 'wss' : 'ws'
+    const wsHost = explicitUrl.replace(/^https?:\/\//, '')
+    return `${wsProtocol}://${wsHost}/api/v1/ws`
   }
 
-  // Return existing promise if fetch is in progress
-  if (tokenFetchPromise) {
-    console.log('[WebSocket] Token fetch in progress, waiting...')
-    return tokenFetchPromise
-  }
-
-  // Start new fetch
-  console.log('[WebSocket] Fetching token from /api/ws-token')
-  tokenFetchPromise = (async () => {
-    try {
-      const res = await fetch('/api/ws-token')
-      if (!res.ok) {
-        const errorBody = await res.text()
-        console.error('[WebSocket] Failed to get token:', res.status, errorBody)
-        return null
-      }
-      const { token } = await res.json()
-      console.log('[WebSocket] Token fetched successfully, length:', token?.length)
-      cachedToken = token
-      return token
-    } catch (error) {
-      console.error('[WebSocket] Token fetch error:', error)
-      return null
-    } finally {
-      tokenFetchPromise = null
-    }
-  })()
-
-  return tokenFetchPromise
-}
-
-/** Clear cached token (call on logout) */
-export function clearWebSocketToken(): void {
-  cachedToken = null
-  tokenFetchPromise = null
-}
-
-// Start pre-fetching token AND connecting immediately if cross-origin
-// This runs during module load, before React renders
-if (typeof window !== 'undefined' && isCrossOrigin()) {
-  console.log('[WebSocket] Pre-fetching token (module load)')
-  void (async () => {
-    const token = await fetchToken()
-    if (token) {
-      console.log('[WebSocket] Token ready, can connect immediately when provider mounts')
-    }
-  })()
+  // No explicit WS URL — connect directly to API server.
+  // In Docker dev: UI is on port 80, API is on port 8080, same host.
+  // Browser sends auth_token cookie automatically (same domain, SameSite=Lax).
+  const apiPort = process.env.NEXT_PUBLIC_API_PORT || '8080'
+  const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws'
+  return `${wsProtocol}://${window.location.hostname}:${apiPort}/api/v1/ws`
 }
 
 // ============================================
@@ -143,14 +72,10 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
 
   const connect = useCallback(async () => {
     if (connectingRef.current) {
-      console.log('[WebSocket] Already connecting, skipping')
       return
     }
 
     const wsUrl = buildWsUrl()
-    const crossOrigin = isCrossOrigin()
-
-    console.log('[WebSocket] Connect called', { wsUrl: !!wsUrl, crossOrigin })
 
     if (!wsUrl) {
       console.log('[WebSocket] No WebSocket URL available')
@@ -158,31 +83,16 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
     }
 
     if (clientRef.current?.isConnected()) {
-      console.log('[WebSocket] Already connected')
       return
     }
 
     connectingRef.current = true
 
     try {
-      let finalUrl = wsUrl
-
-      // For cross-origin, get token (from cache or fetch)
-      if (crossOrigin) {
-        console.log('[WebSocket] Cross-origin detected, fetching token...')
-        const token = await fetchToken()
-        if (!token) {
-          console.error('[WebSocket] No token available - cannot connect')
-          return
-        }
-        finalUrl = `${wsUrl}?token=${token}`
-        console.log('[WebSocket] Token obtained, URL ready')
-      }
-
-      console.log('[WebSocket] Initializing client and connecting to', wsUrl)
+      console.log('[WebSocket] Connecting to', wsUrl)
 
       clientRef.current = initWebSocketClient({
-        url: finalUrl,
+        url: wsUrl,
         onStateChange: (newState) => {
           console.log('[WebSocket] State changed:', newState)
           setState(newState)
@@ -198,16 +108,14 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
     }
   }, [])
 
-  // Connect immediately on mount (no dependency on tenant - token contains tenant info)
+  // Connect immediately on mount
   useEffect(() => {
     if (mountedRef.current) return
     mountedRef.current = true
 
-    console.log('[WebSocket] Provider mounted, connecting...')
     connect()
 
     return () => {
-      console.log('[WebSocket] Cleanup')
       destroyWebSocketClient()
       clientRef.current = null
     }

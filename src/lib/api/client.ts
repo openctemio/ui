@@ -149,8 +149,11 @@ function redirectToLoginOnce(): void {
     return
   }
 
-  // Don't redirect if already on login page
-  if (window.location.pathname.startsWith('/login')) {
+  // Don't redirect if already on login or auth pages
+  if (
+    window.location.pathname.startsWith('/login') ||
+    window.location.pathname.startsWith('/auth')
+  ) {
     return
   }
 
@@ -162,8 +165,11 @@ function redirectToLoginOnce(): void {
   // Clear auth state
   useAuthStore.getState().clearAuth()
 
-  // Use hard redirect to ensure clean state
-  window.location.href = '/login'
+  // Delay redirect slightly to allow other in-flight requests to see the lock
+  // This prevents multiple simultaneous 401 responses from racing
+  setTimeout(() => {
+    window.location.href = '/login'
+  }, 100)
 }
 
 // ============================================

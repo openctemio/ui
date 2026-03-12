@@ -19,6 +19,7 @@ import * as React from 'react'
 import { get } from '@/lib/api/client'
 import { useTenant } from './tenant-provider'
 import type { TenantModulesResponse } from '@/features/integrations/api/use-tenant-modules'
+import type { RiskLevelThresholds } from '@/features/shared/types/common.types'
 
 // ============================================
 // TYPES
@@ -34,6 +35,7 @@ export interface BootstrapPermissions {
 export interface BootstrapData {
   permissions: BootstrapPermissions
   modules?: TenantModulesResponse
+  risk_levels?: RiskLevelThresholds
 }
 
 export interface BootstrapContextValue {
@@ -222,6 +224,18 @@ export function useBootstrapModules() {
     comingSoonModuleIds: data?.modules?.coming_soon_module_ids || [],
     betaModuleIds: data?.modules?.beta_module_ids || [],
     hasModule,
+    isLoading,
+  }
+}
+
+/**
+ * Get risk level thresholds from bootstrap
+ */
+export function useBootstrapRiskLevels() {
+  const { data, isLoading } = useBootstrapContext()
+
+  return {
+    riskLevels: data?.risk_levels || null,
     isLoading,
   }
 }

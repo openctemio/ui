@@ -90,6 +90,7 @@ interface BackendAsset {
   description?: string
   tags?: string[]
   metadata?: Record<string, unknown>
+  primary_owner?: { id: string; type: string; name: string; email?: string }
   first_seen: string
   last_seen: string
   created_at: string
@@ -113,6 +114,14 @@ function transformAsset(backend: BackendAsset): Asset {
     findingCount: backend.finding_count,
     metadata: backend.metadata || {},
     tags: backend.tags || [],
+    primaryOwner: backend.primary_owner
+      ? {
+          id: backend.primary_owner.id,
+          type: backend.primary_owner.type as 'user' | 'group',
+          name: backend.primary_owner.name,
+          email: backend.primary_owner.email,
+        }
+      : undefined,
     firstSeen: backend.first_seen,
     lastSeen: backend.last_seen,
     createdAt: backend.created_at,
