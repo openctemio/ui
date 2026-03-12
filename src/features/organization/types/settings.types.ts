@@ -172,7 +172,8 @@ export interface RiskScorePreviewItem {
 
 export interface PreviewResponse {
   assets: RiskScorePreviewItem[]
-  total_count: number
+  sample_count: number
+  total_assets: number
 }
 
 export interface RecalculateResponse {

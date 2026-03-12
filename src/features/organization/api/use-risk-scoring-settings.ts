@@ -64,7 +64,11 @@ export function useUpdateRiskScoring(tenantIdOrSlug: string | undefined) {
 // ============================================
 
 async function previewRiskScoring(url: string, { arg }: { arg: RiskScoringSettings }) {
-  return fetcherWithOptions<{ assets: RiskScorePreviewItem[]; total_count: number }>(url, {
+  return fetcherWithOptions<{
+    assets: RiskScorePreviewItem[]
+    sample_count: number
+    total_assets: number
+  }>(url, {
     method: 'POST',
     body: JSON.stringify(arg),
   })
