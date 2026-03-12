@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Main } from '@/components/layout'
 import { PageHeader } from '@/features/shared'
 import { useTenant } from '@/context/tenant-provider'
@@ -54,6 +54,7 @@ import type {
   RiskScoringSettings,
   RiskScorePreviewItem,
 } from '@/features/organization/types/settings.types'
+import { Pagination } from '@/components/ui/pagination'
 import { getErrorMessage } from '@/lib/api/error-handler'
 
 function LoadingSkeleton() {
@@ -195,6 +196,8 @@ export default function ScoringConfigurationPage() {
   const [isDirty, setIsDirty] = useState(false)
   const [previewItems, setPreviewItems] = useState<RiskScorePreviewItem[] | null>(null)
   const [previewTotalAssets, setPreviewTotalAssets] = useState<number>(0)
+  const [previewPage, setPreviewPage] = useState(1)
+  const previewPageSize = 10
 
   // Initialize form from API data
   useEffect(() => {
@@ -302,6 +305,7 @@ export default function ScoringConfigurationPage() {
       if (result) {
         setPreviewItems(result.assets)
         setPreviewTotalAssets(result.total_assets)
+        setPreviewPage(1)
       }
     } catch (err) {
       toast.error(getErrorMessage(err))
@@ -329,6 +333,12 @@ export default function ScoringConfigurationPage() {
     window.addEventListener('beforeunload', handler)
     return () => window.removeEventListener('beforeunload', handler)
   }, [isDirty])
+
+  const paginatedPreviewItems = useMemo(() => {
+    if (!previewItems) return []
+    const start = (previewPage - 1) * previewPageSize
+    return previewItems.slice(start, start + previewPageSize)
+  }, [previewItems, previewPage])
 
   if (isLoading || !config) {
     return <LoadingSkeleton />
@@ -969,7 +979,7 @@ export default function ScoringConfigurationPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {previewItems.map((item) => (
+                      {paginatedPreviewItems.map((item) => (
                         <tr key={item.asset_id} className="border-t">
                           <td className="max-w-[180px] truncate p-2">{item.asset_name}</td>
                           <td className="text-muted-foreground p-2 text-xs">{item.asset_type}</td>
@@ -986,6 +996,18 @@ export default function ScoringConfigurationPage() {
                     </tbody>
                   </table>
                 </div>
+                {previewItems.length > previewPageSize && (
+                  <div className="mt-3">
+                    <Pagination
+                      currentPage={previewPage}
+                      totalPages={Math.ceil(previewItems.length / previewPageSize)}
+                      pageSize={previewPageSize}
+                      totalItems={previewItems.length}
+                      onPageChange={setPreviewPage}
+                      showPageSizeSelector={false}
+                    />
+                  </div>
+                )}
               </>
             )}
             {previewItems && previewItems.length === 0 && (
