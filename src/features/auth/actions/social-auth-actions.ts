@@ -21,6 +21,7 @@ import { redirect } from 'next/navigation'
 import { env } from '@/lib/env'
 import { setServerCookie } from '@/lib/cookies-server'
 import { authEndpoints } from '@/lib/api/endpoints'
+import { validateRedirectUrl } from '@/lib/redirect'
 
 import type { AuthSuccessResponse, AuthErrorResponse } from '../schemas/auth.schema'
 
@@ -117,9 +118,9 @@ export async function getOAuthAuthorizationUrl(
       path: '/',
     })
 
-    // Store the final redirect destination
+    // Store the final redirect destination (validated to prevent open redirect)
     if (redirectTo) {
-      cookieStore.set('oauth_redirect', redirectTo, {
+      cookieStore.set('oauth_redirect', validateRedirectUrl(redirectTo, '/'), {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',

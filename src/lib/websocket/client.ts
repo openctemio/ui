@@ -118,6 +118,12 @@ export class WebSocketClient {
     this.clearTimers()
     this.reconnectAttempts = 0
 
+    // Reject all pending requests
+    for (const [requestId, handlers] of this.pendingRequests.entries()) {
+      handlers.reject(new Error('WebSocket client disconnected'))
+    }
+    this.pendingRequests.clear()
+
     if (this.ws) {
       this.ws.close(1000, 'Client disconnect')
       this.ws = null
@@ -294,6 +300,7 @@ export class WebSocketClient {
     }
 
     this.ws.onmessage = (event) => {
+      console.log('[DEBUG WS] Received payload:', event.data)
       this.handleMessage(event.data)
     }
   }
@@ -381,9 +388,10 @@ export class WebSocketClient {
       this.pendingRequests.delete(requestId)
     }
 
-    // Handle specific error codes
+    // Handle specific error codes — log as warning, not error
+    // FORBIDDEN on channel subscribe is common during page transitions
     if (message.data.code === 'FORBIDDEN' || message.data.code === 'UNAUTHORIZED') {
-      this.config.onError?.(new Error(`Auth error: ${message.data.message}`))
+      console.warn('[WebSocket] Auth error on channel:', message.data.message)
     }
   }
 
@@ -466,6 +474,7 @@ export class WebSocketClient {
 
   private send(data: unknown): void {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      console.log('[DEBUG WS] Sending payload:', JSON.stringify(data))
       this.ws.send(JSON.stringify(data))
     }
   }
