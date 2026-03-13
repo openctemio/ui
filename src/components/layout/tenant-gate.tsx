@@ -13,7 +13,7 @@
  * So we need to let the tenant API call happen first to validate auth.
  */
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useTenant } from '@/context/tenant-provider'
 import { useBootstrapContextSafe } from '@/context/bootstrap-provider'
 import { usePermissionsSafe } from '@/context/permission-provider'
@@ -32,6 +32,17 @@ function LoadingScreen({ message = 'Loading...' }: { message?: string }) {
       <div className="flex flex-col items-center gap-4">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         <p className="text-sm text-muted-foreground">{message}</p>
+      </div>
+    </div>
+  )
+}
+
+function LoadingOverlay({ message = 'Switching workspace...' }: { message?: string }) {
+  return (
+    <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-background/50 backdrop-blur-sm">
+      <div className="flex items-center gap-3 rounded-lg border bg-background px-6 py-4 shadow-lg">
+        <Loader2 className="h-5 w-5 animate-spin text-primary" />
+        <p className="text-sm font-medium">{message}</p>
       </div>
     </div>
   )
@@ -100,8 +111,9 @@ export function TenantGate({ children }: TenantGateProps) {
   // This prevents the flash redirect to onboarding when cookie exists
   const [hasCookieChecked, setHasCookieChecked] = useState(false)
   const [hasTenantCookie, setHasTenantCookie] = useState(false)
+  const [hasInitiallyLoaded, setHasInitiallyLoaded] = useState(false)
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const cookie = getCookie(env.cookies.tenant)
     setHasTenantCookie(!!cookie)
     setHasCookieChecked(true)
@@ -174,17 +186,28 @@ export function TenantGate({ children }: TenantGateProps) {
   // If user has tenant cookie, wait for ALL data before showing dashboard
   // Single loading screen approach - provides clean, professional UX
   if (hasTenantCookie) {
-    // Check if all data is ready:
-    // 1. Bootstrap completed (isBootstrapped = true)
-    // 2. Permissions synced to PermissionProvider
-    const hasBootstrapPermissions =
-      bootstrapData?.permissions?.list && bootstrapData.permissions.list.length > 0
-    const hasProviderPermissions = permissions.length > 0
+    // Check if data is ready:
+    // 1. Bootstrap has completed for the current tenant (isBootstrapped = true)
+    // We intentionally removed the strict `hasProviderPermissions` check here
+    // because it can cause race conditions during tenant switches where the
+    // overlay gets stuck for up to 60 seconds if the permissions array is empty.
+    const isDataReady = isBootstrapped
 
-    // Still loading if bootstrap not done OR permissions not synced yet
-    const isDataReady = isBootstrapped && (!hasBootstrapPermissions || hasProviderPermissions)
+    if (isDataReady && !hasInitiallyLoaded) {
+      setHasInitiallyLoaded(true)
+    }
 
     if (!isDataReady) {
+      if (hasInitiallyLoaded) {
+        // Log to understand why it hangs
+        console.log('[TenantGate] Waiting for data...', { isBootstrapped })
+        return (
+          <>
+            <LoadingOverlay message="Switching workspace..." />
+            {children}
+          </>
+        )
+      }
       return <LoadingScreen message="Loading..." />
     }
     return <>{children}</>

@@ -128,22 +128,7 @@ export function PermissionProvider({ children }: PermissionProviderProps) {
       return
     }
 
-    // OPTIMIZATION: Wait for bootstrap to finish loading first
-    // This prevents fetching /sync before bootstrap has a chance to provide permissions
-    if (bootstrap.isLoading) {
-      // Show cached permissions while waiting (instant UI)
-      if (previousTenantIdRef.current !== tenantId) {
-        const stored = getStoredPermissions(tenantId)
-        if (stored) {
-          setPermissions(stored.permissions)
-          setVersion(stored.version)
-        }
-        setIsLoading(true)
-      }
-      return
-    }
-
-    // Tenant changed - reset state
+    // Tenant changed - reset state immediately before checking isLoading
     const tenantChanged = previousTenantIdRef.current !== tenantId
     if (tenantChanged) {
       previousTenantIdRef.current = tenantId
@@ -152,6 +137,21 @@ export function PermissionProvider({ children }: PermissionProviderProps) {
       setError(null)
       setIsStale(false)
       usedBootstrapRef.current = false
+    }
+
+    // OPTIMIZATION: Wait for bootstrap to finish loading first
+    // This prevents fetching /sync before bootstrap has a chance to provide permissions
+    if (bootstrap.isLoading) {
+      // Show cached permissions while waiting (instant UI)
+      if (tenantChanged) {
+        const stored = getStoredPermissions(tenantId)
+        if (stored) {
+          setPermissions(stored.permissions)
+          setVersion(stored.version)
+        }
+        setIsLoading(true)
+      }
+      return
     }
 
     // CASE 1: Bootstrap has permissions - use them, DON'T fetch
@@ -245,6 +245,9 @@ export function PermissionProvider({ children }: PermissionProviderProps) {
           credentials: 'include',
         })
 
+        // Prevent race conditions: ignore response if tenant changed while fetching
+        if (previousTenantIdRef.current !== tenantId) return
+
         // 304 Not Modified - permissions unchanged
         if (response.status === 304) {
           setIsStale(false)
@@ -273,6 +276,9 @@ export function PermissionProvider({ children }: PermissionProviderProps) {
         // Store in localStorage
         storePermissions(tenantId, data.permissions, data.version)
       } catch (err) {
+        // Prevent race conditions: ignore response if tenant changed while fetching
+        if (previousTenantIdRef.current !== tenantId) return
+
         console.error('[PermissionProvider] Failed to fetch permissions:', err)
         setError(err instanceof Error ? err : new Error('Unknown error'))
 
@@ -283,7 +289,9 @@ export function PermissionProvider({ children }: PermissionProviderProps) {
           setVersion(stored.version)
         }
       } finally {
-        setIsLoading(false)
+        if (previousTenantIdRef.current === tenantId) {
+          setIsLoading(false)
+        }
       }
     },
     [tenantId] // Removed etag from deps - using ref instead

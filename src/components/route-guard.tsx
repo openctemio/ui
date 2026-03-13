@@ -29,7 +29,7 @@ import * as React from 'react'
 import { usePathname } from 'next/navigation'
 import { ShieldX, ArrowLeft, Home, Package } from 'lucide-react'
 import { usePermissions } from '@/lib/permissions/hooks'
-import { useBootstrapModules } from '@/context/bootstrap-provider'
+import { useBootstrapModules, useBootstrapContextSafe } from '@/context/bootstrap-provider'
 import { matchRoutePermission } from '@/config/route-permissions'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -56,8 +56,13 @@ type AccessDeniedReason = 'module' | 'permission'
 export function RouteGuard({ children }: RouteGuardProps) {
   const pathname = usePathname()
   // Use the same permission hook as sidebar for consistency
-  const { can } = usePermissions()
-  const { moduleIds } = useBootstrapModules()
+  const { can, isLoading: permissionsLoading, permissions: providerPermissions } = usePermissions()
+  const { moduleIds, isLoading: modulesLoading } = useBootstrapModules()
+  const { isBootstrapped, data: bootstrapData } = useBootstrapContextSafe()
+
+  // Ensure permission sync has fully settled during tenant switches
+  // We mirror TenantGate by only waiting for isBootstrapped to avoid 60s race conditions
+  const isDataReady = isBootstrapped
 
   // Find the route permission config for current pathname
   const routeConfig = React.useMemo(() => {
@@ -107,8 +112,12 @@ export function RouteGuard({ children }: RouteGuardProps) {
     return { hasAccess: true, deniedReason: null }
   }, [routeConfig, can, hasModuleAccess])
 
-  // TenantGate already waits for bootstrap + permissions
-  // So when RouteGuard renders, data is ready - just check access
+  // Show children (loading screen from TenantGate) while bootstrap hasn't completed
+  // or permissions are still being fetched — prevents flash of AccessDenied
+  if (!isDataReady || permissionsLoading || modulesLoading) {
+    return <>{children}</>
+  }
+
   if (!accessCheck.hasAccess && routeConfig) {
     return (
       <AccessDenied

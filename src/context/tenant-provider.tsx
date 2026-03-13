@@ -10,7 +10,7 @@
 'use client'
 
 import * as React from 'react'
-// useRouter removed — globalMutate handles revalidation without router.refresh()
+// useRouter removed — cache.clear() handles revalidation without router.refresh()
 import { useSWRConfig } from 'swr'
 import { useMyTenants, invalidateMyTenantsCache } from '@/lib/api/user-tenant-hooks'
 import type { TenantMembership, TenantRole } from '@/lib/api/user-tenant-types'
@@ -225,16 +225,27 @@ export function TenantProvider({ children }: TenantProviderProps) {
           { path: '/', maxAge: 7 * 24 * 60 * 60 }
         )
 
-        // Clear all SWR caches to force refetch with new tenant context
-        // This invalidates all cached data so components will refetch
-        // Note: We don't call router.refresh() here because globalMutate
-        // already triggers revalidation for all SWR hooks. Adding router.refresh()
-        // would cause double-fetch and cascade of API calls that can trigger
-        // race conditions with token refresh and permission sync.
-        await globalMutate(
-          () => true, // Match all keys
-          undefined, // Clear data
-          { revalidate: true } // Trigger revalidation
+        // Invalidate SWR cache for the new tenant.
+        //
+        // Why selective revalidation? globalMutate with revalidate:true causes
+        // DOUBLE API calls for hooks that include tenantId in their SWR key:
+        //   1. globalMutate revalidates the OLD key (wasted fetch for old tenant)
+        //   2. React re-render creates NEW key → SWR auto-fetches (correct fetch)
+        //
+        // Fix: Skip keys containing the old tenantId (they'll get new keys after
+        // re-render and fetch automatically). Only revalidate keys WITHOUT tenantId
+        // (notifications, platform/stats, etc.) that won't change on re-render.
+        const oldTenantId = currentTenant?.id
+        globalMutate(
+          (key: unknown) => {
+            if (oldTenantId) {
+              const keyStr = Array.isArray(key) ? JSON.stringify(key) : String(key)
+              if (keyStr.includes(oldTenantId)) return false
+            }
+            return true
+          },
+          undefined,
+          { revalidate: true }
         )
 
         console.log('[TenantProvider] Switched to team:', newTenant.name)

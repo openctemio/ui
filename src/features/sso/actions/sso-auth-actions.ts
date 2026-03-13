@@ -21,6 +21,7 @@ import { redirect } from 'next/navigation'
 
 import { env } from '@/lib/env'
 import { setServerCookie } from '@/lib/cookies-server'
+import { validateRedirectUrl } from '@/lib/redirect'
 
 import type { AuthSuccessResponse, AuthErrorResponse } from '@/features/auth/schemas/auth.schema'
 import type { SSOAuthorizeResponse, SSOCallbackResponse, SSOProviderType } from '../types/sso.types'
@@ -100,9 +101,9 @@ export async function getSSOAuthorizeUrl(
       path: '/',
     })
 
-    // Store redirect destination
+    // Store redirect destination (validated to prevent open redirect)
     if (redirectTo) {
-      cookieStore.set('sso_redirect', redirectTo, {
+      cookieStore.set('sso_redirect', validateRedirectUrl(redirectTo, '/'), {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',

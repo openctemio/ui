@@ -15,6 +15,7 @@ import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 
 import { env } from '@/lib/env'
+import { markSwitchTeamCompleted } from '@/lib/api/switch-cooldown'
 
 const BACKEND_URL = process.env.BACKEND_API_URL || 'http://localhost:8080'
 const ACCESS_TOKEN_COOKIE = env.auth.cookieName
@@ -148,6 +149,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     // NOTE: Permissions are no longer stored in cookies
     // PermissionProvider fetches from /api/v1/me/permissions/sync
+
+    // Mark cooldown to prevent proxy from using stale refresh tokens
+    // during concurrent requests that might arrive before new cookies propagate
+    markSwitchTeamCompleted()
 
     console.log('[SwitchTeam] Successfully switched to tenant:', data.tenant_slug)
     return clientResponse

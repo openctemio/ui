@@ -16,6 +16,7 @@ import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 
 import { env } from '@/lib/env'
+import { isInSwitchCooldown } from '@/lib/api/switch-cooldown'
 
 // Use 127.0.0.1 instead of localhost to avoid IPv6 resolution issues in Node.js
 const BACKEND_URL =
@@ -27,6 +28,9 @@ const TENANT_COOKIE = env.cookies.tenant
 // Simple in-memory lock to prevent concurrent refresh attempts
 // Key: tenantId, Value: Promise that resolves when refresh completes
 const refreshLocks = new Map<string, Promise<RefreshResult | null>>()
+
+// Switch cooldown is managed by @/lib/api/switch-cooldown
+// imported above as isInSwitchCooldown()
 
 interface RefreshResult {
   accessToken: string
@@ -181,7 +185,8 @@ async function proxyRequest(
   let refreshedTokenData: RefreshResult | null = null
 
   // If access token is missing but refresh token exists, try to refresh BEFORE making request
-  if (!accessToken && refreshToken) {
+  // Skip during post-switch cooldown to avoid stale refresh token errors
+  if (!accessToken && refreshToken && !isInSwitchCooldown()) {
     console.log('[Proxy] Access token missing, attempting pre-request refresh...')
     const tenantId = await getTenantId()
     refreshedTokenData = await tryRefreshAccessToken(refreshToken, tenantId)
@@ -225,7 +230,9 @@ async function proxyRequest(
     let response = await makeBackendRequest(backendUrl, request.method, headers, body)
 
     // Handle 401 Unauthorized - try to refresh token and retry ONCE
-    if (response.status === 401 && refreshToken && !refreshedTokenData) {
+    // Skip during post-switch cooldown: tokens were just rotated by switch-team,
+    // using the old refresh token would trigger "already been used" errors
+    if (response.status === 401 && refreshToken && !refreshedTokenData && !isInSwitchCooldown()) {
       console.log('[Proxy] Got 401, attempting token refresh and retry...')
       const tenantId = await getTenantId()
       refreshedTokenData = await tryRefreshAccessToken(refreshToken, tenantId)
@@ -256,8 +263,18 @@ async function proxyRequest(
       return proxyResponse
     }
 
-    // Get response body
-    const responseText = await response.text()
+    // Get response body — wrap in try-catch to handle stream errors
+    // (e.g. "Error in input stream" when backend closes connection mid-response)
+    let responseText: string
+    try {
+      responseText = await response.text()
+    } catch (streamError) {
+      console.error('[Proxy] Failed to read response body:', streamError)
+      return NextResponse.json(
+        { error: 'STREAM_ERROR', message: 'Failed to read backend response' },
+        { status: 502 }
+      )
+    }
     if (response.status >= 400) {
       console.log('[Proxy] Backend error:', response.status, responseText.substring(0, 200))
     }
