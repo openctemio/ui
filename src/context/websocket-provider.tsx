@@ -16,6 +16,7 @@ import {
   destroyWebSocketClient,
   type ConnectionState,
 } from '@/lib/websocket'
+import { useBootstrapContextSafe } from '@/context/bootstrap-provider'
 import { env } from '@/lib/env'
 
 // ============================================
@@ -68,7 +69,7 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
   const [state, setState] = useState<ConnectionState>('disconnected')
   const clientRef = useRef<WebSocketClient | null>(null)
   const connectingRef = useRef(false)
-  const mountedRef = useRef(false)
+  const { isBootstrapped } = useBootstrapContextSafe()
 
   const connect = useCallback(async () => {
     if (connectingRef.current) {
@@ -108,10 +109,10 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
     }
   }, [])
 
-  // Connect immediately on mount
+  // Connect only after bootstrap is complete (permissions/tenant context ready)
+  // This prevents "Access denied to channel" errors during initial load
   useEffect(() => {
-    if (mountedRef.current) return
-    mountedRef.current = true
+    if (!isBootstrapped) return
 
     connect()
 
@@ -119,7 +120,7 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
       destroyWebSocketClient()
       clientRef.current = null
     }
-  }, [connect])
+  }, [isBootstrapped, connect])
 
   const value: WebSocketContextValue = {
     state,

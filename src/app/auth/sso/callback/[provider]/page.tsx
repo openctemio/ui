@@ -9,6 +9,7 @@ import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
 
 import { handleSSOCallback } from '@/features/sso/actions/sso-auth-actions'
+import { validateRedirectUrl } from '@/lib/redirect'
 import type { SSOProviderType } from '@/features/sso/types/sso.types'
 
 // ============================================
@@ -49,7 +50,7 @@ export default async function SSOCallbackPage({ params, searchParams }: SSOCallb
   const cookieStore = await cookies()
   const orgSlug = cookieStore.get('sso_org')?.value || ''
   const orgParam = orgSlug ? `&org=${encodeURIComponent(orgSlug)}` : ''
-  const storedRedirectTo = cookieStore.get('sso_redirect')?.value || '/'
+  const storedRedirectTo = validateRedirectUrl(cookieStore.get('sso_redirect')?.value, '/')
 
   // Validate provider
   if (!isValidProvider(provider)) {

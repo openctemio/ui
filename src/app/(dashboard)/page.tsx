@@ -253,7 +253,7 @@ export default function Dashboard() {
         </section>
 
         {/* Error State - show inline error banner instead of blocking */}
-        {error && (
+        {!isLoading && error && (
           <Card className="mb-6 border-yellow-500/50">
             <CardContent className="flex items-center justify-between py-4">
               <div className="flex items-center gap-3">
