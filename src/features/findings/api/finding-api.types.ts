@@ -245,22 +245,44 @@ export interface ApiFinding {
   secret_service?: string
   secret_valid?: boolean
   secret_revoked?: boolean
+  secret_masked_value?: string
+  secret_entropy?: number
+  secret_scopes?: string[]
+  secret_expires_at?: string
+  secret_rotation_due_at?: string
+  secret_age_in_days?: number
+  secret_commit_count?: number
+  secret_in_history_only?: boolean
+  secret_verified_at?: string
 
   // Compliance-specific fields
   compliance_framework?: string
+  compliance_framework_version?: string
   compliance_control_id?: string
+  compliance_control_name?: string
+  compliance_control_description?: string
   compliance_result?: string
+  compliance_section?: string
 
   // Web3-specific fields
   web3_chain?: string
+  web3_chain_id?: number
   web3_contract_address?: string
   web3_swc_id?: string
+  web3_function_signature?: string
+  web3_tx_hash?: string
+  web3_function_selector?: string
+  web3_bytecode_offset?: number
 
   // Misconfiguration-specific fields
   misconfig_policy_id?: string
+  misconfig_policy_name?: string
   misconfig_resource_type?: string
+  misconfig_resource_name?: string
+  misconfig_resource_path?: string
   misconfig_expected?: string
   misconfig_actual?: string
+  misconfig_cause?: string
 }
 
 /**

@@ -23,8 +23,10 @@ import {
   Bot,
 } from 'lucide-react'
 import type { FindingDetail, Activity } from '../../types'
-import { SEVERITY_CONFIG } from '../../types'
+import { SEVERITY_CONFIG, FINDING_TYPE_CONFIG } from '../../types'
+import type { FindingType } from '../../types'
 import { CodeHighlighter } from './code-highlighter'
+import { MetadataViewer } from './heroes/metadata-viewer'
 import { Copy, Check } from 'lucide-react'
 import { useState, useCallback, useMemo } from 'react'
 import { cn } from '@/lib/utils'
@@ -488,6 +490,21 @@ export function OverviewTab({ finding, activities = [] }: OverviewTabProps) {
               {finding.source}
             </Badge>
           </div>
+          {finding.findingType && FINDING_TYPE_CONFIG[finding.findingType as FindingType] && (
+            <div>
+              <p className="text-muted-foreground text-xs">Finding Type</p>
+              <Badge
+                variant="outline"
+                className={cn(
+                  'mt-1',
+                  FINDING_TYPE_CONFIG[finding.findingType as FindingType].color,
+                  FINDING_TYPE_CONFIG[finding.findingType as FindingType].bgColor
+                )}
+              >
+                {FINDING_TYPE_CONFIG[finding.findingType as FindingType].label}
+              </Badge>
+            </div>
+          )}
         </div>
       </div>
 
@@ -600,6 +617,17 @@ export function OverviewTab({ finding, activities = [] }: OverviewTabProps) {
           ))}
         </div>
       </div>
+
+      {/* Scanner Metadata - shown when metadata exists and no hero already displays it */}
+      {finding.metadata &&
+        Object.keys(finding.metadata).filter(
+          (k) => finding.metadata![k] != null && finding.metadata![k] !== '' && !k.startsWith('_')
+        ).length > 0 && (
+          <>
+            <Separator />
+            <MetadataViewer metadata={finding.metadata} />
+          </>
+        )}
     </div>
   )
 }
