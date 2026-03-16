@@ -496,7 +496,7 @@ export default function CredentialsPage() {
       return
     }
 
-    // TODO: Call import API to add credential
+    // Phase 2: Wire to credentials API when backend endpoints are implemented.
     toast.info('Use the Import feature to add credentials via API or CSV')
     setFormData(emptyCredentialForm)
     setAddDialogOpen(false)
@@ -508,7 +508,7 @@ export default function CredentialsPage() {
       return
     }
 
-    // TODO: Implement update API endpoint
+    // Phase 2: Wire to credentials API when backend endpoints are implemented.
     toast.info('Update functionality coming soon')
     setFormData(emptyCredentialForm)
     setEditDialogOpen(false)
@@ -518,7 +518,7 @@ export default function CredentialsPage() {
   const handleDeleteCredential = () => {
     if (!credentialToDelete) return
 
-    // TODO: Implement delete API endpoint
+    // Phase 2: Wire to credentials API when backend endpoints are implemented.
     toast.info('Delete functionality coming soon')
     setDeleteDialogOpen(false)
     setCredentialToDelete(null)
