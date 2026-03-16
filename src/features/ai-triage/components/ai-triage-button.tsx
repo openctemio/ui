@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils'
 import { devLog } from '@/lib/logger'
 import { useHasModule } from '@/features/integrations/api/use-tenant-modules'
 import { useTriageChannel } from '@/hooks/use-websocket'
-import { useRequestTriage, useTriageResult } from '../api'
+import { useRequestTriage, useTriageResult, useAIConfig } from '../api'
 import type { TriageStatus } from '../types'
 
 /** WebSocket triage event structure from backend */
@@ -89,6 +89,10 @@ export function AITriageButton({
   // Check if tenant has AI Triage module enabled (module is_active checked by backend)
   const { hasModule: hasAITriageModule, isLoading: isCheckingModule } =
     useHasModule(AI_TRIAGE_MODULE)
+
+  // Check if AI is actually configured (LLM provider set up)
+  const { data: aiConfig, isLoading: isLoadingConfig } = useAIConfig()
+  const isAIConfigured = aiConfig?.isEnabled === true
 
   const { trigger: requestTriage } = useRequestTriage(findingId)
 
@@ -368,13 +372,18 @@ export function AITriageButton({
     return className
   }
 
-  // Don't render if module is not enabled (unless forceShow is true)
-  if (!forceShow && !isCheckingModule && !hasAITriageModule) {
+  // Don't render if module is not enabled or AI is not configured (unless forceShow is true)
+  if (
+    !forceShow &&
+    !isCheckingModule &&
+    !isLoadingConfig &&
+    (!hasAITriageModule || !isAIConfigured)
+  ) {
     return null
   }
 
-  // Show subtle loading state while checking module access
-  if (!forceShow && isCheckingModule) {
+  // Show subtle loading state while checking module access / AI config
+  if (!forceShow && (isCheckingModule || isLoadingConfig)) {
     return null // Don't show anything while checking - prevents flash
   }
 

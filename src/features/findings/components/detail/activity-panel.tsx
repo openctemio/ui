@@ -352,7 +352,9 @@ export function ActivityPanel({
                       className="h-6 text-xs"
                       disabled={!editingContent.trim()}
                       onClick={() => {
-                        onEditComment?.(activity.id, editingContent)
+                        // Use comment_id from activity metadata (activity.id is the activity record, not the comment)
+                        const commentId = (activity.metadata?.comment_id as string) || activity.id
+                        onEditComment?.(commentId, editingContent)
                         setEditingCommentId(null)
                       }}
                     >
@@ -448,7 +450,9 @@ export function ActivityPanel({
                       className="h-5 w-5 p-0 text-destructive hover:text-destructive"
                       onClick={() => {
                         if (window.confirm('Delete this comment?')) {
-                          onDeleteComment(activity.id)
+                          // Use comment_id from activity metadata (activity.id is the activity record, not the comment)
+                          const commentId = (activity.metadata?.comment_id as string) || activity.id
+                          onDeleteComment(commentId)
                         }
                       }}
                     >

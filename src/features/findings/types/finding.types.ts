@@ -679,6 +679,9 @@ export interface Finding {
   complianceDetails?: ComplianceDetails
   web3Details?: Web3Details
   misconfigDetails?: MisconfigurationDetails
+
+  // Raw scanner metadata (JSONB)
+  metadata?: Record<string, unknown>
 }
 
 // ============================================
@@ -836,8 +839,14 @@ export interface SecretDetails {
   maskedValue?: string // First/last chars visible
   valid?: boolean // Is secret still valid
   revoked?: boolean // Has been revoked
+  entropy?: number // Shannon entropy
   scopes?: string[] // API permissions
   expiresAt?: string
+  rotationDueAt?: string
+  ageInDays?: number
+  commitCount?: number
+  inHistoryOnly?: boolean // Only found in git history, not current HEAD
+  verifiedAt?: string
 }
 
 // ============================================
@@ -863,6 +872,7 @@ export interface ComplianceDetails {
   controlName?: string
   controlDescription?: string
   result?: ComplianceResult
+  section?: string
 }
 
 // ============================================
@@ -871,9 +881,13 @@ export interface ComplianceDetails {
 
 export interface Web3Details {
   chain?: string // ethereum, bsc, polygon
+  chainId?: number
   contractAddress?: string
   swcId?: string // SWC-107, SWC-101
-  functionSelector?: string
+  functionSignature?: string // e.g. withdraw(uint256)
+  txHash?: string
+  functionSelector?: string // e.g. 0x2e1a7d4d
+  bytecodeOffset?: number
 }
 
 // ============================================
@@ -885,6 +899,7 @@ export interface MisconfigurationDetails {
   policyName?: string
   resourceType?: string
   resourceName?: string
+  resourcePath?: string
   expected?: string
   actual?: string
   cause?: string
