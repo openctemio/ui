@@ -471,7 +471,7 @@ export default function TenantPage() {
   }
 
   const handleCopyApiKey = () => {
-    // TODO: Implement actual API key display
+    // API key display not yet implemented — shows placeholder message.
     toast.info('API key feature coming soon')
   }
 

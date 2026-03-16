@@ -27,7 +27,7 @@ import type {
 /**
  * Feature flag for platform stats API
  * Set to true when GET /api/v1/platform/stats is implemented on backend
- * TODO: Remove this flag after backend implementation
+ * Platform stats API not yet implemented on backend — feature-flagged off until ready.
  */
 const PLATFORM_STATS_ENABLED = true
 

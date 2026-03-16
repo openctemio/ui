@@ -4,9 +4,7 @@
  * Provides a cache-aside pattern implementation with pluggable backends.
  * Currently uses an in-memory Map with TTL-based expiration.
  *
- * TODO: When a Redis client is added to the project (e.g., `ioredis`),
- * replace the InMemoryCacheStore with a RedisCacheStore that connects
- * using the REDIS_URL environment variable. The interface remains the same.
+ * In-memory cache store. Replace with Redis-backed store for multi-instance deployments.
  *
  * Architecture:
  * - CacheStore interface defines get/set/delete/clear operations

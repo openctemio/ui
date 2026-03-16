@@ -98,11 +98,9 @@ export function cachedFetch<T>(
  */
 export const getCachedAssetStats = cachedFetch(
   async () => {
-    // TODO: Replace with actual API call
+    // Uses mock data — wire to real API when dashboard stats endpoints are available.
     // const res = await fetch(`${process.env.BACKEND_API_URL}/api/assets/stats`);
     // return res.json();
-
-    // Placeholder - import from mock data for now
     const { getAssetStats } = await import('@/features/assets')
     return getAssetStats()
   },
@@ -115,7 +113,7 @@ export const getCachedAssetStats = cachedFetch(
  */
 export const getCachedFindingStats = cachedFetch(
   async () => {
-    // TODO: Replace with actual API call
+    // Uses mock data — wire to real API when dashboard stats endpoints are available.
     const { getFindingStats } = await import('@/features/findings')
     return getFindingStats()
   },
@@ -128,7 +126,7 @@ export const getCachedFindingStats = cachedFetch(
  */
 export const getCachedScanStats = cachedFetch(
   async () => {
-    // TODO: Replace with actual API call
+    // Uses mock data — wire to real API when dashboard stats endpoints are available.
     const { getScanStats } = await import('@/features/scans')
     return getScanStats()
   },

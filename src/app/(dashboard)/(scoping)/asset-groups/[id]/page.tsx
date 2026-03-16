@@ -418,9 +418,7 @@ export default function AssetGroupDetailPage({ params }: PageProps) {
       if (data.existingAssetIds.length > 0) {
         await addAssets(data.existingAssetIds)
       }
-      // TODO: Create new assets via API then add to group
-      // For now, we only support adding existing assets
-      // New assets would need a separate API call to create them first
+      // Only supports adding existing assets. New asset creation from this view planned for Phase 2.
 
       setAddAssetsDialogOpen(false)
       // Refresh data to get updated counts

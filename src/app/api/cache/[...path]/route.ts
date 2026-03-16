@@ -22,12 +22,7 @@
  * - Backend errors are returned as-is without caching
  * - Non-GET methods return 405 Method Not Allowed
  *
- * TODO: Future enhancement - the existing API client at src/lib/api/client.ts
- * could optionally route cacheable GET requests through /api/cache/ instead of
- * /api/v1/ for automatic caching. This would require adding a `cache` option
- * to ApiRequestOptions and modifying the client to use the cache proxy URL
- * for eligible GET requests. However, this should be done carefully to avoid
- * breaking existing SWR caching and revalidation patterns.
+ * Enhancement: the API client could route cacheable GET requests through this proxy for automatic caching.
  */
 
 import { cookies } from 'next/headers'
