@@ -85,7 +85,7 @@ export default function GroupsPage() {
   const { mutate } = useSWRConfig()
 
   // API Hooks
-  const { groups, isLoading, isError, mutate: mutateGroups } = useGroups()
+  const { groups, uniqueMemberCount, isLoading, isError, mutate: mutateGroups } = useGroups()
   const { createGroup, isCreating } = useCreateGroup()
 
   // UI State
@@ -111,7 +111,6 @@ export default function GroupsPage() {
 
   // Calculate stats
   const totalGroups = groups.length
-  const totalMembers = groups.reduce((acc, g) => acc + (g.member_count ?? 0), 0)
   const totalAssets = groups.reduce((acc, g) => acc + (g.asset_count ?? 0), 0)
 
   // Table columns
@@ -351,7 +350,7 @@ export default function GroupsPage() {
                     <Users className="h-4 w-4" />
                     Total Members
                   </CardDescription>
-                  <CardTitle className="text-3xl">{totalMembers}</CardTitle>
+                  <CardTitle className="text-3xl">{uniqueMemberCount}</CardTitle>
                 </CardHeader>
               </Card>
               <Card>

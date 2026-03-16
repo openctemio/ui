@@ -19,13 +19,19 @@ import {
   Server,
   Cloud,
   Layers,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react'
 import { type GroupAsset } from '@/features/access-control'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 interface AssetsTabProps {
   assets: GroupAsset[]
+  totalCount: number
   isLoading: boolean
+  limit: number
+  offset: number
+  onPageChange: (offset: number) => void
   onAddAsset: () => void
   onBulkAddAssets: () => void
   onRemoveAsset: (id: string, name: string) => void
@@ -33,18 +39,34 @@ interface AssetsTabProps {
 
 export function AssetsTab({
   assets,
+  totalCount,
   isLoading,
+  limit,
+  offset,
+  onPageChange,
   onAddAsset,
   onBulkAddAssets,
   onRemoveAsset,
 }: AssetsTabProps) {
   const [searchQuery, setSearchQuery] = useState('')
 
-  const filteredAssets = assets.filter(
-    (item) =>
-      item.asset?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.asset?.type.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  // Reset to first page when search query changes
+  useEffect(() => {
+    if (searchQuery) {
+      onPageChange(0)
+    }
+  }, [searchQuery, onPageChange])
+
+  const filteredAssets = searchQuery
+    ? assets.filter(
+        (item) =>
+          item.asset?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          item.asset?.type.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : assets
+
+  const currentPage = Math.floor(offset / limit) + 1
+  const totalPages = Math.ceil(totalCount / limit)
 
   const getAssetIcon = (type: string) => {
     switch (type.toLowerCase()) {
@@ -64,7 +86,7 @@ export function AssetsTab({
   return (
     <div className="mt-4">
       <div className="flex items-center justify-between mb-4">
-        <h4 className="text-sm font-medium">Assigned Assets ({assets.length})</h4>
+        <h4 className="text-sm font-medium">Assigned Assets ({totalCount})</h4>
         <div className="flex items-center gap-2">
           <Button size="sm" variant="outline" onClick={onBulkAddAssets}>
             <Layers className="mr-2 h-4 w-4" />
@@ -93,7 +115,7 @@ export function AssetsTab({
             <Skeleton key={i} className="h-14 w-full" />
           ))}
         </div>
-      ) : assets.length === 0 ? (
+      ) : totalCount === 0 ? (
         <div className="text-center py-8 text-muted-foreground">
           <Box className="h-8 w-8 mx-auto mb-2 opacity-50" />
           <p>No assets assigned to this group</p>
@@ -137,12 +159,7 @@ export function AssetsTab({
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem
                       className="text-red-400"
-                      onClick={() =>
-                        onRemoveAsset(
-                          item.asset_id, // Note: using asset_id for removal as typical, or item.id depending on API. Check hook.
-                          item.asset?.name || 'Asset'
-                        )
-                      }
+                      onClick={() => onRemoveAsset(item.asset_id, item.asset?.name || 'Asset')}
                     >
                       <Trash2 className="mr-2 h-4 w-4" />
                       Remove
@@ -152,6 +169,33 @@ export function AssetsTab({
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between mt-4 pt-4 border-t">
+          <span className="text-xs text-muted-foreground">
+            Page {currentPage} of {totalPages} ({totalCount} total)
+          </span>
+          <div className="flex items-center gap-1">
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={offset === 0}
+              onClick={() => onPageChange(Math.max(0, offset - limit))}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={offset + limit >= totalCount}
+              onClick={() => onPageChange(offset + limit)}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       )}
     </div>
