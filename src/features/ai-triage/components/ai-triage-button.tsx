@@ -6,6 +6,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Sparkles, Loader2, AlertCircle, RotateCcw } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
+import { devLog } from '@/lib/logger'
 import { useHasModule } from '@/features/integrations/api/use-tenant-modules'
 import { useTriageChannel } from '@/hooks/use-websocket'
 import { useRequestTriage, useTriageResult } from '../api'
@@ -152,7 +153,7 @@ export function AITriageButton({
   // Debug logging for triage status
   useEffect(() => {
     if (triageResult) {
-      console.log('[AITriageButton] Status:', {
+      devLog.log('[AITriageButton] Status:', {
         findingId,
         apiStatus: triageResult.status,
         wsStatus,

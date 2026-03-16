@@ -12,6 +12,7 @@
 import * as React from 'react'
 // useRouter removed — cache.clear() handles revalidation without router.refresh()
 import { useSWRConfig } from 'swr'
+import { devLog } from '@/lib/logger'
 import { useMyTenants, invalidateMyTenantsCache } from '@/lib/api/user-tenant-hooks'
 import type { TenantMembership, TenantRole } from '@/lib/api/user-tenant-types'
 import { getCookie, setCookie, removeCookie } from '@/lib/cookies'
@@ -108,7 +109,7 @@ export function TenantProvider({ children }: TenantProviderProps) {
     initialReadDoneRef.current = true
 
     const { tenant, hasCookie } = readTenantFromCookie()
-    console.log('[TenantProvider] Initial read:', { tenant: tenant?.id, hasCookie })
+    devLog.log('[TenantProvider] Initial read:', { tenant: tenant?.id, hasCookie })
     setCurrentTenant(tenant)
     setHasTenantCookie(hasCookie)
 
@@ -116,7 +117,7 @@ export function TenantProvider({ children }: TenantProviderProps) {
     if (!tenant && hasCookie) {
       const tenantCookie = getCookie(TENANT_COOKIE)
       if (tenantCookie) {
-        console.warn('[TenantProvider] Invalid tenant cookie format, clearing cookie')
+        devLog.warn('[TenantProvider] Invalid tenant cookie format, clearing cookie')
         removeCookie(TENANT_COOKIE)
         setHasTenantCookie(false)
       }
@@ -161,7 +162,7 @@ export function TenantProvider({ children }: TenantProviderProps) {
       // Find the target tenant
       const targetTenant = tenants.find((t) => t.id === tenantId)
       if (!targetTenant) {
-        console.error('[TenantProvider] Tenant not found:', tenantId)
+        devLog.error('[TenantProvider] Tenant not found:', tenantId)
         return
       }
 
@@ -248,9 +249,9 @@ export function TenantProvider({ children }: TenantProviderProps) {
           { revalidate: true }
         )
 
-        console.log('[TenantProvider] Switched to team:', newTenant.name)
+        devLog.log('[TenantProvider] Switched to team:', newTenant.name)
       } catch (error) {
-        console.error('[TenantProvider] Failed to switch team:', error)
+        devLog.error('[TenantProvider] Failed to switch team:', error)
         throw error
       } finally {
         setIsSwitching(false)

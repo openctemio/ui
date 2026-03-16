@@ -17,6 +17,7 @@
 
 import * as React from 'react'
 import { get } from '@/lib/api/client'
+import { devLog } from '@/lib/logger'
 import { useTenant } from './tenant-provider'
 import type { TenantModulesResponse } from '@/features/integrations/api/use-tenant-modules'
 import type { RiskLevelThresholds } from '@/features/shared/types/common.types'
@@ -107,23 +108,21 @@ export function BootstrapProvider({ children }: BootstrapProviderProps) {
       setIsBootstrapped(true)
       retryCountRef.current = 0
 
-      if (process.env.NODE_ENV === 'development') {
-        console.log('[BootstrapProvider] Fetched bootstrap data', {
-          permissions: result.permissions?.list?.length,
-          hasModules: !!result.modules,
-        })
-      }
+      devLog.log('[BootstrapProvider] Fetched bootstrap data', {
+        permissions: result.permissions?.list?.length,
+        hasModules: !!result.modules,
+      })
     } catch (err) {
       // Prevent race conditions: ignore response if tenant changed while fetching
       if (previousTenantIdRef.current !== tenantId) return
 
-      console.error('[BootstrapProvider] Failed to fetch bootstrap:', err)
+      devLog.error('[BootstrapProvider] Failed to fetch bootstrap:', err)
 
       // Retry once before giving up — the first failure is often a token refresh
       // race condition right after login/select-tenant
       if (retryCountRef.current < 1) {
         retryCountRef.current++
-        console.log('[BootstrapProvider] Retrying bootstrap fetch...')
+        devLog.log('[BootstrapProvider] Retrying bootstrap fetch...')
         // Wait briefly for token refresh to settle
         await new Promise((resolve) => setTimeout(resolve, 1500))
         if (previousTenantIdRef.current === tenantId) {

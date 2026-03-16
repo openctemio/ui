@@ -14,6 +14,7 @@
 import useSWR, { type SWRConfiguration } from 'swr'
 import { get } from '@/lib/api/client'
 import { handleApiError } from '@/lib/api/error-handler'
+import { devLog } from '@/lib/logger'
 import type { NotificationEventType } from '../types/integration.types'
 
 // ============================================
@@ -121,7 +122,7 @@ export function useTenantModules() {
         // For other errors, still degrade gracefully but log for debugging
         const status = (err as { status?: number })?.status
         if (status && status !== 404) {
-          console.warn('[useTenantModules] API error:', status)
+          devLog.warn('[useTenantModules] API error:', status)
         }
         return {
           module_ids: [],

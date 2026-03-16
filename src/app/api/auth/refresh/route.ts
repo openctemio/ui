@@ -16,6 +16,7 @@ import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 
 import { env } from '@/lib/env'
+import { devLog } from '@/lib/logger'
 
 const BACKEND_URL = process.env.BACKEND_API_URL || 'http://localhost:8080'
 // Frontend cookie names (from env config)
@@ -43,13 +44,13 @@ interface TenantInfo {
 }
 
 export async function POST(_request: NextRequest): Promise<NextResponse> {
-  console.log('[Refresh] Token refresh request received')
+  devLog.log('[Refresh] Token refresh request received')
   try {
     const cookieStore = await cookies()
 
     // Get refresh token from cookie
     const refreshToken = cookieStore.get(REFRESH_TOKEN_COOKIE)?.value
-    console.log('[Refresh] Refresh token cookie:', refreshToken ? 'present' : 'MISSING')
+    devLog.log('[Refresh] Refresh token cookie:', refreshToken ? 'present' : 'MISSING')
     if (!refreshToken) {
       return NextResponse.json(
         { success: false, error: { code: 'NO_REFRESH_TOKEN', message: 'No refresh token found' } },
@@ -59,7 +60,7 @@ export async function POST(_request: NextRequest): Promise<NextResponse> {
 
     // Get tenant info from cookie
     const tenantCookie = cookieStore.get(TENANT_COOKIE)?.value
-    console.log('[Refresh] Tenant cookie:', tenantCookie ? 'present' : 'MISSING')
+    devLog.log('[Refresh] Tenant cookie:', tenantCookie ? 'present' : 'MISSING')
     let tenantId: string | undefined
     let existingTenantName: string | undefined
 
@@ -68,9 +69,9 @@ export async function POST(_request: NextRequest): Promise<NextResponse> {
         const tenantInfo: TenantInfo = JSON.parse(tenantCookie)
         tenantId = tenantInfo.id
         existingTenantName = tenantInfo.name // Preserve existing name
-        console.log('[Refresh] Tenant ID:', tenantId)
+        devLog.log('[Refresh] Tenant ID:', tenantId)
       } catch {
-        console.error('[Refresh] Failed to parse tenant cookie')
+        devLog.error('[Refresh] Failed to parse tenant cookie')
       }
     }
 
@@ -96,7 +97,7 @@ export async function POST(_request: NextRequest): Promise<NextResponse> {
     // Handle non-OK response
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ message: 'Refresh failed' }))
-      console.error('[Refresh] Backend returned error:', response.status, errorData)
+      devLog.error('[Refresh] Backend returned error:', response.status, errorData)
 
       // Create error response
       const errorResponse = NextResponse.json(
@@ -113,7 +114,7 @@ export async function POST(_request: NextRequest): Promise<NextResponse> {
       // CRITICAL: Clear ALL cookies when refresh fails with 401
       // This prevents login loops caused by stale cookies
       if (response.status === 401) {
-        console.log('[Refresh] Clearing ALL auth cookies due to invalid refresh token')
+        devLog.log('[Refresh] Clearing ALL auth cookies due to invalid refresh token')
 
         // Clear access token cookie
         errorResponse.cookies.set(ACCESS_TOKEN_COOKIE, '', {
@@ -148,12 +149,12 @@ export async function POST(_request: NextRequest): Promise<NextResponse> {
     }
 
     const data: BackendRefreshResponse = await response.json()
-    console.log('[Refresh] Backend success, new access_token:', !!data.access_token)
-    console.log('[Refresh] Access token LENGTH:', data.access_token?.length, 'bytes')
+    devLog.log('[Refresh] Backend success, new access_token:', !!data.access_token)
+    devLog.log('[Refresh] Access token LENGTH:', data.access_token?.length, 'bytes')
 
     // Check token size - warn if approaching browser cookie limit
     if (data.access_token && data.access_token.length > 3500) {
-      console.warn(
+      devLog.warn(
         `[Refresh] WARNING: Token size (${data.access_token.length} bytes) may approach browser cookie limit (4096 bytes)`
       )
     }
@@ -175,7 +176,7 @@ export async function POST(_request: NextRequest): Promise<NextResponse> {
     // WARNING: Browser cookie limit is ~4096 bytes. Large JWTs will be silently rejected!
     const tokenLength = data.access_token?.length || 0
     if (tokenLength > 4000) {
-      console.warn(
+      devLog.warn(
         `[Refresh] WARNING: Token size (${tokenLength} bytes) may exceed browser cookie limit!`
       )
     }

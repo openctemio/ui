@@ -17,6 +17,7 @@ import {
   type ConnectionState,
 } from '@/lib/websocket'
 import { useBootstrapContextSafe } from '@/context/bootstrap-provider'
+import { devLog } from '@/lib/logger'
 import { env } from '@/lib/env'
 
 // ============================================
@@ -79,7 +80,7 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
     const wsUrl = buildWsUrl()
 
     if (!wsUrl) {
-      console.log('[WebSocket] No WebSocket URL available')
+      devLog.log('[WebSocket] No WebSocket URL available')
       return
     }
 
@@ -90,20 +91,20 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
     connectingRef.current = true
 
     try {
-      console.log('[WebSocket] Connecting to', wsUrl)
+      devLog.log('[WebSocket] Connecting to', wsUrl)
 
       clientRef.current = initWebSocketClient({
         url: wsUrl,
         onStateChange: (newState) => {
-          console.log('[WebSocket] State changed:', newState)
+          devLog.log('[WebSocket] State changed:', newState)
           setState(newState)
         },
-        onError: (error) => console.error('[WebSocket] Connection error:', error),
+        onError: (error) => devLog.error('[WebSocket] Connection error:', error),
       })
 
       clientRef.current.connect()
     } catch (error) {
-      console.error('[WebSocket] Connect failed:', error)
+      devLog.error('[WebSocket] Connect failed:', error)
     } finally {
       connectingRef.current = false
     }

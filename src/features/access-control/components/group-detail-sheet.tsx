@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback, useEffect } from 'react'
+import { devLog } from '@/lib/logger'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
@@ -114,7 +115,7 @@ export function GroupDetailSheet({ groupId, open, onOpenChange, onUpdate }: Grou
   // Log errors for debugging
   useEffect(() => {
     if (groupError && groupErrorDetails) {
-      console.error('[GroupDetailSheet] Failed to load group:', {
+      devLog.error('[GroupDetailSheet] Failed to load group:', {
         groupId,
         error: groupErrorDetails,
         timestamp: new Date().toISOString(),

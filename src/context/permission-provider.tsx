@@ -22,6 +22,7 @@ import {
   storePermissions,
   cleanupExpiredPermissions,
 } from '@/lib/permission-storage'
+import { devLog } from '@/lib/logger'
 import { useTenant } from './tenant-provider'
 import { useBootstrapContextSafe } from './bootstrap-provider'
 
@@ -168,12 +169,10 @@ export function PermissionProvider({ children }: PermissionProviderProps) {
         // Store in localStorage for future reference
         storePermissions(tenantId, bootstrapPerms.list, bootstrapPerms.version)
 
-        if (process.env.NODE_ENV === 'development') {
-          console.log('[PermissionProvider] Using bootstrap permissions - NO /sync call needed', {
-            count: bootstrapPerms.list.length,
-            version: bootstrapPerms.version,
-          })
-        }
+        devLog.log('[PermissionProvider] Using bootstrap permissions - NO /sync call needed', {
+          count: bootstrapPerms.list.length,
+          version: bootstrapPerms.version,
+        })
       }
       return // IMPORTANT: Return here to prevent falling through to fetch
     }
@@ -181,9 +180,7 @@ export function PermissionProvider({ children }: PermissionProviderProps) {
     // CASE 2: Bootstrap finished but no permissions - fetch from API
     // This only happens if bootstrap failed or returned empty permissions
     if (!usedBootstrapRef.current) {
-      if (process.env.NODE_ENV === 'development') {
-        console.log('[PermissionProvider] Bootstrap has no permissions, fetching from /sync')
-      }
+      devLog.log('[PermissionProvider] Bootstrap has no permissions, fetching from /sync')
 
       setIsLoading(true)
 
@@ -217,11 +214,9 @@ export function PermissionProvider({ children }: PermissionProviderProps) {
       if (!force && lastFetchTimeRef.current > 0) {
         const timeSinceLastFetch = now - lastFetchTimeRef.current
         if (timeSinceLastFetch < MIN_FETCH_INTERVAL_MS) {
-          if (process.env.NODE_ENV === 'development') {
-            console.log(
-              `[PermissionProvider] Skipping fetch - last fetch was ${timeSinceLastFetch}ms ago (min: ${MIN_FETCH_INTERVAL_MS}ms)`
-            )
-          }
+          devLog.log(
+            `[PermissionProvider] Skipping fetch - last fetch was ${timeSinceLastFetch}ms ago (min: ${MIN_FETCH_INTERVAL_MS}ms)`
+          )
           return
         }
       }
@@ -279,7 +274,7 @@ export function PermissionProvider({ children }: PermissionProviderProps) {
         // Prevent race conditions: ignore response if tenant changed while fetching
         if (previousTenantIdRef.current !== tenantId) return
 
-        console.error('[PermissionProvider] Failed to fetch permissions:', err)
+        devLog.error('[PermissionProvider] Failed to fetch permissions:', err)
         setError(err instanceof Error ? err : new Error('Unknown error'))
 
         // On error, use cached permissions if available
@@ -325,9 +320,7 @@ export function PermissionProvider({ children }: PermissionProviderProps) {
     }
 
     // Bootstrap finished but no permissions - fetch from API
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[PermissionProvider] Fetching from /sync (bootstrap has no permissions)')
-    }
+    devLog.log('[PermissionProvider] Fetching from /sync (bootstrap has no permissions)')
     fetchPermissions()
   }, [
     tenantId,
@@ -366,14 +359,12 @@ export function PermissionProvider({ children }: PermissionProviderProps) {
 
       // Only sync if tab was hidden for a significant period
       if (hiddenDuration >= MIN_HIDDEN_DURATION_FOR_SYNC_MS) {
-        if (process.env.NODE_ENV === 'development') {
-          console.log(
-            `[PermissionProvider] Tab was hidden for ${Math.round(hiddenDuration / 1000)}s, syncing permissions`
-          )
-        }
+        devLog.log(
+          `[PermissionProvider] Tab was hidden for ${Math.round(hiddenDuration / 1000)}s, syncing permissions`
+        )
         fetchPermissions()
-      } else if (process.env.NODE_ENV === 'development' && tabHiddenAtRef.current > 0) {
-        console.log(
+      } else if (tabHiddenAtRef.current > 0) {
+        devLog.log(
           `[PermissionProvider] Tab was hidden for only ${Math.round(hiddenDuration / 1000)}s, skipping sync (min: ${MIN_HIDDEN_DURATION_FOR_SYNC_MS / 1000}s)`
         )
       }
@@ -515,6 +506,6 @@ export function dispatchPermissionStaleEvent() {
  * Call this from API interceptor when 403 error is received
  */
 export function handleForbiddenError() {
-  console.warn('[Permission] 403 Forbidden - triggering permission refresh')
+  devLog.warn('[Permission] 403 Forbidden - triggering permission refresh')
   dispatchPermissionStaleEvent()
 }

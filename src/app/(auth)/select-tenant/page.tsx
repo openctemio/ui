@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useTransition, useMemo } from 'react'
+import { devLog } from '@/lib/logger'
 import { useRouter } from 'next/navigation'
 import { Building2, Check, Loader2, LogOut } from 'lucide-react'
 import { toast } from 'sonner'
@@ -84,7 +85,7 @@ export default function SelectTenantPage() {
       await localLogoutAction('/login')
     } catch (error) {
       // localLogoutAction uses redirect() which throws, this is expected
-      console.log('[SelectTenant] Logout redirect:', error)
+      devLog.log('[SelectTenant] Logout redirect:', error)
     }
   }
 
