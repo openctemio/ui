@@ -17,6 +17,8 @@ import type {
   ErrorMessage,
 } from './types'
 
+import { devLog } from '@/lib/logger'
+
 // ============================================
 // CONFIGURATION
 // ============================================
@@ -85,7 +87,7 @@ export class WebSocketClient {
       ...DEFAULT_CONFIG,
       ...config,
       onStateChange: config.onStateChange ?? (() => {}),
-      onError: config.onError ?? ((err) => console.error('[WebSocket] Error:', err)),
+      onError: config.onError ?? ((err) => devLog.error('[WebSocket] Error:', err)),
       onConnect: config.onConnect ?? (() => {}),
       onDisconnect: config.onDisconnect ?? (() => {}),
     }
@@ -103,7 +105,7 @@ export class WebSocketClient {
       this.ws &&
       (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)
     ) {
-      console.log('[WebSocket] Already connected or connecting')
+      devLog.log('[WebSocket] Already connected or connecting')
       return
     }
 
@@ -149,7 +151,7 @@ export class WebSocketClient {
 
     // If not connected, subscription will be sent on reconnect
     if (this.state !== 'connected') {
-      console.log('[WebSocket] Queued subscription for', channel)
+      devLog.log('[WebSocket] Queued subscription for', channel)
       return
     }
 
@@ -256,13 +258,13 @@ export class WebSocketClient {
       url.searchParams.set('token', this.config.token)
     }
 
-    console.log('[WebSocket] Connecting to:', url.toString().replace(/token=[^&]+/, 'token=***'))
+    devLog.log('[WebSocket] Connecting to:', url.toString().replace(/token=[^&]+/, 'token=***'))
 
     try {
       this.ws = new WebSocket(url.toString())
       this.setupEventHandlers()
     } catch (error) {
-      console.error('[WebSocket] Failed to create connection:', error)
+      devLog.error('[WebSocket] Failed to create connection:', error)
       this.handleError(error instanceof Error ? error : new Error(String(error)))
     }
   }
@@ -271,7 +273,7 @@ export class WebSocketClient {
     if (!this.ws) return
 
     this.ws.onopen = () => {
-      console.log('[WebSocket] Connected')
+      devLog.log('[WebSocket] Connected')
       this.reconnectAttempts = 0
       this.setState('connected')
       this.config.onConnect?.()
@@ -280,7 +282,7 @@ export class WebSocketClient {
     }
 
     this.ws.onclose = (event) => {
-      console.log('[WebSocket] Disconnected:', event.code, event.reason)
+      devLog.log('[WebSocket] Disconnected:', event.code, event.reason)
       this.clearTimers()
 
       // Don't reconnect if closed cleanly by client
@@ -295,12 +297,12 @@ export class WebSocketClient {
     }
 
     this.ws.onerror = (event) => {
-      console.error('[WebSocket] Error:', event)
+      devLog.error('[WebSocket] Error:', event)
       this.handleError(new Error('WebSocket error'))
     }
 
     this.ws.onmessage = (event) => {
-      console.log('[DEBUG WS] Received payload:', event.data)
+      devLog.log('[DEBUG WS] Received payload:', event.data)
       this.handleMessage(event.data)
     }
   }
@@ -331,10 +333,10 @@ export class WebSocketClient {
           break
 
         default:
-          console.log('[WebSocket] Unknown message type:', message.type)
+          devLog.log('[WebSocket] Unknown message type:', message.type)
       }
     } catch (error) {
-      console.error('[WebSocket] Failed to parse message:', error)
+      devLog.error('[WebSocket] Failed to parse message:', error)
     }
   }
 
@@ -347,7 +349,7 @@ export class WebSocketClient {
   }
 
   private handleSubscribed(message: WebSocketMessage): void {
-    console.log('[WebSocket] Subscribed to:', message.channel)
+    devLog.log('[WebSocket] Subscribed to:', message.channel)
     const requestId = message.request_id
     if (requestId && this.pendingRequests.has(requestId)) {
       this.pendingRequests.get(requestId)!.resolve()
@@ -356,7 +358,7 @@ export class WebSocketClient {
   }
 
   private handleUnsubscribed(message: WebSocketMessage): void {
-    console.log('[WebSocket] Unsubscribed from:', message.channel)
+    devLog.log('[WebSocket] Unsubscribed from:', message.channel)
     const requestId = message.request_id
     if (requestId && this.pendingRequests.has(requestId)) {
       this.pendingRequests.get(requestId)!.resolve()
@@ -373,14 +375,14 @@ export class WebSocketClient {
         try {
           callback(message.data)
         } catch (error) {
-          console.error('[WebSocket] Callback error for channel', channel, error)
+          devLog.error('[WebSocket] Callback error for channel', channel, error)
         }
       })
     }
   }
 
   private handleServerError(message: ErrorMessage): void {
-    console.error('[WebSocket] Server error:', message.data)
+    devLog.error('[WebSocket] Server error:', message.data)
 
     const requestId = message.request_id
     if (requestId && this.pendingRequests.has(requestId)) {
@@ -391,7 +393,7 @@ export class WebSocketClient {
     // Handle specific error codes — log as warning, not error
     // FORBIDDEN on channel subscribe is common during page transitions
     if (message.data.code === 'FORBIDDEN' || message.data.code === 'UNAUTHORIZED') {
-      console.warn('[WebSocket] Auth error on channel:', message.data.message)
+      devLog.warn('[WebSocket] Auth error on channel:', message.data.message)
     }
   }
 
@@ -407,7 +409,7 @@ export class WebSocketClient {
       this.config.maxReconnectAttempts > 0 &&
       this.reconnectAttempts >= this.config.maxReconnectAttempts
     ) {
-      console.error('[WebSocket] Max reconnect attempts reached')
+      devLog.error('[WebSocket] Max reconnect attempts reached')
       this.setState('error')
       this.config.onError?.(new Error('Max reconnect attempts reached'))
       return
@@ -420,7 +422,7 @@ export class WebSocketClient {
     )
     this.reconnectAttempts++
 
-    console.log(
+    devLog.log(
       `[WebSocket] Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts}/${this.config.maxReconnectAttempts || 'unlimited'})`
     )
 
@@ -450,7 +452,7 @@ export class WebSocketClient {
 
         // Set pong timeout
         this.pongTimeout = setTimeout(() => {
-          console.warn('[WebSocket] Pong timeout, reconnecting...')
+          devLog.warn('[WebSocket] Pong timeout, reconnecting...')
           this.ws?.close()
         }, this.config.pongTimeout)
       }
@@ -474,7 +476,7 @@ export class WebSocketClient {
 
   private send(data: unknown): void {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      console.log('[DEBUG WS] Sending payload:', JSON.stringify(data))
+      devLog.log('[DEBUG WS] Sending payload:', JSON.stringify(data))
       this.ws.send(JSON.stringify(data))
     }
   }

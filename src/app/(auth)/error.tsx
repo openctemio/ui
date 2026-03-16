@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { devLog } from '@/lib/logger'
 import Link from 'next/link'
 import { AlertCircle, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -60,7 +61,7 @@ export default function AuthError({ error, reset }: ErrorProps) {
 
     // If it's an auth error, redirect to login
     if (isAuthError(error)) {
-      console.log('[AuthError] Detected auth error, redirecting to login...')
+      devLog.log('[AuthError] Detected auth error, redirecting to login...')
       setIsRedirecting(true)
 
       // Use hard redirect to clear state and pick up new cookies

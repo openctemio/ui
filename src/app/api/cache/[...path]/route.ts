@@ -36,6 +36,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { cacheStore } from '@/lib/cache-proxy/cache-store'
 import { getTTL, shouldNeverCache } from '@/lib/cache-proxy/cache-config'
 import { env } from '@/lib/env'
+import { devLog } from '@/lib/logger'
 
 // Use 127.0.0.1 instead of localhost to avoid IPv6 resolution issues in Node.js
 const BACKEND_URL =
@@ -83,7 +84,7 @@ export async function GET(
     }
   } catch (error) {
     // Cache read failure should never block the request
-    console.warn('[CacheProxy] Cache read error:', error)
+    devLog.warn('[CacheProxy] Cache read error:', error)
   }
 
   // Cache miss -- proxy to backend
@@ -98,7 +99,7 @@ export async function GET(
     try {
       await cacheStore.set(cacheKey, body, ttl)
     } catch (error) {
-      console.warn('[CacheProxy] Cache write error:', error)
+      devLog.warn('[CacheProxy] Cache write error:', error)
     }
 
     // Re-create response with the body we already consumed
@@ -181,7 +182,7 @@ async function proxyToBackend(request: NextRequest, path: string): Promise<Respo
       headers,
     })
   } catch (error) {
-    console.error('[CacheProxy] Backend connection error:', error)
+    devLog.error('[CacheProxy] Backend connection error:', error)
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
     return new Response(
       JSON.stringify({

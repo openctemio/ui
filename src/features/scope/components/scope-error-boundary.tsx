@@ -1,6 +1,7 @@
 'use client'
 
 import { Component, type ReactNode } from 'react'
+import { devLog } from '@/lib/logger'
 import { AlertTriangle, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -40,8 +41,8 @@ export class ScopeErrorBoundary extends Component<
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     // Log error for debugging
-    console.error('[ScopeErrorBoundary] Error caught:', error)
-    console.error('[ScopeErrorBoundary] Component stack:', errorInfo.componentStack)
+    devLog.error('[ScopeErrorBoundary] Error caught:', error)
+    devLog.error('[ScopeErrorBoundary] Component stack:', errorInfo.componentStack)
 
     // Call custom error handler if provided
     this.props.onError?.(error, errorInfo)
@@ -100,7 +101,7 @@ export class ScopeBadgeErrorBoundary extends Component<
   }
 
   componentDidCatch(error: Error) {
-    console.error('[ScopeBadgeErrorBoundary] Error:', error.message)
+    devLog.error('[ScopeBadgeErrorBoundary] Error:', error.message)
   }
 
   render() {

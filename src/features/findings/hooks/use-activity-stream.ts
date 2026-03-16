@@ -8,6 +8,7 @@
 'use client'
 
 import { useEffect, useState, useCallback, useRef } from 'react'
+import { devLog } from '@/lib/logger'
 import { useTenant } from '@/context/tenant-provider'
 import { useFindingChannel, type ConnectionState } from '@/hooks/use-websocket'
 import type { Activity, ActivityType } from '../types'
@@ -230,7 +231,7 @@ export function useActivityStream(
 
       onActivityRef.current?.(activity)
     } catch (error) {
-      console.error('[ActivityStream] Failed to parse activity event:', error)
+      devLog.error('[ActivityStream] Failed to parse activity event:', error)
     }
   }, [])
 
@@ -259,7 +260,7 @@ export function useActivityStream(
   const reconnect = useCallback(() => {
     // WebSocket client handles reconnection automatically
     // This is here for API compatibility
-    console.log('[ActivityStream] Reconnect requested - WebSocket handles this automatically')
+    devLog.log('[ActivityStream] Reconnect requested - WebSocket handles this automatically')
   }, [])
 
   // Clear activities when finding changes

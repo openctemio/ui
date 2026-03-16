@@ -9,6 +9,7 @@
 'use client'
 
 import { useState, useCallback, useEffect } from 'react'
+import { devLog } from '@/lib/logger'
 import { useRouter } from 'next/navigation'
 import { useForm, type UseFormReturn } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -111,7 +112,7 @@ function CreateFirstTeamFormInner({
     setIsSubmitting(true)
 
     try {
-      console.log('[CreateTeamForm] Creating first team via server action')
+      devLog.log('[CreateTeamForm] Creating first team via server action')
       const result = await createFirstTeamAction({
         teamName: data.name,
         teamSlug: data.slug,
@@ -201,7 +202,7 @@ function CreateAdditionalTeamFormInner({
     setIsSubmitting(true)
 
     try {
-      console.log('[CreateTeamForm] Creating additional team via API')
+      devLog.log('[CreateTeamForm] Creating additional team via API')
       const result = await trigger({
         name: data.name,
         slug: data.slug,
@@ -227,10 +228,10 @@ function CreateAdditionalTeamFormInner({
           })
 
           if (!switchResponse.ok) {
-            console.error('[CreateTeamForm] Failed to switch to new team')
+            devLog.error('[CreateTeamForm] Failed to switch to new team')
           }
         } catch (switchError) {
-          console.error('[CreateTeamForm] Switch team error:', switchError)
+          devLog.error('[CreateTeamForm] Switch team error:', switchError)
         }
 
         // Force full page reload to pick up new cookies and refresh all state

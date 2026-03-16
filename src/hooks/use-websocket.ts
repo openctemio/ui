@@ -8,6 +8,7 @@
 'use client'
 
 import { useEffect, useRef, useCallback, useState, useMemo } from 'react'
+import { devLog } from '@/lib/logger'
 import {
   WebSocketClient,
   initWebSocketClient,
@@ -221,7 +222,7 @@ export function useChannel<T = unknown>(options: UseChannelOptions<T>): UseChann
         setIsSubscribed(true)
       })
       .catch((error) => {
-        console.error('[useChannel] Subscribe error:', error)
+        devLog.error('[useChannel] Subscribe error:', error)
         // If we get an error (like timeout), don't treat it as fatally unsubscribed
         // since the WS client will try to resubscribe on reconnect anyway,
         // but we'll set isSubscribed false for UI purposes.

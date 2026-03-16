@@ -10,6 +10,7 @@
  */
 
 import * as React from 'react'
+import { devLog } from '@/lib/logger'
 import { useRouter } from 'next/navigation'
 import {
   ChevronsUpDown,
@@ -85,7 +86,7 @@ export function TeamSwitcher() {
   // Log errors for debugging
   React.useEffect(() => {
     if (error) {
-      console.error('[TeamSwitcher] Error fetching tenants:', error)
+      devLog.error('[TeamSwitcher] Error fetching tenants:', error)
     }
   }, [error])
 

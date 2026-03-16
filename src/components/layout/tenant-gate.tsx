@@ -14,6 +14,7 @@
  */
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { devLog } from '@/lib/logger'
 import { useTenant } from '@/context/tenant-provider'
 import { useBootstrapContextSafe } from '@/context/bootstrap-provider'
 import { usePermissionsSafe } from '@/context/permission-provider'
@@ -83,7 +84,7 @@ function isAuthError(error: Error): boolean {
  * The server/middleware will handle clearing those.
  */
 function clearAuthAndRedirectToLogin() {
-  console.log('[TenantGate] Auth error detected, clearing cookies and redirecting to login')
+  devLog.log('[TenantGate] Auth error detected, clearing cookies and redirecting to login')
 
   // Clear non-HttpOnly auth cookies (if any)
   // Note: HttpOnly cookies (access_token, refresh_token) cannot be cleared from JS
@@ -160,7 +161,7 @@ export function TenantGate({ children }: TenantGateProps) {
     // This means auth is valid but user hasn't created a team yet
     if (tenants.length === 0) {
       hasRedirected.current = true
-      console.log('[TenantGate] No tenants found - redirecting to onboarding')
+      devLog.log('[TenantGate] No tenants found - redirecting to onboarding')
       window.location.href = '/onboarding/create-team'
       return
     }
@@ -168,7 +169,7 @@ export function TenantGate({ children }: TenantGateProps) {
     // Check if user has tenants but no tenant cookie selected
     // This can happen if cookie was cleared but auth is still valid
     if (tenants.length > 0) {
-      console.log('[TenantGate] No tenant selected, but has tenants - selecting first one')
+      devLog.log('[TenantGate] No tenant selected, but has tenants - selecting first one')
       // This will be handled by the first tenant selection flow
     }
   }, [hasCookieChecked, hasTenantCookie, isLoading, error, tenants.length])
@@ -200,7 +201,7 @@ export function TenantGate({ children }: TenantGateProps) {
     if (!isDataReady) {
       if (hasInitiallyLoaded) {
         // Log to understand why it hangs
-        console.log('[TenantGate] Waiting for data...', { isBootstrapped })
+        devLog.log('[TenantGate] Waiting for data...', { isBootstrapped })
         return (
           <>
             <LoadingOverlay message="Switching workspace..." />
