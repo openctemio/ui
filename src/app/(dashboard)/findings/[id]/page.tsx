@@ -440,6 +440,36 @@ export default function FindingDetailPage() {
     }
   }
 
+  const handleEditComment = async (commentId: string, content: string) => {
+    try {
+      const response = await fetch(`/api/v1/findings/${id}/comments/${commentId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ content }),
+      })
+      if (!response.ok) throw new Error('Failed to update comment')
+      await mutateActivities()
+      toast.success('Comment updated')
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Failed to update comment'))
+    }
+  }
+
+  const handleDeleteComment = async (commentId: string) => {
+    try {
+      const response = await fetch(`/api/v1/findings/${id}/comments/${commentId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      })
+      if (!response.ok) throw new Error('Failed to delete comment')
+      await mutateActivities()
+      toast.success('Comment deleted')
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Failed to delete comment'))
+    }
+  }
+
   if (isLoading) {
     return (
       <Main>
@@ -607,6 +637,8 @@ export default function FindingDetailPage() {
                   <ActivityPanel
                     activities={allActivities}
                     onAddComment={handleAddComment}
+                    onEditComment={handleEditComment}
+                    onDeleteComment={handleDeleteComment}
                     total={activitiesTotal}
                     hasMore={!isReachingEnd}
                     isLoadingMore={isLoadingMore}
