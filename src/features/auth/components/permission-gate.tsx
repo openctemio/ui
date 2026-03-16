@@ -47,11 +47,11 @@
 
 import { type ReactNode, type ReactElement, cloneElement, isValidElement, Children } from 'react'
 import {
+  usePermissions,
   useHasPermission,
   useHasAnyPermission,
   useHasAllPermissions,
-  useIsTenantAdmin,
-} from '../hooks/use-permissions'
+} from '@/lib/permissions/hooks'
 import { getPermissionLabel } from '@/lib/permissions/constants'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
@@ -207,8 +207,10 @@ function DisabledWrapper({ children, tooltip }: DisabledWrapperProps) {
 export function PermissionGate(props: PermissionGateProps): ReactNode {
   const { children, adminOverride = true, mode = 'hide' } = props
 
-  // Check if user is tenant admin
-  const isTenantAdmin = useIsTenantAdmin()
+  // Check if user is tenant admin (owner or admin role)
+  // Uses PermissionProvider (real-time sync) — not the Zustand auth store
+  const { isAdmin } = usePermissions()
+  const isTenantAdmin = isAdmin()
 
   // Admin override - tenant admins can access everything
   if (adminOverride && isTenantAdmin) {
@@ -301,8 +303,8 @@ function MultiplePermissionsGate({
   fallback,
   disabledTooltip,
 }: MultiplePermissionsGateProps): ReactNode {
-  const hasAny = useHasAnyPermission(permissions)
-  const hasAll = useHasAllPermissions(permissions)
+  const hasAny = useHasAnyPermission(...permissions)
+  const hasAll = useHasAllPermissions(...permissions)
 
   const hasPermission = requireAll ? hasAll : hasAny
 
@@ -391,8 +393,8 @@ interface AdminGateProps {
  * </AdminGate>
  */
 export function AdminGate({ children, fallback = null }: AdminGateProps): ReactNode {
-  const isTenantAdmin = useIsTenantAdmin()
-  return isTenantAdmin ? children : fallback
+  const { isAdmin } = usePermissions()
+  return isAdmin() ? children : fallback
 }
 
 // ============================================

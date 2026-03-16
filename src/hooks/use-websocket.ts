@@ -309,5 +309,19 @@ export function useTenantChannel<T = unknown>(
   })
 }
 
+/**
+ * Hook to subscribe to group membership/scope rule changes
+ */
+export function useGroupChannel<T = unknown>(
+  groupId: string | null,
+  options: { enabled?: boolean; onData?: (data: T) => void } = {}
+) {
+  return useChannel<T>({
+    channelType: 'group',
+    channelId: groupId,
+    ...options,
+  })
+}
+
 // Re-export types for convenience
 export type { ConnectionState } from '@/lib/websocket'
