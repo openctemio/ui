@@ -17,6 +17,7 @@ export type Severity = 'critical' | 'high' | 'medium' | 'low' | 'info' | 'none'
  * Terminal states: false_positive, accepted, duplicate (can reopen to confirmed)
  */
 export type FindingStatus =
+  // Automated statuses
   | 'new' // Scanner just found it
   | 'confirmed' // Verified as real issue, needs fix
   | 'in_progress' // Developer working on fix
@@ -24,6 +25,13 @@ export type FindingStatus =
   | 'false_positive' // Not a real issue (requires approval)
   | 'accepted' // Risk accepted (requires approval, has expiration)
   | 'duplicate' // Linked to another finding
+  // Pentest-specific statuses (source='pentest')
+  | 'draft' // Pentester drafting
+  | 'in_review' // Peer reviewing
+  | 'remediation' // Dev fixing (pentest)
+  | 'retest' // Awaiting re-verification
+  | 'verified' // Manual retest passed
+  | 'accepted_risk' // Risk accepted (pentest term)
 
 export type FindingSource =
   // Automated scanning tools (AppSec)
