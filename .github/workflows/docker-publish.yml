@@ -52,6 +52,15 @@ jobs:
             echo "::notice::No Docker Hub credentials - publishing to GHCR only"
           fi
 
+      - name: Validate version format
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          if [[ ! "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+            echo "::error::Invalid version format '$VERSION'. Must match v<major>.<minor>.<patch> (e.g., v0.1.0, v1.0.0-staging)"
+            exit 1
+          fi
+
       - name: Set build variables
         id: vars
         run: |
