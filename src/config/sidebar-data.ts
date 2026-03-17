@@ -16,6 +16,7 @@
 import {
   LayoutDashboard,
   FolderKanban,
+  ClipboardCheck,
   Target,
   Settings2,
   Radar,
@@ -141,6 +142,13 @@ export const sidebarData: SidebarData = {
           icon: Settings2,
           permission: Permission.ScopeRead,
           module: 'assets',
+        },
+        {
+          title: 'Compliance',
+          url: '/compliance',
+          icon: ClipboardCheck,
+          permission: Permission.ComplianceFrameworksRead,
+          module: 'compliance',
         },
       ],
     },

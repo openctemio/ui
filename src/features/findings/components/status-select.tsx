@@ -14,7 +14,7 @@ import { FINDING_STATUS_CONFIG, STATUS_TRANSITIONS } from '../types'
 import type { FindingStatus } from '../types'
 
 // Status transition descriptions for tooltips
-const STATUS_DESCRIPTIONS: Record<FindingStatus, string> = {
+const STATUS_DESCRIPTIONS: Partial<Record<FindingStatus, string>> = {
   new: 'Newly discovered finding awaiting triage',
   confirmed: 'Verified as a real security issue',
   in_progress: 'Remediation work has begun',
@@ -22,6 +22,12 @@ const STATUS_DESCRIPTIONS: Record<FindingStatus, string> = {
   accepted: 'Risk acknowledged and accepted by stakeholders',
   false_positive: 'Determined to be a non-issue',
   duplicate: 'Already reported in another finding',
+  draft: 'Pentest finding being drafted',
+  in_review: 'Under peer review',
+  remediation: 'Developer working on fix',
+  retest: 'Awaiting re-verification',
+  verified: 'Fix confirmed via manual retest',
+  accepted_risk: 'Risk acknowledged and accepted',
 }
 
 interface StatusSelectProps {

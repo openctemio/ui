@@ -21,6 +21,7 @@ import type { Severity } from '@/features/shared/types'
  * - duplicate: Linked to another finding
  */
 export type FindingStatus =
+  // Automated statuses
   | 'new' // Scanner just found it
   | 'confirmed' // Verified as real issue, needs fix
   | 'in_progress' // Developer working on fix
@@ -28,6 +29,13 @@ export type FindingStatus =
   | 'false_positive' // Not a real issue (requires approval)
   | 'accepted' // Risk accepted (requires approval, has expiration)
   | 'duplicate' // Linked to another finding
+  // Pentest-specific statuses (source='pentest')
+  | 'draft' // Pentester drafting (hidden from dashboard)
+  | 'in_review' // Peer reviewing
+  | 'remediation' // Dev fixing (pentest)
+  | 'retest' // Awaiting re-verification
+  | 'verified' // Manual retest passed
+  | 'accepted_risk' // Risk accepted (pentest term)
 
 export type StatusCategory = 'open' | 'in_progress' | 'closed'
 
@@ -102,6 +110,56 @@ export const FINDING_STATUS_CONFIG: Record<FindingStatus, StatusConfig> = {
     icon: 'copy',
     category: 'closed',
   },
+  // Pentest-specific statuses
+  draft: {
+    label: 'Draft',
+    color: 'border-gray-500/50',
+    bgColor: 'bg-gray-500/20',
+    textColor: 'text-gray-400',
+    icon: 'file-edit',
+    category: 'open',
+  },
+  in_review: {
+    label: 'In Review',
+    color: 'border-blue-500/50',
+    bgColor: 'bg-blue-500/20',
+    textColor: 'text-blue-400',
+    icon: 'eye',
+    category: 'open',
+  },
+  remediation: {
+    label: 'Remediation',
+    color: 'border-yellow-500/50',
+    bgColor: 'bg-yellow-500/20',
+    textColor: 'text-yellow-400',
+    icon: 'wrench',
+    category: 'in_progress',
+  },
+  retest: {
+    label: 'Retest',
+    color: 'border-orange-500/50',
+    bgColor: 'bg-orange-500/20',
+    textColor: 'text-orange-400',
+    icon: 'rotate-cw',
+    category: 'in_progress',
+  },
+  verified: {
+    label: 'Verified',
+    color: 'border-emerald-500/50',
+    bgColor: 'bg-emerald-500/20',
+    textColor: 'text-emerald-400',
+    icon: 'shield-check',
+    category: 'closed',
+  },
+  accepted_risk: {
+    label: 'Accepted Risk',
+    color: 'border-amber-500/50',
+    bgColor: 'bg-amber-500/20',
+    textColor: 'text-amber-400',
+    icon: 'alert-triangle',
+    category: 'closed',
+    requiresApproval: true,
+  },
 }
 
 /**
@@ -122,13 +180,49 @@ export const STATUS_TRANSITIONS: Record<FindingStatus, FindingStatus[]> = {
   false_positive: ['confirmed'],
   accepted: ['confirmed'],
   duplicate: ['confirmed'],
+  // Pentest transitions
+  draft: ['in_review', 'confirmed', 'false_positive', 'accepted_risk'],
+  in_review: ['confirmed', 'false_positive', 'accepted_risk'],
+  remediation: ['retest', 'false_positive', 'accepted_risk'],
+  retest: ['verified', 'remediation', 'false_positive', 'accepted_risk'],
+  verified: ['remediation'],
+  accepted_risk: ['draft', 'confirmed'],
+}
+
+/** Statuses valid for automated findings */
+export const AUTOMATED_STATUSES: FindingStatus[] = [
+  'new',
+  'confirmed',
+  'in_progress',
+  'resolved',
+  'false_positive',
+  'accepted',
+  'duplicate',
+]
+
+/** Statuses valid for pentest findings */
+export const PENTEST_STATUSES: FindingStatus[] = [
+  'draft',
+  'in_review',
+  'confirmed',
+  'remediation',
+  'retest',
+  'verified',
+  'false_positive',
+  'accepted_risk',
+]
+
+/** Get valid statuses for a finding based on its source */
+export function getStatusesForSource(source: string): FindingStatus[] {
+  if (source === 'pentest') return PENTEST_STATUSES
+  return AUTOMATED_STATUSES
 }
 
 /**
  * Check if a status requires approval to transition to
  */
 export function requiresApproval(status: FindingStatus): boolean {
-  return status === 'false_positive' || status === 'accepted'
+  return status === 'false_positive' || status === 'accepted' || status === 'accepted_risk'
 }
 
 /**
