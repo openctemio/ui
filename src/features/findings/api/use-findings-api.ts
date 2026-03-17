@@ -86,6 +86,8 @@ function buildFindingsEndpoint(filters?: FindingApiFilters): string {
 
   if (filters.severities?.length) params.set('severities', filters.severities.join(','))
   if (filters.statuses?.length) params.set('statuses', filters.statuses.join(','))
+  if (filters.exclude_statuses?.length)
+    params.set('exclude_statuses', filters.exclude_statuses.join(','))
   if (filters.sources?.length) params.set('sources', filters.sources.join(','))
 
   const queryString = params.toString()

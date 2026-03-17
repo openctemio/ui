@@ -57,6 +57,12 @@ function transformApiToFindingDetail(api: ApiFinding): FindingDetail {
     false_positive: 'false_positive',
     accepted: 'accepted',
     duplicate: 'duplicate',
+    draft: 'draft',
+    in_review: 'in_review',
+    remediation: 'remediation',
+    retest: 'retest',
+    verified: 'verified',
+    accepted_risk: 'accepted_risk',
   }
 
   // Create initial activity from creation

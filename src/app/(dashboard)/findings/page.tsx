@@ -234,6 +234,9 @@ export default function FindingsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const { hasPermission } = usePermissions()
 
+  // Statuses hidden from default dashboard view (pentest WIP, not ready for visibility)
+  const HIDDEN_STATUSES = useMemo(() => ['draft', 'in_review'], [])
+
   // Build API filters
   const apiFilters = useMemo((): FindingApiFilters => {
     const filters: FindingApiFilters = {
@@ -248,6 +251,9 @@ export default function FindingsPage() {
       filters.statuses = [
         statusFilter as FindingApiFilters['statuses'] extends (infer U)[] ? U : never,
       ]
+    } else {
+      // Default: exclude draft/in_review (pentest WIP not ready for dashboard)
+      filters.exclude_statuses = HIDDEN_STATUSES
     }
     if (searchQuery.trim()) {
       filters.search = searchQuery.trim()
@@ -819,7 +825,10 @@ export default function FindingsPage() {
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm">
                 <Filter className="mr-2 h-4 w-4" />
-                Status: {statusFilter === 'all' ? 'All' : statusFilter.replace('_', ' ')}
+                Status:{' '}
+                {statusFilter === 'all'
+                  ? 'All'
+                  : FINDING_STATUS_CONFIG[statusFilter as FindingStatus]?.label || statusFilter}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
@@ -839,6 +848,21 @@ export default function FindingsPage() {
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setStatusFilter('accepted')}>
                 Accepted
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setStatusFilter('draft')}>Draft</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setStatusFilter('in_review')}>
+                In Review
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setStatusFilter('remediation')}>
+                Remediation
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setStatusFilter('retest')}>Retest</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setStatusFilter('verified')}>
+                Verified
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setStatusFilter('accepted_risk')}>
+                Accepted Risk
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

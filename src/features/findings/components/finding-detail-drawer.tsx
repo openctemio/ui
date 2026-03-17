@@ -532,6 +532,7 @@ export function FindingDetailDrawer({
                 onChange={handleStatusChange}
                 loading={isUpdatingStatus}
                 showCheck
+                source={finding.source}
               />
 
               {/* Severity Select */}
