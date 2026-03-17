@@ -468,6 +468,7 @@ export interface FindingApiFilters {
   rule_id?: string
   scan_id?: string
   file_path?: string
+  exclude_statuses?: string[]
   search?: string
   page?: number
   per_page?: number

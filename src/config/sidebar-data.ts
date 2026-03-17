@@ -415,7 +415,6 @@ export const sidebarData: SidebarData = {
               title: 'Findings',
               url: '/pentest/findings',
               icon: Bug,
-              badge: '12',
             },
             {
               title: 'Retests',
@@ -630,6 +629,13 @@ export const sidebarData: SidebarData = {
               icon: Boxes,
               // Requires team:update permission (admin-level configuration)
               permission: Permission.TeamUpdate,
+            },
+            {
+              title: 'Pentest',
+              url: '/settings/pentest',
+              icon: Crosshair,
+              permission: Permission.TeamUpdate,
+              module: 'pentest',
             },
           ],
         },

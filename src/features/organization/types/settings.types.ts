@@ -189,12 +189,23 @@ export interface PresetInfo {
 // COMBINED SETTINGS
 // ============================================
 
+export interface PentestConfigOption {
+  value: string
+  label: string
+}
+
+export interface PentestSettings {
+  campaign_types?: PentestConfigOption[]
+  methodologies?: PentestConfigOption[]
+}
+
 export interface TenantSettings {
   general: GeneralSettings
   security: SecuritySettings
   api: APISettings
   branding: BrandingSettings
   risk_scoring: RiskScoringSettings
+  pentest?: PentestSettings
 }
 
 // ============================================
