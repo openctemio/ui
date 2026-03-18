@@ -438,14 +438,14 @@ export const sidebarData: SidebarData = {
           url: '/attack-simulation',
           icon: Swords,
           permission: Permission.PentestRead,
-          module: 'pentest',
+          module: 'attack_simulation', // Separate module — not yet implemented
         },
         {
           title: 'Control Testing',
           url: '/control-testing',
           icon: ShieldCheck,
           permission: Permission.PentestRead,
-          module: 'pentest',
+          module: 'control_testing', // Separate module — not yet implemented
         },
       ],
     },
