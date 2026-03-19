@@ -23,7 +23,6 @@ import {
   Legend,
   ResponsiveContainer,
 } from '@/components/charts'
-import { cn } from '@/lib/utils'
 import { Timer, Clock, Gauge, TrendingDown, CheckCircle2, AlertTriangle, Info } from 'lucide-react'
 
 const SEVERITY_COLORS: Record<string, string> = {

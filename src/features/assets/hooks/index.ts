@@ -33,3 +33,11 @@ export { useAssetScope } from './use-asset-scope'
 export { useAssetDialogs } from './use-asset-dialogs'
 export { useAssetExport } from './use-asset-export'
 export type { ExportFieldConfig } from './use-asset-export'
+
+// Asset ownership hooks
+export {
+  useAssetOwners,
+  addAssetOwner,
+  updateAssetOwner,
+  removeAssetOwner,
+} from './use-asset-owners'

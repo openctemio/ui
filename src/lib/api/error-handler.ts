@@ -6,6 +6,7 @@
 
 import { toast } from 'sonner'
 import type { ApiError } from './types'
+import { devLog } from '@/lib/logger'
 
 // ============================================
 // ERROR CLASSES
@@ -171,7 +172,7 @@ export function handleApiError(
 
   // Log error if enabled
   if (logError) {
-    console.error('[API Error]', {
+    devLog.error('[API Error]', {
       code: apiError.code,
       message: apiError.message,
       statusCode: apiError.statusCode,

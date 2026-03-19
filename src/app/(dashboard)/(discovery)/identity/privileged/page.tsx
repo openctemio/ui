@@ -23,8 +23,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from '@/components/charts'
-import { cn } from '@/lib/utils'
-import { Crown, ShieldAlert, AlertTriangle, Users, KeyRound, Server } from 'lucide-react'
+import { Crown, ShieldAlert, AlertTriangle, KeyRound, Server } from 'lucide-react'
 
 const SEVERITY_COLORS: Record<string, string> = {
   critical: '#ef4444',

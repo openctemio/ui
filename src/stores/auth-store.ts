@@ -14,6 +14,7 @@ import { create } from 'zustand'
 import { devtools } from 'zustand/middleware'
 import { clearAllStoredPermissions } from '@/lib/permission-storage'
 import { clearAllLogoCaches } from '@/lib/logo-storage'
+import { devLog } from '@/lib/logger'
 
 // ============================================
 // TYPES
@@ -295,6 +296,11 @@ export const useAuthStore = create<AuthState>()(
 let authRefreshTimeout: ReturnType<typeof setTimeout> | null = null
 let isRefreshingToken = false
 let authPermanentlyFailed = false
+let refreshRetryCount = 0
+const MAX_REFRESH_RETRIES = 3
+const RETRY_DELAYS = [2000, 5000, 10000] // Exponential backoff: 2s, 5s, 10s
+let lastRedirectTime = 0
+const REDIRECT_COOLDOWN_MS = 10000 // Prevent redirect loops: 10s cooldown
 
 function setupTokenRefresh(expiresIn: number): void {
   if (authRefreshTimeout) {
@@ -305,43 +311,82 @@ function setupTokenRefresh(expiresIn: number): void {
   if (authPermanentlyFailed) return
   if (expiresIn < 60 || expiresIn > 86400) return
 
+  // Reset retry count on successful token update
+  refreshRetryCount = 0
+
   const refreshIn = Math.max(0, (expiresIn - 300) * 1000)
 
   if (typeof window !== 'undefined') {
-    authRefreshTimeout = setTimeout(async () => {
-      if (authPermanentlyFailed || isRefreshingToken) return
-
-      console.log('[Auth] Token expiring soon, refreshing...')
-      isRefreshingToken = true
-
-      try {
-        const response = await fetch('/api/auth/refresh', {
-          method: 'POST',
-          credentials: 'include',
-        })
-
-        const data = await response.json()
-
-        if (response.ok && data.success && data.data?.access_token) {
-          console.log('[Auth] Token refreshed successfully')
-          useAuthStore.getState().updateToken(data.data.access_token)
-        } else {
-          console.warn('[Auth] Token refresh failed:', data.error?.message || 'Unknown error')
-          authPermanentlyFailed = true
-          useAuthStore.getState().clearAuth()
-          redirectToLogin()
-        }
-      } catch (error) {
-        console.error('[Auth] Token refresh error:', error)
-        useAuthStore.getState().clearAuth()
-        redirectToLogin()
-      } finally {
-        setTimeout(() => {
-          isRefreshingToken = false
-        }, 1000)
-      }
-    }, refreshIn)
+    authRefreshTimeout = setTimeout(() => attemptTokenRefresh(), refreshIn)
   }
+}
+
+async function attemptTokenRefresh(): Promise<void> {
+  if (authPermanentlyFailed || isRefreshingToken) return
+
+  devLog.log(
+    `[Auth] Token expiring soon, refreshing... (attempt ${refreshRetryCount + 1}/${MAX_REFRESH_RETRIES})`
+  )
+  isRefreshingToken = true
+
+  try {
+    const response = await fetch('/api/auth/refresh', {
+      method: 'POST',
+      credentials: 'include',
+    })
+
+    const data = await response.json()
+
+    if (response.ok && data.success && data.data?.access_token) {
+      devLog.log('[Auth] Token refreshed successfully')
+      refreshRetryCount = 0
+      useAuthStore.getState().updateToken(data.data.access_token)
+    } else if (response.status === 401) {
+      // 401 = refresh token itself is invalid — no point retrying
+      devLog.warn('[Auth] Refresh token invalid (401), redirecting to login')
+      authPermanentlyFailed = true
+      useAuthStore.getState().clearAuth()
+      safeRedirectToLogin()
+    } else {
+      // Non-401 failure (500, network, etc.) — retry with backoff
+      handleRefreshRetry(`Server error: ${data.error?.message || response.status}`)
+    }
+  } catch (error) {
+    // Network error — retry with backoff
+    handleRefreshRetry(`Network error: ${error instanceof Error ? error.message : 'unknown'}`)
+  } finally {
+    setTimeout(() => {
+      isRefreshingToken = false
+    }, 1000)
+  }
+}
+
+function handleRefreshRetry(reason: string): void {
+  refreshRetryCount++
+  if (refreshRetryCount >= MAX_REFRESH_RETRIES) {
+    devLog.error(`[Auth] Token refresh failed after ${MAX_REFRESH_RETRIES} attempts: ${reason}`)
+    authPermanentlyFailed = true
+    useAuthStore.getState().clearAuth()
+    safeRedirectToLogin()
+  } else {
+    const delay = RETRY_DELAYS[refreshRetryCount - 1] || 10000
+    devLog.warn(`[Auth] Token refresh failed (${reason}), retrying in ${delay}ms...`)
+    authRefreshTimeout = setTimeout(() => attemptTokenRefresh(), delay)
+  }
+}
+
+/**
+ * Redirect to login with cooldown to prevent redirect loops.
+ * If a redirect happened within the last 10 seconds, skip.
+ */
+function safeRedirectToLogin(): void {
+  const now = Date.now()
+  if (now - lastRedirectTime < REDIRECT_COOLDOWN_MS) {
+    devLog.warn('[Auth] Redirect cooldown active, skipping redirect to prevent loop')
+    return
+  }
+  lastRedirectTime = now
+  redirectToLogin()
 }
 
 export function resetAuthFailureFlag(): void {

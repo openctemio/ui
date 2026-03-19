@@ -18,6 +18,7 @@
  */
 
 import { isClient } from './env'
+import { devLog } from '@/lib/logger'
 
 // Storage key prefix
 const STORAGE_PREFIX = 'openctem_perms'
@@ -87,7 +88,7 @@ export function storePermissions(tenantId: string, permissions: string[], versio
     localStorage.setItem(key, JSON.stringify(data))
   } catch (error) {
     // localStorage might be full or disabled
-    console.warn('[PermissionStorage] Failed to store permissions:', error)
+    devLog.warn('[PermissionStorage] Failed to store permissions:', error)
   }
 }
 
@@ -202,7 +203,7 @@ export function cleanupExpiredPermissions(): void {
     keysToRemove.forEach((key) => localStorage.removeItem(key))
 
     if (keysToRemove.length > 0) {
-      console.log(`[PermissionStorage] Cleaned up ${keysToRemove.length} expired entries`)
+      devLog.log(`[PermissionStorage] Cleaned up ${keysToRemove.length} expired entries`)
     }
   } catch {
     // Ignore errors

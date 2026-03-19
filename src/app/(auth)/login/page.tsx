@@ -10,18 +10,19 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { env } from '@/lib/env'
+import { validateRedirectUrl } from '@/lib/redirect'
 
 // Use refactored LoginForm from features directory
 import { LoginForm } from '@/features/auth/components/login-form'
 
 interface LoginPageProps {
-  searchParams: Promise<{ redirect?: string; returnTo?: string }>
+  searchParams: Promise<{ redirect?: string; returnTo?: string; org?: string; error?: string }>
 }
 
 export default async function SignIn({ searchParams }: LoginPageProps) {
   // Get redirect URL from search params (support both 'redirect' and 'returnTo')
   const params = await searchParams
-  const redirectTo = params.returnTo || params.redirect || '/'
+  const redirectTo = validateRedirectUrl(params.returnTo || params.redirect, '/')
 
   // Check if user is already authenticated
   const cookieStore = await cookies()
@@ -63,7 +64,7 @@ export default async function SignIn({ searchParams }: LoginPageProps) {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <LoginForm redirectTo={redirectTo} />
+        <LoginForm redirectTo={redirectTo} orgSlug={params.org} />
       </CardContent>
       <CardFooter>
         <p className="text-muted-foreground px-8 text-center text-sm">

@@ -15,6 +15,7 @@ import { redirect } from 'next/navigation'
 
 import { env } from '@/lib/env'
 import { setServerCookie, removeServerCookie } from '@/lib/cookies-server'
+import { devLog } from '@/lib/logger'
 import { authEndpoints, userEndpoints } from '@/lib/api/endpoints'
 
 import type { AuthSuccessResponse, AuthErrorResponse } from '../schemas/auth.schema'
@@ -234,7 +235,7 @@ export async function loginAction(input: LoginInput): Promise<LoginResult> {
 
     // Case 1: No tenants - user needs to create or join a team
     if (!loginData.tenants || loginData.tenants.length === 0) {
-      console.log('[Login] No tenants found for user - user needs to create or join a team')
+      devLog.log('[Login] No tenants found for user - user needs to create or join a team')
 
       // Store user info for the Create Team page to use as suggested name
       await setServerCookie(
@@ -264,7 +265,7 @@ export async function loginAction(input: LoginInput): Promise<LoginResult> {
 
     // Case 2: Multiple tenants - require user to select
     if (loginData.tenants.length > 1) {
-      console.log(
+      devLog.log(
         '[Login] Multiple tenants found:',
         loginData.tenants.length,
         '- requiring selection'
@@ -290,7 +291,7 @@ export async function loginAction(input: LoginInput): Promise<LoginResult> {
 
     // Case 3: Single tenant - auto-select
     const firstTenant = loginData.tenants[0]
-    console.log('[Login] Single tenant found, auto-selecting:', firstTenant.id, firstTenant.slug)
+    devLog.log('[Login] Single tenant found, auto-selecting:', firstTenant.id, firstTenant.slug)
 
     try {
       const tokenData = await backendFetch<TokenExchangeResponse>(authEndpoints.token(), {
@@ -300,10 +301,10 @@ export async function loginAction(input: LoginInput): Promise<LoginResult> {
           tenant_id: firstTenant.id,
         }),
       })
-      console.log('[Login] Token exchange successful, got access_token:', !!tokenData.access_token)
+      devLog.log('[Login] Token exchange successful, got access_token:', !!tokenData.access_token)
 
       // Store access token in httpOnly cookie
-      console.log(
+      devLog.log(
         '[Login] Setting access token cookie:',
         env.auth.cookieName,
         'token length:',
@@ -316,7 +317,7 @@ export async function loginAction(input: LoginInput): Promise<LoginResult> {
         maxAge: tokenData.expires_in || 900, // Default 15 minutes
         path: '/',
       })
-      console.log('[Login] Access token cookie SET successfully:', env.auth.cookieName)
+      devLog.log('[Login] Access token cookie SET successfully:', env.auth.cookieName)
 
       // Update refresh token if rotated
       if (tokenData.refresh_token) {
@@ -327,7 +328,7 @@ export async function loginAction(input: LoginInput): Promise<LoginResult> {
           maxAge: 7 * 24 * 60 * 60, // 7 days
           path: '/',
         })
-        console.log('[Login] Refresh token cookie updated')
+        devLog.log('[Login] Refresh token cookie updated')
       }
 
       // Store current tenant info in a separate cookie for reference
@@ -347,10 +348,10 @@ export async function loginAction(input: LoginInput): Promise<LoginResult> {
           path: '/',
         }
       )
-      console.log('[Login] Tenant cookie set:', tokenData.tenant_slug, firstTenant.name)
+      devLog.log('[Login] Tenant cookie set:', tokenData.tenant_slug, firstTenant.name)
       // NOTE: Permissions fetched via /api/v1/me/permissions API (not stored in cookie)
     } catch (tokenError) {
-      console.error('[Login] Token exchange FAILED:', tokenError)
+      devLog.error('[Login] Token exchange FAILED:', tokenError)
       throw new Error(
         `Login succeeded but token exchange failed: ${tokenError instanceof Error ? tokenError.message : 'Unknown error'}`
       )
@@ -396,11 +397,11 @@ export async function selectTenantAction(tenantId: string): Promise<LoginResult>
         const pendingTenants: LoginTenant[] = JSON.parse(pendingTenantsStr)
         selectedTenant = pendingTenants.find((t) => t.id === tenantId)
       } catch {
-        console.error('[SelectTenant] Failed to parse pending tenants')
+        devLog.error('[SelectTenant] Failed to parse pending tenants')
       }
     }
 
-    console.log('[SelectTenant] Exchanging token for tenant:', tenantId)
+    devLog.log('[SelectTenant] Exchanging token for tenant:', tenantId)
 
     const tokenData = await backendFetch<TokenExchangeResponse>(authEndpoints.token(), {
       method: 'POST',
@@ -409,9 +410,9 @@ export async function selectTenantAction(tenantId: string): Promise<LoginResult>
         tenant_id: tenantId,
       }),
     })
-    console.log('[SelectTenant] Token exchange successful')
-    console.log('[SelectTenant] access_token length:', tokenData.access_token?.length)
-    console.log('[SelectTenant] expires_in:', tokenData.expires_in)
+    devLog.log('[SelectTenant] Token exchange successful')
+    devLog.log('[SelectTenant] access_token length:', tokenData.access_token?.length)
+    devLog.log('[SelectTenant] expires_in:', tokenData.expires_in)
 
     // Store access token in httpOnly cookie
     await setServerCookie(env.auth.cookieName, tokenData.access_token, {
@@ -460,7 +461,7 @@ export async function selectTenantAction(tenantId: string): Promise<LoginResult>
       message: 'Team selected successfully',
     }
   } catch (error) {
-    console.error('[SelectTenant] Error:', error)
+    devLog.error('[SelectTenant] Error:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to select team',
@@ -563,9 +564,9 @@ export async function localLogoutAction(redirectTo?: string): Promise<never> {
             Authorization: `Bearer ${accessToken}`,
           },
         })
-        console.log('[Logout] Backend logout successful')
+        devLog.log('[Logout] Backend logout successful')
       } catch (error) {
-        console.error('[Logout] Backend logout error (continuing with local cleanup):', error)
+        devLog.error('[Logout] Backend logout error (continuing with local cleanup):', error)
       }
     }
 
@@ -578,7 +579,7 @@ export async function localLogoutAction(redirectTo?: string): Promise<never> {
     await removeServerCookie(env.cookies.pendingTenants) // Pending tenant selection
     await removeServerCookie('app_permissions') // Legacy permissions cookie (cleanup)
 
-    console.log('[Logout] All cookies cleared, redirecting to:', redirectTo || '/login')
+    devLog.log('[Logout] All cookies cleared, redirecting to:', redirectTo || '/login')
 
     redirect(redirectTo || '/login')
   } catch (error) {
@@ -586,7 +587,7 @@ export async function localLogoutAction(redirectTo?: string): Promise<never> {
     if (error instanceof Error && error.message === 'NEXT_REDIRECT') {
       throw error
     }
-    console.error('[Logout] Error:', error)
+    devLog.error('[Logout] Error:', error)
     redirect('/login')
   }
 }
@@ -752,7 +753,7 @@ export async function createFirstTeamAction(
       }
     }
 
-    console.log('[CreateFirstTeam] Creating team:', input.teamName, input.teamSlug)
+    devLog.log('[CreateFirstTeam] Creating team:', input.teamName, input.teamSlug)
 
     // Call backend API with cookies (refresh token in httpOnly cookie)
     const baseUrl = getBackendUrl()
@@ -774,7 +775,7 @@ export async function createFirstTeamAction(
     }
 
     const data: CreateFirstTeamResponse = await response.json()
-    console.log('[CreateFirstTeam] Team created successfully:', data.tenant_name)
+    devLog.log('[CreateFirstTeam] Team created successfully:', data.tenant_name)
 
     // Store access token in httpOnly cookie
     await setServerCookie(env.auth.cookieName, data.access_token, {
@@ -816,7 +817,7 @@ export async function createFirstTeamAction(
     // Clear user info cookie (no longer needed after team created)
     await removeServerCookie(env.cookies.userInfo)
 
-    console.log('[CreateFirstTeam] All cookies set, team creation complete')
+    devLog.log('[CreateFirstTeam] All cookies set, team creation complete')
 
     return {
       success: true,
@@ -828,7 +829,7 @@ export async function createFirstTeamAction(
       },
     }
   } catch (error) {
-    console.error('[CreateFirstTeam] Error:', error)
+    devLog.error('[CreateFirstTeam] Error:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to create team',

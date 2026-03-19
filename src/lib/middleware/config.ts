@@ -20,6 +20,7 @@ export const PUBLIC_ROUTES = [
   '/reset-password',
   '/verify-email',
   '/auth/callback',
+  '/auth/sso/callback',
   '/auth/error',
 ] as const
 

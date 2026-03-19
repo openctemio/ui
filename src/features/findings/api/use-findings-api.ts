@@ -32,7 +32,7 @@ import type {
   AddCommentInput,
   UpdateCommentInput,
 } from './finding-api.types'
-import type { ApiApproval } from '../types/finding.types'
+import type { ApiApproval, ApprovalStatus } from '../types/finding.types'
 
 // ============================================
 // SWR CONFIGURATION
@@ -86,6 +86,8 @@ function buildFindingsEndpoint(filters?: FindingApiFilters): string {
 
   if (filters.severities?.length) params.set('severities', filters.severities.join(','))
   if (filters.statuses?.length) params.set('statuses', filters.statuses.join(','))
+  if (filters.exclude_statuses?.length)
+    params.set('exclude_statuses', filters.exclude_statuses.join(','))
   if (filters.sources?.length) params.set('sources', filters.sources.join(','))
 
   const queryString = params.toString()
@@ -573,12 +575,14 @@ export function useRejectApproval(approvalId: string) {
 }
 
 /**
- * List pending approvals for the current tenant (paginated)
+ * List approvals for the current tenant (paginated, filterable by status)
  */
-export function usePendingApprovals(page = 1, perPage = 20) {
+export function usePendingApprovals(page = 1, perPage = 20, status?: ApprovalStatus) {
   const { currentTenant } = useTenant()
+  const params = new URLSearchParams({ page: String(page), per_page: String(perPage) })
+  if (status) params.set('status', status)
   return useSWR<{ data: ApiApproval[]; total: number; page: number; per_page: number }>(
-    currentTenant ? `/api/v1/approvals?page=${page}&per_page=${perPage}` : null,
+    currentTenant ? `/api/v1/approvals?${params}` : null,
     get,
     { ...defaultConfig, refreshInterval: 30000 }
   )

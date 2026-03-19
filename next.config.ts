@@ -79,7 +79,9 @@ const nextConfig: NextConfig = {
               "style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com", // Google Fonts stylesheets
               "img-src 'self' data: https:",
               "font-src 'self' data: https://fonts.gstatic.com", // Google Fonts files
-              "connect-src 'self' http://localhost:* ws://localhost:* wss://localhost:* https://*.openctem.io wss://*.openctem.io http://openctemio.local:* ws://openctemio.local:* http://*.openctem.local ws://*.openctem.local", // API + WebSocket calls
+              process.env.NODE_ENV === 'development'
+                ? "connect-src 'self' http: ws: wss:" // Dev: allow all origins for HMR WebSocket
+                : "connect-src 'self' https://*.openctem.io wss://*.openctem.io", // Prod: strict origins only
               "frame-ancestors 'none'",
               "base-uri 'self'",
               "form-action 'self'",
@@ -89,8 +91,9 @@ const nextConfig: NextConfig = {
       },
     ]
   },
-  // Allow cross-origin requests in development (all origins)
-  allowedDevOrigins: ['*'],
+  // Note: allowedDevOrigins intentionally NOT set.
+  // When defined, Next.js switches to 'block' mode and '*' wildcard doesn't work.
+  // When undefined, Next.js only warns but doesn't block — HMR works from any IP.
 }
 
 export default withBundleAnalyzer(nextConfig)

@@ -10,6 +10,7 @@
  */
 
 import * as React from 'react'
+import { devLog } from '@/lib/logger'
 import { useRouter } from 'next/navigation'
 import {
   ChevronsUpDown,
@@ -36,6 +37,7 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar'
 import { useTenant } from '@/context/tenant-provider'
+import { useBootstrapContextSafe } from '@/context/bootstrap-provider'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { getErrorMessage } from '@/lib/api/error-handler'
@@ -52,6 +54,10 @@ export function TeamSwitcher() {
   const { isMobile } = useSidebar()
   const { currentTenant, tenants, isLoading, isSwitching, switchTeam, error, loadTenants } =
     useTenant()
+  const { isBootstrapped } = useBootstrapContextSafe()
+
+  // Disable switching while an API call or bootstrap is in progress
+  const isTransitioning = isSwitching || !isBootstrapped
 
   const [isOpen, setIsOpen] = React.useState(false)
 
@@ -80,14 +86,14 @@ export function TeamSwitcher() {
   // Log errors for debugging
   React.useEffect(() => {
     if (error) {
-      console.error('[TeamSwitcher] Error fetching tenants:', error)
+      devLog.error('[TeamSwitcher] Error fetching tenants:', error)
     }
   }, [error])
 
   // Handle team selection
   const handleSelectTeam = React.useCallback(
     async (tenantId: string) => {
-      if (isSwitching) return
+      if (isTransitioning) return
 
       try {
         await switchTeam(tenantId)
@@ -97,7 +103,7 @@ export function TeamSwitcher() {
         toast.error(getErrorMessage(error, 'Failed to switch team'))
       }
     },
-    [switchTeam, isSwitching]
+    [switchTeam, isTransitioning]
   )
 
   // Keyboard shortcuts for team switching
@@ -179,10 +185,10 @@ export function TeamSwitcher() {
             <SidebarMenuButton
               size="lg"
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
-              disabled={isSwitching}
+              disabled={isTransitioning}
             >
               <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
-                {isSwitching ? (
+                {isTransitioning ? (
                   <Loader2 className="size-4 animate-spin" />
                 ) : (
                   React.createElement(teamIcons[currentIconIndex % teamIcons.length], {
@@ -219,7 +225,7 @@ export function TeamSwitcher() {
                   key={tenant.id}
                   onClick={() => handleSelectTeam(tenant.id)}
                   className={cn('gap-2 p-2', isActive && 'bg-accent')}
-                  disabled={isSwitching}
+                  disabled={isTransitioning}
                 >
                   <div className="flex size-6 items-center justify-center rounded-sm border">
                     <Icon className="size-4 shrink-0" />

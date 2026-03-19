@@ -12,7 +12,6 @@ import { useTransition } from 'react'
 import { useAuthStore } from '@/stores/auth-store'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { localLogoutAction } from '@/features/auth/actions/local-auth-actions'
-import { clearWebSocketToken } from '@/context/websocket-provider'
 
 // ============================================
 // TYPES
@@ -52,10 +51,9 @@ export function SignOutDialog({ open, onOpenChange, redirectTo }: SignOutDialogP
     // Close dialog first
     onOpenChange(false)
 
-    // Clear localStorage user data and WebSocket token cache
+    // Clear localStorage user data
     try {
       localStorage.removeItem('app_user')
-      clearWebSocketToken()
     } catch {
       // Ignore localStorage errors
     }
@@ -105,10 +103,9 @@ export function SignOutButton({
   const [isPending, startTransition] = useTransition()
 
   const handleClick = () => {
-    // Clear localStorage user data and WebSocket token cache
+    // Clear localStorage user data
     try {
       localStorage.removeItem('app_user')
-      clearWebSocketToken()
     } catch {
       // Ignore localStorage errors
     }

@@ -1954,7 +1954,7 @@ export default function RepositoryDetailPage() {
     return transformToRepositoryView(repositoryData as unknown as ApiAssetResponse)
   }, [repositoryData])
 
-  // TODO: Replace with real API when available
+  // Uses mock data — wire to repository detail API when backend endpoint is available.
   // Currently using mock data for branches, findings, and activities
   const branches = mockBranchDetails
   const findings = mockFindings

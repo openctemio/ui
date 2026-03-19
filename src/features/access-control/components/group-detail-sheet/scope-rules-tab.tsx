@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -55,6 +55,8 @@ import type {
 import { getErrorMessage } from '@/lib/api/error-handler'
 import { PermissionGate } from '@/features/auth/components/permission-gate'
 import { Permission } from '@/lib/permissions/constants'
+import { useGroupChannel } from '@/hooks/use-websocket'
+import type { ScopeChangeEventData } from '@/lib/websocket/types'
 import { ScopeRuleDialog } from './scope-rule-dialog'
 
 interface ScopeRulesTabProps {
@@ -65,6 +67,28 @@ export function ScopeRulesTab({ groupId }: ScopeRulesTabProps) {
   const { scopeRules, isLoading, isError, error, mutate } = useScopeRules(groupId)
   const { createScopeRule, isCreating } = useCreateScopeRule(groupId)
   const { reconcileGroup, isReconciling } = useReconcileGroup(groupId)
+
+  // Subscribe to real-time scope rule changes via WebSocket
+  const lastToastRef = useRef(0)
+  useGroupChannel<ScopeChangeEventData>(groupId, {
+    enabled: !!groupId,
+    onData: (event) => {
+      // Auto-refresh the scope rules list
+      mutate()
+      // Show toast for significant changes (debounced to avoid spam)
+      const now = Date.now()
+      if (
+        (event.assets_added > 0 || event.assets_removed > 0) &&
+        now - lastToastRef.current > 5000
+      ) {
+        lastToastRef.current = now
+        const parts: string[] = []
+        if (event.assets_added > 0) parts.push(`${event.assets_added} added`)
+        if (event.assets_removed > 0) parts.push(`${event.assets_removed} removed`)
+        toast.info(`Scope updated: ${parts.join(', ')}`)
+      }
+    },
+  })
 
   const [searchQuery, setSearchQuery] = useState('')
   const [dialogOpen, setDialogOpen] = useState(false)

@@ -10,7 +10,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { cn } from '@/lib/utils'
 import {
   Puzzle,
   Plus,
@@ -192,7 +191,7 @@ function EmptyState() {
 
 export default function ConnectedAppsPage() {
   const { currentTenant } = useTenant()
-  const { stats, isLoading } = useDashboardStats(currentTenant?.id || null)
+  const { isLoading } = useDashboardStats(currentTenant?.id || null)
 
   const summaryStats = useMemo(() => {
     const connected = PLACEHOLDER_APPS.filter((a) => a.status === 'connected').length

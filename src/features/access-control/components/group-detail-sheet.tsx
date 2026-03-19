@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback, useEffect } from 'react'
+import { devLog } from '@/lib/logger'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
@@ -55,6 +56,11 @@ export function GroupDetailSheet({ groupId, open, onOpenChange, onUpdate }: Grou
   const { currentTenant } = useTenant()
   const tenantSlug = currentTenant?.slug
 
+  // Pagination state
+  const [membersOffset, setMembersOffset] = useState(0)
+  const [assetsOffset, setAssetsOffset] = useState(0)
+  const PAGE_SIZE = 20
+
   // API Hooks - Only fetch when sheet is open (avoid unnecessary API calls)
   const {
     group,
@@ -65,17 +71,19 @@ export function GroupDetailSheet({ groupId, open, onOpenChange, onUpdate }: Grou
   } = useGroup(groupId, { skip: !open })
   const {
     members,
+    totalCount: membersTotalCount,
     isLoading: membersLoading,
     mutate: mutateMembers,
-  } = useGroupMembers(groupId, { skip: !open })
+  } = useGroupMembers(groupId, { skip: !open, limit: PAGE_SIZE, offset: membersOffset })
   const { updateGroup, isUpdating } = useUpdateGroup(open ? groupId : null)
   const { addMember, isAdding: isAddingMember } = useAddGroupMember(open ? groupId : null)
   const { members: tenantMembers } = useMembers(open ? tenantSlug : undefined)
   const {
     assets,
+    totalCount: assetsTotalCount,
     isLoading: assetsLoading,
     mutate: mutateAssets,
-  } = useGroupAssets(groupId, { skip: !open })
+  } = useGroupAssets(groupId, { skip: !open, limit: PAGE_SIZE, offset: assetsOffset })
   const { assignAsset, isAssigning: isAssigningAsset } = useAssignAssetToGroup(
     open ? groupId : null
   )
@@ -103,18 +111,21 @@ export function GroupDetailSheet({ groupId, open, onOpenChange, onUpdate }: Grou
     assetToRemove?.id || null
   )
 
-  // Force revalidate when sheet opens to avoid stale cache
+  // Reset pagination and revalidate when sheet opens
   useEffect(() => {
     if (open && groupId) {
+      setMembersOffset(0)
+      setAssetsOffset(0)
       mutateGroup()
+      mutateMembers()
       mutateAssets()
     }
-  }, [open, groupId, mutateGroup, mutateAssets])
+  }, [open, groupId, mutateGroup, mutateMembers, mutateAssets])
 
   // Log errors for debugging
   useEffect(() => {
     if (groupError && groupErrorDetails) {
-      console.error('[GroupDetailSheet] Failed to load group:', {
+      devLog.error('[GroupDetailSheet] Failed to load group:', {
         groupId,
         error: groupErrorDetails,
         timestamp: new Date().toISOString(),
@@ -292,7 +303,9 @@ export function GroupDetailSheet({ groupId, open, onOpenChange, onUpdate }: Grou
                     <Box className="h-4 w-4" />
                     <span className="text-xs">Assets</span>
                   </div>
-                  <p className="text-lg font-semibold">{assets?.length ?? 0}</p>
+                  <p className="text-lg font-semibold">
+                    {group.asset_count ?? assetsTotalCount ?? 0}
+                  </p>
                 </div>
                 <div className="text-center">
                   <div className="flex items-center justify-center gap-1 text-muted-foreground">
@@ -328,7 +341,11 @@ export function GroupDetailSheet({ groupId, open, onOpenChange, onUpdate }: Grou
                   <TabsContent value="members">
                     <MembersTab
                       members={members}
+                      totalCount={membersTotalCount}
                       isLoading={membersLoading}
+                      limit={PAGE_SIZE}
+                      offset={membersOffset}
+                      onPageChange={setMembersOffset}
                       onAddMember={() => setAddMemberDialogOpen(true)}
                       onRemoveMember={(userId, name) => setMemberToRemove({ userId, name })}
                     />
@@ -337,7 +354,11 @@ export function GroupDetailSheet({ groupId, open, onOpenChange, onUpdate }: Grou
                   <TabsContent value="assets">
                     <AssetsTab
                       assets={assets}
+                      totalCount={assetsTotalCount}
                       isLoading={assetsLoading}
+                      limit={PAGE_SIZE}
+                      offset={assetsOffset}
+                      onPageChange={setAssetsOffset}
                       onAddAsset={() => setAddAssetDialogOpen(true)}
                       onBulkAddAssets={() => setBulkAddAssetsDialogOpen(true)}
                       onRemoveAsset={(id, name) => setAssetToRemove({ id, name })}

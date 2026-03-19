@@ -18,9 +18,35 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Get version
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
+          append_body: true
+          body: |
+            ## Docker Image
+
+            Image is published to **GitHub Container Registry** (multi-arch: amd64 + arm64):
+
+            ```bash
+            docker pull ghcr.io/openctemio/ui:${{ steps.version.outputs.VERSION }}
+            ```
+
+            > Image is also mirrored to Docker Hub (`openctemio/ui`) if configured.
+
+            ## Deployment
+
+            ```bash
+            # Update version in your .env.versions file
+            UI_VERSION=${{ steps.version.outputs.VERSION }}
+
+            # Pull and restart
+            docker compose pull ui
+            docker compose up -d ui
+            ```
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -15,6 +15,8 @@ import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 
 import { env } from '@/lib/env'
+import { markSwitchTeamCompleted } from '@/lib/api/switch-cooldown'
+import { devLog } from '@/lib/logger'
 
 const BACKEND_URL = process.env.BACKEND_API_URL || 'http://localhost:8080'
 const ACCESS_TOKEN_COOKIE = env.auth.cookieName
@@ -39,7 +41,7 @@ interface TokenExchangeResponse {
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
-  console.log('[SwitchTeam] Request received')
+  devLog.log('[SwitchTeam] Request received')
 
   try {
     // Parse request body
@@ -56,7 +58,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     // Get refresh token from cookie
     const refreshToken = cookieStore.get(REFRESH_TOKEN_COOKIE)?.value
-    console.log('[SwitchTeam] Refresh token:', refreshToken ? 'present' : 'MISSING')
+    devLog.log('[SwitchTeam] Refresh token:', refreshToken ? 'present' : 'MISSING')
 
     if (!refreshToken) {
       return NextResponse.json(
@@ -66,7 +68,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     // Exchange token for new tenant
-    console.log('[SwitchTeam] Exchanging token for tenant:', body.tenant_id)
+    devLog.log('[SwitchTeam] Exchanging token for tenant:', body.tenant_id)
     const response = await fetch(`${BACKEND_URL}/api/v1/auth/token`, {
       method: 'POST',
       headers: {
@@ -80,7 +82,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ message: 'Token exchange failed' }))
-      console.error('[SwitchTeam] Backend error:', response.status, errorData)
+      devLog.error('[SwitchTeam] Backend error:', response.status, errorData)
       return NextResponse.json(
         {
           success: false,
@@ -94,7 +96,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     const data: TokenExchangeResponse = await response.json()
-    console.log('[SwitchTeam] Token exchange successful for tenant:', data.tenant_slug)
+    devLog.log('[SwitchTeam] Token exchange successful for tenant:', data.tenant_slug)
 
     // Build success response
     // NOTE: Permissions are fetched via PermissionProvider, not from JWT
@@ -149,10 +151,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // NOTE: Permissions are no longer stored in cookies
     // PermissionProvider fetches from /api/v1/me/permissions/sync
 
-    console.log('[SwitchTeam] Successfully switched to tenant:', data.tenant_slug)
+    // Mark cooldown to prevent proxy from using stale refresh tokens
+    // during concurrent requests that might arrive before new cookies propagate
+    markSwitchTeamCompleted()
+
+    devLog.log('[SwitchTeam] Successfully switched to tenant:', data.tenant_slug)
     return clientResponse
   } catch (error) {
-    console.error('[SwitchTeam] Error:', error)
+    devLog.error('[SwitchTeam] Error:', error)
     return NextResponse.json(
       {
         success: false,

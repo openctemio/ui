@@ -28,13 +28,12 @@ export interface Group {
   group_type: GroupType
   // Alias for backward compatibility in UI
   type?: GroupType
+  is_active?: boolean
   created_at: string
   updated_at: string
-  created_by: string
   // Computed fields from API
   member_count?: number
   asset_count?: number
-  permission_set_count?: number
 }
 
 /**
@@ -47,6 +46,7 @@ export interface GroupMember {
   role: GroupMemberRole
   joined_at: string
   added_by?: string
+  added_by_name?: string
   // Backend standard response fields
   name: string
   email: string

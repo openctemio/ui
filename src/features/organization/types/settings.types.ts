@@ -85,14 +85,127 @@ export interface UpdateBrandingSettingsInput {
 }
 
 // ============================================
+// RISK SCORING SETTINGS
+// ============================================
+
+export interface ComponentWeights {
+  exposure: number
+  criticality: number
+  findings: number
+  ctem: number
+}
+
+export interface ExposureScoreConfig {
+  public: number
+  restricted: number
+  private: number
+  isolated: number
+  unknown: number
+}
+
+export interface ExposureMultiplierConfig {
+  public: number
+  restricted: number
+  private: number
+  isolated: number
+  unknown: number
+}
+
+export interface CriticalityScoreConfig {
+  critical: number
+  high: number
+  medium: number
+  low: number
+  none: number
+}
+
+export interface SeverityWeightConfig {
+  critical: number
+  high: number
+  medium: number
+  low: number
+  info: number
+}
+
+export interface FindingImpactConfig {
+  mode: 'count' | 'severity_weighted'
+  per_finding_points: number
+  finding_cap: number
+  severity_weights: SeverityWeightConfig
+}
+
+export interface CTEMPointsConfig {
+  enabled: boolean
+  internet_accessible: number
+  pii_exposed: number
+  phi_exposed: number
+  high_risk_compliance: number
+  restricted_data: number
+}
+
+export interface RiskLevelConfig {
+  critical_min: number
+  high_min: number
+  medium_min: number
+  low_min: number
+}
+
+export interface RiskScoringSettings {
+  preset?: string
+  weights: ComponentWeights
+  exposure_scores: ExposureScoreConfig
+  exposure_multipliers: ExposureMultiplierConfig
+  criticality_scores: CriticalityScoreConfig
+  finding_impact: FindingImpactConfig
+  ctem_points: CTEMPointsConfig
+  risk_levels: RiskLevelConfig
+}
+
+export interface RiskScorePreviewItem {
+  asset_id: string
+  asset_name: string
+  asset_type: string
+  current_score: number
+  new_score: number
+  delta: number
+}
+
+export interface PreviewResponse {
+  assets: RiskScorePreviewItem[]
+  sample_count: number
+  total_assets: number
+}
+
+export interface RecalculateResponse {
+  assets_updated: number
+}
+
+export interface PresetInfo {
+  name: string
+  config: RiskScoringSettings
+}
+
+// ============================================
 // COMBINED SETTINGS
 // ============================================
+
+export interface PentestConfigOption {
+  value: string
+  label: string
+}
+
+export interface PentestSettings {
+  campaign_types?: PentestConfigOption[]
+  methodologies?: PentestConfigOption[]
+}
 
 export interface TenantSettings {
   general: GeneralSettings
   security: SecuritySettings
   api: APISettings
   branding: BrandingSettings
+  risk_scoring: RiskScoringSettings
+  pentest?: PentestSettings
 }
 
 // ============================================

@@ -14,6 +14,7 @@
 import useSWR, { type SWRConfiguration } from 'swr'
 import { get } from '@/lib/api/client'
 import { handleApiError } from '@/lib/api/error-handler'
+import { devLog } from '@/lib/logger'
 import type { NotificationEventType } from '../types/integration.types'
 
 // ============================================
@@ -116,9 +117,13 @@ export function useTenantModules() {
     async (url: string) => {
       try {
         return await get<TenantModulesResponse>(url)
-      } catch {
-        // Return empty data if endpoint not available
-        // This allows the UI to gracefully degrade
+      } catch (err: unknown) {
+        // Return empty data for 404 (OSS edition without licensing API)
+        // For other errors, still degrade gracefully but log for debugging
+        const status = (err as { status?: number })?.status
+        if (status && status !== 404) {
+          devLog.warn('[useTenantModules] API error:', status)
+        }
         return {
           module_ids: [],
           modules: [],

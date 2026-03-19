@@ -32,6 +32,7 @@ export type ChannelType =
   | 'tenant' // tenant:{id} - Tenant-wide notifications
   | 'notification' // notification:{tenant_id} - Notification delivery
   | 'triage' // triage:{finding_id} - AI triage progress
+  | 'group' // group:{id} - Group membership/scope rule changes
 
 /**
  * Create a channel string from type and ID
@@ -178,4 +179,12 @@ export interface ScanEventData {
   progress?: number
   findings_count?: number
   error?: string
+}
+
+/** Scope change event data from group channel */
+export interface ScopeChangeEventData {
+  event_type: 'scope_rule_evaluated' | 'scope_rule_reconciled'
+  group_id: string
+  assets_added: number
+  assets_removed: number
 }

@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { getRiskLevel } from '../types'
+import { useRiskThresholds } from '@/context/risk-scoring-provider'
 
 interface RiskScoreBadgeProps {
   score: number
@@ -18,7 +19,8 @@ export function RiskScoreBadge({
   size = 'md',
   className,
 }: RiskScoreBadgeProps) {
-  const { label, color, textColor } = getRiskLevel(score)
+  const thresholds = useRiskThresholds()
+  const { label, color, textColor } = getRiskLevel(score, thresholds)
 
   const sizeClasses = {
     sm: 'text-xs px-1.5 py-0.5',
@@ -52,7 +54,8 @@ export function RiskScoreMeter({
   showTooltip = true,
   className,
 }: RiskScoreMeterProps) {
-  const { label, color } = getRiskLevel(score)
+  const thresholds = useRiskThresholds()
+  const { label, color } = getRiskLevel(score, thresholds)
 
   // Map color classes to progress bar colors
   const progressColor = color.replace('bg-', '')
@@ -112,7 +115,8 @@ export function RiskScoreGauge({
   showLabel = true,
   className,
 }: RiskScoreGaugeProps) {
-  const { label, color } = getRiskLevel(score)
+  const thresholds = useRiskThresholds()
+  const { label, color } = getRiskLevel(score, thresholds)
 
   const sizeConfig = {
     sm: { diameter: 40, strokeWidth: 4, fontSize: 'text-xs' },

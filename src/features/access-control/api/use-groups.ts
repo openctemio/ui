@@ -38,6 +38,14 @@ type ApiResponse<T> = T[] | Record<string, T[] | unknown>
 /**
  * Fetch all groups for the current tenant
  */
+interface GroupListResponse {
+  groups: Group[]
+  total_count: number
+  unique_member_count: number
+  limit: number
+  offset: number
+}
+
 export function useGroups(filters?: GroupFilters) {
   const params = new URLSearchParams()
   if (filters?.type) params.set('type', filters.type)
@@ -46,16 +54,18 @@ export function useGroups(filters?: GroupFilters) {
   const queryString = params.toString()
   const url = queryString ? `${API_BASE}?${queryString}` : API_BASE
 
-  const { data, error, isLoading, mutate } = useSWR<{ groups: Group[] } | Group[]>(url, fetcher, {
+  const { data, error, isLoading, mutate } = useSWR<GroupListResponse | Group[]>(url, fetcher, {
     revalidateOnFocus: false,
     dedupingInterval: 30000,
   })
 
   // Defensive access: support both { groups: [...] } and [...]
   const groups = Array.isArray(data) ? data : data?.groups || []
+  const uniqueMemberCount = Array.isArray(data) ? 0 : (data?.unique_member_count ?? 0)
 
   return {
     groups,
+    uniqueMemberCount,
     isLoading,
     isError: !!error,
     error,
@@ -121,34 +131,56 @@ export function useGroup(groupId: string | null, options?: UseGroupOptions) {
 }
 
 /**
- * Fetch group members
+ * Fetch group members (paginated)
  */
-export function useGroupMembers(groupId: string | null, options?: UseGroupOptions) {
+interface PaginatedMembersResponse {
+  items: GroupMember[]
+  total_count: number
+  limit: number
+  offset: number
+}
+
+export function useGroupMembers(
+  groupId: string | null,
+  options?: UseGroupOptions & { limit?: number; offset?: number }
+) {
   const shouldFetch = !options?.skip && groupId
+  const limit = options?.limit ?? 20
+  const offset = options?.offset ?? 0
 
-  const { data, error, isLoading, mutate } = useSWR<ApiResponse<GroupMember>>(
-    shouldFetch ? `${API_BASE}/${groupId}/members` : null,
-    fetcher,
-    {
-      revalidateOnFocus: false,
-      dedupingInterval: 30000,
-    }
-  )
+  const url = shouldFetch ? `${API_BASE}/${groupId}/members?limit=${limit}&offset=${offset}` : null
 
-  // Try to find the array in common locations
+  const { data, error, isLoading, mutate } = useSWR<
+    PaginatedMembersResponse | ApiResponse<GroupMember>
+  >(url, fetcher, {
+    revalidateOnFocus: false,
+    dedupingInterval: 30000,
+  })
+
+  // Support both paginated { items: [...] } and legacy array/object responses
   let members: GroupMember[] = []
-  if (Array.isArray(data)) {
+  let totalCount = 0
+  if (data && 'items' in data && Array.isArray(data.items)) {
+    members = data.items as GroupMember[]
+    totalCount = (data as PaginatedMembersResponse).total_count
+  } else if (Array.isArray(data)) {
     members = data
-  } else if (data?.members && Array.isArray(data.members)) {
-    members = data.members
-  } else if (data?.users && Array.isArray(data.users)) {
-    members = data.users
-  } else if (data?.data && Array.isArray(data.data)) {
-    members = data.data
+    totalCount = data.length
+  } else if (data && typeof data === 'object') {
+    const d = data as Record<string, unknown>
+    if (Array.isArray(d.members)) {
+      members = d.members as GroupMember[]
+    } else if (Array.isArray(d.users)) {
+      members = d.users as GroupMember[]
+    } else if (Array.isArray(d.data)) {
+      members = d.data as GroupMember[]
+    }
+    totalCount = members.length
   }
 
   return {
     members,
+    totalCount,
     isLoading: shouldFetch ? isLoading : false,
     isError: !!error,
     error,
@@ -190,31 +222,54 @@ export function useGroupPermissionSets(groupId: string | null, options?: UseGrou
 }
 
 /**
- * Fetch group's assets
+ * Fetch group's assets (paginated)
  */
-export function useGroupAssets(groupId: string | null, options?: UseGroupOptions) {
+interface PaginatedAssetsResponse {
+  items: GroupAsset[]
+  total_count: number
+  limit: number
+  offset: number
+}
+
+export function useGroupAssets(
+  groupId: string | null,
+  options?: UseGroupOptions & { limit?: number; offset?: number }
+) {
   const shouldFetch = !options?.skip && groupId
+  const limit = options?.limit ?? 20
+  const offset = options?.offset ?? 0
 
-  const { data, error, isLoading, mutate } = useSWR<ApiResponse<GroupAsset>>(
-    shouldFetch ? `${API_BASE}/${groupId}/assets` : null,
-    fetcher,
-    {
-      revalidateOnFocus: false,
-      dedupingInterval: 30000,
-    }
-  )
+  const url = shouldFetch ? `${API_BASE}/${groupId}/assets?limit=${limit}&offset=${offset}` : null
 
+  const { data, error, isLoading, mutate } = useSWR<
+    PaginatedAssetsResponse | ApiResponse<GroupAsset>
+  >(url, fetcher, {
+    revalidateOnFocus: false,
+    dedupingInterval: 30000,
+  })
+
+  // Support both paginated { items: [...] } and legacy array/object responses
   let assets: GroupAsset[] = []
-  if (Array.isArray(data)) {
+  let totalCount = 0
+  if (data && 'items' in data && Array.isArray(data.items)) {
+    assets = data.items as GroupAsset[]
+    totalCount = (data as PaginatedAssetsResponse).total_count
+  } else if (Array.isArray(data)) {
     assets = data
-  } else if (data?.assets && Array.isArray(data.assets)) {
-    assets = data.assets
-  } else if (data?.data && Array.isArray(data.data)) {
-    assets = data.data
+    totalCount = data.length
+  } else if (data && typeof data === 'object') {
+    const d = data as Record<string, unknown>
+    if (Array.isArray(d.assets)) {
+      assets = d.assets as GroupAsset[]
+    } else if (Array.isArray(d.data)) {
+      assets = d.data as GroupAsset[]
+    }
+    totalCount = assets.length
   }
 
   return {
     assets,
+    totalCount,
     isLoading: shouldFetch ? isLoading : false,
     isError: !!error,
     error,

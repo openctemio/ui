@@ -34,14 +34,6 @@ const SEVERITY_COLORS: Record<string, string> = {
   info: '#3b82f6',
 }
 
-const STATUS_COLORS: Record<string, string> = {
-  open: '#ef4444',
-  in_progress: '#f97316',
-  resolved: '#22c55e',
-  closed: '#6b7280',
-  accepted: '#3b82f6',
-}
-
 function StatsCardSkeleton() {
   return (
     <Card>

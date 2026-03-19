@@ -16,6 +16,8 @@ import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 
 import { env } from '@/lib/env'
+import { isInSwitchCooldown } from '@/lib/api/switch-cooldown'
+import { devLog } from '@/lib/logger'
 
 // Use 127.0.0.1 instead of localhost to avoid IPv6 resolution issues in Node.js
 const BACKEND_URL =
@@ -27,6 +29,9 @@ const TENANT_COOKIE = env.cookies.tenant
 // Simple in-memory lock to prevent concurrent refresh attempts
 // Key: tenantId, Value: Promise that resolves when refresh completes
 const refreshLocks = new Map<string, Promise<RefreshResult | null>>()
+
+// Switch cooldown is managed by @/lib/api/switch-cooldown
+// imported above as isInSwitchCooldown()
 
 interface RefreshResult {
   accessToken: string
@@ -45,7 +50,7 @@ async function getTenantId(): Promise<string | undefined> {
       const tenantInfo = JSON.parse(tenantCookie)
       return tenantInfo.id
     } catch {
-      console.error('[Proxy] Failed to parse tenant cookie')
+      devLog.error('[Proxy] Failed to parse tenant cookie')
     }
   }
   return undefined
@@ -61,21 +66,21 @@ async function tryRefreshAccessToken(
   tenantId: string | undefined
 ): Promise<RefreshResult | null> {
   if (!tenantId) {
-    console.log('[Proxy] Cannot refresh - no tenant ID')
+    devLog.log('[Proxy] Cannot refresh - no tenant ID')
     return null
   }
 
   // Check if there's already a refresh in progress for this tenant
   const existingPromise = refreshLocks.get(tenantId)
   if (existingPromise) {
-    console.log('[Proxy] Refresh already in progress for tenant, waiting...')
+    devLog.log('[Proxy] Refresh already in progress for tenant, waiting...')
     return existingPromise
   }
 
   // Create a new refresh promise
   const refreshPromise = (async (): Promise<RefreshResult | null> => {
     try {
-      console.log('[Proxy] Attempting to refresh access token for tenant:', tenantId)
+      devLog.log('[Proxy] Attempting to refresh access token for tenant:', tenantId)
       const response = await fetch(`${BACKEND_URL}/api/v1/auth/refresh`, {
         method: 'POST',
         headers: {
@@ -89,12 +94,12 @@ async function tryRefreshAccessToken(
 
       if (!response.ok) {
         const errorText = await response.text().catch(() => 'Unknown error')
-        console.log('[Proxy] Token refresh failed:', response.status, errorText)
+        devLog.log('[Proxy] Token refresh failed:', response.status, errorText)
         return null
       }
 
       const data = await response.json()
-      console.log('[Proxy] Token refresh successful, new token length:', data.access_token?.length)
+      devLog.log('[Proxy] Token refresh successful, new token length:', data.access_token?.length)
 
       return {
         accessToken: data.access_token,
@@ -102,7 +107,7 @@ async function tryRefreshAccessToken(
         expiresIn: data.expires_in || 900,
       }
     } catch (error) {
-      console.error('[Proxy] Token refresh error:', error)
+      devLog.error('[Proxy] Token refresh error:', error)
       return null
     } finally {
       // Remove lock after completion
@@ -121,7 +126,7 @@ async function tryRefreshAccessToken(
  */
 function setTokenCookies(response: NextResponse, tokenData: RefreshResult): void {
   const isProd = process.env.NODE_ENV === 'production'
-  console.log('[Proxy] Setting token cookies, expires_in:', tokenData.expiresIn)
+  devLog.log('[Proxy] Setting token cookies, expires_in:', tokenData.expiresIn)
 
   // Set new access token cookie
   response.cookies.set(ACCESS_TOKEN_COOKIE, tokenData.accessToken, {
@@ -175,21 +180,22 @@ async function proxyRequest(
   const refreshToken = cookieStore.get(REFRESH_TOKEN_COOKIE)?.value
 
   // Debug: Log cookie status (reduced logging for production)
-  console.log('[Proxy]', request.method, path, accessToken ? 'authenticated' : 'NO_TOKEN')
+  devLog.log('[Proxy]', request.method, path, accessToken ? 'authenticated' : 'NO_TOKEN')
 
   // Track if we refreshed the token (to set cookie in response)
   let refreshedTokenData: RefreshResult | null = null
 
   // If access token is missing but refresh token exists, try to refresh BEFORE making request
-  if (!accessToken && refreshToken) {
-    console.log('[Proxy] Access token missing, attempting pre-request refresh...')
+  // Skip during post-switch cooldown to avoid stale refresh token errors
+  if (!accessToken && refreshToken && !isInSwitchCooldown()) {
+    devLog.log('[Proxy] Access token missing, attempting pre-request refresh...')
     const tenantId = await getTenantId()
     refreshedTokenData = await tryRefreshAccessToken(refreshToken, tenantId)
     if (refreshedTokenData) {
       accessToken = refreshedTokenData.accessToken
-      console.log('[Proxy] Pre-request token refresh successful')
+      devLog.log('[Proxy] Pre-request token refresh successful')
     } else {
-      console.warn('[Proxy] Pre-request token refresh failed')
+      devLog.warn('[Proxy] Pre-request token refresh failed')
     }
   }
 
@@ -225,21 +231,23 @@ async function proxyRequest(
     let response = await makeBackendRequest(backendUrl, request.method, headers, body)
 
     // Handle 401 Unauthorized - try to refresh token and retry ONCE
-    if (response.status === 401 && refreshToken && !refreshedTokenData) {
-      console.log('[Proxy] Got 401, attempting token refresh and retry...')
+    // Skip during post-switch cooldown: tokens were just rotated by switch-team,
+    // using the old refresh token would trigger "already been used" errors
+    if (response.status === 401 && refreshToken && !refreshedTokenData && !isInSwitchCooldown()) {
+      devLog.log('[Proxy] Got 401, attempting token refresh and retry...')
       const tenantId = await getTenantId()
       refreshedTokenData = await tryRefreshAccessToken(refreshToken, tenantId)
 
       if (refreshedTokenData) {
-        console.log('[Proxy] Token refresh successful, retrying original request...')
+        devLog.log('[Proxy] Token refresh successful, retrying original request...')
         // Update Authorization header with new token
         headers.set('Authorization', `Bearer ${refreshedTokenData.accessToken}`)
 
         // Retry the original request
         response = await makeBackendRequest(backendUrl, request.method, headers, body)
-        console.log('[Proxy] Retry response:', response.status)
+        devLog.log('[Proxy] Retry response:', response.status)
       } else {
-        console.warn('[Proxy] Token refresh failed, returning original 401')
+        devLog.warn('[Proxy] Token refresh failed, returning original 401')
       }
     }
 
@@ -256,10 +264,20 @@ async function proxyRequest(
       return proxyResponse
     }
 
-    // Get response body
-    const responseText = await response.text()
+    // Get response body — wrap in try-catch to handle stream errors
+    // (e.g. "Error in input stream" when backend closes connection mid-response)
+    let responseText: string
+    try {
+      responseText = await response.text()
+    } catch (streamError) {
+      devLog.error('[Proxy] Failed to read response body:', streamError)
+      return NextResponse.json(
+        { error: 'STREAM_ERROR', message: 'Failed to read backend response' },
+        { status: 502 }
+      )
+    }
     if (response.status >= 400) {
-      console.log('[Proxy] Backend error:', response.status, responseText.substring(0, 200))
+      devLog.log('[Proxy] Backend error:', response.status, responseText.substring(0, 200))
     }
 
     // Create response with same status and headers
@@ -292,7 +310,7 @@ async function proxyRequest(
 
     return proxyResponse
   } catch (error) {
-    console.error('[Proxy] Connection error:', error)
+    devLog.error('[Proxy] Connection error:', error)
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
     return NextResponse.json(
       { error: 'PROXY_ERROR', message: `Failed to connect to backend: ${errorMessage}` },

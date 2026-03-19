@@ -125,10 +125,14 @@ function buildTriageHistoryEndpoint(findingId: string, limit?: number, offset?: 
 
 async function fetchTriageResult(url: string): Promise<AITriageResult | null> {
   try {
-    const response = await get<ApiTriageResult>(url)
-    return transformTriageResult(response)
+    const response = await get<ApiTriageResult | { data: null }>(url)
+    // Backend returns {data: null} when no triage exists yet
+    if (!response || ('data' in response && response.data === null)) {
+      return null
+    }
+    return transformTriageResult(response as ApiTriageResult)
   } catch (error: unknown) {
-    // 404 means no triage exists yet - return null instead of throwing
+    // 404 fallback for backward compatibility
     if (error && typeof error === 'object' && 'statusCode' in error && error.statusCode === 404) {
       return null
     }
