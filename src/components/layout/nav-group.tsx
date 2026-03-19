@@ -118,8 +118,8 @@ function getReleaseStatusBadge(
 
 /**
  * Filter sub-items based on sub-modules from API.
- * - Items without assetModuleKey are always shown (like "Overview")
- * - Items with assetModuleKey are filtered by sub-module presence in API response
+ * - Items without subModuleKey are always shown (like "Overview")
+ * - Items with subModuleKey are filtered by sub-module presence in API response
  * - API only returns active modules, so if not in response = hidden
  * - "disabled" release status hides completely
  * - "coming_soon" and "beta" modules get their release status applied
@@ -130,35 +130,29 @@ function useFilteredSubItems(
   subModules: Record<string, LicensingModule[]>
 ) {
   return useMemo(() => {
-    // If no parent module specified, return all items
+    // If no parent module specified, return all items (e.g. Organization)
     if (!parentModuleId) return items
 
-    // Get sub-modules for this parent
-    const parentSubModules = subModules[parentModuleId] || []
-
-    // If no sub-modules loaded yet, return all items (for loading state)
-    if (parentSubModules.length === 0 && Object.keys(subModules).length === 0) {
+    // If sub-modules not loaded yet (API still fetching), show all items
+    // to prevent flash of empty content during initial load
+    if (Object.keys(subModules).length === 0) {
       return items
     }
 
+    // Get sub-modules for this parent from API response
+    const parentSubModules = subModules[parentModuleId] || []
+
     return items
       .map((item) => {
-        // Items without assetModuleKey are always shown (like "Overview")
-        if (!item.assetModuleKey) return item
+        // Items without subModuleKey are always shown (like "Overview")
+        if (!item.subModuleKey) return item
 
-        // Find the sub-module that matches this item
-        const subModule = parentSubModules.find((m) => m.slug === item.assetModuleKey)
+        // Find the sub-module that matches this item's key
+        const subModule = parentSubModules.find((m) => m.slug === item.subModuleKey)
 
         // If sub-module not found in API response, hide the item
-        // API only returns active modules, so absence = not available
-        if (!subModule) {
-          // If sub-modules exist for parent but this item not found, hide it
-          if (parentSubModules.length > 0) {
-            return null
-          }
-          // If no sub-modules at all for parent, show item as-is (backward compat)
-          return item
-        }
+        // API only returns enabled+active modules, so absence = not available
+        if (!subModule) return null
 
         // If sub-module is disabled, hide completely
         if (subModule.release_status === 'disabled') return null

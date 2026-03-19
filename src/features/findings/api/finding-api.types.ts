@@ -17,6 +17,7 @@ export type Severity = 'critical' | 'high' | 'medium' | 'low' | 'info' | 'none'
  * Terminal states: false_positive, accepted, duplicate (can reopen to confirmed)
  */
 export type FindingStatus =
+  // Automated statuses
   | 'new' // Scanner just found it
   | 'confirmed' // Verified as real issue, needs fix
   | 'in_progress' // Developer working on fix
@@ -24,6 +25,13 @@ export type FindingStatus =
   | 'false_positive' // Not a real issue (requires approval)
   | 'accepted' // Risk accepted (requires approval, has expiration)
   | 'duplicate' // Linked to another finding
+  // Pentest-specific statuses (source='pentest')
+  | 'draft' // Pentester drafting
+  | 'in_review' // Peer reviewing
+  | 'remediation' // Dev fixing (pentest)
+  | 'retest' // Awaiting re-verification
+  | 'verified' // Manual retest passed
+  | 'accepted_risk' // Risk accepted (pentest term)
 
 export type FindingSource =
   // Automated scanning tools (AppSec)
@@ -245,22 +253,44 @@ export interface ApiFinding {
   secret_service?: string
   secret_valid?: boolean
   secret_revoked?: boolean
+  secret_masked_value?: string
+  secret_entropy?: number
+  secret_scopes?: string[]
+  secret_expires_at?: string
+  secret_rotation_due_at?: string
+  secret_age_in_days?: number
+  secret_commit_count?: number
+  secret_in_history_only?: boolean
+  secret_verified_at?: string
 
   // Compliance-specific fields
   compliance_framework?: string
+  compliance_framework_version?: string
   compliance_control_id?: string
+  compliance_control_name?: string
+  compliance_control_description?: string
   compliance_result?: string
+  compliance_section?: string
 
   // Web3-specific fields
   web3_chain?: string
+  web3_chain_id?: number
   web3_contract_address?: string
   web3_swc_id?: string
+  web3_function_signature?: string
+  web3_tx_hash?: string
+  web3_function_selector?: string
+  web3_bytecode_offset?: number
 
   // Misconfiguration-specific fields
   misconfig_policy_id?: string
+  misconfig_policy_name?: string
   misconfig_resource_type?: string
+  misconfig_resource_name?: string
+  misconfig_resource_path?: string
   misconfig_expected?: string
   misconfig_actual?: string
+  misconfig_cause?: string
 }
 
 /**
@@ -438,6 +468,7 @@ export interface FindingApiFilters {
   rule_id?: string
   scan_id?: string
   file_path?: string
+  exclude_statuses?: string[]
   search?: string
   page?: number
   per_page?: number

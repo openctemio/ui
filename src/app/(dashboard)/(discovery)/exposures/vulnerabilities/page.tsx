@@ -21,9 +21,7 @@ import {
   Area,
 } from '@/components/charts'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { cn } from '@/lib/utils'
 import { Bug, AlertTriangle, Clock, Shield } from 'lucide-react'
 
 const SEVERITY_COLORS: Record<string, string> = {
@@ -41,15 +39,6 @@ const SEVERITY_LABELS: Record<string, string> = {
   low: 'Low',
   info: 'Info',
 }
-
-const SEVERITY_BADGE_VARIANTS: Record<string, 'destructive' | 'default' | 'secondary' | 'outline'> =
-  {
-    critical: 'destructive',
-    high: 'destructive',
-    medium: 'default',
-    low: 'secondary',
-    info: 'outline',
-  }
 
 const SEVERITY_ORDER = ['critical', 'high', 'medium', 'low', 'info'] as const
 

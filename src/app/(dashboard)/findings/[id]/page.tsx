@@ -37,6 +37,8 @@ import {
   ActivityPanel,
   DataFlowTab,
 } from '@/features/findings/components/detail'
+import { getSourceLayout, getOrderedTabs } from '@/features/findings/config/source-layout'
+import '@/features/findings/config/register-layouts'
 
 /**
  * Transform API response to FindingDetail format for UI components
@@ -55,6 +57,12 @@ function transformApiToFindingDetail(api: ApiFinding): FindingDetail {
     false_positive: 'false_positive',
     accepted: 'accepted',
     duplicate: 'duplicate',
+    draft: 'draft',
+    in_review: 'in_review',
+    remediation: 'remediation',
+    retest: 'retest',
+    verified: 'verified',
+    accepted_risk: 'accepted_risk',
   }
 
   // Create initial activity from creation
@@ -274,22 +282,55 @@ function transformApiToFindingDetail(api: ApiFinding): FindingDetail {
           service: api.secret_service,
           valid: api.secret_valid,
           revoked: api.secret_revoked,
+          maskedValue: api.secret_masked_value,
+          entropy: api.secret_entropy,
+          scopes: api.secret_scopes,
+          expiresAt: api.secret_expires_at,
+          rotationDueAt: api.secret_rotation_due_at,
+          ageInDays: api.secret_age_in_days,
+          commitCount: api.secret_commit_count,
+          inHistoryOnly: api.secret_in_history_only,
+          verifiedAt: api.secret_verified_at,
         }
       : undefined,
     complianceDetails: api.compliance_framework
       ? {
           framework: api.compliance_framework as ComplianceFramework,
+          frameworkVersion: api.compliance_framework_version,
           controlId: api.compliance_control_id,
+          controlName: api.compliance_control_name,
+          controlDescription: api.compliance_control_description,
           result: api.compliance_result as ComplianceResult | undefined,
+          section: api.compliance_section,
         }
       : undefined,
     web3Details: api.web3_chain
       ? {
           chain: api.web3_chain,
+          chainId: api.web3_chain_id,
           contractAddress: api.web3_contract_address,
           swcId: api.web3_swc_id,
+          functionSignature: api.web3_function_signature,
+          txHash: api.web3_tx_hash,
+          functionSelector: api.web3_function_selector,
+          bytecodeOffset: api.web3_bytecode_offset,
         }
       : undefined,
+    misconfigDetails: api.misconfig_policy_id
+      ? {
+          policyId: api.misconfig_policy_id,
+          policyName: api.misconfig_policy_name,
+          resourceType: api.misconfig_resource_type,
+          resourceName: api.misconfig_resource_name,
+          resourcePath: api.misconfig_resource_path,
+          expected: api.misconfig_expected,
+          actual: api.misconfig_actual,
+          cause: api.misconfig_cause,
+        }
+      : undefined,
+
+    // Raw scanner metadata
+    metadata: api.metadata,
   }
 }
 
@@ -390,7 +431,11 @@ export default function FindingDetailPage() {
   }
 
   // Real-time activity stream via SSE
-  const { realtimeActivities, status: streamStatus } = useActivityStream(id, {
+  const {
+    realtimeActivities,
+    status: streamStatus,
+    clearActivities,
+  } = useActivityStream(id, {
     // When we receive a new activity, check if it's a triage event
     onActivity: (activity) => {
       // Refresh activities to update total count
@@ -406,6 +451,11 @@ export default function FindingDetailPage() {
   // Transform API data to FindingDetail format
   // Asset info now comes from api.asset (enriched by backend), no need for separate fetch
   const finding = apiFinding ? transformApiToFindingDetail(apiFinding) : null
+
+  // Source-aware layout: hero component + tab ordering
+  const layout = finding ? getSourceLayout(finding) : {}
+  const orderedTabs = getOrderedTabs(layout)
+  const HeroComponent = layout.heroComponent
 
   // Merge real-time activities with fetched activities (deduplicate by ID)
   // Real-time activities take priority (shown first, newest)
@@ -433,10 +483,43 @@ export default function FindingDetailPage() {
       await addComment({ content })
       // Revalidate activities - comment is created as an activity record
       await mutateActivities()
+      clearActivities()
       toast.success('Comment added')
     } catch (error) {
       toast.error(getErrorMessage(error, 'Failed to add comment'))
       console.error('Add comment error:', error)
+    }
+  }
+
+  const handleEditComment = async (commentId: string, content: string) => {
+    try {
+      const response = await fetch(`/api/v1/findings/${id}/comments/${commentId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ content }),
+      })
+      if (!response.ok) throw new Error('Failed to update comment')
+      await mutateActivities()
+      clearActivities()
+      toast.success('Comment updated')
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Failed to update comment'))
+    }
+  }
+
+  const handleDeleteComment = async (commentId: string) => {
+    try {
+      const response = await fetch(`/api/v1/findings/${id}/comments/${commentId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      })
+      if (!response.ok) throw new Error('Failed to delete comment')
+      await mutateActivities()
+      clearActivities()
+      toast.success('Comment deleted')
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Failed to delete comment'))
     }
   }
 
@@ -495,56 +578,50 @@ export default function FindingDetailPage() {
               <FindingHeader finding={finding} onTriageCompleted={handleTriageCompleted} />
             </CardHeader>
 
-            {/* Tabs */}
-            <Tabs defaultValue="overview" className="flex min-h-0 flex-1 flex-col">
+            {/* Source-specific hero section */}
+            {HeroComponent && <HeroComponent finding={finding} />}
+
+            {/* Tabs — order and visibility driven by source layout */}
+            <Tabs defaultValue={orderedTabs[0]} className="flex min-h-0 flex-1 flex-col">
               <div className="flex-shrink-0 border-b px-3 sm:px-6 overflow-x-auto no-scrollbar">
                 <TabsList className="h-auto gap-2 sm:gap-4 rounded-none bg-transparent p-0 w-max min-w-full">
-                  <TabsTrigger
-                    value="overview"
-                    className="rounded-none border-b-2 border-transparent bg-transparent px-1 sm:px-0 pb-3 pt-3 text-sm sm:text-base whitespace-nowrap shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
-                  >
-                    Overview
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="evidence"
-                    className="rounded-none border-b-2 border-transparent bg-transparent px-1 sm:px-0 pb-3 pt-3 text-sm sm:text-base whitespace-nowrap shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
-                  >
-                    Evidence
-                    {(() => {
-                      const count =
-                        (finding.contextSnippet || finding.snippet ? 1 : 0) +
-                        (finding.stacks?.length || 0) +
-                        (finding.relatedLocations?.length || 0) +
-                        (finding.attachments?.length || 0)
-                      return count > 0 ? ` (${count})` : ''
-                    })()}
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="remediation"
-                    className="rounded-none border-b-2 border-transparent bg-transparent px-1 sm:px-0 pb-3 pt-3 text-sm sm:text-base whitespace-nowrap shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
-                  >
-                    Remediation
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="attack-path"
-                    className="rounded-none border-b-2 border-transparent bg-transparent px-1 sm:px-0 pb-3 pt-3 text-sm sm:text-base whitespace-nowrap shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
-                  >
-                    <span className="hidden sm:inline">Attack Path</span>
-                    <span className="sm:hidden">Path</span>
-                    {finding.dataFlow && (
-                      <span className="ml-1 sm:ml-1.5 rounded-full bg-blue-500/20 px-1 sm:px-1.5 py-0.5 text-[10px] text-blue-400">
-                        {(finding.dataFlow.sources?.length || 0) +
-                          (finding.dataFlow.intermediates?.length || 0) +
-                          (finding.dataFlow.sinks?.length || 0)}
-                      </span>
-                    )}
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="related"
-                    className="rounded-none border-b-2 border-transparent bg-transparent px-1 sm:px-0 pb-3 pt-3 text-sm sm:text-base whitespace-nowrap shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
-                  >
-                    Related
-                  </TabsTrigger>
+                  {orderedTabs.map((tab) => (
+                    <TabsTrigger
+                      key={tab}
+                      value={tab}
+                      className="rounded-none border-b-2 border-transparent bg-transparent px-1 sm:px-0 pb-3 pt-3 text-sm sm:text-base whitespace-nowrap shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                    >
+                      {tab === 'overview' && 'Overview'}
+                      {tab === 'evidence' && (
+                        <>
+                          Evidence
+                          {(() => {
+                            const count =
+                              (finding.contextSnippet || finding.snippet ? 1 : 0) +
+                              (finding.stacks?.length || 0) +
+                              (finding.relatedLocations?.length || 0) +
+                              (finding.attachments?.length || 0)
+                            return count > 0 ? ` (${count})` : ''
+                          })()}
+                        </>
+                      )}
+                      {tab === 'remediation' && 'Remediation'}
+                      {tab === 'attack-path' && (
+                        <>
+                          <span className="hidden sm:inline">Attack Path</span>
+                          <span className="sm:hidden">Path</span>
+                          {finding.dataFlow && (
+                            <span className="ml-1 sm:ml-1.5 rounded-full bg-blue-500/20 px-1 sm:px-1.5 py-0.5 text-[10px] text-blue-400">
+                              {(finding.dataFlow.sources?.length || 0) +
+                                (finding.dataFlow.intermediates?.length || 0) +
+                                (finding.dataFlow.sinks?.length || 0)}
+                            </span>
+                          )}
+                        </>
+                      )}
+                      {tab === 'related' && 'Related'}
+                    </TabsTrigger>
+                  ))}
                 </TabsList>
               </div>
 
@@ -607,6 +684,8 @@ export default function FindingDetailPage() {
                   <ActivityPanel
                     activities={allActivities}
                     onAddComment={handleAddComment}
+                    onEditComment={handleEditComment}
+                    onDeleteComment={handleDeleteComment}
                     total={activitiesTotal}
                     hasMore={!isReachingEnd}
                     isLoadingMore={isLoadingMore}

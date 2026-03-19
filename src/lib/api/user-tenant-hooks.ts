@@ -10,6 +10,7 @@ import * as React from 'react'
 import useSWR, { type SWRConfiguration } from 'swr'
 import { get } from './client'
 import { handleApiError } from './error-handler'
+import { devLog } from '@/lib/logger'
 import type { TenantMembership } from './user-tenant-types'
 
 // ============================================
@@ -49,7 +50,7 @@ const defaultConfig: SWRConfiguration = {
     // Don't show toast for auth errors - TenantGate will handle redirect
     const statusCode = (error as { statusCode?: number }).statusCode
     if (statusCode === 401) {
-      console.log('[useMyTenants] Auth error, will redirect to login')
+      devLog.log('[useMyTenants] Auth error, will redirect to login')
       return
     }
     handleApiError(error, {

@@ -30,6 +30,10 @@ import {
   ChevronUp,
   Loader2,
   AlertTriangle,
+  Pencil,
+  Trash2,
+  Check,
+  X,
 } from 'lucide-react'
 import type { Activity, ActivityType } from '../../types'
 import { ACTIVITY_TYPE_CONFIG, FINDING_STATUS_CONFIG, SEVERITY_CONFIG } from '../../types'
@@ -38,6 +42,8 @@ import type { Severity } from '@/features/shared/types'
 interface ActivityPanelProps {
   activities: Activity[]
   onAddComment?: (comment: string, isInternal: boolean) => void
+  onEditComment?: (commentId: string, content: string) => void
+  onDeleteComment?: (commentId: string) => void
   // Pagination props
   total?: number
   hasMore?: boolean
@@ -69,6 +75,8 @@ const ACTIVITY_ICONS: Record<ActivityType, React.ReactNode> = {
 export function ActivityPanel({
   activities,
   onAddComment,
+  onEditComment,
+  onDeleteComment,
   hasMore,
   isLoadingMore,
   onLoadMore,
@@ -77,6 +85,8 @@ export function ActivityPanel({
   const [isInternal, setIsInternal] = useState(false)
   const [expandedReplies, setExpandedReplies] = useState<Set<string>>(new Set())
   const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set())
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null)
+  const [editingContent, setEditingContent] = useState('')
 
   // Character limit for comment truncation (display)
   const COMMENT_TRUNCATE_LENGTH = 200
@@ -312,7 +322,7 @@ export function ActivityPanel({
         return (
           <div className="space-y-3">
             <div
-              className={`rounded-lg p-3 ${activity.type === 'internal_note' ? 'border border-amber-500/20 bg-amber-500/10' : 'bg-muted/50'}`}
+              className={`group/comment rounded-lg p-3 ${activity.type === 'internal_note' ? 'border border-amber-500/20 bg-amber-500/10' : 'bg-muted/50'}`}
             >
               {activity.type === 'internal_note' && (
                 <div className="mb-2 flex items-center gap-1 text-xs text-amber-400">
@@ -320,9 +330,44 @@ export function ActivityPanel({
                   Internal Note
                 </div>
               )}
-              <div className="text-sm prose prose-sm dark:prose-invert max-w-none [&_pre]:text-xs [&_code]:text-xs [&_p]:my-1">
-                <MarkdownPreview content={displayContent} />
-              </div>
+              {editingCommentId === activity.id ? (
+                <div className="space-y-2">
+                  <Textarea
+                    value={editingContent}
+                    onChange={(e) => setEditingContent(e.target.value)}
+                    className="min-h-[60px] max-h-[120px] resize-none text-sm"
+                  />
+                  <div className="flex items-center gap-1 justify-end">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 text-xs"
+                      onClick={() => setEditingCommentId(null)}
+                    >
+                      <X className="mr-1 h-3 w-3" />
+                      Cancel
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="h-6 text-xs"
+                      disabled={!editingContent.trim()}
+                      onClick={() => {
+                        // Use comment_id from activity metadata (activity.id is the activity record, not the comment)
+                        const commentId = (activity.metadata?.comment_id as string) || activity.id
+                        onEditComment?.(commentId, editingContent)
+                        setEditingCommentId(null)
+                      }}
+                    >
+                      <Check className="mr-1 h-3 w-3" />
+                      Save
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-sm prose prose-sm dark:prose-invert max-w-none [&_pre]:text-xs [&_code]:text-xs [&_p]:my-1">
+                  <MarkdownPreview content={displayContent} />
+                </div>
+              )}
               {isLongComment && !wasBackendTruncated && (
                 <Button
                   variant="link"
@@ -379,6 +424,41 @@ export function ActivityPanel({
                       </Tooltip>
                     </TooltipProvider>
                   ))}
+                </div>
+              )}
+
+              {/* Edit/Delete Actions */}
+              {(onEditComment || onDeleteComment) && editingCommentId !== activity.id && (
+                <div className="mt-2 flex items-center gap-1 opacity-0 group-hover/comment:opacity-100 transition-opacity">
+                  {onEditComment && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-5 w-5 p-0"
+                      onClick={() => {
+                        setEditingCommentId(activity.id)
+                        setEditingContent(activity.content || '')
+                      }}
+                    >
+                      <Pencil className="h-3 w-3" />
+                    </Button>
+                  )}
+                  {onDeleteComment && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-5 w-5 p-0 text-destructive hover:text-destructive"
+                      onClick={() => {
+                        if (window.confirm('Delete this comment?')) {
+                          // Use comment_id from activity metadata (activity.id is the activity record, not the comment)
+                          const commentId = (activity.metadata?.comment_id as string) || activity.id
+                          onDeleteComment(commentId)
+                        }
+                      }}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  )}
                 </div>
               )}
             </div>

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo, useCallback } from 'react'
+import Link from 'next/link'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { ColumnDef } from '@tanstack/react-table'
 import { Main } from '@/components/layout'
@@ -35,6 +36,7 @@ import {
   AlertCircle,
   Loader2,
   Route,
+  ClipboardList,
 } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import {
@@ -68,6 +70,7 @@ import type { Finding, FindingStatus, FindingUser } from '@/features/findings'
 import type { Severity } from '@/features/shared/types'
 import { toast } from 'sonner'
 import { getErrorMessage } from '@/lib/api/error-handler'
+import { usePermissions } from '@/context/permission-provider'
 
 // ============================================
 // Transform API Finding to UI Finding
@@ -227,6 +230,12 @@ export default function FindingsPage() {
   const [findingToDelete, setFindingToDelete] = useState<Finding | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
+  const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [searchQuery, setSearchQuery] = useState('')
+  const { hasPermission } = usePermissions()
+
+  // Statuses hidden from default dashboard view (pentest WIP, not ready for visibility)
+  const HIDDEN_STATUSES = useMemo(() => ['draft', 'in_review'], [])
 
   // Build API filters
   const apiFilters = useMemo((): FindingApiFilters => {
@@ -238,8 +247,19 @@ export default function FindingsPage() {
     if (severityTab !== 'all') {
       filters.severities = [severityTab as ApiSeverity]
     }
+    if (statusFilter !== 'all') {
+      filters.statuses = [
+        statusFilter as FindingApiFilters['statuses'] extends (infer U)[] ? U : never,
+      ]
+    } else {
+      // Default: exclude draft/in_review (pentest WIP not ready for dashboard)
+      filters.exclude_statuses = HIDDEN_STATUSES
+    }
+    if (searchQuery.trim()) {
+      filters.search = searchQuery.trim()
+    }
     return filters
-  }, [assetIdFilter, sourceIdFilter, severityTab])
+  }, [assetIdFilter, sourceIdFilter, severityTab, statusFilter, searchQuery])
 
   // Fetch finding stats (stable, not affected by severity filter)
   const { data: findingStats, isLoading: statsLoading, mutate: mutateStats } = useFindingStatsApi()
@@ -314,19 +334,100 @@ export default function FindingsPage() {
   }
 
   const handleExport = (format: string) => {
-    toast.success(`Exporting findings as ${format}...`, {
-      description: 'File will be downloaded shortly',
-    })
+    if (!findings.length) {
+      toast.error('No findings to export')
+      return
+    }
+
+    if (format === 'CSV') {
+      const headers = ['ID', 'Title', 'Severity', 'Status', 'Source', 'Scanner', 'Created At']
+      const rows = findings.map((f) => [
+        f.id,
+        `"${(f.title || '').replace(/"/g, '""')}"`,
+        f.severity,
+        f.status,
+        f.source || '',
+        f.scanner || '',
+        f.createdAt,
+      ])
+      const csv = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n')
+      const blob = new Blob([csv], { type: 'text/csv' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `findings-${new Date().toISOString().split('T')[0]}.csv`
+      a.click()
+      URL.revokeObjectURL(url)
+      toast.success('CSV exported successfully')
+    } else if (format === 'JSON') {
+      const data = findings.map((f) => ({
+        id: f.id,
+        title: f.title,
+        severity: f.severity,
+        status: f.status,
+        source: f.source,
+        scanner: f.scanner,
+        cve: f.cve,
+        createdAt: f.createdAt,
+      }))
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `findings-${new Date().toISOString().split('T')[0]}.json`
+      a.click()
+      URL.revokeObjectURL(url)
+      toast.success('JSON exported successfully')
+    } else {
+      toast.info('PDF export coming soon')
+    }
   }
 
-  const handleBulkAssign = () => {
-    toast.success(`Assigning ${selectedCount} findings...`)
-    setRowSelection({})
+  const handleBulkAssign = async () => {
+    const selectedIds = Object.keys(rowSelection).filter((k) => rowSelection[k])
+    const findingIds = selectedIds.map((idx) => findings[parseInt(idx)]?.id).filter(Boolean)
+    if (findingIds.length === 0) return
+
+    // For now, use prompt for user ID - a proper dialog would be Phase 2
+    const userId = window.prompt('Enter user ID to assign findings to:')
+    if (!userId?.trim()) return
+
+    try {
+      const response = await fetch('/api/v1/findings/bulk/assign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ finding_ids: findingIds, user_id: userId.trim() }),
+      })
+      if (!response.ok) throw new Error('Failed to assign findings')
+      toast.success(`Assigned ${findingIds.length} findings`)
+      setRowSelection({})
+      mutateFindings()
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Failed to assign findings'))
+    }
   }
 
-  const handleBulkStatusChange = (status: string) => {
-    toast.success(`Updating ${selectedCount} findings to ${status}`)
-    setRowSelection({})
+  const handleBulkStatusChange = async (status: string) => {
+    const selectedIds = Object.keys(rowSelection).filter((k) => rowSelection[k])
+    const findingIds = selectedIds.map((idx) => findings[parseInt(idx)]?.id).filter(Boolean)
+    if (findingIds.length === 0) return
+
+    try {
+      const response = await fetch('/api/v1/findings/bulk/status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ finding_ids: findingIds, status }),
+      })
+      if (!response.ok) throw new Error('Failed to update findings')
+      toast.success(`Updated ${findingIds.length} findings to ${status}`)
+      setRowSelection({})
+      mutateFindings()
+      mutateStats()
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Failed to update findings'))
+    }
   }
 
   const handleRowClick = useCallback((finding: Finding) => {
@@ -581,20 +682,22 @@ export default function FindingsPage() {
                   <Flag className="mr-2 h-4 w-4" />
                   Mark as False Positive
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  className="text-red-500"
-                  onClick={() => handleRowAction('delete', finding)}
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete
-                </DropdownMenuItem>
+                {hasPermission('findings:delete') && (
+                  <DropdownMenuItem
+                    className="text-red-500"
+                    onClick={() => handleRowAction('delete', finding)}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete
+                  </DropdownMenuItem>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           )
         },
       },
     ],
-    [handleRowAction, handleRowClick]
+    [handleRowAction, handleRowClick, hasPermission]
   )
 
   // Error state
@@ -630,6 +733,12 @@ export default function FindingsPage() {
           }
         >
           <div className="flex flex-wrap items-center gap-2">
+            <Link href="/findings/approvals">
+              <Button variant="outline" size="sm">
+                <ClipboardList className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Approvals</span>
+              </Button>
+            </Link>
             <Button
               variant="outline"
               size="sm"
@@ -662,10 +771,12 @@ export default function FindingsPage() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button size="sm" onClick={() => setCreateDialogOpen(true)}>
-              <Plus className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">Add Finding</span>
-            </Button>
+            {hasPermission('findings:write') && (
+              <Button size="sm" onClick={() => setCreateDialogOpen(true)}>
+                <Plus className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Add Finding</span>
+              </Button>
+            )}
           </div>
         </PageHeader>
 
@@ -698,6 +809,64 @@ export default function FindingsPage() {
             )}
           </div>
         )}
+
+        {/* Filter Bar */}
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <div className="flex-1 min-w-[200px] max-w-sm">
+            <input
+              type="text"
+              placeholder="Search findings..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            />
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Filter className="mr-2 h-4 w-4" />
+                Status:{' '}
+                {statusFilter === 'all'
+                  ? 'All'
+                  : FINDING_STATUS_CONFIG[statusFilter as FindingStatus]?.label || statusFilter}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onClick={() => setStatusFilter('all')}>All</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setStatusFilter('new')}>New</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setStatusFilter('confirmed')}>
+                Confirmed
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setStatusFilter('in_progress')}>
+                In Progress
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setStatusFilter('resolved')}>
+                Resolved
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setStatusFilter('false_positive')}>
+                False Positive
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setStatusFilter('accepted')}>
+                Accepted
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setStatusFilter('draft')}>Draft</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setStatusFilter('in_review')}>
+                In Review
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setStatusFilter('remediation')}>
+                Remediation
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setStatusFilter('retest')}>Retest</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setStatusFilter('verified')}>
+                Verified
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setStatusFilter('accepted_risk')}>
+                Accepted Risk
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
 
         {/* Bulk Actions Bar - Shows when items selected */}
         {selectedCount > 0 && (

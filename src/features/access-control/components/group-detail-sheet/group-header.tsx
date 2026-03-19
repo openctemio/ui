@@ -31,8 +31,8 @@ export function GroupHeader({
 
   return (
     <div className="relative px-6 pt-8 pb-6 bg-gradient-to-b from-muted/50 to-background">
-      {/* Edit Button */}
-      <div className="absolute top-4 right-4">
+      {/* Edit Button - positioned below Sheet close button to avoid overlap */}
+      <div className="absolute top-14 right-4">
         {isEditing ? (
           <div className="flex gap-2">
             <Button size="sm" variant="ghost" onClick={onCancelEdit}>

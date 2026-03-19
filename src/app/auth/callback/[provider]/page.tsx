@@ -12,6 +12,7 @@ import {
   handleOAuthCallback,
   type SocialProvider,
 } from '@/features/auth/actions/social-auth-actions'
+import { validateRedirectUrl } from '@/lib/redirect'
 
 // ============================================
 // TYPES
@@ -72,7 +73,7 @@ export default async function OAuthCallbackPage({ params, searchParams }: OAuthC
 
   // Get the stored redirect destination
   const cookieStore = await cookies()
-  const redirectTo = cookieStore.get('oauth_redirect')?.value || '/'
+  const redirectTo = validateRedirectUrl(cookieStore.get('oauth_redirect')?.value, '/')
 
   // Clean up redirect cookie
   cookieStore.delete('oauth_redirect')

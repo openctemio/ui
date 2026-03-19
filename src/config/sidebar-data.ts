@@ -16,6 +16,7 @@
 import {
   LayoutDashboard,
   FolderKanban,
+  ClipboardCheck,
   Target,
   Settings2,
   Radar,
@@ -142,6 +143,13 @@ export const sidebarData: SidebarData = {
           permission: Permission.ScopeRead,
           module: 'assets',
         },
+        {
+          title: 'Compliance',
+          url: '/compliance',
+          icon: ClipboardCheck,
+          permission: Permission.ComplianceFrameworksRead,
+          module: 'compliance',
+        },
       ],
     },
 
@@ -182,107 +190,101 @@ export const sidebarData: SidebarData = {
               title: 'Domains',
               url: '/assets/domains',
               icon: Globe,
-              assetModuleKey: 'domains',
+              subModuleKey: 'domains',
             },
             {
               title: 'Certificates',
               url: '/assets/certificates',
               icon: ShieldCheck,
-              assetModuleKey: 'certificates',
+              subModuleKey: 'certificates',
             },
             {
               title: 'IP Addresses',
               url: '/assets/ip-addresses',
               icon: Target,
-              assetModuleKey: 'ip-addresses',
+              subModuleKey: 'ip-addresses',
             },
             // Applications - Web, mobile, API services
             {
               title: 'Websites',
               url: '/assets/websites',
               icon: MonitorSmartphone,
-              assetModuleKey: 'websites',
+              subModuleKey: 'websites',
             },
             {
               title: 'APIs',
               url: '/assets/apis',
               icon: Zap,
-              assetModuleKey: 'apis',
+              subModuleKey: 'apis',
             },
             {
               title: 'Mobile Apps',
               url: '/assets/mobile',
               icon: Smartphone,
-              assetModuleKey: 'mobile',
+              subModuleKey: 'mobile',
             },
             {
               title: 'Services',
               url: '/assets/services',
               icon: Zap,
-              assetModuleKey: 'services',
+              subModuleKey: 'services',
             },
             // Cloud Infrastructure
             {
               title: 'Cloud Accounts',
               url: '/assets/cloud-accounts',
               icon: Cloud,
-              assetModuleKey: 'cloud-accounts',
+              subModuleKey: 'cloud-accounts',
             },
             {
               title: 'Cloud Resources',
-              url: '/assets/cloud',
+              url: '/assets/cloud-resources',
               icon: Cloud,
-              assetModuleKey: 'cloud',
-            },
-            {
-              title: 'Compute',
-              url: '/assets/compute',
-              icon: Server,
-              assetModuleKey: 'compute',
+              subModuleKey: 'cloud-resources',
             },
             {
               title: 'Storage',
               url: '/assets/storage',
               icon: Database,
-              assetModuleKey: 'storage',
+              subModuleKey: 'storage',
             },
             {
               title: 'Serverless',
               url: '/assets/serverless',
               icon: Zap,
-              assetModuleKey: 'serverless',
+              subModuleKey: 'serverless',
             },
             // Infrastructure - Servers, containers, networks
             {
               title: 'Hosts',
               url: '/assets/hosts',
               icon: Server,
-              assetModuleKey: 'hosts',
+              subModuleKey: 'hosts',
             },
             {
               title: 'Kubernetes',
               url: '/assets/containers',
               icon: Boxes,
-              assetModuleKey: 'containers',
+              subModuleKey: 'containers',
             },
             {
               title: 'Databases',
               url: '/assets/databases',
               icon: Database,
-              assetModuleKey: 'databases',
+              subModuleKey: 'databases',
             },
             {
               title: 'Networks',
               url: '/assets/networks',
               icon: Target,
-              assetModuleKey: 'networks',
+              subModuleKey: 'networks',
             },
             // Code & CI/CD
             {
               title: 'Repositories',
               url: '/assets/repositories',
               icon: GitBranch,
-              assetModuleKey: 'repositories',
+              subModuleKey: 'repositories',
             },
           ],
         },
@@ -294,7 +296,7 @@ export const sidebarData: SidebarData = {
           url: '/exposures',
           icon: AlertTriangle,
           permission: Permission.FindingsRead,
-          module: 'findings',
+          module: 'exposures',
         },
         // ----------------------------------------
         // CREDENTIAL LEAKS
@@ -413,7 +415,6 @@ export const sidebarData: SidebarData = {
               title: 'Findings',
               url: '/pentest/findings',
               icon: Bug,
-              badge: '12',
             },
             {
               title: 'Retests',
@@ -437,14 +438,14 @@ export const sidebarData: SidebarData = {
           url: '/attack-simulation',
           icon: Swords,
           permission: Permission.PentestRead,
-          module: 'pentest',
+          module: 'attack_simulation', // Separate module — not yet implemented
         },
         {
           title: 'Control Testing',
           url: '/control-testing',
           icon: ShieldCheck,
           permission: Permission.PentestRead,
-          module: 'pentest',
+          module: 'control_testing', // Separate module — not yet implemented
         },
       ],
     },
@@ -493,13 +494,7 @@ export const sidebarData: SidebarData = {
           url: '/findings',
           icon: FileWarning,
           // Badge is dynamically fetched from dashboard stats - see useDynamicBadges hook
-          permission: Permission.FindingsRead,
-          module: 'findings',
-        },
-        {
-          title: 'Approvals',
-          url: '/findings/approvals',
-          icon: ClipboardList,
+          // Approvals accessible via button in findings page (not sidebar - keeps sidebar lean)
           permission: Permission.FindingsRead,
           module: 'findings',
         },
@@ -621,6 +616,27 @@ export const sidebarData: SidebarData = {
               // Requires audit:read permission (core feature - no module required)
               permission: Permission.AuditRead,
             },
+            {
+              title: 'Risk Scoring',
+              url: '/settings/scoring',
+              icon: Scale,
+              // Requires team:update permission (admin-level configuration)
+              permission: Permission.TeamUpdate,
+            },
+            {
+              title: 'Modules',
+              url: '/settings/modules',
+              icon: Boxes,
+              // Requires team:update permission (admin-level configuration)
+              permission: Permission.TeamUpdate,
+            },
+            {
+              title: 'Pentest',
+              url: '/settings/pentest',
+              icon: Crosshair,
+              permission: Permission.TeamUpdate,
+              module: 'pentest',
+            },
           ],
         },
         {
@@ -640,26 +656,31 @@ export const sidebarData: SidebarData = {
               title: 'SCMs',
               url: '/settings/integrations/scm',
               icon: GitBranch,
+              subModuleKey: 'scm',
             },
             {
               title: 'Notifications',
               url: '/settings/integrations/notifications',
               icon: Bell,
+              subModuleKey: 'notifications',
             },
             {
               title: 'CI/CD',
               url: '/settings/integrations/cicd',
               icon: Workflow,
+              subModuleKey: 'pipelines_int',
             },
             {
               title: 'Ticketing',
               url: '/settings/integrations/ticketing',
               icon: ListChecks,
+              subModuleKey: 'ticketing',
             },
             {
               title: 'SIEM',
               url: '/settings/integrations/siem',
               icon: Shield,
+              subModuleKey: 'siem',
             },
           ],
         },

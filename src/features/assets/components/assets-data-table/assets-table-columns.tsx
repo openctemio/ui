@@ -20,6 +20,8 @@ import {
   Trash2,
   MoreHorizontal,
   Copy,
+  User,
+  Users,
   type LucideIcon,
 } from 'lucide-react'
 import type { Asset } from '../../types'
@@ -31,6 +33,7 @@ export interface AssetColumnConfig {
   showClassification?: boolean
   showFindings?: boolean
   showRiskScore?: boolean
+  showOwner?: boolean
   showTags?: boolean
   showActions?: boolean
   showCreatedAt?: boolean
@@ -53,6 +56,7 @@ const defaultConfig: AssetColumnConfig = {
   showClassification: true,
   showFindings: true,
   showRiskScore: true,
+  showOwner: true,
   showTags: false,
   showActions: true,
 }
@@ -192,6 +196,28 @@ export function createAssetColumns(
         </Button>
       ),
       cell: ({ row }) => <RiskScoreBadge score={row.original.riskScore} size="sm" />,
+    })
+  }
+
+  // Owner column
+  if (mergedConfig.showOwner) {
+    columns.push({
+      id: 'owner',
+      header: 'Owner',
+      cell: ({ row }) => {
+        const owner = row.original.primaryOwner
+        if (!owner) {
+          return <span className="text-muted-foreground text-sm">-</span>
+        }
+        const OwnerIcon = owner.type === 'group' ? Users : User
+        return (
+          <div className="flex items-center gap-1.5 max-w-[140px]">
+            <OwnerIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+            <span className="truncate text-sm">{owner.name}</span>
+          </div>
+        )
+      },
+      enableSorting: false,
     })
   }
 

@@ -10,8 +10,9 @@
 'use client'
 
 import * as React from 'react'
-import { useRouter } from 'next/navigation'
+// useRouter removed — cache.clear() handles revalidation without router.refresh()
 import { useSWRConfig } from 'swr'
+import { devLog } from '@/lib/logger'
 import { useMyTenants, invalidateMyTenantsCache } from '@/lib/api/user-tenant-hooks'
 import type { TenantMembership, TenantRole } from '@/lib/api/user-tenant-types'
 import { getCookie, setCookie, removeCookie } from '@/lib/cookies'
@@ -89,7 +90,7 @@ function readTenantFromCookie(): { tenant: CurrentTenant | null; hasCookie: bool
 }
 
 export function TenantProvider({ children }: TenantProviderProps) {
-  const router = useRouter()
+  // router removed — see switchTeam for explanation
   const { mutate: globalMutate } = useSWRConfig()
 
   // Start with null, read from cookie in useLayoutEffect to avoid hydration mismatch
@@ -108,7 +109,7 @@ export function TenantProvider({ children }: TenantProviderProps) {
     initialReadDoneRef.current = true
 
     const { tenant, hasCookie } = readTenantFromCookie()
-    console.log('[TenantProvider] Initial read:', { tenant: tenant?.id, hasCookie })
+    devLog.log('[TenantProvider] Initial read:', { tenant: tenant?.id, hasCookie })
     setCurrentTenant(tenant)
     setHasTenantCookie(hasCookie)
 
@@ -116,7 +117,7 @@ export function TenantProvider({ children }: TenantProviderProps) {
     if (!tenant && hasCookie) {
       const tenantCookie = getCookie(TENANT_COOKIE)
       if (tenantCookie) {
-        console.warn('[TenantProvider] Invalid tenant cookie format, clearing cookie')
+        devLog.warn('[TenantProvider] Invalid tenant cookie format, clearing cookie')
         removeCookie(TENANT_COOKIE)
         setHasTenantCookie(false)
       }
@@ -161,7 +162,7 @@ export function TenantProvider({ children }: TenantProviderProps) {
       // Find the target tenant
       const targetTenant = tenants.find((t) => t.id === tenantId)
       if (!targetTenant) {
-        console.error('[TenantProvider] Tenant not found:', tenantId)
+        devLog.error('[TenantProvider] Tenant not found:', tenantId)
         return
       }
 
@@ -225,26 +226,38 @@ export function TenantProvider({ children }: TenantProviderProps) {
           { path: '/', maxAge: 7 * 24 * 60 * 60 }
         )
 
-        // Clear all SWR caches to force refetch with new tenant context
-        // This invalidates all cached data so components will refetch
-        await globalMutate(
-          () => true, // Match all keys
-          undefined, // Clear data
-          { revalidate: true } // Trigger revalidation
+        // Invalidate SWR cache for the new tenant.
+        //
+        // Why selective revalidation? globalMutate with revalidate:true causes
+        // DOUBLE API calls for hooks that include tenantId in their SWR key:
+        //   1. globalMutate revalidates the OLD key (wasted fetch for old tenant)
+        //   2. React re-render creates NEW key → SWR auto-fetches (correct fetch)
+        //
+        // Fix: Skip keys containing the old tenantId (they'll get new keys after
+        // re-render and fetch automatically). Only revalidate keys WITHOUT tenantId
+        // (notifications, platform/stats, etc.) that won't change on re-render.
+        const oldTenantId = currentTenant?.id
+        globalMutate(
+          (key: unknown) => {
+            if (oldTenantId) {
+              const keyStr = Array.isArray(key) ? JSON.stringify(key) : String(key)
+              if (keyStr.includes(oldTenantId)) return false
+            }
+            return true
+          },
+          undefined,
+          { revalidate: true }
         )
 
-        // Also refresh server components
-        router.refresh()
-
-        console.log('[TenantProvider] Switched to team:', newTenant.name)
+        devLog.log('[TenantProvider] Switched to team:', newTenant.name)
       } catch (error) {
-        console.error('[TenantProvider] Failed to switch team:', error)
+        devLog.error('[TenantProvider] Failed to switch team:', error)
         throw error
       } finally {
         setIsSwitching(false)
       }
     },
-    [currentTenant, tenants, isSwitching, router, globalMutate]
+    [currentTenant, tenants, isSwitching, globalMutate]
   )
 
   // Refresh tenants

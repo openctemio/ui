@@ -8,14 +8,17 @@
 'use client'
 
 import { useEffect, useRef, useCallback, useState, useMemo } from 'react'
+import { devLog } from '@/lib/logger'
 import {
   WebSocketClient,
   initWebSocketClient,
   destroyWebSocketClient,
+  getWebSocketClient,
   type ConnectionState,
   type ChannelType,
   makeChannel,
 } from '@/lib/websocket'
+import { useWebSocket } from '@/context/websocket-provider'
 import { env } from '@/lib/env'
 
 // ============================================
@@ -176,6 +179,7 @@ interface UseChannelReturn<T> {
  */
 export function useChannel<T = unknown>(options: UseChannelOptions<T>): UseChannelReturn<T> {
   const { channelType, channelId, enabled = true, onData } = options
+  const { isConnected } = useWebSocket()
 
   const [data, setData] = useState<T | null>(null)
   const [isSubscribed, setIsSubscribed] = useState(false)
@@ -186,28 +190,25 @@ export function useChannel<T = unknown>(options: UseChannelOptions<T>): UseChann
     callbackRef.current = onData
   }, [onData])
 
-  // Subscribe/unsubscribe when channel changes
+  // Subscribe/unsubscribe when channel changes or connection state changes
   useEffect(() => {
     if (!enabled || !channelId) {
       setIsSubscribed(false)
       return
     }
 
-    const channel = makeChannel(channelType, channelId)
-
-    // Get the global client (if initialized)
+    // Wait for WebSocket client to be initialized and connected
     let client: WebSocketClient | null = null
     try {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { getWebSocketClient } = require('@/lib/websocket')
       client = getWebSocketClient()
     } catch {
-      // Client not initialized yet
-      console.log('[useChannel] WebSocket client not initialized')
+      // Client not initialized yet — will retry when isConnected changes
       return
     }
 
     if (!client) return
+
+    const channel = makeChannel(channelType, channelId)
 
     const handleData = (eventData: T) => {
       setData(eventData)
@@ -221,7 +222,10 @@ export function useChannel<T = unknown>(options: UseChannelOptions<T>): UseChann
         setIsSubscribed(true)
       })
       .catch((error) => {
-        console.error('[useChannel] Subscribe error:', error)
+        devLog.error('[useChannel] Subscribe error:', error)
+        // If we get an error (like timeout), don't treat it as fatally unsubscribed
+        // since the WS client will try to resubscribe on reconnect anyway,
+        // but we'll set isSubscribed false for UI purposes.
         setIsSubscribed(false)
       })
 
@@ -232,7 +236,7 @@ export function useChannel<T = unknown>(options: UseChannelOptions<T>): UseChann
       })
       setIsSubscribed(false)
     }
-  }, [channelType, channelId, enabled])
+  }, [channelType, channelId, enabled, isConnected])
 
   const clearData = useCallback(() => {
     setData(null)
@@ -301,6 +305,20 @@ export function useTenantChannel<T = unknown>(
   return useChannel<T>({
     channelType: 'tenant',
     channelId: tenantId,
+    ...options,
+  })
+}
+
+/**
+ * Hook to subscribe to group membership/scope rule changes
+ */
+export function useGroupChannel<T = unknown>(
+  groupId: string | null,
+  options: { enabled?: boolean; onData?: (data: T) => void } = {}
+) {
+  return useChannel<T>({
+    channelType: 'group',
+    channelId: groupId,
     ...options,
   })
 }

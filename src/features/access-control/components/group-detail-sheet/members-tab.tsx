@@ -9,33 +9,68 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Users, UserPlus, Trash2, MoreHorizontal, Crown, User, Search } from 'lucide-react'
+import {
+  Users,
+  UserPlus,
+  Trash2,
+  MoreHorizontal,
+  Crown,
+  User,
+  Search,
+  ChevronLeft,
+  ChevronRight,
+} from 'lucide-react'
 import { MemberRoleConfig, getInitials, type GroupMember } from '@/features/access-control'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 interface MembersTabProps {
   members: GroupMember[]
+  totalCount: number
   isLoading: boolean
+  limit: number
+  offset: number
+  onPageChange: (offset: number) => void
   onAddMember: () => void
   onRemoveMember: (userId: string, name: string) => void
 }
 
-export function MembersTab({ members, isLoading, onAddMember, onRemoveMember }: MembersTabProps) {
+export function MembersTab({
+  members,
+  totalCount,
+  isLoading,
+  limit,
+  offset,
+  onPageChange,
+  onAddMember,
+  onRemoveMember,
+}: MembersTabProps) {
   const [searchQuery, setSearchQuery] = useState('')
 
-  const filteredMembers = members.filter((member) => {
-    const name = member.name || member.user_name || member.user?.name || ''
-    const email = member.email || member.user_email || member.user?.email || ''
-    return (
-      name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      email.toLowerCase().includes(searchQuery.toLowerCase())
-    )
-  })
+  // Reset to first page when search query changes
+  useEffect(() => {
+    if (searchQuery) {
+      onPageChange(0)
+    }
+  }, [searchQuery, onPageChange])
+
+  const filteredMembers = searchQuery
+    ? members.filter((member) => {
+        const name = member.name || member.user_name || member.user?.name || ''
+        const email = member.email || member.user_email || member.user?.email || ''
+        return (
+          name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          email.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+      })
+    : members
+
+  const currentPage = Math.floor(offset / limit) + 1
+  const totalPages = Math.ceil(totalCount / limit)
 
   return (
     <div className="mt-4">
       <div className="flex items-center justify-between mb-4">
-        <h4 className="text-sm font-medium">Group Members ({members.length})</h4>
+        <h4 className="text-sm font-medium">Group Members ({totalCount})</h4>
         <Button size="sm" onClick={onAddMember}>
           <UserPlus className="mr-2 h-4 w-4" />
           Add Member
@@ -58,7 +93,7 @@ export function MembersTab({ members, isLoading, onAddMember, onRemoveMember }: 
             <Skeleton key={i} className="h-14 w-full" />
           ))}
         </div>
-      ) : members.length === 0 ? (
+      ) : totalCount === 0 ? (
         <div className="text-center py-8 text-muted-foreground">
           <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
           <p>No members in this group yet</p>
@@ -89,9 +124,9 @@ export function MembersTab({ members, isLoading, onAddMember, onRemoveMember }: 
                     <p className="font-medium text-sm">{name}</p>
                     <p className="text-xs text-muted-foreground">
                       {email}
-                      {member.added_by && (
+                      {(member.added_by_name || member.added_by) && (
                         <span className="ml-1 text-xs text-muted-foreground/60">
-                          • Added by {member.added_by}
+                          • Added by {member.added_by_name || member.added_by}
                         </span>
                       )}
                     </p>
@@ -126,6 +161,33 @@ export function MembersTab({ members, isLoading, onAddMember, onRemoveMember }: 
               </div>
             )
           })}
+        </div>
+      )}
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between mt-4 pt-4 border-t">
+          <span className="text-xs text-muted-foreground">
+            Page {currentPage} of {totalPages} ({totalCount} total)
+          </span>
+          <div className="flex items-center gap-1">
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={offset === 0}
+              onClick={() => onPageChange(Math.max(0, offset - limit))}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={offset + limit >= totalCount}
+              onClick={() => onPageChange(offset + limit)}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       )}
     </div>

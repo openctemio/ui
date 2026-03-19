@@ -1,5 +1,6 @@
 'use client'
 
+import { useCallback } from 'react'
 import { useState } from 'react'
 import Link from 'next/link'
 import { formatDistanceToNow } from 'date-fns'
@@ -10,6 +11,7 @@ import {
   CheckCheck,
   CheckCircle,
   Info,
+  Loader2,
   Scan,
   User,
   XCircle,
@@ -20,75 +22,16 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
-
-// Types
-interface UserNotification {
-  id: string
-  notification_type: string
-  title: string
-  body?: string
-  severity: 'critical' | 'high' | 'medium' | 'low' | 'info'
-  icon?: string
-  resource_type?: string
-  resource_id?: string
-  url?: string
-  is_read: boolean
-  created_at: string
-}
-
-// Mock data - will be replaced with API calls
-const mockNotifications: UserNotification[] = [
-  {
-    id: '1',
-    notification_type: 'finding_new',
-    title: 'Critical SQL Injection vulnerability found',
-    body: 'Detected in api-server.example.com - Immediate action required',
-    severity: 'critical',
-    url: '/findings',
-    is_read: false,
-    created_at: new Date(Date.now() - 2 * 60 * 1000).toISOString(), // 2 min ago
-  },
-  {
-    id: '2',
-    notification_type: 'scan_completed',
-    title: 'Weekly Security Scan completed',
-    body: 'Found 3 new vulnerabilities, 12 assets scanned',
-    severity: 'info',
-    url: '/scans',
-    is_read: false,
-    created_at: new Date(Date.now() - 15 * 60 * 1000).toISOString(), // 15 min ago
-  },
-  {
-    id: '3',
-    notification_type: 'finding_assigned',
-    title: 'Finding assigned to you',
-    body: 'XSS vulnerability in login page needs your attention',
-    severity: 'high',
-    url: '/findings',
-    is_read: false,
-    created_at: new Date(Date.now() - 60 * 60 * 1000).toISOString(), // 1 hour ago
-  },
-  {
-    id: '4',
-    notification_type: 'finding_status_change',
-    title: 'Finding marked as resolved',
-    body: 'CSRF vulnerability has been fixed and verified',
-    severity: 'medium',
-    url: '/findings',
-    is_read: true,
-    created_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
-  },
-  {
-    id: '5',
-    notification_type: 'scan_failed',
-    title: 'Scan failed: Connection timeout',
-    body: 'Unable to reach target: staging.example.com',
-    severity: 'high',
-    url: '/scans',
-    is_read: true,
-    created_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), // 1 day ago
-  },
-]
+import {
+  useNotificationsApi,
+  useUnreadCountApi,
+  markNotificationAsRead,
+  markAllNotificationsAsRead,
+  invalidateNotificationsCache,
+  type UserNotification,
+} from '@/features/notifications/api/use-notification-api'
+import { useTenantChannel } from '@/hooks/use-websocket'
+import { useTenant } from '@/context/tenant-provider'
 
 const severityColors: Record<string, string> = {
   critical: 'text-red-500',
@@ -189,17 +132,52 @@ function NotificationItem({ notification, onMarkAsRead, onClose }: NotificationI
 
 export function NotificationBell() {
   const [open, setOpen] = useState(false)
-  const [notifications, setNotifications] = useState(mockNotifications)
+  const { currentTenant } = useTenant()
 
-  const unreadCount = notifications.filter((n) => !n.is_read).length
+  // Fetch notifications and unread count from API
+  const {
+    data: notificationsData,
+    isLoading,
+    mutate: mutateNotifications,
+  } = useNotificationsApi(1, 20)
+  const { data: unreadData, mutate: mutateUnreadCount } = useUnreadCountApi()
 
-  const handleMarkAsRead = (id: string) => {
-    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, is_read: true } : n)))
-  }
+  const notifications = notificationsData?.data ?? []
+  const unreadCount = unreadData?.count ?? 0
 
-  const handleMarkAllAsRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })))
-  }
+  // Subscribe to tenant-wide WebSocket channel for real-time updates
+  // This catches audience=all notifications broadcast to the tenant channel
+  useTenantChannel(currentTenant?.id ?? null, {
+    onData: useCallback(
+      (data: Record<string, unknown>) => {
+        // Only revalidate when the WebSocket event is a notification
+        if (data?.type === 'notification') {
+          mutateNotifications()
+          mutateUnreadCount()
+        }
+      },
+      [mutateNotifications, mutateUnreadCount]
+    ),
+  })
+
+  const handleMarkAsRead = useCallback(async (id: string) => {
+    try {
+      await markNotificationAsRead(id)
+      await invalidateNotificationsCache()
+    } catch {
+      // Silently fail - notification will still appear as unread
+      // and will be retried on next poll
+    }
+  }, [])
+
+  const handleMarkAllAsRead = useCallback(async () => {
+    try {
+      await markAllNotificationsAsRead()
+      await invalidateNotificationsCache()
+    } catch {
+      // Silently fail
+    }
+  }, [])
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -243,7 +221,12 @@ export function NotificationBell() {
         <Separator />
 
         <ScrollArea className="h-[320px] sm:h-[400px]">
-          {notifications.length === 0 ? (
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center py-10 text-muted-foreground sm:py-12">
+              <Loader2 className="h-8 w-8 mb-2 animate-spin opacity-30 sm:h-10 sm:w-10 sm:mb-3" />
+              <p className="text-xs font-medium sm:text-sm">Loading notifications...</p>
+            </div>
+          ) : notifications.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-10 text-muted-foreground sm:py-12">
               <Bell className="h-8 w-8 mb-2 opacity-30 sm:h-10 sm:w-10 sm:mb-3" />
               <p className="text-xs font-medium sm:text-sm">No notifications</p>
@@ -272,7 +255,7 @@ export function NotificationBell() {
             size="sm"
             asChild
           >
-            <Link href="/insights/notifications" onClick={() => setOpen(false)}>
+            <Link href="/notifications" onClick={() => setOpen(false)}>
               View all notifications
             </Link>
           </Button>

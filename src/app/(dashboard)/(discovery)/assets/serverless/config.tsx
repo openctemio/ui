@@ -1,8 +1,7 @@
 'use client'
 
 import { Badge } from '@/components/ui/badge'
-import { Cpu, Cloud, Network, CheckCircle, AlertTriangle, Shield, Zap } from 'lucide-react'
-import type { Asset } from '@/features/assets'
+import { Cpu, Network, CheckCircle, AlertTriangle, Shield, Zap } from 'lucide-react'
 import type { AssetPageConfig } from '@/features/assets/types/page-config.types'
 
 const runtimeColors: Record<string, string> = {

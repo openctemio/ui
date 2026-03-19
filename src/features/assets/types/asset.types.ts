@@ -708,6 +708,7 @@ export interface Asset {
   provider?: string // SCM provider or asset source (github, gitlab, etc.)
   metadata: AssetMetadata
   tags?: string[]
+  primaryOwner?: OwnerBrief
   firstSeen: string
   lastSeen: string
   createdAt: string
@@ -1136,4 +1137,73 @@ export interface AssetFinding {
   firstSeen: string
   lastSeen: string
   resolvedAt?: string
+}
+
+// ============================================
+// Asset Ownership Types
+// ============================================
+
+/**
+ * Ownership type for asset owners
+ */
+export type OwnershipType = 'primary' | 'secondary' | 'stakeholder' | 'informed' | 'regulatory'
+
+export const OWNERSHIP_TYPE_LABELS: Record<OwnershipType, string> = {
+  primary: 'Primary',
+  secondary: 'Secondary',
+  stakeholder: 'Stakeholder',
+  informed: 'Informed',
+  regulatory: 'Regulatory',
+}
+
+export const OWNERSHIP_TYPE_COLORS: Record<
+  OwnershipType,
+  { bg: string; text: string; border: string }
+> = {
+  primary: { bg: 'bg-blue-500/15', text: 'text-blue-600', border: 'border-blue-500/30' },
+  secondary: { bg: 'bg-slate-500/15', text: 'text-slate-600', border: 'border-slate-500/30' },
+  stakeholder: { bg: 'bg-purple-500/15', text: 'text-purple-600', border: 'border-purple-500/30' },
+  informed: { bg: 'bg-green-500/15', text: 'text-green-600', border: 'border-green-500/30' },
+  regulatory: { bg: 'bg-amber-500/15', text: 'text-amber-600', border: 'border-amber-500/30' },
+}
+
+/**
+ * Asset owner returned from the API
+ */
+export interface AssetOwner {
+  id: string
+  userId?: string
+  userName?: string
+  userEmail?: string
+  groupId?: string
+  groupName?: string
+  ownershipType: OwnershipType
+  assignedAt: string
+  assignedByName?: string
+}
+
+/**
+ * Primary owner brief (lightweight, included in asset list response)
+ */
+export interface OwnerBrief {
+  id: string
+  type: 'user' | 'group'
+  name: string
+  email?: string
+}
+
+/**
+ * Input for adding an owner to an asset
+ */
+export interface AddAssetOwnerInput {
+  userId?: string
+  groupId?: string
+  ownershipType: OwnershipType
+}
+
+/**
+ * Input for updating an owner's type
+ */
+export interface UpdateAssetOwnerInput {
+  ownershipType: OwnershipType
 }

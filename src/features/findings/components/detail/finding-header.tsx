@@ -359,6 +359,7 @@ export function FindingHeader({
                 value={status}
                 onChange={handleStatusChange}
                 loading={isUpdatingStatus}
+                source={finding.source}
               />
               <SeveritySelect
                 value={severity}
@@ -443,7 +444,12 @@ export function FindingHeader({
             <h1 className="text-base font-bold leading-tight truncate max-w-[400px]">
               {finding.title}
             </h1>
-            <StatusSelect value={status} onChange={handleStatusChange} loading={isUpdatingStatus} />
+            <StatusSelect
+              value={status}
+              onChange={handleStatusChange}
+              loading={isUpdatingStatus}
+              source={finding.source}
+            />
             <SeveritySelect
               value={severity}
               onChange={handleSeverityChange}
@@ -577,6 +583,7 @@ export function FindingHeader({
                 value={status}
                 onChange={handleStatusChange}
                 loading={isUpdatingStatus}
+                source={finding.source}
               />
               <SeveritySelect
                 value={severity}

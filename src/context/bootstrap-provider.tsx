@@ -17,8 +17,10 @@
 
 import * as React from 'react'
 import { get } from '@/lib/api/client'
+import { devLog } from '@/lib/logger'
 import { useTenant } from './tenant-provider'
 import type { TenantModulesResponse } from '@/features/integrations/api/use-tenant-modules'
+import type { RiskLevelThresholds } from '@/features/shared/types/common.types'
 
 // ============================================
 // TYPES
@@ -34,6 +36,7 @@ export interface BootstrapPermissions {
 export interface BootstrapData {
   permissions: BootstrapPermissions
   modules?: TenantModulesResponse
+  risk_levels?: RiskLevelThresholds
 }
 
 export interface BootstrapContextValue {
@@ -68,20 +71,26 @@ export function BootstrapProvider({ children }: BootstrapProviderProps) {
   const tenantId = currentTenant?.id
 
   const [data, setData] = React.useState<BootstrapData | null>(null)
-  // Start with isLoading = true if we have a tenantId to bootstrap
-  // This prevents other providers from thinking bootstrap is done when it hasn't started
-  const [isLoading, setIsLoading] = React.useState(!!tenantId)
+  // Start with isLoading = true always to prevent flash of error/access-denied
+  // during the initial bootstrap fetch. It will be set to false once bootstrap
+  // completes or when there's no tenantId to bootstrap.
+  const [isLoading, setIsLoading] = React.useState(true)
   const [error, setError] = React.useState<Error | null>(null)
   const [isBootstrapped, setIsBootstrapped] = React.useState(false)
+  const [fetchedTenantId, setFetchedTenantId] = React.useState<string | null>(null)
 
   // Track previous tenant to detect switches
   const previousTenantIdRef = React.useRef<string | null>(null)
+
+  // Track retry attempts
+  const retryCountRef = React.useRef(0)
 
   // Fetch bootstrap data
   const fetchBootstrap = React.useCallback(async () => {
     if (!tenantId) {
       setData(null)
       setIsBootstrapped(false)
+      setFetchedTenantId(null)
       return
     }
 
@@ -90,23 +99,48 @@ export function BootstrapProvider({ children }: BootstrapProviderProps) {
 
     try {
       const result = await get<BootstrapData>('/api/v1/me/bootstrap')
-      setData(result)
-      setIsBootstrapped(true)
 
-      if (process.env.NODE_ENV === 'development') {
-        console.log('[BootstrapProvider] Fetched bootstrap data', {
-          permissions: result.permissions?.list?.length,
-          hasModules: !!result.modules,
-        })
-      }
+      // Prevent race conditions: ignore response if tenant changed while fetching
+      if (previousTenantIdRef.current !== tenantId) return
+
+      setData(result)
+      setFetchedTenantId(tenantId)
+      setIsBootstrapped(true)
+      retryCountRef.current = 0
+
+      devLog.log('[BootstrapProvider] Fetched bootstrap data', {
+        permissions: result.permissions?.list?.length,
+        hasModules: !!result.modules,
+      })
     } catch (err) {
-      console.error('[BootstrapProvider] Failed to fetch bootstrap:', err)
+      // Prevent race conditions: ignore response if tenant changed while fetching
+      if (previousTenantIdRef.current !== tenantId) return
+
+      devLog.error('[BootstrapProvider] Failed to fetch bootstrap:', err)
+
+      // Retry once before giving up — the first failure is often a token refresh
+      // race condition right after login/select-tenant
+      if (retryCountRef.current < 1) {
+        retryCountRef.current++
+        devLog.log('[BootstrapProvider] Retrying bootstrap fetch...')
+        // Wait briefly for token refresh to settle
+        await new Promise((resolve) => setTimeout(resolve, 1500))
+        if (previousTenantIdRef.current === tenantId) {
+          fetchBootstrap()
+        }
+        return
+      }
+
+      retryCountRef.current = 0
       setError(err instanceof Error ? err : new Error('Failed to fetch bootstrap'))
       // Set minimal data on error so the app can still function
       setData({ permissions: { list: [], version: 0 } })
+      setFetchedTenantId(tenantId)
       setIsBootstrapped(true) // Mark as bootstrapped even on error to prevent infinite retry
     } finally {
-      setIsLoading(false)
+      if (previousTenantIdRef.current === tenantId) {
+        setIsLoading(false)
+      }
     }
   }, [tenantId])
 
@@ -115,39 +149,44 @@ export function BootstrapProvider({ children }: BootstrapProviderProps) {
     if (!tenantId) {
       setData(null)
       setIsBootstrapped(false)
+      setFetchedTenantId(null)
       setIsLoading(false)
       previousTenantIdRef.current = null
       return
     }
 
-    // Skip if same tenant and already bootstrapped
-    if (previousTenantIdRef.current === tenantId && isBootstrapped) {
+    // Skip if same tenant (already fetched or fetching)
+    if (previousTenantIdRef.current === tenantId) {
       return
     }
 
-    // Set loading to true IMMEDIATELY when tenant is available
-    // This prevents other providers from making duplicate API calls
-    // before bootstrap has a chance to fetch
+    // Reset bootstrap state IMMEDIATELY when tenant changes
+    // This prevents RouteGuard from evaluating stale permissions/modules
+    // while the new tenant's data is being fetched
+    setIsBootstrapped(false)
     setIsLoading(true)
     previousTenantIdRef.current = tenantId
     fetchBootstrap()
-  }, [tenantId, isBootstrapped, fetchBootstrap])
+  }, [tenantId, fetchBootstrap])
 
   // Refresh function
   const refresh = React.useCallback(async () => {
     await fetchBootstrap()
   }, [fetchBootstrap])
 
-  const value = React.useMemo<BootstrapContextValue>(
-    () => ({
-      data,
-      isLoading,
-      error,
-      isBootstrapped,
+  const value = React.useMemo<BootstrapContextValue>(() => {
+    // Synchronize context instantly with currentTenant to prevent stale data
+    // leaking during the React render cycle before useEffect runs.
+    const isStale = tenantId ? fetchedTenantId !== tenantId : false
+
+    return {
+      data: isStale ? null : data,
+      isLoading: isLoading || isStale,
+      error: isStale ? null : error,
+      isBootstrapped: isStale ? false : isBootstrapped,
       refresh,
-    }),
-    [data, isLoading, error, isBootstrapped, refresh]
-  )
+    }
+  }, [data, isLoading, error, isBootstrapped, fetchedTenantId, tenantId, refresh])
 
   return <BootstrapContext.Provider value={value}>{children}</BootstrapContext.Provider>
 }
@@ -222,6 +261,18 @@ export function useBootstrapModules() {
     comingSoonModuleIds: data?.modules?.coming_soon_module_ids || [],
     betaModuleIds: data?.modules?.beta_module_ids || [],
     hasModule,
+    isLoading,
+  }
+}
+
+/**
+ * Get risk level thresholds from bootstrap
+ */
+export function useBootstrapRiskLevels() {
+  const { data, isLoading } = useBootstrapContext()
+
+  return {
+    riskLevels: data?.risk_levels || null,
     isLoading,
   }
 }

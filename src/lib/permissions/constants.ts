@@ -318,9 +318,31 @@ export const Permission = {
   // ===========================================
   MembersManage: 'team:members:write', // Alias for MembersWrite
   BillingManage: 'settings:billing:write', // Alias for BillingWrite
-  PentestRead: 'validation:read', // Alias for ValidationRead
-  PentestWrite: 'validation:write', // Alias for ValidationWrite
+  PentestRead: 'validation:read', // Alias for ValidationRead (legacy)
+  PentestWrite: 'validation:write', // Alias for ValidationWrite (legacy)
   GroupsPermissions: 'team:groups:write', // Alias for GroupsWrite
+
+  // Pentest granular permissions
+  PentestCampaignsRead: 'pentest:campaigns:read',
+  PentestCampaignsWrite: 'pentest:campaigns:write',
+  PentestCampaignsDelete: 'pentest:campaigns:delete',
+  PentestFindingsRead: 'pentest:findings:read',
+  PentestFindingsWrite: 'pentest:findings:write',
+  PentestFindingsDelete: 'pentest:findings:delete',
+  PentestRetestsRead: 'pentest:retests:read',
+  PentestRetestsWrite: 'pentest:retests:write',
+  PentestTemplatesRead: 'pentest:templates:read',
+  PentestTemplatesWrite: 'pentest:templates:write',
+  PentestReportsWrite: 'pentest:reports:write',
+
+  // Compliance permissions
+  ComplianceFrameworksRead: 'compliance:frameworks:read',
+  ComplianceFrameworksWrite: 'compliance:frameworks:write',
+  ComplianceAssessmentsRead: 'compliance:assessments:read',
+  ComplianceAssessmentsWrite: 'compliance:assessments:write',
+  ComplianceMappingsRead: 'compliance:mappings:read',
+  ComplianceMappingsWrite: 'compliance:mappings:write',
+  ComplianceReportsRead: 'compliance:reports:read',
 
   // Legacy project permissions (mapped to assets)
   ProjectsRead: 'assets:read',
@@ -391,6 +413,14 @@ export const PermissionGroups = {
     Permission.SLARead,
     Permission.ScopeRead,
     Permission.ValidationRead,
+    Permission.PentestCampaignsRead,
+    Permission.PentestFindingsRead,
+    Permission.PentestRetestsRead,
+    Permission.PentestTemplatesRead,
+    Permission.ComplianceFrameworksRead,
+    Permission.ComplianceAssessmentsRead,
+    Permission.ComplianceMappingsRead,
+    Permission.ComplianceReportsRead,
     Permission.ReportsRead,
     Permission.ThreatIntelRead,
     Permission.AITriageRead,
@@ -435,6 +465,14 @@ export const PermissionGroups = {
     Permission.SLAWrite,
     Permission.ScopeWrite,
     Permission.ValidationWrite,
+    Permission.PentestCampaignsWrite,
+    Permission.PentestFindingsWrite,
+    Permission.PentestRetestsWrite,
+    Permission.PentestTemplatesWrite,
+    Permission.PentestReportsWrite,
+    Permission.ComplianceFrameworksWrite,
+    Permission.ComplianceAssessmentsWrite,
+    Permission.ComplianceMappingsWrite,
     Permission.ReportsWrite,
     Permission.ThreatIntelWrite,
   ],
@@ -471,6 +509,8 @@ export const PermissionGroups = {
     Permission.PipelinesDelete,
     Permission.SLADelete,
     Permission.ScopeDelete,
+    Permission.PentestCampaignsDelete,
+    Permission.PentestFindingsDelete,
   ],
 
   // Team management permissions
@@ -654,9 +694,31 @@ export const PermissionLabels: Partial<Record<PermissionString, string>> = {
   [Permission.ScopeWrite]: 'Manage Scope',
   [Permission.ScopeDelete]: 'Delete Scope',
 
-  // Validation
+  // Validation (legacy)
   [Permission.ValidationRead]: 'View Validation',
   [Permission.ValidationWrite]: 'Manage Validation',
+
+  // Pentest (granular)
+  [Permission.PentestCampaignsRead]: 'View Pentest Campaigns',
+  [Permission.PentestCampaignsWrite]: 'Manage Pentest Campaigns',
+  [Permission.PentestCampaignsDelete]: 'Delete Pentest Campaigns',
+  [Permission.PentestFindingsRead]: 'View Pentest Findings',
+  [Permission.PentestFindingsWrite]: 'Manage Pentest Findings',
+  [Permission.PentestFindingsDelete]: 'Delete Pentest Findings',
+  [Permission.PentestRetestsRead]: 'View Pentest Retests',
+  [Permission.PentestRetestsWrite]: 'Manage Pentest Retests',
+  [Permission.PentestTemplatesRead]: 'View Pentest Templates',
+  [Permission.PentestTemplatesWrite]: 'Manage Pentest Templates',
+  [Permission.PentestReportsWrite]: 'Manage Pentest Reports',
+
+  // Compliance
+  [Permission.ComplianceFrameworksRead]: 'View Compliance Frameworks',
+  [Permission.ComplianceFrameworksWrite]: 'Manage Compliance Frameworks',
+  [Permission.ComplianceAssessmentsRead]: 'View Compliance Assessments',
+  [Permission.ComplianceAssessmentsWrite]: 'Manage Compliance Assessments',
+  [Permission.ComplianceMappingsRead]: 'View Compliance Mappings',
+  [Permission.ComplianceMappingsWrite]: 'Manage Compliance Mappings',
+  [Permission.ComplianceReportsRead]: 'View Compliance Reports',
 
   // Reports
   [Permission.ReportsRead]: 'View Reports',
@@ -825,9 +887,29 @@ export const RolePermissions: Record<RoleString, PermissionString[]> = {
     Permission.ScopeRead,
     Permission.ScopeWrite,
     Permission.ScopeDelete,
-    // Validation
+    // Validation (legacy)
     Permission.ValidationRead,
     Permission.ValidationWrite,
+    // Pentest (granular - all)
+    Permission.PentestCampaignsRead,
+    Permission.PentestCampaignsWrite,
+    Permission.PentestCampaignsDelete,
+    Permission.PentestFindingsRead,
+    Permission.PentestFindingsWrite,
+    Permission.PentestFindingsDelete,
+    Permission.PentestRetestsRead,
+    Permission.PentestRetestsWrite,
+    Permission.PentestTemplatesRead,
+    Permission.PentestTemplatesWrite,
+    Permission.PentestReportsWrite,
+    // Compliance (all)
+    Permission.ComplianceFrameworksRead,
+    Permission.ComplianceFrameworksWrite,
+    Permission.ComplianceAssessmentsRead,
+    Permission.ComplianceAssessmentsWrite,
+    Permission.ComplianceMappingsRead,
+    Permission.ComplianceMappingsWrite,
+    Permission.ComplianceReportsRead,
     // Reports
     Permission.ReportsRead,
     Permission.ReportsWrite,
@@ -965,9 +1047,29 @@ export const RolePermissions: Record<RoleString, PermissionString[]> = {
     Permission.ScopeRead,
     Permission.ScopeWrite,
     Permission.ScopeDelete,
-    // Validation
+    // Validation (legacy)
     Permission.ValidationRead,
     Permission.ValidationWrite,
+    // Pentest (granular - all)
+    Permission.PentestCampaignsRead,
+    Permission.PentestCampaignsWrite,
+    Permission.PentestCampaignsDelete,
+    Permission.PentestFindingsRead,
+    Permission.PentestFindingsWrite,
+    Permission.PentestFindingsDelete,
+    Permission.PentestRetestsRead,
+    Permission.PentestRetestsWrite,
+    Permission.PentestTemplatesRead,
+    Permission.PentestTemplatesWrite,
+    Permission.PentestReportsWrite,
+    // Compliance (all)
+    Permission.ComplianceFrameworksRead,
+    Permission.ComplianceFrameworksWrite,
+    Permission.ComplianceAssessmentsRead,
+    Permission.ComplianceAssessmentsWrite,
+    Permission.ComplianceMappingsRead,
+    Permission.ComplianceMappingsWrite,
+    Permission.ComplianceReportsRead,
     // Reports
     Permission.ReportsRead,
     Permission.ReportsWrite,
@@ -1046,9 +1148,26 @@ export const RolePermissions: Record<RoleString, PermissionString[]> = {
     // Attack Surface (read + write)
     Permission.ScopeRead,
     Permission.ScopeWrite,
-    // Validation (read + write)
+    // Validation (legacy)
     Permission.ValidationRead,
     Permission.ValidationWrite,
+    // Pentest (read + write, no delete)
+    Permission.PentestCampaignsRead,
+    Permission.PentestCampaignsWrite,
+    Permission.PentestFindingsRead,
+    Permission.PentestFindingsWrite,
+    Permission.PentestRetestsRead,
+    Permission.PentestRetestsWrite,
+    Permission.PentestTemplatesRead,
+    Permission.PentestTemplatesWrite,
+    Permission.PentestReportsWrite,
+    // Compliance (read + write, no framework write)
+    Permission.ComplianceFrameworksRead,
+    Permission.ComplianceAssessmentsRead,
+    Permission.ComplianceAssessmentsWrite,
+    Permission.ComplianceMappingsRead,
+    Permission.ComplianceMappingsWrite,
+    Permission.ComplianceReportsRead,
     // Reports (read + write)
     Permission.ReportsRead,
     Permission.ReportsWrite,
@@ -1106,8 +1225,18 @@ export const RolePermissions: Record<RoleString, PermissionString[]> = {
     Permission.SLARead,
     // Attack Surface (read only)
     Permission.ScopeRead,
-    // Validation (read only)
+    // Validation (legacy)
     Permission.ValidationRead,
+    // Pentest (read only)
+    Permission.PentestCampaignsRead,
+    Permission.PentestFindingsRead,
+    Permission.PentestRetestsRead,
+    Permission.PentestTemplatesRead,
+    // Compliance (read only)
+    Permission.ComplianceFrameworksRead,
+    Permission.ComplianceAssessmentsRead,
+    Permission.ComplianceMappingsRead,
+    Permission.ComplianceReportsRead,
     // Reports (read only)
     Permission.ReportsRead,
     // Threat Intel (read only)

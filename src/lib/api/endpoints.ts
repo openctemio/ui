@@ -111,12 +111,6 @@ export const authEndpoints = {
    */
   createFirstTeam: () => `${API_BASE.AUTH}/create-first-team`,
 
-  /**
-   * Get short-lived WebSocket token for cross-origin WebSocket connections
-   * Required when frontend and backend are on different ports (development)
-   */
-  wsToken: () => `${API_BASE.AUTH}/ws-token`,
-
   // ============================================
   // SOCIAL/OAUTH AUTH
   // ============================================
@@ -132,6 +126,26 @@ export const authEndpoints = {
    * @param provider - OAuth provider (google, github, microsoft)
    */
   oauthCallback: (provider: string) => `${API_BASE.AUTH}/oauth/${provider}/callback`,
+
+  // Per-tenant SSO endpoints (public)
+  /**
+   * List active SSO providers for a tenant
+   * @param orgSlug - Tenant slug (org identifier)
+   */
+  ssoProviders: (orgSlug: string) =>
+    `${API_BASE.AUTH}/sso/providers?org=${encodeURIComponent(orgSlug)}`,
+
+  /**
+   * Get SSO authorization URL
+   * @param provider - SSO provider (entra_id, okta, google_workspace)
+   */
+  ssoAuthorize: (provider: string) => `${API_BASE.AUTH}/sso/${provider}/authorize`,
+
+  /**
+   * SSO callback endpoint
+   * @param provider - SSO provider (entra_id, okta, google_workspace)
+   */
+  ssoCallback: (provider: string) => `${API_BASE.AUTH}/sso/${provider}/callback`,
 } as const
 
 // ============================================
@@ -348,6 +362,41 @@ export const tenantEndpoints = {
    */
   updateBrandingSettings: (tenantIdOrSlug: string) =>
     `${API_BASE.TENANTS}/${tenantIdOrSlug}/settings/branding`,
+
+  /**
+   * Risk scoring settings
+   */
+  riskScoringSettings: (tenantIdOrSlug: string) =>
+    `${API_BASE.TENANTS}/${tenantIdOrSlug}/settings/risk-scoring`,
+
+  /**
+   * Preview risk scoring changes
+   */
+  riskScoringPreview: (tenantIdOrSlug: string) =>
+    `${API_BASE.TENANTS}/${tenantIdOrSlug}/settings/risk-scoring/preview`,
+
+  /**
+   * Recalculate risk scores
+   */
+  riskScoringRecalculate: (tenantIdOrSlug: string) =>
+    `${API_BASE.TENANTS}/${tenantIdOrSlug}/settings/risk-scoring/recalculate`,
+
+  /**
+   * Risk scoring presets
+   */
+  riskScoringPresets: (tenantIdOrSlug: string) =>
+    `${API_BASE.TENANTS}/${tenantIdOrSlug}/settings/risk-scoring/presets`,
+
+  /**
+   * Module management
+   */
+  modules: (tenantIdOrSlug: string) => `${API_BASE.TENANTS}/${tenantIdOrSlug}/settings/modules`,
+
+  /**
+   * Reset modules to defaults
+   */
+  modulesReset: (tenantIdOrSlug: string) =>
+    `${API_BASE.TENANTS}/${tenantIdOrSlug}/settings/modules/reset`,
 } as const
 
 // ============================================
@@ -463,6 +512,32 @@ export const assetEndpoints = {
    * high_risk_count, findings_total, risk_score_avg
    */
   stats: () => `${API_BASE.ASSETS}/stats`,
+
+  // ============================================
+  // ASSET OWNERS
+  // ============================================
+
+  /**
+   * List owners of an asset
+   */
+  listOwners: (assetId: string) => `${API_BASE.ASSETS}/${assetId}/owners`,
+
+  /**
+   * Add an owner to an asset
+   */
+  addOwner: (assetId: string) => `${API_BASE.ASSETS}/${assetId}/owners`,
+
+  /**
+   * Update an owner's type
+   */
+  updateOwner: (assetId: string, ownerId: string) =>
+    `${API_BASE.ASSETS}/${assetId}/owners/${ownerId}`,
+
+  /**
+   * Remove an owner from an asset
+   */
+  removeOwner: (assetId: string, ownerId: string) =>
+    `${API_BASE.ASSETS}/${assetId}/owners/${ownerId}`,
 } as const
 
 // ============================================
@@ -1863,6 +1938,40 @@ export const platformEndpoints = {
 } as const
 
 // ============================================
+// NOTIFICATION ENDPOINTS
+// ============================================
+
+/**
+ * User notification endpoints (in-app notifications)
+ */
+export const notificationEndpoints = {
+  /**
+   * List notifications for current user
+   */
+  list: () => '/api/v1/notifications',
+
+  /**
+   * Get unread notification count
+   */
+  unreadCount: () => '/api/v1/notifications/unread-count',
+
+  /**
+   * Mark a single notification as read
+   */
+  markAsRead: (id: string) => `/api/v1/notifications/${id}/read`,
+
+  /**
+   * Mark all notifications as read
+   */
+  markAllAsRead: () => '/api/v1/notifications/read-all',
+
+  /**
+   * Get/update notification preferences
+   */
+  preferences: () => '/api/v1/notifications/preferences',
+} as const
+
+// ============================================
 // ENDPOINT COLLECTIONS
 // ============================================
 
@@ -1899,6 +2008,7 @@ export const endpoints = {
   workflows: workflowEndpoints,
   workflowRuns: workflowRunEndpoints,
   platform: platformEndpoints,
+  notifications: notificationEndpoints,
 } as const
 
 /**
@@ -1934,4 +2044,5 @@ export {
   workflowEndpoints as workflows,
   workflowRunEndpoints as workflowRuns,
   platformEndpoints as platform,
+  notificationEndpoints as notifications,
 }
