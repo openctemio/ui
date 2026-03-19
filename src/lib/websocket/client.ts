@@ -121,7 +121,7 @@ export class WebSocketClient {
     this.reconnectAttempts = 0
 
     // Reject all pending requests
-    for (const [requestId, handlers] of this.pendingRequests.entries()) {
+    for (const [, handlers] of this.pendingRequests.entries()) {
       handlers.reject(new Error('WebSocket client disconnected'))
     }
     this.pendingRequests.clear()
