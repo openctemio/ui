@@ -56,7 +56,7 @@ type AccessDeniedReason = 'module' | 'permission'
 export function RouteGuard({ children }: RouteGuardProps) {
   const pathname = usePathname()
   // Use the same permission hook as sidebar for consistency
-  const { can, isLoading: permissionsLoading, permissions: providerPermissions } = usePermissions()
+  const { can, isLoading: permissionsLoading } = usePermissions()
   const { moduleIds, isLoading: modulesLoading } = useBootstrapModules()
   const { isBootstrapped, data: bootstrapData } = useBootstrapContextSafe()
 
