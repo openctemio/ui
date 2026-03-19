@@ -8,7 +8,7 @@
 
 import useSWR, { type SWRConfiguration } from 'swr'
 import useSWRMutation from 'swr/mutation'
-import { get, post, del, patch } from '@/lib/api/client'
+import { get, post, del } from '@/lib/api/client'
 import { handleApiError } from '@/lib/api/error-handler'
 import type { ControlStatus, Priority } from '../types/compliance.types'
 
