@@ -11,14 +11,25 @@
 
 const isDev = process.env.NODE_ENV !== 'production'
 
+// Sanitize string arguments to prevent log injection (e.g., newline-based spoofing)
+const sanitizeLogArg = (arg: unknown): unknown => {
+  if (typeof arg === 'string') {
+    // Remove CR and LF characters
+    return arg.replace(/[\r\n]/g, '')
+  }
+  return arg
+}
+
+const sanitizeLogArgs = (args: unknown[]): unknown[] => args.map(sanitizeLogArg)
+
 export const devLog = {
   log: (...args: unknown[]) => {
-    if (isDev) console.log(...args)
+    if (isDev) console.log(...sanitizeLogArgs(args))
   },
   warn: (...args: unknown[]) => {
-    if (isDev) console.warn(...args)
+    if (isDev) console.warn(...sanitizeLogArgs(args))
   },
   error: (...args: unknown[]) => {
-    if (isDev) console.error(...args)
+    if (isDev) console.error(...sanitizeLogArgs(args))
   },
 }
