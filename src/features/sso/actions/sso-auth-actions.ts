@@ -207,7 +207,7 @@ export async function handleSSOCallback(
       message: `Successfully signed in with SSO`,
     }
   } catch (error) {
-    console.error(`SSO callback error (${provider}):`, error)
+    console.error('SSO callback error (' + String(provider) + '):', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'SSO authentication failed',
