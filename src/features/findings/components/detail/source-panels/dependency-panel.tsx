@@ -6,11 +6,11 @@ import { Package, ArrowUp, CheckCircle2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { FindingDetail } from '../../../types'
 
-interface DependencyHeroProps {
+interface DependencyPanelProps {
   finding: FindingDetail
 }
 
-export function DependencyHero({ finding }: DependencyHeroProps) {
+export function DependencyPanel({ finding }: DependencyPanelProps) {
   // SCA findings store package info in metadata
   const meta = finding.metadata || {}
   const packageName = (meta.package_name as string) || (meta.component_name as string) || ''
