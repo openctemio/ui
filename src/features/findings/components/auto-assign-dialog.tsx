@@ -35,7 +35,7 @@ export function AutoAssignDialog({ open, onOpenChange, onSuccess }: AutoAssignDi
   const handleAssign = async () => {
     setIsSubmitting(true)
     try {
-      const data = await post<AutoAssignResult>('/api/v1/findings/actions/assign-to-owners', {
+      const data = await post<AutoAssignResult>('/api/v1/finding-actions/assign-to-owners', {
         filter: {
           // Assign unassigned critical+high findings
         },

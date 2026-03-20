@@ -82,7 +82,7 @@ function buildGroupsUrl(filters: FindingGroupsFilters): string {
   if (filters.asset_tags) params.set('asset_tags', filters.asset_tags)
   if (filters.page) params.set('page', String(filters.page))
   if (filters.per_page) params.set('per_page', String(filters.per_page))
-  return `/api/v1/findings/groups?${params.toString()}`
+  return `/api/v1/finding-groups?${params.toString()}`
 }
 
 export function useFindingGroups(filters: FindingGroupsFilters) {
@@ -96,7 +96,7 @@ export function useFindingGroups(filters: FindingGroupsFilters) {
 
 export function useRelatedCVEs(cveId: string | null, assetTags?: string) {
   const url = cveId
-    ? `/api/v1/findings/related-cves/${encodeURIComponent(cveId)}${assetTags ? `?asset_tags=${assetTags}` : ''}`
+    ? `/api/v1/finding-groups/related-cves/${encodeURIComponent(cveId)}${assetTags ? `?asset_tags=${assetTags}` : ''}`
     : null
 
   return useSWR<RelatedCVEsResponse>(url, (u: string) => get<RelatedCVEsResponse>(u), {

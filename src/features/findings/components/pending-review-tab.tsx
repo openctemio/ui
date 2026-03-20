@@ -57,7 +57,7 @@ export function PendingReviewTab() {
     setIsProcessing(group.group_key)
     try {
       // Verify all fix_applied findings matching this CVE
-      const result = await post<{ updated: number }>('/api/v1/findings/actions/verify', {
+      const result = await post<{ updated: number }>('/api/v1/finding-actions/verify', {
         filter: { cve_ids: [group.group_key] },
         note: `Batch verified: ${group.label}`,
       })
@@ -83,7 +83,7 @@ export function PendingReviewTab() {
     setIsProcessing(rejectTarget.group_key)
     try {
       // Reject all fix_applied findings matching this CVE
-      const result = await post<{ updated: number }>('/api/v1/findings/actions/reject-fix', {
+      const result = await post<{ updated: number }>('/api/v1/finding-actions/reject-fix', {
         filter: { cve_ids: [rejectTarget.group_key] },
         reason: rejectReason.trim(),
       })
