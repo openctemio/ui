@@ -458,22 +458,21 @@ export default function FindingDetailPage() {
   const orderedTabs = getOrderedTabs(layout)
   const SourcePanel = layout.sourcePanel
 
-  // Merge real-time activities with fetched activities (deduplicate by ID)
-  // Real-time activities take priority (shown first, newest)
+  // Merge real-time + API + synthetic activities (deduplicate by ID)
   const allActivities = useMemo(() => {
-    const fetchedActivities =
-      apiActivities.length > 0 ? apiActivities : finding ? finding.activities : []
+    // Start with API activities (real data from backend)
+    const base = apiActivities.length > 0 ? apiActivities : []
 
-    // If no real-time activities, just return fetched
-    if (realtimeActivities.length === 0) {
-      return fetchedActivities
-    }
+    // Add real-time activities (WebSocket), dedup against base
+    const baseIds = new Set(base.map((a) => a.id))
+    const uniqueRealtime = realtimeActivities.filter((a) => !baseIds.has(a.id))
 
-    // Deduplicate: real-time activities take precedence
-    const realtimeIds = new Set(realtimeActivities.map((a) => a.id))
-    const uniqueFetched = fetchedActivities.filter((a) => !realtimeIds.has(a.id))
+    // Always include synthetic "Discovered by" from finding transform
+    // This is the creation event — not stored in activities table
+    const syntheticActivities =
+      finding?.activities?.filter((a) => a.type === 'created' && !baseIds.has(a.id)) ?? []
 
-    return [...realtimeActivities, ...uniqueFetched]
+    return [...uniqueRealtime, ...base, ...syntheticActivities]
   }, [apiActivities, finding, realtimeActivities])
 
   // Handler for adding new comments
