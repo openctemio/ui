@@ -93,7 +93,7 @@ export function MarkFixedDialog({
         ...(reference.trim() && { reference: reference.trim() }),
       }
 
-      const result = await post<FixAppliedResponse>('/api/v1/findings/actions/fix-applied', body)
+      const result = await post<FixAppliedResponse>('/api/v1/finding-actions/fix-applied', body)
 
       toast.success(`${result.updated} findings marked as fix applied`, {
         description:
