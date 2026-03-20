@@ -1,62 +1,55 @@
 /**
  * Register all source layout configurations.
- * This file is imported once in page.tsx to wire up hero components.
- *
- * Design decision: Overview is ALWAYS the first/default tab.
- * The hero component provides source-specific context above tabs,
- * so tab reordering is unnecessary. We only control:
- * - heroComponent: source-specific section above tabs
- * - hiddenTabs: tabs that don't apply (e.g., attack-path for non-SAST)
+ * This file is imported once in page.tsx to wire up source panels and tab ordering.
  */
 
 import { registerTypeLayout, registerSourceLayout } from './source-layout'
-import { SecretHero } from '../components/detail/heroes/secret-hero'
-import { DependencyHero } from '../components/detail/heroes/dependency-hero'
-import { MisconfigHero } from '../components/detail/heroes/misconfig-hero'
-import { DastHero } from '../components/detail/heroes/dast-hero'
-import { ComplianceHero } from '../components/detail/heroes/compliance-hero'
-import { Web3Hero } from '../components/detail/heroes/web3-hero'
-import { PentestHero } from '../components/detail/heroes/pentest-hero'
+import { SecretPanel } from '../components/detail/source-panels/secret-panel'
+import { DependencyPanel } from '../components/detail/source-panels/dependency-panel'
+import { MisconfigPanel } from '../components/detail/source-panels/misconfig-panel'
+import { DastPanel } from '../components/detail/source-panels/dast-panel'
+import { CompliancePanel } from '../components/detail/source-panels/compliance-panel'
+import { Web3Panel } from '../components/detail/source-panels/web3-panel'
 
 // Type-specific layouts (highest priority)
 registerTypeLayout('secret', {
-  heroComponent: SecretHero,
+  sourcePanel: SecretPanel,
   hiddenTabs: ['attack-path'],
 })
 
 registerTypeLayout('misconfiguration', {
-  heroComponent: MisconfigHero,
+  sourcePanel: MisconfigPanel,
   hiddenTabs: ['attack-path'],
 })
 
 registerTypeLayout('compliance', {
-  heroComponent: ComplianceHero,
+  sourcePanel: CompliancePanel,
   hiddenTabs: ['attack-path'],
 })
 
 registerTypeLayout('web3', {
-  heroComponent: Web3Hero,
+  sourcePanel: Web3Panel,
 })
 
 // Source-specific layouts (fallback when findingType is generic 'vulnerability')
 registerSourceLayout('dast', {
-  heroComponent: DastHero,
+  sourcePanel: DastPanel,
   hiddenTabs: ['attack-path'],
 })
 
 registerSourceLayout('sca', {
-  heroComponent: DependencyHero,
+  sourcePanel: DependencyPanel,
   hiddenTabs: ['attack-path'],
 })
 
 registerSourceLayout('pentest', {
-  heroComponent: PentestHero,
+  tabOrder: ['overview', 'pentest', 'evidence', 'remediation', 'related'],
 })
 
 registerSourceLayout('bug_bounty', {
-  heroComponent: PentestHero,
+  tabOrder: ['overview', 'pentest', 'evidence', 'remediation', 'related'],
 })
 
 registerSourceLayout('red_team', {
-  heroComponent: PentestHero,
+  tabOrder: ['overview', 'pentest', 'evidence', 'remediation', 'related'],
 })
