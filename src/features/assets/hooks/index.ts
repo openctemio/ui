@@ -41,3 +41,6 @@ export {
   updateAssetOwner,
   removeAssetOwner,
 } from './use-asset-owners'
+
+// Asset relationship hooks
+export { useAssetRelationships } from './use-asset-relationships'

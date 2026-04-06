@@ -308,8 +308,9 @@ export function useAssets(filters?: AssetSearchFilters) {
   // Only fetch if user has permission, tenant context, and not skipped
   const shouldFetch = currentTenant && canReadAssets && !filters?.skip
 
+  // Use stable string key (queryString) instead of object reference to prevent cache bloat
   const { data, error, isLoading, mutate } = useSWR<BackendListResponse<BackendAsset>>(
-    shouldFetch ? ['assets', filters] : null,
+    shouldFetch ? `/api/v1/assets${queryString}` : null,
     () => get<BackendListResponse<BackendAsset>>(`/api/v1/assets${queryString}`),
     {
       revalidateOnFocus: false,

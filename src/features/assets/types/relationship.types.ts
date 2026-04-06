@@ -169,8 +169,6 @@ export type ExtendedAssetType =
   | 'container_image'
   | 'api_collection'
   | 'api_endpoint'
-  | 'network'
-  | 'load_balancer'
   | 'identity_provider'
 
 /**
@@ -197,21 +195,42 @@ export const EXTENDED_ASSET_TYPE_LABELS: Record<ExtendedAssetType, string> = {
   container: 'Container',
   database: 'Database',
   network: 'Network',
+  // Base asset types - Infrastructure (extended)
+  vpc: 'VPC',
+  subnet: 'Subnet',
+  load_balancer: 'Load Balancer',
+  firewall: 'Firewall',
+  kubernetes_cluster: 'Kubernetes Cluster',
+  kubernetes_namespace: 'Kubernetes Namespace',
+  container_registry: 'Container Registry',
+  // Base asset types - Data
+  data_store: 'Data Store',
+  s3_bucket: 'S3 Bucket',
+  // Base asset types - Identity
+  iam_user: 'IAM User',
+  iam_role: 'IAM Role',
+  service_account: 'Service Account',
   // Base asset types - Code
   repository: 'Repository',
+  // Base asset types - Recon
+  http_service: 'HTTP Service',
+  open_port: 'Open Port',
+  discovered_url: 'Discovered URL',
+  // Base asset types - Discovery
+  subdomain: 'Subdomain',
+  web_application: 'Web Application',
   // Unclassified
   unclassified: 'Unclassified',
   // Legacy base types (deprecated)
   service: 'Service',
   credential: 'Credential',
   mobile: 'Mobile App',
-  // Extended types
+  // Extended types (only those NOT already in AssetType)
   k8s_cluster: 'Kubernetes Cluster',
   k8s_workload: 'Kubernetes Workload',
   container_image: 'Container Image',
   api_collection: 'API Collection',
   api_endpoint: 'API Endpoint',
-  load_balancer: 'Load Balancer',
   identity_provider: 'Identity Provider',
 }
 

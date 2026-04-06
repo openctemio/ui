@@ -19,10 +19,12 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
+import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 
 import type { AssetFinding } from '../types/asset.types'
-import { getAssetFindings } from '../lib/mock-data'
+import { useAssetFindingsApi } from '@/features/findings/api/use-findings-api'
+import type { ApiFinding } from '@/features/findings/api/finding-api.types'
 
 interface AssetFindingsProps {
   assetId: string
@@ -85,13 +87,71 @@ const statusConfig: Record<
   false_positive: { label: 'False Positive', variant: 'outline' },
 }
 
-export function AssetFindings({ assetId, className }: AssetFindingsProps) {
-  const [findings, setFindings] = React.useState<AssetFinding[]>([])
+/**
+ * Map API finding to the AssetFinding shape used by this component.
+ */
+function mapApiFinding(f: ApiFinding): AssetFinding {
+  // Map API finding_type/source to the component's FindingType
+  const typeMap: Record<string, AssetFinding['type']> = {
+    vulnerability: 'vulnerability',
+    misconfiguration: 'misconfiguration',
+    secret: 'secret',
+    compliance: 'compliance',
+  }
+  const findingType: AssetFinding['type'] =
+    (f.finding_type && typeMap[f.finding_type]) || 'vulnerability'
 
-  React.useEffect(() => {
-    const data = getAssetFindings(assetId)
-    setFindings(data)
-  }, [assetId])
+  // Map API status to the component's FindingStatus
+  const statusMap: Record<string, AssetFinding['status']> = {
+    new: 'open',
+    confirmed: 'open',
+    in_progress: 'in_progress',
+    resolved: 'resolved',
+    false_positive: 'false_positive',
+    accepted: 'accepted',
+    duplicate: 'resolved',
+    draft: 'open',
+    in_review: 'in_progress',
+    remediation: 'in_progress',
+    retest: 'in_progress',
+    verified: 'resolved',
+    accepted_risk: 'accepted',
+  }
+  const status: AssetFinding['status'] = statusMap[f.status] || 'open'
+
+  // Map severity, filtering 'none' to 'info'
+  const severity: AssetFinding['severity'] =
+    f.severity === 'none' ? 'info' : (f.severity as AssetFinding['severity'])
+
+  return {
+    id: f.id,
+    type: findingType,
+    severity,
+    status,
+    title: f.title || f.message,
+    description: f.description || f.message,
+    assetId: f.asset_id,
+    assetName: f.asset?.name || '',
+    assetType: (f.asset?.type as AssetFinding['assetType']) || 'host',
+    cveId: f.cve_id,
+    cvssScore: f.cvss_score,
+    cweId: f.cwe_ids?.[0],
+    rule: f.rule_id || f.rule_name,
+    remediation: f.remediation?.recommendation || f.recommendation,
+    references: f.remediation?.references,
+    firstSeen: f.first_detected_at || f.created_at,
+    lastSeen: f.last_seen_at || f.updated_at,
+    resolvedAt: f.resolved_at,
+  }
+}
+
+export function AssetFindings({ assetId, className }: AssetFindingsProps) {
+  const { data: response, isLoading, error } = useAssetFindingsApi(assetId, undefined, 1, 50)
+
+  const findings = React.useMemo<AssetFinding[]>(() => {
+    if (!response?.data) return []
+    return response.data.map(mapApiFinding)
+  }, [response])
 
   const severityCounts = React.useMemo(() => {
     return {
@@ -102,6 +162,45 @@ export function AssetFindings({ assetId, className }: AssetFindingsProps) {
       info: findings.filter((f) => f.severity === 'info').length,
     }
   }, [findings])
+
+  if (isLoading) {
+    return (
+      <div className={cn('space-y-4', className)}>
+        <div className="flex flex-wrap gap-2">
+          <Skeleton className="h-8 w-24 rounded-full" />
+          <Skeleton className="h-8 w-20 rounded-full" />
+          <Skeleton className="h-8 w-22 rounded-full" />
+        </div>
+        <Separator />
+        <div className="space-y-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="p-4 rounded-lg border bg-card">
+              <div className="flex items-start gap-3">
+                <Skeleton className="h-8 w-8 rounded-lg" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-3 w-full" />
+                  <Skeleton className="h-3 w-1/2" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className={cn('flex flex-col items-center justify-center py-8 text-center', className)}>
+        <AlertCircle className="h-12 w-12 text-destructive mb-3" />
+        <h3 className="font-medium">Failed to load findings</h3>
+        <p className="text-sm text-muted-foreground mt-1">
+          Could not fetch findings for this asset. Please try again later.
+        </p>
+      </div>
+    )
+  }
 
   if (findings.length === 0) {
     return (
@@ -218,7 +317,7 @@ export function AssetFindings({ assetId, className }: AssetFindingsProps) {
         <Link href={`/findings?assetId=${assetId}`}>
           <Button variant="outline" className="w-full">
             <FileWarning className="mr-2 h-4 w-4" />
-            View All Findings ({findings.length})
+            View All Findings ({response?.total ?? findings.length})
             <ChevronRight className="ml-2 h-4 w-4" />
           </Button>
         </Link>

@@ -3,5 +3,6 @@
  */
 
 export * from './mock-data'
-export * from './mock-relationships'
 export * from './domain-hierarchy'
+export * from './config-builder'
+export * from './category-templates'
