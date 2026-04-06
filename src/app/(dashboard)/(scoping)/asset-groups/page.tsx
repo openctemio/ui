@@ -287,8 +287,8 @@ export default function AssetGroupsPage() {
   // Fetch data
   const { data: groups, isLoading, mutate: refreshData } = useAssetGroups({ filters: apiFilters })
 
-  // Get all assets for create dialog
-  const { assets: allAssets } = useAssets({ pageSize: 100 })
+  // Get all assets for create dialog (lazy: only fetch when dialog is open)
+  const { assets: allAssets } = useAssets({ pageSize: 100, skip: !isCreateOpen })
 
   // Mutation hooks
   const updateAssetGroup = useUpdateAssetGroup(editGroup?.id || '')

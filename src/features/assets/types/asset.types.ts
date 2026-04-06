@@ -42,8 +42,29 @@ export type AssetType =
   | 'container'
   | 'database'
   | 'network'
+  | 'vpc'
+  | 'subnet'
+  | 'load_balancer'
+  | 'firewall'
+  | 'kubernetes_cluster'
+  | 'kubernetes_namespace'
+  | 'container_registry'
+  // Data
+  | 'data_store'
+  | 's3_bucket'
+  // Identity
+  | 'iam_user'
+  | 'iam_role'
+  | 'service_account'
   // Code & CI/CD
   | 'repository' // Git repositories (unified asset type)
+  // Recon-specific (auto-discovered)
+  | 'http_service'
+  | 'open_port'
+  | 'discovered_url'
+  // Discovery
+  | 'subdomain'
+  | 'web_application'
   // Unclassified
   | 'unclassified' // Assets not yet classified
   // Legacy types (deprecated - kept for backwards compatibility)
@@ -202,8 +223,29 @@ export const ASSET_TYPE_LABELS: Record<AssetType, string> = {
   container: 'Container',
   database: 'Database',
   network: 'Network',
+  vpc: 'VPC',
+  subnet: 'Subnet',
+  load_balancer: 'Load Balancer',
+  firewall: 'Firewall',
+  kubernetes_cluster: 'Kubernetes Cluster',
+  kubernetes_namespace: 'Kubernetes Namespace',
+  container_registry: 'Container Registry',
+  // Data
+  data_store: 'Data Store',
+  s3_bucket: 'S3 Bucket',
+  // Identity
+  iam_user: 'IAM User',
+  iam_role: 'IAM Role',
+  service_account: 'Service Account',
   // Code & CI/CD
   repository: 'Repository',
+  // Recon-specific
+  http_service: 'HTTP Service',
+  open_port: 'Open Port',
+  discovered_url: 'Discovered URL',
+  // Discovery
+  subdomain: 'Subdomain',
+  web_application: 'Web Application',
   // Unclassified
   unclassified: 'Unclassified',
   // Legacy types (deprecated)
@@ -229,7 +271,24 @@ export const ASSET_TYPE_ICONS: Record<AssetType, string> = {
   container: 'Boxes',
   database: 'Database',
   network: 'Network',
+  vpc: 'Network',
+  subnet: 'Network',
+  load_balancer: 'Scale',
+  firewall: 'Shield',
+  kubernetes_cluster: 'Boxes',
+  kubernetes_namespace: 'FolderOpen',
+  container_registry: 'Package',
+  data_store: 'Database',
+  s3_bucket: 'HardDrive',
+  iam_user: 'User',
+  iam_role: 'Key',
+  service_account: 'UserCheck',
   repository: 'GitBranch',
+  http_service: 'Radio',
+  open_port: 'LockOpen',
+  discovered_url: 'Link2',
+  subdomain: 'Globe',
+  web_application: 'MonitorSmartphone',
   unclassified: 'HelpCircle',
   // Legacy types (deprecated)
   service: 'Zap',
@@ -254,7 +313,24 @@ export const ASSET_TYPE_DESCRIPTIONS: Record<AssetType, string> = {
   container: 'Docker and Kubernetes workloads',
   database: 'Database instances and clusters',
   network: 'VPCs, firewalls, load balancers',
+  vpc: 'Virtual Private Clouds',
+  subnet: 'Network subnets',
+  load_balancer: 'Load balancers and traffic managers',
+  firewall: 'Firewalls and security groups',
+  kubernetes_cluster: 'Kubernetes clusters (EKS, GKE, AKS)',
+  kubernetes_namespace: 'Kubernetes namespaces',
+  container_registry: 'Container image registries',
+  data_store: 'Key-value stores, caches, queues',
+  s3_bucket: 'Object storage buckets',
+  iam_user: 'IAM user accounts',
+  iam_role: 'IAM roles and policies',
+  service_account: 'Service accounts and machine identities',
   repository: 'Source code repositories',
+  http_service: 'HTTP/HTTPS services (discovered)',
+  open_port: 'Open network ports (discovered)',
+  discovered_url: 'URLs and endpoints (discovered)',
+  subdomain: 'Subdomains',
+  web_application: 'Web applications',
   unclassified: 'Assets not yet classified',
   // Legacy types (deprecated)
   service: 'Network services (SSH, HTTP, DB services)',
@@ -286,8 +362,29 @@ export const ASSET_TYPE_COLORS: Record<AssetType, { bg: string; text: string }> 
   container: { bg: 'bg-teal-500/15', text: 'text-teal-600' },
   database: { bg: 'bg-emerald-500/15', text: 'text-emerald-600' },
   network: { bg: 'bg-rose-500/15', text: 'text-rose-600' },
+  vpc: { bg: 'bg-violet-500/15', text: 'text-violet-600' },
+  subnet: { bg: 'bg-violet-500/15', text: 'text-violet-600' },
+  load_balancer: { bg: 'bg-rose-500/15', text: 'text-rose-600' },
+  firewall: { bg: 'bg-red-500/15', text: 'text-red-600' },
+  kubernetes_cluster: { bg: 'bg-blue-500/15', text: 'text-blue-600' },
+  kubernetes_namespace: { bg: 'bg-blue-500/15', text: 'text-blue-600' },
+  container_registry: { bg: 'bg-teal-500/15', text: 'text-teal-600' },
+  // Data
+  data_store: { bg: 'bg-emerald-500/15', text: 'text-emerald-600' },
+  s3_bucket: { bg: 'bg-amber-500/15', text: 'text-amber-600' },
+  // Identity
+  iam_user: { bg: 'bg-indigo-500/15', text: 'text-indigo-600' },
+  iam_role: { bg: 'bg-amber-500/15', text: 'text-amber-600' },
+  service_account: { bg: 'bg-teal-500/15', text: 'text-teal-600' },
   // Code & CI/CD
   repository: { bg: 'bg-fuchsia-500/15', text: 'text-fuchsia-600' },
+  // Recon
+  http_service: { bg: 'bg-cyan-500/15', text: 'text-cyan-600' },
+  open_port: { bg: 'bg-red-500/15', text: 'text-red-600' },
+  discovered_url: { bg: 'bg-emerald-500/15', text: 'text-emerald-600' },
+  // Discovery
+  subdomain: { bg: 'bg-blue-500/15', text: 'text-blue-600' },
+  web_application: { bg: 'bg-cyan-500/15', text: 'text-cyan-600' },
   // Unclassified
   unclassified: { bg: 'bg-gray-500/15', text: 'text-gray-600' },
   // Legacy types (deprecated)
