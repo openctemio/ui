@@ -37,6 +37,7 @@ import {
   ActivityPanel,
   DataFlowTab,
 } from '@/features/findings/components/detail'
+import { PentestDetailsTab } from '@/features/findings/components/detail/pentest-details-tab'
 import { getSourceLayout, getOrderedTabs } from '@/features/findings/config/source-layout'
 import '@/features/findings/config/register-layouts'
 
@@ -452,27 +453,26 @@ export default function FindingDetailPage() {
   // Asset info now comes from api.asset (enriched by backend), no need for separate fetch
   const finding = apiFinding ? transformApiToFindingDetail(apiFinding) : null
 
-  // Source-aware layout: hero component + tab ordering
+  // Source-aware layout: source panel + tab ordering
   const layout = finding ? getSourceLayout(finding) : {}
   const orderedTabs = getOrderedTabs(layout)
-  const HeroComponent = layout.heroComponent
+  const SourcePanel = layout.sourcePanel
 
-  // Merge real-time activities with fetched activities (deduplicate by ID)
-  // Real-time activities take priority (shown first, newest)
+  // Merge real-time + API + synthetic activities (deduplicate by ID)
   const allActivities = useMemo(() => {
-    const fetchedActivities =
-      apiActivities.length > 0 ? apiActivities : finding ? finding.activities : []
+    // Start with API activities (real data from backend)
+    const base = apiActivities.length > 0 ? apiActivities : []
 
-    // If no real-time activities, just return fetched
-    if (realtimeActivities.length === 0) {
-      return fetchedActivities
-    }
+    // Add real-time activities (WebSocket), dedup against base
+    const baseIds = new Set(base.map((a) => a.id))
+    const uniqueRealtime = realtimeActivities.filter((a) => !baseIds.has(a.id))
 
-    // Deduplicate: real-time activities take precedence
-    const realtimeIds = new Set(realtimeActivities.map((a) => a.id))
-    const uniqueFetched = fetchedActivities.filter((a) => !realtimeIds.has(a.id))
+    // Always include synthetic "Discovered by" from finding transform
+    // This is the creation event — not stored in activities table
+    const syntheticActivities =
+      finding?.activities?.filter((a) => a.type === 'created' && !baseIds.has(a.id)) ?? []
 
-    return [...realtimeActivities, ...uniqueFetched]
+    return [...uniqueRealtime, ...base, ...syntheticActivities]
   }, [apiActivities, finding, realtimeActivities])
 
   // Handler for adding new comments
@@ -578,8 +578,8 @@ export default function FindingDetailPage() {
               <FindingHeader finding={finding} onTriageCompleted={handleTriageCompleted} />
             </CardHeader>
 
-            {/* Source-specific hero section */}
-            {HeroComponent && <HeroComponent finding={finding} />}
+            {/* Source-specific context panel */}
+            {SourcePanel && <SourcePanel finding={finding} />}
 
             {/* Tabs — order and visibility driven by source layout */}
             <Tabs defaultValue={orderedTabs[0]} className="flex min-h-0 flex-1 flex-col">
@@ -619,6 +619,7 @@ export default function FindingDetailPage() {
                           )}
                         </>
                       )}
+                      {tab === 'pentest' && 'Pentest Details'}
                       {tab === 'related' && 'Related'}
                     </TabsTrigger>
                   ))}
@@ -637,6 +638,9 @@ export default function FindingDetailPage() {
                 </TabsContent>
                 <TabsContent value="attack-path" className="m-0 mt-0">
                   <DataFlowTab finding={finding} />
+                </TabsContent>
+                <TabsContent value="pentest" className="m-0 mt-0">
+                  <PentestDetailsTab finding={finding} />
                 </TabsContent>
                 <TabsContent value="related" className="m-0 mt-0">
                   <RelatedTab finding={finding} />

@@ -402,6 +402,7 @@ export function AgentsSection({ typeFilter }: AgentsSectionProps) {
     link.href = url
     link.download = 'agents.csv'
     link.click()
+    URL.revokeObjectURL(url)
     toast.success('Agents exported')
   }, [agents])
 

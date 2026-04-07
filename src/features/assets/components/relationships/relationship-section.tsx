@@ -16,25 +16,68 @@ import {
   LayoutGrid,
   List,
   GitBranch,
+  Loader2,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { cn } from '@/lib/utils'
-import type { AssetRelationship, RelationshipDirection } from '../../types'
+import type {
+  AssetRelationship,
+  RelationshipDirection,
+  RelationshipGraphNode,
+  RelationshipGraphEdge,
+  RelationshipGraph,
+} from '../../types'
 import { RELATIONSHIP_LABELS } from '../../types'
 import { RelationshipCard, RelationshipListItem } from './relationship-card'
 import { RelationshipGraphView, MiniGraph } from './relationship-graph'
-import { buildRelationshipGraph } from '../../lib'
 
 // ============================================
 // Types
 // ============================================
 
+/**
+ * Build a relationship graph from an array of relationships for visualization.
+ */
+function buildGraphFromRelationships(relationships: AssetRelationship[]): RelationshipGraph {
+  const nodeMap = new Map<string, RelationshipGraphNode>()
+  const edges: RelationshipGraphEdge[] = []
+
+  relationships.forEach((rel) => {
+    if (!nodeMap.has(rel.sourceAssetId)) {
+      nodeMap.set(rel.sourceAssetId, {
+        id: rel.sourceAssetId,
+        name: rel.sourceAssetName,
+        type: rel.sourceAssetType,
+      })
+    }
+    if (!nodeMap.has(rel.targetAssetId)) {
+      nodeMap.set(rel.targetAssetId, {
+        id: rel.targetAssetId,
+        name: rel.targetAssetName,
+        type: rel.targetAssetType,
+      })
+    }
+    edges.push({
+      id: rel.id,
+      source: rel.sourceAssetId,
+      target: rel.targetAssetId,
+      type: rel.type,
+      label: rel.type.replace(/_/g, ' '),
+      impactWeight: rel.impactWeight,
+    })
+  })
+
+  return { nodes: Array.from(nodeMap.values()), edges }
+}
+
 interface RelationshipSectionProps {
   /** All relationships for this asset */
   relationships: AssetRelationship[]
+  /** Whether relationships are still loading from the API */
+  isLoading?: boolean
   /** Current asset ID */
   currentAssetId: string
   /** Called when "Add" button is clicked */
@@ -64,6 +107,7 @@ type ViewMode = 'list' | 'card' | 'graph'
 
 export function RelationshipSection({
   relationships,
+  isLoading = false,
   currentAssetId,
   onAddClick,
   onEditClick,
@@ -104,12 +148,23 @@ export function RelationshipSection({
     }
   }, [activeTab, relationships, outgoing, incoming])
 
-  // Build graph data
-  const graphData = React.useMemo(() => buildRelationshipGraph(currentAssetId), [currentAssetId])
+  // Build graph data from the relationships already passed in
+  const graphData = React.useMemo(() => buildGraphFromRelationships(relationships), [relationships])
 
   // Get direction for a relationship
   const getDirection = (rel: AssetRelationship): RelationshipDirection => {
     return rel.sourceAssetId === currentAssetId ? 'outgoing' : 'incoming'
+  }
+
+  if (isLoading) {
+    return (
+      <div className={cn('rounded-xl border p-6 bg-card', className)}>
+        <div className="flex flex-col items-center justify-center text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mb-3" />
+          <p className="text-sm text-muted-foreground">Loading relationships...</p>
+        </div>
+      </div>
+    )
   }
 
   if (relationships.length === 0) {
@@ -280,7 +335,7 @@ export function RelationshipPreview({
   maxItems = 3,
   className,
 }: RelationshipPreviewProps) {
-  const graphData = React.useMemo(() => buildRelationshipGraph(currentAssetId), [currentAssetId])
+  const graphData = React.useMemo(() => buildGraphFromRelationships(relationships), [relationships])
 
   const displayRelationships = relationships.slice(0, maxItems)
   const remainingCount = relationships.length - maxItems

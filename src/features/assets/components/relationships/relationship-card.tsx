@@ -57,8 +57,25 @@ const EXTENDED_ASSET_TYPE_COLORS: Record<ExtendedAssetType, { bg: string; text: 
   container: { bg: 'bg-indigo-500/20', text: 'text-indigo-500' },
   database: { bg: 'bg-yellow-500/20', text: 'text-yellow-500' },
   network: { bg: 'bg-gray-500/20', text: 'text-gray-500' },
+  vpc: { bg: 'bg-violet-500/20', text: 'text-violet-500' },
+  subnet: { bg: 'bg-violet-400/20', text: 'text-violet-400' },
+  load_balancer: { bg: 'bg-rose-500/20', text: 'text-rose-500' },
+  firewall: { bg: 'bg-red-500/20', text: 'text-red-500' },
+  kubernetes_cluster: { bg: 'bg-blue-600/20', text: 'text-blue-600' },
+  kubernetes_namespace: { bg: 'bg-blue-400/20', text: 'text-blue-400' },
+  container_registry: { bg: 'bg-teal-500/20', text: 'text-teal-500' },
+  data_store: { bg: 'bg-emerald-500/20', text: 'text-emerald-500' },
+  s3_bucket: { bg: 'bg-amber-500/20', text: 'text-amber-500' },
+  iam_user: { bg: 'bg-indigo-500/20', text: 'text-indigo-500' },
+  iam_role: { bg: 'bg-amber-500/20', text: 'text-amber-500' },
+  service_account: { bg: 'bg-teal-500/20', text: 'text-teal-500' },
   // Code & CI/CD
   repository: { bg: 'bg-orange-500/20', text: 'text-orange-500' },
+  http_service: { bg: 'bg-cyan-500/20', text: 'text-cyan-500' },
+  open_port: { bg: 'bg-red-500/20', text: 'text-red-500' },
+  discovered_url: { bg: 'bg-emerald-500/20', text: 'text-emerald-500' },
+  subdomain: { bg: 'bg-blue-500/20', text: 'text-blue-500' },
+  web_application: { bg: 'bg-cyan-500/20', text: 'text-cyan-500' },
   // Unclassified
   unclassified: { bg: 'bg-gray-400/20', text: 'text-gray-400' },
   // Legacy types (deprecated)
@@ -71,7 +88,6 @@ const EXTENDED_ASSET_TYPE_COLORS: Record<ExtendedAssetType, { bg: string; text: 
   container_image: { bg: 'bg-violet-500/20', text: 'text-violet-500' },
   api_collection: { bg: 'bg-teal-500/20', text: 'text-teal-500' },
   api_endpoint: { bg: 'bg-teal-400/20', text: 'text-teal-400' },
-  load_balancer: { bg: 'bg-amber-500/20', text: 'text-amber-500' },
   identity_provider: { bg: 'bg-rose-500/20', text: 'text-rose-500' },
 }
 

@@ -114,6 +114,8 @@ export const Permission = {
   FindingsExport: 'findings:export',
   FindingsBulkUpdate: 'findings:bulk_update',
   FindingsApprove: 'findings:approve',
+  FindingsFixApply: 'findings:fix_apply',
+  FindingsVerify: 'findings:verify',
 
   // Exposures (findings:exposures:*)
   ExposuresRead: 'findings:exposures:read',

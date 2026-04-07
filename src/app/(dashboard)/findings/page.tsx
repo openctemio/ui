@@ -46,6 +46,13 @@ import {
   FINDING_STATUS_CONFIG,
   SEVERITY_CONFIG,
 } from '@/features/findings'
+import { FindingGroupsTab } from '@/features/findings/components/finding-groups-tab'
+import { MarkFixedDialog } from '@/features/findings/components/mark-fixed-dialog'
+import { PendingReviewTab } from '@/features/findings/components/pending-review-tab'
+import {
+  usePendingVerificationCount,
+  type FindingGroup,
+} from '@/features/findings/api/use-finding-groups'
 import {
   useFindingsApi,
   useFindingStatsApi,
@@ -232,7 +239,10 @@ export default function FindingsPage() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState('')
+  const [mainTab, setMainTab] = useState<'findings' | 'groups' | 'pending'>('findings')
+  const [markFixedGroup, setMarkFixedGroup] = useState<FindingGroup | null>(null)
   const { hasPermission } = usePermissions()
+  const pendingCount = usePendingVerificationCount()
 
   // Statuses hidden from default dashboard view (pentest WIP, not ready for visibility)
   const HIDDEN_STATUSES = useMemo(() => ['draft', 'in_review'], [])
@@ -780,252 +790,314 @@ export default function FindingsPage() {
           </div>
         </PageHeader>
 
-        {/* Active Filter Indicators */}
-        {(assetIdFilter || sourceIdFilter) && (
-          <div className="mt-4 flex items-center gap-2 flex-wrap">
-            <Filter className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm text-muted-foreground">Filtered by:</span>
-            {assetIdFilter && (
-              <Badge variant="secondary" className="gap-1.5">
-                Asset: {assetIdFilter.slice(0, 8)}...
-                <button
-                  onClick={clearFilters}
-                  className="ml-0.5 rounded-full hover:bg-muted-foreground/20"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </Badge>
-            )}
-            {sourceIdFilter && (
-              <Badge variant="secondary" className="gap-1.5">
-                Source: {sourceIdFilter.slice(0, 8)}...
-                <button
-                  onClick={clearFilters}
-                  className="ml-0.5 rounded-full hover:bg-muted-foreground/20"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </Badge>
-            )}
-          </div>
-        )}
-
-        {/* Filter Bar */}
-        <div className="mt-4 flex flex-wrap items-center gap-2">
-          <div className="flex-1 min-w-[200px] max-w-sm">
-            <input
-              type="text"
-              placeholder="Search findings..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            />
-          </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
-                <Filter className="mr-2 h-4 w-4" />
-                Status:{' '}
-                {statusFilter === 'all'
-                  ? 'All'
-                  : FINDING_STATUS_CONFIG[statusFilter as FindingStatus]?.label || statusFilter}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuItem onClick={() => setStatusFilter('all')}>All</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setStatusFilter('new')}>New</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setStatusFilter('confirmed')}>
-                Confirmed
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setStatusFilter('in_progress')}>
-                In Progress
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setStatusFilter('resolved')}>
-                Resolved
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setStatusFilter('false_positive')}>
-                False Positive
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setStatusFilter('accepted')}>
-                Accepted
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => setStatusFilter('draft')}>Draft</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setStatusFilter('in_review')}>
-                In Review
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setStatusFilter('remediation')}>
-                Remediation
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setStatusFilter('retest')}>Retest</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setStatusFilter('verified')}>
-                Verified
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setStatusFilter('accepted_risk')}>
-                Accepted Risk
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+        {/* Main Tab Selector */}
+        <div className="mt-4">
+          <Tabs value={mainTab} onValueChange={(v) => setMainTab(v as typeof mainTab)}>
+            <TabsList>
+              <TabsTrigger value="findings">All Findings</TabsTrigger>
+              <TabsTrigger value="groups">Groups</TabsTrigger>
+              <TabsTrigger value="pending" className="relative">
+                Pending Review
+                {pendingCount > 0 && (
+                  <Badge variant="destructive" className="ml-1.5 h-5 min-w-[20px] px-1 text-[10px]">
+                    {pendingCount}
+                  </Badge>
+                )}
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
 
-        {/* Bulk Actions Bar - Shows when items selected */}
-        {selectedCount > 0 && (
-          <Card className="mt-4 border-primary">
-            <CardContent className="flex items-center justify-between py-3">
-              <span className="text-sm font-medium">{selectedCount} finding(s) selected</span>
-              <div className="flex flex-wrap items-center gap-2">
-                <Button variant="outline" size="sm" onClick={handleBulkAssign}>
-                  <UserPlus className="mr-2 h-4 w-4" />
-                  Assign
-                </Button>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm">
-                      <Flag className="mr-2 h-4 w-4" />
-                      Change Status
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    <DropdownMenuItem onClick={() => handleBulkStatusChange('open')}>
-                      Open
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleBulkStatusChange('in_progress')}>
-                      In Progress
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleBulkStatusChange('resolved')}>
-                      Resolved
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleBulkStatusChange('false_positive')}>
-                      False Positive
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                <Button variant="outline" size="sm" onClick={() => setRowSelection({})}>
-                  Clear Selection
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+        {mainTab === 'groups' && (
+          <div className="mt-4">
+            <FindingGroupsTab onMarkFixed={(group) => setMarkFixedGroup(group)} />
+          </div>
         )}
 
-        {isInitialLoading ? (
-          <div className="mt-6">
-            <FindingsLoadingSkeleton />
+        {mainTab === 'pending' && (
+          <div className="mt-4">
+            <PendingReviewTab />
           </div>
-        ) : (
+        )}
+
+        {mainTab !== 'findings' ? null : (
           <>
-            {/* Stats Cards - Always visible once loaded */}
-            {/* Mobile: 2x2 grid showing Critical, High, Medium, Low */}
-            {/* Desktop: 5 columns showing all severities */}
-            <div className="mt-6 grid gap-3 sm:gap-4 grid-cols-2 sm:grid-cols-4 lg:grid-cols-5">
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardDescription>Critical</CardDescription>
-                  <CardTitle className="text-2xl sm:text-3xl text-red-500">
-                    {stats.bySeverity.critical}
-                  </CardTitle>
-                </CardHeader>
-              </Card>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardDescription>High</CardDescription>
-                  <CardTitle className="text-2xl sm:text-3xl text-orange-500">
-                    {stats.bySeverity.high}
-                  </CardTitle>
-                </CardHeader>
-              </Card>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardDescription>Medium</CardDescription>
-                  <CardTitle className="text-2xl sm:text-3xl text-yellow-500">
-                    {stats.bySeverity.medium}
-                  </CardTitle>
-                </CardHeader>
-              </Card>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardDescription>Low</CardDescription>
-                  <CardTitle className="text-2xl sm:text-3xl text-blue-500">
-                    {stats.bySeverity.low}
-                  </CardTitle>
-                </CardHeader>
-              </Card>
-              {/* Info card - hidden on mobile to maintain 2x2 grid */}
-              <Card className="hidden lg:block">
-                <CardHeader className="pb-2">
-                  <CardDescription>Info</CardDescription>
-                  <CardTitle className="text-3xl text-gray-500">{stats.bySeverity.info}</CardTitle>
-                </CardHeader>
-              </Card>
+            {/* Active Filter Indicators */}
+            {(assetIdFilter || sourceIdFilter) && (
+              <div className="mt-4 flex items-center gap-2 flex-wrap">
+                <Filter className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">Filtered by:</span>
+                {assetIdFilter && (
+                  <Badge variant="secondary" className="gap-1.5">
+                    Asset: {assetIdFilter.slice(0, 8)}...
+                    <button
+                      onClick={clearFilters}
+                      className="ml-0.5 rounded-full hover:bg-muted-foreground/20"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                )}
+                {sourceIdFilter && (
+                  <Badge variant="secondary" className="gap-1.5">
+                    Source: {sourceIdFilter.slice(0, 8)}...
+                    <button
+                      onClick={clearFilters}
+                      className="ml-0.5 rounded-full hover:bg-muted-foreground/20"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                )}
+              </div>
+            )}
+
+            {/* Filter Bar */}
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <div className="flex-1 min-w-[200px] max-w-sm">
+                <input
+                  type="text"
+                  placeholder="Search findings..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                />
+              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <Filter className="mr-2 h-4 w-4" />
+                    Status:{' '}
+                    {statusFilter === 'all'
+                      ? 'All'
+                      : FINDING_STATUS_CONFIG[statusFilter as FindingStatus]?.label || statusFilter}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem onClick={() => setStatusFilter('all')}>All</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setStatusFilter('new')}>New</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setStatusFilter('confirmed')}>
+                    Confirmed
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setStatusFilter('in_progress')}>
+                    In Progress
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setStatusFilter('fix_applied')}>
+                    Fix Applied
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setStatusFilter('resolved')}>
+                    Resolved
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setStatusFilter('false_positive')}>
+                    False Positive
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setStatusFilter('accepted')}>
+                    Accepted
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => setStatusFilter('draft')}>
+                    Draft
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setStatusFilter('in_review')}>
+                    In Review
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setStatusFilter('remediation')}>
+                    Remediation
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setStatusFilter('retest')}>
+                    Retest
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setStatusFilter('verified')}>
+                    Verified
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setStatusFilter('accepted_risk')}>
+                    Accepted Risk
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
 
-            {/* Tabs with DataTable */}
-            <Tabs value={severityTab} onValueChange={setSeverityTab} className="mt-6">
-              {/* Scroll container with fade indicator on mobile */}
-              <div className="relative sm:static">
-                <div className="overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
-                  <TabsList className="h-auto w-max">
-                    <TabsTrigger value="all" className="text-xs sm:text-sm shrink-0">
-                      All ({stats.total})
-                    </TabsTrigger>
-                    <TabsTrigger value="critical" className="text-xs sm:text-sm shrink-0">
-                      <span className="hidden sm:inline">Critical</span>
-                      <span className="sm:hidden">Crit</span>
-                      <span className="ml-1">({stats.bySeverity.critical})</span>
-                    </TabsTrigger>
-                    <TabsTrigger value="high" className="text-xs sm:text-sm shrink-0">
-                      High ({stats.bySeverity.high})
-                    </TabsTrigger>
-                    <TabsTrigger value="medium" className="text-xs sm:text-sm shrink-0">
-                      <span className="hidden sm:inline">Medium</span>
-                      <span className="sm:hidden">Med</span>
-                      <span className="ml-1">({stats.bySeverity.medium})</span>
-                    </TabsTrigger>
-                    <TabsTrigger value="low" className="text-xs sm:text-sm shrink-0">
-                      Low ({stats.bySeverity.low})
-                    </TabsTrigger>
-                  </TabsList>
-                </div>
-                {/* Fade indicator for scrollable content on mobile */}
-                <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-background to-transparent pointer-events-none sm:hidden" />
-              </div>
+            {/* Bulk Actions Bar - Shows when items selected */}
+            {selectedCount > 0 && (
+              <Card className="mt-4 border-primary">
+                <CardContent className="flex items-center justify-between py-3">
+                  <span className="text-sm font-medium">{selectedCount} finding(s) selected</span>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button variant="outline" size="sm" onClick={handleBulkAssign}>
+                      <UserPlus className="mr-2 h-4 w-4" />
+                      Assign
+                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm">
+                          <Flag className="mr-2 h-4 w-4" />
+                          Change Status
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent>
+                        <DropdownMenuItem onClick={() => handleBulkStatusChange('open')}>
+                          Open
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleBulkStatusChange('in_progress')}>
+                          In Progress
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleBulkStatusChange('resolved')}>
+                          Resolved
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleBulkStatusChange('false_positive')}>
+                          False Positive
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    <Button variant="outline" size="sm" onClick={() => setRowSelection({})}>
+                      Clear Selection
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
-              <TabsContent value={severityTab}>
-                <Card className="mt-4">
-                  <CardContent className="pt-6">
-                    {isTableLoading ? (
-                      <div className="space-y-3">
-                        {[...Array(5)].map((_, i) => (
-                          <div key={i} className="flex items-center gap-4">
-                            <Skeleton className="h-4 w-4" />
-                            <Skeleton className="h-4 flex-1" />
-                            <Skeleton className="h-6 w-16" />
-                            <Skeleton className="h-4 w-12" />
-                            <Skeleton className="h-4 w-24" />
-                            <Skeleton className="h-6 w-20" />
+            {isInitialLoading ? (
+              <div className="mt-6">
+                <FindingsLoadingSkeleton />
+              </div>
+            ) : (
+              <>
+                {/* Stats Cards - Always visible once loaded */}
+                {/* Mobile: 2x2 grid showing Critical, High, Medium, Low */}
+                {/* Desktop: 5 columns showing all severities */}
+                <div className="mt-6 grid gap-3 sm:gap-4 grid-cols-2 sm:grid-cols-4 lg:grid-cols-5">
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardDescription>Critical</CardDescription>
+                      <CardTitle className="text-2xl sm:text-3xl text-red-500">
+                        {stats.bySeverity.critical}
+                      </CardTitle>
+                    </CardHeader>
+                  </Card>
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardDescription>High</CardDescription>
+                      <CardTitle className="text-2xl sm:text-3xl text-orange-500">
+                        {stats.bySeverity.high}
+                      </CardTitle>
+                    </CardHeader>
+                  </Card>
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardDescription>Medium</CardDescription>
+                      <CardTitle className="text-2xl sm:text-3xl text-yellow-500">
+                        {stats.bySeverity.medium}
+                      </CardTitle>
+                    </CardHeader>
+                  </Card>
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardDescription>Low</CardDescription>
+                      <CardTitle className="text-2xl sm:text-3xl text-blue-500">
+                        {stats.bySeverity.low}
+                      </CardTitle>
+                    </CardHeader>
+                  </Card>
+                  {/* Info card - hidden on mobile to maintain 2x2 grid */}
+                  <Card className="hidden lg:block">
+                    <CardHeader className="pb-2">
+                      <CardDescription>Info</CardDescription>
+                      <CardTitle className="text-3xl text-gray-500">
+                        {stats.bySeverity.info}
+                      </CardTitle>
+                    </CardHeader>
+                  </Card>
+                </div>
+
+                {/* Tabs with DataTable */}
+                <Tabs value={severityTab} onValueChange={setSeverityTab} className="mt-6">
+                  {/* Scroll container with fade indicator on mobile */}
+                  <div className="relative sm:static">
+                    <div className="overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
+                      <TabsList className="h-auto w-max">
+                        <TabsTrigger value="all" className="text-xs sm:text-sm shrink-0">
+                          All ({stats.total})
+                        </TabsTrigger>
+                        <TabsTrigger value="critical" className="text-xs sm:text-sm shrink-0">
+                          <span className="hidden sm:inline">Critical</span>
+                          <span className="sm:hidden">Crit</span>
+                          <span className="ml-1">({stats.bySeverity.critical})</span>
+                        </TabsTrigger>
+                        <TabsTrigger value="high" className="text-xs sm:text-sm shrink-0">
+                          High ({stats.bySeverity.high})
+                        </TabsTrigger>
+                        <TabsTrigger value="medium" className="text-xs sm:text-sm shrink-0">
+                          <span className="hidden sm:inline">Medium</span>
+                          <span className="sm:hidden">Med</span>
+                          <span className="ml-1">({stats.bySeverity.medium})</span>
+                        </TabsTrigger>
+                        <TabsTrigger value="low" className="text-xs sm:text-sm shrink-0">
+                          Low ({stats.bySeverity.low})
+                        </TabsTrigger>
+                      </TabsList>
+                    </div>
+                    {/* Fade indicator for scrollable content on mobile */}
+                    <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-background to-transparent pointer-events-none sm:hidden" />
+                  </div>
+
+                  <TabsContent value={severityTab}>
+                    <Card className="mt-4">
+                      <CardContent className="pt-6">
+                        {isTableLoading ? (
+                          <div className="space-y-3">
+                            {[...Array(5)].map((_, i) => (
+                              <div key={i} className="flex items-center gap-4">
+                                <Skeleton className="h-4 w-4" />
+                                <Skeleton className="h-4 flex-1" />
+                                <Skeleton className="h-6 w-16" />
+                                <Skeleton className="h-4 w-12" />
+                                <Skeleton className="h-4 w-24" />
+                                <Skeleton className="h-6 w-20" />
+                              </div>
+                            ))}
                           </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <DataTable
-                        columns={columns}
-                        data={findings}
-                        searchPlaceholder="Search findings..."
-                        emptyMessage="No findings found"
-                        emptyDescription={
-                          findings.length === 0
-                            ? 'No security findings match your search criteria'
-                            : undefined
-                        }
-                      />
-                    )}
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
+                        ) : (
+                          <DataTable
+                            columns={columns}
+                            data={findings}
+                            searchPlaceholder="Search findings..."
+                            emptyMessage="No findings found"
+                            emptyDescription={
+                              findings.length === 0
+                                ? 'No security findings match your search criteria'
+                                : undefined
+                            }
+                          />
+                        )}
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
+                </Tabs>
+              </>
+            )}
           </>
         )}
       </Main>
+
+      {/* Mark Fixed Dialog */}
+      {markFixedGroup && (
+        <MarkFixedDialog
+          open={!!markFixedGroup}
+          onOpenChange={(open) => {
+            if (!open) setMarkFixedGroup(null)
+          }}
+          groupKey={markFixedGroup.group_key}
+          groupType={markFixedGroup.group_type}
+          groupLabel={markFixedGroup.label}
+          findingCount={markFixedGroup.stats.in_progress}
+          onSuccess={() => {
+            setMarkFixedGroup(null)
+            mutateFindings()
+            mutateStats()
+          }}
+        />
+      )}
 
       {/* Finding Quick View Drawer */}
       <FindingDetailDrawer
