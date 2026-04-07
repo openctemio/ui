@@ -1,11 +1,10 @@
 'use client'
 
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import {
   type ColumnDef,
   flexRender,
   getCoreRowModel,
-  getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
   type SortingState,
@@ -66,7 +65,7 @@ import {
   Download,
   Copy,
 } from 'lucide-react'
-import { useAssets, getAssetRelationships, type Asset } from '@/features/assets'
+import { useAssets, type Asset } from '@/features/assets'
 import { Can, Permission, usePermissions } from '@/lib/permissions'
 import {
   ScopeBadge,
@@ -82,6 +81,7 @@ import {
   type ScopeTargetStatus,
 } from '@/features/scope'
 import type { ApiScopeTarget, ApiScopeExclusion } from '@/features/scope/api/scope-api.types'
+import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import { useDebounce } from '@/hooks/use-debounce'
 // Status filter is now string-based to support custom status values
 import type { AssetType } from '../types'
@@ -147,9 +147,31 @@ export function AssetPage({ config }: AssetPageProps) {
   const canWriteAssets = can(Permission.AssetsWrite)
   const canDeleteAssets = can(Permission.AssetsDelete)
 
-  // Data fetching
-  const { assets, isLoading, mutate } = useAssets({
+  // URL state persistence
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const pathname = usePathname()
+
+  // Pagination state — initialise from URL
+  const [currentPage, setCurrentPage] = useState(() => {
+    const p = searchParams.get('page')
+    return p ? Math.max(1, parseInt(p, 10) || 1) : 1
+  })
+  const [pageSize] = useState(50)
+
+  // Server-side search (debounced) — initialise from URL
+  const [searchValue, setSearchValue] = useState(() => searchParams.get('q') || '')
+  const debouncedSearch = useDebounce(searchValue, 300)
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [debouncedSearch])
+
+  // Data fetching with server-side pagination and search
+  const { assets, total, totalPages, isLoading, mutate } = useAssets({
     types: (config.types || [config.type]) as AssetType[],
+    page: currentPage,
+    pageSize,
+    search: debouncedSearch || undefined,
   })
 
   // Apply optional data transform (e.g., domain tree flattening)
@@ -163,17 +185,49 @@ export function AssetPage({ config }: AssetPageProps) {
   const dialogs = useAssetDialogs()
   const { handleExport } = useAssetExport(transformedAssets, config.exportFields, config.type)
 
-  // Table state
-  const [sorting, setSorting] = useState<SortingState>(
-    config.defaultSort
+  // Table state — initialise from URL where applicable
+  const [sorting, setSorting] = useState<SortingState>(() => {
+    const sortParam = searchParams.get('sort')
+    const dirParam = searchParams.get('dir')
+    if (sortParam) {
+      return [{ id: sortParam, desc: dirParam === 'desc' }]
+    }
+    return config.defaultSort
       ? [{ id: config.defaultSort.field, desc: config.defaultSort.direction === 'desc' }]
       : []
+  })
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>(
+    () => (searchParams.get('status') as StatusFilter) || 'all'
   )
-  const [searchValue, setSearchValue] = useState('')
-  const globalFilter = useDebounce(searchValue, 300)
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [customFilterValues, setCustomFilterValues] = useState<Record<string, string>>({})
   const [rowSelection, setRowSelection] = useState({})
+
+  // Sync state to URL search params
+  const isInitialMount = useRef(true)
+  useEffect(() => {
+    // Skip the initial mount to avoid a redundant replace on first render
+    if (isInitialMount.current) {
+      isInitialMount.current = false
+      return
+    }
+    const params = new URLSearchParams()
+    if (currentPage > 1) params.set('page', String(currentPage))
+    if (debouncedSearch) params.set('q', debouncedSearch)
+    if (statusFilter !== 'all') params.set('status', statusFilter)
+    if (sorting.length > 0) {
+      const defaultField = config.defaultSort?.field
+      const defaultDesc = config.defaultSort?.direction === 'desc'
+      const isDefault =
+        sorting.length === 1 && sorting[0].id === defaultField && sorting[0].desc === defaultDesc
+      if (!isDefault) {
+        params.set('sort', sorting[0].id)
+        params.set('dir', sorting[0].desc ? 'desc' : 'asc')
+      }
+    }
+    const qs = params.toString()
+    const newUrl = qs ? `${pathname}?${qs}` : pathname
+    router.replace(newUrl, { scroll: false })
+  }, [currentPage, debouncedSearch, statusFilter, sorting, pathname, router, config.defaultSort])
 
   // Scope integration — real API data
   const { data: scopeTargetsData } = useScopeTargetsApi({ status: 'active', per_page: 500 })
@@ -583,13 +637,14 @@ export function AssetPage({ config }: AssetPageProps) {
   const table = useReactTable({
     data: filteredData,
     columns,
-    state: { sorting, globalFilter, rowSelection },
+    state: { sorting, rowSelection },
     onSortingChange: setSorting,
     onRowSelectionChange: setRowSelection,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
+    manualPagination: true,
+    pageCount: totalPages,
   })
 
   const handleBulkDelete = async () => {
@@ -823,45 +878,46 @@ export function AssetPage({ config }: AssetPageProps) {
               </Table>
             </div>
 
-            {/* Pagination */}
+            {/* Pagination (server-side) */}
             <div className="flex items-center justify-between mt-4">
               <div className="text-sm text-muted-foreground">
-                {table.getFilteredSelectedRowModel().rows.length} of{' '}
-                {table.getFilteredRowModel().rows.length} row(s) selected.
+                {total > 0
+                  ? `Showing ${(currentPage - 1) * pageSize + 1}-${Math.min(currentPage * pageSize, total)} of ${total}`
+                  : 'No results'}
               </div>
               <div className="flex items-center gap-2">
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => table.setPageIndex(0)}
-                  disabled={!table.getCanPreviousPage()}
+                  onClick={() => setCurrentPage(1)}
+                  disabled={currentPage <= 1}
                 >
                   <ChevronsLeft className="h-4 w-4" />
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => table.previousPage()}
-                  disabled={!table.getCanPreviousPage()}
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage <= 1}
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
                 <span className="text-sm text-muted-foreground">
-                  Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
+                  Page {currentPage} of {totalPages || 1}
                 </span>
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => table.nextPage()}
-                  disabled={!table.getCanNextPage()}
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage >= totalPages}
                 >
                   <ChevronRight className="h-4 w-4" />
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-                  disabled={!table.getCanNextPage()}
+                  onClick={() => setCurrentPage(totalPages)}
+                  disabled={currentPage >= totalPages}
                 >
                   <ChevronsRight className="h-4 w-4" />
                 </Button>
@@ -881,7 +937,6 @@ export function AssetPage({ config }: AssetPageProps) {
         gradientFrom={config.gradientFrom}
         gradientVia={config.gradientVia}
         assetTypeName={config.label}
-        relationships={selectedAsset ? getAssetRelationships(selectedAsset.id) : []}
         extraTabs={
           selectedAsset
             ? [

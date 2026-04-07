@@ -24,6 +24,7 @@ import {
 } from './sheet-sections'
 import { RelationshipSection, RelationshipPreview } from './relationships'
 import { ClassificationBadges } from './classification-badges'
+import { useAssetRelationships } from '../hooks'
 import type { Asset } from '../types/asset.types'
 import type { AssetRelationship } from '../types/relationship.types'
 
@@ -97,9 +98,6 @@ interface AssetDetailSheetProps<T extends Asset> {
   // Relationship Props
   // ============================================
 
-  /** Relationships for this asset (optional - if provided, shows Relationships tab) */
-  relationships?: AssetRelationship[]
-
   /** Callback when Add Relationship is clicked */
   onAddRelationship?: () => void
 
@@ -112,7 +110,7 @@ interface AssetDetailSheetProps<T extends Asset> {
   /** Callback when navigating to a related asset */
   onNavigateToAsset?: (assetId: string) => void
 
-  /** Whether to show relationship preview in overview tab (default: true if relationships provided) */
+  /** Whether to show relationship preview in overview tab (default: true if relationships exist) */
   showRelationshipPreview?: boolean
 
   /** Callback when tags are updated inline */
@@ -147,7 +145,6 @@ export function AssetDetailSheet<T extends Asset>({
   showFindingsTab = true,
   extraTabs,
   // Relationship props
-  relationships,
   onAddRelationship,
   onEditRelationship,
   onDeleteRelationship,
@@ -158,14 +155,19 @@ export function AssetDetailSheet<T extends Asset>({
 }: AssetDetailSheetProps<T>) {
   const [activeTab, setActiveTab] = React.useState('overview')
 
+  // Fetch relationships from API
+  const { relationships, isLoading: isLoadingRelationships } = useAssetRelationships(
+    asset?.id ?? null
+  )
+
   if (!asset) return null
 
   // Calculate icon background color from text color
   const iconBgColor = iconColor.replace('text-', 'bg-').replace(/(\d+)$/, '$1/20')
 
   // Determine if we should show relationships
-  const hasRelationships = relationships && relationships.length > 0
-  const shouldShowRelationshipTab = relationships !== undefined
+  const hasRelationships = relationships.length > 0
+  const shouldShowRelationshipTab = true
   const shouldShowRelationshipPreview = showRelationshipPreview ?? hasRelationships
 
   // Calculate total number of tabs
@@ -264,7 +266,7 @@ export function AssetDetailSheet<T extends Asset>({
             {overviewContent}
 
             {/* Relationship Preview in Overview */}
-            {shouldShowRelationshipPreview && relationships && (
+            {shouldShowRelationshipPreview && (
               <RelationshipPreview
                 relationships={relationships}
                 currentAssetId={asset.id}
@@ -288,7 +290,8 @@ export function AssetDetailSheet<T extends Asset>({
           {shouldShowRelationshipTab && (
             <TabsContent value="relationships" className="mt-0">
               <RelationshipSection
-                relationships={relationships || []}
+                relationships={relationships}
+                isLoading={isLoadingRelationships}
                 currentAssetId={asset.id}
                 onAddClick={onAddRelationship}
                 onEditClick={onEditRelationship}

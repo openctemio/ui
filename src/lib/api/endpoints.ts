@@ -538,6 +538,15 @@ export const assetEndpoints = {
    */
   removeOwner: (assetId: string, ownerId: string) =>
     `${API_BASE.ASSETS}/${assetId}/owners/${ownerId}`,
+
+  // ============================================
+  // ASSET RELATIONSHIPS
+  // ============================================
+
+  /**
+   * List relationships for an asset
+   */
+  listRelationships: (assetId: string) => `${API_BASE.ASSETS}/${assetId}/relationships`,
 } as const
 
 // ============================================

@@ -26,7 +26,7 @@ import type { FindingDetail, Activity } from '../../types'
 import { SEVERITY_CONFIG, FINDING_TYPE_CONFIG } from '../../types'
 import type { FindingType } from '../../types'
 import { CodeHighlighter } from './code-highlighter'
-import { MetadataViewer } from './heroes/metadata-viewer'
+import { MetadataViewer } from './source-panels/metadata-viewer'
 import { Copy, Check } from 'lucide-react'
 import { useState, useCallback, useMemo } from 'react'
 import { cn } from '@/lib/utils'
@@ -618,7 +618,7 @@ export function OverviewTab({ finding, activities = [] }: OverviewTabProps) {
         </div>
       </div>
 
-      {/* Scanner Metadata - shown when metadata exists and no hero already displays it */}
+      {/* Scanner Metadata - shown when metadata exists and no source panel already displays it */}
       {finding.metadata &&
         Object.keys(finding.metadata).filter(
           (k) => finding.metadata![k] != null && finding.metadata![k] !== '' && !k.startsWith('_')

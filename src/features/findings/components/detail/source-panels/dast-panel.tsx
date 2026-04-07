@@ -8,11 +8,11 @@ import { Globe, ChevronDown, ChevronUp } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { FindingDetail } from '../../../types'
 
-interface DastHeroProps {
+interface DastPanelProps {
   finding: FindingDetail
 }
 
-export function DastHero({ finding }: DastHeroProps) {
+export function DastPanel({ finding }: DastPanelProps) {
   const [expanded, setExpanded] = useState(false)
   const meta = finding.metadata || {}
 

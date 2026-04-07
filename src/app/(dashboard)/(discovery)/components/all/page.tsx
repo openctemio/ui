@@ -120,6 +120,7 @@ export default function AllComponentsPage() {
     a.href = url
     a.download = 'components.csv'
     a.click()
+    URL.revokeObjectURL(url)
     toast.success('Components exported')
   }
 
