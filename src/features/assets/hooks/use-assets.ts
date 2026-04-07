@@ -90,6 +90,7 @@ interface BackendAsset {
   description?: string
   tags?: string[]
   metadata?: Record<string, unknown>
+  properties?: Record<string, unknown>
   primary_owner?: { id: string; type: string; name: string; email?: string }
   first_seen: string
   last_seen: string
@@ -112,7 +113,7 @@ function transformAsset(backend: BackendAsset): Asset {
     exposure: backend.exposure as ExposureLevel,
     riskScore: backend.risk_score,
     findingCount: backend.finding_count,
-    metadata: backend.metadata || {},
+    metadata: { ...(backend.properties || {}), ...(backend.metadata || {}) },
     tags: backend.tags || [],
     primaryOwner: backend.primary_owner
       ? {
