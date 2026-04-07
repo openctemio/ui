@@ -67,8 +67,10 @@ export default function SelectTenantPage() {
 
       if (result.success) {
         toast.success('Team selected successfully')
-        // Use full page reload to ensure cookies are picked up
-        // router.push() doesn't work reliably after server action sets cookies
+        // Brief delay to ensure Set-Cookie headers are fully processed by browser
+        // before hard redirect. Without this, dashboard bootstrap may race with
+        // cookie initialization and flash a 401 error before auto-recovering.
+        await new Promise((resolve) => setTimeout(resolve, 100))
         window.location.href = '/'
       } else {
         setSelectedId(null)

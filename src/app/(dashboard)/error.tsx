@@ -32,7 +32,12 @@ function isTransientError(error: Error): boolean {
     message.includes('network error') ||
     message.includes('failed to fetch') ||
     message.includes('proxy_error') ||
-    message.includes('stream_error')
+    message.includes('stream_error') ||
+    message.includes('unauthorized') ||
+    message.includes('401') ||
+    message.includes('token') ||
+    message.includes('authentication') ||
+    message.includes('chunk')
   )
 }
 
