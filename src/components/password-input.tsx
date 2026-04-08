@@ -24,6 +24,7 @@ export function PasswordInput({ className, disabled, ref, ...props }: PasswordIn
         size="icon"
         variant="ghost"
         disabled={disabled}
+        aria-label={showPassword ? 'Hide password' : 'Show password'}
         className="text-muted-foreground absolute end-1 top-1/2 h-6 w-6 -translate-y-1/2 rounded-md"
         onClick={() => setShowPassword((prev) => !prev)}
       >

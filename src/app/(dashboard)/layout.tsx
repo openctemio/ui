@@ -46,7 +46,7 @@ export default async function SiteLayout({ children }: SiteLayoutProps) {
                 <RouteGuard>
                   {/* Global header that handles per-route visibility */}
                   <DashboardHeader />
-                  {children}
+                  <main id="content">{children}</main>
                 </RouteGuard>
               </SidebarInset>
             </SidebarProvider>
