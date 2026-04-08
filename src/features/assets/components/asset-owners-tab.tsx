@@ -195,20 +195,19 @@ export function AssetOwnersTab({ assetId }: AssetOwnersTabProps) {
     setEditOwnershipType(owner.ownershipType)
   }
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
-        Loading owners...
-      </div>
-    )
-  }
+  // CRITICAL: Do NOT early-return on isLoading. The Add/Edit/Remove dialogs
+  // are rendered as children of this component — if we unmount and re-mount
+  // the tree on every SWR revalidation (e.g. when the user clicks the Add
+  // Owner button and triggers a focus event), the dialog state is lost and
+  // the user sees a "flicker". Instead, render the loading state inline and
+  // keep the dialogs mounted at all times.
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Users className="h-4 w-4 text-muted-foreground" />
-          <h3 className="text-sm font-medium">Owners ({owners.length})</h3>
+          <h3 className="text-sm font-medium">Owners ({isLoading ? '…' : owners.length})</h3>
         </div>
         {canEdit && (
           <Button variant="outline" size="sm" onClick={() => setShowAddDialog(true)}>
@@ -218,7 +217,11 @@ export function AssetOwnersTab({ assetId }: AssetOwnersTabProps) {
         )}
       </div>
 
-      {owners.length === 0 ? (
+      {isLoading ? (
+        <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
+          Loading owners...
+        </div>
+      ) : owners.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-8">
           <Users className="h-8 w-8 text-muted-foreground/50" />
           <p className="mt-2 text-sm text-muted-foreground">No owners assigned</p>
@@ -249,9 +252,16 @@ export function AssetOwnersTab({ assetId }: AssetOwnersTabProps) {
         </div>
       )}
 
-      {/* Add Owner Dialog */}
+      {/* Add Owner Dialog
+          NOTE: This dialog is nested inside the AssetDetailSheet (also a Radix
+          dialog primitive). Without these guards, clicking inside the inner
+          dialog can be interpreted as "outside" by the parent sheet's focus
+          guard, causing visual flicker. Closing only happens via Cancel/X. */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-        <DialogContent>
+        <DialogContent
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onInteractOutside={(e) => e.preventDefault()}
+        >
           <DialogHeader>
             <DialogTitle>Add Owner</DialogTitle>
             <DialogDescription>Add a user or group as an owner of this asset.</DialogDescription>
@@ -307,9 +317,12 @@ export function AssetOwnersTab({ assetId }: AssetOwnersTabProps) {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Owner Dialog */}
+      {/* Edit Owner Dialog — same nested-dialog guards as Add */}
       <Dialog open={!!editOwner} onOpenChange={(open) => !open && setEditOwner(null)}>
-        <DialogContent>
+        <DialogContent
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onInteractOutside={(e) => e.preventDefault()}
+        >
           <DialogHeader>
             <DialogTitle>Edit Ownership Type</DialogTitle>
             <DialogDescription>
