@@ -894,6 +894,12 @@ export const agentEndpoints = {
   stats: (agentId: string) => `${API_BASE.AGENTS}/${agentId}/stats`,
 
   /**
+   * Tenant-wide agent stats (status/health/type/mode breakdowns).
+   * SQL-aggregated server-side; replaces client-side .filter().length.
+   */
+  tenantStats: () => `${API_BASE.AGENTS}/stats`,
+
+  /**
    * Activate agent (set status to active)
    */
   activate: (agentId: string) => `${API_BASE.AGENTS}/${agentId}/activate`,
