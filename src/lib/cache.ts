@@ -9,6 +9,8 @@
 
 import { unstable_cache } from 'next/cache'
 
+import { env } from '@/lib/env'
+
 /**
  * Cache duration presets (in seconds)
  */
@@ -150,8 +152,7 @@ export function createCachedApiClient<T>(
   return unstable_cache(
     async () => {
       try {
-        const baseUrl = process.env.BACKEND_API_URL || 'http://localhost:8080'
-        const res = await fetch(`${baseUrl}${endpoint}`, {
+        const res = await fetch(`${env.api.url}${endpoint}`, {
           headers: {
             'Content-Type': 'application/json',
           },

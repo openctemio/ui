@@ -9,6 +9,7 @@ import { useAuthStore } from '@/stores/auth-store'
 import type { ApiError, ApiRequestOptions, ApiResponse } from './types'
 import { ApiClientError } from './error-handler'
 import { dispatchPermissionStaleEvent } from '@/context/permission-provider'
+import { env } from '@/lib/env'
 import { devLog } from '@/lib/logger'
 
 // ============================================
@@ -26,7 +27,7 @@ function isServer(): boolean {
  * Get API base URL
  *
  * - Client-side: Empty string (requests go to /api/v1/* which is proxied by Next.js)
- * - Server-side: Direct to backend URL
+ * - Server-side: Direct to backend URL (from env.api.url)
  */
 export function getApiBaseUrl(): string {
   // On client-side, use empty base URL
@@ -35,18 +36,11 @@ export function getApiBaseUrl(): string {
     return ''
   }
 
-  // On server-side, use direct backend URL
-  const baseUrl = process.env.BACKEND_API_URL
-
-  if (!baseUrl) {
-    // Return default in development, throw in production
-    if (process.env.NODE_ENV === 'production') {
-      throw new Error('BACKEND_API_URL is not defined. Please set it in environment variables.')
-    }
-    return 'http://localhost:8080'
+  // On server-side, use direct backend URL (single source of truth)
+  if (!process.env.BACKEND_API_URL && process.env.NODE_ENV === 'production') {
+    throw new Error('BACKEND_API_URL is not defined. Please set it in environment variables.')
   }
-
-  return baseUrl
+  return env.api.url
 }
 
 /**

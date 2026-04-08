@@ -30,6 +30,16 @@ function getEnvVar(key: string, defaultValue?: string): string {
   return value || defaultValue || ''
 }
 
+/**
+ * Resolves the backend API URL for server-side fetch.
+ * Replaces "localhost" with "127.0.0.1" to avoid Node.js IPv6 resolution
+ * issues where localhost may resolve to ::1 and the backend isn't listening on IPv6.
+ */
+function resolveBackendApiUrl(): string {
+  const url = getEnvVar('BACKEND_API_URL', 'http://localhost:8080')
+  return url.replace('localhost', '127.0.0.1')
+}
+
 // ============================================
 // PUBLIC ENVIRONMENT VARIABLES
 // (Accessible from both client and server)
@@ -38,8 +48,8 @@ function getEnvVar(key: string, defaultValue?: string): string {
 export const env = {
   // API Configuration - Single source of truth for backend API URL
   api: {
-    /** Backend API URL (e.g., http://localhost:8080) - Server-side only */
-    url: getEnvVar('BACKEND_API_URL', 'http://localhost:8080'),
+    /** Backend API URL for server-side fetch (e.g., http://api:8080) - Single source of truth */
+    url: resolveBackendApiUrl(),
     /** Request timeout in milliseconds */
     timeout: parseInt(getEnvVar('API_TIMEOUT', '30000'), 10),
     /**
