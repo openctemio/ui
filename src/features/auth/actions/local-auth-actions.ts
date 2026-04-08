@@ -111,16 +111,11 @@ export interface LoginResult {
 // HELPER FUNCTIONS
 // ============================================
 
-function getBackendUrl(): string {
-  return process.env.BACKEND_API_URL || 'http://localhost:8080'
-}
-
 // NOTE: Permissions are NOT stored in cookies anymore (too large, > 4KB limit)
 // Frontend fetches permissions via /api/v1/me/permissions API instead
 
 async function backendFetch<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  const baseUrl = getBackendUrl()
-  const url = `${baseUrl}${endpoint}`
+  const url = `${env.api.url}${endpoint}`
 
   const response = await fetch(url, {
     ...options,
@@ -756,8 +751,7 @@ export async function createFirstTeamAction(
     devLog.log('[CreateFirstTeam] Creating team:', input.teamName, input.teamSlug)
 
     // Call backend API with cookies (refresh token in httpOnly cookie)
-    const baseUrl = getBackendUrl()
-    const response = await fetch(`${baseUrl}${authEndpoints.createFirstTeam()}`, {
+    const response = await fetch(`${env.api.url}${authEndpoints.createFirstTeam()}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
