@@ -328,6 +328,7 @@ export interface NewScanFormData {
   type: ScanType
   workflowId?: string // Only used when mode is "workflow"
   agentPreference: AgentPreference // Platform agent selection
+  profileId?: string // Optional scan profile (drives quality gate evaluation)
 
   // Step 2: Targets
   targets: ScanTargets
@@ -336,6 +337,12 @@ export interface NewScanFormData {
   options: ScanOptions
   intensity: ScanIntensity
   maxConcurrent: number
+  /** Max execution time in seconds (30-86400, default 3600) */
+  timeoutSeconds: number
+  /** Max automatic retry attempts after failure (0-10, default 0) */
+  maxRetries: number
+  /** Initial backoff between retries in seconds (10-86400, default 60) */
+  retryBackoffSeconds: number
 
   // Step 4: Schedule
   schedule: ScanSchedule
@@ -348,10 +355,14 @@ export const DEFAULT_NEW_SCAN: NewScanFormData = {
   type: 'quick',
   workflowId: undefined,
   agentPreference: 'auto',
+  profileId: undefined,
   targets: DEFAULT_TARGETS,
   options: DEFAULT_SCAN_OPTIONS,
   intensity: 'medium',
   maxConcurrent: 10,
+  timeoutSeconds: 3600,
+  maxRetries: 0,
+  retryBackoffSeconds: 60,
   schedule: {
     runImmediately: true,
     frequency: 'weekly',

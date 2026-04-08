@@ -105,6 +105,12 @@ function mapFormDataToRequest(formData: NewScanFormData): CreateScanConfigReques
     agent_preference: mapAgentPreference(formData.agentPreference),
     targets_per_job: formData.maxConcurrent || 10,
     scanner_config: scannerConfig,
+    timeout_seconds: formData.timeoutSeconds,
+    max_retries: formData.maxRetries,
+    retry_backoff_seconds: formData.retryBackoffSeconds,
+  }
+  if (formData.profileId) {
+    request.profile_id = formData.profileId
   }
 
   // COMBINE all target sources
