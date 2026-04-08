@@ -1,6 +1,7 @@
 import type { ColumnDef } from '@tanstack/react-table'
 import type { Asset } from './asset.types'
 import type { ExportFieldConfig } from '../hooks/use-asset-export'
+import type { AssetStatsData } from '../hooks/use-assets'
 
 /**
  * Configuration for a type-specific asset page.
@@ -127,7 +128,18 @@ export interface FormFieldConfig {
 export interface StatsCardConfig {
   title: string
   icon: React.ComponentType<{ className?: string }>
-  compute: (assets: Asset[]) => number | string
+  /**
+   * Compute the displayed value.
+   * Receives:
+   *   - `assets`: the current page's transformed assets (50 max)
+   *   - `stats`: full type-scoped aggregated stats from `/assets/stats?types=…`
+   *
+   * Prefer `stats` for any global count (Active, With Findings, etc.) so the
+   * card reflects the entire dataset, not just the current page.
+   * Use `assets` only for stats that depend on per-row metadata not aggregated
+   * by the backend (e.g. `metadata.isVirtual`).
+   */
+  compute: (assets: Asset[], stats: AssetStatsData) => number | string
   variant?: 'default' | 'success' | 'warning' | 'danger'
 }
 

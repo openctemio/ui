@@ -82,15 +82,17 @@ export const databasesConfig: AssetPageConfig = {
     {
       title: 'Active',
       icon: CheckCircle,
-      compute: (assets) => assets.filter((a) => a.status === 'active').length,
+      compute: (_assets, stats) => stats.byStatus.active ?? 0,
       variant: 'success',
     },
     {
+      // metadata.encryption isn't aggregated — current page only
       title: 'Encrypted',
       icon: Lock,
       compute: (assets) => assets.filter((a) => a.metadata.encryption).length,
     },
     {
+      // metadata.backupEnabled isn't aggregated — current page only
       title: 'With Backup',
       icon: Save,
       compute: (assets) => assets.filter((a) => a.metadata.backupEnabled).length,

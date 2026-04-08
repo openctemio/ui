@@ -159,6 +159,8 @@ export const cloudConfig: AssetPageConfig = {
 
   statsCards: [
     {
+      // metadata.cloudProvider isn't aggregated by /assets/stats — current
+      // page only. Once backend exposes by_provider, switch to stats.byProvider.
       title: 'AWS',
       icon: Cloud,
       compute: (assets: Asset[]) =>
@@ -179,7 +181,7 @@ export const cloudConfig: AssetPageConfig = {
     {
       title: 'With Findings',
       icon: AlertTriangle,
-      compute: (assets: Asset[]) => assets.filter((a) => a.findingCount > 0).length,
+      compute: (_assets, stats) => stats.withFindings,
       variant: 'warning',
     },
   ],

@@ -315,13 +315,52 @@ export default function AssetsOverviewPage() {
           </Card>
         </div>
 
-        {/* Asset Categories */}
+        {/* Empty state — when the tenant has zero assets across the board,
+            show an onboarding CTA instead of an empty grid. This is the
+            "first-run" experience: clarifies the next step rather than
+            leaving the user staring at an empty page. */}
+        {!statsLoading && totalAssets === 0 && (
+          <Card className="mt-8 border-dashed">
+            <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+              <div className="rounded-full bg-muted p-4 mb-4">
+                <Container className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <h3 className="text-lg font-semibold mb-1">No assets discovered yet</h3>
+              <p className="text-sm text-muted-foreground max-w-md mb-6">
+                Run a discovery scan, connect a cloud provider, or add assets manually to start
+                building your inventory.
+              </p>
+              <div className="flex flex-wrap gap-2 justify-center">
+                <Link href="/scans">
+                  <Button>
+                    <Target className="mr-2 h-4 w-4" />
+                    Run Discovery Scan
+                  </Button>
+                </Link>
+                <Link href="/integrations">
+                  <Button variant="outline">Connect Provider</Button>
+                </Link>
+                <Link href="/scope-config">
+                  <Button variant="outline">Configure Scope</Button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Asset Categories — hide empty categories once stats finish loading
+            so the overview only surfaces what the tenant actually has. While
+            stats are loading we keep all visible categories so the layout
+            doesn't pop in. */}
         <div className="mt-8 grid gap-6 lg:grid-cols-2 xl:grid-cols-3">
           {(Object.keys(ASSET_TYPE_CATEGORIES) as AssetTypeCategory[])
             .filter((categoryKey) => {
-              // Hide categories with no visible types
+              // Hide categories with no visible types (sub-module gating)
               const types = filteredCategoryTypes[categoryKey] || []
-              return types.length > 0
+              if (types.length === 0) return false
+              // Once stats are loaded, hide categories with zero assets
+              if (!statsLoading && getCategoryTotal(categoryKey) === 0) return false
+              return true
             })
             .map((categoryKey) => {
               const category = ASSET_TYPE_CATEGORIES[categoryKey]
@@ -356,6 +395,9 @@ export default function AssetsOverviewPage() {
                   <CardContent className="pt-0">
                     <div className="space-y-2">
                       {(filteredCategoryTypes[categoryKey] || [])
+                        // Once stats are loaded, hide types with zero assets
+                        // so empty rows like "Networks 0" don't clutter the card
+                        .filter((type) => statsLoading || getTypeCount(type) > 0)
                         .slice(0, 6) // Limit to 6 types per category
                         .map((type) => {
                           const TypeIcon = ASSET_TYPE_ICONS[type] || Container

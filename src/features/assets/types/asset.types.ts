@@ -803,6 +803,13 @@ export interface Asset {
   groupId?: string // Optional - asset can be ungrouped
   groupName?: string
   provider?: string // SCM provider or asset source (github, gitlab, etc.)
+  /**
+   * Free-text owner reference. Distinct from `primaryOwner` (which links to a
+   * known user/group entity) — `ownerRef` is a label that lets the org track
+   * an asset's owning team / contact / cost center even when no user record
+   * exists. Persisted to assets.owner_ref (max 500 chars).
+   */
+  ownerRef?: string
   metadata: AssetMetadata
   tags?: string[]
   primaryOwner?: OwnerBrief
@@ -826,6 +833,8 @@ export interface CreateAssetInput {
   scope?: AssetScope // Defaults to 'internal' if not provided
   exposure?: ExposureLevel // Defaults to 'unknown' if not provided
   groupId?: string // Optional - can create ungrouped assets
+  /** Free-text owner reference (team / contact / cost center). Max 500 chars. */
+  ownerRef?: string
   metadata?: Partial<AssetMetadata>
   tags?: string[]
 }
@@ -840,6 +849,8 @@ export interface UpdateAssetInput {
   scope?: AssetScope
   exposure?: ExposureLevel
   groupId?: string | null // null to remove from group
+  /** Free-text owner reference (team / contact / cost center). Max 500 chars. */
+  ownerRef?: string
   metadata?: Partial<AssetMetadata>
   tags?: string[]
 }
