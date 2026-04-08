@@ -745,9 +745,9 @@ export function AssetPage({ config }: AssetPageProps) {
                   value={statusFilter}
                   onValueChange={(v) => setStatusFilter(v as StatusFilter)}
                 >
-                  <TabsList>
+                  <TabsList role="tablist">
                     {statusFilterOptions.map((f) => (
-                      <TabsTrigger key={f.value} value={f.value} className="text-xs">
+                      <TabsTrigger key={f.value} value={f.value} className="text-xs" role="tab">
                         {f.label}
                         <Badge variant="secondary" className="ml-1.5 px-1.5 py-0 text-xs">
                           {statusCounts[f.value] ?? 0}
@@ -788,6 +788,7 @@ export function AssetPage({ config }: AssetPageProps) {
                     value={searchValue}
                     onChange={(e) => setSearchValue(e.target.value)}
                     className="pl-8"
+                    aria-label="Search assets"
                   />
                 </div>
 
@@ -829,53 +830,81 @@ export function AssetPage({ config }: AssetPageProps) {
             </div>
 
             {/* Table */}
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  {table.getHeaderGroups().map((headerGroup) => (
-                    <TableRow key={headerGroup.id}>
-                      {headerGroup.headers.map((header) => (
-                        <TableHead key={header.id}>
-                          {header.isPlaceholder
-                            ? null
-                            : flexRender(header.column.columnDef.header, header.getContext())}
-                        </TableHead>
+            <div className="overflow-x-auto -mx-4 sm:mx-0">
+              <div className="min-w-[800px] sm:min-w-0">
+                <div className="rounded-md border">
+                  <Table aria-label="Assets table">
+                    <TableHeader>
+                      {table.getHeaderGroups().map((headerGroup) => (
+                        <TableRow key={headerGroup.id}>
+                          {headerGroup.headers.map((header) => {
+                            const hideOnMobile = [
+                              'classification',
+                              'tags',
+                              'findingCount',
+                              'riskScore',
+                              'scope-match',
+                            ].includes(header.id)
+                            return (
+                              <TableHead
+                                key={header.id}
+                                className={hideOnMobile ? 'hidden sm:table-cell' : undefined}
+                              >
+                                {header.isPlaceholder
+                                  ? null
+                                  : flexRender(header.column.columnDef.header, header.getContext())}
+                              </TableHead>
+                            )
+                          })}
+                        </TableRow>
                       ))}
-                    </TableRow>
-                  ))}
-                </TableHeader>
-                <TableBody>
-                  {table.getRowModel().rows?.length ? (
-                    table.getRowModel().rows.map((row) => (
-                      <TableRow
-                        key={row.id}
-                        data-state={row.getIsSelected() && 'selected'}
-                        className="cursor-pointer"
-                        onClick={() => dialogs.setSelectedAsset(row.original)}
-                      >
-                        {row.getVisibleCells().map((cell) => (
-                          <TableCell key={cell.id}>
-                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </TableHeader>
+                    <TableBody>
+                      {table.getRowModel().rows?.length ? (
+                        table.getRowModel().rows.map((row) => (
+                          <TableRow
+                            key={row.id}
+                            data-state={row.getIsSelected() && 'selected'}
+                            className="cursor-pointer"
+                            onClick={() => dialogs.setSelectedAsset(row.original)}
+                          >
+                            {row.getVisibleCells().map((cell) => {
+                              const hideOnMobile = [
+                                'classification',
+                                'tags',
+                                'findingCount',
+                                'riskScore',
+                                'scope-match',
+                              ].includes(cell.column.id)
+                              return (
+                                <TableCell
+                                  key={cell.id}
+                                  className={hideOnMobile ? 'hidden sm:table-cell' : undefined}
+                                >
+                                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                </TableCell>
+                              )
+                            })}
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={columns.length} className="h-24 text-center">
+                            {isLoading ? (
+                              <div className="flex flex-col items-center gap-2">
+                                <Skeleton className="h-4 w-48" />
+                                <Skeleton className="h-4 w-32" />
+                              </div>
+                            ) : (
+                              `No ${config.labelPlural.toLowerCase()} found.`
+                            )}
                           </TableCell>
-                        ))}
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={columns.length} className="h-24 text-center">
-                        {isLoading ? (
-                          <div className="flex flex-col items-center gap-2">
-                            <Skeleton className="h-4 w-48" />
-                            <Skeleton className="h-4 w-32" />
-                          </div>
-                        ) : (
-                          `No ${config.labelPlural.toLowerCase()} found.`
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
             </div>
 
             {/* Pagination (server-side) */}
@@ -891,6 +920,7 @@ export function AssetPage({ config }: AssetPageProps) {
                   size="sm"
                   onClick={() => setCurrentPage(1)}
                   disabled={currentPage <= 1}
+                  aria-label="First page"
                 >
                   <ChevronsLeft className="h-4 w-4" />
                 </Button>
@@ -899,6 +929,7 @@ export function AssetPage({ config }: AssetPageProps) {
                   size="sm"
                   onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                   disabled={currentPage <= 1}
+                  aria-label="Previous page"
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
@@ -910,6 +941,7 @@ export function AssetPage({ config }: AssetPageProps) {
                   size="sm"
                   onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                   disabled={currentPage >= totalPages}
+                  aria-label="Next page"
                 >
                   <ChevronRight className="h-4 w-4" />
                 </Button>
@@ -918,6 +950,7 @@ export function AssetPage({ config }: AssetPageProps) {
                   size="sm"
                   onClick={() => setCurrentPage(totalPages)}
                   disabled={currentPage >= totalPages}
+                  aria-label="Last page"
                 >
                   <ChevronsRight className="h-4 w-4" />
                 </Button>
