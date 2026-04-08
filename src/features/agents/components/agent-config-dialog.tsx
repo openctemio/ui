@@ -39,19 +39,26 @@ export function AgentConfigDialog({ open, onOpenChange, agent, apiKey }: AgentCo
   // Fetch rendered templates from the backend.
   // Templates live in api/configs/agent-templates/*.tmpl on the API host —
   // operators can edit them without rebuilding the frontend.
+  //
+  // SECURITY: API key (when provided) is sent via X-Agent-API-Key header,
+  // never as a query parameter — query strings get logged by proxies,
+  // load balancers, browser history, and referer headers.
   useEffect(() => {
     if (!open || !agent.id) return
 
+    const controller = new AbortController()
     setLoading(true)
     setFetchError(null)
 
-    const params = new URLSearchParams()
-    if (apiKey) params.set('api_key', apiKey)
-    const url = `/api/v1/agents/${agent.id}/config-templates${params.toString() ? `?${params.toString()}` : ''}`
+    const headers: Record<string, string> = { Accept: 'application/json' }
+    if (apiKey) {
+      headers['X-Agent-API-Key'] = apiKey
+    }
 
-    fetch(url, {
+    fetch(`/api/v1/agents/${agent.id}/config-templates`, {
       credentials: 'include',
-      headers: { Accept: 'application/json' },
+      headers,
+      signal: controller.signal,
     })
       .then(async (res) => {
         if (!res.ok) {
@@ -62,10 +69,13 @@ export function AgentConfigDialog({ open, onOpenChange, agent, apiKey }: AgentCo
       })
       .then((data) => setTemplates(data))
       .catch((err: Error) => {
+        if (err.name === 'AbortError') return
         setFetchError(err.message)
         toast.error(`Failed to load agent config templates: ${err.message}`)
       })
       .finally(() => setLoading(false))
+
+    return () => controller.abort()
   }, [open, agent.id, apiKey])
 
   const yamlConfig = templates?.yaml ?? ''
@@ -142,6 +152,8 @@ export function AgentConfigDialog({ open, onOpenChange, agent, apiKey }: AgentCo
                 <Button
                   variant="outline"
                   size="sm"
+                  disabled={!yamlConfig}
+                  aria-label="Download agent YAML configuration"
                   onClick={() =>
                     handleDownload(
                       yamlConfig,
@@ -155,6 +167,8 @@ export function AgentConfigDialog({ open, onOpenChange, agent, apiKey }: AgentCo
                 <Button
                   variant="outline"
                   size="sm"
+                  disabled={!yamlConfig}
+                  aria-label="Copy YAML config to clipboard"
                   onClick={() => handleCopy(yamlConfig, 'YAML config')}
                 >
                   {copied === 'YAML config' ? (
@@ -175,6 +189,8 @@ export function AgentConfigDialog({ open, onOpenChange, agent, apiKey }: AgentCo
                 <Button
                   variant="outline"
                   size="sm"
+                  disabled={!envConfig}
+                  aria-label="Copy environment variables to clipboard"
                   onClick={() => handleCopy(envConfig, 'Environment variables')}
                 >
                   {copied === 'Environment variables' ? (
@@ -195,6 +211,8 @@ export function AgentConfigDialog({ open, onOpenChange, agent, apiKey }: AgentCo
                 <Button
                   variant="outline"
                   size="sm"
+                  disabled={!dockerConfig}
+                  aria-label="Copy Docker command to clipboard"
                   onClick={() => handleCopy(dockerConfig, 'Docker command')}
                 >
                   {copied === 'Docker command' ? (
@@ -215,6 +233,8 @@ export function AgentConfigDialog({ open, onOpenChange, agent, apiKey }: AgentCo
                 <Button
                   variant="outline"
                   size="sm"
+                  disabled={!cliConfig}
+                  aria-label="Copy CLI commands to clipboard"
                   onClick={() => handleCopy(cliConfig, 'CLI commands')}
                 >
                   {copied === 'CLI commands' ? (
