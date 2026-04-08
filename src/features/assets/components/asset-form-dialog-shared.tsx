@@ -58,6 +58,10 @@ function getInitialValues(
       values[field.name] = field.defaultValue ?? (field.type === 'boolean' ? false : '')
     }
   }
+  // owner_ref is a top-level Asset field exposed by the backend; surface it
+  // in every form regardless of per-type config so users can label ownership
+  // without us threading it through 24 separate config files.
+  values.ownerRef = asset?.ownerRef ?? ''
   return values
 }
 
@@ -131,6 +135,14 @@ export function AssetFormDialogShared({
       } else {
         data[field.name] = raw
       }
+    }
+
+    // Forward owner_ref. Trim and only send when non-empty so we don't reset
+    // a previously-set value to '' on partial updates.
+    const ownerRefRaw = formData.ownerRef
+    if (typeof ownerRefRaw === 'string') {
+      const trimmed = ownerRefRaw.trim().slice(0, 500)
+      data.ownerRef = trimmed || undefined
     }
 
     if (includeGroupSelect) {
@@ -257,6 +269,26 @@ export function AssetFormDialogShared({
               )}
             </div>
           ))}
+
+          {/* Owner reference — universal field for all asset types. Free-text
+              label like a team name, contact email, or cost center. */}
+          <div>
+            <Label htmlFor="ownerRef" className="text-sm font-medium">
+              Owner Reference
+            </Label>
+            <div className="mt-1.5">
+              <Input
+                id="ownerRef"
+                value={String(formData.ownerRef ?? '')}
+                onChange={(e) => handleChange('ownerRef', e.target.value)}
+                placeholder="Team / contact / cost center"
+                maxLength={500}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Optional — used for ownership tracking and reporting.
+            </p>
+          </div>
 
           {includeGroupSelect && (
             <div>
