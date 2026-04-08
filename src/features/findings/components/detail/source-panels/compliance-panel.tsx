@@ -6,7 +6,7 @@ import { ShieldCheck, XCircle, CheckCircle2, HelpCircle, Minus } from 'lucide-re
 import { cn } from '@/lib/utils'
 import type { FindingDetail } from '../../../types'
 
-interface ComplianceHeroProps {
+interface CompliancePanelProps {
   finding: FindingDetail
 }
 
@@ -17,7 +17,7 @@ const RESULT_CONFIG: Record<string, { icon: typeof CheckCircle2; color: string; 
   not_applicable: { icon: Minus, color: 'text-gray-400', bg: 'bg-gray-500/20' },
 }
 
-export function ComplianceHero({ finding }: ComplianceHeroProps) {
+export function CompliancePanel({ finding }: CompliancePanelProps) {
   const details = finding.complianceDetails
   if (!details) return null
 

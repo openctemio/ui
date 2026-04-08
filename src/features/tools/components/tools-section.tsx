@@ -303,6 +303,7 @@ export function ToolsSection({ onToolSelect, selectedToolId }: ToolsSectionProps
     link.href = url
     link.download = `${mainTab}-tools.csv`
     link.click()
+    URL.revokeObjectURL(url)
     toast.success('Tools exported')
   }, [tools, mainTab, categoriesData])
 

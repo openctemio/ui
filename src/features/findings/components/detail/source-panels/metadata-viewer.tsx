@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils'
 
 interface MetadataViewerProps {
   metadata: Record<string, unknown>
-  /** Keys to exclude (already shown by hero component) */
+  /** Keys to exclude (already shown by source panel) */
   excludeKeys?: string[]
   className?: string
 }
