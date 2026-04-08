@@ -7,11 +7,11 @@ import { Key, ShieldAlert, ShieldCheck, Clock, GitCommit } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { FindingDetail } from '../../../types'
 
-interface SecretHeroProps {
+interface SecretPanelProps {
   finding: FindingDetail
 }
 
-export function SecretHero({ finding }: SecretHeroProps) {
+export function SecretPanel({ finding }: SecretPanelProps) {
   const details = finding.secretDetails
 
   if (!details) return null

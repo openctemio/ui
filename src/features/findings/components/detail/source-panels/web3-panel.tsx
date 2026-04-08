@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { useState } from 'react'
 import type { FindingDetail } from '../../../types'
 
-interface Web3HeroProps {
+interface Web3PanelProps {
   finding: FindingDetail
 }
 
@@ -22,7 +22,7 @@ const CHAIN_NAMES: Record<string, string> = {
   solana: 'Solana',
 }
 
-export function Web3Hero({ finding }: Web3HeroProps) {
+export function Web3Panel({ finding }: Web3PanelProps) {
   const [copied, setCopied] = useState(false)
   const details = finding.web3Details
   if (!details) return null

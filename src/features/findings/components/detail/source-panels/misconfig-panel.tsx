@@ -5,11 +5,11 @@ import { Badge } from '@/components/ui/badge'
 import { Settings, FileCode } from 'lucide-react'
 import type { FindingDetail } from '../../../types'
 
-interface MisconfigHeroProps {
+interface MisconfigPanelProps {
   finding: FindingDetail
 }
 
-export function MisconfigHero({ finding }: MisconfigHeroProps) {
+export function MisconfigPanel({ finding }: MisconfigPanelProps) {
   const details = finding.misconfigDetails
   if (!details) return null
 
