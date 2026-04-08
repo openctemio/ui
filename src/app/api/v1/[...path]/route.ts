@@ -211,7 +211,13 @@ async function proxyRequest(
   }
 
   // Forward other relevant headers from client
-  const forwardHeaders = ['accept', 'accept-language', 'x-tenant-id', 'x-csrf-token']
+  const forwardHeaders = [
+    'accept',
+    'accept-language',
+    'x-tenant-id',
+    'x-csrf-token',
+    'x-agent-api-key', // For GET /agents/{id}/config-templates — keeps key out of query string
+  ]
   forwardHeaders.forEach((header) => {
     const value = request.headers.get(header)
     if (value) {
