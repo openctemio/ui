@@ -1,7 +1,16 @@
 'use client'
 
 import { Badge } from '@/components/ui/badge'
-import { Server, CheckCircle, Network, AlertTriangle, Shield, Cpu, HardDrive } from 'lucide-react'
+import {
+  Server,
+  CheckCircle,
+  Network,
+  AlertTriangle,
+  Shield,
+  Cpu,
+  HardDrive,
+  Globe,
+} from 'lucide-react'
 import type { AssetPageConfig } from '@/features/assets/types/page-config.types'
 import type { Asset } from '@/features/assets'
 
@@ -17,15 +26,43 @@ export const hostsConfig: AssetPageConfig = {
 
   columns: [
     {
+      // Primary identity for a host. Many hosts share a hostname (e.g. "web")
+      // but the IP is what makes a row meaningful at-a-glance. We render the
+      // primary IP plus any extras (ipv6, public_ip) inline if present.
+      accessorKey: 'metadata.ip',
+      header: 'IP',
+      cell: ({ row }) => {
+        const meta = row.original.metadata as Record<string, unknown>
+        const primary = (meta.ip as string) || ''
+        const extras = [meta.publicIp, meta.ipv6, meta.privateIp].filter(
+          (v): v is string => typeof v === 'string' && v.length > 0 && v !== primary
+        )
+        if (!primary && extras.length === 0) {
+          return <span className="text-muted-foreground">-</span>
+        }
+        return (
+          <div className="max-w-[180px]" title={[primary, ...extras].filter(Boolean).join('\n')}>
+            {primary && <p className="text-sm font-mono truncate">{primary}</p>}
+            {extras.length > 0 && (
+              <p className="text-xs text-muted-foreground font-mono truncate">
+                {extras.length === 1 ? extras[0] : `+${extras.length} more`}
+              </p>
+            )}
+          </div>
+        )
+      },
+    },
+    {
       accessorKey: 'metadata.os',
       header: 'OS',
       cell: ({ row }) => {
         const os = row.original.metadata.os as string
         const version = row.original.metadata.osVersion as string
+        const fullLabel = [os, version].filter(Boolean).join(' ')
         return (
-          <div>
-            <p className="text-sm">{os || '-'}</p>
-            {version && <p className="text-xs text-muted-foreground">{version}</p>}
+          <div className="max-w-[180px]" title={fullLabel}>
+            <p className="text-sm truncate">{os || '-'}</p>
+            {version && <p className="text-xs text-muted-foreground truncate">{version}</p>}
           </div>
         )
       },
@@ -159,10 +196,13 @@ export const hostsConfig: AssetPageConfig = {
     {
       title: 'Active',
       icon: CheckCircle,
-      compute: (assets: Asset[]) => assets.filter((a) => a.status === 'active').length,
+      compute: (_assets, stats) => stats.byStatus.active ?? 0,
       variant: 'success',
     },
     {
+      // Backend doesn't aggregate metadata.isVirtual, so this card still
+      // reflects only the current page. Acceptable trade-off until we add
+      // a dedicated host-stats endpoint.
       title: 'Virtual',
       icon: Network,
       compute: (assets: Asset[]) => assets.filter((a) => a.metadata.isVirtual).length,
@@ -170,7 +210,7 @@ export const hostsConfig: AssetPageConfig = {
     {
       title: 'With Findings',
       icon: AlertTriangle,
-      compute: (assets: Asset[]) => assets.filter((a) => a.findingCount > 0).length,
+      compute: (_assets, stats) => stats.withFindings,
       variant: 'warning',
     },
   ],
@@ -223,6 +263,19 @@ export const hostsConfig: AssetPageConfig = {
     {
       title: 'System Information',
       fields: [
+        {
+          label: 'IP Address',
+          getValue: (asset: Asset) => {
+            const ip = asset.metadata.ip as string | undefined
+            if (!ip) return <span className="text-muted-foreground">-</span>
+            return (
+              <div className="flex items-center gap-2">
+                <Globe className="h-4 w-4 text-purple-500" />
+                <span className="font-mono font-medium">{ip}</span>
+              </div>
+            )
+          },
+        },
         {
           label: 'Hostname',
           getValue: (asset: Asset) => (asset.metadata.hostname as string) || '-',

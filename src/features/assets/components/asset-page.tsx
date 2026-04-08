@@ -65,7 +65,8 @@ import {
   Download,
   Copy,
 } from 'lucide-react'
-import { useAssets, type Asset } from '@/features/assets'
+import { useAssets, useAssetStats, type Asset } from '@/features/assets'
+import { TagFilter } from './tag-filter'
 import { Can, Permission, usePermissions } from '@/lib/permissions'
 import {
   ScopeBadge,
@@ -162,17 +163,66 @@ export function AssetPage({ config }: AssetPageProps) {
   // Server-side search (debounced) — initialise from URL
   const [searchValue, setSearchValue] = useState(() => searchParams.get('q') || '')
   const debouncedSearch = useDebounce(searchValue, 300)
+
+  // Tag filter (multi-select, server-side) — initialise from URL
+  const [tagFilters, setTagFilters] = useState<string[]>(() => {
+    const t = searchParams.get('tags')
+    return t ? t.split(',').filter(Boolean) : []
+  })
+
   useEffect(() => {
     setCurrentPage(1)
   }, [debouncedSearch])
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [tagFilters])
 
-  // Data fetching with server-side pagination and search
+  // Memoize array references to keep SWR cache keys stable across renders
+  const typeFilter = useMemo(
+    () => (config.types || [config.type]) as AssetType[],
+    [config.types, config.type]
+  )
+
+  // Data fetching with server-side pagination, search, and tag filter.
+  // `total` here is the FILTERED total (e.g. 50 of 1,427 prod hosts).
   const { assets, total, totalPages, isLoading, mutate } = useAssets({
-    types: (config.types || [config.type]) as AssetType[],
+    types: typeFilter,
     page: currentPage,
     pageSize,
     search: debouncedSearch || undefined,
+    tags: tagFilters.length > 0 ? tagFilters : undefined,
   })
+
+  // Type-wide stats (NOT filter-aware). These power the top stat cards and
+  // status tab badges, which should remain stable regardless of search/tag
+  // filters — they are the user's "anchor" for the size of the dataset.
+  // Filter results are surfaced separately via the `total` from useAssets()
+  // and the "filtered" hint near the table.
+  //
+  // CRITICAL: We track `statsLoading` separately so the stat cards don't flash
+  // a skeleton every time the user changes a filter (which only re-fetches
+  // `useAssets`, not `useAssetStats`).
+  const { stats: typeStats, isLoading: statsLoading } = useAssetStats(typeFilter)
+
+  // Headline assets — a separate query that fetches the FIRST page of assets
+  // for this type with NO search/tag/page filters applied. Used by stat cards
+  // whose `compute` reads metadata fields (e.g. SSL, encryption, isVirtual)
+  // that the backend stats endpoint does not aggregate. This keeps those
+  // cards STABLE when the user filters the table — without it, a card like
+  // "SSL Insecure" would re-compute on every keystroke.
+  //
+  // Limitation: still page-bounded (only the first 50 rows of the type), so
+  // it's an approximation. If a metadata aggregate is critical, the right
+  // long-term fix is to extend GetAggregateStats to include those fields.
+  const { assets: headlineAssets } = useAssets({
+    types: typeFilter,
+    page: 1,
+    pageSize,
+  })
+
+  // True when the user has narrowed the view via a non-status filter.
+  // Status tabs are intentionally excluded — they're navigation, not filtering.
+  const hasActiveFilter = debouncedSearch.length > 0 || tagFilters.length > 0
 
   // Apply optional data transform (e.g., domain tree flattening)
   const transformedAssets = useMemo(
@@ -214,6 +264,7 @@ export function AssetPage({ config }: AssetPageProps) {
     if (currentPage > 1) params.set('page', String(currentPage))
     if (debouncedSearch) params.set('q', debouncedSearch)
     if (statusFilter !== 'all') params.set('status', statusFilter)
+    if (tagFilters.length > 0) params.set('tags', tagFilters.join(','))
     if (sorting.length > 0) {
       const defaultField = config.defaultSort?.field
       const defaultDesc = config.defaultSort?.direction === 'desc'
@@ -227,7 +278,16 @@ export function AssetPage({ config }: AssetPageProps) {
     const qs = params.toString()
     const newUrl = qs ? `${pathname}?${qs}` : pathname
     router.replace(newUrl, { scroll: false })
-  }, [currentPage, debouncedSearch, statusFilter, sorting, pathname, router, config.defaultSort])
+  }, [
+    currentPage,
+    debouncedSearch,
+    statusFilter,
+    tagFilters,
+    sorting,
+    pathname,
+    router,
+    config.defaultSort,
+  ])
 
   // Scope integration — real API data
   const { data: scopeTargetsData } = useScopeTargetsApi({ status: 'active', per_page: 500 })
@@ -297,15 +357,26 @@ export function AssetPage({ config }: AssetPageProps) {
     return data
   }, [transformedAssets, statusFilter, customFilterValues, resolvedFilters])
 
-  // Status counts — single pass O(n)
+  // Status counts — derived from the tenant-wide stats endpoint so the tab
+  // badges reflect the entire dataset (e.g. 1427 hosts) instead of only the
+  // 50 rows on the current page. Fall back to the in-page tally while stats
+  // are loading or if a status value isn't surfaced by the backend aggregate.
   const statusCounts = useMemo(() => {
-    const counts: Record<string, number> = { all: transformedAssets.length }
+    const counts: Record<string, number> = {
+      all: typeStats.total || transformedAssets.length,
+    }
+    for (const [status, count] of Object.entries(typeStats.byStatus)) {
+      counts[status] = count
+    }
+    // Backstop: ensure any status visible on the current page has a number,
+    // even if the stats endpoint doesn't list it (e.g. custom status values).
     for (const asset of transformedAssets) {
-      const s = asset.status
-      counts[s] = (counts[s] ?? 0) + 1
+      if (counts[asset.status] === undefined) {
+        counts[asset.status] = 0
+      }
     }
     return counts
-  }, [transformedAssets])
+  }, [typeStats, transformedAssets])
 
   // Copy handler
   const handleCopy = useCallback(
@@ -324,6 +395,10 @@ export function AssetPage({ config }: AssetPageProps) {
     async (data: Record<string, unknown>) => {
       const tags = (data.tags as string[] | undefined) ?? []
       delete data.tags
+
+      // owner_ref is a universal field on every form, not in config.formFields
+      const ownerRef = data.ownerRef as string | undefined
+      delete data.ownerRef
 
       const metadata: Record<string, unknown> = {}
       const topLevel: Record<string, unknown> = {}
@@ -344,6 +419,7 @@ export function AssetPage({ config }: AssetPageProps) {
         description: String(data.description ?? ''),
         scope: 'internal',
         exposure: 'unknown',
+        ownerRef,
         tags,
         ...topLevel,
       } as never)
@@ -356,6 +432,10 @@ export function AssetPage({ config }: AssetPageProps) {
       if (!dialogs.selectedAsset) return false
       const tags = (data.tags as string[] | undefined) ?? []
       delete data.tags
+
+      // owner_ref is a universal field on every form, not in config.formFields
+      const ownerRef = data.ownerRef as string | undefined
+      delete data.ownerRef
 
       // Collect metadata and top-level fields (same logic as create)
       const metadata: Record<string, unknown> = {}
@@ -374,6 +454,7 @@ export function AssetPage({ config }: AssetPageProps) {
       return crud.handleUpdate(dialogs.selectedAsset.id, {
         name: String(data.name ?? ''),
         description: String(data.description ?? ''),
+        ownerRef,
         tags,
         ...(Object.keys(metadata).length > 0 ? { metadata } : {}),
         ...topLevel,
@@ -422,12 +503,22 @@ export function AssetPage({ config }: AssetPageProps) {
           </Button>
         ),
         cell: ({ row }) => (
-          <div className="flex items-center gap-2">
+          // max-w caps the cell so very long names (e.g. UUIDs appended to a
+          // hostname) don't blow out the table layout. Truncate + native title
+          // tooltip surfaces the full value on hover.
+          <div className="flex items-center gap-2 max-w-[280px]">
             <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
-            <div className="min-w-0">
-              <p className="font-medium truncate">{row.original.name}</p>
+            <div className="min-w-0 flex-1">
+              <p className="font-medium truncate" title={row.original.name}>
+                {row.original.name}
+              </p>
               {row.original.groupName && (
-                <p className="text-muted-foreground text-xs truncate">{row.original.groupName}</p>
+                <p
+                  className="text-muted-foreground text-xs truncate"
+                  title={row.original.groupName}
+                >
+                  {row.original.groupName}
+                </p>
               )}
             </div>
           </div>
@@ -661,7 +752,7 @@ export function AssetPage({ config }: AssetPageProps) {
       <Main>
         <PageHeader
           title={`${config.labelPlural}`}
-          description={`${transformedAssets.length} ${config.labelPlural.toLowerCase()} in your infrastructure`}
+          description={`${typeStats.total.toLocaleString()} ${config.labelPlural.toLowerCase()} in your infrastructure`}
         >
           <div className="flex gap-2">
             <Button variant="outline" onClick={handleExport}>
@@ -693,10 +784,10 @@ export function AssetPage({ config }: AssetPageProps) {
                 <Icon className="h-4 w-4" />
                 Total {config.labelPlural}
               </CardDescription>
-              {isLoading ? (
+              {statsLoading ? (
                 <Skeleton className="h-9 w-16 mt-1" />
               ) : (
-                <CardTitle className="text-3xl">{transformedAssets.length}</CardTitle>
+                <CardTitle className="text-3xl">{typeStats.total.toLocaleString()}</CardTitle>
               )}
             </CardHeader>
           </Card>
@@ -710,10 +801,15 @@ export function AssetPage({ config }: AssetPageProps) {
                     <StatIcon className="h-4 w-4" />
                     {stat.title}
                   </CardDescription>
-                  {isLoading ? (
+                  {statsLoading ? (
                     <Skeleton className="h-9 w-16 mt-1" />
                   ) : (
-                    <CardTitle className="text-3xl">{stat.compute(transformedAssets)}</CardTitle>
+                    <CardTitle className="text-3xl">
+                      {/* Pass headlineAssets (unfiltered first page) so
+                          metadata-based computes (SSL, virtual, encrypted)
+                          stay stable when the user filters the table. */}
+                      {stat.compute(headlineAssets, typeStats)}
+                    </CardTitle>
                   )}
                 </CardHeader>
               </Card>
@@ -737,6 +833,27 @@ export function AssetPage({ config }: AssetPageProps) {
         <Card className="mt-6">
           <CardHeader>
             <CardTitle>All {config.labelPlural}</CardTitle>
+            {hasActiveFilter && !isLoading && (
+              <CardDescription className="text-xs">
+                Filtered:{' '}
+                <span className="font-medium text-foreground">{total.toLocaleString()}</span> of{' '}
+                <span className="font-medium">{typeStats.total.toLocaleString()}</span>{' '}
+                {config.labelPlural.toLowerCase()}
+                {tagFilters.length > 0 && (
+                  <>
+                    {' '}
+                    — matching tag{tagFilters.length === 1 ? '' : 's'}{' '}
+                    <span className="font-medium">{tagFilters.join(', ')}</span>
+                  </>
+                )}
+                {debouncedSearch && (
+                  <>
+                    {' '}
+                    — search <span className="font-medium">&ldquo;{debouncedSearch}&rdquo;</span>
+                  </>
+                )}
+              </CardDescription>
+            )}
           </CardHeader>
           <CardContent>
             <div className="flex flex-col gap-4 mb-4 sm:flex-row sm:items-center sm:justify-between">
@@ -778,6 +895,8 @@ export function AssetPage({ config }: AssetPageProps) {
                     </SelectContent>
                   </Select>
                 ))}
+
+                <TagFilter value={tagFilters} onChange={setTagFilters} />
               </div>
 
               <div className="flex items-center gap-2">
