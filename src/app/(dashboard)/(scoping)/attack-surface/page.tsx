@@ -213,32 +213,38 @@ export default function AttackSurfacePage() {
                       <Skeleton className="h-5 w-10" />
                     </div>
                   ))
-                : stats?.assetBreakdown?.map((item) => {
-                    const typeConfig = assetTypeIcons[item.type] || {
-                      icon: Server,
-                      color: 'text-gray-400',
-                    }
-                    const TypeIcon = typeConfig.icon
-                    return (
-                      <div key={item.type} className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className={typeConfig.color}>
-                            <TypeIcon className="h-5 w-5" />
+                : (stats?.assetBreakdown ?? [])
+                    .filter((item) => item.total > 0)
+                    .map((item) => {
+                      const typeConfig = assetTypeIcons[item.type] || {
+                        icon: Server,
+                        color: 'text-gray-400',
+                      }
+                      const TypeIcon = typeConfig.icon
+                      return (
+                        <div key={item.type} className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className={typeConfig.color}>
+                              <TypeIcon className="h-5 w-5" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium">
+                                {assetTypeNames[item.type] || item.type}
+                              </p>
+                              <p className="text-muted-foreground text-xs">
+                                {item.exposed} exposed
+                              </p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="text-sm font-medium">
-                              {assetTypeNames[item.type] || item.type}
-                            </p>
-                            <p className="text-muted-foreground text-xs">{item.exposed} exposed</p>
-                          </div>
+                          <Badge variant="secondary">{item.total}</Badge>
                         </div>
-                        <Badge variant="secondary">{item.total}</Badge>
-                      </div>
-                    )
-                  })}
-              {!isLoading && (!stats?.assetBreakdown || stats.assetBreakdown.length === 0) && (
-                <p className="text-muted-foreground text-sm text-center py-4">No assets found</p>
-              )}
+                      )
+                    })}
+              {!isLoading &&
+                (!stats?.assetBreakdown ||
+                  stats.assetBreakdown.filter((item) => item.total > 0).length === 0) && (
+                  <p className="text-muted-foreground text-sm text-center py-4">No assets found</p>
+                )}
             </CardContent>
           </Card>
 
