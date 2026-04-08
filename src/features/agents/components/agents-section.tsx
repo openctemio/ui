@@ -61,6 +61,7 @@ import { AgentDetailSheet } from './agent-detail-sheet'
 import { AgentTable } from './agent-table'
 import {
   useAgents,
+  useTenantAgentStats,
   useDeleteAgent,
   useBulkDeleteAgents,
   useActivateAgent,
@@ -171,6 +172,10 @@ export function AgentsSection({ typeFilter }: AgentsSectionProps) {
   const { data: agentsData, error, isLoading, mutate } = useAgents(_filters)
   const agents: Agent[] = useMemo(() => agentsData?.items ?? [], [agentsData?.items])
 
+  // Tenant-wide aggregated stats — independent of pagination/filters so the
+  // top stat cards always reflect the FULL dataset, not just the current page.
+  const { data: tenantAgentStats } = useTenantAgentStats()
+
   // Mutations
   const { trigger: deleteAgentTrigger, isMutating: isDeleting } = useDeleteAgent(
     selectedAgent?.id || ''
@@ -186,8 +191,31 @@ export function AgentsSection({ typeFilter }: AgentsSectionProps) {
     return agents.filter((a) => a.type === typeFilter)
   }, [agents, typeFilter])
 
-  // Calculate stats
-  const stats = useMemo(() => calculateStats(typeFilteredAgents), [typeFilteredAgents])
+  // Stats — prefer the API-aggregated tenant stats (accurate across all
+  // pages); fall back to per-page calculation if the stats request hasn't
+  // resolved yet (or for the type-filtered case where we filter client-side).
+  const stats = useMemo(() => {
+    if (tenantAgentStats && !typeFilter) {
+      return {
+        total: tenantAgentStats.total,
+        online: tenantAgentStats.by_health?.online ?? 0,
+        offline:
+          (tenantAgentStats.by_health?.offline ?? 0) +
+          (tenantAgentStats.by_health?.unknown ?? 0) +
+          (tenantAgentStats.by_status?.disabled ?? 0),
+        error: tenantAgentStats.by_health?.error ?? 0,
+        activeJobs: tenantAgentStats.active_jobs,
+        byMode: {
+          daemon: tenantAgentStats.by_execution_mode?.daemon ?? 0,
+          standalone: tenantAgentStats.by_execution_mode?.standalone ?? 0,
+        },
+        byType: {
+          collector: tenantAgentStats.by_type?.collector ?? 0,
+        },
+      }
+    }
+    return calculateStats(typeFilteredAgents)
+  }, [tenantAgentStats, typeFilter, typeFilteredAgents])
 
   // Filter agents based on tab, status, and search
   const filteredAgents = useMemo(() => {
