@@ -18,7 +18,6 @@ import { env } from '@/lib/env'
 import { markSwitchTeamCompleted } from '@/lib/api/switch-cooldown'
 import { devLog } from '@/lib/logger'
 
-const BACKEND_URL = env.api.url
 const ACCESS_TOKEN_COOKIE = env.auth.cookieName
 const REFRESH_TOKEN_COOKIE = env.auth.refreshCookieName
 const TENANT_COOKIE = env.cookies.tenant
@@ -69,7 +68,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     // Exchange token for new tenant
     devLog.log('[SwitchTeam] Exchanging token for tenant:', body.tenant_id)
-    const response = await fetch(`${BACKEND_URL}/api/v1/auth/token`, {
+    const response = await fetch(`${env.api.url}/api/v1/auth/token`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

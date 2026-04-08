@@ -19,7 +19,6 @@ import { env } from '@/lib/env'
 import { isInSwitchCooldown } from '@/lib/api/switch-cooldown'
 import { devLog } from '@/lib/logger'
 
-const BACKEND_URL = env.api.url
 const ACCESS_TOKEN_COOKIE = env.auth.cookieName
 const REFRESH_TOKEN_COOKIE = env.auth.refreshCookieName
 const TENANT_COOKIE = env.cookies.tenant
@@ -79,7 +78,7 @@ async function tryRefreshAccessToken(
   const refreshPromise = (async (): Promise<RefreshResult | null> => {
     try {
       devLog.log('[Proxy] Attempting to refresh access token for tenant:', tenantId)
-      const response = await fetch(`${BACKEND_URL}/api/v1/auth/refresh`, {
+      const response = await fetch(`${env.api.url}/api/v1/auth/refresh`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -170,7 +169,7 @@ async function proxyRequest(
   const path = params.path.join('/')
   const url = new URL(request.url)
   // Route is /api/v1/[...path], so we need to add /api/v1/ prefix for backend
-  const backendUrl = `${BACKEND_URL}/api/v1/${path}${url.search}`
+  const backendUrl = `${env.api.url}/api/v1/${path}${url.search}`
 
   // Get access token from httpOnly cookie
   const cookieStore = await cookies()

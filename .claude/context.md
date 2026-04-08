@@ -27,6 +27,7 @@
 ### Important Notes
 
 **DO NOT:**
+
 - ❌ Add Prisma to this project
 - ❌ Add database connection
 - ❌ Create complex API routes in Next.js
@@ -34,6 +35,7 @@
 - ❌ Store data in Next.js
 
 **DO:**
+
 - ✅ Create API client to connect to backend
 - ✅ Use SWR or React Query for data fetching
 - ✅ Focus on UI/UX and user experience
@@ -45,6 +47,7 @@
 ## 📝 User Requirements
 
 ### Backend API
+
 - User has a **separate backend API service**
 - Backend handles:
   - Database operations
@@ -55,6 +58,7 @@
   - Background jobs
 
 ### Frontend (This Codebase)
+
 - Responsibilities:
   - User interface
   - Authentication flow (Keycloak OAuth)
@@ -70,8 +74,9 @@
 ### Environment Variables Needed
 
 ```env
-# Backend API URL
-NEXT_PUBLIC_BACKEND_API_URL=https://api.example.com  # User's backend
+# Backend API URL (server-side only — single source of truth)
+# Client-side requests proxied through Next.js at /api/v1/*
+BACKEND_API_URL=http://api:8080
 
 # Keycloak (already configured)
 NEXT_PUBLIC_KEYCLOAK_URL=...
@@ -84,11 +89,13 @@ NEXT_PUBLIC_KEYCLOAK_CLIENT_ID=...
 ## 📊 Current Status
 
 ### Completed ✅
+
 - Phase 1: Security & Keycloak (100%)
 - Phase 2: Architecture & Best Practices (100%)
 - Phase 3: Testing & Quality (84.28% coverage, 274 tests)
 
 ### TODO
+
 - [ ] Create API client (`src/lib/api/client.ts`)
 - [ ] Install SWR or React Query
 - [ ] Define API endpoints & types
@@ -101,6 +108,7 @@ NEXT_PUBLIC_KEYCLOAK_CLIENT_ID=...
 ## 🎯 Next Actions
 
 **Priority 1: API Integration (1-2 days)**
+
 1. Install SWR: `npm install swr`
 2. Create `src/lib/api/client.ts` with auth headers
 3. Define `src/lib/api/endpoints.ts` for type-safe URLs
@@ -108,6 +116,7 @@ NEXT_PUBLIC_KEYCLOAK_CLIENT_ID=...
 5. Replace dashboard mock data
 
 **Priority 2: DevOps (1-2 days)**
+
 1. Setup GitHub Actions for CI/CD
 2. Install Sentry for error tracking
 3. Setup Husky for pre-commit hooks
@@ -119,6 +128,7 @@ NEXT_PUBLIC_KEYCLOAK_CLIENT_ID=...
 ## 📚 Documentation
 
 **Key Files:**
+
 - `docs/ARCHITECTURE.md` - Architecture overview & API integration guide
 - `docs/PROJECT_ASSESSMENT.md` - Production readiness assessment
 - `docs/PHASE1_SUMMARY.md` - Security & Keycloak
@@ -126,6 +136,7 @@ NEXT_PUBLIC_KEYCLOAK_CLIENT_ID=...
 - `docs/PHASE3_SUMMARY.md` - Testing & Quality
 
 **Assessment:**
+
 - Current Score: 82/100 (B+ Grade)
 - After API integration: 90+/100 (A Grade)
 - Production-ready: ✅ Almost there!
@@ -135,6 +146,7 @@ NEXT_PUBLIC_KEYCLOAK_CLIENT_ID=...
 ## ⚠️ Remember
 
 **This is a FRONTEND-ONLY codebase:**
+
 - All data comes from user's backend API
 - No database in this project
 - No Prisma needed
@@ -142,6 +154,7 @@ NEXT_PUBLIC_KEYCLOAK_CLIENT_ID=...
 - Backend API integration is the main task
 
 **Backend API Requirements:**
+
 - Must accept JWT tokens from Keycloak
 - Must provide RESTful endpoints
 - Should return JSON responses

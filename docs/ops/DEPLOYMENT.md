@@ -52,8 +52,8 @@ NEXT_PUBLIC_KEYCLOAK_CLIENT_ID=nextjs-client
 KEYCLOAK_CLIENT_SECRET=<secret-from-keycloak>
 NEXT_PUBLIC_KEYCLOAK_REDIRECT_URI=https://your-app.com/auth/callback
 
-# Backend API
-NEXT_PUBLIC_BACKEND_API_URL=https://api.your-domain.com
+# Backend API (server-side only — single source of truth)
+# Client-side requests proxied through Next.js at /api/v1/*
 BACKEND_API_URL=https://api.your-domain.com
 
 # Application
@@ -116,6 +116,7 @@ In Keycloak Admin Console:
 ### Vercel Deployment (Recommended)
 
 **Why Vercel:**
+
 - ✅ Zero-configuration deployment
 - ✅ Automatic HTTPS
 - ✅ Global CDN
@@ -146,7 +147,7 @@ vercel env add NEXT_PUBLIC_KEYCLOAK_URL
 vercel env add NEXT_PUBLIC_KEYCLOAK_REALM
 vercel env add NEXT_PUBLIC_KEYCLOAK_CLIENT_ID
 vercel env add KEYCLOAK_CLIENT_SECRET
-vercel env add NEXT_PUBLIC_BACKEND_API_URL
+vercel env add BACKEND_API_URL
 vercel env add NEXT_PUBLIC_APP_URL
 vercel env add SECURE_COOKIES
 vercel env add CSRF_SECRET
@@ -206,6 +207,7 @@ Create `vercel.json` (optional):
 ### Docker Deployment
 
 **Why Docker:**
+
 - ✅ Portable across platforms
 - ✅ Consistent environments
 - ✅ Easy scaling with orchestration
@@ -238,13 +240,13 @@ COPY . .
 ARG NEXT_PUBLIC_KEYCLOAK_URL
 ARG NEXT_PUBLIC_KEYCLOAK_REALM
 ARG NEXT_PUBLIC_KEYCLOAK_CLIENT_ID
-ARG NEXT_PUBLIC_BACKEND_API_URL
+ARG BACKEND_API_URL
 ARG NEXT_PUBLIC_APP_URL
 
 ENV NEXT_PUBLIC_KEYCLOAK_URL=$NEXT_PUBLIC_KEYCLOAK_URL
 ENV NEXT_PUBLIC_KEYCLOAK_REALM=$NEXT_PUBLIC_KEYCLOAK_REALM
 ENV NEXT_PUBLIC_KEYCLOAK_CLIENT_ID=$NEXT_PUBLIC_KEYCLOAK_CLIENT_ID
-ENV NEXT_PUBLIC_BACKEND_API_URL=$NEXT_PUBLIC_BACKEND_API_URL
+ENV BACKEND_API_URL=$BACKEND_API_URL
 ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
 ENV NODE_ENV=production
 
@@ -314,10 +316,10 @@ services:
         NEXT_PUBLIC_KEYCLOAK_URL: ${NEXT_PUBLIC_KEYCLOAK_URL}
         NEXT_PUBLIC_KEYCLOAK_REALM: ${NEXT_PUBLIC_KEYCLOAK_REALM}
         NEXT_PUBLIC_KEYCLOAK_CLIENT_ID: ${NEXT_PUBLIC_KEYCLOAK_CLIENT_ID}
-        NEXT_PUBLIC_BACKEND_API_URL: ${NEXT_PUBLIC_BACKEND_API_URL}
+        BACKEND_API_URL: ${BACKEND_API_URL}
         NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
     ports:
-      - "3000:3000"
+      - '3000:3000'
     environment:
       - NODE_ENV=production
       - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET}
@@ -353,6 +355,7 @@ curl http://localhost:3000/api/health
 ```
 
 **Important:** The production setup (`docker-compose.prod.yml`) includes:
+
 - Nginx reverse proxy with SSL/TLS support
 - Rate limiting (10 requests/second)
 - Security headers
@@ -503,6 +506,7 @@ curl -I https://your-app.com
 ### 3. Monitor Application
 
 **With PM2 (Traditional):**
+
 ```bash
 # View logs
 pm2 logs nextjs-app
@@ -512,6 +516,7 @@ pm2 monit
 ```
 
 **With Docker:**
+
 ```bash
 # View logs
 docker-compose logs -f nextjs
@@ -521,6 +526,7 @@ docker stats
 ```
 
 **With Vercel:**
+
 - View logs in Vercel Dashboard
 - Setup integrations (Sentry, LogRocket, etc.)
 
@@ -554,6 +560,7 @@ The health check endpoint is already implemented at `src/app/api/health/route.ts
 ```
 
 Test your deployment:
+
 ```bash
 # Local
 curl http://localhost:3000/api/health
@@ -626,6 +633,7 @@ Before going live, verify:
 **Cause:** Keycloak redirect URI not matching production URL
 
 **Fix:**
+
 1. Go to Keycloak Admin → Clients → Your Client
 2. Add to **Valid Redirect URIs**: `https://your-app.com/auth/callback`
 3. Save changes
@@ -635,6 +643,7 @@ Before going live, verify:
 **Cause:** CSRF_SECRET not set or cookies not working
 
 **Fix:**
+
 1. Verify CSRF_SECRET is set: `echo $CSRF_SECRET`
 2. Verify SECURE_COOKIES=true in production
 3. Verify HTTPS is enabled
@@ -645,6 +654,7 @@ Before going live, verify:
 **Cause:** Next.js app not running or port mismatch
 
 **Fix:**
+
 ```bash
 # Check if app is running
 pm2 status
@@ -665,13 +675,15 @@ docker-compose restart
 **Cause:** Build-time vs runtime variables confusion
 
 **Fix:**
+
 - `NEXT_PUBLIC_*` variables: Available in browser (build-time)
 - Other variables: Server-side only (runtime)
-- Rebuild after changing NEXT_PUBLIC_ variables
+- Rebuild after changing NEXT*PUBLIC* variables
 
 ### Performance Issues
 
 **Check:**
+
 ```bash
 # Memory usage
 free -h
@@ -684,6 +696,7 @@ docker stats
 ```
 
 **Optimize:**
+
 - Increase server resources
 - Enable CDN
 - Optimize images
@@ -703,6 +716,7 @@ docker stats
 ## Support
 
 For deployment issues:
+
 1. Check [docs/auth/TROUBLESHOOTING.md](../features/auth/TROUBLESHOOTING.md)
 2. Review logs (PM2, Docker, Vercel)
 3. Test in staging environment first
