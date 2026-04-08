@@ -547,6 +547,23 @@ export const assetEndpoints = {
    * List relationships for an asset
    */
   listRelationships: (assetId: string) => `${API_BASE.ASSETS}/${assetId}/relationships`,
+
+  /**
+   * Create a new relationship for an asset (POST)
+   * The {id} in the path is the source asset; backend also requires
+   * source_asset_id in the body and rejects mismatches.
+   */
+  createRelationship: (assetId: string) => `${API_BASE.ASSETS}/${assetId}/relationships`,
+
+  /**
+   * Update a relationship by its own ID (PUT)
+   */
+  updateRelationship: (relationshipId: string) => `/api/v1/relationships/${relationshipId}`,
+
+  /**
+   * Delete a relationship by its own ID (DELETE)
+   */
+  deleteRelationship: (relationshipId: string) => `/api/v1/relationships/${relationshipId}`,
 } as const
 
 // ============================================

@@ -40,15 +40,26 @@ export default async function SignIn({ searchParams }: LoginPageProps) {
     } else if (hasPendingTenants) {
       // User has multiple teams but hasn't selected one - redirect to select-tenant
       redirect('/select-tenant')
-    } else {
-      // User has no teams but has a specific destination (e.g., invitation)
-      // Let them go there first - they can accept invitation and get a tenant
-      if (redirectTo.includes('/invitations/')) {
-        redirect(redirectTo)
-      }
-      // Otherwise, redirect to onboarding to create first team
-      redirect('/onboarding/create-team')
+    } else if (redirectTo.includes('/invitations/')) {
+      // Special case: invitation links — let them through with current auth
+      // so the invitation acceptance flow can issue a fresh tenant cookie.
+      redirect(redirectTo)
     }
+
+    // ⚠️ Dangling auth state: refresh_token exists but no tenant cookie and
+    // no pendingTenants cookie. This typically happens when the user logged
+    // in with a multi-tenant account, walked away from /select-tenant, and
+    // the pendingTenants cookie expired before they picked a team.
+    //
+    // We CANNOT assume "no tenants" here — the user almost certainly has
+    // tenants on the server, we just lost the cached list locally. The
+    // previous behaviour (redirect to /onboarding/create-team) caused the
+    // user to create a duplicate tenant they didn't want.
+    //
+    // Instead: fall through and render the login form. The user re-enters
+    // credentials, /auth/login returns the tenant list fresh, and the
+    // normal flow resumes. The dangling refresh_token is harmless — the
+    // successful re-login will overwrite it.
   }
 
   return (

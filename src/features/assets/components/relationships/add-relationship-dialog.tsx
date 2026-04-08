@@ -3,11 +3,15 @@
 /**
  * Add Relationship Dialog Component
  *
- * Dialog for creating new relationships between assets
+ * Dialog for creating new relationships between assets.
+ *
+ * Target asset selection uses a server-side debounced search instead of
+ * preloading every asset in the tenant — that pattern does not scale and
+ * was the reason this dialog never got wired before.
  */
 
 import * as React from 'react'
-import { Search, Link2, ArrowRight, AlertCircle } from 'lucide-react'
+import { Link2, ArrowRight, AlertCircle, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -30,12 +34,14 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Slider } from '@/components/ui/slider'
+import { useDebounce } from '@/hooks/use-debounce'
 import { cn } from '@/lib/utils'
 import type {
   RelationshipType,
   ExtendedAssetType,
   CreateRelationshipInput,
   RelationshipConfidence,
+  AssetRelationship,
 } from '../../types'
 import {
   RELATIONSHIP_LABELS,
@@ -61,12 +67,37 @@ interface AddRelationshipDialogProps {
   onOpenChange: (open: boolean) => void
   /** Current asset (source of the relationship) */
   sourceAsset: AssetOption
-  /** Available assets to select as target */
-  availableAssets: AssetOption[]
+  /**
+   * Server-side asset search. Called with the user's query (already
+   * debounced). Should return up to ~50 candidates filtered by tenant.
+   * The dialog further narrows the result by valid target types and
+   * excludes the source asset from the final list.
+   */
+  searchAssets: (query: string) => Promise<AssetOption[]>
+  /**
+   * Existing relationships involving this source asset. Used to hide
+   * candidates that already have a relationship of the selected type
+   * with the source — saves the user from picking → submit → "already
+   * exists" → try again. Also handles the runs_on / deployed_to
+   * placement mutex (we hide candidates that already have the
+   * conflicting type so the backend's mutex check is never hit).
+   */
+  existingRelationships?: AssetRelationship[]
   /** Called when relationship is created */
   onSubmit: (input: CreateRelationshipInput) => void
   /** Loading state */
   isLoading?: boolean
+}
+
+/**
+ * runs_on and deployed_to are mutually exclusive for the same source/target
+ * pair (see asset_relationship_service.go placement mutex). Returns the
+ * conflicting type for a given type, or null if no mutex applies.
+ */
+function getMutexType(type: RelationshipType): RelationshipType | null {
+  if (type === 'runs_on') return 'deployed_to'
+  if (type === 'deployed_to') return 'runs_on'
+  return null
 }
 
 // ============================================
@@ -159,17 +190,23 @@ export function AddRelationshipDialog({
   open,
   onOpenChange,
   sourceAsset,
-  availableAssets,
+  searchAssets,
+  existingRelationships = [],
   onSubmit,
   isLoading = false,
 }: AddRelationshipDialogProps) {
   // Form state
   const [relationshipType, setRelationshipType] = React.useState<RelationshipType | ''>('')
-  const [targetAssetId, setTargetAssetId] = React.useState<string>('')
+  const [selectedTarget, setSelectedTarget] = React.useState<AssetOption | null>(null)
   const [description, setDescription] = React.useState('')
   const [confidence, setConfidence] = React.useState<RelationshipConfidence>('medium')
   const [impactWeight, setImpactWeight] = React.useState(5)
   const [searchQuery, setSearchQuery] = React.useState('')
+  const debouncedQuery = useDebounce(searchQuery, 250)
+
+  // Server-side search results
+  const [searchResults, setSearchResults] = React.useState<AssetOption[]>([])
+  const [isSearching, setIsSearching] = React.useState(false)
 
   // Get valid relationship types for source asset
   const validRelationshipTypes = React.useMemo(
@@ -183,67 +220,101 @@ export function AddRelationshipDialog({
     return getValidTargetTypes(relationshipType as RelationshipType, sourceAsset.type)
   }, [relationshipType, sourceAsset.type])
 
-  // Filter available assets based on valid target types and search
-  const filteredAssets = React.useMemo(() => {
-    let result = availableAssets
+  // Run server-side search whenever the debounced query changes (and a
+  // relationship type is selected — no point searching before then).
+  React.useEffect(() => {
+    if (!open || !relationshipType) {
+      setSearchResults([])
+      return
+    }
+    let cancelled = false
+    setIsSearching(true)
+    searchAssets(debouncedQuery)
+      .then((results) => {
+        if (cancelled) return
+        setSearchResults(results)
+      })
+      .catch(() => {
+        if (cancelled) return
+        setSearchResults([])
+      })
+      .finally(() => {
+        if (cancelled) return
+        setIsSearching(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [open, relationshipType, debouncedQuery, searchAssets])
 
-    // Filter by valid target types if relationship is selected
+  // Compute the set of asset IDs that are already related to the source
+  // by either:
+  //   (a) the currently-selected relationship type — duplicate
+  //   (b) the placement-mutex sibling type — would be rejected by the
+  //       backend mutex check
+  // Hidden from the picker so the user never sees them as candidates.
+  // We only consider OUTGOING edges (where source is the current asset)
+  // because that's the direction this dialog creates.
+  const takenTargetIds = React.useMemo(() => {
+    if (!relationshipType) return new Set<string>()
+    const mutex = getMutexType(relationshipType as RelationshipType)
+    const taken = new Set<string>()
+    for (const rel of existingRelationships) {
+      if (rel.sourceAssetId !== sourceAsset.id) continue
+      if (rel.type === relationshipType || rel.type === mutex) {
+        taken.add(rel.targetAssetId)
+      }
+    }
+    return taken
+  }, [existingRelationships, relationshipType, sourceAsset.id])
+
+  // Apply final client-side filters in order:
+  //   1. valid target types (constraint table — local, no API needed)
+  //   2. exclude the source asset itself
+  //   3. exclude assets that are already related (avoid round-trip errors)
+  const filteredAssets = React.useMemo(() => {
+    let result = searchResults
     if (validTargetTypes.length > 0) {
       result = result.filter((asset) => validTargetTypes.includes(asset.type))
     }
-
-    // Filter by search
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase()
-      result = result.filter(
-        (asset) =>
-          asset.name.toLowerCase().includes(query) || asset.type.toLowerCase().includes(query)
-      )
-    }
-
-    // Exclude source asset
     result = result.filter((asset) => asset.id !== sourceAsset.id)
-
+    if (takenTargetIds.size > 0) {
+      result = result.filter((asset) => !takenTargetIds.has(asset.id))
+    }
     return result
-  }, [availableAssets, validTargetTypes, searchQuery, sourceAsset.id])
-
-  // Selected target asset
-  const selectedTarget = React.useMemo(
-    () => availableAssets.find((a) => a.id === targetAssetId),
-    [availableAssets, targetAssetId]
-  )
+  }, [searchResults, validTargetTypes, sourceAsset.id, takenTargetIds])
 
   // Validation
   const isValid = React.useMemo(() => {
-    if (!relationshipType || !targetAssetId) return false
-    if (!selectedTarget) return false
+    if (!relationshipType || !selectedTarget) return false
     return isValidRelationship(
       relationshipType as RelationshipType,
       sourceAsset.type,
       selectedTarget.type
     )
-  }, [relationshipType, targetAssetId, selectedTarget, sourceAsset.type])
+  }, [relationshipType, selectedTarget, sourceAsset.type])
 
   // Reset form when dialog closes
   React.useEffect(() => {
     if (!open) {
       setRelationshipType('')
-      setTargetAssetId('')
+      setSelectedTarget(null)
       setDescription('')
       setConfidence('medium')
       setImpactWeight(5)
       setSearchQuery('')
+      setSearchResults([])
     }
   }, [open])
 
   // Handle submit
   const handleSubmit = () => {
-    if (!isValid || !relationshipType) return
+    if (!isValid || !relationshipType || !selectedTarget) return
 
     onSubmit({
       type: relationshipType as RelationshipType,
       sourceAssetId: sourceAsset.id,
-      targetAssetId,
+      targetAssetId: selectedTarget.id,
       description: description || undefined,
       confidence,
       discoveryMethod: 'manual',
@@ -258,7 +329,11 @@ export function AddRelationshipDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent
+        className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto"
+        onPointerDownOutside={(e) => e.preventDefault()}
+        onInteractOutside={(e) => e.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle>Add Relationship</DialogTitle>
           <DialogDescription>Create a new relationship from {sourceAsset.name}</DialogDescription>
@@ -283,49 +358,95 @@ export function AddRelationshipDialog({
             </div>
           </div>
 
-          {/* Relationship Type */}
-          <div className="space-y-2">
-            <Label>Relationship Type</Label>
-            <Select
-              value={relationshipType}
-              onValueChange={(v) => {
-                setRelationshipType(v as RelationshipType)
-                setTargetAssetId('') // Reset target when type changes
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select relationship type" />
-              </SelectTrigger>
-              <SelectContent>
-                {validRelationshipTypes.map((type) => {
-                  const labels = RELATIONSHIP_LABELS[type]
-                  return (
-                    <SelectItem key={type} value={type}>
-                      <div className="flex flex-col">
-                        <span>{labels.direct}</span>
-                        <span className="text-xs text-muted-foreground">{labels.description}</span>
-                      </div>
-                    </SelectItem>
-                  )
-                })}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Visual Preview */}
-          {relationshipType && (
-            <div className="flex items-center justify-center gap-3 py-2">
-              <Badge variant="secondary">{sourceAsset.name}</Badge>
-              <ArrowRight className="h-4 w-4 text-muted-foreground" />
-              <Badge variant="outline">
-                {RELATIONSHIP_LABELS[relationshipType as RelationshipType]?.direct}
-              </Badge>
-              <ArrowRight className="h-4 w-4 text-muted-foreground" />
-              <Badge variant="secondary">{selectedTarget?.name || 'Select target...'}</Badge>
+          {/* No valid relationship types — happens when the source asset
+              has an unmapped type (e.g. `unclassified`). Show a clear
+              message instead of an empty dropdown. */}
+          {validRelationshipTypes.length === 0 ? (
+            <div className="rounded-lg border border-dashed border-amber-500/50 bg-amber-500/5 p-4">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-500 shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <p className="text-sm font-medium">No relationship types available</p>
+                  <p className="text-xs text-muted-foreground">
+                    The asset type{' '}
+                    <strong>
+                      {EXTENDED_ASSET_TYPE_LABELS[sourceAsset.type] ?? sourceAsset.type}
+                    </strong>{' '}
+                    has no relationship constraints defined yet. Create the relationship from the
+                    other end of the edge instead, or contact your administrator to extend the
+                    constraint table.
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* Relationship Type — SelectItem children show ONLY the label
+              (e.g. "Runs On"). Putting the description inside SelectItem
+              caused Radix to render it inside the trigger as well, creating
+              a 2-line trigger and a duplicate of the helper text below. */
+            <div className="space-y-2">
+              <Label>Relationship Type</Label>
+              <Select
+                value={relationshipType}
+                onValueChange={(v) => {
+                  setRelationshipType(v as RelationshipType)
+                  setSelectedTarget(null) // Reset target when type changes
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select relationship type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {validRelationshipTypes.map((type) => {
+                    const labels = RELATIONSHIP_LABELS[type]
+                    return (
+                      <SelectItem key={type} value={type}>
+                        {labels.direct}
+                      </SelectItem>
+                    )
+                  })}
+                </SelectContent>
+              </Select>
+              {relationshipType && (
+                <p className="text-xs text-muted-foreground">
+                  {RELATIONSHIP_LABELS[relationshipType as RelationshipType]?.description}
+                </p>
+              )}
+              {/* Edge case: type was selected (valid for the source type
+                  in the abstract) but the constraint table doesn't list
+                  any concrete target types. Tells the user up front
+                  instead of leaving them staring at an empty picker. */}
+              {relationshipType && validTargetTypes.length === 0 && (
+                <div className="flex items-start gap-2 rounded-md border border-amber-500/50 bg-amber-500/5 p-2.5 text-xs">
+                  <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-500 shrink-0 mt-0.5" />
+                  <span>
+                    No target asset types are defined for this relationship from a{' '}
+                    <strong>{EXTENDED_ASSET_TYPE_LABELS[sourceAsset.type]}</strong>. Pick a
+                    different relationship type.
+                  </span>
+                </div>
+              )}
             </div>
           )}
 
-          {/* Target Asset Selector */}
+          {/* Visual Preview */}
+          {relationshipType && (
+            <div className="flex items-center justify-center gap-3 py-2 flex-wrap">
+              <Badge variant="secondary" className="max-w-[180px] truncate">
+                {sourceAsset.name}
+              </Badge>
+              <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
+              <Badge variant="outline">
+                {RELATIONSHIP_LABELS[relationshipType as RelationshipType]?.direct}
+              </Badge>
+              <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
+              <Badge variant="secondary" className="max-w-[180px] truncate">
+                {selectedTarget?.name || 'Select target…'}
+              </Badge>
+            </div>
+          )}
+
+          {/* Target Asset Selector — server-side search */}
           <div className="space-y-2">
             <Label>Target Asset</Label>
             {!relationshipType ? (
@@ -335,24 +456,43 @@ export function AddRelationshipDialog({
               </div>
             ) : (
               <>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search assets..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-9"
-                  />
-                </div>
+                <Input
+                  placeholder="Search assets by name…"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
                 <ScrollArea className="h-[200px] rounded-lg border p-2">
-                  {filteredAssets.length === 0 ? (
+                  {isSearching ? (
                     <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+                      <Loader2 className="h-6 w-6 animate-spin mb-2" />
+                      <p className="text-sm">Searching…</p>
+                    </div>
+                  ) : filteredAssets.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-4 text-center">
                       <Link2 className="h-8 w-8 mb-2" />
-                      <p className="text-sm">No compatible assets found</p>
+                      <p className="text-sm">
+                        {debouncedQuery
+                          ? `No compatible assets match "${debouncedQuery}"`
+                          : 'No compatible assets found'}
+                      </p>
                       {validTargetTypes.length > 0 && (
                         <p className="text-xs mt-1">
                           Looking for:{' '}
-                          {validTargetTypes.map((t) => EXTENDED_ASSET_TYPE_LABELS[t]).join(', ')}
+                          {validTargetTypes
+                            .map((t) => EXTENDED_ASSET_TYPE_LABELS[t])
+                            .filter(Boolean)
+                            .join(', ')}
+                        </p>
+                      )}
+                      {/* Tell the user *why* their search came back empty
+                          when the only reason is "everything is already
+                          related". Otherwise they may think the search
+                          is broken. */}
+                      {takenTargetIds.size > 0 && !debouncedQuery && (
+                        <p className="text-xs mt-2">
+                          {takenTargetIds.size} compatible asset
+                          {takenTargetIds.size === 1 ? ' is' : 's are'} already related and
+                          therefore hidden.
                         </p>
                       )}
                     </div>
@@ -362,10 +502,18 @@ export function AddRelationshipDialog({
                         <AssetSelectorItem
                           key={asset.id}
                           asset={asset}
-                          selected={asset.id === targetAssetId}
-                          onClick={() => setTargetAssetId(asset.id)}
+                          selected={asset.id === selectedTarget?.id}
+                          onClick={() => setSelectedTarget(asset)}
                         />
                       ))}
+                      {takenTargetIds.size > 0 && (
+                        <p className="text-[11px] text-muted-foreground text-center pt-2 border-t mt-2">
+                          {takenTargetIds.size} asset
+                          {takenTargetIds.size === 1 ? ' is' : 's are'} hidden because{' '}
+                          {takenTargetIds.size === 1 ? 'it already has' : 'they already have'} a
+                          relationship of this type with the source.
+                        </p>
+                      )}
                     </div>
                   )}
                 </ScrollArea>
@@ -374,7 +522,7 @@ export function AddRelationshipDialog({
           </div>
 
           {/* Additional Options */}
-          {targetAssetId && (
+          {selectedTarget && (
             <>
               {/* Description */}
               <div className="space-y-2">

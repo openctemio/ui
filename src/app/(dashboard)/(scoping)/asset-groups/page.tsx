@@ -891,7 +891,14 @@ export default function AssetGroupsPage() {
                 <Skeleton className="h-8 w-16" />
               ) : (
                 <>
-                  <p className="text-2xl font-bold">{stats.averageRiskScore}</p>
+                  {/* Round to 1 decimal — the raw value is computed by
+                      averaging integer scores so it can have a long
+                      repeating fractional tail (e.g. 53.16666666666664).
+                      One decimal place is precise enough for a risk
+                      summary card. */}
+                  <p className="text-2xl font-bold">
+                    {Math.round((stats.averageRiskScore ?? 0) * 10) / 10}
+                  </p>
                   <p className="text-xs text-muted-foreground mt-1">Out of 100</p>
                 </>
               )}

@@ -286,24 +286,39 @@ export const apisConfig: AssetPageConfig = {
     },
   ],
 
+  // detailSections rendering rule (asset-page.tsx): a field whose
+  // getValue returns null/undefined is skipped, and a section whose
+  // fields all return null is hidden entirely. We use this to avoid
+  // the previous wall-of-dashes when API metadata is sparse.
+  //
+  // The Ownership section that used to live here was deleted on
+  // purpose: it read free-text `metadata.owner` / `metadata.team`
+  // strings that nothing populates, while the AUTHORITATIVE owner
+  // data lives in the asset_owners table and is shown in the
+  // Owners tab. Two data paths for the same concept is a bug.
   detailSections: [
     {
       title: 'API Information',
       fields: [
         {
           label: 'Type',
-          getValue: (asset) => (
-            <Badge variant="outline" className="uppercase">
-              {asset.metadata.apiType || 'REST'}
-            </Badge>
-          ),
+          // Don't default to "REST" — that's a confident claim about
+          // an API protocol that we may not actually know.
+          getValue: (asset) =>
+            asset.metadata.apiType ? (
+              <Badge variant="outline" className="uppercase">
+                {asset.metadata.apiType}
+              </Badge>
+            ) : null,
         },
         {
           label: 'Version',
-          getValue: (asset) => asset.metadata.version || '-',
+          getValue: (asset) => asset.metadata.version || null,
         },
         {
           label: 'Authentication',
+          // Auth type defaults to 'none' which is a meaningful claim
+          // ("we know there's no auth") so we keep showing it.
           getValue: (asset) => {
             const authType = asset.metadata.authType || 'none'
             return (
@@ -316,21 +331,27 @@ export const apisConfig: AssetPageConfig = {
         },
         {
           label: 'Base URL',
+          // Fall back to the asset's name when metadata.baseUrl is
+          // missing — for ingested API assets the name IS the URL
+          // (e.g. `https://api.vndirect.com.vn/v2`). The previous
+          // code showed "-" in that case which was the most jarring
+          // empty cell on the screen.
           getValue: (asset) => {
-            const url = asset.metadata.baseUrl
-            if (!url) return '-'
+            const url =
+              asset.metadata.baseUrl || (asset.name?.startsWith('http') ? asset.name : null)
+            if (!url) return null
             return <code className="text-xs bg-muted px-1.5 py-0.5 rounded break-all">{url}</code>
           },
         },
         {
           label: 'TLS Version',
-          getValue: (asset) => asset.metadata.tlsVersion || '-',
+          getValue: (asset) => asset.metadata.tlsVersion || null,
         },
         {
           label: 'Documentation',
           getValue: (asset) => {
             const url = asset.metadata.documentationUrl
-            if (!url) return '-'
+            if (!url) return null
             return (
               <a
                 href={sanitizeExternalUrl(url)}
@@ -352,33 +373,34 @@ export const apisConfig: AssetPageConfig = {
         {
           label: 'Settings',
           fullWidth: true,
-          getValue: (asset) => (
-            <div className="flex flex-wrap gap-2">
-              <Badge variant={asset.metadata.corsEnabled ? 'default' : 'secondary'}>
-                CORS {asset.metadata.corsEnabled ? 'Enabled' : 'Disabled'}
-              </Badge>
-              <Badge variant={asset.metadata.rateLimitEnabled ? 'default' : 'secondary'}>
-                Rate Limit{' '}
-                {asset.metadata.rateLimitEnabled ? `(${asset.metadata.rateLimit}/min)` : 'Disabled'}
-              </Badge>
-              <Badge variant={asset.metadata.openApiSpec ? 'default' : 'secondary'}>
-                OpenAPI {asset.metadata.openApiSpec ? 'Available' : 'N/A'}
-              </Badge>
-            </div>
-          ),
-        },
-      ],
-    },
-    {
-      title: 'Ownership',
-      fields: [
-        {
-          label: 'Owner',
-          getValue: (asset) => asset.metadata.owner || '-',
-        },
-        {
-          label: 'Team',
-          getValue: (asset) => asset.metadata.team || '-',
+          // Tri-state: Enabled (true) / Disabled (false) / Unknown
+          // (undefined). The previous version mapped undefined → "Disabled"
+          // which is a false negative — it claims we verified the API
+          // has no rate limiting when in fact we just never asked.
+          getValue: (asset) => {
+            const cors = asset.metadata.corsEnabled
+            const rl = asset.metadata.rateLimitEnabled
+            const oas = asset.metadata.openApiSpec
+            // If all three are undefined, the whole row is meaningless.
+            if (cors === undefined && rl === undefined && oas === undefined) return null
+            const corsLabel = cors === true ? 'Enabled' : cors === false ? 'Disabled' : 'Unknown'
+            const rlLabel =
+              rl === true
+                ? `(${asset.metadata.rateLimit ?? '?'}/min)`
+                : rl === false
+                  ? 'Disabled'
+                  : 'Unknown'
+            const oasLabel = oas === true ? 'Available' : oas === false ? 'N/A' : 'Unknown'
+            const tone = (v: boolean | undefined): 'default' | 'secondary' | 'outline' =>
+              v === true ? 'default' : v === false ? 'secondary' : 'outline'
+            return (
+              <div className="flex flex-wrap gap-2">
+                <Badge variant={tone(cors)}>CORS {corsLabel}</Badge>
+                <Badge variant={tone(rl)}>Rate Limit {rlLabel}</Badge>
+                <Badge variant={tone(oas)}>OpenAPI {oasLabel}</Badge>
+              </div>
+            )
+          },
         },
       ],
     },
@@ -390,7 +412,11 @@ export const apisConfig: AssetPageConfig = {
           fullWidth: true,
           getValue: (asset) => {
             const reqPerDay = asset.metadata.requestsPerDay
-            if (!reqPerDay) return '-'
+            // No traffic data → return null. The renderer will skip
+            // this field, the section will end up empty, and the
+            // whole "Traffic Statistics" card disappears instead of
+            // showing a "Stats: -" placeholder.
+            if (!reqPerDay) return null
             const formatNum = (n: number) => {
               if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`
               if (n >= 1000) return `${(n / 1000).toFixed(1)}K`

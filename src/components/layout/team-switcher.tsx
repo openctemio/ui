@@ -106,16 +106,27 @@ export function TeamSwitcher() {
     [switchTeam, isTransitioning]
   )
 
-  // Keyboard shortcuts for team switching
+  // Keyboard shortcuts for team switching: ⌘⇧1-9 / Ctrl+Shift+1-9.
+  //
+  // We use Shift as a modifier to AVOID conflicting with the browser's
+  // built-in tab-switching shortcuts (⌘1, ⌘2, … in Chrome/Safari/Firefox
+  // on macOS; Ctrl+1, Ctrl+2, … on Windows/Linux). The previous version
+  // hijacked those shortcuts and made it impossible to switch browser
+  // tabs while focused on the dashboard.
+  //
+  // Implementation note: when Shift is held, `event.key` for `Shift+1` is
+  // the *shifted* character (`!`), not `1`. We have to use `event.code`
+  // (the physical key, e.g. `Digit1`) so the shortcut works regardless of
+  // keyboard layout.
   React.useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      // Only handle ⌘1-9 or Ctrl+1-9
-      if ((event.metaKey || event.ctrlKey) && event.key >= '1' && event.key <= '9') {
-        const index = parseInt(event.key) - 1
-        if (index < displayTenants.length) {
-          event.preventDefault()
-          handleSelectTeam(displayTenants[index].id)
-        }
+      if (!(event.metaKey || event.ctrlKey) || !event.shiftKey) return
+      const match = event.code.match(/^Digit([1-9])$/)
+      if (!match) return
+      const index = parseInt(match[1], 10) - 1
+      if (index < displayTenants.length) {
+        event.preventDefault()
+        handleSelectTeam(displayTenants[index].id)
       }
     }
 
@@ -232,7 +243,9 @@ export function TeamSwitcher() {
                   </div>
                   <span className="flex-1">{tenant.name}</span>
                   {isActive && <Check className="size-4 text-primary" />}
-                  <DropdownMenuShortcut>⌘{index + 1}</DropdownMenuShortcut>
+                  {/* ⌘⇧1-9 / Ctrl+Shift+1-9. Shift is required to avoid
+                      hijacking the browser's tab-switching shortcuts. */}
+                  <DropdownMenuShortcut>⌘⇧{index + 1}</DropdownMenuShortcut>
                 </DropdownMenuItem>
               )
             })}

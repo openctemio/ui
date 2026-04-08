@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
 import { cn } from '@/lib/utils'
 import { AssetFindings } from './asset-findings'
+import { TagsSection } from './sheet-sections'
 import type { Api } from '../types/asset.types'
 
 // ============================================
@@ -67,6 +68,12 @@ interface ApiDetailSheetProps {
     label: string
     content: React.ReactNode
   }>
+
+  /** Inline tag editor save handler. If omitted the section is hidden. */
+  onUpdateTags?: (tags: string[]) => Promise<void>
+
+  /** Available tag suggestions for the autocomplete */
+  tagSuggestions?: string[]
 }
 
 // ============================================
@@ -88,6 +95,8 @@ export function ApiDetailSheet({
   subtitle,
   statusBadge,
   extraTabs,
+  onUpdateTags,
+  tagSuggestions,
 }: ApiDetailSheetProps) {
   if (!api) return null
 
@@ -120,7 +129,9 @@ export function ApiDetailSheet({
             gradientVia
           )}
         >
-          <div className="flex items-center gap-3 mb-3">
+          {/* pr-14 reserves space for the Sheet's built-in close button (X)
+              so the status badge doesn't overlap with it. */}
+          <div className="flex items-center gap-3 mb-3 pr-14">
             <div
               className={cn('h-12 w-12 rounded-xl flex items-center justify-center', iconBgColor)}
             >
@@ -159,6 +170,7 @@ export function ApiDetailSheet({
           <TabsContent value="overview" className="space-y-4 mt-0">
             {statsContent}
             {overviewContent}
+            <TagsSection tags={api.tags} suggestions={tagSuggestions} onSave={onUpdateTags} />
           </TabsContent>
 
           {/* Extra Tabs */}

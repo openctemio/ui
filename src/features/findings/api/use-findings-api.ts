@@ -487,13 +487,35 @@ async function fetchFindingStats(url: string): Promise<FindingStatsResponse> {
 }
 
 /**
- * Fetch finding stats (total, by severity, by status, by source)
- * Use this for stable stats that don't change when filtering by severity tab
+ * Filters supported by the /findings/stats endpoint.
+ *
+ * The backend currently supports:
+ *  - assetId: scope the counts to a single asset (used by the
+ *    /findings page when filtered by `?assetId=…` so the severity
+ *    cards reflect the filtered table, not the global tenant counts).
+ *
+ * Add new filters here as the backend grows.
  */
-export function useFindingStatsApi(config?: SWRConfiguration) {
+export interface FindingStatsFilters {
+  assetId?: string | null
+}
+
+/**
+ * Fetch finding stats (total, by severity, by status, by source)
+ *
+ * Pass filters to scope the stats. Without filters this returns
+ * tenant-wide counts. The cache key includes the serialized filters
+ * so different filter combinations don't trample each other in SWR.
+ */
+export function useFindingStatsApi(filters?: FindingStatsFilters, config?: SWRConfiguration) {
   const { currentTenant } = useTenant()
 
-  const key = currentTenant ? '/api/v1/findings/stats' : null
+  const params = new URLSearchParams()
+  if (filters?.assetId) params.set('asset_id', filters.assetId)
+  const queryString = params.toString()
+  const url = queryString ? `/api/v1/findings/stats?${queryString}` : '/api/v1/findings/stats'
+
+  const key = currentTenant ? url : null
 
   return useSWR<FindingStatsResponse>(key, fetchFindingStats, { ...defaultConfig, ...config })
 }

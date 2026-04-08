@@ -1,7 +1,16 @@
 'use client'
 
-import { useState } from 'react'
-import { Users, UserPlus, Trash2, Building2, User, Pencil } from 'lucide-react'
+import { useState, useMemo } from 'react'
+import {
+  Users,
+  UserPlus,
+  Trash2,
+  Building2,
+  User,
+  Pencil,
+  Check,
+  ChevronsUpDown,
+} from 'lucide-react'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -30,10 +39,40 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { Input } from '@/components/ui/input'
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
 import { usePermissions, Permission } from '@/lib/permissions'
+import useSWR from 'swr'
+import { useTenant } from '@/context/tenant-provider'
+import { get } from '@/lib/api/client'
+import { getErrorMessage } from '@/lib/api/error-handler'
+import { useDebounce } from '@/hooks/use-debounce'
+import { useGroups } from '@/features/access-control/api/use-groups'
+
+// Backend response shape for GET /tenants/{slug}/members?include=user
+// (defined inline because the typed lib hook doesn't support include param yet)
+interface MemberWithUserResponse {
+  id: string
+  user_id: string
+  role: string
+  email: string
+  name: string
+  avatar_url?: string
+  status?: string
+}
+interface MembersResponse {
+  data: MemberWithUserResponse[]
+  total: number
+}
 import {
   useAssetOwners,
   addAssetOwner,
@@ -41,7 +80,17 @@ import {
   removeAssetOwner,
 } from '../hooks/use-asset-owners'
 import type { AssetOwner, OwnershipType } from '../types'
-import { OWNERSHIP_TYPE_LABELS, OWNERSHIP_TYPE_COLORS } from '../types'
+import { OWNERSHIP_TYPE_LABELS, OWNERSHIP_TYPE_COLORS, OWNERSHIP_TYPE_DESCRIPTIONS } from '../types'
+
+// ============================================
+// PICKER OPTION TYPE
+// ============================================
+
+interface PickerOption {
+  id: string
+  label: string
+  sublabel?: string
+}
 
 interface AssetOwnersTabProps {
   assetId: string
@@ -126,33 +175,154 @@ export function AssetOwnersTab({ assetId }: AssetOwnersTabProps) {
   const [editOwner, setEditOwner] = useState<AssetOwner | null>(null)
   const [removeOwnerTarget, setRemoveOwnerTarget] = useState<AssetOwner | null>(null)
 
-  // Add owner form state
+  // Add owner form state — `selectedOption` is the chosen user/group, not
+  // just an ID string. The previous version asked users to type a UUID,
+  // which nobody can do. Now they pick from a searchable list of real
+  // tenant members or groups.
   const [addType, setAddType] = useState<'user' | 'group'>('user')
-  const [addId, setAddId] = useState('')
+  const [selectedOption, setSelectedOption] = useState<PickerOption | null>(null)
   const [addOwnershipType, setAddOwnershipType] = useState<OwnershipType>('primary')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [pickerOpen, setPickerOpen] = useState(false)
+
+  // Picker search — debounced so we don't fire a network request on every
+  // keystroke. The actual filtering is done server-side via the `search`
+  // query parameter on /tenants/{slug}/members and /groups, so this scales
+  // to tenants with thousands of members.
+  const [searchValue, setSearchValue] = useState('')
+  const debouncedSearch = useDebounce(searchValue, 250)
 
   // Edit owner state
   const [editOwnershipType, setEditOwnershipType] = useState<OwnershipType>('primary')
 
+  // Fetch options for the picker.
+  //
+  // Server-side search via `?search=` + `?include=user` so the picker scales
+  // to tenants with thousands of members. We fetch a fixed `limit=50` and
+  // let the user narrow down with the search input — there is no infinite
+  // scroll because in practice the user always types a few characters of
+  // the name/email, and 50 results is enough to cover any reasonable typo.
+  //
+  // Without `include=user` the backend returns only IDs/roles (no name or
+  // email), and the picker shows everything as "(no name)". That was the
+  // original bug.
+  const { currentTenant } = useTenant()
+  const tenantSlug = currentTenant?.slug ?? null
+  const PICKER_PAGE_SIZE = 50
+
+  const buildMembersUrl = () => {
+    if (addType !== 'user' || !tenantSlug) return null
+    const params = new URLSearchParams({
+      include: 'user',
+      limit: String(PICKER_PAGE_SIZE),
+    })
+    if (debouncedSearch.trim()) {
+      params.set('search', debouncedSearch.trim())
+    }
+    return `/api/v1/tenants/${tenantSlug}/members?${params.toString()}`
+  }
+
+  const { data: membersData, isLoading: membersLoading } = useSWR<MembersResponse>(
+    buildMembersUrl(),
+    (url: string) => get<MembersResponse>(url),
+    { revalidateOnFocus: false, dedupingInterval: 30000, keepPreviousData: true }
+  )
+
+  // Groups also support a `search` filter via the existing useGroups hook;
+  // pass it through so groups picker also scales.
+  const { groups: groupsData, isLoading: groupsLoading } = useGroups(
+    addType === 'group' ? { search: debouncedSearch.trim() || undefined } : undefined
+  )
+
+  const pickerLoading = addType === 'user' ? membersLoading : groupsLoading
+
+  // Sets of IDs already assigned to this asset, split by user vs group.
+  // Used to filter the picker so the user can't pick someone who's
+  // already an owner — picking a duplicate would round-trip to a 409
+  // and a "already an owner" toast. Better UX: never offer them.
+  // Same approach as the relationship picker (#115 hide-already-related).
+  const takenUserIds = useMemo(
+    () => new Set(owners.filter((o) => o.userId).map((o) => o.userId as string)),
+    [owners]
+  )
+  const takenGroupIds = useMemo(
+    () => new Set(owners.filter((o) => o.groupId).map((o) => o.groupId as string)),
+    [owners]
+  )
+
+  // Normalise both lists to PickerOption shape so the picker doesn't care
+  // about the source. Members API returns FLAT fields (m.name, m.email)
+  // not nested m.user.name — see MemberWithUserResponse above.
+  const userOptions: PickerOption[] = useMemo(() => {
+    if (addType !== 'user') return []
+    return (membersData?.data ?? [])
+      .map((m) => ({
+        id: m.user_id,
+        label: m.name?.trim() || m.email || '(unnamed user)',
+        sublabel: m.name?.trim() ? m.email : undefined,
+      }))
+      .filter((o) => o.id && !takenUserIds.has(o.id))
+  }, [membersData, addType, takenUserIds])
+
+  const groupOptions: PickerOption[] = useMemo(() => {
+    if (addType !== 'group') return []
+    return (groupsData ?? [])
+      .map((g) => ({
+        id: g.id,
+        label: g.name,
+        sublabel: g.description || undefined,
+      }))
+      .filter((o) => o.id && !takenGroupIds.has(o.id))
+  }, [groupsData, addType, takenGroupIds])
+
+  const pickerOptions = addType === 'user' ? userOptions : groupOptions
+
+  // Count of assigned-of-this-type for the empty-state hint below.
+  // Re-uses the existing taken sets — no extra computation.
+  const takenCountForType = addType === 'user' ? takenUserIds.size : takenGroupIds.size
+
+  const resetAddForm = () => {
+    setSelectedOption(null)
+    setAddOwnershipType('primary')
+  }
+
   const handleAdd = async () => {
-    if (!addId.trim()) {
-      toast.error('Please enter an ID')
+    if (!selectedOption) {
+      toast.error(`Please select a ${addType}`)
       return
     }
     setIsSubmitting(true)
     try {
       await addAssetOwner(assetId, {
-        userId: addType === 'user' ? addId.trim() : undefined,
-        groupId: addType === 'group' ? addId.trim() : undefined,
+        userId: addType === 'user' ? selectedOption.id : undefined,
+        groupId: addType === 'group' ? selectedOption.id : undefined,
         ownershipType: addOwnershipType,
       })
-      toast.success('Owner added successfully')
+      toast.success(
+        `${selectedOption.label} added as ${OWNERSHIP_TYPE_LABELS[addOwnershipType].toLowerCase()} owner`
+      )
       setShowAddDialog(false)
-      setAddId('')
+      resetAddForm()
       mutate()
-    } catch {
-      toast.error('Failed to add owner')
+    } catch (error) {
+      // Surface the backend's actual error message instead of a generic
+      // "Failed to add owner". The backend returns 409 Conflict with
+      // "This owner is already assigned to the asset" for duplicates,
+      // 400 Bad Request for invalid IDs, 403 for permission, etc.
+      // Special-case the duplicate to give the user an actionable hint
+      // (suggest editing the existing owner instead).
+      const message = getErrorMessage(error, 'Failed to add owner')
+      const isDuplicate =
+        message.toLowerCase().includes('already') ||
+        message.toLowerCase().includes('duplicate') ||
+        message.toLowerCase().includes('conflict')
+      if (isDuplicate) {
+        toast.error(`${selectedOption.label} is already an owner of this asset`, {
+          description: 'To change their role, edit the existing owner instead.',
+        })
+      } else {
+        toast.error(message)
+      }
     } finally {
       setIsSubmitting(false)
     }
@@ -168,8 +338,8 @@ export function AssetOwnersTab({ assetId }: AssetOwnersTabProps) {
       toast.success('Owner updated successfully')
       setEditOwner(null)
       mutate()
-    } catch {
-      toast.error('Failed to update owner')
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Failed to update owner'))
     } finally {
       setIsSubmitting(false)
     }
@@ -183,8 +353,8 @@ export function AssetOwnersTab({ assetId }: AssetOwnersTabProps) {
       toast.success('Owner removed successfully')
       setRemoveOwnerTarget(null)
       mutate()
-    } catch {
-      toast.error('Failed to remove owner')
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Failed to remove owner'))
     } finally {
       setIsSubmitting(false)
     }
@@ -257,19 +427,38 @@ export function AssetOwnersTab({ assetId }: AssetOwnersTabProps) {
           dialog primitive). Without these guards, clicking inside the inner
           dialog can be interpreted as "outside" by the parent sheet's focus
           guard, causing visual flicker. Closing only happens via Cancel/X. */}
-      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+      <Dialog
+        open={showAddDialog}
+        onOpenChange={(open) => {
+          setShowAddDialog(open)
+          if (!open) resetAddForm()
+        }}
+      >
         <DialogContent
+          // max-h + overflow-y-auto ensures the footer (Cancel / Add Owner
+          // buttons) always remains reachable, even when the dialog content
+          // is taller than the viewport. Without this the buttons could be
+          // pushed below the visible area on short screens.
+          className="max-h-[90vh] overflow-y-auto"
           onPointerDownOutside={(e) => e.preventDefault()}
           onInteractOutside={(e) => e.preventDefault()}
         >
           <DialogHeader>
             <DialogTitle>Add Owner</DialogTitle>
-            <DialogDescription>Add a user or group as an owner of this asset.</DialogDescription>
+            <DialogDescription>
+              Assign a user or group to be responsible for this asset.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Owner Type</Label>
-              <Select value={addType} onValueChange={(v) => setAddType(v as 'user' | 'group')}>
+              <Select
+                value={addType}
+                onValueChange={(v) => {
+                  setAddType(v as 'user' | 'group')
+                  setSelectedOption(null) // reset picker when switching type
+                }}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -279,16 +468,158 @@ export function AssetOwnersTab({ assetId }: AssetOwnersTabProps) {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Searchable picker — replaces the old "Enter UUID" text input.
+                Lists actual tenant members or groups from the API and lets
+                the user search by name/email. */}
             <div className="space-y-2">
-              <Label>{addType === 'user' ? 'User ID' : 'Group ID'}</Label>
-              <Input
-                value={addId}
-                onChange={(e) => setAddId(e.target.value)}
-                placeholder={`Enter ${addType} ID`}
-              />
+              <Label>{addType === 'user' ? 'User' : 'Group'}</Label>
+              <Popover
+                open={pickerOpen}
+                onOpenChange={(open) => {
+                  setPickerOpen(open)
+                  // Clear search when popover closes so reopening starts fresh
+                  if (!open) setSearchValue('')
+                }}
+                modal
+              >
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={pickerOpen}
+                    // The trigger shows ONLY the label (e.g. user name or
+                    // group name) — never the sublabel. We learned the hard
+                    // way that rendering the sublabel inline (even with
+                    // truncate) can blow out the dialog width when the
+                    // sublabel contains long unbreakable text. The selected
+                    // sublabel is displayed in the helper line below the
+                    // button instead, where it can wrap freely.
+                    className="w-full min-w-0 overflow-hidden justify-between font-normal"
+                    title={selectedOption?.label}
+                  >
+                    <span className="flex-1 min-w-0 truncate text-left text-sm">
+                      {selectedOption ? (
+                        selectedOption.label
+                      ) : (
+                        <span className="text-muted-foreground">Select a {addType}…</span>
+                      )}
+                    </span>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent
+                  className="w-[var(--radix-popover-trigger-width)] p-0"
+                  align="start"
+                  // Same nested-dialog guards: prevent the parent dialog from
+                  // interpreting clicks inside the popover as outside-clicks.
+                  onPointerDownOutside={(e) => {
+                    const target = e.target as HTMLElement | null
+                    if (target?.closest('[data-radix-popper-content-wrapper]')) {
+                      e.preventDefault()
+                    }
+                  }}
+                >
+                  {/*
+                    shouldFilter={false} disables Radix Command's client-side
+                    filtering. The server is the authoritative filter — we
+                    pass `searchValue` straight to the API. Otherwise Radix
+                    would also try to filter the 50 results we fetched,
+                    which would HIDE results that matched the server query
+                    but didn't happen to match Radix's local fuzzy match.
+                  */}
+                  <Command shouldFilter={false}>
+                    <CommandInput
+                      value={searchValue}
+                      onValueChange={setSearchValue}
+                      placeholder={`Search ${addType === 'user' ? 'users by name or email' : 'groups by name'}…`}
+                    />
+                    <CommandList>
+                      {pickerLoading ? (
+                        <div className="py-6 text-center text-sm text-muted-foreground">
+                          Loading…
+                        </div>
+                      ) : pickerOptions.length === 0 ? (
+                        <CommandEmpty>
+                          <div className="space-y-1">
+                            <p>
+                              {debouncedSearch
+                                ? `No ${addType === 'user' ? 'users' : 'groups'} match "${debouncedSearch}".`
+                                : `No ${addType === 'user' ? 'users' : 'groups'} available.`}
+                            </p>
+                            {/* Tell the user *why* the picker may be empty
+                                when the only reason is "everything is
+                                already an owner". Otherwise the empty
+                                state looks like a bug. */}
+                            {takenCountForType > 0 && !debouncedSearch && (
+                              <p className="text-[11px]">
+                                {takenCountForType} {addType === 'user' ? 'user' : 'group'}
+                                {takenCountForType === 1 ? ' is' : 's are'} already an owner of this
+                                asset and therefore hidden.
+                              </p>
+                            )}
+                          </div>
+                        </CommandEmpty>
+                      ) : (
+                        <CommandGroup>
+                          {pickerOptions.map((option) => (
+                            <CommandItem
+                              key={option.id}
+                              value={option.id}
+                              onSelect={() => {
+                                setSelectedOption(option)
+                                setPickerOpen(false)
+                                setSearchValue('')
+                              }}
+                              className="flex items-start gap-2"
+                            >
+                              <Check
+                                className={cn(
+                                  'mt-1 h-4 w-4 shrink-0',
+                                  selectedOption?.id === option.id ? 'opacity-100' : 'opacity-0'
+                                )}
+                              />
+                              <div className="min-w-0 flex-1">
+                                <p className="text-sm truncate">{option.label}</p>
+                                {option.sublabel && (
+                                  <p className="text-xs text-muted-foreground truncate">
+                                    {option.sublabel}
+                                  </p>
+                                )}
+                              </div>
+                            </CommandItem>
+                          ))}
+                          {/* Hint when results are capped at PICKER_PAGE_SIZE
+                              — encourages user to refine their search */}
+                          {pickerOptions.length >= PICKER_PAGE_SIZE && (
+                            <div className="border-t px-3 py-2 text-[11px] text-muted-foreground text-center">
+                              Showing first {PICKER_PAGE_SIZE} results — type to refine
+                            </div>
+                          )}
+                        </CommandGroup>
+                      )}
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+              {/* Show the selected option's sublabel (email for users,
+                  description for groups) below the button where it can
+                  wrap freely without breaking the dialog layout. */}
+              {selectedOption?.sublabel && (
+                <p className="text-xs text-muted-foreground break-words">
+                  {selectedOption.sublabel}
+                </p>
+              )}
             </div>
+
+            {/* Ownership role — SelectItem children intentionally show ONLY
+                the label (e.g. "Primary"). The description for the currently
+                selected role is the single helper line below the dropdown.
+                Putting the description inside the SelectItem made Radix
+                render it inside the trigger AS WELL, creating a 2-line
+                trigger and a duplicate of the helper text. */}
             <div className="space-y-2">
-              <Label>Ownership Type</Label>
+              <Label>Ownership Role</Label>
               <Select
                 value={addOwnershipType}
                 onValueChange={(v) => setAddOwnershipType(v as OwnershipType)}
@@ -297,20 +628,31 @@ export function AssetOwnersTab({ assetId }: AssetOwnersTabProps) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.entries(OWNERSHIP_TYPE_LABELS).map(([value, label]) => (
-                    <SelectItem key={value} value={value}>
-                      {label}
-                    </SelectItem>
-                  ))}
+                  {(Object.entries(OWNERSHIP_TYPE_LABELS) as [OwnershipType, string][]).map(
+                    ([value, label]) => (
+                      <SelectItem key={value} value={value}>
+                        {label}
+                      </SelectItem>
+                    )
+                  )}
                 </SelectContent>
               </Select>
+              <p className="text-xs text-muted-foreground">
+                {OWNERSHIP_TYPE_DESCRIPTIONS[addOwnershipType]}
+              </p>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAddDialog(false)}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowAddDialog(false)
+                resetAddForm()
+              }}
+            >
               Cancel
             </Button>
-            <Button onClick={handleAdd} disabled={isSubmitting}>
+            <Button onClick={handleAdd} disabled={isSubmitting || !selectedOption}>
               {isSubmitting ? 'Adding...' : 'Add Owner'}
             </Button>
           </DialogFooter>

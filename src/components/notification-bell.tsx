@@ -197,7 +197,17 @@ export function NotificationBell() {
       </PopoverTrigger>
 
       <PopoverContent
-        className="w-[340px] max-w-[calc(100vw-1rem)] p-0 sm:w-[380px]"
+        // Mobile: take nearly the full viewport width (minus 1rem on
+        // each side) so collision detection produces symmetric margins
+        // regardless of where the bell sits in the header. The previous
+        // fixed `w-[340px]` was anchored to the bell trigger via
+        // `align="end"`, but the bell isn't the last button in the
+        // header (theme toggle + avatar come after it), so the popover
+        // landed visually off-center.
+        //
+        // Tablet+: revert to the fixed 380px right-anchored to the
+        // bell, which is the desktop pattern users expect.
+        className="w-[calc(100vw-2rem)] max-w-[380px] p-0 sm:w-[380px]"
         align="end"
         sideOffset={8}
         collisionPadding={16}

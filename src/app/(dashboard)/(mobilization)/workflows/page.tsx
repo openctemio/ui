@@ -455,13 +455,23 @@ export default function WorkflowsPage() {
   // Create workflow mutation
   const { trigger: createWorkflow, isMutating: isCreating } = useCreateWorkflow()
 
-  // Compute stats from workflow data
+  // Compute stats from workflow data.
+  //
+  // IMPORTANT: `totalWorkflows` uses the API's `total` field (full dataset)
+  // instead of `items.length` (current page only). The previous version
+  // showed 50 workflows even when a tenant had 200, because per_page is 50.
+  //
+  // The other counts (active, triggered, successRate) are still derived
+  // from `items` because there's no /workflows/stats endpoint yet — they
+  // reflect the loaded page only. If a tenant ever crosses 50 workflows we
+  // should add a stats endpoint similar to /agents/stats. For now this is
+  // documented in-line so the next person doesn't think it's a bug.
   const workflowStats = useMemo(() => {
     if (!workflowsData?.items) {
       return { totalWorkflows: 0, active: 0, triggered: 0, successRate: 0 }
     }
     const items = workflowsData.items
-    const totalWorkflows = items.length
+    const totalWorkflows = workflowsData.total
     const active = items.filter((w) => w.is_active).length
     const triggered = items.reduce((sum, w) => sum + w.total_runs, 0)
     const successful = items.reduce((sum, w) => sum + w.successful_runs, 0)

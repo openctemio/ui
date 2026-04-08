@@ -1074,6 +1074,8 @@ export interface K8sCluster {
   apiServerUrl?: string
   createdAt: string
   lastSeen: string
+  /** Asset metadata tags inherited from the base assets table. */
+  tags?: string[]
 }
 
 export type WorkloadType =
@@ -1107,6 +1109,8 @@ export interface K8sWorkload {
   memoryLimit?: string
   createdAt: string
   lastSeen: string
+  /** Asset metadata tags inherited from the base assets table. */
+  tags?: string[]
 }
 
 /**
@@ -1133,6 +1137,9 @@ export interface ContainerImage {
   lastScanned?: string
   pushedAt?: string
   createdAt: string
+  /** Asset metadata tags (the JSONB asset.tags column).
+   *  Note: distinct from `tag` above which is the docker image tag. */
+  tags?: string[]
 }
 
 // ============================================
@@ -1203,6 +1210,10 @@ export interface Api {
   createdAt: string
   lastSeen: string
   lastActivity?: string
+  // Tags — same field as on the base asset entity. The Api type is a
+  // frontend projection of an asset row, so it inherits tags from the
+  // backend `assets.tags` JSONB column.
+  tags?: string[]
 }
 
 // ============================================
@@ -1262,6 +1273,19 @@ export const OWNERSHIP_TYPE_LABELS: Record<OwnershipType, string> = {
   stakeholder: 'Stakeholder',
   informed: 'Informed',
   regulatory: 'Regulatory',
+}
+
+/**
+ * Plain-language explanation of each ownership type, surfaced in the
+ * Add/Edit Owner picker so users don't have to guess what each role
+ * means. Loosely based on the RACI model.
+ */
+export const OWNERSHIP_TYPE_DESCRIPTIONS: Record<OwnershipType, string> = {
+  primary: 'Accountable owner — main point of contact for this asset.',
+  secondary: 'Backup owner — covers when the primary is unavailable.',
+  stakeholder: 'Has interest in the asset but does not operate it day-to-day.',
+  informed: 'Notified about changes and incidents but takes no action.',
+  regulatory: 'Compliance / audit owner — responsible for regulatory obligations.',
 }
 
 export const OWNERSHIP_TYPE_COLORS: Record<
