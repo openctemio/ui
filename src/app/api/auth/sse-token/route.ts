@@ -18,7 +18,6 @@ import { NextResponse } from 'next/server'
 
 import { env } from '@/lib/env'
 
-const BACKEND_URL = env.api.url
 const ACCESS_TOKEN_COOKIE = env.auth.cookieName
 const REFRESH_TOKEN_COOKIE = env.auth.refreshCookieName
 const TENANT_COOKIE = env.cookies.tenant
@@ -56,7 +55,7 @@ async function tryRefreshToken(
   if (!tenantId) return null
 
   try {
-    const response = await fetch(`${BACKEND_URL}/api/v1/auth/refresh`, {
+    const response = await fetch(`${env.api.url}/api/v1/auth/refresh`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

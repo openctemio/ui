@@ -33,7 +33,6 @@ import { getTTL, shouldNeverCache } from '@/lib/cache-proxy/cache-config'
 import { env } from '@/lib/env'
 import { devLog } from '@/lib/logger'
 
-const BACKEND_URL = env.api.url
 const ACCESS_TOKEN_COOKIE = env.auth.cookieName
 
 // ============================================
@@ -150,7 +149,7 @@ async function proxyToBackend(request: NextRequest, path: string): Promise<Respo
   const cookieStore = await cookies()
   const accessToken = cookieStore.get(ACCESS_TOKEN_COOKIE)?.value
   const url = new URL(request.url)
-  const backendUrl = `${BACKEND_URL}${path}${url.search}`
+  const backendUrl = `${env.api.url}${path}${url.search}`
 
   // Build headers
   const headers = new Headers()
