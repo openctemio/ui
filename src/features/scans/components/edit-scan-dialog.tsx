@@ -100,6 +100,9 @@ function scanConfigToFormData(config: ScanConfig): NewScanFormData {
     },
     intensity: (scannerConfig.intensity as 'low' | 'medium' | 'high') || 'medium',
     maxConcurrent: config.targets_per_job || 10,
+    timeoutSeconds: config.timeout_seconds || 3600,
+    maxRetries: config.max_retries ?? 0,
+    retryBackoffSeconds: config.retry_backoff_seconds || 60,
     schedule: {
       runImmediately: isManual,
       frequency: mapScheduleTypeToFrequency(config.schedule_type),
