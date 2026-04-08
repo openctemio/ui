@@ -281,8 +281,19 @@ export default function FindingsPage() {
     HIDDEN_STATUSES,
   ])
 
-  // Fetch finding stats (stable, not affected by severity filter)
-  const { data: findingStats, isLoading: statsLoading, mutate: mutateStats } = useFindingStatsApi()
+  // Fetch finding stats. Pass `assetId` so the severity cards reflect
+  // the filtered table when the user navigates here from an asset
+  // detail sheet ("View All Findings"). Without this, the cards
+  // showed global tenant counts (e.g. "9 Critical") while the table
+  // showed only the asset-scoped row count (e.g. "1 result"), which
+  // looks like a bug.
+  const {
+    data: findingStats,
+    isLoading: statsLoading,
+    mutate: mutateStats,
+  } = useFindingStatsApi({
+    assetId: assetIdFilter ?? undefined,
+  })
 
   // Fetch findings from API (filtered by severity tab)
   const {

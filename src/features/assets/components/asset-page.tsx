@@ -50,6 +50,7 @@ import {
 } from '@/components/ui/select'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from 'sonner'
+import { copyToClipboard } from '@/lib/clipboard'
 import {
   Plus,
   Search as SearchIcon,
@@ -90,6 +91,8 @@ import type { AssetPageConfig } from '../types/page-config.types'
 import { useAssetCRUD } from '../hooks/use-asset-crud'
 import { useAssetDialogs } from '../hooks/use-asset-dialogs'
 import { useAssetExport } from '../hooks/use-asset-export'
+import { useAssetTags } from '../hooks/use-asset-tags'
+import { updateAsset } from '../hooks/use-assets'
 import { AssetFormDialogShared } from './asset-form-dialog-shared'
 import { AssetDeleteDialogShared } from './asset-delete-dialog-shared'
 import { AssetOwnersTab } from './asset-owners-tab'
@@ -220,6 +223,35 @@ export function AssetPage({ config }: AssetPageProps) {
     pageSize,
   })
 
+  // Scope coverage assets — separate query for the Scope Status widget.
+  //
+  // The previous behaviour computed scope coverage from `transformedAssets`
+  // (the FILTERED current page). That was wrong on two axes:
+  //   1. Filters changed the widget — but Scope Status is a tenant-wide
+  //      concept, not "what I happen to be looking at right now".
+  //   2. Pagination cut off the count — for a list with 1500 hosts, the
+  //      widget would say "50 of 50 in scope" instead of "X of 1500".
+  //
+  // We fetch the maximum page allowed by the backend (100 — see
+  // `asset_service.go: PerPage int validate:"min=0,max=100"`) of assets
+  // of this type with NO search/tag/page filters applied. The widget
+  // then shows scope coverage for that sample, decoupled from whatever
+  // the user is doing in the table below.
+  //
+  // SCALE LIMIT: tenants with >100 assets of one type get a sample-based
+  // estimate. The proper fix is a backend `/api/v1/scope/asset-coverage`
+  // endpoint that runs the matching server-side and aggregates over the
+  // full dataset. Tracked as TODO(scope-stats-endpoint) above.
+  //
+  // We use the backend's hard cap (100) rather than guessing a higher
+  // number — the previous version requested 1000 which the validator
+  // rejected with 400, causing the widget to show "0 of 0" everywhere.
+  const { assets: scopeCoverageAssets = [], total: scopeCoverageAssetsTotal = 0 } = useAssets({
+    types: typeFilter,
+    page: 1,
+    pageSize: 100,
+  })
+
   // True when the user has narrowed the view via a non-status filter.
   // Status tabs are intentionally excluded — they're navigation, not filtering.
   const hasActiveFilter = debouncedSearch.length > 0 || tagFilters.length > 0
@@ -316,10 +348,22 @@ export function AssetPage({ config }: AssetPageProps) {
     return map
   }, [transformedAssets, scopeTargets, scopeExclusions])
 
+  // Computes scope coverage from the dedicated `scopeCoverageAssets`
+  // query (above), NOT from the user-filtered `transformedAssets`.
+  // This means the widget reflects tenant-wide scope status for the
+  // current asset type and is unaffected by the search/tag filters
+  // and pagination state of the table below it.
+  //
+  // TODO(scope-stats-endpoint): build `/api/v1/scope/asset-coverage?type=…`
+  // that runs the scope-rule matching server-side and returns
+  // { total, in_scope, excluded, not_scoped } for the entire tenant
+  // dataset. Then this widget will work for tenants with >1000 assets
+  // of one type without the sample-based caveat.
+  const scopeCoverageFullyLoaded = scopeCoverageAssetsTotal <= (scopeCoverageAssets?.length ?? 0)
   const scopeCoverage = useMemo(
     () =>
       calculateScopeCoverage(
-        (transformedAssets ?? []).map((a) => ({
+        (scopeCoverageAssets ?? []).map((a) => ({
           id: a.id,
           name: a.name,
           type: a.type ?? 'unclassified',
@@ -327,7 +371,7 @@ export function AssetPage({ config }: AssetPageProps) {
         scopeTargets,
         scopeExclusions
       ),
-    [transformedAssets, scopeTargets, scopeExclusions]
+    [scopeCoverageAssets, scopeTargets, scopeExclusions]
   )
 
   // Resolve filters: customFilters[] takes priority, fallback to single customFilter
@@ -378,16 +422,66 @@ export function AssetPage({ config }: AssetPageProps) {
     return counts
   }, [typeStats, transformedAssets])
 
-  // Copy handler
+  // Copy handler — uses copyToClipboard helper which feature-detects
+  // navigator.clipboard (only available in secure contexts) and falls
+  // back to document.execCommand. The previous direct navigator.clipboard
+  // call crashed with "navigator.clipboard is undefined" when the app
+  // was served over plain HTTP on a LAN IP.
   const handleCopy = useCallback(
-    (asset: Asset) => {
+    async (asset: Asset) => {
       if (!config.copyAction) return
-      navigator.clipboard
-        .writeText(config.copyAction.getValue(asset))
-        .then(() => toast.success('Copied to clipboard'))
-        .catch(() => toast.error('Failed to copy'))
+      const ok = await copyToClipboard(config.copyAction.getValue(asset))
+      if (ok) {
+        toast.success('Copied to clipboard')
+      } else {
+        toast.error('Failed to copy')
+      }
     },
     [config.copyAction]
+  )
+
+  // Tag suggestions for the inline editor in TagsSection. The hook
+  // pulls the global tag list cached for ~5min so we don't hit the
+  // network for every keystroke.
+  const { tags: tagSuggestions } = useAssetTags()
+
+  // Tag editor save handler. Used by `<TagsSection onSave>` inside the
+  // AssetDetailSheet's Overview tab. Without this prop the section
+  // renders read-only and the user can't add/edit/delete tags.
+  //
+  // Stale-display bug: after a successful save the API returns the
+  // updated asset, BUT `dialogs.selectedAsset` is component state set
+  // when the user clicked the row — it's a snapshot. Without lifting
+  // the new tags into selectedAsset, the TagsSection re-renders with
+  // the OLD tags array even though the save succeeded. The user sees
+  // a "Tags updated" toast and the deleted tag still in the list,
+  // which looks like the save lied to them.
+  //
+  // Fix: capture the returned Asset from updateAsset() and call
+  // setSelectedAsset(updated) so the sheet's local state is fresh.
+  // Then mutate() the list query in the background so the table
+  // also reflects the change on the next render.
+  const handleUpdateTags = useCallback(
+    async (tags: string[]) => {
+      if (!dialogs.selectedAsset) return
+      try {
+        const updated = await updateAsset(dialogs.selectedAsset.id, { tags })
+        toast.success('Tags updated')
+        // Lift the fresh asset into the sheet's local state so the
+        // TagsSection re-renders with the new tag list immediately.
+        dialogs.setSelectedAsset(updated)
+        // Background: refetch the list so the table reflects the
+        // updated tags on the next render too.
+        await mutate()
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to update tags'
+        toast.error(message)
+        // Re-throw so TagsSection's catch surfaces a toast and keeps
+        // the dialog in edit mode.
+        throw err
+      }
+    },
+    [dialogs, mutate]
   )
 
   // Form submit handlers
@@ -817,9 +911,26 @@ export function AssetPage({ config }: AssetPageProps) {
           })}
         </div>
 
-        {/* Scope status */}
-        <div className="mt-4">
+        {/* Scope status — tenant-wide, NOT affected by the table's
+            search/tag filters or pagination. Driven by the dedicated
+            `scopeCoverageAssets` query which fetches up to 1000 assets
+            of this type with no filters applied. For tenants with more
+            than 1000 assets of one type the widget shows a sample
+            caveat until the proper backend stats endpoint is built
+            (see TODO(scope-stats-endpoint) above). */}
+        <div className="mt-4 space-y-2">
           <ScopeCoverageCard coverage={scopeCoverage} showBreakdown={false} />
+          {!scopeCoverageFullyLoaded && (
+            <p className="text-[11px] text-muted-foreground px-1">
+              Showing scope coverage for the first {scopeCoverageAssets?.length ?? 0} of{' '}
+              {scopeCoverageAssetsTotal.toLocaleString()} assets. Tenant-wide breakdown for very
+              large lists requires a server-side stats endpoint —{' '}
+              <a href="/scope-config" className="underline hover:text-foreground">
+                view full coverage in Scope Configuration
+              </a>
+              .
+            </p>
+          )}
         </div>
 
         {/* Optional header content (banners, alerts) */}
@@ -1089,6 +1200,12 @@ export function AssetPage({ config }: AssetPageProps) {
         gradientFrom={config.gradientFrom}
         gradientVia={config.gradientVia}
         assetTypeName={config.label}
+        // Tag CRUD: passes the inline tag editor save handler so the
+        // TagsSection in the Overview tab is editable. Without this
+        // the section renders read-only (no pencil icon, no add/delete).
+        // Was the user-reported "no add/edit/delete tag" bug.
+        onUpdateTags={handleUpdateTags}
+        tagSuggestions={tagSuggestions}
         extraTabs={
           selectedAsset
             ? [
@@ -1141,19 +1258,34 @@ export function AssetPage({ config }: AssetPageProps) {
         overviewContent={
           selectedAsset && config.detailSections ? (
             <>
-              {config.detailSections.map((section, si) => (
-                <div key={si} className="rounded-xl border p-4 bg-card space-y-3">
-                  <SectionTitle>{section.title}</SectionTitle>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    {section.fields.map((field, fi) => (
-                      <div key={fi} className={field.fullWidth ? 'col-span-2' : ''}>
-                        <p className="text-muted-foreground">{field.label}</p>
-                        <div className="font-medium mt-0.5">{field.getValue(selectedAsset)}</div>
-                      </div>
-                    ))}
+              {config.detailSections.map((section, si) => {
+                // Resolve every field eagerly so we can filter empty
+                // ones and skip whole sections that end up with no
+                // content. Fields whose getValue returns null /
+                // undefined are dropped — this lets per-type configs
+                // hide rows where the underlying metadata is missing
+                // instead of rendering a "-" wall.
+                const resolvedFields = section.fields
+                  .map((field) => ({
+                    ...field,
+                    value: field.getValue(selectedAsset!),
+                  }))
+                  .filter((f) => f.value !== null && f.value !== undefined)
+                if (resolvedFields.length === 0) return null
+                return (
+                  <div key={si} className="rounded-xl border p-4 bg-card space-y-3">
+                    <SectionTitle>{section.title}</SectionTitle>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      {resolvedFields.map((field, fi) => (
+                        <div key={fi} className={field.fullWidth ? 'col-span-2' : ''}>
+                          <p className="text-muted-foreground">{field.label}</p>
+                          <div className="font-medium mt-0.5">{field.value}</div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </>
           ) : undefined
         }
@@ -1176,6 +1308,7 @@ export function AssetPage({ config }: AssetPageProps) {
         open={dialogs.editDialogOpen}
         onOpenChange={dialogs.setEditDialogOpen}
         title={`Edit ${config.label}`}
+        description={`Update the details for this ${config.label.toLowerCase()}.`}
         fields={config.formFields}
         asset={dialogs.selectedAsset}
         onSubmit={handleFormUpdate}

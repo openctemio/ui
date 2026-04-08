@@ -160,7 +160,9 @@ export function ComponentDetailSheet({ component, open, onOpenChange }: Componen
             gradientVia
           )}
         >
-          <div className="flex items-start gap-3 mb-3">
+          {/* pr-14 reserves space for the Sheet's built-in close button (X)
+              so the RiskScoreBadge doesn't overlap with it. */}
+          <div className="flex items-start gap-3 mb-3 pr-14">
             <div
               className={cn(
                 'h-12 w-12 rounded-xl flex items-center justify-center shrink-0',

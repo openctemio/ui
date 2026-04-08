@@ -1,10 +1,10 @@
 'use client'
 
 import useSWR from 'swr'
-import { get } from '@/lib/api/client'
+import { get, post, put, del } from '@/lib/api/client'
 import { endpoints } from '@/lib/api/endpoints'
 import { usePermissions, Permission } from '@/lib/permissions'
-import type { AssetRelationship } from '../types'
+import type { AssetRelationship, CreateRelationshipInput, UpdateRelationshipInput } from '../types'
 
 /**
  * Backend response format for asset relationships list
@@ -81,4 +81,63 @@ export function useAssetRelationships(assetId: string | null) {
     error,
     mutate,
   }
+}
+
+// ============================================
+// Mutations
+// ============================================
+//
+// These are plain async functions (not hooks) so callers can decide when to
+// trigger them and how to revalidate. Same pattern as use-asset-owners.ts —
+// callers typically `await addAssetRelationship(...)` then call `mutate()`
+// from `useAssetRelationships` to refresh the list.
+
+/**
+ * Create a new relationship from `assetId` (source) to another asset.
+ *
+ * The path's `assetId` and the body's `source_asset_id` must match — the
+ * backend rejects mismatches to prevent the URL from being misleading.
+ */
+export async function addAssetRelationship(
+  assetId: string,
+  input: CreateRelationshipInput
+): Promise<BackendRelationshipResponse> {
+  return post<BackendRelationshipResponse>(endpoints.assets.createRelationship(assetId), {
+    type: input.type,
+    source_asset_id: input.sourceAssetId,
+    target_asset_id: input.targetAssetId,
+    description: input.description ?? '',
+    confidence: input.confidence ?? 'medium',
+    discovery_method: input.discoveryMethod ?? 'manual',
+    impact_weight: input.impactWeight,
+    tags: input.tags,
+  })
+}
+
+/**
+ * Update mutable fields on an existing relationship.
+ *
+ * The backend's `mark_verified` flag is intentionally not exposed here —
+ * it bumps the `last_verified` timestamp and there is no UX surface that
+ * asks the user "is this still accurate?". When that surface is built,
+ * add a dedicated `markRelationshipVerified` function rather than
+ * piggy-backing on the generic update.
+ */
+export async function updateAssetRelationship(
+  relationshipId: string,
+  input: UpdateRelationshipInput
+): Promise<BackendRelationshipResponse> {
+  return put<BackendRelationshipResponse>(endpoints.assets.updateRelationship(relationshipId), {
+    description: input.description,
+    confidence: input.confidence,
+    impact_weight: input.impactWeight,
+    tags: input.tags,
+  })
+}
+
+/**
+ * Delete a relationship by its ID.
+ */
+export async function removeAssetRelationship(relationshipId: string): Promise<void> {
+  await del(endpoints.assets.deleteRelationship(relationshipId))
 }

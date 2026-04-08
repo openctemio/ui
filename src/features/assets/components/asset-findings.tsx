@@ -17,7 +17,6 @@ import {
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
@@ -244,8 +243,14 @@ export function AssetFindings({ assetId, className }: AssetFindingsProps) {
 
       <Separator />
 
-      {/* Findings List */}
-      <ScrollArea className="h-[400px] pr-4">
+      {/* Findings List
+          Renders inline (no fixed-height ScrollArea wrapper). The parent
+          SheetContent already has overflow-y-auto, so the whole sheet
+          scrolls as one — that prevents the previous bug where a fixed
+          h-[400px] ScrollArea created dead empty space below the list
+          when there were only a few findings, AND prevented nested
+          scroll containers when there were many. */}
+      <div>
         <div className="space-y-3">
           {findings.map((finding) => {
             const severity = severityConfig[finding.severity]
@@ -310,7 +315,7 @@ export function AssetFindings({ assetId, className }: AssetFindingsProps) {
             )
           })}
         </div>
-      </ScrollArea>
+      </div>
 
       {/* View All Link */}
       <div className="pt-2 border-t">

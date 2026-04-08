@@ -251,7 +251,17 @@ export function AssetFormDialogShared({
       <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
-          {description && <DialogDescription>{description}</DialogDescription>}
+          {/*
+            Always render DialogDescription. Radix requires either a
+            description or `aria-describedby={undefined}` on DialogContent;
+            without it React logs a "Missing Description" warning. The
+            previous version only rendered it when the parent passed a
+            description prop, leaving Edit dialog (no description prop)
+            triggering the warning.
+          */}
+          <DialogDescription>
+            {description ?? `Fill in the form below and save to apply your changes.`}
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">

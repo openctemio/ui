@@ -273,12 +273,21 @@ export function RelationshipSection({
                       relationship={rel}
                       direction={getDirection(rel)}
                       currentAssetId={currentAssetId}
-                      onClick={() => onEditClick?.(rel)}
+                      onAssetClick={onAssetClick}
+                      onEdit={onEditClick}
+                      onDelete={onDeleteClick}
                     />
                   ))}
                 </div>
               ) : (
-                <div className="grid gap-4 sm:grid-cols-2">
+                /* Card view: default to a single column. The 2-column
+                   variant only kicks in at lg+ where this section has
+                   ~700px+ to play with. The previous `sm:grid-cols-2`
+                   activated at 640px viewport but the parent sheet is
+                   only ~576px wide regardless of viewport, so cards were
+                   getting crushed to ~260px and truncating both asset
+                   names. */
+                <div className="grid gap-4 lg:grid-cols-2">
                   {filteredRelationships.map((rel) => (
                     <RelationshipCard
                       key={rel.id}
@@ -337,7 +346,13 @@ export function RelationshipPreview({
 }: RelationshipPreviewProps) {
   const graphData = React.useMemo(() => buildGraphFromRelationships(relationships), [relationships])
 
-  const displayRelationships = relationships.slice(0, maxItems)
+  // expanded → show all relationships inline. The user can collapse
+  // back via the "Show fewer" button. This is the in-place alternative
+  // to "View All" (which navigates to the Relations tab) — useful when
+  // the user just wants a peek without leaving the Overview.
+  const [expanded, setExpanded] = React.useState(false)
+
+  const displayRelationships = expanded ? relationships : relationships.slice(0, maxItems)
   const remainingCount = relationships.length - maxItems
 
   if (relationships.length === 0) {
@@ -400,10 +415,23 @@ export function RelationshipPreview({
           )
         })}
 
-        {remainingCount > 0 && (
-          <p className="text-xs text-muted-foreground text-center pt-1">
-            +{remainingCount} more relationships
-          </p>
+        {remainingCount > 0 && !expanded && (
+          <button
+            type="button"
+            onClick={() => setExpanded(true)}
+            className="w-full text-xs text-muted-foreground text-center pt-1 hover:text-foreground hover:underline transition-colors"
+          >
+            +{remainingCount} more relationship{remainingCount === 1 ? '' : 's'}
+          </button>
+        )}
+        {expanded && relationships.length > maxItems && (
+          <button
+            type="button"
+            onClick={() => setExpanded(false)}
+            className="w-full text-xs text-muted-foreground text-center pt-1 hover:text-foreground hover:underline transition-colors"
+          >
+            Show fewer
+          </button>
         )}
       </div>
     </div>

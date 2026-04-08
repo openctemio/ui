@@ -76,7 +76,16 @@ export function TagInput({
     .filter((s) => !input || s.toLowerCase().includes(input.toLowerCase()))
     .slice(0, 6)
 
-  const showSuggestions = focused && filteredSuggestions.length > 0
+  // Show the suggestions UI whenever the input is focused, even if the
+  // filtered list is empty. The previous version only showed the panel
+  // when there was at least one suggestion to render — which made the
+  // feature invisible to users in two common cases:
+  //   1. The asset has all of the tenant's existing tags already added
+  //   2. The user's typed query doesn't match any suggestion
+  // In both cases the user couldn't tell if autocomplete even existed.
+  // Showing the panel + an empty-state message makes the affordance
+  // discoverable.
+  const showSuggestions = focused && !disabled && suggestions.length > 0
 
   return (
     <div className="space-y-2">
@@ -116,17 +125,31 @@ export function TagInput({
               {showSuggestions && (
                 <div className="flex flex-wrap gap-1" role="listbox" aria-label="Tag suggestions">
                   <span className="text-xs text-muted-foreground mr-1 py-0.5">Suggestions:</span>
-                  {filteredSuggestions.map((tag) => (
-                    <Badge
-                      key={tag}
-                      variant="outline"
-                      role="option"
-                      className="cursor-pointer hover:bg-primary/10 hover:text-primary hover:border-primary/30 text-xs transition-colors"
-                      onClick={() => handleAdd(tag)}
-                    >
-                      + {tag}
-                    </Badge>
-                  ))}
+                  {filteredSuggestions.length > 0 ? (
+                    filteredSuggestions.map((tag) => (
+                      <Badge
+                        key={tag}
+                        variant="outline"
+                        role="option"
+                        className="cursor-pointer hover:bg-primary/10 hover:text-primary hover:border-primary/30 text-xs transition-colors"
+                        // onMouseDown fires before onBlur, so the tag is
+                        // added before the suggestion list closes. Using
+                        // onClick alone races with the blur timeout.
+                        onMouseDown={(e) => {
+                          e.preventDefault()
+                          handleAdd(tag)
+                        }}
+                      >
+                        + {tag}
+                      </Badge>
+                    ))
+                  ) : (
+                    <span className="text-xs text-muted-foreground italic">
+                      {input
+                        ? `No existing tag matches "${input}". Press Enter to create.`
+                        : 'All existing tags are already applied. Type to create a new one.'}
+                    </span>
+                  )}
                 </div>
               )}
             </>

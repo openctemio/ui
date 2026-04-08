@@ -72,12 +72,14 @@ export const RELATIONSHIP_LABELS: Record<RelationshipType, RelationshipLabelPair
   runs_on: {
     direct: 'Runs On',
     inverse: 'Runs',
-    description: 'Workload runs on compute (service/container → host/node/cluster)',
+    description:
+      'Runtime location of a workload — service/container/website is currently executing on this compute. Use this for "where it lives now". For build/deploy events use Deployed To.',
   },
   deployed_to: {
     direct: 'Deployed To',
     inverse: 'Has Deployment',
-    description: 'Artifact deployed to target (repo/build → cluster/host/env)',
+    description:
+      'Build artifact placed at a target — strictly for repos / container images / build outputs. Do NOT use this for runtime workloads (those use Runs On).',
   },
   contains: {
     direct: 'Contains',
@@ -332,14 +334,16 @@ export const VALID_RELATIONSHIP_CONSTRAINTS: Record<RelationshipType, Relationsh
     },
   ],
 
+  // `deployed_to` is intentionally artifact-only. Runtime workloads
+  // (service / api / website / container) use `runs_on` instead — the two
+  // are not interchangeable. We previously allowed `service`/`api` here
+  // and that produced the redundant "service deployed_to host AND service
+  // runs_on host" pair on the same edge. See migration 000106 for the
+  // backfill that converts existing wrong rows.
   deployed_to: [
     {
       sourceTypes: ['repository', 'container_image'],
       targetTypes: ['k8s_cluster', 'k8s_workload', 'cloud_account', 'host'],
-    },
-    {
-      sourceTypes: ['service', 'api'],
-      targetTypes: ['k8s_cluster', 'cloud_account', 'host'],
     },
   ],
 

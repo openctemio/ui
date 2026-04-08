@@ -394,6 +394,19 @@ export function useAssetsByType(
 }
 
 /**
+ * Fetch a single asset by ID (non-hook variant of useAsset).
+ *
+ * Use this from event handlers / callbacks where you cannot call hooks
+ * conditionally. Example: clicking a related asset in the relationships
+ * tab needs to swap the parent sheet's selectedAsset, but the click
+ * handler isn't a render path so it can't useSWR.
+ */
+export async function getAsset(assetId: string): Promise<Asset> {
+  const response = await get<BackendAsset>(endpoints.assets.get(assetId))
+  return transformAsset(response)
+}
+
+/**
  * Create a new asset
  */
 export async function createAsset(input: CreateAssetInput): Promise<Asset> {

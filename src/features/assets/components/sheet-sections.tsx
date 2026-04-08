@@ -119,9 +119,28 @@ export function StatsGrid({ children, columns = 2, className }: StatsGridProps) 
 interface TimelineSectionProps {
   firstSeen: string
   lastSeen: string
+  createdAt?: string
+  updatedAt?: string
 }
 
-export function TimelineSection({ firstSeen, lastSeen }: TimelineSectionProps) {
+/**
+ * Renders all 4 lifecycle timestamps an asset carries:
+ *   - First Seen — when the asset was first observed by any scanner
+ *   - Last Seen  — when the asset was last observed
+ *   - Created    — when the asset row was inserted in OpenCTEM
+ *   - Updated    — when the asset row was last modified
+ *
+ * First/Last Seen describe the *real-world discovery* lifecycle.
+ * Created/Updated describe the *database record* lifecycle. They can
+ * differ — e.g. an asset was discovered yesterday (firstSeen) but the
+ * description was edited today (updatedAt).
+ */
+export function TimelineSection({
+  firstSeen,
+  lastSeen,
+  createdAt,
+  updatedAt,
+}: TimelineSectionProps) {
   return (
     <div className="rounded-xl border p-4 bg-card">
       <h4 className="text-sm font-medium mb-3">Timeline</h4>
@@ -144,6 +163,32 @@ export function TimelineSection({ firstSeen, lastSeen }: TimelineSectionProps) {
             <p className="text-xs text-muted-foreground">{new Date(lastSeen).toLocaleString()}</p>
           </div>
         </div>
+        {createdAt && (
+          <div className="flex items-start gap-3">
+            <div className="h-6 w-6 rounded-full bg-purple-500/20 flex items-center justify-center mt-0.5">
+              <Clock className="h-3.5 w-3.5 text-purple-500" />
+            </div>
+            <div>
+              <p className="text-sm font-medium">Created</p>
+              <p className="text-xs text-muted-foreground">
+                {new Date(createdAt).toLocaleString()}
+              </p>
+            </div>
+          </div>
+        )}
+        {updatedAt && updatedAt !== createdAt && (
+          <div className="flex items-start gap-3">
+            <div className="h-6 w-6 rounded-full bg-amber-500/20 flex items-center justify-center mt-0.5">
+              <Clock className="h-3.5 w-3.5 text-amber-500" />
+            </div>
+            <div>
+              <p className="text-sm font-medium">Updated</p>
+              <p className="text-xs text-muted-foreground">
+                {new Date(updatedAt).toLocaleString()}
+              </p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

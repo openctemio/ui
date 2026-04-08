@@ -622,8 +622,9 @@ export default function EcosystemsPage() {
                         Components
                       </SheetTitle>
                       <SheetDescription className="mt-1">
-                        {ecosystemComponentsData?.data?.length ?? 0} components found in this
-                        ecosystem
+                        {/* Use API total (full ecosystem count), not the
+                            current page (.data.length is capped at per_page=100). */}
+                        {ecosystemComponentsData?.total ?? 0} components found in this ecosystem
                       </SheetDescription>
                     </div>
                   </div>
@@ -644,7 +645,8 @@ export default function EcosystemsPage() {
                       <span className="text-sm text-muted-foreground">Total</span>
                     </div>
                     <p className="mt-1 text-2xl font-bold">
-                      {ecosystemComponentsData?.data?.length ?? 0}
+                      {/* Total = API total for this ecosystem, not the 100-item page */}
+                      {ecosystemComponentsData?.total ?? 0}
                     </p>
                   </button>
                   <button
