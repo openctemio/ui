@@ -228,6 +228,7 @@ export default function FindingsPage() {
   const router = useRouter()
   const assetIdFilter = searchParams.get('assetId')
   const sourceIdFilter = searchParams.get('source')
+  const scanIdFilter = searchParams.get('scan_id')
 
   const [selectedFinding, setSelectedFinding] = useState<Finding | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -254,6 +255,7 @@ export default function FindingsPage() {
     }
     if (assetIdFilter) filters.asset_id = assetIdFilter
     if (sourceIdFilter) filters.source_id = sourceIdFilter
+    if (scanIdFilter) filters.scan_id = scanIdFilter
     if (severityTab !== 'all') {
       filters.severities = [severityTab as ApiSeverity]
     }
@@ -269,7 +271,15 @@ export default function FindingsPage() {
       filters.search = searchQuery.trim()
     }
     return filters
-  }, [assetIdFilter, sourceIdFilter, severityTab, statusFilter, searchQuery])
+  }, [
+    assetIdFilter,
+    sourceIdFilter,
+    scanIdFilter,
+    severityTab,
+    statusFilter,
+    searchQuery,
+    HIDDEN_STATUSES,
+  ])
 
   // Fetch finding stats (stable, not affected by severity filter)
   const { data: findingStats, isLoading: statsLoading, mutate: mutateStats } = useFindingStatsApi()
@@ -789,6 +799,27 @@ export default function FindingsPage() {
             )}
           </div>
         </PageHeader>
+
+        {/* Active scan filter badge */}
+        {scanIdFilter && (
+          <div className="mt-4 flex items-center gap-2">
+            <Badge variant="secondary" className="gap-1.5">
+              <Filter className="h-3 w-3" />
+              Scan: {scanIdFilter.slice(0, 8)}…
+              <button
+                type="button"
+                onClick={() => router.push('/findings')}
+                className="ml-1 rounded-sm hover:bg-background/50"
+                aria-label="Clear scan filter"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+            <span className="text-muted-foreground text-xs">
+              Showing findings from this scan only
+            </span>
+          </div>
+        )}
 
         {/* Main Tab Selector */}
         <div className="mt-4">
