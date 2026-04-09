@@ -9,7 +9,7 @@
 // ============================================
 
 export type MemberRole = 'owner' | 'admin' | 'member' | 'viewer'
-export type MemberStatus = 'active' | 'pending' | 'inactive'
+export type MemberStatus = 'active' | 'pending' | 'inactive' | 'suspended'
 
 export interface Member {
   id: string
@@ -124,6 +124,7 @@ export const STATUS_DISPLAY: Record<
   active: { label: 'Active', color: 'text-green-400', bgColor: 'bg-green-500/20' },
   pending: { label: 'Pending', color: 'text-yellow-400', bgColor: 'bg-yellow-500/20' },
   inactive: { label: 'Inactive', color: 'text-gray-400', bgColor: 'bg-gray-500/20' },
+  suspended: { label: 'Suspended', color: 'text-orange-400', bgColor: 'bg-orange-500/20' },
 }
 
 // Note: Membership level selection removed from UI.
