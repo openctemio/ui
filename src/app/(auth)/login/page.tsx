@@ -16,7 +16,18 @@ import { validateRedirectUrl } from '@/lib/redirect'
 import { LoginForm } from '@/features/auth/components/login-form'
 
 interface LoginPageProps {
-  searchParams: Promise<{ redirect?: string; returnTo?: string; org?: string; error?: string }>
+  searchParams: Promise<{
+    redirect?: string
+    returnTo?: string
+    org?: string
+    error?: string
+    // Preserved from the invitation flow — when a user clicks an
+    // invite link and doesn't have an account, the invitation page
+    // redirects to /login?email=alice@co.com&returnTo=/invitations/{token}.
+    // The login page passes this email through to the "Sign up" link
+    // so the register form can pre-fill it.
+    email?: string
+  }>
 }
 
 export default async function SignIn({ searchParams }: LoginPageProps) {
@@ -69,7 +80,12 @@ export default async function SignIn({ searchParams }: LoginPageProps) {
         <CardDescription>
           Enter your email and password below to <br />
           log into your account. Don&apos;t have an account?{' '}
-          <Link href="/register" className="hover:text-primary underline underline-offset-4">
+          <Link
+            href={
+              params.email ? `/register?email=${encodeURIComponent(params.email)}` : '/register'
+            }
+            className="hover:text-primary underline underline-offset-4"
+          >
             Sign up
           </Link>
         </CardDescription>

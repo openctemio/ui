@@ -95,13 +95,21 @@ export function RegisterForm({
     toast.error(errorParam)
   }
 
+  // Pre-fill the email field when the user arrives from an invitation
+  // link. The invitation page redirects to /login?email=alice@co.com&
+  // returnTo=/invitations/{token}, and the "Create Account" link on
+  // the login page preserves the email param. Without this the user
+  // has to manually re-type the exact email the invitation was sent
+  // to — error-prone and high friction.
+  const prefillEmail = searchParams.get('email') ?? ''
+
   // Form setup with centralized schema
   const form = useForm<RegisterInput>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
       firstName: '',
       lastName: '',
-      email: '',
+      email: prefillEmail,
       password: '',
       confirmPassword: '',
     },
