@@ -10,10 +10,13 @@ import {
   Pencil,
   Check,
   ChevronsUpDown,
+  Search,
+  X,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
@@ -293,6 +296,56 @@ export function AssetOwnersTab({ assetId }: AssetOwnersTabProps) {
     [owners]
   )
 
+  // Owner list display state — search + sort. The list scales to
+  // dozens of owners (typical asset has 1–10, critical infrastructure
+  // can have 30+). The list is sorted by ownership type priority so
+  // the primary owner is always at the top, then by assigned-at desc
+  // so newest assignments surface first within each tier.
+  //
+  // The search input only appears once the list crosses a small
+  // threshold so the typical 1–5 owner case stays uncluttered.
+  const SEARCH_THRESHOLD = 5
+  const [ownerSearch, setOwnerSearch] = useState('')
+
+  // Lower number = higher priority. Order matches the canonical
+  // ownership hierarchy (RACI-ish). Unknown values sort last.
+  const ownershipPriority: Record<string, number> = {
+    primary: 0,
+    secondary: 1,
+    stakeholder: 2,
+    accountable: 2,
+    responsible: 3,
+    informed: 4,
+    consulted: 4,
+    regulatory: 5,
+  }
+
+  const sortedOwners = useMemo(() => {
+    return [...owners].sort((a, b) => {
+      const pa = ownershipPriority[a.ownershipType] ?? 99
+      const pb = ownershipPriority[b.ownershipType] ?? 99
+      if (pa !== pb) return pa - pb
+      // Same priority: newest assignment first.
+      const ta = a.assignedAt ? new Date(a.assignedAt).getTime() : 0
+      const tb = b.assignedAt ? new Date(b.assignedAt).getTime() : 0
+      return tb - ta
+    })
+    // ownershipPriority is module-level constant; safe to omit from deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [owners])
+
+  const visibleOwners = useMemo(() => {
+    const q = ownerSearch.trim().toLowerCase()
+    if (!q) return sortedOwners
+    return sortedOwners.filter((o) => {
+      const haystack = [o.userName, o.userEmail, o.groupName]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase()
+      return haystack.includes(q)
+    })
+  }, [sortedOwners, ownerSearch])
+
   // Normalise both sources to the discriminated PickerOption type. Members
   // API returns FLAT fields (m.name, m.email) — see MemberWithUserResponse
   // above. Each option carries `kind` so the renderer can pick the right
@@ -454,16 +507,65 @@ export function AssetOwnersTab({ assetId }: AssetOwnersTabProps) {
         </div>
       ) : (
         <div className="space-y-2">
-          {owners.map((owner) => (
-            <OwnerCard
-              key={owner.id}
-              owner={owner}
-              canEdit={canEdit}
-              canDelete={canDelete}
-              onEdit={onEditClick}
-              onRemove={setRemoveOwnerTarget}
-            />
-          ))}
+          {/*
+            Search input only appears when the list grows beyond
+            SEARCH_THRESHOLD owners — keeps the typical 1–5 case
+            visually clean.
+          */}
+          {owners.length > SEARCH_THRESHOLD && (
+            <div className="space-y-1">
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  value={ownerSearch}
+                  onChange={(e) => setOwnerSearch(e.target.value)}
+                  placeholder="Search owners by name, email, or group…"
+                  className="pl-8 h-8 text-sm"
+                />
+                {ownerSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setOwnerSearch('')}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    aria-label="Clear search"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
+              {ownerSearch && (
+                <p className="text-xs text-muted-foreground">
+                  Showing {visibleOwners.length} of {owners.length}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/*
+            Bounded scroll container so a long owner list doesn't push
+            other tab content off-screen. ~10 OwnerCards fit before the
+            scrollbar appears (each card is ~64px). The Sheet itself
+            still scrolls outside this container, so the search bar
+            stays visible while the operator scans the list.
+          */}
+          <div className="max-h-[480px] overflow-y-auto pr-1 space-y-2">
+            {visibleOwners.length === 0 ? (
+              <p className="py-6 text-center text-sm text-muted-foreground">
+                No owners match &ldquo;{ownerSearch}&rdquo;.
+              </p>
+            ) : (
+              visibleOwners.map((owner) => (
+                <OwnerCard
+                  key={owner.id}
+                  owner={owner}
+                  canEdit={canEdit}
+                  canDelete={canDelete}
+                  onEdit={onEditClick}
+                  onRemove={setRemoveOwnerTarget}
+                />
+              ))
+            )}
+          </div>
         </div>
       )}
 
