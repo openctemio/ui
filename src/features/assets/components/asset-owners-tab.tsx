@@ -86,11 +86,13 @@ import { OWNERSHIP_TYPE_LABELS, OWNERSHIP_TYPE_COLORS, OWNERSHIP_TYPE_DESCRIPTIO
 // PICKER OPTION TYPE
 // ============================================
 
-interface PickerOption {
-  id: string
-  label: string
-  sublabel?: string
-}
+// Discriminated union: the picker offers BOTH users and groups in a single
+// list, so each option carries its own kind. The `kind` drives both the
+// rendering (User icon vs Group icon) and the submit payload (userId vs
+// groupId).
+type PickerOption =
+  | { kind: 'user'; id: string; label: string; sublabel?: string }
+  | { kind: 'group'; id: string; label: string; sublabel?: string }
 
 interface AssetOwnersTabProps {
   assetId: string
@@ -102,6 +104,41 @@ function OwnershipBadge({ type }: { type: OwnershipType }) {
     <Badge variant="outline" className={cn(colors.bg, colors.text, colors.border)}>
       {OWNERSHIP_TYPE_LABELS[type]}
     </Badge>
+  )
+}
+
+// Single-row renderer for the unified owner picker. Extracted from the JSX
+// because it is reused for both the Users and Groups CommandGroup sections,
+// and inlining it twice would force the two branches to drift over time.
+function PickerItemRow({
+  option,
+  selected,
+  onSelect,
+}: {
+  option: PickerOption
+  selected: boolean
+  onSelect: () => void
+}) {
+  const Icon = option.kind === 'user' ? User : Building2
+  const iconColor = option.kind === 'user' ? 'text-blue-500' : 'text-purple-500'
+  return (
+    <CommandItem
+      // Including kind in the value lets Radix's selection state distinguish
+      // a user and a group with the same UUID (shouldn't happen, but cheap
+      // belt-and-braces).
+      value={`${option.kind}:${option.id}`}
+      onSelect={onSelect}
+      className="flex items-start gap-2"
+    >
+      <Check className={cn('mt-1 h-4 w-4 shrink-0', selected ? 'opacity-100' : 'opacity-0')} />
+      <Icon className={cn('mt-1 h-4 w-4 shrink-0', iconColor)} />
+      <div className="min-w-0 flex-1">
+        <p className="text-sm truncate">{option.label}</p>
+        {option.sublabel && (
+          <p className="text-xs text-muted-foreground truncate">{option.sublabel}</p>
+        )}
+      </div>
+    </CommandItem>
   )
 }
 
@@ -175,11 +212,13 @@ export function AssetOwnersTab({ assetId }: AssetOwnersTabProps) {
   const [editOwner, setEditOwner] = useState<AssetOwner | null>(null)
   const [removeOwnerTarget, setRemoveOwnerTarget] = useState<AssetOwner | null>(null)
 
-  // Add owner form state — `selectedOption` is the chosen user/group, not
-  // just an ID string. The previous version asked users to type a UUID,
-  // which nobody can do. Now they pick from a searchable list of real
-  // tenant members or groups.
-  const [addType, setAddType] = useState<'user' | 'group'>('user')
+  // Add owner form state — `selectedOption` is the chosen user OR group,
+  // tagged with its kind. The previous version had a separate "Owner Type"
+  // dropdown the user had to set FIRST before the picker would even show
+  // any options. Most operators didn't notice the dropdown and assumed
+  // they could only assign groups (the option that happened to be
+  // visible). Now both kinds are listed in a single picker, grouped into
+  // "Users" and "Groups" sections.
   const [selectedOption, setSelectedOption] = useState<PickerOption | null>(null)
   const [addOwnershipType, setAddOwnershipType] = useState<OwnershipType>('primary')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -206,12 +245,15 @@ export function AssetOwnersTab({ assetId }: AssetOwnersTabProps) {
   // Without `include=user` the backend returns only IDs/roles (no name or
   // email), and the picker shows everything as "(no name)". That was the
   // original bug.
+  //
+  // Both members AND groups are fetched in parallel and ONLY when the
+  // dialog is open. This is what powers the unified picker.
   const { currentTenant } = useTenant()
   const tenantSlug = currentTenant?.slug ?? null
   const PICKER_PAGE_SIZE = 50
 
   const buildMembersUrl = () => {
-    if (addType !== 'user' || !tenantSlug) return null
+    if (!showAddDialog || !tenantSlug) return null
     const params = new URLSearchParams({
       include: 'user',
       limit: String(PICKER_PAGE_SIZE),
@@ -229,12 +271,13 @@ export function AssetOwnersTab({ assetId }: AssetOwnersTabProps) {
   )
 
   // Groups also support a `search` filter via the existing useGroups hook;
-  // pass it through so groups picker also scales.
+  // pass it through so groups picker also scales. We pass `undefined` (the
+  // hook's "skip" signal) when the dialog is closed.
   const { groups: groupsData, isLoading: groupsLoading } = useGroups(
-    addType === 'group' ? { search: debouncedSearch.trim() || undefined } : undefined
+    showAddDialog ? { search: debouncedSearch.trim() || undefined } : undefined
   )
 
-  const pickerLoading = addType === 'user' ? membersLoading : groupsLoading
+  const pickerLoading = membersLoading || groupsLoading
 
   // Sets of IDs already assigned to this asset, split by user vs group.
   // Used to filter the picker so the user can't pick someone who's
@@ -250,36 +293,38 @@ export function AssetOwnersTab({ assetId }: AssetOwnersTabProps) {
     [owners]
   )
 
-  // Normalise both lists to PickerOption shape so the picker doesn't care
-  // about the source. Members API returns FLAT fields (m.name, m.email)
-  // not nested m.user.name — see MemberWithUserResponse above.
+  // Normalise both sources to the discriminated PickerOption type. Members
+  // API returns FLAT fields (m.name, m.email) — see MemberWithUserResponse
+  // above. Each option carries `kind` so the renderer can pick the right
+  // icon and the submit handler can decide between userId vs groupId.
   const userOptions: PickerOption[] = useMemo(() => {
-    if (addType !== 'user') return []
     return (membersData?.data ?? [])
-      .map((m) => ({
-        id: m.user_id,
-        label: m.name?.trim() || m.email || '(unnamed user)',
-        sublabel: m.name?.trim() ? m.email : undefined,
-      }))
+      .map(
+        (m): PickerOption => ({
+          kind: 'user',
+          id: m.user_id,
+          label: m.name?.trim() || m.email || '(unnamed user)',
+          sublabel: m.name?.trim() ? m.email : undefined,
+        })
+      )
       .filter((o) => o.id && !takenUserIds.has(o.id))
-  }, [membersData, addType, takenUserIds])
+  }, [membersData, takenUserIds])
 
   const groupOptions: PickerOption[] = useMemo(() => {
-    if (addType !== 'group') return []
     return (groupsData ?? [])
-      .map((g) => ({
-        id: g.id,
-        label: g.name,
-        sublabel: g.description || undefined,
-      }))
+      .map(
+        (g): PickerOption => ({
+          kind: 'group',
+          id: g.id,
+          label: g.name,
+          sublabel: g.description || undefined,
+        })
+      )
       .filter((o) => o.id && !takenGroupIds.has(o.id))
-  }, [groupsData, addType, takenGroupIds])
+  }, [groupsData, takenGroupIds])
 
-  const pickerOptions = addType === 'user' ? userOptions : groupOptions
-
-  // Count of assigned-of-this-type for the empty-state hint below.
-  // Re-uses the existing taken sets — no extra computation.
-  const takenCountForType = addType === 'user' ? takenUserIds.size : takenGroupIds.size
+  const totalOptions = userOptions.length + groupOptions.length
+  const totalTaken = takenUserIds.size + takenGroupIds.size
 
   const resetAddForm = () => {
     setSelectedOption(null)
@@ -288,14 +333,14 @@ export function AssetOwnersTab({ assetId }: AssetOwnersTabProps) {
 
   const handleAdd = async () => {
     if (!selectedOption) {
-      toast.error(`Please select a ${addType}`)
+      toast.error('Please select a user or group')
       return
     }
     setIsSubmitting(true)
     try {
       await addAssetOwner(assetId, {
-        userId: addType === 'user' ? selectedOption.id : undefined,
-        groupId: addType === 'group' ? selectedOption.id : undefined,
+        userId: selectedOption.kind === 'user' ? selectedOption.id : undefined,
+        groupId: selectedOption.kind === 'group' ? selectedOption.id : undefined,
         ownershipType: addOwnershipType,
       })
       toast.success(
@@ -450,30 +495,13 @@ export function AssetOwnersTab({ assetId }: AssetOwnersTabProps) {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
+            {/* Unified picker — both users and groups in a single list,
+                grouped into "Users" and "Groups" sections. The previous
+                version had a separate "Owner Type" Select that operators
+                kept missing, leading them to believe only groups were
+                assignable. */}
             <div className="space-y-2">
-              <Label>Owner Type</Label>
-              <Select
-                value={addType}
-                onValueChange={(v) => {
-                  setAddType(v as 'user' | 'group')
-                  setSelectedOption(null) // reset picker when switching type
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="user">User</SelectItem>
-                  <SelectItem value="group">Group</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Searchable picker — replaces the old "Enter UUID" text input.
-                Lists actual tenant members or groups from the API and lets
-                the user search by name/email. */}
-            <div className="space-y-2">
-              <Label>{addType === 'user' ? 'User' : 'Group'}</Label>
+              <Label>Owner</Label>
               <Popover
                 open={pickerOpen}
                 onOpenChange={(open) => {
@@ -488,21 +516,25 @@ export function AssetOwnersTab({ assetId }: AssetOwnersTabProps) {
                     variant="outline"
                     role="combobox"
                     aria-expanded={pickerOpen}
-                    // The trigger shows ONLY the label (e.g. user name or
-                    // group name) — never the sublabel. We learned the hard
-                    // way that rendering the sublabel inline (even with
-                    // truncate) can blow out the dialog width when the
-                    // sublabel contains long unbreakable text. The selected
-                    // sublabel is displayed in the helper line below the
-                    // button instead, where it can wrap freely.
+                    // The trigger shows the label plus a small icon hinting
+                    // at the kind (User vs Group). Never the sublabel — we
+                    // learned the hard way that rendering long emails inline
+                    // can blow out the dialog width.
                     className="w-full min-w-0 overflow-hidden justify-between font-normal"
                     title={selectedOption?.label}
                   >
-                    <span className="flex-1 min-w-0 truncate text-left text-sm">
+                    <span className="flex-1 min-w-0 flex items-center gap-2 text-left text-sm">
                       {selectedOption ? (
-                        selectedOption.label
+                        <>
+                          {selectedOption.kind === 'user' ? (
+                            <User className="h-3.5 w-3.5 shrink-0 text-blue-500" />
+                          ) : (
+                            <Building2 className="h-3.5 w-3.5 shrink-0 text-purple-500" />
+                          )}
+                          <span className="truncate">{selectedOption.label}</span>
+                        </>
                       ) : (
-                        <span className="text-muted-foreground">Select a {addType}…</span>
+                        <span className="text-muted-foreground">Select a user or group…</span>
                       )}
                     </span>
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -532,71 +564,83 @@ export function AssetOwnersTab({ assetId }: AssetOwnersTabProps) {
                     <CommandInput
                       value={searchValue}
                       onValueChange={setSearchValue}
-                      placeholder={`Search ${addType === 'user' ? 'users by name or email' : 'groups by name'}…`}
+                      placeholder="Search by name, email, or group…"
                     />
                     <CommandList>
                       {pickerLoading ? (
                         <div className="py-6 text-center text-sm text-muted-foreground">
                           Loading…
                         </div>
-                      ) : pickerOptions.length === 0 ? (
+                      ) : totalOptions === 0 ? (
                         <CommandEmpty>
                           <div className="space-y-1">
                             <p>
                               {debouncedSearch
-                                ? `No ${addType === 'user' ? 'users' : 'groups'} match "${debouncedSearch}".`
-                                : `No ${addType === 'user' ? 'users' : 'groups'} available.`}
+                                ? `No users or groups match "${debouncedSearch}".`
+                                : 'No users or groups available.'}
                             </p>
                             {/* Tell the user *why* the picker may be empty
                                 when the only reason is "everything is
                                 already an owner". Otherwise the empty
                                 state looks like a bug. */}
-                            {takenCountForType > 0 && !debouncedSearch && (
+                            {totalTaken > 0 && !debouncedSearch && (
                               <p className="text-[11px]">
-                                {takenCountForType} {addType === 'user' ? 'user' : 'group'}
-                                {takenCountForType === 1 ? ' is' : 's are'} already an owner of this
-                                asset and therefore hidden.
+                                {totalTaken} owner
+                                {totalTaken === 1 ? ' is' : 's are'} already assigned to this asset
+                                and therefore hidden.
                               </p>
                             )}
                           </div>
                         </CommandEmpty>
                       ) : (
-                        <CommandGroup>
-                          {pickerOptions.map((option) => (
-                            <CommandItem
-                              key={option.id}
-                              value={option.id}
-                              onSelect={() => {
-                                setSelectedOption(option)
-                                setPickerOpen(false)
-                                setSearchValue('')
-                              }}
-                              className="flex items-start gap-2"
-                            >
-                              <Check
-                                className={cn(
-                                  'mt-1 h-4 w-4 shrink-0',
-                                  selectedOption?.id === option.id ? 'opacity-100' : 'opacity-0'
-                                )}
-                              />
-                              <div className="min-w-0 flex-1">
-                                <p className="text-sm truncate">{option.label}</p>
-                                {option.sublabel && (
-                                  <p className="text-xs text-muted-foreground truncate">
-                                    {option.sublabel}
-                                  </p>
-                                )}
-                              </div>
-                            </CommandItem>
-                          ))}
-                          {/* Hint when results are capped at PICKER_PAGE_SIZE
+                        <>
+                          {userOptions.length > 0 && (
+                            <CommandGroup heading="Users">
+                              {userOptions.map((option) => (
+                                <PickerItemRow
+                                  key={`user:${option.id}`}
+                                  option={option}
+                                  selected={
+                                    selectedOption?.kind === 'user' &&
+                                    selectedOption.id === option.id
+                                  }
+                                  onSelect={() => {
+                                    setSelectedOption(option)
+                                    setPickerOpen(false)
+                                    setSearchValue('')
+                                  }}
+                                />
+                              ))}
+                            </CommandGroup>
+                          )}
+                          {groupOptions.length > 0 && (
+                            <CommandGroup heading="Groups">
+                              {groupOptions.map((option) => (
+                                <PickerItemRow
+                                  key={`group:${option.id}`}
+                                  option={option}
+                                  selected={
+                                    selectedOption?.kind === 'group' &&
+                                    selectedOption.id === option.id
+                                  }
+                                  onSelect={() => {
+                                    setSelectedOption(option)
+                                    setPickerOpen(false)
+                                    setSearchValue('')
+                                  }}
+                                />
+                              ))}
+                            </CommandGroup>
+                          )}
+                          {/* Hint when EITHER list is capped at PICKER_PAGE_SIZE
                               — encourages user to refine their search */}
-                          {pickerOptions.length >= PICKER_PAGE_SIZE && (
+                          {(userOptions.length >= PICKER_PAGE_SIZE ||
+                            groupOptions.length >= PICKER_PAGE_SIZE) && (
                             <div className="border-t px-3 py-2 text-[11px] text-muted-foreground text-center">
-                              Showing first {PICKER_PAGE_SIZE} results — type to refine
+                              Showing first {PICKER_PAGE_SIZE} per section — type to refine
                             </div>
                           )}
-                        </CommandGroup>
+                        </>
                       )}
                     </CommandList>
                   </Command>
