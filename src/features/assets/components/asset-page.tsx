@@ -640,6 +640,21 @@ export function AssetPage({ config }: AssetPageProps) {
         ),
       },
       // Tags
+      //
+      // Tag chips can hold values like "source:gcp-dns" (14 chars) which
+      // are wider than a tight max-w cap. The previous version applied
+      // truncate + max-w-[80px] directly on the Badge — but Badge is
+      // `inline-flex` with `justify-center` and `overflow-hidden`, and
+      // text-overflow:ellipsis does not work on flex items unless the
+      // child has `min-w-0`. The result was text clipped on both sides
+      // with no ellipsis, leaving operators staring at "urce:gcp-dns"
+      // and wondering what the actual tag name was.
+      //
+      // The fix: wrap each tag value in an inner <span> that owns the
+      // truncate behaviour (block display → ellipsis works), give the
+      // badge a roomier max width that fits typical "key:value" tags,
+      // and add a native title tooltip for the full value on hover.
+      // Two-tag preview + tooltip with the rest stays the same.
       {
         id: 'tags',
         header: 'Tags',
@@ -649,14 +664,15 @@ export function AssetPage({ config }: AssetPageProps) {
           const visible = tags.slice(0, 2)
           const remaining = tags.slice(2)
           return (
-            <div className="flex flex-wrap gap-1 max-w-[180px]">
+            <div className="flex flex-wrap items-center gap-1 max-w-[220px]">
               {visible.map((tag) => (
                 <Badge
                   key={tag}
                   variant="outline"
-                  className="text-xs px-1.5 py-0 truncate max-w-[80px]"
+                  className="text-xs px-1.5 py-0 max-w-[140px]"
+                  title={tag}
                 >
-                  {tag}
+                  <span className="block truncate">{tag}</span>
                 </Badge>
               ))}
               {remaining.length > 0 && (
@@ -667,7 +683,7 @@ export function AssetPage({ config }: AssetPageProps) {
                         +{remaining.length}
                       </Badge>
                     </TooltipTrigger>
-                    <TooltipContent side="bottom" className="max-w-[240px]">
+                    <TooltipContent side="bottom" className="max-w-[280px]">
                       <div className="flex flex-wrap gap-1">
                         {remaining.map((tag) => (
                           <Badge key={tag} variant="outline" className="text-xs px-1.5 py-0">
