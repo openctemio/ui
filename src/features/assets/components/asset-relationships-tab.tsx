@@ -99,6 +99,15 @@ interface BackendAssetsListResponse {
 
 const PICKER_PAGE_SIZE = 50
 
+// Format a list of asset names for inclusion in a toast message.
+// Joins the first N with commas, summarises the rest as "and K more"
+// to keep toasts readable when the user picked many targets.
+function truncateNameList(names: string[], max = 3): string {
+  if (names.length <= max) return names.join(', ')
+  const head = names.slice(0, max).join(', ')
+  return `${head}, and ${names.length - max} more`
+}
+
 export function AssetRelationshipsTab({
   assetId,
   sourceAsset,
@@ -156,32 +165,50 @@ export function AssetRelationshipsTab({
   // Handlers
   // ============================================
 
-  // Multi-select handler. The dialog now lets the user pick N targets
-  // and submit them all at once. We fire the createRelationship calls
-  // in parallel via Promise.allSettled so a single failure doesn't
-  // block the rest, then aggregate the results into one toast.
+  // Multi-select handler. The dialog passes one (input, targetName)
+  // per selected target. We fire the createRelationship calls in
+  // CHUNKED parallel batches (5 at a time) so a user picking 50
+  // targets doesn't blast 50 concurrent POSTs at the backend, then
+  // aggregate the results into one toast.
+  //
+  // Why chunked instead of all-parallel: backend has no per-tenant
+  // rate limit on relationship creation, and each insert does
+  // multiple queries (asset GetByID for source + target, mutex Exists
+  // check, INSERT, GetByID for response). 50 of those in parallel is
+  // 250+ concurrent queries against PG which is unkind even on a fast
+  // tenant. 5 at a time keeps the perceived latency unchanged (the
+  // chunks complete in parallel) while bounding the load.
   //
   // Possible outcomes:
   //   - All N succeeded → green toast with the count
-  //   - All N failed → red toast with the first error message
-  //   - Mixed (e.g. K succeeded, M-K already-existed) → yellow toast
-  //     with a "K created, M skipped" summary so the user understands
-  //     why the count doesn't match what they picked
-  const handleAdd = async (inputs: CreateRelationshipInput[]) => {
-    if (inputs.length === 0) return
+  //   - All N failed for duplicate reasons → red toast
+  //   - All N failed for other reasons → red toast with first error
+  //   - Mixed → warning toast naming the skipped target(s)
+  const handleAdd = async (
+    items: Array<{ input: CreateRelationshipInput; targetName: string }>
+  ) => {
+    if (items.length === 0) return
     setIsSubmitting(true)
     try {
-      const results = await Promise.allSettled(
-        inputs.map((input) => addAssetRelationship(assetId, input))
-      )
+      const CHUNK_SIZE = 5
+      const results: PromiseSettledResult<unknown>[] = []
+      for (let i = 0; i < items.length; i += CHUNK_SIZE) {
+        const chunk = items.slice(i, i + CHUNK_SIZE)
+        const chunkResults = await Promise.allSettled(
+          chunk.map((item) => addAssetRelationship(assetId, item.input))
+        )
+        results.push(...chunkResults)
+      }
 
-      const succeeded: number[] = []
-      const duplicates: number[] = []
-      const otherErrors: string[] = []
+      const succeededNames: string[] = []
+      const duplicateNames: string[] = []
+      const otherFailedNames: string[] = []
+      const otherErrorMessages: string[] = []
 
       results.forEach((res, i) => {
+        const name = items[i].targetName
         if (res.status === 'fulfilled') {
-          succeeded.push(i)
+          succeededNames.push(name)
           return
         }
         const message = getErrorMessage(res.reason, 'Failed to create relationship')
@@ -190,40 +217,51 @@ export function AssetRelationshipsTab({
           message.toLowerCase().includes('duplicate') ||
           message.toLowerCase().includes('conflict')
         if (isDuplicate) {
-          duplicates.push(i)
+          duplicateNames.push(name)
         } else {
-          otherErrors.push(message)
+          otherFailedNames.push(name)
+          otherErrorMessages.push(message)
         }
       })
 
-      const total = inputs.length
-      if (succeeded.length === total) {
-        // All good
+      const total = items.length
+      if (succeededNames.length === total) {
         toast.success(total === 1 ? 'Relationship created' : `${total} relationships created`)
         setShowAddDialog(false)
-      } else if (succeeded.length === 0 && otherErrors.length === 0) {
-        // Every attempt was a duplicate — same single-edge messaging
+      } else if (succeededNames.length === 0 && otherFailedNames.length === 0) {
+        // Every attempt was a duplicate
         toast.error(
           total === 1
             ? 'This relationship already exists'
             : `All ${total} relationships already exist`,
           {
             description:
-              'Relationships with the same type between these assets are already recorded.',
+              total === 1
+                ? 'A relationship with the same type between these assets is already recorded.'
+                : `Already recorded: ${truncateNameList(duplicateNames)}`,
           }
         )
-      } else if (succeeded.length === 0) {
+      } else if (succeededNames.length === 0) {
         // Every attempt failed for non-duplicate reasons
-        toast.error(otherErrors[0] || 'Failed to create relationships')
-      } else {
-        // Mixed: at least one succeeded, at least one didn't
-        const skipped = duplicates.length + otherErrors.length
-        toast.warning(`${succeeded.length} of ${total} created`, {
+        toast.error(otherErrorMessages[0] || 'Failed to create relationships', {
           description:
-            duplicates.length > 0 && otherErrors.length === 0
-              ? `${skipped} were already recorded.`
-              : `${skipped} could not be created${otherErrors[0] ? `: ${otherErrors[0]}` : ''}.`,
+            otherFailedNames.length > 1
+              ? `Failed: ${truncateNameList(otherFailedNames)}`
+              : undefined,
         })
+      } else {
+        // Mixed: at least one succeeded, at least one didn't.
+        // Surface WHICH targets were skipped so the user can investigate
+        // instead of just seeing a count.
+        const description =
+          duplicateNames.length > 0 && otherFailedNames.length === 0
+            ? `Already recorded: ${truncateNameList(duplicateNames)}`
+            : otherFailedNames.length > 0 && duplicateNames.length === 0
+              ? `Failed: ${truncateNameList(otherFailedNames)}${
+                  otherErrorMessages[0] ? ` (${otherErrorMessages[0]})` : ''
+                }`
+              : `${duplicateNames.length} already existed, ${otherFailedNames.length} failed`
+        toast.warning(`${succeededNames.length} of ${total} created`, { description })
         setShowAddDialog(false)
       }
 
