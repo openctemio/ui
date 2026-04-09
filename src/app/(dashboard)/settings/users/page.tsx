@@ -98,13 +98,14 @@ import { getErrorMessage } from '@/lib/api/error-handler'
 import { copyToClipboard } from '@/lib/clipboard'
 import { Can, Permission } from '@/lib/permissions'
 
-type StatusFilter = 'all' | 'active' | 'pending' | 'inactive'
+type StatusFilter = 'all' | 'active' | 'pending' | 'inactive' | 'suspended'
 type RoleFilter = 'all' | MemberRole
 
 // Static config
 const statusFilters: { value: StatusFilter; label: string }[] = [
   { value: 'all', label: 'All' },
   { value: 'active', label: 'Active' },
+  { value: 'suspended', label: 'Suspended' },
   { value: 'inactive', label: 'Inactive' },
   // Note: "Pending" removed - pending invitations are shown in separate section
 ]
@@ -669,10 +670,11 @@ export default function UsersPage() {
   }, [members, invitations])
 
   // Status counts from members (for tabs)
-  const statusCounts = useMemo(
+  const statusCounts: Record<StatusFilter, number> = useMemo(
     () => ({
       all: members.length,
       active: members.filter((m) => m.status === 'active').length,
+      suspended: members.filter((m) => m.status === 'suspended').length,
       pending: invitations.length,
       inactive: members.filter((m) => m.status === 'inactive').length,
     }),
@@ -787,7 +789,6 @@ export default function UsersPage() {
                   <Can permission={Permission.RolesAssign}>
                     <DropdownMenuItem
                       onClick={() => {
-                        // Directly open dialog - don't use pending mechanism when sheet is closed
                         setEditRolesMember(member)
                         setEditRolesDialogOpen(true)
                       }}
@@ -798,6 +799,47 @@ export default function UsersPage() {
                   </Can>
                   <Can permission={Permission.MembersManage}>
                     <DropdownMenuSeparator />
+                    {member.status === 'suspended' ? (
+                      <DropdownMenuItem
+                        className="text-green-500"
+                        onClick={async () => {
+                          if (!tenantSlug) return
+                          try {
+                            await fetcherWithOptions(
+                              tenantEndpoints.reactivateMember(tenantSlug, member.id),
+                              { method: 'POST' }
+                            )
+                            toast.success(`${member.name || member.email} reactivated`)
+                            refreshData()
+                          } catch {
+                            toast.error('Failed to reactivate member')
+                          }
+                        }}
+                      >
+                        <CheckCircle className="mr-2 h-4 w-4" />
+                        Reactivate
+                      </DropdownMenuItem>
+                    ) : (
+                      <DropdownMenuItem
+                        className="text-orange-500"
+                        onClick={async () => {
+                          if (!tenantSlug) return
+                          try {
+                            await fetcherWithOptions(
+                              tenantEndpoints.suspendMember(tenantSlug, member.id),
+                              { method: 'POST' }
+                            )
+                            toast.success(`${member.name || member.email} suspended`)
+                            refreshData()
+                          } catch {
+                            toast.error('Failed to suspend member')
+                          }
+                        }}
+                      >
+                        <Ban className="mr-2 h-4 w-4" />
+                        Suspend
+                      </DropdownMenuItem>
+                    )}
                     <DropdownMenuItem
                       className="text-red-400"
                       onClick={() => handleRemoveMember(member)}

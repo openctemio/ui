@@ -337,6 +337,18 @@ export const tenantEndpoints = {
   resendInvitation: (tenantIdOrSlug: string, invitationId: string) =>
     `${API_BASE.TENANTS}/${tenantIdOrSlug}/invitations/${invitationId}/resend`,
 
+  /**
+   * Suspend a member (POST) — revokes access, preserves membership row
+   */
+  suspendMember: (tenantIdOrSlug: string, memberId: string) =>
+    `${API_BASE.TENANTS}/${tenantIdOrSlug}/members/${memberId}/suspend`,
+
+  /**
+   * Reactivate a suspended member (POST) — restores access
+   */
+  reactivateMember: (tenantIdOrSlug: string, memberId: string) =>
+    `${API_BASE.TENANTS}/${tenantIdOrSlug}/members/${memberId}/reactivate`,
+
   // ============================================
   // SETTINGS MANAGEMENT
   // ============================================
