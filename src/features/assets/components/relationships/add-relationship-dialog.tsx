@@ -91,12 +91,13 @@ interface AddRelationshipDialogProps {
   existingRelationships?: AssetRelationship[]
   /** Called when relationship is created */
   /**
-   * Called when the user clicks Create. Receives an array of inputs —
-   * one per selected target. The parent is responsible for firing N
-   * createRelationship API calls (in parallel or sequentially) and
-   * surfacing aggregate success/failure to the user.
+   * Called when the user clicks Create. Receives an array of items —
+   * one per selected target. Each item carries the create input AND
+   * the target's display name so the parent can surface per-target
+   * success/failure messages without having to look up the name from
+   * a stale cache.
    */
-  onSubmit: (inputs: CreateRelationshipInput[]) => void
+  onSubmit: (items: Array<{ input: CreateRelationshipInput; targetName: string }>) => void
   /** Loading state */
   isLoading?: boolean
 }
@@ -335,23 +336,28 @@ export function AddRelationshipDialog({
     })
   }, [])
 
-  // Handle submit. Builds one CreateRelationshipInput per selected
-  // target — the parent fires N parallel API calls and aggregates
-  // success/failure.
+  // Handle submit. Builds one (input, targetName) pair per selected
+  // target — the parent fires N create calls (chunked, see
+  // AssetRelationshipsTab.handleAdd) and uses the target names to
+  // produce per-target success/failure messages.
   const handleSubmit = () => {
     if (!isValid || !relationshipType || selectedTargets.length === 0) return
 
-    const inputs: CreateRelationshipInput[] = selectedTargets.map((target) => ({
-      type: relationshipType as RelationshipType,
-      sourceAssetId: sourceAsset.id,
-      targetAssetId: target.id,
-      description: description || undefined,
-      confidence,
-      discoveryMethod: 'manual',
-      impactWeight,
-    }))
+    const items: Array<{ input: CreateRelationshipInput; targetName: string }> =
+      selectedTargets.map((target) => ({
+        input: {
+          type: relationshipType as RelationshipType,
+          sourceAssetId: sourceAsset.id,
+          targetAssetId: target.id,
+          description: description || undefined,
+          confidence,
+          discoveryMethod: 'manual',
+          impactWeight,
+        },
+        targetName: target.name,
+      }))
 
-    onSubmit(inputs)
+    onSubmit(items)
   }
 
   const sourceColors = ASSET_TYPE_COLORS[sourceAsset.type] || {
@@ -511,7 +517,17 @@ export function AddRelationshipDialog({
 
           {/* Target Asset Selector — server-side search */}
           <div className="space-y-2">
-            <Label>Target Asset</Label>
+            <div className="flex items-center justify-between">
+              <Label>Target Asset</Label>
+              {/* Live count of selected targets — invisible state from
+                  the picker would otherwise be confusing when the user
+                  scrolls or filters and can't see what they've picked. */}
+              {selectedTargets.length > 0 && (
+                <span className="text-xs text-muted-foreground">
+                  {selectedTargets.length} selected
+                </span>
+              )}
+            </div>
             {!relationshipType ? (
               <div className="flex items-center gap-2 p-4 rounded-lg border border-dashed text-muted-foreground">
                 <AlertCircle className="h-4 w-4" />
@@ -519,11 +535,48 @@ export function AddRelationshipDialog({
               </div>
             ) : (
               <>
-                <Input
-                  placeholder="Search assets by name…"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
+                <div className="flex items-center gap-2">
+                  <Input
+                    placeholder="Search assets by name…"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="flex-1"
+                  />
+                  {/* Bulk-select shortcuts. "Select all visible" uses
+                      the current filteredAssets list (post search +
+                      constraint filter), so it never picks something
+                      the user can't see. "Clear" wipes everything,
+                      including off-screen picks the user may have
+                      forgotten about. */}
+                  {filteredAssets.length > 0 && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        // Merge filteredAssets into selectedTargets,
+                        // deduping by id so re-clicking is idempotent.
+                        setSelectedTargets((current) => {
+                          const byId = new Map(current.map((t) => [t.id, t]))
+                          for (const a of filteredAssets) byId.set(a.id, a)
+                          return Array.from(byId.values())
+                        })
+                      }}
+                    >
+                      Select all
+                    </Button>
+                  )}
+                  {selectedTargets.length > 0 && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setSelectedTargets([])}
+                    >
+                      Clear
+                    </Button>
+                  )}
+                </div>
                 <ScrollArea className="h-[200px] rounded-lg border p-2">
                   {isSearching ? (
                     <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
@@ -569,8 +622,32 @@ export function AddRelationshipDialog({
                           <p className="text-xs text-foreground">
                             <strong>Tip:</strong> Resolves To is for the literal DNS endpoint (an IP
                             address or load balancer). To link this domain to a website / API /
-                            service, switch to <strong>Exposes</strong>. For subdomain → parent
-                            domain or CNAME aliases use <strong>CNAME Of</strong>.
+                            service, switch to{' '}
+                            {/* Clickable redirect — flips the relationship
+                                type dropdown to Exposes immediately so the
+                                user doesn't have to scroll back up. */}
+                            <button
+                              type="button"
+                              className="font-semibold text-primary hover:underline"
+                              onClick={() => {
+                                setRelationshipType('exposes')
+                                setSelectedTargets([])
+                              }}
+                            >
+                              Exposes
+                            </button>
+                            . For subdomain → parent domain or CNAME aliases use{' '}
+                            <button
+                              type="button"
+                              className="font-semibold text-primary hover:underline"
+                              onClick={() => {
+                                setRelationshipType('cname_of')
+                                setSelectedTargets([])
+                              }}
+                            >
+                              CNAME Of
+                            </button>
+                            .
                           </p>
                         </div>
                       )}
