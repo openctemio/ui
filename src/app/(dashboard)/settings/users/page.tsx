@@ -1340,6 +1340,17 @@ export default function UsersPage() {
                                     </Tooltip>
                                   )}
                                 </>
+                              ) : invitation.role ? (
+                                /* Fallback for invitations created before
+                                   the RBAC role picker was added — they
+                                   have the legacy `role` field ("member",
+                                   "admin", etc.) but an empty role_ids
+                                   array. Show the legacy role so the admin
+                                   sees SOMETHING meaningful instead of the
+                                   confusing "No roles" badge. */
+                                <Badge className="bg-gray-500/20 text-gray-400 border-0 text-xs capitalize">
+                                  {invitation.role}
+                                </Badge>
                               ) : (
                                 <Badge className="bg-gray-500/20 text-gray-400 border-0 text-xs">
                                   No roles
@@ -1357,7 +1368,7 @@ export default function UsersPage() {
                             </div>
                           </div>
                         </div>
-                        <div className="flex flex-wrap items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-1">
                           <Button
                             variant="ghost"
                             size="sm"
@@ -1382,15 +1393,34 @@ export default function UsersPage() {
                           <Button
                             variant="ghost"
                             size="sm"
+                            className="text-muted-foreground hover:text-foreground"
+                            title="Resend invitation email"
+                            onClick={async () => {
+                              if (!tenantSlug) return
+                              try {
+                                await fetcherWithOptions(
+                                  tenantEndpoints.resendInvitation(tenantSlug, invitation.id),
+                                  { method: 'POST' }
+                                )
+                                toast.success('Invitation email resent')
+                              } catch {
+                                toast.error('Failed to resend invitation')
+                              }
+                            }}
+                          >
+                            <Send className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
                             className="text-red-400 hover:text-red-500 hover:bg-red-500/10"
+                            title="Cancel invitation"
                             onClick={async () => {
                               if (!tenantSlug) return
                               try {
                                 await fetcherWithOptions(
                                   tenantEndpoints.deleteInvitation(tenantSlug, invitation.id),
-                                  {
-                                    method: 'DELETE',
-                                  }
+                                  { method: 'DELETE' }
                                 )
                                 toast.success('Invitation cancelled')
                                 refreshData()

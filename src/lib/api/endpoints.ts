@@ -330,6 +330,13 @@ export const tenantEndpoints = {
   deleteInvitation: (tenantIdOrSlug: string, invitationId: string) =>
     `${API_BASE.TENANTS}/${tenantIdOrSlug}/invitations/${invitationId}`,
 
+  /**
+   * Resend invitation email (POST) — re-queues the email without
+   * changing the token, expiry, or any other metadata.
+   */
+  resendInvitation: (tenantIdOrSlug: string, invitationId: string) =>
+    `${API_BASE.TENANTS}/${tenantIdOrSlug}/invitations/${invitationId}/resend`,
+
   // ============================================
   // SETTINGS MANAGEMENT
   // ============================================
