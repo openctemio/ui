@@ -77,6 +77,16 @@ export interface LoginBackendResponse {
     name: string
     role: string
   }>
+  // Suspended memberships — non-empty when this user has tenants where
+  // their access has been paused. They are NOT selectable; the field
+  // exists so the UI can tell the user "your access to X is suspended"
+  // instead of bouncing them into create-team onboarding.
+  suspended_tenants?: Array<{
+    id: string
+    slug: string
+    name: string
+    role: string
+  }>
 }
 
 // Token exchange response (tenant-scoped access token)
@@ -105,6 +115,10 @@ export interface LoginResult {
   // Multi-tenant selection
   requiresTenantSelection?: boolean
   tenants?: LoginTenant[]
+  // Memberships the user has but cannot use because they're suspended.
+  // The login form surfaces this so the user knows why they have no
+  // accessible team, instead of being routed to create-team onboarding.
+  suspendedTenants?: LoginTenant[]
 }
 
 // ============================================
@@ -228,8 +242,27 @@ export async function loginAction(input: LoginInput): Promise<LoginResult> {
       authProvider: 'local',
     }
 
-    // Case 1: No tenants - user needs to create or join a team
+    // Case 1: No tenants - user needs to create or join a team.
     if (!loginData.tenants || loginData.tenants.length === 0) {
+      // Sub-case 1a: user has only suspended memberships. Don't bounce
+      // them to onboarding — tell them why they have no team. The login
+      // form renders the message and stays on /login.
+      if (loginData.suspended_tenants && loginData.suspended_tenants.length > 0) {
+        devLog.log(
+          '[Login] User has only suspended memberships:',
+          loginData.suspended_tenants.length
+        )
+        const tenantNames = loginData.suspended_tenants.map((t) => t.name).join(', ')
+        return {
+          success: false,
+          user,
+          error: `Your access to ${tenantNames} ${
+            loginData.suspended_tenants.length === 1 ? 'is' : 'are'
+          } suspended. Please contact a team administrator to be reactivated.`,
+          suspendedTenants: loginData.suspended_tenants,
+        }
+      }
+
       devLog.log('[Login] No tenants found for user - user needs to create or join a team')
 
       // Store user info for the Create Team page to use as suggested name
