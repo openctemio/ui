@@ -51,6 +51,7 @@ export const Module = {
   Remediation: 'remediation',
   ThreatIntel: 'threat_intel',
   Integrations: 'integrations',
+  Compliance: 'compliance',
 } as const
 
 /**
@@ -223,6 +224,24 @@ export const routePermissions: Record<string, RoutePermissionConfig> = {
   '/reports/**': {
     permission: Permission.ReportsRead,
     module: Module.Reports,
+  },
+
+  // ========================================
+  // Compliance (Module: compliance)
+  // Direct URL access must enforce permission — sidebar filtering alone
+  // is not enough since users can navigate via URL.
+  // ========================================
+  '/compliance': {
+    permission: Permission.ComplianceFrameworksRead,
+    module: Module.Compliance,
+  },
+  '/compliance/**': {
+    permission: Permission.ComplianceFrameworksRead,
+    module: Module.Compliance,
+  },
+  '/insights/reports/compliance': {
+    permission: Permission.ComplianceReportsRead,
+    module: Module.Compliance,
   },
 
   // ========================================

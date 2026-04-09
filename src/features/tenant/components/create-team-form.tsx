@@ -13,7 +13,7 @@ import { devLog } from '@/lib/logger'
 import { useRouter } from 'next/navigation'
 import { useForm, type UseFormReturn } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Building2, Link2, FileText, Loader2, CheckCircle2 } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -26,14 +26,6 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
 import { toast } from 'sonner'
 import { getErrorMessage } from '@/lib/api/error-handler'
 import { useCreateTenant } from '../api'
@@ -283,150 +275,128 @@ function CreateTeamFormUI({
   form,
   onSubmit,
   handleSlugChange,
-  slugValue,
+  slugValue: _slugValue,
   isFormValid,
   isSubmitting,
   isMutating,
   showCancel,
   onCancel,
 }: CreateTeamFormUIProps) {
+  // No Card wrapper, no duplicate title, no icon clutter on labels.
+  // The page-level <h1> already says "Set up your first team" — the form
+  // just needs to be the form, not re-introduce a card title.
   return (
-    <Card className="w-full max-w-lg">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Building2 className="h-5 w-5" />
-          Create New Team
-        </CardTitle>
-        <CardDescription>
-          Create a new team to organize your projects and collaborate with others.
-        </CardDescription>
-      </CardHeader>
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        {/* Team Name */}
+        <FormField
+          control={form.control}
+          name="name"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Team name</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="Acme Corporation"
+                  autoFocus
+                  disabled={isMutating || isSubmitting}
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)}>
-          <CardContent className="space-y-6">
-            {/* Team Name */}
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center gap-2">
-                    <Building2 className="h-4 w-4" />
-                    Team Name
-                  </FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="Acme Corporation"
-                      autoFocus
-                      disabled={isMutating || isSubmitting}
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormDescription>The display name for your team</FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+        {/* URL Slug — single composite input. The "app.openctem.io/" prefix
+            sits inline at the start of the box; the input shares the same
+            border so the whole thing reads as one field, not two glued
+            rectangles. */}
+        <FormField
+          control={form.control}
+          name="slug"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Team URL</FormLabel>
+              <FormControl>
+                <div className="border-input bg-background focus-within:border-ring focus-within:ring-ring/50 flex h-9 items-center rounded-md border shadow-xs transition-[color,box-shadow] focus-within:ring-[3px]">
+                  <span className="text-muted-foreground select-none ps-3 text-sm">
+                    app.openctem.io/
+                  </span>
+                  <Input
+                    placeholder="acme-corp"
+                    className="border-0 shadow-none focus-visible:ring-0 ps-1"
+                    disabled={isMutating || isSubmitting}
+                    {...field}
+                    onChange={handleSlugChange}
+                  />
+                </div>
+              </FormControl>
+              <FormDescription className="text-xs">
+                Lowercase letters, numbers, and hyphens only.
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-            {/* URL Slug */}
-            <FormField
-              control={form.control}
-              name="slug"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center gap-2">
-                    <Link2 className="h-4 w-4" />
-                    Team URL
-                  </FormLabel>
-                  <FormControl>
-                    <div className="flex">
-                      <span className="inline-flex items-center px-3 text-sm text-muted-foreground bg-muted border border-r-0 rounded-l-md">
-                        app.openctem.io/
-                      </span>
-                      <Input
-                        placeholder="acme-corp"
-                        className="rounded-l-none"
-                        disabled={isMutating || isSubmitting}
-                        {...field}
-                        onChange={handleSlugChange}
-                      />
-                    </div>
-                  </FormControl>
-                  <FormDescription>
-                    URL-friendly identifier (lowercase letters, numbers, hyphens)
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+        {/* Description — optional, no resize handle, no double-description text */}
+        <FormField
+          control={form.control}
+          name="description"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="flex items-baseline gap-2">
+                Description
+                <span className="text-muted-foreground text-xs font-normal">Optional</span>
+              </FormLabel>
+              <FormControl>
+                <Textarea
+                  placeholder="What does this team work on?"
+                  rows={3}
+                  disabled={isMutating || isSubmitting}
+                  className="resize-none"
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-            {/* Preview URL */}
-            {slugValue && (
-              <div className="rounded-md bg-muted/50 p-3 text-sm">
-                <p className="text-muted-foreground mb-1">Your team URL will be:</p>
-                <p className="font-mono text-primary">https://app.openctem.io/{slugValue}</p>
-              </div>
-            )}
-
-            {/* Description */}
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center gap-2">
-                    <FileText className="h-4 w-4" />
-                    Description
-                    <span className="text-xs text-muted-foreground font-normal">(optional)</span>
-                  </FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="A brief description of your team..."
-                      rows={3}
-                      disabled={isMutating || isSubmitting}
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    Help team members understand the purpose of this team
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </CardContent>
-
-          <CardFooter
-            className={`flex border-t pt-6 ${showCancel && onCancel ? 'justify-between' : 'justify-end'}`}
-          >
-            {showCancel && onCancel && (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={onCancel}
-                disabled={isMutating || isSubmitting}
-              >
-                Cancel
-              </Button>
-            )}
-            <Button type="submit" disabled={isMutating || isSubmitting || !isFormValid}>
-              {isMutating || isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Creating...
-                </>
-              ) : (
-                <>
-                  <CheckCircle2 className="mr-2 h-4 w-4" />
-                  Create Team
-                </>
-              )}
+        {/* Action row — primary button is full-width when there's no Cancel
+            (onboarding case) so the next step is unmistakable. With Cancel,
+            buttons share the row. No icon on the Create button — the text
+            "Create team" is enough. */}
+        <div className="flex gap-3 pt-2">
+          {showCancel && onCancel && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onCancel}
+              disabled={isMutating || isSubmitting}
+            >
+              Cancel
             </Button>
-          </CardFooter>
-        </form>
-      </Form>
-    </Card>
+          )}
+          <Button
+            type="submit"
+            size="lg"
+            disabled={isMutating || isSubmitting || !isFormValid}
+            className="flex-1"
+          >
+            {isMutating || isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Creating team…
+              </>
+            ) : (
+              'Create team'
+            )}
+          </Button>
+        </div>
+      </form>
+    </Form>
   )
 }
 

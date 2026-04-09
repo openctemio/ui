@@ -49,6 +49,7 @@ import {
   Settings,
   Activity,
 } from 'lucide-react'
+import { copyToClipboard } from '@/lib/clipboard'
 import { Can, Permission } from '@/lib/permissions'
 import { useScanConfig, useScanSessions, invalidateScanConfigsCache } from '@/lib/api/scan-hooks'
 import { post, del } from '@/lib/api/client'
@@ -125,6 +126,7 @@ export default function ScanDetailPage() {
   const [isActivating, setIsActivating] = useState(false)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [stoppingRunId, setStoppingRunId] = useState<string | null>(null)
 
   // Fetch scan config
   const { data: config, isLoading, error } = useScanConfig(scanId)
@@ -159,6 +161,21 @@ export default function ScanDetailPage() {
       toast.error(getErrorMessage(error, `Failed to trigger scan "${config.name}"`))
     } finally {
       setIsTriggering(false)
+    }
+  }
+
+  // Cancel an active run. Backend cascade-cancels all in-flight commands.
+  const handleStopRun = async (run: ScanSession) => {
+    setStoppingRunId(run.id)
+    try {
+      await post(`/api/v1/scan-sessions/${run.id}/stop`, {})
+      toast.success('Run cancelled. In-flight commands will stop shortly.')
+      // Re-fetch runs
+      await invalidateScanConfigsCache()
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to cancel run'))
+    } finally {
+      setStoppingRunId(null)
     }
   }
 
@@ -464,34 +481,111 @@ export default function ScanDetailPage() {
                       <TableHead>Scanner</TableHead>
                       <TableHead>Target</TableHead>
                       <TableHead>Findings</TableHead>
+                      <TableHead>Quality Gate</TableHead>
                       <TableHead>Duration</TableHead>
                       <TableHead>Started</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {recentRuns.map((run: ScanSession) => (
-                      <TableRow key={run.id}>
-                        <TableCell>
-                          <RunStatusBadge status={run.status} />
-                        </TableCell>
-                        <TableCell className="font-medium">{run.scanner_name}</TableCell>
-                        <TableCell className="max-w-[200px] truncate">{run.asset_value}</TableCell>
-                        <TableCell>
-                          {run.findings_total > 0 ? (
+                    {recentRuns.map((run: ScanSession) => {
+                      const isActive =
+                        run.status === 'pending' ||
+                        run.status === 'queued' ||
+                        run.status === 'running'
+                      return (
+                        <TableRow key={run.id}>
+                          <TableCell>
                             <div className="flex items-center gap-1">
-                              <Badge variant="secondary">{run.findings_total}</Badge>
-                              {run.findings_new > 0 && (
-                                <Badge className="bg-red-500">{run.findings_new} new</Badge>
+                              <RunStatusBadge status={run.status} />
+                              {run.retry_attempt !== undefined && run.retry_attempt > 0 && (
+                                <Badge
+                                  variant="outline"
+                                  className="text-xs"
+                                  title={`Retry attempt ${run.retry_attempt}`}
+                                >
+                                  <RefreshCw className="h-3 w-3 mr-0.5" />
+                                  {run.retry_attempt}
+                                </Badge>
                               )}
                             </div>
-                          ) : (
-                            <span className="text-muted-foreground">-</span>
-                          )}
-                        </TableCell>
-                        <TableCell>{formatDuration(run.duration_ms)}</TableCell>
-                        <TableCell>{formatDate(run.started_at)}</TableCell>
-                      </TableRow>
-                    ))}
+                          </TableCell>
+                          <TableCell className="font-medium">{run.scanner_name}</TableCell>
+                          <TableCell className="max-w-[200px] truncate">
+                            {run.asset_value}
+                          </TableCell>
+                          <TableCell>
+                            {run.findings_total > 0 ? (
+                              <Link
+                                href={`/findings?scan_id=${run.id}`}
+                                className="hover:underline"
+                              >
+                                <div className="flex items-center gap-1">
+                                  <Badge variant="secondary">{run.findings_total}</Badge>
+                                  {run.findings_new > 0 && (
+                                    <Badge className="bg-red-500">{run.findings_new} new</Badge>
+                                  )}
+                                </div>
+                              </Link>
+                            ) : (
+                              <span className="text-muted-foreground">-</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {run.quality_gate_result ? (
+                              run.quality_gate_result.passed ? (
+                                <Badge className="bg-green-600 hover:bg-green-700">
+                                  <CheckCircle className="h-3 w-3 mr-1" />
+                                  Passed
+                                </Badge>
+                              ) : (
+                                <Badge
+                                  variant="destructive"
+                                  title={
+                                    run.quality_gate_result.breaches
+                                      ?.map(
+                                        (b) =>
+                                          `${b.metric}: ${b.actual} > ${b.limit === 0 ? 'any' : b.limit}`
+                                      )
+                                      .join(', ') || 'Quality gate failed'
+                                  }
+                                >
+                                  <AlertTriangle className="h-3 w-3 mr-1" />
+                                  Failed
+                                  {run.quality_gate_result.breaches &&
+                                    run.quality_gate_result.breaches.length > 0 &&
+                                    ` (${run.quality_gate_result.breaches.length})`}
+                                </Badge>
+                              )
+                            ) : (
+                              <span className="text-muted-foreground text-xs">-</span>
+                            )}
+                          </TableCell>
+                          <TableCell>{formatDuration(run.duration_ms)}</TableCell>
+                          <TableCell>{formatDate(run.started_at)}</TableCell>
+                          <TableCell className="text-right">
+                            {isActive && (
+                              <Can permission={Permission.ScansWrite}>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  disabled={stoppingRunId === run.id}
+                                  onClick={() => handleStopRun(run)}
+                                  aria-label={`Cancel run ${run.id}`}
+                                >
+                                  {stoppingRunId === run.id ? (
+                                    <RefreshCw className="mr-1 h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <XCircle className="mr-1 h-4 w-4" />
+                                  )}
+                                  Cancel
+                                </Button>
+                              </Can>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
                   </TableBody>
                 </Table>
               )}
@@ -697,7 +791,7 @@ export default function ScanDetailPage() {
                       size="sm"
                       className="h-6 w-6 p-0"
                       onClick={() => {
-                        navigator.clipboard.writeText(config.id)
+                        copyToClipboard(config.id)
                         toast.success('ID copied to clipboard')
                       }}
                     >

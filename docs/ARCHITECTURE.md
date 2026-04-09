@@ -48,7 +48,7 @@
 
 ### ✅ **Separate Backend API** (Current Setup)
 
-**Backend API URL:** Set in environment variable `NEXT_PUBLIC_BACKEND_API_URL`
+**Backend API URL:** Set in environment variable `BACKEND_API_URL` (server-side only). Client-side requests go through the Next.js proxy at `/api/v1/*`.
 
 **Responsibilities:**
 
@@ -83,8 +83,9 @@
 **Environment Variable:**
 
 ```env
-# .env.local
-NEXT_PUBLIC_BACKEND_API_URL=https://api.example.com
+# .env.local — server-side only (single source of truth)
+# Client-side requests proxied through Next.js at /api/v1/*
+BACKEND_API_URL=http://api:8080
 ```
 
 **API Client Location:**
@@ -134,7 +135,9 @@ import { useAuthStore } from '@/stores/auth-store'
 
 export async function apiClient<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const accessToken = useAuthStore.getState().accessToken
-  const baseUrl = process.env.NEXT_PUBLIC_BACKEND_API_URL
+  // Client-side: empty string (proxied via /api/v1/*)
+  // Server-side: env.api.url (BACKEND_API_URL)
+  const baseUrl = getApiBaseUrl()
 
   const response = await fetch(`${baseUrl}${endpoint}`, {
     ...options,
@@ -196,7 +199,7 @@ const users = await apiClient<User[]>('/api/users')
 // app/users/page.tsx (Server Component)
 async function UsersPage() {
   // Fetch on server
-  const users = await fetch(`${process.env.BACKEND_API_URL}/api/users`, {
+  const users = await fetch(`${env.api.url}/api/users`, {
     headers: {
       Authorization: `Bearer ${getServerSideToken()}`,
     },
@@ -241,7 +244,7 @@ function UsersList() {
 // actions/create-user.ts
 'use server'
 export async function createUser(formData: FormData) {
-  const response = await fetch(`${process.env.BACKEND_API_URL}/api/users`, {
+  const response = await fetch(`${env.api.url}/api/users`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${getServerSideToken()}`,
@@ -298,18 +301,9 @@ export async function createUser(formData: FormData) {
 ### Environment Variables
 
 ```env
-# Backend API
-NEXT_PUBLIC_BACKEND_API_URL=https://api.example.com  # Public (client-side)
-BACKEND_API_URL=https://api.example.com              # Private (server-side)
-BACKEND_API_KEY=secret-key-here                      # Private only
-
-# Keycloak (already configured)
-NEXT_PUBLIC_KEYCLOAK_URL=...
-NEXT_PUBLIC_KEYCLOAK_REALM=...
-NEXT_PUBLIC_KEYCLOAK_CLIENT_ID=...
-
-# Features
-NEXT_PUBLIC_ENABLE_MOCK_API=false  # Disable mock data
+# Backend API — single source of truth (server-side only)
+# Client-side requests are proxied through Next.js at /api/v1/*
+BACKEND_API_URL=http://api:8080
 ```
 
 ---

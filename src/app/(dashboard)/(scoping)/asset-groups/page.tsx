@@ -78,6 +78,7 @@ import {
 import { useAssets } from '@/features/assets'
 import type { AssetGroup, CreateAssetGroupInput } from '@/features/asset-groups/types'
 import type { AssetGroupApiFilters } from '@/features/asset-groups/api'
+import { copyToClipboard } from '@/lib/clipboard'
 import { Can, Permission } from '@/lib/permissions'
 
 // ============================================
@@ -360,12 +361,12 @@ export default function AssetGroupsPage() {
   }
 
   const handleCopyId = (id: string) => {
-    navigator.clipboard.writeText(id)
+    copyToClipboard(id)
     toast.success('Group ID copied')
   }
 
   const handleCopyLink = (id: string) => {
-    navigator.clipboard.writeText(`${window.location.origin}/asset-groups/${id}`)
+    copyToClipboard(`${window.location.origin}/asset-groups/${id}`)
     toast.success('Link copied to clipboard')
   }
 
@@ -891,7 +892,14 @@ export default function AssetGroupsPage() {
                 <Skeleton className="h-8 w-16" />
               ) : (
                 <>
-                  <p className="text-2xl font-bold">{stats.averageRiskScore}</p>
+                  {/* Round to 1 decimal — the raw value is computed by
+                      averaging integer scores so it can have a long
+                      repeating fractional tail (e.g. 53.16666666666664).
+                      One decimal place is precise enough for a risk
+                      summary card. */}
+                  <p className="text-2xl font-bold">
+                    {Math.round((stats.averageRiskScore ?? 0) * 10) / 10}
+                  </p>
                   <p className="text-xs text-muted-foreground mt-1">Out of 100</p>
                 </>
               )}

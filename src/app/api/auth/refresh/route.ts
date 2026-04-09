@@ -18,7 +18,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { env } from '@/lib/env'
 import { devLog } from '@/lib/logger'
 
-const BACKEND_URL = process.env.BACKEND_API_URL || 'http://localhost:8080'
 // Frontend cookie names (from env config)
 const ACCESS_TOKEN_COOKIE = env.auth.cookieName
 const REFRESH_TOKEN_COOKIE = env.auth.refreshCookieName
@@ -83,7 +82,7 @@ export async function POST(_request: NextRequest): Promise<NextResponse> {
     }
 
     // Make request to backend refresh endpoint
-    const response = await fetch(`${BACKEND_URL}/api/v1/auth/refresh`, {
+    const response = await fetch(`${env.api.url}/api/v1/auth/refresh`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

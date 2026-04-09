@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
+import { copyToClipboard } from '@/lib/clipboard'
 import { getErrorMessage } from '@/lib/api/error-handler'
 import {
   Sheet,
@@ -479,7 +480,7 @@ export function FindingDetailDrawer({
                 <DropdownMenuContent align="end" className="w-48">
                   <DropdownMenuItem
                     onClick={() => {
-                      navigator.clipboard.writeText(finding.id)
+                      copyToClipboard(finding.id)
                       toast.success('Finding ID copied to clipboard')
                     }}
                   >
@@ -488,9 +489,7 @@ export function FindingDetailDrawer({
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => {
-                      navigator.clipboard.writeText(
-                        window.location.origin + `/findings/${finding.id}`
-                      )
+                      copyToClipboard(window.location.origin + `/findings/${finding.id}`)
                       toast.success('Finding URL copied to clipboard')
                     }}
                   >
@@ -707,24 +706,11 @@ export function FindingDetailDrawer({
                                       toast.error('No code content to copy')
                                       return
                                     }
-                                    try {
-                                      await navigator.clipboard.writeText(textToCopy)
+                                    const ok = await copyToClipboard(textToCopy)
+                                    if (ok) {
                                       toast.success('Code copied to clipboard')
-                                    } catch {
-                                      // Fallback for non-HTTPS or older browsers
-                                      const textArea = document.createElement('textarea')
-                                      textArea.value = textToCopy
-                                      textArea.style.position = 'fixed'
-                                      textArea.style.left = '-999999px'
-                                      document.body.appendChild(textArea)
-                                      textArea.select()
-                                      try {
-                                        document.execCommand('copy')
-                                        toast.success('Code copied to clipboard')
-                                      } catch {
-                                        toast.error('Failed to copy code')
-                                      }
-                                      document.body.removeChild(textArea)
+                                    } else {
+                                      toast.error('Failed to copy code')
                                     }
                                   }}
                                 >

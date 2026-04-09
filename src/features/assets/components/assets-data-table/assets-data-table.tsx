@@ -32,6 +32,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
+import { copyToClipboard } from '@/lib/clipboard'
 import { getErrorMessage } from '@/lib/api/error-handler'
 import {
   Plus,
@@ -54,7 +55,7 @@ import { AssetDeleteDialog } from './asset-delete-dialog'
 import { createAssetColumns, type AssetColumnConfig } from './assets-table-columns'
 import { AssetDetailSheet } from '../asset-detail-sheet'
 import type { Asset, AssetType, CreateAssetInput, UpdateAssetInput } from '../../types'
-import { useAssetTags, updateAsset as updateAssetApi } from '../../hooks'
+import { useAssetTags, updateAsset as updateAssetApi, getAsset } from '../../hooks'
 
 export interface AssetsDataTableProps {
   // Data
@@ -182,7 +183,7 @@ export function AssetsDataTable({
             setShowDeleteDialog(true)
           },
           onCopy: (asset) => {
-            navigator.clipboard.writeText(asset.name)
+            copyToClipboard(asset.name)
             toast.success('Copied to clipboard')
           },
         },
@@ -614,6 +615,23 @@ export function AssetsDataTable({
             setAssetToDelete(selectedAsset)
             setShowDeleteDialog(true)
             setSelectedAsset(null)
+          }
+        }}
+        // Cross-asset navigation from the relationships tab. First try the
+        // current page's filteredAssets (cheap, no network), then fall back
+        // to fetching by ID if the related asset isn't on this page (e.g.
+        // it's a different type, or in a different filtered slice).
+        onNavigateToAsset={async (id: string) => {
+          const local = filteredAssets.find((a) => a.id === id)
+          if (local) {
+            setSelectedAsset(local)
+            return
+          }
+          try {
+            const fetched = await getAsset(id)
+            setSelectedAsset(fetched)
+          } catch {
+            // Toast handled by getAsset's caller — keep this silent.
           }
         }}
         icon={assetTypeIcon}

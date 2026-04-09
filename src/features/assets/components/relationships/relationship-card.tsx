@@ -160,15 +160,22 @@ function AssetNode({ name, type, onClick }: AssetNodeProps) {
   const colors = EXTENDED_ASSET_TYPE_COLORS[type] || EXTENDED_ASSET_TYPE_COLORS.service
   const label = EXTENDED_ASSET_TYPE_LABELS[type] || type
 
+  // flex-1 + min-w-0 lets the node grow into the parent's available width
+  // and still truncate gracefully when names are very long. Removed the
+  // hard `max-w-[140px]` cap that was forcing "https://port..." and
+  // "app-server-..." truncation even when there was room to spare.
   return (
     <button
       onClick={onClick}
       className={cn(
         'flex flex-col items-center gap-1 p-2 rounded-lg border bg-card hover:bg-accent/50 transition-colors',
-        'min-w-[100px] max-w-[140px]'
+        'flex-1 min-w-0 basis-0'
       )}
+      title={name}
     >
-      <div className={cn('h-8 w-8 rounded-lg flex items-center justify-center', colors.bg)}>
+      <div
+        className={cn('h-8 w-8 rounded-lg flex items-center justify-center shrink-0', colors.bg)}
+      >
         <Link2 className={cn('h-4 w-4', colors.text)} />
       </div>
       <span className="text-xs font-medium truncate w-full text-center">{name}</span>
@@ -299,14 +306,16 @@ export function RelationshipCard({
         </DropdownMenu>
       </div>
 
-      {/* Visual Relationship */}
-      <div className="flex items-center justify-center gap-4 mb-4">
+      {/* Visual Relationship — justify-between + flex-1 nodes makes the
+          two AssetNodes share the available width equally instead of
+          collapsing to their min-content width. */}
+      <div className="flex items-center justify-between gap-3 mb-4">
         <AssetNode
           name={relationship.sourceAssetName}
           type={relationship.sourceAssetType}
           onClick={() => onSourceClick?.(relationship.sourceAssetId)}
         />
-        <div className="flex flex-col items-center gap-1">
+        <div className="flex flex-col items-center gap-1 shrink-0">
           <ArrowRight className="h-5 w-5 text-muted-foreground" />
           <span className="text-[10px] text-muted-foreground text-center max-w-[80px]">
             {labels.direct}
@@ -363,14 +372,21 @@ interface RelationshipListItemProps {
   relationship: AssetRelationship
   direction: RelationshipDirection
   currentAssetId: string
-  onClick?: () => void
+  /** Click on the asset name → navigate to that asset */
+  onAssetClick?: (assetId: string) => void
+  /** Click on the pencil icon → open edit dialog */
+  onEdit?: (relationship: AssetRelationship) => void
+  /** Click on the trash icon → open delete confirmation */
+  onDelete?: (relationship: AssetRelationship) => void
 }
 
 export function RelationshipListItem({
   relationship,
   direction,
   currentAssetId,
-  onClick,
+  onAssetClick,
+  onEdit,
+  onDelete,
 }: RelationshipListItemProps) {
   const labels = RELATIONSHIP_LABELS[relationship.type]
   const label = direction === 'outgoing' ? labels.direct : labels.inverse
@@ -378,40 +394,82 @@ export function RelationshipListItem({
   const isSource = currentAssetId === relationship.sourceAssetId
   const otherAsset = isSource
     ? {
+        id: relationship.targetAssetId,
         name: relationship.targetAssetName,
         type: relationship.targetAssetType,
       }
     : {
+        id: relationship.sourceAssetId,
         name: relationship.sourceAssetName,
         type: relationship.sourceAssetType,
       }
 
   const colors = EXTENDED_ASSET_TYPE_COLORS[otherAsset.type] || EXTENDED_ASSET_TYPE_COLORS.service
 
+  // The whole row used to be a single <button> firing onClick (which the
+  // parent wired to "edit") — that left list-view users with no way to
+  // delete and no way to navigate to the related asset. We replaced it
+  // with a div + inline action buttons. Default click on the asset
+  // name/icon area navigates; pencil/trash buttons get their own handlers
+  // and stop event propagation so they don't trigger navigation.
   return (
-    <button
-      onClick={onClick}
-      className="flex items-center gap-3 w-full p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors text-left"
-    >
-      <div
-        className={cn('h-9 w-9 rounded-lg flex items-center justify-center shrink-0', colors.bg)}
+    <div className="flex items-center gap-2 w-full p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors group">
+      <button
+        type="button"
+        onClick={() => onAssetClick?.(otherAsset.id)}
+        disabled={!onAssetClick}
+        className="flex items-center gap-3 flex-1 min-w-0 text-left disabled:cursor-default"
       >
-        <Link2 className={cn('h-4 w-4', colors.text)} />
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium truncate">{otherAsset.name}</p>
-        <p className="text-xs text-muted-foreground">
-          {label} - {EXTENDED_ASSET_TYPE_LABELS[otherAsset.type]}
-        </p>
-      </div>
-      <div className="flex items-center gap-2 shrink-0">
+        <div
+          className={cn('h-9 w-9 rounded-lg flex items-center justify-center shrink-0', colors.bg)}
+        >
+          <Link2 className={cn('h-4 w-4', colors.text)} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium truncate">{otherAsset.name}</p>
+          <p className="text-xs text-muted-foreground">
+            {label} - {EXTENDED_ASSET_TYPE_LABELS[otherAsset.type]}
+          </p>
+        </div>
+      </button>
+      <div className="flex items-center gap-1 shrink-0">
         <ImpactIndicator weight={relationship.impactWeight} />
         {direction === 'outgoing' ? (
           <ArrowRight className="h-4 w-4 text-muted-foreground" />
         ) : (
           <ArrowLeft className="h-4 w-4 text-muted-foreground" />
         )}
+        {onEdit && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
+            onClick={(e) => {
+              e.stopPropagation()
+              onEdit(relationship)
+            }}
+            aria-label="Edit relationship"
+          >
+            <Pencil className="h-3.5 w-3.5" />
+          </Button>
+        )}
+        {onDelete && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 text-destructive opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity hover:text-destructive"
+            onClick={(e) => {
+              e.stopPropagation()
+              onDelete(relationship)
+            }}
+            aria-label="Delete relationship"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+        )}
       </div>
-    </button>
+    </div>
   )
 }

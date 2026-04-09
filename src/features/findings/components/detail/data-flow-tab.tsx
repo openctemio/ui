@@ -18,6 +18,7 @@ import {
 import { useState } from 'react'
 import type { FindingDetail, DataFlow, DataFlowLocation, DataFlowLocationType } from '../../types'
 import { DATA_FLOW_LOCATION_CONFIG } from '../../types'
+import { copyToClipboard } from '@/lib/clipboard'
 import { cn } from '@/lib/utils'
 import { CodeHighlighter } from './code-highlighter'
 import { Button } from '@/components/ui/button'
@@ -48,7 +49,7 @@ function useCopyToClipboard() {
   const [copied, setCopied] = useState(false)
 
   const copy = async (text: string) => {
-    await navigator.clipboard.writeText(text)
+    await copyToClipboard(text)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }

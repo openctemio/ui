@@ -13,6 +13,12 @@
 # testing
 /coverage
 
+# playwright e2e artefacts
+/playwright-report
+/test-results
+/playwright/.cache
+e2e/.env
+
 # next.js
 /.next/
 /out/

@@ -137,18 +137,18 @@ export const domainsConfig: AssetPageConfig = {
     {
       title: 'Active',
       icon: CheckCircle,
-      compute: (assets) => assets.filter((a) => a.status === 'active').length,
+      compute: (_assets, stats) => stats.byStatus.active ?? 0,
       variant: 'success',
     },
     {
       title: 'Inactive',
       icon: Clock,
-      compute: (assets) => assets.filter((a) => a.status === 'inactive').length,
+      compute: (_assets, stats) => stats.byStatus.inactive ?? 0,
     },
     {
       title: 'With Findings',
       icon: AlertTriangle,
-      compute: (assets) => assets.filter((a) => a.findingCount > 0).length,
+      compute: (_assets, stats) => stats.withFindings,
       variant: 'warning',
     },
   ],

@@ -99,13 +99,25 @@ function NotificationItem({ notification, onMarkAsRead, onClose }: NotificationI
         <Icon className="h-3.5 w-3.5 flex-shrink-0 sm:h-4 sm:w-4" />
       </div>
       <div className="flex-1 min-w-0 space-y-0.5 sm:space-y-1">
+        {/*
+          break-words (overflow-wrap: anywhere) so long phrases like
+          `You have been added to the team "Security Operations"` wrap
+          inside the narrow mobile popover instead of running off the
+          right edge. line-clamp-2 caps height; ellipsis appears at the
+          end of line 2 only when wrap actually happens. Without
+          break-words the content was running past the popover and the
+          line-clamp ellipsis was hidden behind the cut-off.
+        */}
         <p
-          className={cn('text-xs leading-tight sm:text-sm', !notification.is_read && 'font-medium')}
+          className={cn(
+            'text-xs leading-tight sm:text-sm break-words line-clamp-2',
+            !notification.is_read && 'font-medium'
+          )}
         >
           {notification.title}
         </p>
         {notification.body && (
-          <p className="text-[11px] text-muted-foreground line-clamp-2 sm:text-xs">
+          <p className="text-[11px] text-muted-foreground line-clamp-2 break-words sm:text-xs">
             {notification.body}
           </p>
         )}
@@ -197,10 +209,24 @@ export function NotificationBell() {
       </PopoverTrigger>
 
       <PopoverContent
-        className="w-[340px] max-w-[calc(100vw-1rem)] p-0 sm:w-[380px]"
+        // Mobile: take nearly the full viewport width (minus 1rem on
+        // each side) so collision detection produces symmetric margins
+        // regardless of where the bell sits in the header. The previous
+        // fixed `w-[340px]` was anchored to the bell trigger via
+        // `align="end"`, but the bell isn't the last button in the
+        // header (theme toggle + avatar come after it), so the popover
+        // landed visually off-center.
+        //
+        // Tablet+: revert to the fixed 380px right-anchored to the
+        // bell, which is the desktop pattern users expect.
+        //
+        // overflow-x-hidden + the break-words on inner text prevent
+        // long titles/bodies from rendering past the popover edge on
+        // narrow viewports.
+        className="w-[calc(100vw-1rem)] max-w-[380px] p-0 sm:w-[380px] overflow-x-hidden"
         align="end"
         sideOffset={8}
-        collisionPadding={16}
+        collisionPadding={8}
       >
         <div className="flex items-center justify-between px-3 py-3 sm:px-4">
           <h4 className="text-sm font-semibold sm:text-base">Notifications</h4>

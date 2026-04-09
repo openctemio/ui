@@ -16,7 +16,18 @@ import { validateRedirectUrl } from '@/lib/redirect'
 import { LoginForm } from '@/features/auth/components/login-form'
 
 interface LoginPageProps {
-  searchParams: Promise<{ redirect?: string; returnTo?: string; org?: string; error?: string }>
+  searchParams: Promise<{
+    redirect?: string
+    returnTo?: string
+    org?: string
+    error?: string
+    // Preserved from the invitation flow — when a user clicks an
+    // invite link and doesn't have an account, the invitation page
+    // redirects to /login?email=alice@co.com&returnTo=/invitations/{token}.
+    // The login page passes this email through to the "Sign up" link
+    // so the register form can pre-fill it.
+    email?: string
+  }>
 }
 
 export default async function SignIn({ searchParams }: LoginPageProps) {
@@ -40,15 +51,26 @@ export default async function SignIn({ searchParams }: LoginPageProps) {
     } else if (hasPendingTenants) {
       // User has multiple teams but hasn't selected one - redirect to select-tenant
       redirect('/select-tenant')
-    } else {
-      // User has no teams but has a specific destination (e.g., invitation)
-      // Let them go there first - they can accept invitation and get a tenant
-      if (redirectTo.includes('/invitations/')) {
-        redirect(redirectTo)
-      }
-      // Otherwise, redirect to onboarding to create first team
-      redirect('/onboarding/create-team')
+    } else if (redirectTo.includes('/invitations/')) {
+      // Special case: invitation links — let them through with current auth
+      // so the invitation acceptance flow can issue a fresh tenant cookie.
+      redirect(redirectTo)
     }
+
+    // ⚠️ Dangling auth state: refresh_token exists but no tenant cookie and
+    // no pendingTenants cookie. This typically happens when the user logged
+    // in with a multi-tenant account, walked away from /select-tenant, and
+    // the pendingTenants cookie expired before they picked a team.
+    //
+    // We CANNOT assume "no tenants" here — the user almost certainly has
+    // tenants on the server, we just lost the cached list locally. The
+    // previous behaviour (redirect to /onboarding/create-team) caused the
+    // user to create a duplicate tenant they didn't want.
+    //
+    // Instead: fall through and render the login form. The user re-enters
+    // credentials, /auth/login returns the tenant list fresh, and the
+    // normal flow resumes. The dangling refresh_token is harmless — the
+    // successful re-login will overwrite it.
   }
 
   return (
@@ -58,7 +80,12 @@ export default async function SignIn({ searchParams }: LoginPageProps) {
         <CardDescription>
           Enter your email and password below to <br />
           log into your account. Don&apos;t have an account?{' '}
-          <Link href="/register" className="hover:text-primary underline underline-offset-4">
+          <Link
+            href={
+              params.email ? `/register?email=${encodeURIComponent(params.email)}` : '/register'
+            }
+            className="hover:text-primary underline underline-offset-4"
+          >
             Sign up
           </Link>
         </CardDescription>

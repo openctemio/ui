@@ -88,6 +88,7 @@ interface BackendAsset {
   risk_score: number // 0-100
   finding_count: number
   description?: string
+  owner_ref?: string // Free-text owner reference (team / contact / cost center)
   tags?: string[]
   metadata?: Record<string, unknown>
   properties?: Record<string, unknown>
@@ -109,6 +110,7 @@ function transformAsset(backend: BackendAsset): Asset {
     criticality: backend.criticality as Criticality,
     status: backend.status as 'active' | 'inactive' | 'archived',
     description: backend.description,
+    ownerRef: backend.owner_ref,
     scope: backend.scope as AssetScope,
     exposure: backend.exposure as ExposureLevel,
     riskScore: backend.risk_score,
@@ -392,6 +394,19 @@ export function useAssetsByType(
 }
 
 /**
+ * Fetch a single asset by ID (non-hook variant of useAsset).
+ *
+ * Use this from event handlers / callbacks where you cannot call hooks
+ * conditionally. Example: clicking a related asset in the relationships
+ * tab needs to swap the parent sheet's selectedAsset, but the click
+ * handler isn't a render path so it can't useSWR.
+ */
+export async function getAsset(assetId: string): Promise<Asset> {
+  const response = await get<BackendAsset>(endpoints.assets.get(assetId))
+  return transformAsset(response)
+}
+
+/**
  * Create a new asset
  */
 export async function createAsset(input: CreateAssetInput): Promise<Asset> {
@@ -402,6 +417,7 @@ export async function createAsset(input: CreateAssetInput): Promise<Asset> {
     description: input.description,
     scope: input.scope || 'internal',
     exposure: input.exposure || 'unknown',
+    owner_ref: input.ownerRef,
     tags: input.tags,
   })
   return transformAsset(response)
@@ -417,6 +433,7 @@ export async function updateAsset(assetId: string, input: UpdateAssetInput): Pro
     description: input.description,
     scope: input.scope,
     exposure: input.exposure,
+    owner_ref: input.ownerRef,
     tags: input.tags,
   })
   return transformAsset(response)
@@ -457,8 +474,12 @@ export async function bulkDeleteAssets(assetIds: string[]): Promise<void> {
  * Hook for asset stats (uses dedicated /api/v1/assets/stats endpoint)
  * This provides comprehensive cached asset statistics with all breakdowns
  * Only fetches if user has assets:read permission
+ *
+ * Optionally filter by asset types and/or tags. Both filters mirror the List
+ * endpoint semantics so the stats card always reflects whatever the user has
+ * filtered to in the table (e.g. type=host AND tag=production).
  */
-export function useAssetStats() {
+export function useAssetStats(types?: string[], tags?: string[]) {
   const { currentTenant } = useTenant()
   const { can } = usePermissions()
   const canReadAssets = can(Permission.AssetsRead)
@@ -466,11 +487,19 @@ export function useAssetStats() {
   // Only fetch if user has permission and tenant context
   const shouldFetch = currentTenant && canReadAssets
 
+  const params = new URLSearchParams()
+  if (types && types.length > 0) params.set('types', types.join(','))
+  if (tags && tags.length > 0) params.set('tags', tags.join(','))
+  const queryString = params.toString()
+  const querySuffix = queryString ? `?${queryString}` : ''
+  const cacheKey = shouldFetch ? `asset-stats${querySuffix}` : null
+
   const { data, error, isLoading, mutate } = useSWR<BackendAssetStats>(
-    shouldFetch ? 'asset-stats' : null,
+    cacheKey,
     async () => {
-      // Fetch from dedicated asset stats endpoint
-      const response = await get<BackendAssetStats>(endpoints.assets.stats())
+      // Fetch from dedicated asset stats endpoint with optional filters
+      const url = `${endpoints.assets.stats()}${querySuffix}`
+      const response = await get<BackendAssetStats>(url)
       return response
     },
     {

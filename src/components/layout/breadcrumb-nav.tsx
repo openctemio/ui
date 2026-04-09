@@ -141,7 +141,7 @@ export function BreadcrumbNav({ pageTitle, className, hideIdSegment = true }: Br
             <BreadcrumbSeparator />
             <BreadcrumbItem>
               {item.isLast ? (
-                <BreadcrumbPage className="max-w-[200px] truncate capitalize">
+                <BreadcrumbPage className="max-w-[200px] truncate capitalize" aria-current="page">
                   {item.label}
                 </BreadcrumbPage>
               ) : (

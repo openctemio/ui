@@ -48,7 +48,19 @@ interface RelationshipGraphProps {
 // Constants
 // ============================================
 
-const NODE_RADIUS = 40
+// Reduced from 40 — smaller nodes leave more room for the two label
+// rows below each node and prevent the bottom node from being clipped
+// by the SVG viewBox in a vertical layout.
+const NODE_RADIUS = 32
+
+// Total vertical space a node + its name + type labels needs.
+// Used by the layout to keep nodes from overlapping each other's labels.
+const NODE_LABEL_HEIGHT = 32
+
+// Padding the layout reserves around the edge of the SVG so labels never
+// run off the canvas. The previous code only reserved NODE_RADIUS+20 which
+// was not enough for the two-line text labels.
+const LAYOUT_PADDING = NODE_RADIUS + NODE_LABEL_HEIGHT + 12
 
 const ASSET_TYPE_COLORS: Record<string, string> = {
   domain: '#3b82f6',
@@ -74,39 +86,81 @@ const ASSET_TYPE_COLORS: Record<string, string> = {
 }
 
 // ============================================
-// Layout Algorithm (Simple Force-Directed)
+// Layout Algorithm
 // ============================================
+//
+// We use two layouts based on graph size:
+//
+//   * Small graphs (≤5 nodes): a deterministic horizontal arrangement
+//     with the central node in the middle and the other nodes spread to
+//     the left/right. Each node gets its own column so the source/target
+//     names never collide with edge labels. This is the right layout for
+//     the 99% case (an asset has 1-3 outgoing relationships).
+//
+//   * Larger graphs: classic radial layout — central node in the middle,
+//     others arranged on a circle around it. Better than horizontal once
+//     there are too many leaves to fit on one row.
+//
+// In both cases we reserve LAYOUT_PADDING around the edges so the SVG
+// viewBox never clips a node label. The previous version only reserved
+// NODE_RADIUS+20 which was 28px short of what the two-line label needs,
+// causing the bottom node's name+type to be cut off entirely.
 
 function calculateNodePositions(
   nodes: RelationshipGraphNode[],
-  edges: RelationshipGraphEdge[],
+  _edges: RelationshipGraphEdge[],
   centralNodeId?: string,
   width: number = 600,
   height: number = 400
 ): NodeWithPosition[] {
   if (nodes.length === 0) return []
 
-  // Simple circular layout with central node
   const centerX = width / 2
   const centerY = height / 2
 
-  // If there's a central node, place it in the center
   const centralNode = centralNodeId ? nodes.find((n) => n.id === centralNodeId) : nodes[0]
   const otherNodes = nodes.filter((n) => n.id !== centralNode?.id)
 
   const result: NodeWithPosition[] = []
-
-  // Place central node
   if (centralNode) {
-    result.push({
-      ...centralNode,
-      position: { x: centerX, y: centerY },
-    })
+    result.push({ ...centralNode, position: { x: centerX, y: centerY } })
   }
 
-  // Place other nodes in a circle around the center
-  const angleStep = (2 * Math.PI) / Math.max(otherNodes.length, 1)
-  const radius = Math.min(width, height) / 2 - NODE_RADIUS - 20
+  // Small-graph horizontal layout
+  if (otherNodes.length <= 4) {
+    // Available horizontal range, accounting for label padding on both sides
+    const usableWidth = width - LAYOUT_PADDING * 2
+    if (otherNodes.length === 1) {
+      // Single relationship — put it on the right of the central node
+      result.push({
+        ...otherNodes[0],
+        position: { x: Math.min(centerX + 180, width - LAYOUT_PADDING), y: centerY },
+      })
+    } else {
+      // Multiple — alternate left/right around the central node, evenly
+      // spaced. We give each node a vertical jitter so two nodes on the
+      // same side don't collide with each other's labels.
+      const sideStep = usableWidth / (otherNodes.length + 1)
+      otherNodes.forEach((node, i) => {
+        // Even index → right, odd → left, starting from sideStep
+        const side = i % 2 === 0 ? 1 : -1
+        const distance = sideStep * (Math.floor(i / 2) + 1)
+        const verticalOffset = otherNodes.length > 2 ? (i % 2 === 0 ? -40 : 40) : 0
+        result.push({
+          ...node,
+          position: {
+            x: centerX + side * distance,
+            y: centerY + verticalOffset,
+          },
+        })
+      })
+    }
+    return result
+  }
+
+  // Radial layout for larger graphs
+  const angleStep = (2 * Math.PI) / otherNodes.length
+  const radius = Math.min(width, height) / 2 - LAYOUT_PADDING
 
   otherNodes.forEach((node, index) => {
     const angle = angleStep * index - Math.PI / 2 // Start from top
@@ -213,7 +267,7 @@ function GraphEdge({ edge, sourcePos, targetPos, onClick }: GraphEdgeProps) {
   // Calculate edge path with offset for node radius
   const dx = targetPos.x - sourcePos.x
   const dy = targetPos.y - sourcePos.y
-  const distance = Math.sqrt(dx * dx + dy * dy)
+  const distance = Math.sqrt(dx * dx + dy * dy) || 1
   const unitX = dx / distance
   const unitY = dy / distance
 
@@ -222,9 +276,12 @@ function GraphEdge({ edge, sourcePos, targetPos, onClick }: GraphEdgeProps) {
   const endX = targetPos.x - unitX * (NODE_RADIUS + 10) // Extra offset for arrow
   const endY = targetPos.y - unitY * (NODE_RADIUS + 10)
 
-  // Midpoint for label
-  const midX = (startX + endX) / 2
-  const midY = (startY + endY) / 2
+  // Midpoint for label, then offset perpendicular to the line so the
+  // label doesn't sit on top of the source/target node's name labels.
+  // Perp direction = rotate (unitX, unitY) by 90°, scaled.
+  const labelOffset = 12
+  const midX = (startX + endX) / 2 + -unitY * labelOffset
+  const midY = (startY + endY) / 2 + unitX * labelOffset
 
   // Arrow color based on impact
   const getEdgeColor = () => {
@@ -235,6 +292,9 @@ function GraphEdge({ edge, sourcePos, targetPos, onClick }: GraphEdgeProps) {
 
   const edgeColor = getEdgeColor()
   const labels = RELATIONSHIP_LABELS[edge.type]
+  const labelText = labels?.direct || edge.type
+  // Approximate label width — 6.2px per char + 12px horizontal padding
+  const labelWidth = Math.max(48, labelText.length * 6.2 + 12)
 
   return (
     <g onClick={onClick} style={{ cursor: 'pointer' }}>
@@ -250,20 +310,30 @@ function GraphEdge({ edge, sourcePos, targetPos, onClick }: GraphEdgeProps) {
         markerEnd="url(#arrowhead)"
         className="transition-all hover:stroke-opacity-100"
       />
-      {/* Label background */}
+      {/* Label background — hardcoded white/border colors instead of
+          CSS variables, which were rendering as a dark muddy fill in
+          SVG context (`hsl(var(--background))` is fragile here). */}
       <rect
-        x={midX - 30}
-        y={midY - 10}
-        width={60}
-        height={20}
-        rx={4}
-        fill="hsl(var(--background))"
-        stroke="hsl(var(--border))"
+        x={midX - labelWidth / 2}
+        y={midY - 9}
+        width={labelWidth}
+        height={18}
+        rx={9}
+        fill="#ffffff"
+        stroke="#e5e7eb"
         strokeWidth={1}
       />
-      {/* Label text */}
-      <text x={midX} y={midY + 4} textAnchor="middle" className="text-[9px] fill-muted-foreground">
-        {labels?.direct || edge.type}
+      {/* Label text — explicit fill for SVG; the className-based fill
+          rules don't always cascade through to <text>. */}
+      <text
+        x={midX}
+        y={midY + 3}
+        textAnchor="middle"
+        fontSize={10}
+        fill="#475569"
+        style={{ pointerEvents: 'none' }}
+      >
+        {labelText}
       </text>
     </g>
   )

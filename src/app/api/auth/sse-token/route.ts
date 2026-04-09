@@ -18,8 +18,6 @@ import { NextResponse } from 'next/server'
 
 import { env } from '@/lib/env'
 
-const BACKEND_URL =
-  process.env.BACKEND_API_URL?.replace('localhost', '127.0.0.1') || 'http://127.0.0.1:8080'
 const ACCESS_TOKEN_COOKIE = env.auth.cookieName
 const REFRESH_TOKEN_COOKIE = env.auth.refreshCookieName
 const TENANT_COOKIE = env.cookies.tenant
@@ -57,7 +55,7 @@ async function tryRefreshToken(
   if (!tenantId) return null
 
   try {
-    const response = await fetch(`${BACKEND_URL}/api/v1/auth/refresh`, {
+    const response = await fetch(`${env.api.url}/api/v1/auth/refresh`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

@@ -392,27 +392,26 @@ export const repositoriesConfig: AssetPageConfig = {
     {
       title: 'Active',
       icon: CheckCircle,
-      compute: (assets) => assets.filter((a) => a.status === 'active').length,
+      compute: (_assets, stats) => stats.byStatus.active ?? 0,
       variant: 'success',
     },
     {
       title: 'With Findings',
       icon: AlertTriangle,
-      compute: (assets) => assets.filter((a) => a.findingCount > 0).length,
+      compute: (_assets, stats) => stats.withFindings,
       variant: 'warning',
     },
     {
+      // repository.componentCount isn't aggregated by /assets/stats — current page only
       title: 'Components',
       icon: Package,
       compute: (assets) => assets.reduce((acc, a) => acc + (a.repository?.componentCount || 0), 0),
     },
     {
+      // Backend exposes risk_score_avg across the type-filtered set
       title: 'Avg Risk Score',
       icon: Activity,
-      compute: (assets) => {
-        if (assets.length === 0) return 0
-        return Math.round(assets.reduce((acc, a) => acc + a.riskScore, 0) / assets.length)
-      },
+      compute: (_assets, stats) => Math.round(stats.averageRiskScore),
     },
   ],
 

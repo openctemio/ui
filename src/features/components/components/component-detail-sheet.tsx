@@ -27,6 +27,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Separator } from '@/components/ui/separator'
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
+import { copyToClipboard } from '@/lib/clipboard'
 import { cn, sanitizeExternalUrl } from '@/lib/utils'
 import { toast } from 'sonner'
 import { EcosystemBadge } from './ecosystem-badge'
@@ -112,7 +113,7 @@ export function ComponentDetailSheet({ component, open, onOpenChange }: Componen
     component.vulnerabilityCount.low
 
   const handleCopyPurl = () => {
-    navigator.clipboard.writeText(component.purl)
+    copyToClipboard(component.purl)
     toast.success('PURL copied to clipboard')
   }
 
@@ -160,7 +161,9 @@ export function ComponentDetailSheet({ component, open, onOpenChange }: Componen
             gradientVia
           )}
         >
-          <div className="flex items-start gap-3 mb-3">
+          {/* pr-14 reserves space for the Sheet's built-in close button (X)
+              so the RiskScoreBadge doesn't overlap with it. */}
+          <div className="flex items-start gap-3 mb-3 pr-14">
             <div
               className={cn(
                 'h-12 w-12 rounded-xl flex items-center justify-center shrink-0',

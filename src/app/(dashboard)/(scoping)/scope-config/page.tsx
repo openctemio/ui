@@ -423,18 +423,27 @@ export default function ScopeConfigPage() {
         coverage: statsData.coverage ?? 0,
       }
     }
-    // Fallback when stats API hasn't loaded yet
+    // Fallback when stats API hasn't loaded yet.
+    //
+    // Use API totals (targetsData?.total etc) instead of array .length so the
+    // numbers don't drop to "current page count" while statsData is loading.
+    // Active/enabled counts are still derived from the loaded page because we
+    // don't have a per-status breakdown without statsData; this is a brief
+    // loading-state fallback only — once statsData arrives the branch above
+    // takes over with authoritative numbers.
     return {
-      targets: targets.length,
+      targets: targetsData?.total ?? 0,
       activeTargets: targets.filter((t) => t.status === 'active').length,
-      exclusions: exclusions.length,
+      exclusions: exclusionsData?.total ?? 0,
       activeSchedules: schedules.filter((s) => s.enabled).length,
       coverage:
-        targets.length > 0
-          ? Math.round((targets.filter((t) => t.status === 'active').length / targets.length) * 100)
+        targetsData?.total && targetsData.total > 0
+          ? Math.round(
+              (targets.filter((t) => t.status === 'active').length / targetsData.total) * 100
+            )
           : 0,
     }
-  }, [statsData, targets, exclusions, schedules])
+  }, [statsData, targetsData, exclusionsData, targets, schedules])
 
   // Duplicate check helpers
   const checkDuplicateTarget = useCallback(

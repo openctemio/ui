@@ -137,10 +137,11 @@ export const servicesConfig: AssetPageConfig = {
     {
       title: 'Active',
       icon: CheckCircle,
-      compute: (assets) => assets.filter((a) => a.status === 'active').length,
+      compute: (_assets, stats) => stats.byStatus.active ?? 0,
       variant: 'success',
     },
     {
+      // metadata.protocol isn't aggregated by /assets/stats — current page only
       title: 'TCP Services',
       icon: Network,
       compute: (assets) =>
@@ -149,7 +150,7 @@ export const servicesConfig: AssetPageConfig = {
     {
       title: 'With Findings',
       icon: AlertTriangle,
-      compute: (assets) => assets.filter((a) => a.findingCount > 0).length,
+      compute: (_assets, stats) => stats.withFindings,
       variant: 'warning',
     },
   ],

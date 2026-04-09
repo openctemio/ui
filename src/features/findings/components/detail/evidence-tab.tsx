@@ -28,6 +28,7 @@ import {
   Github,
   GitBranch,
 } from 'lucide-react'
+import { copyToClipboard } from '@/lib/clipboard'
 import type { Evidence, EvidenceType, FindingDetail } from '../../types'
 import { EVIDENCE_TYPE_CONFIG } from '../../types'
 import { CodeHighlighter } from './code-highlighter'
@@ -193,12 +194,8 @@ export function EvidenceTab({ evidence, finding }: EvidenceTabProps) {
               <div className="flex items-center justify-between px-3 py-2 bg-slate-800/50 border-b border-slate-700/30">
                 <span className="text-xs text-slate-400 font-mono">{item.title}</span>
                 <button
-                  onClick={async () => {
-                    try {
-                      await navigator.clipboard.writeText(item.content)
-                    } catch {
-                      // Ignore
-                    }
+                  onClick={() => {
+                    copyToClipboard(item.content)
                   }}
                   className="text-slate-400 hover:text-slate-200 transition-colors p-1 rounded"
                   title="Copy code"

@@ -125,6 +125,7 @@ export const mobileConfig: AssetPageConfig = {
 
   statsCards: [
     {
+      // metadata.platform isn't aggregated by /assets/stats — current page only
       title: 'iOS Apps',
       icon: Apple,
       compute: (assets) => assets.filter((a) => (a.metadata.platform as string) === 'ios').length,
@@ -139,7 +140,7 @@ export const mobileConfig: AssetPageConfig = {
     {
       title: 'With Findings',
       icon: AlertTriangle,
-      compute: (assets) => assets.filter((a) => a.findingCount > 0).length,
+      compute: (_assets, stats) => stats.withFindings,
       variant: 'warning',
     },
   ],

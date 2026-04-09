@@ -179,6 +179,12 @@ export function useMyPermissions() {
   }
 }
 
+// Stable empty array used as the loading-state fallback for useUserRoles.
+// Returning a fresh `[]` literal every render breaks consumers whose effects
+// depend on `roles` — each render produces a new reference, the effect re-runs,
+// and (if it calls setState) you get "Maximum update depth exceeded".
+const EMPTY_ROLES: readonly Role[] = Object.freeze([])
+
 /**
  * Fetch a user's roles
  */
@@ -193,7 +199,7 @@ export function useUserRoles(userId: string | null) {
   )
 
   return {
-    roles: data || [],
+    roles: data ?? (EMPTY_ROLES as Role[]),
     isLoading,
     isError: !!error,
     error,
