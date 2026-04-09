@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useCallback, useEffect } from 'react'
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import {
   ColumnDef,
   flexRender,
@@ -108,12 +108,11 @@ import { getErrorMessage } from '@/lib/api/error-handler'
 import { copyToClipboard } from '@/lib/clipboard'
 import { Can, Permission } from '@/lib/permissions'
 
-// Tab values for the status filter. "pending" stays in the union because the
-// statusCounts map keys it (pending invitations are shown in their own
-// section, not as a tab here). "inactive" was removed: it was always 0 in
-// practice — the user-level "inactive" status has no UI to set it and is
-// orthogonal to the membership lifecycle this page manages.
-type StatusFilter = 'all' | 'active' | 'pending' | 'suspended'
+// Tab values for the status filter on the members table. Pending
+// invitations live in their own section (not in the members list), so
+// they are NOT a tab here. The user-level "inactive" status is also
+// excluded — it was always 0 in practice and has no admin UI.
+type StatusFilter = 'all' | 'active' | 'suspended'
 type RoleFilter = 'all' | MemberRole
 
 // Static config
@@ -121,7 +120,6 @@ const statusFilters: { value: StatusFilter; label: string }[] = [
   { value: 'all', label: 'All' },
   { value: 'active', label: 'Active' },
   { value: 'suspended', label: 'Suspended' },
-  // "Pending" not shown here: pending invitations live in a separate section.
 ]
 
 const roleFilters: { value: RoleFilter; label: string }[] = [
@@ -337,12 +335,27 @@ function EditUserRolesDialog({
   const { setUserRoles, isSetting } = useSetUserRoles(open ? member?.user_id || null : null)
   const [selectedRoleIds, setSelectedRoleIds] = useState<string[]>([])
 
-  // Initialize selected roles when dialog opens
+  // Initialize selected roles ONCE per open session. The previous version
+  // re-ran on every userRoles reference change, which meant any SWR
+  // revalidate (e.g. after a tab focus or a manual mutate elsewhere)
+  // silently wiped the user's in-progress checkbox toggles. Track init
+  // with a ref and reset it when the dialog closes.
+  const initialized = useRef(false)
   useEffect(() => {
-    if (open && userRoles) {
-      setSelectedRoleIds(userRoles.map((r) => r.id))
+    if (!open) {
+      initialized.current = false
+      return
     }
-  }, [open, userRoles])
+    if (!initialized.current && !userRolesLoading && userRoles.length > 0) {
+      setSelectedRoleIds(userRoles.map((r) => r.id))
+      initialized.current = true
+    } else if (!initialized.current && !userRolesLoading) {
+      // Loaded with empty result — still mark as initialized so we don't
+      // overwrite an explicit "select nothing" state on re-render.
+      setSelectedRoleIds([])
+      initialized.current = true
+    }
+  }, [open, userRoles, userRolesLoading])
 
   const handleSave = async () => {
     try {
@@ -604,6 +617,11 @@ export default function UsersPage() {
   // while the request is pending.
   const [suspendConfirmMember, setSuspendConfirmMember] = useState<MemberWithUser | null>(null)
   const [isSuspending, setIsSuspending] = useState(false)
+  // Remove confirmation: same shape, but for the destructive Remove action.
+  // Remove deletes the membership row entirely (and any pending invitations
+  // tied to the email) so it deserves at least as much friction as Suspend.
+  const [removeConfirmMember, setRemoveConfirmMember] = useState<MemberWithUser | null>(null)
+  const [isRemoving, setIsRemoving] = useState(false)
 
   // Track if sheet is fully closed (after animation completes)
   const [isSheetAnimating, setIsSheetAnimating] = useState(false)
@@ -687,16 +705,16 @@ export default function UsersPage() {
     }
   }, [members, invitations])
 
-  // Status counts from members (for tabs)
+  // Status counts from members (for tabs).
+  // Pending invitations are listed in their own section above the table
+  // and are not represented in this tab strip.
   const statusCounts: Record<StatusFilter, number> = useMemo(
     () => ({
       all: members.length,
       active: members.filter((m) => m.status === 'active').length,
       suspended: members.filter((m) => m.status === 'suspended').length,
-      // "pending" is sourced from invitations, not from member rows.
-      pending: invitations.length,
     }),
-    [members, invitations]
+    [members]
   )
 
   // Table columns. The select-checkbox column was removed alongside the
@@ -833,7 +851,12 @@ export default function UsersPage() {
                     )}
                     <DropdownMenuItem
                       className="text-red-400"
-                      onClick={() => handleRemoveMember(member)}
+                      onSelect={(e) => {
+                        // Open confirmation instead of firing immediately.
+                        // onSelect lets the dropdown close cleanly first.
+                        e.preventDefault()
+                        setRemoveConfirmMember(member)
+                      }}
                     >
                       <Trash2 className="mr-2 h-4 w-4" />
                       Remove Member
@@ -864,17 +887,24 @@ export default function UsersPage() {
   })
 
   // Actions
-  const handleRemoveMember = async (member: MemberWithUser) => {
-    if (!tenantSlug) return
-
+  // Confirm and execute the pending removal. Called from the AlertDialog
+  // action button — keeps removal a deliberate two-click action.
+  const handleConfirmRemove = async () => {
+    if (!tenantSlug || !removeConfirmMember) return
+    setIsRemoving(true)
     try {
-      await fetcherWithOptions(tenantEndpoints.removeMember(tenantSlug, member.id), {
+      await fetcherWithOptions(tenantEndpoints.removeMember(tenantSlug, removeConfirmMember.id), {
         method: 'DELETE',
       })
-      toast.success(`Removed ${member.name} from the team`)
+      toast.success(
+        `Removed ${removeConfirmMember.name || removeConfirmMember.email} from the team`
+      )
+      setRemoveConfirmMember(null)
       refreshData()
     } catch (error) {
       toast.error(getErrorMessage(error, 'Failed to remove member'))
+    } finally {
+      setIsRemoving(false)
     }
   }
 
@@ -1502,12 +1532,18 @@ export default function UsersPage() {
                   <div
                     className={`mt-2 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${STATUS_DISPLAY[selectedMember.status]?.bgColor} ${STATUS_DISPLAY[selectedMember.status]?.color}`}
                   >
+                    {/*
+                      Members loaded from the API only ever carry "active"
+                      or "suspended" — pending invitations are rendered in a
+                      separate section, never as MemberWithUser. The dot
+                      colour matches the badge palette in STATUS_DISPLAY.
+                    */}
                     <span
                       className={`h-1.5 w-1.5 rounded-full ${
                         selectedMember.status === 'active'
                           ? 'bg-green-400'
-                          : selectedMember.status === 'pending'
-                            ? 'bg-yellow-400'
+                          : selectedMember.status === 'suspended'
+                            ? 'bg-orange-400'
                             : 'bg-gray-400'
                       }`}
                     />
@@ -1568,7 +1604,11 @@ export default function UsersPage() {
                       size="sm"
                       className="w-full justify-center text-red-500 hover:text-red-600 hover:bg-red-500/10"
                       onClick={() => {
-                        handleRemoveMember(selectedMember)
+                        // Two-step: close the sheet, then open the
+                        // confirmation dialog. The AlertDialog has its own
+                        // overlay and would visually fight the sheet if
+                        // both were open at once.
+                        setRemoveConfirmMember(selectedMember)
                         setSelectedMember(null)
                       }}
                     >
@@ -1857,6 +1897,60 @@ export default function UsersPage() {
                 <>
                   <Ban className="mr-2 h-4 w-4" />
                   Suspend
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Remove Member Confirmation Dialog */}
+      <AlertDialog
+        open={!!removeConfirmMember}
+        onOpenChange={(open) => {
+          if (!open && !isRemoving) setRemoveConfirmMember(null)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Trash2 className="h-5 w-5 text-red-500" />
+              Remove member from team?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {removeConfirmMember && (
+                <>
+                  <span className="font-medium text-foreground">
+                    {removeConfirmMember.name || removeConfirmMember.email}
+                  </span>{' '}
+                  will be removed from this team. Their membership row, role assignments, and any
+                  pending invitations addressed to their email will be deleted. This is permanent —
+                  to undo, you would need to invite them again from scratch. Prefer{' '}
+                  <span className="font-medium text-foreground">Suspend</span> if you only want to
+                  pause access temporarily.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isRemoving}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault()
+                void handleConfirmRemove()
+              }}
+              disabled={isRemoving}
+              className="bg-red-500 text-white hover:bg-red-600 focus:ring-red-500"
+            >
+              {isRemoving ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Removing...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Remove
                 </>
               )}
             </AlertDialogAction>
