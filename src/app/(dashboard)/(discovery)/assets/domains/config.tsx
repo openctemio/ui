@@ -299,6 +299,14 @@ export function buildDomainsConfig({
       getValue: (asset) => asset.name,
     },
 
-    defaultSort: { field: 'name', direction: 'asc' },
+    // Intentionally NO defaultSort. The shared AssetPage sorts the rows
+    // by `row.original.name` which would scramble the parent/child
+    // grouping (e.g. "a.ipas.com.vn" < "ipas.com.vn" alphabetically, so
+    // the subdomain ends up ABOVE its root). Without a default sort the
+    // table preserves the order returned by `flattenDomainTreeForTable`,
+    // which is already grouped: roots in alpha order, each followed by
+    // its subs in alpha order. The user can still click the Name column
+    // header to opt in to a flat alphabetical sort if they explicitly
+    // want it, but the default view stays hierarchical.
   }
 }
