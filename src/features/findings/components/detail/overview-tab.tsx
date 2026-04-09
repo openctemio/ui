@@ -29,6 +29,7 @@ import { CodeHighlighter } from './code-highlighter'
 import { MetadataViewer } from './source-panels/metadata-viewer'
 import { Copy, Check } from 'lucide-react'
 import { useState, useCallback, useMemo } from 'react'
+import { copyToClipboard } from '@/lib/clipboard'
 import { cn } from '@/lib/utils'
 
 interface OverviewTabProps {
@@ -649,7 +650,7 @@ function CodeSnippetSection({ finding }: { finding: FindingDetail }) {
   const handleCopy = useCallback(async () => {
     if (!displaySnippet) return
     try {
-      await navigator.clipboard.writeText(displaySnippet)
+      await copyToClipboard(displaySnippet)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch {

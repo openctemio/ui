@@ -32,6 +32,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
+import { copyToClipboard } from '@/lib/clipboard'
 import { getErrorMessage } from '@/lib/api/error-handler'
 import {
   Plus,
@@ -182,7 +183,7 @@ export function AssetsDataTable({
             setShowDeleteDialog(true)
           },
           onCopy: (asset) => {
-            navigator.clipboard.writeText(asset.name)
+            copyToClipboard(asset.name)
             toast.success('Copied to clipboard')
           },
         },

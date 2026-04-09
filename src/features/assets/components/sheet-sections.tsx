@@ -24,6 +24,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { TagInput } from '@/components/ui/tag-input'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { copyToClipboard } from '@/lib/clipboard'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { getErrorMessage } from '@/lib/api/error-handler'
@@ -457,7 +458,8 @@ export function SecretValueField({
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(value)
+      const ok = await copyToClipboard(value)
+      if (!ok) throw new Error('Failed to copy')
       setIsCopied(true)
       toast.success('Secret copied to clipboard')
       setTimeout(() => setIsCopied(false), 2000)

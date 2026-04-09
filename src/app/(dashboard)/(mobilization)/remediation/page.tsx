@@ -75,6 +75,7 @@ import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
 import { toast } from 'sonner'
+import { copyToClipboard } from '@/lib/clipboard'
 import { Can, Permission } from '@/lib/permissions'
 import {
   mockRemediationTasks,
@@ -350,12 +351,12 @@ export default function RemediationPage() {
   }
 
   const handleCopyId = (id: string) => {
-    navigator.clipboard.writeText(id)
+    copyToClipboard(id)
     toast.success('Task ID copied')
   }
 
   const handleCopyLink = (id: string) => {
-    navigator.clipboard.writeText(`${window.location.origin}/remediation/${id}`)
+    copyToClipboard(`${window.location.origin}/remediation/${id}`)
     toast.success('Link copied')
   }
 

@@ -49,6 +49,7 @@ import {
   Settings,
   Activity,
 } from 'lucide-react'
+import { copyToClipboard } from '@/lib/clipboard'
 import { Can, Permission } from '@/lib/permissions'
 import { useScanConfig, useScanSessions, invalidateScanConfigsCache } from '@/lib/api/scan-hooks'
 import { post, del } from '@/lib/api/client'
@@ -790,7 +791,7 @@ export default function ScanDetailPage() {
                       size="sm"
                       className="h-6 w-6 p-0"
                       onClick={() => {
-                        navigator.clipboard.writeText(config.id)
+                        copyToClipboard(config.id)
                         toast.success('ID copied to clipboard')
                       }}
                     >

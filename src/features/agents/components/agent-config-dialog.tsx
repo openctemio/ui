@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
+import { copyToClipboard } from '@/lib/clipboard'
 import type { Agent } from '@/lib/api/agent-types'
 
 interface RenderedTemplates {
@@ -84,7 +85,7 @@ export function AgentConfigDialog({ open, onOpenChange, agent, apiKey }: AgentCo
   const cliConfig = templates?.cli ?? ''
 
   const handleCopy = async (text: string, label: string) => {
-    await navigator.clipboard.writeText(text)
+    await copyToClipboard(text)
     setCopied(label)
     toast.success(`${label} copied to clipboard`)
     setTimeout(() => setCopied(null), 2000)

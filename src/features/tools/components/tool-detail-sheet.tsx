@@ -24,6 +24,7 @@ import {
   Layers,
   Calendar,
 } from 'lucide-react'
+import { copyToClipboard } from '@/lib/clipboard'
 import { cn } from '@/lib/utils'
 import { useState } from 'react'
 import type { Tool } from '@/lib/api/tool-types'
@@ -51,7 +52,7 @@ function CommandBlock({ label, command }: { label: string; command: string }) {
   const [copied, setCopied] = useState(false)
 
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(command)
+    await copyToClipboard(command)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }

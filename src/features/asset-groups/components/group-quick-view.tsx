@@ -7,6 +7,7 @@ import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { RiskScoreBadge } from '@/features/shared'
+import { copyToClipboard } from '@/lib/clipboard'
 import { Can, Permission } from '@/lib/permissions'
 import {
   FolderKanban,
@@ -195,12 +196,12 @@ export function GroupQuickView({
   const colors = group ? CRITICALITY_COLORS[group.criticality] || CRITICALITY_COLORS.low : null
 
   const handleCopyId = (id: string) => {
-    navigator.clipboard.writeText(id)
+    copyToClipboard(id)
     toast.success('Group ID copied')
   }
 
   const handleCopyLink = (id: string) => {
-    navigator.clipboard.writeText(`${window.location.origin}/asset-groups/${id}`)
+    copyToClipboard(`${window.location.origin}/asset-groups/${id}`)
     toast.success('Link copied to clipboard')
   }
 

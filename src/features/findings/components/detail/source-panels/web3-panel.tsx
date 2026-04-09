@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge'
 import { Copy, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useState } from 'react'
+import { copyToClipboard } from '@/lib/clipboard'
 import type { FindingDetail } from '../../../types'
 
 interface Web3PanelProps {
@@ -36,7 +37,7 @@ export function Web3Panel({ finding }: Web3PanelProps) {
 
   const handleCopy = async () => {
     if (details.contractAddress) {
-      await navigator.clipboard.writeText(details.contractAddress)
+      await copyToClipboard(details.contractAddress)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     }
