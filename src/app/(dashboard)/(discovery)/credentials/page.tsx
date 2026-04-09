@@ -118,6 +118,7 @@ import type {
   ApiCredential,
 } from '@/features/credentials/api/credential-api.types'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { copyToClipboard } from '@/lib/clipboard'
 import { Can, Permission } from '@/lib/permissions'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -525,7 +526,7 @@ export default function CredentialsPage() {
   }
 
   const handleCopyCredential = (credential: Asset) => {
-    navigator.clipboard.writeText(credential.name)
+    copyToClipboard(credential.name)
     toast.success('Credential name copied to clipboard')
   }
 

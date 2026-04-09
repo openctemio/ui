@@ -14,6 +14,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { Main } from '@/components/layout'
+import { copyToClipboard } from '@/lib/clipboard'
 import { cn } from '@/lib/utils'
 import {
   Search,
@@ -568,8 +569,8 @@ function ExposureDetailsView({
   secretsRevealed,
   onToggleSecrets,
 }: ExposureDetailsViewProps) {
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text)
+  const handleCopy = (text: string) => {
+    copyToClipboard(text)
     toast.success('Copied to clipboard')
   }
 
@@ -698,7 +699,7 @@ function ExposureDetailsView({
                           variant="ghost"
                           size="sm"
                           className="h-6 w-6 p-0"
-                          onClick={() => copyToClipboard(stringValue)}
+                          onClick={() => handleCopy(stringValue)}
                         >
                           <Copy className="h-3 w-3" />
                         </Button>
@@ -708,7 +709,7 @@ function ExposureDetailsView({
                           variant="ghost"
                           size="sm"
                           className="h-6 w-6 p-0"
-                          onClick={() => copyToClipboard(stringValue)}
+                          onClick={() => handleCopy(stringValue)}
                         >
                           <Copy className="h-3 w-3" />
                         </Button>
@@ -767,7 +768,7 @@ function ExposureDetailsView({
                         variant="ghost"
                         size="sm"
                         className="h-6 w-6 p-0"
-                        onClick={() => copyToClipboard(stringValue)}
+                        onClick={() => handleCopy(stringValue)}
                       >
                         <Copy className="h-3 w-3" />
                       </Button>

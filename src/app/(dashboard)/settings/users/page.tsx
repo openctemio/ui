@@ -95,6 +95,7 @@ const MemberRolesContext = createContext<MemberRolesMap>(new Map())
 import { fetcherWithOptions } from '@/lib/api/client'
 import { tenantEndpoints } from '@/lib/api/endpoints'
 import { getErrorMessage } from '@/lib/api/error-handler'
+import { copyToClipboard } from '@/lib/clipboard'
 import { Can, Permission } from '@/lib/permissions'
 
 type StatusFilter = 'all' | 'active' | 'pending' | 'inactive'
@@ -1368,10 +1369,10 @@ export default function UsersPage() {
                                 return
                               }
                               const inviteLink = `${window.location.origin}/invitations/${invitation.token}`
-                              try {
-                                await navigator.clipboard.writeText(inviteLink)
+                              const ok = await copyToClipboard(inviteLink)
+                              if (ok) {
                                 toast.success('Invitation link copied to clipboard')
-                              } catch {
+                              } else {
                                 toast.error('Failed to copy link')
                               }
                             }}

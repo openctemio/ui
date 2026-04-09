@@ -76,6 +76,7 @@ import type {
 import type { Finding, FindingStatus, FindingUser } from '@/features/findings'
 import type { Severity } from '@/features/shared/types'
 import { toast } from 'sonner'
+import { copyToClipboard } from '@/lib/clipboard'
 import { getErrorMessage } from '@/lib/api/error-handler'
 import { usePermissions } from '@/context/permission-provider'
 
@@ -543,11 +544,11 @@ export default function FindingsPage() {
           handleRowClick(finding)
           break
         case 'copy_id':
-          navigator.clipboard.writeText(finding.id)
+          copyToClipboard(finding.id)
           toast.success('Finding ID copied to clipboard')
           break
         case 'copy_link':
-          navigator.clipboard.writeText(`${window.location.origin}/findings/${finding.id}`)
+          copyToClipboard(`${window.location.origin}/findings/${finding.id}`)
           toast.success('Link copied to clipboard')
           break
         case 'delete':

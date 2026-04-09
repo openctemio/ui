@@ -675,6 +675,7 @@ function transformToRepositoryView(asset: ApiAssetResponse): RepositoryView {
 }
 
 import { cn } from '@/lib/utils'
+import { copyToClipboard } from '@/lib/clipboard'
 import { Can, Permission } from '@/lib/permissions'
 import { getErrorMessage } from '@/lib/api/error-handler'
 
@@ -2183,7 +2184,7 @@ export default function RepositoryDetailPage() {
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem
                     onClick={() => {
-                      navigator.clipboard.writeText(repository.repository?.webUrl || '')
+                      copyToClipboard(repository.repository?.webUrl || '')
                       toast.success('URL copied')
                     }}
                   >

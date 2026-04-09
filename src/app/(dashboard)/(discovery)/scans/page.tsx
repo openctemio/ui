@@ -90,6 +90,7 @@ import {
   FileJson,
   FileSpreadsheet,
 } from 'lucide-react'
+import { copyToClipboard } from '@/lib/clipboard'
 import { Can, Permission } from '@/lib/permissions'
 import { exportToCSV, exportToJSON } from '@/lib/utils'
 import {
@@ -1794,7 +1795,7 @@ function ConfigDetailSheet({ config, onClose: _onClose, onDelete }: ConfigDetail
                     className="h-6 w-6 p-0"
                     onClick={(e) => {
                       e.stopPropagation()
-                      navigator.clipboard.writeText(config.id)
+                      copyToClipboard(config.id)
                       toast.success('ID copied to clipboard')
                     }}
                   >
@@ -2652,7 +2653,7 @@ function SessionDetailSheet({ session, onStop, onRetry, isActioning }: SessionDe
               variant="outline"
               className="flex-1"
               onClick={() => {
-                navigator.clipboard.writeText(session.id)
+                copyToClipboard(session.id)
                 toast.success('Session ID copied to clipboard')
               }}
             >
@@ -2895,7 +2896,7 @@ function SessionDetailSheet({ session, onStop, onRetry, isActioning }: SessionDe
                     size="sm"
                     className="h-6 w-6 p-0"
                     onClick={() => {
-                      navigator.clipboard.writeText(session.id)
+                      copyToClipboard(session.id)
                       toast.success('ID copied to clipboard')
                     }}
                   >

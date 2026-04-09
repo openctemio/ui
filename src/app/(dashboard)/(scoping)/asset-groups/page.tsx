@@ -78,6 +78,7 @@ import {
 import { useAssets } from '@/features/assets'
 import type { AssetGroup, CreateAssetGroupInput } from '@/features/asset-groups/types'
 import type { AssetGroupApiFilters } from '@/features/asset-groups/api'
+import { copyToClipboard } from '@/lib/clipboard'
 import { Can, Permission } from '@/lib/permissions'
 
 // ============================================
@@ -360,12 +361,12 @@ export default function AssetGroupsPage() {
   }
 
   const handleCopyId = (id: string) => {
-    navigator.clipboard.writeText(id)
+    copyToClipboard(id)
     toast.success('Group ID copied')
   }
 
   const handleCopyLink = (id: string) => {
-    navigator.clipboard.writeText(`${window.location.origin}/asset-groups/${id}`)
+    copyToClipboard(`${window.location.origin}/asset-groups/${id}`)
     toast.success('Link copied to clipboard')
   }
 

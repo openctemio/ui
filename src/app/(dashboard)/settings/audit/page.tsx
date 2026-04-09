@@ -66,6 +66,7 @@ import {
   formatAction,
   getActionCategory,
 } from '@/features/organization'
+import { copyToClipboard } from '@/lib/clipboard'
 import { Permission, useHasPermission } from '@/lib/permissions'
 
 // Helper functions
@@ -840,7 +841,7 @@ function CopyButton({ value }: { value: string }) {
   const [copied, setCopied] = useState(false)
 
   const onCopy = () => {
-    navigator.clipboard.writeText(value)
+    copyToClipboard(value)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
