@@ -15,18 +15,20 @@ export type GeneratedRelationshipType =
   | 'deployed_to'
   | 'contains'
   | 'exposes'
-  | 'member_of'
   | 'resolves_to'
+  | 'cname_of'
   | 'depends_on'
+  | 'peer_of'
+  | 'replicates_to'
   | 'sends_data_to'
   | 'stores_data_in'
   | 'authenticates_to'
   | 'granted_to'
+  | 'has_access_to'
   | 'load_balances'
   | 'protected_by'
   | 'monitors'
   | 'manages'
-  | 'owned_by'
 
 // =============================================================================
 // Labels
@@ -61,7 +63,7 @@ export const GENERATED_RELATIONSHIP_LABELS: Record<
     direct: 'Contains',
     inverse: 'Contained By',
     description:
-      'Hierarchical parent-child relationship (org → app → service; cluster → namespace).',
+      'Hierarchical parent-child relationship. The single direction we use for ALL hierarchical edges (cluster→workload, host→container, cloud_account→host, etc). Always source = parent, target = child. Do NOT model the inverse as a separate edge.',
     category: 'attack_surface_mapping',
   },
   exposes: {
@@ -70,29 +72,46 @@ export const GENERATED_RELATIONSHIP_LABELS: Record<
     description: 'Asset exposes an access surface (api/service → port/endpoint/public interface).',
     category: 'attack_surface_mapping',
   },
-  member_of: {
-    direct: 'Member Of',
-    inverse: 'Has Member',
-    description:
-      'Membership in a group or collection (user → group; host → cluster; namespace → cluster).',
-    category: 'attack_surface_mapping',
-  },
   resolves_to: {
     direct: 'Resolves To',
     inverse: 'Resolved By',
-    description: 'DNS resolution (domain/subdomain → IP/CDN/load balancer).',
+    description:
+      'Literal DNS A/AAAA resolution — a domain resolves to an IP record or a load balancer that owns that IP. STRICT semantic: target MUST be the network endpoint, not the server that happens to own the IP. For "this domain leads to this server / website" use Exposes. For subdomain → parent domain or CNAME aliases use Cname Of.',
+    category: 'attack_surface_mapping',
+  },
+  cname_of: {
+    direct: 'CNAME Of',
+    inverse: 'Has CNAME',
+    description:
+      'DNS aliasing — this name is a CNAME for that name. Also used for subdomain → parent domain logical relationships. Distinct from Resolves To which captures the final IP/host record.',
     category: 'attack_surface_mapping',
   },
   depends_on: {
     direct: 'Depends On',
     inverse: 'Used By',
-    description: 'A needs B to function (service → database; web_app → api).',
+    description:
+      'A needs B to function (service → database; web_app → api). Use for hard runtime dependencies, NOT for peer relationships (use Peer Of) or replication (use Replicates To).',
+    category: 'attack_path_analysis',
+  },
+  peer_of: {
+    direct: 'Peer Of',
+    inverse: 'Peer Of',
+    description:
+      'Symmetric relationship between equal-rank assets — sibling services in a cluster, HA pairs, leader/follower nodes. Pick EITHER asset as source; the inverse direction is implied. Do NOT model the same pair twice.',
+    category: 'attack_path_analysis',
+  },
+  replicates_to: {
+    direct: 'Replicates To',
+    inverse: 'Replicates From',
+    description:
+      'Data replication relationship — primary database streams to replica, log shipper writes to remote, etc. Different from Sends Data To which is application-level data flow; replication is infrastructure-level state copy.',
     category: 'attack_path_analysis',
   },
   sends_data_to: {
     direct: 'Sends Data To',
     inverse: 'Receives Data From',
-    description: 'Data flow in-transit (service → service; producer → queue).',
+    description:
+      'Application data flow in-transit (service → service; producer → queue). For infrastructure replication use Replicates To.',
     category: 'attack_path_analysis',
   },
   stores_data_in: {
@@ -110,7 +129,15 @@ export const GENERATED_RELATIONSHIP_LABELS: Record<
   granted_to: {
     direct: 'Granted To',
     inverse: 'Has Grant',
-    description: 'IAM privilege (role/policy → principal/resource).',
+    description:
+      'IAM grant — a credential/role/policy is granted TO a principal (user, service, machine identity). Use for "who is allowed to use this credential". For "what does this principal have access to" use Has Access To.',
+    category: 'attack_path_analysis',
+  },
+  has_access_to: {
+    direct: 'Has Access To',
+    inverse: 'Accessed By',
+    description:
+      'IAM resource access — a principal/credential has been authorised to access a resource. The other half of the IAM model alongside Granted To. Use for "what can this credential reach".',
     category: 'attack_path_analysis',
   },
   load_balances: {
@@ -122,26 +149,23 @@ export const GENERATED_RELATIONSHIP_LABELS: Record<
   protected_by: {
     direct: 'Protected By',
     inverse: 'Protects',
-    description: 'Security control (web_app → WAF; host → EDR; cloud → CSPM).',
-    category: 'control_and_ownership',
+    description:
+      'Active security control that can block / mitigate / quarantine (WAF, EDR with prevention, IPS, CSPM with auto-remediation, runtime security agents). Use this when the tool can modify traffic/state, not just observe it. For pure observability use Monitors.',
+    category: 'control_and_observability',
   },
   monitors: {
     direct: 'Monitors',
     inverse: 'Monitored By',
-    description: 'Observability (SIEM/EDR/APM → asset).',
-    category: 'control_and_ownership',
+    description:
+      'Passive observability — telemetry collection without blocking or modifying state (SIEM ingest, APM traces, log forwarding, vulnerability scanners). For tools that can take action use Protected By.',
+    category: 'control_and_observability',
   },
   manages: {
     direct: 'Manages',
     inverse: 'Managed By',
-    description: 'Control-plane management (cloud_account/IAM → resource/workload).',
-    category: 'control_and_ownership',
-  },
-  owned_by: {
-    direct: 'Owned By',
-    inverse: 'Owns',
-    description: 'Accountability (asset → team/owner).',
-    category: 'control_and_ownership',
+    description:
+      'Control-plane management — the source asset has CRUD authority over the target (cloud account manages its resources, k8s cluster manages its workloads, IaC stack manages provisioned assets). Different from Contains which is structural hierarchy.',
+    category: 'control_and_observability',
   },
 }
 
@@ -184,28 +208,40 @@ export const GENERATED_RELATIONSHIP_CONSTRAINTS: Record<
   ],
   contains: [
     {
-      sourceTypes: ['k8s_cluster'],
-      targetTypes: ['k8s_workload'],
-    },
-    {
-      sourceTypes: ['api_collection', 'api'],
-      targetTypes: ['api_endpoint'],
-    },
-    {
-      sourceTypes: ['host'],
-      targetTypes: ['container', 'service', 'database'],
-    },
-    {
-      sourceTypes: ['repository'],
-      targetTypes: ['container_image'],
+      sourceTypes: ['cloud_account'],
+      targetTypes: [
+        'host',
+        'database',
+        'k8s_cluster',
+        'network',
+        'storage',
+        'serverless',
+        'load_balancer',
+      ],
     },
     {
       sourceTypes: ['network'],
       targetTypes: ['host', 'cloud_account', 'load_balancer'],
     },
     {
-      sourceTypes: ['cloud_account'],
-      targetTypes: ['host', 'database', 'k8s_cluster', 'network', 'storage', 'serverless'],
+      sourceTypes: ['host'],
+      targetTypes: ['container', 'service', 'database'],
+    },
+    {
+      sourceTypes: ['k8s_cluster'],
+      targetTypes: ['k8s_workload', 'kubernetes_namespace'],
+    },
+    {
+      sourceTypes: ['k8s_workload'],
+      targetTypes: ['container'],
+    },
+    {
+      sourceTypes: ['api_collection', 'api'],
+      targetTypes: ['api_endpoint'],
+    },
+    {
+      sourceTypes: ['repository'],
+      targetTypes: ['container_image'],
     },
   ],
   exposes: [
@@ -222,20 +258,16 @@ export const GENERATED_RELATIONSHIP_CONSTRAINTS: Record<
       targetTypes: ['api', 'service', 'website'],
     },
   ],
-  member_of: [
-    {
-      sourceTypes: ['host', 'container', 'k8s_workload'],
-      targetTypes: ['k8s_cluster', 'network'],
-    },
-    {
-      sourceTypes: ['service', 'api'],
-      targetTypes: ['network'],
-    },
-  ],
   resolves_to: [
     {
       sourceTypes: ['domain'],
-      targetTypes: ['ip_address', 'load_balancer', 'cloud_account', 'host'],
+      targetTypes: ['ip_address', 'load_balancer'],
+    },
+  ],
+  cname_of: [
+    {
+      sourceTypes: ['domain'],
+      targetTypes: ['domain'],
     },
   ],
   depends_on: [
@@ -252,14 +284,30 @@ export const GENERATED_RELATIONSHIP_CONSTRAINTS: Record<
       targetTypes: ['api', 'service'],
     },
   ],
-  sends_data_to: [
+  peer_of: [
     {
-      sourceTypes: ['service', 'api', 'website', 'mobile'],
-      targetTypes: ['database', 'api', 'service', 'cloud_account'],
+      sourceTypes: ['service', 'api'],
+      targetTypes: ['service', 'api'],
     },
     {
       sourceTypes: ['database'],
       targetTypes: ['database'],
+    },
+    {
+      sourceTypes: ['host', 'container'],
+      targetTypes: ['host', 'container'],
+    },
+  ],
+  replicates_to: [
+    {
+      sourceTypes: ['database', 'storage'],
+      targetTypes: ['database', 'storage'],
+    },
+  ],
+  sends_data_to: [
+    {
+      sourceTypes: ['service', 'api', 'website', 'mobile'],
+      targetTypes: ['database', 'api', 'service', 'cloud_account'],
     },
   ],
   stores_data_in: [
@@ -284,8 +332,14 @@ export const GENERATED_RELATIONSHIP_CONSTRAINTS: Record<
   ],
   granted_to: [
     {
-      sourceTypes: ['credential', 'service'],
-      targetTypes: ['cloud_account', 'database', 'api', 'service', 'k8s_cluster'],
+      sourceTypes: ['credential'],
+      targetTypes: ['iam_user', 'iam_role', 'service_account', 'service'],
+    },
+  ],
+  has_access_to: [
+    {
+      sourceTypes: ['credential', 'iam_user', 'iam_role', 'service_account', 'service'],
+      targetTypes: ['cloud_account', 'database', 'api', 'service', 'k8s_cluster', 'storage'],
     },
   ],
   load_balances: [
@@ -332,23 +386,6 @@ export const GENERATED_RELATIONSHIP_CONSTRAINTS: Record<
       targetTypes: ['k8s_workload', 'container'],
     },
   ],
-  owned_by: [
-    {
-      sourceTypes: [
-        'domain',
-        'website',
-        'service',
-        'repository',
-        'cloud_account',
-        'host',
-        'database',
-        'api',
-        'mobile',
-        'k8s_cluster',
-      ],
-      targetTypes: ['service'],
-    },
-  ],
 }
 
 // =============================================================================
@@ -363,7 +400,7 @@ export interface GeneratedRelationshipCategory {
 export const GENERATED_RELATIONSHIP_CATEGORIES: GeneratedRelationshipCategory[] = [
   { id: 'attack_surface_mapping', name: 'Attack Surface Mapping' },
   { id: 'attack_path_analysis', name: 'Attack Path Analysis' },
-  { id: 'control_and_ownership', name: 'Control & Ownership' },
+  { id: 'control_and_observability', name: 'Control & Observability' },
 ]
 
 // =============================================================================
@@ -375,16 +412,18 @@ export const ALL_GENERATED_RELATIONSHIP_TYPES: GeneratedRelationshipType[] = [
   'deployed_to',
   'contains',
   'exposes',
-  'member_of',
   'resolves_to',
+  'cname_of',
   'depends_on',
+  'peer_of',
+  'replicates_to',
   'sends_data_to',
   'stores_data_in',
   'authenticates_to',
   'granted_to',
+  'has_access_to',
   'load_balances',
   'protected_by',
   'monitors',
   'manages',
-  'owned_by',
 ]

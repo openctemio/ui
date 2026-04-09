@@ -156,30 +156,78 @@ export function AssetRelationshipsTab({
   // Handlers
   // ============================================
 
-  const handleAdd = async (input: CreateRelationshipInput) => {
+  // Multi-select handler. The dialog now lets the user pick N targets
+  // and submit them all at once. We fire the createRelationship calls
+  // in parallel via Promise.allSettled so a single failure doesn't
+  // block the rest, then aggregate the results into one toast.
+  //
+  // Possible outcomes:
+  //   - All N succeeded → green toast with the count
+  //   - All N failed → red toast with the first error message
+  //   - Mixed (e.g. K succeeded, M-K already-existed) → yellow toast
+  //     with a "K created, M skipped" summary so the user understands
+  //     why the count doesn't match what they picked
+  const handleAdd = async (inputs: CreateRelationshipInput[]) => {
+    if (inputs.length === 0) return
     setIsSubmitting(true)
     try {
-      await addAssetRelationship(assetId, input)
-      toast.success('Relationship created')
-      setShowAddDialog(false)
-      mutate()
-    } catch (error) {
-      // Surface the backend's actual error message instead of a generic
-      // "Failed to create". 409 Conflict means the same source/target/type
-      // already exists — give the user an actionable hint.
-      const message = getErrorMessage(error, 'Failed to create relationship')
-      const isDuplicate =
-        message.toLowerCase().includes('already') ||
-        message.toLowerCase().includes('duplicate') ||
-        message.toLowerCase().includes('conflict')
-      if (isDuplicate) {
-        toast.error('This relationship already exists', {
-          description:
-            'A relationship of the same type between these two assets is already recorded.',
-        })
+      const results = await Promise.allSettled(
+        inputs.map((input) => addAssetRelationship(assetId, input))
+      )
+
+      const succeeded: number[] = []
+      const duplicates: number[] = []
+      const otherErrors: string[] = []
+
+      results.forEach((res, i) => {
+        if (res.status === 'fulfilled') {
+          succeeded.push(i)
+          return
+        }
+        const message = getErrorMessage(res.reason, 'Failed to create relationship')
+        const isDuplicate =
+          message.toLowerCase().includes('already') ||
+          message.toLowerCase().includes('duplicate') ||
+          message.toLowerCase().includes('conflict')
+        if (isDuplicate) {
+          duplicates.push(i)
+        } else {
+          otherErrors.push(message)
+        }
+      })
+
+      const total = inputs.length
+      if (succeeded.length === total) {
+        // All good
+        toast.success(total === 1 ? 'Relationship created' : `${total} relationships created`)
+        setShowAddDialog(false)
+      } else if (succeeded.length === 0 && otherErrors.length === 0) {
+        // Every attempt was a duplicate — same single-edge messaging
+        toast.error(
+          total === 1
+            ? 'This relationship already exists'
+            : `All ${total} relationships already exist`,
+          {
+            description:
+              'Relationships with the same type between these assets are already recorded.',
+          }
+        )
+      } else if (succeeded.length === 0) {
+        // Every attempt failed for non-duplicate reasons
+        toast.error(otherErrors[0] || 'Failed to create relationships')
       } else {
-        toast.error(message)
+        // Mixed: at least one succeeded, at least one didn't
+        const skipped = duplicates.length + otherErrors.length
+        toast.warning(`${succeeded.length} of ${total} created`, {
+          description:
+            duplicates.length > 0 && otherErrors.length === 0
+              ? `${skipped} were already recorded.`
+              : `${skipped} could not be created${otherErrors[0] ? `: ${otherErrors[0]}` : ''}.`,
+        })
+        setShowAddDialog(false)
       }
+
+      mutate()
     } finally {
       setIsSubmitting(false)
     }

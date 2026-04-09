@@ -27,7 +27,9 @@ import { Textarea } from '@/components/ui/textarea'
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
@@ -50,6 +52,10 @@ import {
   getValidTargetTypes,
   isValidRelationship,
 } from '../../types'
+import {
+  GENERATED_RELATIONSHIP_CATEGORIES,
+  GENERATED_RELATIONSHIP_LABELS,
+} from '../../types/relationship.types.generated'
 
 // ============================================
 // Types
@@ -84,7 +90,13 @@ interface AddRelationshipDialogProps {
    */
   existingRelationships?: AssetRelationship[]
   /** Called when relationship is created */
-  onSubmit: (input: CreateRelationshipInput) => void
+  /**
+   * Called when the user clicks Create. Receives an array of inputs —
+   * one per selected target. The parent is responsible for firing N
+   * createRelationship API calls (in parallel or sequentially) and
+   * surfacing aggregate success/failure to the user.
+   */
+  onSubmit: (inputs: CreateRelationshipInput[]) => void
   /** Loading state */
   isLoading?: boolean
 }
@@ -197,7 +209,12 @@ export function AddRelationshipDialog({
 }: AddRelationshipDialogProps) {
   // Form state
   const [relationshipType, setRelationshipType] = React.useState<RelationshipType | ''>('')
-  const [selectedTarget, setSelectedTarget] = React.useState<AssetOption | null>(null)
+  // Multi-select: every relationship type can have one or many targets.
+  // The previous version was radio-style (one target only) which forced
+  // the user to reopen the dialog N times for fan-out edges like
+  // `domain exposes [website1, website2, website3]`. Picker is now
+  // checkbox-style; submit fires N parallel createRelationship calls.
+  const [selectedTargets, setSelectedTargets] = React.useState<AssetOption[]>([])
   const [description, setDescription] = React.useState('')
   const [confidence, setConfidence] = React.useState<RelationshipConfidence>('medium')
   const [impactWeight, setImpactWeight] = React.useState(5)
@@ -284,21 +301,21 @@ export function AddRelationshipDialog({
     return result
   }, [searchResults, validTargetTypes, sourceAsset.id, takenTargetIds])
 
-  // Validation
+  // Validation: every selected target must satisfy the constraint table
+  // for the chosen relationship type. Any one bad target invalidates
+  // the whole submission so partial-valid states don't sneak through.
   const isValid = React.useMemo(() => {
-    if (!relationshipType || !selectedTarget) return false
-    return isValidRelationship(
-      relationshipType as RelationshipType,
-      sourceAsset.type,
-      selectedTarget.type
+    if (!relationshipType || selectedTargets.length === 0) return false
+    return selectedTargets.every((target) =>
+      isValidRelationship(relationshipType as RelationshipType, sourceAsset.type, target.type)
     )
-  }, [relationshipType, selectedTarget, sourceAsset.type])
+  }, [relationshipType, selectedTargets, sourceAsset.type])
 
   // Reset form when dialog closes
   React.useEffect(() => {
     if (!open) {
       setRelationshipType('')
-      setSelectedTarget(null)
+      setSelectedTargets([])
       setDescription('')
       setConfidence('medium')
       setImpactWeight(5)
@@ -307,19 +324,34 @@ export function AddRelationshipDialog({
     }
   }, [open])
 
-  // Handle submit
-  const handleSubmit = () => {
-    if (!isValid || !relationshipType || !selectedTarget) return
+  // Toggle a target in/out of the selection. Used by the picker's
+  // checkbox-style click handler. Multi-select is the default for
+  // every relationship type — see the comment on the state declaration.
+  const toggleTarget = React.useCallback((asset: AssetOption) => {
+    setSelectedTargets((current) => {
+      const exists = current.some((t) => t.id === asset.id)
+      if (exists) return current.filter((t) => t.id !== asset.id)
+      return [...current, asset]
+    })
+  }, [])
 
-    onSubmit({
+  // Handle submit. Builds one CreateRelationshipInput per selected
+  // target — the parent fires N parallel API calls and aggregates
+  // success/failure.
+  const handleSubmit = () => {
+    if (!isValid || !relationshipType || selectedTargets.length === 0) return
+
+    const inputs: CreateRelationshipInput[] = selectedTargets.map((target) => ({
       type: relationshipType as RelationshipType,
       sourceAssetId: sourceAsset.id,
-      targetAssetId: selectedTarget.id,
+      targetAssetId: target.id,
       description: description || undefined,
       confidence,
       discoveryMethod: 'manual',
       impactWeight,
-    })
+    }))
+
+    onSubmit(inputs)
   }
 
   const sourceColors = ASSET_TYPE_COLORS[sourceAsset.type] || {
@@ -390,19 +422,39 @@ export function AddRelationshipDialog({
                 value={relationshipType}
                 onValueChange={(v) => {
                   setRelationshipType(v as RelationshipType)
-                  setSelectedTarget(null) // Reset target when type changes
+                  // Clear selection when type changes — different types
+                  // have different valid target sets, so a previously
+                  // picked target may no longer apply.
+                  setSelectedTargets([])
                 }}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select relationship type" />
                 </SelectTrigger>
                 <SelectContent>
-                  {validRelationshipTypes.map((type) => {
-                    const labels = RELATIONSHIP_LABELS[type]
+                  {/* Group the dropdown by category. Categories with no
+                      valid types for the current source asset are skipped
+                      so the user only sees groups they can actually pick
+                      from. The category metadata is sourced from the
+                      generated registry, which is itself generated from
+                      configs/relationship-types.yaml. */}
+                  {GENERATED_RELATIONSHIP_CATEGORIES.map((category) => {
+                    const typesInCategory = validRelationshipTypes.filter(
+                      (type) => GENERATED_RELATIONSHIP_LABELS[type]?.category === category.id
+                    )
+                    if (typesInCategory.length === 0) return null
                     return (
-                      <SelectItem key={type} value={type}>
-                        {labels.direct}
-                      </SelectItem>
+                      <SelectGroup key={category.id}>
+                        <SelectLabel>{category.name}</SelectLabel>
+                        {typesInCategory.map((type) => {
+                          const labels = RELATIONSHIP_LABELS[type]
+                          return (
+                            <SelectItem key={type} value={type}>
+                              {labels.direct}
+                            </SelectItem>
+                          )
+                        })}
+                      </SelectGroup>
                     )
                   })}
                 </SelectContent>
@@ -429,7 +481,10 @@ export function AddRelationshipDialog({
             </div>
           )}
 
-          {/* Visual Preview */}
+          {/* Visual Preview — collapses to "→ N assets" once the user
+              has picked more than one target so the badge row doesn't
+              wrap into a wall. Single-pick still shows the asset name
+              for the common case. */}
           {relationshipType && (
             <div className="flex items-center justify-center gap-3 py-2 flex-wrap">
               <Badge variant="secondary" className="max-w-[180px] truncate">
@@ -440,9 +495,17 @@ export function AddRelationshipDialog({
                 {RELATIONSHIP_LABELS[relationshipType as RelationshipType]?.direct}
               </Badge>
               <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
-              <Badge variant="secondary" className="max-w-[180px] truncate">
-                {selectedTarget?.name || 'Select target…'}
-              </Badge>
+              {selectedTargets.length === 0 ? (
+                <Badge variant="secondary" className="max-w-[180px] truncate">
+                  Select target…
+                </Badge>
+              ) : selectedTargets.length === 1 ? (
+                <Badge variant="secondary" className="max-w-[180px] truncate">
+                  {selectedTargets[0].name}
+                </Badge>
+              ) : (
+                <Badge variant="secondary">{selectedTargets.length} assets</Badge>
+              )}
             </div>
           )}
 
@@ -495,17 +558,36 @@ export function AddRelationshipDialog({
                           therefore hidden.
                         </p>
                       )}
+                      {/* Smart redirect for the most common confusion:
+                          user wants `domain → server` but picks the
+                          strict resolves_to (which only accepts IP /
+                          load balancer endpoints). Suggest the right
+                          relationship type instead of leaving them
+                          stuck with an empty picker. */}
+                      {relationshipType === 'resolves_to' && (
+                        <div className="mt-3 rounded-md border border-primary/30 bg-primary/5 p-2.5 text-left">
+                          <p className="text-xs text-foreground">
+                            <strong>Tip:</strong> Resolves To is for the literal DNS endpoint (an IP
+                            address or load balancer). To link this domain to a website / API /
+                            service, switch to <strong>Exposes</strong>. For subdomain → parent
+                            domain or CNAME aliases use <strong>CNAME Of</strong>.
+                          </p>
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <div className="space-y-1">
-                      {filteredAssets.map((asset) => (
-                        <AssetSelectorItem
-                          key={asset.id}
-                          asset={asset}
-                          selected={asset.id === selectedTarget?.id}
-                          onClick={() => setSelectedTarget(asset)}
-                        />
-                      ))}
+                      {filteredAssets.map((asset) => {
+                        const isPicked = selectedTargets.some((t) => t.id === asset.id)
+                        return (
+                          <AssetSelectorItem
+                            key={asset.id}
+                            asset={asset}
+                            selected={isPicked}
+                            onClick={() => toggleTarget(asset)}
+                          />
+                        )
+                      })}
                       {takenTargetIds.size > 0 && (
                         <p className="text-[11px] text-muted-foreground text-center pt-2 border-t mt-2">
                           {takenTargetIds.size} asset
@@ -521,12 +603,22 @@ export function AddRelationshipDialog({
             )}
           </div>
 
-          {/* Additional Options */}
-          {selectedTarget && (
+          {/* Additional Options. When the user has multi-selected,
+              the description / confidence / impact applies to ALL N
+              edges that will be created. The label below makes that
+              explicit so users don't think they're editing one. */}
+          {selectedTargets.length > 0 && (
             <>
               {/* Description */}
               <div className="space-y-2">
-                <Label>Description (Optional)</Label>
+                <Label>
+                  Description (Optional)
+                  {selectedTargets.length > 1 && (
+                    <span className="ml-1 text-xs font-normal text-muted-foreground">
+                      — applied to all {selectedTargets.length} relationships
+                    </span>
+                  )}
+                </Label>
                 <Textarea
                   placeholder="Describe this relationship..."
                   value={description}
@@ -575,7 +667,13 @@ export function AddRelationshipDialog({
             Cancel
           </Button>
           <Button onClick={handleSubmit} disabled={!isValid || isLoading}>
-            {isLoading ? 'Creating...' : 'Create Relationship'}
+            {isLoading
+              ? selectedTargets.length > 1
+                ? `Creating ${selectedTargets.length}…`
+                : 'Creating…'
+              : selectedTargets.length > 1
+                ? `Create ${selectedTargets.length} Relationships`
+                : 'Create Relationship'}
           </Button>
         </DialogFooter>
       </DialogContent>
