@@ -54,7 +54,7 @@ import { get } from '@/lib/api/client'
 import { getErrorMessage } from '@/lib/api/error-handler'
 import { Permission, usePermissions } from '@/lib/permissions'
 import {
-  addAssetRelationship,
+  addAssetRelationshipBatch,
   removeAssetRelationship,
   updateAssetRelationship,
   useAssetRelationships,
@@ -166,61 +166,52 @@ export function AssetRelationshipsTab({
   // ============================================
 
   // Multi-select handler. The dialog passes one (input, targetName)
-  // per selected target. We fire the createRelationship calls in
-  // CHUNKED parallel batches (5 at a time) so a user picking 50
-  // targets doesn't blast 50 concurrent POSTs at the backend, then
-  // aggregate the results into one toast.
+  // per selected target. We send all of them in ONE call to the
+  // batch endpoint POST /assets/{id}/relationships/batch.
   //
-  // Why chunked instead of all-parallel: backend has no per-tenant
-  // rate limit on relationship creation, and each insert does
-  // multiple queries (asset GetByID for source + target, mutex Exists
-  // check, INSERT, GetByID for response). 50 of those in parallel is
-  // 250+ concurrent queries against PG which is unkind even on a fast
-  // tenant. 5 at a time keeps the perceived latency unchanged (the
-  // chunks complete in parallel) while bounding the load.
+  // The batch endpoint validates the source asset + tenant ONCE for
+  // the whole request (instead of per-item like the singleton path)
+  // and reports per-item status in the response. Per-item failures do
+  // not abort the batch — every target gets its own outcome.
+  //
+  // Why batch endpoint instead of N parallel POSTs: it's one HTTP
+  // round trip instead of N, source-asset validation is a single
+  // query instead of N, and the backend can rate-limit at the
+  // request level. Same UX as before — chunking is no longer needed
+  // because all the load is now on a single endpoint that the backend
+  // controls.
   //
   // Possible outcomes:
-  //   - All N succeeded → green toast with the count
-  //   - All N failed for duplicate reasons → red toast
-  //   - All N failed for other reasons → red toast with first error
+  //   - All N created → green toast with the count
+  //   - All N duplicates → red toast naming the duplicates
+  //   - All N other-failed → red toast with first error
   //   - Mixed → warning toast naming the skipped target(s)
+  //   - Whole-batch failure (bad source asset, etc.) → red toast
   const handleAdd = async (
     items: Array<{ input: CreateRelationshipInput; targetName: string }>
   ) => {
     if (items.length === 0) return
     setIsSubmitting(true)
     try {
-      const CHUNK_SIZE = 5
-      const results: PromiseSettledResult<unknown>[] = []
-      for (let i = 0; i < items.length; i += CHUNK_SIZE) {
-        const chunk = items.slice(i, i + CHUNK_SIZE)
-        const chunkResults = await Promise.allSettled(
-          chunk.map((item) => addAssetRelationship(assetId, item.input))
-        )
-        results.push(...chunkResults)
-      }
+      const result = await addAssetRelationshipBatch(
+        assetId,
+        items.map((it) => it.input)
+      )
 
       const succeededNames: string[] = []
       const duplicateNames: string[] = []
       const otherFailedNames: string[] = []
       const otherErrorMessages: string[] = []
 
-      results.forEach((res, i) => {
-        const name = items[i].targetName
-        if (res.status === 'fulfilled') {
+      result.results.forEach((r) => {
+        const name = items[r.index]?.targetName ?? '(unknown)'
+        if (r.status === 'created') {
           succeededNames.push(name)
-          return
-        }
-        const message = getErrorMessage(res.reason, 'Failed to create relationship')
-        const isDuplicate =
-          message.toLowerCase().includes('already') ||
-          message.toLowerCase().includes('duplicate') ||
-          message.toLowerCase().includes('conflict')
-        if (isDuplicate) {
+        } else if (r.status === 'duplicate') {
           duplicateNames.push(name)
         } else {
           otherFailedNames.push(name)
-          otherErrorMessages.push(message)
+          if (r.error) otherErrorMessages.push(r.error)
         }
       })
 
@@ -250,9 +241,7 @@ export function AssetRelationshipsTab({
               : undefined,
         })
       } else {
-        // Mixed: at least one succeeded, at least one didn't.
-        // Surface WHICH targets were skipped so the user can investigate
-        // instead of just seeing a count.
+        // Mixed
         const description =
           duplicateNames.length > 0 && otherFailedNames.length === 0
             ? `Already recorded: ${truncateNameList(duplicateNames)}`
@@ -264,10 +253,13 @@ export function AssetRelationshipsTab({
         toast.warning(`${succeededNames.length} of ${total} created`, { description })
         setShowAddDialog(false)
       }
-
-      mutate()
+    } catch (error) {
+      // Whole-batch failure (bad source asset, missing tenant, etc.)
+      const message = getErrorMessage(error, 'Failed to create relationships')
+      toast.error(message)
     } finally {
       setIsSubmitting(false)
+      mutate()
     }
   }
 
