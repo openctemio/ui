@@ -47,6 +47,7 @@ export {
 export {
   useAssetRelationships,
   addAssetRelationship,
+  addAssetRelationshipBatch,
   updateAssetRelationship,
   removeAssetRelationship,
 } from './use-asset-relationships'
