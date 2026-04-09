@@ -683,12 +683,25 @@ export function AssetPage({ config }: AssetPageProps) {
                         +{remaining.length}
                       </Badge>
                     </TooltipTrigger>
+                    {/*
+                      TooltipContent uses bg-primary + text-primary-foreground
+                      (dark bg, light text) regardless of theme. The default
+                      Badge `variant="outline"` paints text in `text-foreground`
+                      which is the regular dark text — that gives BLACK chips
+                      on a BLACK tooltip background and the user can't read
+                      the tag names. Override the colours to use the popover
+                      foreground tokens so the chips contrast against the
+                      tooltip background in both light and dark themes.
+                    */}
                     <TooltipContent side="bottom" className="max-w-[280px]">
                       <div className="flex flex-wrap gap-1">
                         {remaining.map((tag) => (
-                          <Badge key={tag} variant="outline" className="text-xs px-1.5 py-0">
+                          <span
+                            key={tag}
+                            className="rounded-md border border-primary-foreground/30 bg-primary-foreground/10 px-1.5 py-0.5 text-xs text-primary-foreground"
+                          >
                             {tag}
-                          </Badge>
+                          </span>
                         ))}
                       </div>
                     </TooltipContent>
