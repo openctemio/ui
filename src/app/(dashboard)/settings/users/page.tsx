@@ -108,7 +108,12 @@ import { getErrorMessage } from '@/lib/api/error-handler'
 import { copyToClipboard } from '@/lib/clipboard'
 import { Can, Permission } from '@/lib/permissions'
 
-type StatusFilter = 'all' | 'active' | 'pending' | 'inactive' | 'suspended'
+// Tab values for the status filter. "pending" stays in the union because the
+// statusCounts map keys it (pending invitations are shown in their own
+// section, not as a tab here). "inactive" was removed: it was always 0 in
+// practice — the user-level "inactive" status has no UI to set it and is
+// orthogonal to the membership lifecycle this page manages.
+type StatusFilter = 'all' | 'active' | 'pending' | 'suspended'
 type RoleFilter = 'all' | MemberRole
 
 // Static config
@@ -116,8 +121,7 @@ const statusFilters: { value: StatusFilter; label: string }[] = [
   { value: 'all', label: 'All' },
   { value: 'active', label: 'Active' },
   { value: 'suspended', label: 'Suspended' },
-  { value: 'inactive', label: 'Inactive' },
-  // Note: "Pending" removed - pending invitations are shown in separate section
+  // "Pending" not shown here: pending invitations live in a separate section.
 ]
 
 const roleFilters: { value: RoleFilter; label: string }[] = [
@@ -626,7 +630,6 @@ export default function UsersPage() {
   const [globalFilter, setGlobalFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('all')
-  const [rowSelection, setRowSelection] = useState({})
   const [inviteForm, setInviteForm] = useState({
     email: '',
     roleIds: [] as string[], // RBAC roles to assign when user joins
@@ -690,36 +693,15 @@ export default function UsersPage() {
       all: members.length,
       active: members.filter((m) => m.status === 'active').length,
       suspended: members.filter((m) => m.status === 'suspended').length,
+      // "pending" is sourced from invitations, not from member rows.
       pending: invitations.length,
-      inactive: members.filter((m) => m.status === 'inactive').length,
     }),
     [members, invitations]
   )
 
-  // Table columns
+  // Table columns. The select-checkbox column was removed alongside the
+  // bulk-actions dropdown — there's nothing to do with selected rows now.
   const columns: ColumnDef<MemberWithUser>[] = [
-    {
-      id: 'select',
-      header: ({ table }) => (
-        <Checkbox
-          checked={
-            table.getIsAllPageRowsSelected() ||
-            (table.getIsSomePageRowsSelected() && 'indeterminate')
-          }
-          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-          aria-label="Select all"
-        />
-      ),
-      cell: ({ row }) => (
-        <Checkbox
-          checked={row.getIsSelected()}
-          onCheckedChange={(value) => row.toggleSelected(!!value)}
-          aria-label="Select row"
-        />
-      ),
-      enableSorting: false,
-      enableHiding: false,
-    },
     {
       accessorKey: 'name',
       header: ({ column }) => (
@@ -872,11 +854,9 @@ export default function UsersPage() {
     state: {
       sorting,
       globalFilter,
-      rowSelection,
     },
     onSortingChange: setSorting,
     onGlobalFilterChange: setGlobalFilter,
-    onRowSelectionChange: setRowSelection,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
@@ -1174,35 +1154,16 @@ export default function UsersPage() {
                       </PopoverContent>
                     </Popover>
 
-                    <Can permission={Permission.MembersManage}>
-                      {Object.keys(rowSelection).length > 0 && (
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="sm">
-                              {Object.keys(rowSelection).length} selected
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => toast.success('Resent invites')}>
-                              <Send className="mr-2 h-4 w-4" />
-                              Resend Invites
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => toast.success('Deactivated users')}>
-                              <Ban className="mr-2 h-4 w-4" />
-                              Deactivate
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              className="text-red-400"
-                              onClick={() => toast.success('Deleted users')}
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      )}
-                    </Can>
+                    {/*
+                      Bulk actions dropdown was removed: the previous version
+                      rendered "Resend Invites / Deactivate / Delete" buttons
+                      that fired toast.success() without calling any API.
+                      Selecting 50 users and clicking "Delete" did nothing but
+                      lie to the operator. Per-row actions in the dropdown on
+                      each table row are the supported way to suspend / remove
+                      a member; bulk endpoints can come back when there's a
+                      real implementation behind them.
+                    */}
                   </div>
                 </div>
 
