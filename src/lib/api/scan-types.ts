@@ -78,6 +78,12 @@ export interface ScanConfig {
   tags?: string[]
   run_on_tenant_runner: boolean
   agent_preference: AgentPreference
+  profile_id?: string
+  timeout_seconds: number
+  /** Maximum automatic retry attempts (0 = no retry, max 10) */
+  max_retries: number
+  /** Initial backoff between retries in seconds (10-86400). Actual delay is exponential per attempt. */
+  retry_backoff_seconds: number
   status: ScanConfigStatus
   last_run_id?: string
   last_run_at?: string
@@ -128,6 +134,13 @@ export interface CreateScanConfigRequest {
   tags?: string[]
   run_on_tenant_runner?: boolean
   agent_preference?: AgentPreference
+  profile_id?: string
+  /** Max execution time in seconds (min 30, max 86400, default 3600) */
+  timeout_seconds?: number
+  /** Maximum automatic retry attempts (0 = no retry, max 10) */
+  max_retries?: number
+  /** Initial backoff seconds (10-86400, default 60). Exponential per attempt. */
+  retry_backoff_seconds?: number
 }
 
 /**
@@ -148,6 +161,14 @@ export interface UpdateScanConfigRequest {
   tags?: string[]
   run_on_tenant_runner?: boolean
   agent_preference?: AgentPreference
+  /** Pass empty string to unlink the profile, omit to leave unchanged */
+  profile_id?: string
+  /** Max execution time in seconds (min 30, max 86400) */
+  timeout_seconds?: number
+  /** Maximum automatic retry attempts (0 = disable retry, max 10) */
+  max_retries?: number
+  /** Initial backoff seconds between retries (10-86400) */
+  retry_backoff_seconds?: number
 }
 
 /**
@@ -323,6 +344,28 @@ export function isErrorStatus(status: ScanSessionStatus): boolean {
 /**
  * Scan Session entity (matches backend ScanSessionResponse)
  */
+/**
+ * Quality gate evaluation result returned by the backend after a scan run
+ * completes if the parent scan was linked to a profile with a quality gate.
+ */
+export interface QualityGateResult {
+  passed: boolean
+  reason?: string
+  breaches?: Array<{
+    metric: string // "critical", "high", "medium", "total"
+    limit: number
+    actual: number
+  }>
+  counts?: {
+    critical: number
+    high: number
+    medium: number
+    low: number
+    info: number
+    total: number
+  }
+}
+
 export interface ScanSession {
   id: string
   tenant_id?: string
@@ -346,6 +389,11 @@ export interface ScanSession {
   completed_at?: string
   duration_ms?: number
   created_at: string
+
+  /** Current retry attempt (0 = first attempt, 1 = first retry, ...) */
+  retry_attempt?: number
+  /** Quality gate evaluation result (only when parent scan has profile_id linked) */
+  quality_gate_result?: QualityGateResult
 }
 
 // Alias for backward compatibility

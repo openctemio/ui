@@ -19,9 +19,6 @@ import { env } from '@/lib/env'
 import { isInSwitchCooldown } from '@/lib/api/switch-cooldown'
 import { devLog } from '@/lib/logger'
 
-// Use 127.0.0.1 instead of localhost to avoid IPv6 resolution issues in Node.js
-const BACKEND_URL =
-  process.env.BACKEND_API_URL?.replace('localhost', '127.0.0.1') || 'http://127.0.0.1:8080'
 const ACCESS_TOKEN_COOKIE = env.auth.cookieName
 const REFRESH_TOKEN_COOKIE = env.auth.refreshCookieName
 const TENANT_COOKIE = env.cookies.tenant
@@ -81,7 +78,7 @@ async function tryRefreshAccessToken(
   const refreshPromise = (async (): Promise<RefreshResult | null> => {
     try {
       devLog.log('[Proxy] Attempting to refresh access token for tenant:', tenantId)
-      const response = await fetch(`${BACKEND_URL}/api/v1/auth/refresh`, {
+      const response = await fetch(`${env.api.url}/api/v1/auth/refresh`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -172,7 +169,7 @@ async function proxyRequest(
   const path = params.path.join('/')
   const url = new URL(request.url)
   // Route is /api/v1/[...path], so we need to add /api/v1/ prefix for backend
-  const backendUrl = `${BACKEND_URL}/api/v1/${path}${url.search}`
+  const backendUrl = `${env.api.url}/api/v1/${path}${url.search}`
 
   // Get access token from httpOnly cookie
   const cookieStore = await cookies()
@@ -214,7 +211,13 @@ async function proxyRequest(
   }
 
   // Forward other relevant headers from client
-  const forwardHeaders = ['accept', 'accept-language', 'x-tenant-id', 'x-csrf-token']
+  const forwardHeaders = [
+    'accept',
+    'accept-language',
+    'x-tenant-id',
+    'x-csrf-token',
+    'x-agent-api-key', // For GET /agents/{id}/config-templates — keeps key out of query string
+  ]
   forwardHeaders.forEach((header) => {
     const value = request.headers.get(header)
     if (value) {

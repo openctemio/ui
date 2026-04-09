@@ -30,13 +30,8 @@ import type { SSOAuthorizeResponse, SSOCallbackResponse, SSOProviderType } from 
 // HELPERS
 // ============================================
 
-function getBackendUrl(): string {
-  return process.env.BACKEND_API_URL || 'http://localhost:8080'
-}
-
 async function backendFetch<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  const baseUrl = getBackendUrl()
-  const url = `${baseUrl}${endpoint}`
+  const url = `${env.api.url}${endpoint}`
 
   const response = await fetch(url, {
     ...options,

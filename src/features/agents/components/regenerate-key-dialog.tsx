@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Loader2, KeyRound, AlertTriangle, Copy, Check, Eye, EyeOff, FileCode } from 'lucide-react'
 import { toast } from 'sonner'
+import { copyToClipboard } from '@/lib/clipboard'
 import { getErrorMessage } from '@/lib/api/error-handler'
 
 import { Button } from '@/components/ui/button'
@@ -86,7 +87,7 @@ export function RegenerateKeyDialog({
 
   const handleCopyApiKey = async () => {
     if (apiKey) {
-      await navigator.clipboard.writeText(apiKey)
+      await copyToClipboard(apiKey)
       setCopied(true)
       toast.success('API key copied to clipboard')
       setTimeout(() => setCopied(false), 2000)

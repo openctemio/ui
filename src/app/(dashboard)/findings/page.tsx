@@ -76,6 +76,7 @@ import type {
 import type { Finding, FindingStatus, FindingUser } from '@/features/findings'
 import type { Severity } from '@/features/shared/types'
 import { toast } from 'sonner'
+import { copyToClipboard } from '@/lib/clipboard'
 import { getErrorMessage } from '@/lib/api/error-handler'
 import { usePermissions } from '@/context/permission-provider'
 
@@ -228,6 +229,7 @@ export default function FindingsPage() {
   const router = useRouter()
   const assetIdFilter = searchParams.get('assetId')
   const sourceIdFilter = searchParams.get('source')
+  const scanIdFilter = searchParams.get('scan_id')
 
   const [selectedFinding, setSelectedFinding] = useState<Finding | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -254,6 +256,7 @@ export default function FindingsPage() {
     }
     if (assetIdFilter) filters.asset_id = assetIdFilter
     if (sourceIdFilter) filters.source_id = sourceIdFilter
+    if (scanIdFilter) filters.scan_id = scanIdFilter
     if (severityTab !== 'all') {
       filters.severities = [severityTab as ApiSeverity]
     }
@@ -269,10 +272,29 @@ export default function FindingsPage() {
       filters.search = searchQuery.trim()
     }
     return filters
-  }, [assetIdFilter, sourceIdFilter, severityTab, statusFilter, searchQuery])
+  }, [
+    assetIdFilter,
+    sourceIdFilter,
+    scanIdFilter,
+    severityTab,
+    statusFilter,
+    searchQuery,
+    HIDDEN_STATUSES,
+  ])
 
-  // Fetch finding stats (stable, not affected by severity filter)
-  const { data: findingStats, isLoading: statsLoading, mutate: mutateStats } = useFindingStatsApi()
+  // Fetch finding stats. Pass `assetId` so the severity cards reflect
+  // the filtered table when the user navigates here from an asset
+  // detail sheet ("View All Findings"). Without this, the cards
+  // showed global tenant counts (e.g. "9 Critical") while the table
+  // showed only the asset-scoped row count (e.g. "1 result"), which
+  // looks like a bug.
+  const {
+    data: findingStats,
+    isLoading: statsLoading,
+    mutate: mutateStats,
+  } = useFindingStatsApi({
+    assetId: assetIdFilter ?? undefined,
+  })
 
   // Fetch findings from API (filtered by severity tab)
   const {
@@ -522,11 +544,11 @@ export default function FindingsPage() {
           handleRowClick(finding)
           break
         case 'copy_id':
-          navigator.clipboard.writeText(finding.id)
+          copyToClipboard(finding.id)
           toast.success('Finding ID copied to clipboard')
           break
         case 'copy_link':
-          navigator.clipboard.writeText(`${window.location.origin}/findings/${finding.id}`)
+          copyToClipboard(`${window.location.origin}/findings/${finding.id}`)
           toast.success('Link copied to clipboard')
           break
         case 'delete':
@@ -789,6 +811,27 @@ export default function FindingsPage() {
             )}
           </div>
         </PageHeader>
+
+        {/* Active scan filter badge */}
+        {scanIdFilter && (
+          <div className="mt-4 flex items-center gap-2">
+            <Badge variant="secondary" className="gap-1.5">
+              <Filter className="h-3 w-3" />
+              Scan: {scanIdFilter.slice(0, 8)}…
+              <button
+                type="button"
+                onClick={() => router.push('/findings')}
+                className="ml-1 rounded-sm hover:bg-background/50"
+                aria-label="Clear scan filter"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+            <span className="text-muted-foreground text-xs">
+              Showing findings from this scan only
+            </span>
+          </div>
+        )}
 
         {/* Main Tab Selector */}
         <div className="mt-4">

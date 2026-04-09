@@ -50,6 +50,16 @@ const eslintConfig = defineConfig([
       "@typescript-eslint/no-explicit-any": "off",
     },
   },
+  // Playwright e2e: `use` here is a fixture callback, not a React hook.
+  // The react-hooks rule misfires on it, so we disable hooks linting for
+  // this directory. These files never run in the React renderer.
+  {
+    files: ["e2e/**/*.ts", "playwright.config.ts"],
+    rules: {
+      "react-hooks/rules-of-hooks": "off",
+      "react-hooks/exhaustive-deps": "off",
+    },
+  },
 ]);
 
 export default eslintConfig;

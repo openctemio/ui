@@ -39,6 +39,16 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -95,17 +105,23 @@ const MemberRolesContext = createContext<MemberRolesMap>(new Map())
 import { fetcherWithOptions } from '@/lib/api/client'
 import { tenantEndpoints } from '@/lib/api/endpoints'
 import { getErrorMessage } from '@/lib/api/error-handler'
+import { copyToClipboard } from '@/lib/clipboard'
 import { Can, Permission } from '@/lib/permissions'
 
-type StatusFilter = 'all' | 'active' | 'pending' | 'inactive'
+// Tab values for the status filter. "pending" stays in the union because the
+// statusCounts map keys it (pending invitations are shown in their own
+// section, not as a tab here). "inactive" was removed: it was always 0 in
+// practice — the user-level "inactive" status has no UI to set it and is
+// orthogonal to the membership lifecycle this page manages.
+type StatusFilter = 'all' | 'active' | 'pending' | 'suspended'
 type RoleFilter = 'all' | MemberRole
 
 // Static config
 const statusFilters: { value: StatusFilter; label: string }[] = [
   { value: 'all', label: 'All' },
   { value: 'active', label: 'Active' },
-  { value: 'inactive', label: 'Inactive' },
-  // Note: "Pending" removed - pending invitations are shown in separate section
+  { value: 'suspended', label: 'Suspended' },
+  // "Pending" not shown here: pending invitations live in a separate section.
 ]
 
 const roleFilters: { value: RoleFilter; label: string }[] = [
@@ -583,6 +599,11 @@ export default function UsersPage() {
   const [editRolesDialogOpen, setEditRolesDialogOpen] = useState(false)
   // Track pending roles edit (used when transitioning from sheet to dialog)
   const [pendingRolesEdit, setPendingRolesEdit] = useState<MemberWithUser | null>(null)
+  // Suspend confirmation: holds the member awaiting confirmation, plus an
+  // in-flight flag so the action button can show a spinner and be disabled
+  // while the request is pending.
+  const [suspendConfirmMember, setSuspendConfirmMember] = useState<MemberWithUser | null>(null)
+  const [isSuspending, setIsSuspending] = useState(false)
 
   // Track if sheet is fully closed (after animation completes)
   const [isSheetAnimating, setIsSheetAnimating] = useState(false)
@@ -609,7 +630,6 @@ export default function UsersPage() {
   const [globalFilter, setGlobalFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('all')
-  const [rowSelection, setRowSelection] = useState({})
   const [inviteForm, setInviteForm] = useState({
     email: '',
     roleIds: [] as string[], // RBAC roles to assign when user joins
@@ -668,40 +688,20 @@ export default function UsersPage() {
   }, [members, invitations])
 
   // Status counts from members (for tabs)
-  const statusCounts = useMemo(
+  const statusCounts: Record<StatusFilter, number> = useMemo(
     () => ({
       all: members.length,
       active: members.filter((m) => m.status === 'active').length,
+      suspended: members.filter((m) => m.status === 'suspended').length,
+      // "pending" is sourced from invitations, not from member rows.
       pending: invitations.length,
-      inactive: members.filter((m) => m.status === 'inactive').length,
     }),
     [members, invitations]
   )
 
-  // Table columns
+  // Table columns. The select-checkbox column was removed alongside the
+  // bulk-actions dropdown — there's nothing to do with selected rows now.
   const columns: ColumnDef<MemberWithUser>[] = [
-    {
-      id: 'select',
-      header: ({ table }) => (
-        <Checkbox
-          checked={
-            table.getIsAllPageRowsSelected() ||
-            (table.getIsSomePageRowsSelected() && 'indeterminate')
-          }
-          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-          aria-label="Select all"
-        />
-      ),
-      cell: ({ row }) => (
-        <Checkbox
-          checked={row.getIsSelected()}
-          onCheckedChange={(value) => row.toggleSelected(!!value)}
-          aria-label="Select row"
-        />
-      ),
-      enableSorting: false,
-      enableHiding: false,
-    },
     {
       accessorKey: 'name',
       header: ({ column }) => (
@@ -786,7 +786,6 @@ export default function UsersPage() {
                   <Can permission={Permission.RolesAssign}>
                     <DropdownMenuItem
                       onClick={() => {
-                        // Directly open dialog - don't use pending mechanism when sheet is closed
                         setEditRolesMember(member)
                         setEditRolesDialogOpen(true)
                       }}
@@ -797,6 +796,41 @@ export default function UsersPage() {
                   </Can>
                   <Can permission={Permission.MembersManage}>
                     <DropdownMenuSeparator />
+                    {member.status === 'suspended' ? (
+                      <DropdownMenuItem
+                        className="text-green-500"
+                        onClick={async () => {
+                          if (!tenantSlug) return
+                          try {
+                            await fetcherWithOptions(
+                              tenantEndpoints.reactivateMember(tenantSlug, member.id),
+                              { method: 'POST' }
+                            )
+                            toast.success(`${member.name || member.email} reactivated`)
+                            refreshData()
+                          } catch {
+                            toast.error('Failed to reactivate member')
+                          }
+                        }}
+                      >
+                        <CheckCircle className="mr-2 h-4 w-4" />
+                        Reactivate
+                      </DropdownMenuItem>
+                    ) : (
+                      <DropdownMenuItem
+                        className="text-orange-500"
+                        onSelect={(e) => {
+                          // Open confirmation dialog instead of firing
+                          // immediately. onSelect lets the dropdown close
+                          // cleanly before the AlertDialog opens.
+                          e.preventDefault()
+                          setSuspendConfirmMember(member)
+                        }}
+                      >
+                        <Ban className="mr-2 h-4 w-4" />
+                        Suspend
+                      </DropdownMenuItem>
+                    )}
                     <DropdownMenuItem
                       className="text-red-400"
                       onClick={() => handleRemoveMember(member)}
@@ -820,11 +854,9 @@ export default function UsersPage() {
     state: {
       sorting,
       globalFilter,
-      rowSelection,
     },
     onSortingChange: setSorting,
     onGlobalFilterChange: setGlobalFilter,
-    onRowSelectionChange: setRowSelection,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
@@ -843,6 +875,25 @@ export default function UsersPage() {
       refreshData()
     } catch (error) {
       toast.error(getErrorMessage(error, 'Failed to remove member'))
+    }
+  }
+
+  // Confirm and execute the pending suspend. Called from the AlertDialog
+  // action button — keeps suspension a deliberate two-click action.
+  const handleConfirmSuspend = async () => {
+    if (!tenantSlug || !suspendConfirmMember) return
+    setIsSuspending(true)
+    try {
+      await fetcherWithOptions(tenantEndpoints.suspendMember(tenantSlug, suspendConfirmMember.id), {
+        method: 'POST',
+      })
+      toast.success(`${suspendConfirmMember.name || suspendConfirmMember.email} suspended`)
+      setSuspendConfirmMember(null)
+      refreshData()
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Failed to suspend member'))
+    } finally {
+      setIsSuspending(false)
     }
   }
 
@@ -1103,35 +1154,16 @@ export default function UsersPage() {
                       </PopoverContent>
                     </Popover>
 
-                    <Can permission={Permission.MembersManage}>
-                      {Object.keys(rowSelection).length > 0 && (
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="sm">
-                              {Object.keys(rowSelection).length} selected
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => toast.success('Resent invites')}>
-                              <Send className="mr-2 h-4 w-4" />
-                              Resend Invites
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => toast.success('Deactivated users')}>
-                              <Ban className="mr-2 h-4 w-4" />
-                              Deactivate
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              className="text-red-400"
-                              onClick={() => toast.success('Deleted users')}
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      )}
-                    </Can>
+                    {/*
+                      Bulk actions dropdown was removed: the previous version
+                      rendered "Resend Invites / Deactivate / Delete" buttons
+                      that fired toast.success() without calling any API.
+                      Selecting 50 users and clicking "Delete" did nothing but
+                      lie to the operator. Per-row actions in the dropdown on
+                      each table row are the supported way to suspend / remove
+                      a member; bulk endpoints can come back when there's a
+                      real implementation behind them.
+                    */}
                   </div>
                 </div>
 
@@ -1339,6 +1371,17 @@ export default function UsersPage() {
                                     </Tooltip>
                                   )}
                                 </>
+                              ) : invitation.role ? (
+                                /* Fallback for invitations created before
+                                   the RBAC role picker was added — they
+                                   have the legacy `role` field ("member",
+                                   "admin", etc.) but an empty role_ids
+                                   array. Show the legacy role so the admin
+                                   sees SOMETHING meaningful instead of the
+                                   confusing "No roles" badge. */
+                                <Badge className="bg-gray-500/20 text-gray-400 border-0 text-xs capitalize">
+                                  {invitation.role}
+                                </Badge>
                               ) : (
                                 <Badge className="bg-gray-500/20 text-gray-400 border-0 text-xs">
                                   No roles
@@ -1356,7 +1399,7 @@ export default function UsersPage() {
                             </div>
                           </div>
                         </div>
-                        <div className="flex flex-wrap items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-1">
                           <Button
                             variant="ghost"
                             size="sm"
@@ -1368,10 +1411,10 @@ export default function UsersPage() {
                                 return
                               }
                               const inviteLink = `${window.location.origin}/invitations/${invitation.token}`
-                              try {
-                                await navigator.clipboard.writeText(inviteLink)
+                              const ok = await copyToClipboard(inviteLink)
+                              if (ok) {
                                 toast.success('Invitation link copied to clipboard')
-                              } catch {
+                              } else {
                                 toast.error('Failed to copy link')
                               }
                             }}
@@ -1381,15 +1424,34 @@ export default function UsersPage() {
                           <Button
                             variant="ghost"
                             size="sm"
+                            className="text-muted-foreground hover:text-foreground"
+                            title="Resend invitation email"
+                            onClick={async () => {
+                              if (!tenantSlug) return
+                              try {
+                                await fetcherWithOptions(
+                                  tenantEndpoints.resendInvitation(tenantSlug, invitation.id),
+                                  { method: 'POST' }
+                                )
+                                toast.success('Invitation email resent')
+                              } catch {
+                                toast.error('Failed to resend invitation')
+                              }
+                            }}
+                          >
+                            <Send className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
                             className="text-red-400 hover:text-red-500 hover:bg-red-500/10"
+                            title="Cancel invitation"
                             onClick={async () => {
                               if (!tenantSlug) return
                               try {
                                 await fetcherWithOptions(
                                   tenantEndpoints.deleteInvitation(tenantSlug, invitation.id),
-                                  {
-                                    method: 'DELETE',
-                                  }
+                                  { method: 'DELETE' }
                                 )
                                 toast.success('Invitation cancelled')
                                 refreshData()
@@ -1746,6 +1808,61 @@ export default function UsersPage() {
           onSuccess={refreshData}
         />
       )}
+
+      {/* Suspend Member Confirmation Dialog */}
+      <AlertDialog
+        open={!!suspendConfirmMember}
+        onOpenChange={(open) => {
+          if (!open && !isSuspending) setSuspendConfirmMember(null)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Ban className="h-5 w-5 text-orange-500" />
+              Suspend member?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {suspendConfirmMember && (
+                <>
+                  <span className="font-medium text-foreground">
+                    {suspendConfirmMember.name || suspendConfirmMember.email}
+                  </span>{' '}
+                  will immediately lose access to this team. Active sessions will be invalidated and
+                  any pending invitations will be cancelled. You can reactivate them later — the
+                  membership and audit trail are preserved.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isSuspending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                // Prevent default close so we can keep the dialog open
+                // while the request is in flight; close happens in the
+                // handler on success.
+                e.preventDefault()
+                void handleConfirmSuspend()
+              }}
+              disabled={isSuspending}
+              className="bg-orange-500 text-white hover:bg-orange-600 focus:ring-orange-500"
+            >
+              {isSuspending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Suspending...
+                </>
+              ) : (
+                <>
+                  <Ban className="mr-2 h-4 w-4" />
+                  Suspend
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </MemberRolesContext.Provider>
   )
 }

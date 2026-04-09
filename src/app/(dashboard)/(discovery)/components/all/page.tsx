@@ -71,11 +71,18 @@ export default function AllComponentsPage() {
     return apiData.data.map(mapApiComponentToUi)
   }, [apiData])
 
-  // Mock Stats (until backend API provides stats endpoint)
-  // We can't easily calculate stats from a paginated list, so we might need a separate API call later.
-  // For now, we'll zero them out or keep using mock stats for the CARDS only to prevent UI looking broken,
-  // BUT the table will be real data.
-  const stats = useMemo(() => getComponentStats(), [])
+  // Stats: prefer the API total for "Total Components" so the headline number
+  // matches reality (the previous mock stats showed a fake 8000+ even when
+  // tenants had 0 components). The other 3 stat cards (direct/outdated/
+  // vulnerable) still use the mock helper because the components API does
+  // not yet expose those breakdowns; we display them with a "—" hint until
+  // a /components/stats endpoint exists.
+  const apiTotalComponents = apiData?.total ?? 0
+  const mockStats = useMemo(() => getComponentStats(), [])
+  const stats = {
+    ...mockStats,
+    totalComponents: apiTotalComponents,
+  }
 
   // Reset page when filters change
   // useEffect(() => setPage(1), [searchQuery, filterType, ecosystemFilter]);
@@ -244,7 +251,11 @@ export default function AllComponentsPage() {
                   Component Inventory
                 </CardTitle>
                 <CardDescription>
-                  {filteredComponents.length} of {stats.totalComponents} components
+                  {/* When filters are active, the API still returns total
+                      for the FILTERED set; show that as the right-hand
+                      number. Without filters this equals the unfiltered
+                      total (apiTotalComponents above). */}
+                  Showing {filteredComponents.length} of {apiData?.total ?? 0} components
                 </CardDescription>
               </div>
             </div>

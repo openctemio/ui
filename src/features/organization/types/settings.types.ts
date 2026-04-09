@@ -26,11 +26,21 @@ export interface UpdateGeneralSettingsInput {
 // SECURITY SETTINGS
 // ============================================
 
+/**
+ * Email verification mode controls whether new users in this tenant must
+ * verify their email address before login.
+ *   - "auto"   = require verification iff SMTP is configured (default)
+ *   - "always" = always require verification (operator must configure SMTP)
+ *   - "never"  = never require verification (closed/internal deployments)
+ */
+export type EmailVerificationMode = 'auto' | 'always' | 'never'
+
 export interface SecuritySettings {
   mfa_required: boolean
   session_timeout_min: number
   ip_whitelist: string[]
   allowed_domains: string[]
+  email_verification_mode: EmailVerificationMode
 }
 
 export interface UpdateSecuritySettingsInput {
@@ -38,6 +48,7 @@ export interface UpdateSecuritySettingsInput {
   session_timeout_min?: number
   ip_whitelist?: string[]
   allowed_domains?: string[]
+  email_verification_mode?: EmailVerificationMode
 }
 
 // ============================================

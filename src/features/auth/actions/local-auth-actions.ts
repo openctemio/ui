@@ -111,16 +111,11 @@ export interface LoginResult {
 // HELPER FUNCTIONS
 // ============================================
 
-function getBackendUrl(): string {
-  return process.env.BACKEND_API_URL || 'http://localhost:8080'
-}
-
 // NOTE: Permissions are NOT stored in cookies anymore (too large, > 4KB limit)
 // Frontend fetches permissions via /api/v1/me/permissions API instead
 
 async function backendFetch<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  const baseUrl = getBackendUrl()
-  const url = `${baseUrl}${endpoint}`
+  const url = `${env.api.url}${endpoint}`
 
   const response = await fetch(url, {
     ...options,
@@ -271,12 +266,21 @@ export async function loginAction(input: LoginInput): Promise<LoginResult> {
         '- requiring selection'
       )
 
-      // Store tenants temporarily in cookie for selection page
+      // Store tenants in cookie for the selection page.
+      //
+      // TTL: 1 hour. The previous value (5 minutes) was the cause of a UX
+      // bug where users who walked away from /select-tenant for a few minutes
+      // came back to find themselves bounced through /login → /onboarding/
+      // create-team — the system thought they had no tenants because this
+      // cookie expired. The cookie carries no secrets (just a list of
+      // tenant names/ids the user already belongs to), so a longer TTL has
+      // no security cost. /login also falls back to a server-side API call
+      // when this cookie is missing as a defence-in-depth.
       await setServerCookie(env.cookies.pendingTenants, JSON.stringify(loginData.tenants), {
         httpOnly: false, // Client needs to read this
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
-        maxAge: 5 * 60, // 5 minutes - short lived
+        maxAge: 60 * 60, // 1 hour
         path: '/',
       })
 
@@ -756,8 +760,7 @@ export async function createFirstTeamAction(
     devLog.log('[CreateFirstTeam] Creating team:', input.teamName, input.teamSlug)
 
     // Call backend API with cookies (refresh token in httpOnly cookie)
-    const baseUrl = getBackendUrl()
-    const response = await fetch(`${baseUrl}${authEndpoints.createFirstTeam()}`, {
+    const response = await fetch(`${env.api.url}${authEndpoints.createFirstTeam()}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

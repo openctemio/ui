@@ -138,6 +138,7 @@ export default function TenantPage() {
     session_timeout_min: 60,
     ip_whitelist: '',
     allowed_domains: '',
+    email_verification_mode: 'auto' as 'auto' | 'always' | 'never',
   })
 
   const [apiForm, setApiForm] = useState({
@@ -200,6 +201,8 @@ export default function TenantPage() {
         session_timeout_min: settings.security.session_timeout_min || 60,
         ip_whitelist: (settings.security.ip_whitelist || []).join('\n'),
         allowed_domains: (settings.security.allowed_domains || []).join('\n'),
+        email_verification_mode:
+          (settings.security.email_verification_mode as 'auto' | 'always' | 'never') || 'auto',
       })
       setApiForm({
         api_key_enabled: settings.api.api_key_enabled || false,
@@ -444,6 +447,7 @@ export default function TenantPage() {
         session_timeout_min: securityForm.session_timeout_min,
         ip_whitelist: ipWhitelist,
         allowed_domains: allowedDomains,
+        email_verification_mode: securityForm.email_verification_mode,
       })
       if (result) {
         mutate(result)
@@ -926,6 +930,66 @@ export default function TenantPage() {
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+
+                <Separator />
+
+                <div className="space-y-2">
+                  <Label>Email Verification</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Controls whether new users must verify their email address before login.
+                  </p>
+                  <Select
+                    value={securityForm.email_verification_mode}
+                    onValueChange={(value) =>
+                      setSecurityForm({
+                        ...securityForm,
+                        email_verification_mode: value as 'auto' | 'always' | 'never',
+                      })
+                    }
+                    disabled={!canUpdateTenant}
+                  >
+                    <SelectTrigger className="w-full max-w-md">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="auto">
+                        <div className="flex flex-col items-start">
+                          <span className="font-medium">Auto (Recommended)</span>
+                          <span className="text-xs text-muted-foreground">
+                            Require verification only when SMTP is configured
+                          </span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="always">
+                        <div className="flex flex-col items-start">
+                          <span className="font-medium">Always Require</span>
+                          <span className="text-xs text-muted-foreground">
+                            Force verification (SMTP must be configured to deliver emails)
+                          </span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="never">
+                        <div className="flex flex-col items-start">
+                          <span className="font-medium">Never Require</span>
+                          <span className="text-xs text-muted-foreground">
+                            Skip verification — users marked verified on registration. Use only for
+                            closed/internal deployments.
+                          </span>
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {securityForm.email_verification_mode === 'never' && (
+                    <p className="text-sm text-amber-600 dark:text-amber-400 flex items-start gap-2 mt-2">
+                      <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                      <span>
+                        Warning: anyone can register with any email address. This opens the door to
+                        account hijacking via email spoofing. Only use on internal deployments where
+                        registration is restricted by other means.
+                      </span>
+                    </p>
+                  )}
                 </div>
               </CardContent>
             </Card>

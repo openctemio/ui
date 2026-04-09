@@ -137,6 +137,36 @@ export function useAgents(filters?: AgentListFilters, config?: SWRConfiguration)
 }
 
 /**
+ * Tenant-wide aggregated agent stats from `/api/v1/agents/stats`.
+ *
+ * Use this for the agents page stat cards instead of computing
+ * `agents.filter(...).length` from a paginated list — that pattern undercounts
+ * once a tenant has more than one page of agents (the default page size is 20).
+ *
+ * This hook does NOT depend on filters/pagination so it stays stable when the
+ * user filters the table by status / health / search.
+ */
+export interface TenantAgentStats {
+  total: number
+  by_status: Record<string, number>
+  by_health: Record<string, number>
+  by_type: Record<string, number>
+  by_execution_mode: Record<string, number>
+  active_jobs: number
+  online_active: number
+}
+
+export function useTenantAgentStats(config?: SWRConfiguration) {
+  const { currentTenant } = useTenant()
+  const key = currentTenant ? agentEndpoints.tenantStats() : null
+  return useSWR<TenantAgentStats>(key, (url: string) => get<TenantAgentStats>(url), {
+    ...defaultConfig,
+    dedupingInterval: 30000,
+    ...config,
+  })
+}
+
+/**
  * Fetch a single agent by ID
  */
 export function useAgent(agentId: string | null, config?: SWRConfiguration) {

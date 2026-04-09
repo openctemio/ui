@@ -9,7 +9,13 @@
 // ============================================
 
 export type MemberRole = 'owner' | 'admin' | 'member' | 'viewer'
-export type MemberStatus = 'active' | 'pending' | 'inactive'
+// Membership lifecycle states the UI cares about:
+//   active    — normal access
+//   pending   — synthetic state for unaccepted invitations (no membership row yet)
+//   suspended — admin paused access; the membership row exists but is blocked
+// User-level "inactive" status is intentionally NOT in this list — it has no
+// tenant-admin UI and the OSS product has no super-admin platform layer.
+export type MemberStatus = 'active' | 'pending' | 'suspended'
 
 export interface Member {
   id: string
@@ -123,7 +129,7 @@ export const STATUS_DISPLAY: Record<
 > = {
   active: { label: 'Active', color: 'text-green-400', bgColor: 'bg-green-500/20' },
   pending: { label: 'Pending', color: 'text-yellow-400', bgColor: 'bg-yellow-500/20' },
-  inactive: { label: 'Inactive', color: 'text-gray-400', bgColor: 'bg-gray-500/20' },
+  suspended: { label: 'Suspended', color: 'text-orange-400', bgColor: 'bg-orange-500/20' },
 }
 
 // Note: Membership level selection removed from UI.

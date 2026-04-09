@@ -4,6 +4,7 @@ import { use, useState, useMemo, useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Main } from '@/components/layout'
 import { RiskScoreBadge } from '@/features/shared'
+import { copyToClipboard } from '@/lib/clipboard'
 import { Can, Permission } from '@/lib/permissions'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -358,12 +359,12 @@ export default function AssetGroupDetailPage({ params }: PageProps) {
 
   // Handlers
   const handleCopyId = () => {
-    navigator.clipboard.writeText(group.id)
+    copyToClipboard(group.id)
     toast.success('Group ID copied')
   }
 
   const handleCopyLink = () => {
-    navigator.clipboard.writeText(window.location.href)
+    copyToClipboard(window.location.href)
     toast.success('Link copied to clipboard')
   }
 

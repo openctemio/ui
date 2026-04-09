@@ -32,6 +32,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { copyToClipboard } from '@/lib/clipboard'
 import { cn } from '@/lib/utils'
 
 import { AgentTypeIcon } from './agent-type-icon'
@@ -145,7 +146,7 @@ export function AddAgentDialog({ open, onOpenChange, onSuccess }: AddAgentDialog
 
   const handleCopyApiKey = async () => {
     if (apiKey) {
-      await navigator.clipboard.writeText(apiKey)
+      await copyToClipboard(apiKey)
       setCopied(true)
       toast.success('API key copied to clipboard')
       setTimeout(() => setCopied(false), 2000)

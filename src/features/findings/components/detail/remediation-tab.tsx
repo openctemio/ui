@@ -28,6 +28,7 @@ import {
   Target,
 } from 'lucide-react'
 import { useState, useMemo } from 'react'
+import { copyToClipboard } from '@/lib/clipboard'
 import type { Remediation, RemediationStepStatus, FindingDetail } from '../../types'
 import { CodeHighlighter } from './code-highlighter'
 import { buildRepositoryCodeUrl } from '../../lib/repository-url'
@@ -55,7 +56,7 @@ export function RemediationTab({ remediation, finding }: RemediationTabProps) {
   const [copiedCode, setCopiedCode] = useState(false)
 
   const handleCopyCode = async (code: string) => {
-    await navigator.clipboard.writeText(code)
+    await copyToClipboard(code)
     setCopiedCode(true)
     setTimeout(() => setCopiedCode(false), 2000)
   }

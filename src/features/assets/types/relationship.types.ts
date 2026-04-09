@@ -3,40 +3,38 @@
  *
  * Defines relationships between assets following CMDB best practices
  * (ServiceNow, BMC patterns) for attack surface management.
+ *
+ * The relationship type IDs, labels, descriptions and constraints are
+ * GENERATED from `api/configs/relationship-types.yaml` by the codegen
+ * tool at `api/cmd/gen-relationships`. This file re-exports the
+ * generated symbols under their existing public names so the rest of
+ * the UI code doesn't need to change.
+ *
+ * To add a new relationship type:
+ *   1. Edit `api/configs/relationship-types.yaml`
+ *   2. Run `make generate-relationships` from the api directory
+ *   3. Commit YAML + the two generated files
+ *
+ * Do NOT add types here by hand — they will be lost on the next codegen.
  */
 
 import type { AssetType } from './asset.types'
+import {
+  type GeneratedRelationshipType,
+  GENERATED_RELATIONSHIP_LABELS,
+  GENERATED_RELATIONSHIP_CONSTRAINTS,
+  ALL_GENERATED_RELATIONSHIP_TYPES,
+} from './relationship.types.generated'
 
 // ============================================
 // Relationship Type Definitions
 // ============================================
 
 /**
- * 16 CTEM-optimized relationship types organized by pillar:
- * - Attack Surface Mapping: runs_on, deployed_to, contains, exposes, member_of, resolves_to
- * - Attack Path Analysis: depends_on, sends_data_to, stores_data_in, authenticates_to, granted_to, load_balances
- * - Control & Ownership: protected_by, monitors, manages, owned_by
+ * Union of every supported relationship type.
+ * Generated from configs/relationship-types.yaml.
  */
-export type RelationshipType =
-  // Attack Surface Mapping
-  | 'runs_on'
-  | 'deployed_to'
-  | 'contains'
-  | 'exposes'
-  | 'member_of'
-  | 'resolves_to'
-  // Attack Path Analysis
-  | 'depends_on'
-  | 'sends_data_to'
-  | 'stores_data_in'
-  | 'authenticates_to'
-  | 'granted_to'
-  | 'load_balances'
-  // Control & Ownership
-  | 'protected_by'
-  | 'monitors'
-  | 'manages'
-  | 'owned_by'
+export type RelationshipType = GeneratedRelationshipType
 
 /**
  * Direction of relationship from an asset's perspective
@@ -64,96 +62,12 @@ export interface RelationshipLabelPair {
 }
 
 /**
- * Human-readable labels for each relationship type
- * Each relationship has a direct and inverse label for bidirectional display
+ * Human-readable labels for each relationship type.
+ * Re-exported from the generated registry. The generated value has an
+ * extra `category` field that's a no-op for existing consumers.
  */
-export const RELATIONSHIP_LABELS: Record<RelationshipType, RelationshipLabelPair> = {
-  // === Attack Surface Mapping ===
-  runs_on: {
-    direct: 'Runs On',
-    inverse: 'Runs',
-    description: 'Workload runs on compute (service/container → host/node/cluster)',
-  },
-  deployed_to: {
-    direct: 'Deployed To',
-    inverse: 'Has Deployment',
-    description: 'Artifact deployed to target (repo/build → cluster/host/env)',
-  },
-  contains: {
-    direct: 'Contains',
-    inverse: 'Contained By',
-    description: 'Hierarchical parent-child (org → app → service; cluster → namespace)',
-  },
-  exposes: {
-    direct: 'Exposes',
-    inverse: 'Exposed By',
-    description: 'Asset exposes access surface (api/service → port/endpoint/public interface)',
-  },
-  member_of: {
-    direct: 'Member Of',
-    inverse: 'Has Member',
-    description: 'Membership (user → group; host → cluster; namespace → cluster)',
-  },
-  resolves_to: {
-    direct: 'Resolves To',
-    inverse: 'Resolved By',
-    description: 'DNS resolution (domain/subdomain → IP/CDN/load balancer)',
-  },
-
-  // === Attack Path Analysis ===
-  depends_on: {
-    direct: 'Depends On',
-    inverse: 'Used By',
-    description: 'A needs B to function (service → database; web_app → api)',
-  },
-  sends_data_to: {
-    direct: 'Sends Data To',
-    inverse: 'Receives Data From',
-    description: 'Data flow in-transit (service → service; producer → queue)',
-  },
-  stores_data_in: {
-    direct: 'Stores Data In',
-    inverse: 'Stores Data For',
-    description: 'Data at-rest (service/app → database/bucket/data store)',
-  },
-  authenticates_to: {
-    direct: 'Authenticates To',
-    inverse: 'Authenticates',
-    description: 'Auth relationship (user/service → IdP/app/api)',
-  },
-  granted_to: {
-    direct: 'Granted To',
-    inverse: 'Has Grant',
-    description: 'IAM privilege (role/policy → principal/resource)',
-  },
-  load_balances: {
-    direct: 'Load Balances',
-    inverse: 'Load Balanced By',
-    description: 'Traffic distribution (load_balancer → service/web_app)',
-  },
-
-  // === Control & Ownership ===
-  protected_by: {
-    direct: 'Protected By',
-    inverse: 'Protects',
-    description: 'Security control (web_app → WAF; host → EDR; cloud → CSPM)',
-  },
-  monitors: {
-    direct: 'Monitors',
-    inverse: 'Monitored By',
-    description: 'Observability (SIEM/EDR/APM → asset)',
-  },
-  manages: {
-    direct: 'Manages',
-    inverse: 'Managed By',
-    description: 'Control-plane management (cloud_account/IAM → resource/workload)',
-  },
-  owned_by: {
-    direct: 'Owned By',
-    inverse: 'Owns',
-    description: 'Accountability (asset → team/owner)',
-  },
-}
+export const RELATIONSHIP_LABELS: Record<RelationshipType, RelationshipLabelPair> =
+  GENERATED_RELATIONSHIP_LABELS
 
 // ============================================
 // Extended Asset Types (for relationships)
@@ -307,227 +221,18 @@ export interface RelationshipConstraint {
 }
 
 /**
- * Valid relationship constraints - defines which asset types can be related
- * This is used for validation when creating relationships
+ * Valid relationship constraints — defines which asset type pairs are
+ * legal for each relationship type. Re-exported from the generated
+ * registry. The generated value uses the same field names so the cast
+ * is structural.
  */
-export const VALID_RELATIONSHIP_CONSTRAINTS: Record<RelationshipType, RelationshipConstraint[]> = {
-  // === Attack Surface Mapping ===
+export const VALID_RELATIONSHIP_CONSTRAINTS: Record<RelationshipType, RelationshipConstraint[]> =
+  GENERATED_RELATIONSHIP_CONSTRAINTS as Record<RelationshipType, RelationshipConstraint[]>
 
-  runs_on: [
-    {
-      sourceTypes: ['service', 'api', 'website'],
-      targetTypes: ['host', 'container', 'k8s_workload', 'cloud_account'],
-    },
-    {
-      sourceTypes: ['database'],
-      targetTypes: ['host', 'container', 'cloud_account'],
-    },
-    {
-      sourceTypes: ['k8s_workload'],
-      targetTypes: ['k8s_cluster'],
-    },
-    {
-      sourceTypes: ['container'],
-      targetTypes: ['host', 'k8s_workload'],
-    },
-  ],
-
-  deployed_to: [
-    {
-      sourceTypes: ['repository', 'container_image'],
-      targetTypes: ['k8s_cluster', 'k8s_workload', 'cloud_account', 'host'],
-    },
-    {
-      sourceTypes: ['service', 'api'],
-      targetTypes: ['k8s_cluster', 'cloud_account', 'host'],
-    },
-  ],
-
-  contains: [
-    {
-      sourceTypes: ['k8s_cluster'],
-      targetTypes: ['k8s_workload'],
-    },
-    {
-      sourceTypes: ['api_collection', 'api'],
-      targetTypes: ['api_endpoint'],
-    },
-    {
-      sourceTypes: ['host'],
-      targetTypes: ['container', 'service', 'database'],
-    },
-    {
-      sourceTypes: ['repository'],
-      targetTypes: ['container_image'],
-    },
-    {
-      sourceTypes: ['network'],
-      targetTypes: ['host', 'cloud_account', 'load_balancer'],
-    },
-    {
-      sourceTypes: ['cloud_account'],
-      targetTypes: ['host', 'database', 'k8s_cluster', 'network', 'storage', 'serverless'],
-    },
-  ],
-
-  exposes: [
-    {
-      sourceTypes: ['host', 'k8s_workload', 'container'],
-      targetTypes: ['api_endpoint', 'service', 'api'],
-    },
-    {
-      sourceTypes: ['domain'],
-      targetTypes: ['website', 'api', 'service'],
-    },
-    {
-      sourceTypes: ['load_balancer'],
-      targetTypes: ['api', 'service', 'website'],
-    },
-  ],
-
-  member_of: [
-    {
-      sourceTypes: ['host', 'container', 'k8s_workload'],
-      targetTypes: ['k8s_cluster', 'network'],
-    },
-    {
-      sourceTypes: ['service', 'api'],
-      targetTypes: ['network'],
-    },
-  ],
-
-  resolves_to: [
-    {
-      sourceTypes: ['domain'],
-      targetTypes: ['ip_address', 'load_balancer', 'cloud_account', 'host'],
-    },
-  ],
-
-  // === Attack Path Analysis ===
-
-  depends_on: [
-    {
-      sourceTypes: ['service', 'api', 'website'],
-      targetTypes: ['database', 'api', 'service', 'credential'],
-    },
-    {
-      sourceTypes: ['k8s_workload'],
-      targetTypes: ['container_image', 'database', 'api', 'service'],
-    },
-    {
-      sourceTypes: ['mobile'],
-      targetTypes: ['api', 'service'],
-    },
-  ],
-
-  sends_data_to: [
-    {
-      sourceTypes: ['service', 'api', 'website', 'mobile'],
-      targetTypes: ['database', 'api', 'service', 'cloud_account'],
-    },
-    {
-      sourceTypes: ['database'],
-      targetTypes: ['database'], // Replication
-    },
-  ],
-
-  stores_data_in: [
-    {
-      sourceTypes: ['service', 'api', 'website'],
-      targetTypes: ['database', 'storage', 'cloud_account'],
-    },
-    {
-      sourceTypes: ['k8s_workload'],
-      targetTypes: ['database', 'storage'],
-    },
-  ],
-
-  authenticates_to: [
-    {
-      sourceTypes: ['api', 'service', 'website', 'mobile'],
-      targetTypes: ['identity_provider', 'service', 'api'],
-    },
-    {
-      sourceTypes: ['k8s_workload'],
-      targetTypes: ['identity_provider', 'service'],
-    },
-  ],
-
-  granted_to: [
-    {
-      sourceTypes: ['credential', 'service'],
-      targetTypes: ['cloud_account', 'database', 'api', 'service', 'k8s_cluster'],
-    },
-  ],
-
-  load_balances: [
-    {
-      sourceTypes: ['load_balancer', 'service', 'cloud_account'],
-      targetTypes: ['host', 'k8s_workload', 'service', 'container'],
-    },
-  ],
-
-  // === Control & Ownership ===
-
-  protected_by: [
-    {
-      sourceTypes: ['website', 'api', 'service'],
-      targetTypes: ['load_balancer', 'service'], // WAF, CDN as load_balancer/service
-    },
-    {
-      sourceTypes: ['host', 'compute'],
-      targetTypes: ['service'], // EDR, AV as service
-    },
-    {
-      sourceTypes: ['cloud_account'],
-      targetTypes: ['service'], // CSPM, GuardDuty as service
-    },
-  ],
-
-  monitors: [
-    {
-      sourceTypes: ['service'], // SIEM, EDR, APM as service
-      targetTypes: [
-        'host',
-        'k8s_cluster',
-        'cloud_account',
-        'api',
-        'service',
-        'database',
-        'network',
-      ],
-    },
-  ],
-
-  manages: [
-    {
-      sourceTypes: ['cloud_account'],
-      targetTypes: ['host', 'database', 'k8s_cluster', 'network', 'load_balancer'],
-    },
-    {
-      sourceTypes: ['k8s_cluster'],
-      targetTypes: ['k8s_workload', 'container'],
-    },
-  ],
-
-  owned_by: [
-    {
-      sourceTypes: [
-        'domain',
-        'website',
-        'service',
-        'repository',
-        'cloud_account',
-        'host',
-        'database',
-        'api',
-        'mobile',
-        'k8s_cluster',
-      ],
-      targetTypes: ['service'], // Team/owner represented as service type
-    },
-  ],
-}
+/**
+ * Ordered list of every relationship type ID. Generated.
+ */
+export const ALL_RELATIONSHIP_TYPES: RelationshipType[] = ALL_GENERATED_RELATIONSHIP_TYPES
 
 // ============================================
 // Validation Helpers

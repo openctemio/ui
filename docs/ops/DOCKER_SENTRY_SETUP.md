@@ -134,11 +134,9 @@ NEXT_PUBLIC_KEYCLOAK_CLIENT_ID=nextjs-client
 NEXT_PUBLIC_KEYCLOAK_REDIRECT_URI=https://app.your-domain.com/auth/callback
 KEYCLOAK_CLIENT_SECRET=<from-keycloak>
 
-# API
-NEXT_PUBLIC_BACKEND_API_URL=https://api.your-domain.com
-NEXT_PUBLIC_API_URL=https://api.your-domain.com/api
+# API (server-side only — single source of truth)
+# Client-side requests proxied through Next.js at /api/v1/*
 BACKEND_API_URL=https://api.your-domain.com
-API_URL=https://api.your-domain.com/api
 
 # Application
 NEXT_PUBLIC_APP_URL=https://app.your-domain.com
@@ -281,7 +279,7 @@ curl http://localhost:3000/api/test-sentry
 ## Docker Image Sizes
 
 | Target      | Size   | Use Case                    |
-|-------------|--------|------------------------------|
+| ----------- | ------ | --------------------------- |
 | development | ~1.3GB | Local dev with hot reload   |
 | production  | ~341MB | Optimized production deploy |
 

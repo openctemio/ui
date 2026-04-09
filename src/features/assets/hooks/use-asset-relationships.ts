@@ -1,10 +1,10 @@
 'use client'
 
 import useSWR from 'swr'
-import { get } from '@/lib/api/client'
+import { get, post, put, del } from '@/lib/api/client'
 import { endpoints } from '@/lib/api/endpoints'
 import { usePermissions, Permission } from '@/lib/permissions'
-import type { AssetRelationship } from '../types'
+import type { AssetRelationship, CreateRelationshipInput, UpdateRelationshipInput } from '../types'
 
 /**
  * Backend response format for asset relationships list
@@ -81,4 +81,123 @@ export function useAssetRelationships(assetId: string | null) {
     error,
     mutate,
   }
+}
+
+// ============================================
+// Mutations
+// ============================================
+//
+// These are plain async functions (not hooks) so callers can decide when to
+// trigger them and how to revalidate. Same pattern as use-asset-owners.ts —
+// callers typically `await addAssetRelationship(...)` then call `mutate()`
+// from `useAssetRelationships` to refresh the list.
+
+/**
+ * Create a new relationship from `assetId` (source) to another asset.
+ *
+ * The path's `assetId` and the body's `source_asset_id` must match — the
+ * backend rejects mismatches to prevent the URL from being misleading.
+ */
+export async function addAssetRelationship(
+  assetId: string,
+  input: CreateRelationshipInput
+): Promise<BackendRelationshipResponse> {
+  return post<BackendRelationshipResponse>(endpoints.assets.createRelationship(assetId), {
+    type: input.type,
+    source_asset_id: input.sourceAssetId,
+    target_asset_id: input.targetAssetId,
+    description: input.description ?? '',
+    confidence: input.confidence ?? 'medium',
+    discovery_method: input.discoveryMethod ?? 'manual',
+    impact_weight: input.impactWeight,
+    tags: input.tags,
+  })
+}
+
+// ============================================
+// Batch create
+// ============================================
+
+/**
+ * Per-item result from the batch create endpoint. The frontend uses
+ * `index` to map back to the original input position so it can produce
+ * per-target success/failure messages without re-fetching anything.
+ */
+export interface BatchCreateRelationshipResultItem {
+  index: number
+  status: 'created' | 'duplicate' | 'error'
+  target_asset_id: string
+  relationship_id?: string
+  error?: string
+}
+
+export interface BatchCreateRelationshipResult {
+  results: BatchCreateRelationshipResultItem[]
+  created: number
+  duplicates: number
+  errors: number
+  total: number
+}
+
+/**
+ * Bulk-create relationships from one source asset to many targets in
+ * a single API call. The source asset is taken from the URL path
+ * (`/assets/{assetId}/relationships/batch`) and validated ONCE for the
+ * whole batch on the backend, instead of per-item like the singleton
+ * endpoint.
+ *
+ * Per-item failures (invalid type, target not found, duplicate) do
+ * NOT abort the batch — every item gets a result entry. The HTTP
+ * response is always 200 unless the whole batch fails (bad tenant,
+ * missing source asset).
+ *
+ * Used by AssetRelationshipsTab when the user multi-selects targets
+ * in the Add Relationship dialog.
+ */
+export async function addAssetRelationshipBatch(
+  assetId: string,
+  inputs: CreateRelationshipInput[]
+): Promise<BatchCreateRelationshipResult> {
+  return post<BatchCreateRelationshipResult>(
+    `${endpoints.assets.createRelationship(assetId)}/batch`,
+    {
+      items: inputs.map((input) => ({
+        type: input.type,
+        target_asset_id: input.targetAssetId,
+        description: input.description ?? '',
+        confidence: input.confidence ?? 'medium',
+        discovery_method: input.discoveryMethod ?? 'manual',
+        impact_weight: input.impactWeight,
+        tags: input.tags,
+      })),
+    }
+  )
+}
+
+/**
+ * Update mutable fields on an existing relationship.
+ *
+ * The backend's `mark_verified` flag is intentionally not exposed here —
+ * it bumps the `last_verified` timestamp and there is no UX surface that
+ * asks the user "is this still accurate?". When that surface is built,
+ * add a dedicated `markRelationshipVerified` function rather than
+ * piggy-backing on the generic update.
+ */
+export async function updateAssetRelationship(
+  relationshipId: string,
+  input: UpdateRelationshipInput
+): Promise<BackendRelationshipResponse> {
+  return put<BackendRelationshipResponse>(endpoints.assets.updateRelationship(relationshipId), {
+    description: input.description,
+    confidence: input.confidence,
+    impact_weight: input.impactWeight,
+    tags: input.tags,
+  })
+}
+
+/**
+ * Delete a relationship by its ID.
+ */
+export async function removeAssetRelationship(relationshipId: string): Promise<void> {
+  await del(endpoints.assets.deleteRelationship(relationshipId))
 }

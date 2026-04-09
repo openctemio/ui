@@ -330,6 +330,25 @@ export const tenantEndpoints = {
   deleteInvitation: (tenantIdOrSlug: string, invitationId: string) =>
     `${API_BASE.TENANTS}/${tenantIdOrSlug}/invitations/${invitationId}`,
 
+  /**
+   * Resend invitation email (POST) — re-queues the email without
+   * changing the token, expiry, or any other metadata.
+   */
+  resendInvitation: (tenantIdOrSlug: string, invitationId: string) =>
+    `${API_BASE.TENANTS}/${tenantIdOrSlug}/invitations/${invitationId}/resend`,
+
+  /**
+   * Suspend a member (POST) — revokes access, preserves membership row
+   */
+  suspendMember: (tenantIdOrSlug: string, memberId: string) =>
+    `${API_BASE.TENANTS}/${tenantIdOrSlug}/members/${memberId}/suspend`,
+
+  /**
+   * Reactivate a suspended member (POST) — restores access
+   */
+  reactivateMember: (tenantIdOrSlug: string, memberId: string) =>
+    `${API_BASE.TENANTS}/${tenantIdOrSlug}/members/${memberId}/reactivate`,
+
   // ============================================
   // SETTINGS MANAGEMENT
   // ============================================
@@ -547,6 +566,23 @@ export const assetEndpoints = {
    * List relationships for an asset
    */
   listRelationships: (assetId: string) => `${API_BASE.ASSETS}/${assetId}/relationships`,
+
+  /**
+   * Create a new relationship for an asset (POST)
+   * The {id} in the path is the source asset; backend also requires
+   * source_asset_id in the body and rejects mismatches.
+   */
+  createRelationship: (assetId: string) => `${API_BASE.ASSETS}/${assetId}/relationships`,
+
+  /**
+   * Update a relationship by its own ID (PUT)
+   */
+  updateRelationship: (relationshipId: string) => `/api/v1/relationships/${relationshipId}`,
+
+  /**
+   * Delete a relationship by its own ID (DELETE)
+   */
+  deleteRelationship: (relationshipId: string) => `/api/v1/relationships/${relationshipId}`,
 } as const
 
 // ============================================
@@ -892,6 +928,12 @@ export const agentEndpoints = {
    * Get agent statistics
    */
   stats: (agentId: string) => `${API_BASE.AGENTS}/${agentId}/stats`,
+
+  /**
+   * Tenant-wide agent stats (status/health/type/mode breakdowns).
+   * SQL-aggregated server-side; replaces client-side .filter().length.
+   */
+  tenantStats: () => `${API_BASE.AGENTS}/stats`,
 
   /**
    * Activate agent (set status to active)

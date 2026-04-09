@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
 import { cn } from '@/lib/utils'
 import { AssetFindings } from './asset-findings'
+import { TagsSection } from './sheet-sections'
 import type { K8sCluster, K8sWorkload, ContainerImage } from '../types/asset.types'
 
 // ============================================
@@ -68,6 +69,12 @@ interface ContainerDetailSheetProps<T extends ContainerAsset> {
 
   /** Finding count for tab label */
   findingCount?: number
+
+  /** Inline tag editor save handler. If omitted the section is hidden. */
+  onUpdateTags?: (tags: string[]) => Promise<void>
+
+  /** Available tag suggestions for the autocomplete */
+  tagSuggestions?: string[]
 }
 
 // ============================================
@@ -90,6 +97,8 @@ export function ContainerDetailSheet<T extends ContainerAsset>({
   statusBadge,
   showFindingsTab = true,
   findingCount = 0,
+  onUpdateTags,
+  tagSuggestions,
 }: ContainerDetailSheetProps<T>) {
   if (!asset) return null
 
@@ -111,7 +120,9 @@ export function ContainerDetailSheet<T extends ContainerAsset>({
             gradientVia
           )}
         >
-          <div className="flex items-center gap-3 mb-3">
+          {/* pr-14 reserves space for the Sheet's built-in close button (X)
+              so the status badge doesn't overlap with it. */}
+          <div className="flex items-center gap-3 mb-3 pr-14">
             <div
               className={cn('h-12 w-12 rounded-xl flex items-center justify-center', iconBgColor)}
             >
@@ -145,6 +156,7 @@ export function ContainerDetailSheet<T extends ContainerAsset>({
             {/* Overview Tab */}
             <TabsContent value="overview" className="space-y-4 mt-0">
               {overviewContent}
+              <TagsSection tags={asset.tags} suggestions={tagSuggestions} onSave={onUpdateTags} />
             </TabsContent>
 
             {/* Findings Tab */}
@@ -153,7 +165,10 @@ export function ContainerDetailSheet<T extends ContainerAsset>({
             </TabsContent>
           </Tabs>
         ) : (
-          <div className="px-6 pb-6 space-y-4">{overviewContent}</div>
+          <div className="px-6 pb-6 space-y-4">
+            {overviewContent}
+            <TagsSection tags={asset.tags} suggestions={tagSuggestions} onSave={onUpdateTags} />
+          </div>
         )}
       </SheetContent>
     </Sheet>

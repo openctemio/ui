@@ -8,6 +8,7 @@ export {
   useAsset,
   useAssetsByType,
   useAssetStats,
+  getAsset,
   createAsset,
   updateAsset,
   deleteAsset,
@@ -43,4 +44,10 @@ export {
 } from './use-asset-owners'
 
 // Asset relationship hooks
-export { useAssetRelationships } from './use-asset-relationships'
+export {
+  useAssetRelationships,
+  addAssetRelationship,
+  addAssetRelationshipBatch,
+  updateAssetRelationship,
+  removeAssetRelationship,
+} from './use-asset-relationships'

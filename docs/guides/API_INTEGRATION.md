@@ -25,11 +25,13 @@ Complete guide for integrating with your separate backend API.
 ## Overview
 
 The frontend connects to your separate backend API using:
+
 - **API Client:** Type-safe HTTP client with automatic auth headers
 - **SWR Hooks:** React hooks for data fetching with caching
 - **Error Handler:** Centralized error handling with user-friendly messages
 
 **Architecture:**
+
 ```
 Frontend (Next.js) → API Client → Backend API
                         ↓
@@ -43,8 +45,9 @@ Frontend (Next.js) → API Client → Backend API
 ### 1. Configure Backend URL
 
 ```bash
-# .env.local
-NEXT_PUBLIC_BACKEND_API_URL=https://your-backend-api.com
+# .env.local — server-side only (single source of truth)
+# Client-side requests proxied through Next.js at /api/v1/*
+BACKEND_API_URL=http://api:8080
 ```
 
 ### 2. Use in Components
@@ -88,11 +91,9 @@ export function UsersPage() {
 ### Environment Variables
 
 ```env
-# Required - Your backend API base URL
-NEXT_PUBLIC_BACKEND_API_URL=https://api.example.com
-
-# Optional - Server-side only (for Server Components)
-BACKEND_API_URL=https://api.example.com
+# Required - Backend API URL (server-side only — single source of truth)
+# Client-side requests proxied through Next.js at /api/v1/*
+BACKEND_API_URL=http://api:8080
 
 # Optional - Request timeout (default: 30000ms)
 API_TIMEOUT=30000
@@ -103,12 +104,12 @@ API_TIMEOUT=30000
 ```typescript
 // src/lib/api/hooks.ts (already configured)
 export const defaultSwrConfig = {
-  revalidateOnFocus: false,      // Don't refetch on window focus
-  revalidateOnReconnect: true,   // Refetch on network reconnect
-  shouldRetryOnError: true,      // Retry on error
-  errorRetryCount: 3,            // Max 3 retries
-  errorRetryInterval: 1000,      // 1s between retries
-  dedupingInterval: 2000,        // Dedupe requests within 2s
+  revalidateOnFocus: false, // Don't refetch on window focus
+  revalidateOnReconnect: true, // Refetch on network reconnect
+  shouldRetryOnError: true, // Retry on error
+  errorRetryCount: 3, // Max 3 retries
+  errorRetryInterval: 1000, // 1s between retries
+  dedupingInterval: 2000, // Dedupe requests within 2s
 }
 ```
 
@@ -127,12 +128,12 @@ const users = await get<User[]>('/api/users')
 // POST request
 const newUser = await post<User>('/api/users', {
   name: 'John',
-  email: 'john@example.com'
+  email: 'john@example.com',
 })
 
 // PUT request
 const updated = await put<User>('/api/users/123', {
-  name: 'John Doe'
+  name: 'John Doe',
 })
 
 // DELETE request
@@ -146,9 +147,7 @@ import { get, endpoints } from '@/lib/api'
 import type { User, PaginatedResponse } from '@/lib/api'
 
 // Type-safe endpoint + response type
-const users = await get<PaginatedResponse<User>>(
-  endpoints.users.list({ page: 1, pageSize: 10 })
-)
+const users = await get<PaginatedResponse<User>>(endpoints.users.list({ page: 1, pageSize: 10 }))
 
 // users.data is User[]
 // users.pagination has page info
@@ -181,7 +180,7 @@ const handleFileUpload = async (file: File) => {
   const result = await uploadFile('/api/files/upload', file, {
     onProgress: (progress) => {
       console.log(`Uploaded: ${progress.percentage}%`)
-    }
+    },
   })
 
   console.log('File URL:', result.url)
@@ -406,18 +405,18 @@ try {
   await createUser(data)
 } catch (error) {
   handleApiError(error, {
-    showToast: false,         // Don't show toast
-    logError: true,           // Log to console
+    showToast: false, // Don't show toast
+    logError: true, // Log to console
     customMessages: {
-      'USER_EXISTS': 'Email already taken',
-      'INVALID_EMAIL': 'Please provide a valid email'
+      USER_EXISTS: 'Email already taken',
+      INVALID_EMAIL: 'Please provide a valid email',
     },
     onError: (err) => {
       // Custom handling
       if (err.isValidationError()) {
         setFormErrors(extractValidationErrors(err))
       }
-    }
+    },
   })
 }
 ```
@@ -481,10 +480,8 @@ import { optimisticUpdate, endpoints } from '@/lib/api'
 const handleLike = async (postId: string) => {
   const optimisticData = { ...post, likes: post.likes + 1 }
 
-  await optimisticUpdate(
-    endpoints.posts.get(postId),
-    optimisticData,
-    () => post('/api/posts/${postId}/like')
+  await optimisticUpdate(endpoints.posts.get(postId), optimisticData, () =>
+    post('/api/posts/${postId}/like')
   )
 }
 ```
@@ -494,15 +491,12 @@ const handleLike = async (postId: string) => {
 ```typescript
 import { retryWithBackoff, get } from '@/lib/api'
 
-const data = await retryWithBackoff(
-  () => get('/api/users'),
-  {
-    maxRetries: 3,
-    onRetry: (error, attempt) => {
-      console.log(`Retry ${attempt} after error:`, error.message)
-    }
-  }
-)
+const data = await retryWithBackoff(() => get('/api/users'), {
+  maxRetries: 3,
+  onRetry: (error, attempt) => {
+    console.log(`Retry ${attempt} after error:`, error.message)
+  },
+})
 ```
 
 ### Custom Fetcher
@@ -676,10 +670,12 @@ Allow requests from Next.js frontend:
 
 ```javascript
 // Example Express.js CORS
-app.use(cors({
-  origin: process.env.FRONTEND_URL,  // http://localhost:3000
-  credentials: true
-}))
+app.use(
+  cors({
+    origin: process.env.FRONTEND_URL, // http://localhost:3000
+    credentials: true,
+  })
+)
 ```
 
 ### 3. Response Format (Recommended)
@@ -689,7 +685,9 @@ Use consistent response format:
 ```json
 {
   "success": true,
-  "data": { /* your data */ }
+  "data": {
+    /* your data */
+  }
 }
 ```
 
@@ -711,6 +709,7 @@ Or for errors:
 ### 4. HTTP Status Codes
 
 Use standard status codes:
+
 - `200` - Success
 - `201` - Created
 - `204` - No Content
@@ -730,13 +729,16 @@ Use standard status codes:
 **Problem:** `Access to fetch has been blocked by CORS policy`
 
 **Solution:**
+
 ```javascript
 // Backend CORS configuration
-app.use(cors({
-  origin: 'http://localhost:3000',  // Your Next.js URL
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
-}))
+app.use(
+  cors({
+    origin: 'http://localhost:3000', // Your Next.js URL
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  })
+)
 ```
 
 ### Authentication Errors
@@ -744,6 +746,7 @@ app.use(cors({
 **Problem:** 401 Unauthorized
 
 **Solutions:**
+
 1. Check access token exists: `useAuthStore.getState().accessToken`
 2. Check token not expired: Use JWT debugger
 3. Verify backend validates Keycloak tokens correctly
@@ -753,8 +756,9 @@ app.use(cors({
 **Problem:** `Network error - please check your connection`
 
 **Solutions:**
-1. Check `NEXT_PUBLIC_BACKEND_API_URL` is correct
-2. Verify backend is running
+
+1. Check `BACKEND_API_URL` is correct (server-side only)
+2. Verify backend is running and reachable from the Next.js container
 3. Check firewall/proxy settings
 
 ### TypeScript Errors
@@ -778,7 +782,7 @@ export interface User {
 
 ## Next Steps
 
-1. **Configure Environment:** Set `NEXT_PUBLIC_BACKEND_API_URL` in `.env.local`
+1. **Configure Environment:** Set `BACKEND_API_URL` in `.env.local`
 2. **Customize Types:** Update `src/lib/api/types.ts` for your backend schema
 3. **Add Endpoints:** Add more endpoints in `src/lib/api/endpoints.ts`
 4. **Create Hooks:** Create domain-specific hooks for your features
@@ -787,6 +791,7 @@ export interface User {
 ---
 
 **See Also:**
+
 - [Architecture Documentation](../ARCHITECTURE.md)
 - [Auth Usage Guide](../features/auth/AUTH_USAGE.md)
 - [Troubleshooting](../features/auth/TROUBLESHOOTING.md)

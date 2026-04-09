@@ -90,6 +90,7 @@ import {
   FileJson,
   FileSpreadsheet,
 } from 'lucide-react'
+import { copyToClipboard } from '@/lib/clipboard'
 import { Can, Permission } from '@/lib/permissions'
 import { exportToCSV, exportToJSON } from '@/lib/utils'
 import {
@@ -1794,7 +1795,7 @@ function ConfigDetailSheet({ config, onClose: _onClose, onDelete }: ConfigDetail
                     className="h-6 w-6 p-0"
                     onClick={(e) => {
                       e.stopPropagation()
-                      navigator.clipboard.writeText(config.id)
+                      copyToClipboard(config.id)
                       toast.success('ID copied to clipboard')
                     }}
                   >
@@ -1873,9 +1874,11 @@ function RunActionsCell({
           </DropdownMenuItem>
         )}
         {session.status === 'completed' && session.findings_total > 0 && (
-          <DropdownMenuItem onClick={() => toast.info(`View ${session.findings_total} findings`)}>
-            <Shield className="mr-2 h-4 w-4" />
-            View Findings
+          <DropdownMenuItem asChild>
+            <Link href={`/findings?scan_id=${session.id}`}>
+              <Shield className="mr-2 h-4 w-4" />
+              View {session.findings_total} Findings
+            </Link>
           </DropdownMenuItem>
         )}
       </DropdownMenuContent>
@@ -2636,13 +2639,11 @@ function SessionDetailSheet({ session, onStop, onRetry, isActioning }: SessionDe
             </Button>
           )}
           {session.status === 'completed' && session.findings_total > 0 && (
-            <Button
-              size="sm"
-              className="flex-1"
-              onClick={() => toast.info(`View ${session.findings_total} findings`)}
-            >
-              <Eye className="mr-2 h-4 w-4" />
-              View Findings
+            <Button asChild size="sm" className="flex-1">
+              <Link href={`/findings?scan_id=${session.id}`}>
+                <Eye className="mr-2 h-4 w-4" />
+                View {session.findings_total} Findings
+              </Link>
             </Button>
           )}
           {(session.status === 'pending' ||
@@ -2652,7 +2653,7 @@ function SessionDetailSheet({ session, onStop, onRetry, isActioning }: SessionDe
               variant="outline"
               className="flex-1"
               onClick={() => {
-                navigator.clipboard.writeText(session.id)
+                copyToClipboard(session.id)
                 toast.success('Session ID copied to clipboard')
               }}
             >
@@ -2895,7 +2896,7 @@ function SessionDetailSheet({ session, onStop, onRetry, isActioning }: SessionDe
                     size="sm"
                     className="h-6 w-6 p-0"
                     onClick={() => {
-                      navigator.clipboard.writeText(session.id)
+                      copyToClipboard(session.id)
                       toast.success('ID copied to clipboard')
                     }}
                   >

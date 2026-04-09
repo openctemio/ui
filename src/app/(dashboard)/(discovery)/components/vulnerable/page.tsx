@@ -31,7 +31,11 @@ type SeverityFilter = 'all' | 'critical' | 'high' | 'medium' | 'kev'
 
 export default function VulnerableComponentsPage() {
   // Fetch vulnerable components from API (no limit to get all)
-  const { data: apiVulnerableComponents, isLoading } = useVulnerableComponentsApi(100)
+  // limit=100 is the API cap — this endpoint returns the TOP N most-vulnerable
+  // components, not a paginated list. All counts derived from this array are
+  // bounded by 100; the UI labels reflect that ("Top 100 most vulnerable").
+  const VULNERABLE_LIMIT = 100
+  const { data: apiVulnerableComponents, isLoading } = useVulnerableComponentsApi(VULNERABLE_LIMIT)
 
   // Transform API data to UI Component type
   const vulnerableComponents = useMemo(() => {
@@ -303,7 +307,9 @@ export default function VulnerableComponentsPage() {
                 <CardDescription>
                   {isLoading
                     ? 'Loading...'
-                    : `${filteredComponents.length} components requiring remediation`}
+                    : vulnerableComponents.length >= VULNERABLE_LIMIT
+                      ? `${filteredComponents.length} of top ${VULNERABLE_LIMIT} most vulnerable components`
+                      : `${filteredComponents.length} components requiring remediation`}
                 </CardDescription>
               </div>
             </div>
