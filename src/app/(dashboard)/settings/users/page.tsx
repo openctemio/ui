@@ -39,6 +39,16 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -585,6 +595,11 @@ export default function UsersPage() {
   const [editRolesDialogOpen, setEditRolesDialogOpen] = useState(false)
   // Track pending roles edit (used when transitioning from sheet to dialog)
   const [pendingRolesEdit, setPendingRolesEdit] = useState<MemberWithUser | null>(null)
+  // Suspend confirmation: holds the member awaiting confirmation, plus an
+  // in-flight flag so the action button can show a spinner and be disabled
+  // while the request is pending.
+  const [suspendConfirmMember, setSuspendConfirmMember] = useState<MemberWithUser | null>(null)
+  const [isSuspending, setIsSuspending] = useState(false)
 
   // Track if sheet is fully closed (after animation completes)
   const [isSheetAnimating, setIsSheetAnimating] = useState(false)
@@ -822,18 +837,12 @@ export default function UsersPage() {
                     ) : (
                       <DropdownMenuItem
                         className="text-orange-500"
-                        onClick={async () => {
-                          if (!tenantSlug) return
-                          try {
-                            await fetcherWithOptions(
-                              tenantEndpoints.suspendMember(tenantSlug, member.id),
-                              { method: 'POST' }
-                            )
-                            toast.success(`${member.name || member.email} suspended`)
-                            refreshData()
-                          } catch {
-                            toast.error('Failed to suspend member')
-                          }
+                        onSelect={(e) => {
+                          // Open confirmation dialog instead of firing
+                          // immediately. onSelect lets the dropdown close
+                          // cleanly before the AlertDialog opens.
+                          e.preventDefault()
+                          setSuspendConfirmMember(member)
                         }}
                       >
                         <Ban className="mr-2 h-4 w-4" />
@@ -886,6 +895,25 @@ export default function UsersPage() {
       refreshData()
     } catch (error) {
       toast.error(getErrorMessage(error, 'Failed to remove member'))
+    }
+  }
+
+  // Confirm and execute the pending suspend. Called from the AlertDialog
+  // action button — keeps suspension a deliberate two-click action.
+  const handleConfirmSuspend = async () => {
+    if (!tenantSlug || !suspendConfirmMember) return
+    setIsSuspending(true)
+    try {
+      await fetcherWithOptions(tenantEndpoints.suspendMember(tenantSlug, suspendConfirmMember.id), {
+        method: 'POST',
+      })
+      toast.success(`${suspendConfirmMember.name || suspendConfirmMember.email} suspended`)
+      setSuspendConfirmMember(null)
+      refreshData()
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Failed to suspend member'))
+    } finally {
+      setIsSuspending(false)
     }
   }
 
@@ -1819,6 +1847,61 @@ export default function UsersPage() {
           onSuccess={refreshData}
         />
       )}
+
+      {/* Suspend Member Confirmation Dialog */}
+      <AlertDialog
+        open={!!suspendConfirmMember}
+        onOpenChange={(open) => {
+          if (!open && !isSuspending) setSuspendConfirmMember(null)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Ban className="h-5 w-5 text-orange-500" />
+              Suspend member?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {suspendConfirmMember && (
+                <>
+                  <span className="font-medium text-foreground">
+                    {suspendConfirmMember.name || suspendConfirmMember.email}
+                  </span>{' '}
+                  will immediately lose access to this team. Active sessions will be invalidated and
+                  any pending invitations will be cancelled. You can reactivate them later — the
+                  membership and audit trail are preserved.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isSuspending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                // Prevent default close so we can keep the dialog open
+                // while the request is in flight; close happens in the
+                // handler on success.
+                e.preventDefault()
+                void handleConfirmSuspend()
+              }}
+              disabled={isSuspending}
+              className="bg-orange-500 text-white hover:bg-orange-600 focus:ring-orange-500"
+            >
+              {isSuspending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Suspending...
+                </>
+              ) : (
+                <>
+                  <Ban className="mr-2 h-4 w-4" />
+                  Suspend
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </MemberRolesContext.Provider>
   )
 }
