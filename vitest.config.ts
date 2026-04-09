@@ -30,7 +30,8 @@ export default defineConfig({
 
     // Include/exclude patterns
     include: ['**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
-    exclude: ['node_modules', '.next', 'dist', 'build'],
+    // e2e/ contains Playwright specs, which use a different runner.
+    exclude: ['node_modules', '.next', 'dist', 'build', 'e2e/**'],
   },
   resolve: {
     alias: {
