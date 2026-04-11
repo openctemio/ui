@@ -112,7 +112,11 @@ export function TenantGate({ children }: TenantGateProps) {
   // This prevents the flash redirect to onboarding when cookie exists
   const [hasCookieChecked, setHasCookieChecked] = useState(false)
   const [hasTenantCookie, setHasTenantCookie] = useState(false)
-  const [hasInitiallyLoaded, setHasInitiallyLoaded] = useState(false)
+  // Persist initial load across navigations — prevents "Loading..." on back/forward
+  const [hasInitiallyLoaded, setHasInitiallyLoaded] = useState(() => {
+    if (typeof window === 'undefined') return false
+    return sessionStorage.getItem('tenant_gate_loaded') === '1'
+  })
 
   useLayoutEffect(() => {
     const cookie = getCookie(env.cookies.tenant)
@@ -196,6 +200,7 @@ export function TenantGate({ children }: TenantGateProps) {
 
     if (isDataReady && !hasInitiallyLoaded) {
       setHasInitiallyLoaded(true)
+      sessionStorage.setItem('tenant_gate_loaded', '1')
     }
 
     if (!isDataReady) {
