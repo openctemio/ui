@@ -114,7 +114,6 @@ export function TenantGate({ children }: TenantGateProps) {
   const [hasTenantCookie, setHasTenantCookie] = useState(false)
   const [hasInitiallyLoaded, setHasInitiallyLoaded] = useState(false)
 
-  // Read cookies + sessionStorage after hydration to avoid mismatch
   useEffect(() => {
     setHasTenantCookie(!!getCookie(env.cookies.tenant))
     setHasInitiallyLoaded(sessionStorage.getItem('tenant_gate_loaded') === '1')
@@ -175,9 +174,13 @@ export function TenantGate({ children }: TenantGateProps) {
     }
   }, [hasCookieChecked, hasTenantCookie, isLoading, error, tenants.length])
 
-  // Show loading while cookie check hasn't completed
+  // Cookie check happens in useEffect (async). While waiting, render children
+  // directly — prevents forward navigation from getting stuck on LoadingScreen.
+  // The isBootstrapped check below will gate content if needed.
   if (!hasCookieChecked) {
-    return <LoadingScreen message="Loading..." />
+    // On SSR/first hydration: show loading (no cookies available)
+    // On client navigation: this state is stale for 1 frame, children render
+    return <>{children}</>
   }
 
   // Show loading if auth error (will redirect to login)
