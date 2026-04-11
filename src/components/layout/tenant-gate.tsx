@@ -13,7 +13,7 @@
  * So we need to let the tenant API call happen first to validate auth.
  */
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { devLog } from '@/lib/logger'
 import { useTenant } from '@/context/tenant-provider'
 import { useBootstrapContextSafe } from '@/context/bootstrap-provider'
@@ -114,9 +114,13 @@ export function TenantGate({ children }: TenantGateProps) {
   const [hasTenantCookie, setHasTenantCookie] = useState(false)
   const [hasInitiallyLoaded, setHasInitiallyLoaded] = useState(false)
 
-  useEffect(() => {
-    setHasTenantCookie(!!getCookie(env.cookies.tenant))
-    setHasInitiallyLoaded(sessionStorage.getItem('tenant_gate_loaded') === '1')
+  useLayoutEffect(() => {
+    const cookie = getCookie(env.cookies.tenant)
+    setHasTenantCookie(!!cookie)
+    // Restore previously loaded state — prevents blocking loading on back/forward
+    if (sessionStorage.getItem('tenant_gate_loaded') === '1') {
+      setHasInitiallyLoaded(true)
+    }
     setHasCookieChecked(true)
   }, [])
 
@@ -174,13 +178,9 @@ export function TenantGate({ children }: TenantGateProps) {
     }
   }, [hasCookieChecked, hasTenantCookie, isLoading, error, tenants.length])
 
-  // Cookie check happens in useEffect (async). While waiting, render children
-  // directly — prevents forward navigation from getting stuck on LoadingScreen.
-  // The isBootstrapped check below will gate content if needed.
+  // Show loading while cookie check hasn't completed
   if (!hasCookieChecked) {
-    // On SSR/first hydration: show loading (no cookies available)
-    // On client navigation: this state is stale for 1 frame, children render
-    return <>{children}</>
+    return <LoadingScreen message="Loading..." />
   }
 
   // Show loading if auth error (will redirect to login)
@@ -200,7 +200,11 @@ export function TenantGate({ children }: TenantGateProps) {
 
     if (isDataReady && !hasInitiallyLoaded) {
       setHasInitiallyLoaded(true)
-      sessionStorage.setItem('tenant_gate_loaded', '1')
+      try {
+        sessionStorage.setItem('tenant_gate_loaded', '1')
+      } catch {
+        /* ignore */
+      }
     }
 
     if (!isDataReady) {
