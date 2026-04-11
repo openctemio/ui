@@ -147,6 +147,11 @@ export function BootstrapProvider({ children }: BootstrapProviderProps) {
   // Fetch on tenant change
   React.useEffect(() => {
     if (!tenantId) {
+      // Don't reset if we previously had a tenant — this is a transient null
+      // during forward navigation re-render. Wait for tenant to resolve.
+      if (previousTenantIdRef.current && isBootstrapped) {
+        return
+      }
       setData(null)
       setIsBootstrapped(false)
       setFetchedTenantId(null)
