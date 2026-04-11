@@ -13,7 +13,7 @@
  * So we need to let the tenant API call happen first to validate auth.
  */
 
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { devLog } from '@/lib/logger'
 import { useTenant } from '@/context/tenant-provider'
 import { useBootstrapContextSafe } from '@/context/bootstrap-provider'
@@ -110,19 +110,16 @@ export function TenantGate({ children }: TenantGateProps) {
 
   // Check if tenant cookie exists directly (don't wait for state update)
   // This prevents the flash redirect to onboarding when cookie exists
-  const [hasCookieChecked, setHasCookieChecked] = useState(false)
-  const [hasTenantCookie, setHasTenantCookie] = useState(false)
-  // Persist initial load across navigations — prevents "Loading..." on back/forward
+  // Read cookies synchronously in state initializer — no flash of loading screen
+  const [hasCookieChecked] = useState(() => typeof window !== 'undefined')
+  const [hasTenantCookie] = useState(() => {
+    if (typeof window === 'undefined') return false
+    return !!getCookie(env.cookies.tenant)
+  })
   const [hasInitiallyLoaded, setHasInitiallyLoaded] = useState(() => {
     if (typeof window === 'undefined') return false
     return sessionStorage.getItem('tenant_gate_loaded') === '1'
   })
-
-  useLayoutEffect(() => {
-    const cookie = getCookie(env.cookies.tenant)
-    setHasTenantCookie(!!cookie)
-    setHasCookieChecked(true)
-  }, [])
 
   // Handle authentication errors - HIGHEST PRIORITY
   // When token is invalid, API will return 401 - redirect to login
