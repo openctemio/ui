@@ -110,16 +110,16 @@ export function TenantGate({ children }: TenantGateProps) {
 
   // Check if tenant cookie exists directly (don't wait for state update)
   // This prevents the flash redirect to onboarding when cookie exists
-  // Read cookies synchronously in state initializer — no flash of loading screen
-  const [hasCookieChecked] = useState(() => typeof window !== 'undefined')
-  const [hasTenantCookie] = useState(() => {
-    if (typeof window === 'undefined') return false
-    return !!getCookie(env.cookies.tenant)
-  })
-  const [hasInitiallyLoaded, setHasInitiallyLoaded] = useState(() => {
-    if (typeof window === 'undefined') return false
-    return sessionStorage.getItem('tenant_gate_loaded') === '1'
-  })
+  const [hasCookieChecked, setHasCookieChecked] = useState(false)
+  const [hasTenantCookie, setHasTenantCookie] = useState(false)
+  const [hasInitiallyLoaded, setHasInitiallyLoaded] = useState(false)
+
+  // Read cookies + sessionStorage after hydration to avoid mismatch
+  useEffect(() => {
+    setHasTenantCookie(!!getCookie(env.cookies.tenant))
+    setHasInitiallyLoaded(sessionStorage.getItem('tenant_gate_loaded') === '1')
+    setHasCookieChecked(true)
+  }, [])
 
   // Handle authentication errors - HIGHEST PRIORITY
   // When token is invalid, API will return 401 - redirect to login
