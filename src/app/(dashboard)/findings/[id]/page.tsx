@@ -548,7 +548,16 @@ export default function FindingDetailPage() {
     )
   }
 
-  if (error || !finding) {
+  if (!finding) {
+    // Still loading (tenant context initializing) — show skeleton
+    if (isLoading) {
+      return (
+        <Main>
+          <LoadingSkeleton />
+        </Main>
+      )
+    }
+    // Actual error or not found
     return (
       <Main>
         <div className="flex h-[50vh] items-center justify-center">
