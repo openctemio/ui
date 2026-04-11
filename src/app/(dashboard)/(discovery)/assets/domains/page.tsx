@@ -1,7 +1,7 @@
 'use client'
 
-import { Suspense, useCallback, useMemo, useState } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useCallback, useMemo, useState } from 'react'
+import { useUrlParams } from '@/hooks/use-url-param'
 
 import { AssetPage } from '@/features/assets/components/asset-page'
 import { buildDomainsConfig } from './config'
@@ -18,15 +18,7 @@ import { buildDomainsConfig } from './config'
  * collapsed parent.
  */
 export default function DomainsPage() {
-  return (
-    <Suspense>
-      <DomainsContent />
-    </Suspense>
-  )
-}
-
-function DomainsContent() {
-  const searchParams = useSearchParams()
+  const searchParams = useUrlParams()
   // A non-empty `q` (search) or `tags` filter forces the picker into
   // "show all" mode so a query like "api" still surfaces api.example.com
   // even when its parent root is collapsed. Status tabs (Active /

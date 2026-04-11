@@ -1,8 +1,9 @@
 'use client'
 
-import { Suspense, useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import Link from 'next/link'
-import { useSearchParams, useRouter } from 'next/navigation'
+import { useRouter } from 'next/navigation'
+import { useUrlParams } from '@/hooks/use-url-param'
 import { ColumnDef } from '@tanstack/react-table'
 import { Main } from '@/components/layout'
 import { PageHeader, SeverityBadge, DataTable, DataTableColumnHeader } from '@/features/shared'
@@ -237,15 +238,11 @@ function FindingsLoadingSkeleton() {
 }
 
 export default function FindingsPage() {
-  return (
-    <Suspense>
-      <FindingsContent />
-    </Suspense>
-  )
+  return <FindingsContent />
 }
 
 function FindingsContent() {
-  const searchParams = useSearchParams()
+  const searchParams = useUrlParams()
   const router = useRouter()
   const assetIdFilter = searchParams.get('assetId')
   const sourceIdFilter = searchParams.get('source')
