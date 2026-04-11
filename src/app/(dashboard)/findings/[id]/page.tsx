@@ -16,7 +16,7 @@ import { getTriageCacheKey } from '@/features/ai-triage/api'
 import type { ApiFinding } from '@/features/findings/api/finding-api.types'
 import { toast } from 'sonner'
 import { getErrorMessage } from '@/lib/api/error-handler'
-import { ArrowLeft, Wifi, WifiOff } from 'lucide-react'
+import { Wifi, WifiOff } from 'lucide-react'
 import type {
   FindingDetail,
   FindingStatus,
@@ -46,8 +46,10 @@ import '@/features/findings/config/register-layouts'
  * Asset info now comes from api.asset (enriched by backend)
  */
 function transformApiToFindingDetail(api: ApiFinding): FindingDetail {
-  // Use asset info from API (enriched by backend) or fall back to asset_id
-  const assetName = api.asset?.name || api.asset_id
+  // Use asset info from API (enriched by backend), skip nil UUIDs
+  const nilUUID = '00000000-0000-0000-0000-000000000000'
+  const hasValidAsset = api.asset_id && api.asset_id !== nilUUID
+  const assetName = api.asset?.name || (hasValidAsset ? api.asset_id : '')
   const assetWebUrl = api.asset?.web_url
   const statusMap: Record<string, FindingStatus> = {
     new: 'new',
@@ -106,7 +108,7 @@ function transformApiToFindingDetail(api: ApiFinding): FindingDetail {
   }
 
   // Use asset name if provided, otherwise use a display-friendly version
-  const displayAssetName = assetName || api.asset_id
+  const displayAssetName = assetName || (hasValidAsset ? api.asset_id : '')
 
   return {
     id: api.id,
@@ -146,23 +148,38 @@ function transformApiToFindingDetail(api: ApiFinding): FindingDetail {
     contextSnippet: api.context_snippet,
     contextStartLine: api.context_start_line,
 
-    // Asset - use resolved asset name and webUrl
-    assets: [
-      {
-        id: api.asset_id,
-        type: 'repository',
-        name: displayAssetName,
-        url: assetWebUrl,
-      },
-    ],
+    // Asset - for pentest: show affected targets; for scanner: show repository
+    assets: (() => {
+      const isPentestSrc = ['pentest', 'bug_bounty', 'red_team', 'manual'].includes(api.source)
+      type AT = 'domain' | 'website' | 'service' | 'ip' | 'repository' | 'cloud' | 'target'
+      const assetType: AT = isPentestSrc ? 'target' : (api.asset?.type as AT) || 'repository'
+      const result: { id: string; type: AT; name: string; url?: string }[] = []
+      // Skip nil/zero UUID asset IDs (pentest findings without linked CTEM asset)
+      const isValidAssetId = api.asset_id && api.asset_id !== '00000000-0000-0000-0000-000000000000'
+      if (isValidAssetId) {
+        result.push({ id: api.asset_id, type: assetType, name: displayAssetName, url: assetWebUrl })
+      }
+      if (isPentestSrc && api.metadata?.affected_assets) {
+        for (const t of api.metadata.affected_assets as string[]) {
+          if (!result.some((a) => a.name === t)) {
+            result.push({ id: t, type: 'target', name: t })
+          }
+        }
+      }
+      return result
+    })(),
 
     // Evidence - snippets are shown in dedicated "Code Evidence" section
     // This array is for other evidence items (screenshots, logs, etc.)
     evidence: [],
 
-    // Remediation - use recommendation from scanner, then resolution, then fallback
+    // Remediation - pentest: use remediation_guidance from metadata; scanner: use recommendation
     remediation: {
-      description: api.recommendation || api.resolution || 'No recommendation provided by scanner.',
+      description:
+        (api.metadata?.remediation_guidance as string) ||
+        api.recommendation ||
+        api.resolution ||
+        '',
       steps: [],
       references: (api.metadata?.references as string[]) || [],
       progress: api.status === 'resolved' ? 100 : 0,
@@ -550,29 +567,18 @@ export default function FindingDetailPage() {
   }
 
   return (
-    <Main fixed>
-      {/* Back Button - Outside card, hidden on mobile */}
-      <div className="mb-2 flex-shrink-0 hidden sm:block">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8 gap-1.5 px-2 text-muted-foreground hover:text-foreground"
-          onClick={() => router.back()}
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back
-        </Button>
-      </div>
+    <Main fixed className="!py-0 !px-0 sm:!px-0 lg:!px-0">
+      {/* Full-bleed layout — no padding, content fills viewport */}
 
       {/* Two-panel resizable layout */}
       <ResizablePanelGroup
         direction="horizontal"
-        className="flex-1 rounded-lg"
+        className="!h-[calc(100vh-3.5rem)] rounded-lg"
         autoSaveId="finding-detail-layout"
       >
         {/* Left Panel - Header + Tabs */}
         <ResizablePanel defaultSize={70} minSize={40}>
-          <Card className="flex h-full flex-col overflow-hidden pb-4 gap-0">
+          <Card className="flex h-full flex-col overflow-hidden gap-0 border-0 shadow-none rounded-none">
             {/* Finding Header */}
             <CardHeader className="flex-shrink-0 pb-1">
               <FindingHeader finding={finding} onTriageCompleted={handleTriageCompleted} />
@@ -623,6 +629,13 @@ export default function FindingDetailPage() {
                       {tab === 'related' && 'Related'}
                     </TabsTrigger>
                   ))}
+                  {/* Activity tab — mobile only (desktop has side panel) */}
+                  <TabsTrigger
+                    value="activity"
+                    className="lg:hidden rounded-none border-b-2 border-transparent bg-transparent px-1 sm:px-0 pb-3 pt-3 text-sm whitespace-nowrap shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                  >
+                    Activity ({activitiesTotal + realtimeActivities.length})
+                  </TabsTrigger>
                 </TabsList>
               </div>
 
@@ -645,6 +658,19 @@ export default function FindingDetailPage() {
                 <TabsContent value="related" className="m-0 mt-0">
                   <RelatedTab finding={finding} />
                 </TabsContent>
+                {/* Activity tab content — mobile only */}
+                <TabsContent value="activity" className="m-0 mt-0 lg:hidden">
+                  <ActivityPanel
+                    activities={allActivities}
+                    onAddComment={handleAddComment}
+                    onEditComment={handleEditComment}
+                    onDeleteComment={handleDeleteComment}
+                    total={activitiesTotal}
+                    hasMore={!isReachingEnd}
+                    isLoadingMore={isLoadingMore}
+                    onLoadMore={loadMore}
+                  />
+                </TabsContent>
               </CardContent>
             </Tabs>
           </Card>
@@ -655,7 +681,7 @@ export default function FindingDetailPage() {
 
         {/* Right Panel - Activity */}
         <ResizablePanel defaultSize={30} minSize={20} maxSize={50} className="hidden lg:block">
-          <Card className="h-full overflow-hidden py-1">
+          <Card className="h-full overflow-hidden py-1 border-0 border-l rounded-none shadow-none">
             <div className="flex h-full flex-col">
               <CardHeader className="flex-shrink-0 border-b [.border-b]:pb-3 py-1">
                 <div className="flex items-center justify-between">

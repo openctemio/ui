@@ -16,6 +16,11 @@ import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 
 import { env } from '@/lib/env'
+
+// Limit request body to 12MB (matches backend MaxFileSize 10MB + 2MB overhead).
+// Prevents memory exhaustion from oversized uploads hitting the Node.js proxy.
+export const maxDuration = 60 // seconds
+export const dynamic = 'force-dynamic'
 import { isInSwitchCooldown } from '@/lib/api/switch-cooldown'
 import { devLog } from '@/lib/logger'
 
@@ -153,7 +158,7 @@ async function makeBackendRequest(
   backendUrl: string,
   method: string,
   headers: Headers,
-  body: string | undefined
+  body: BodyInit | undefined
 ): Promise<Response> {
   return fetch(backendUrl, {
     method,
@@ -196,9 +201,18 @@ async function proxyRequest(
     }
   }
 
-  // Build headers
+  // Build headers — preserve the original Content-Type for multipart uploads
+  // (file attachments). For regular JSON requests, set application/json.
   const headers = new Headers()
-  headers.set('Content-Type', 'application/json')
+  const incomingContentType = request.headers.get('content-type') || ''
+  const isMultipart = incomingContentType.includes('multipart/form-data')
+  if (isMultipart) {
+    // Forward the original Content-Type WITH boundary parameter so the backend
+    // can parse the multipart body. Do NOT set 'application/json'.
+    headers.set('Content-Type', incomingContentType)
+  } else {
+    headers.set('Content-Type', 'application/json')
+  }
 
   // Set Authorization header
   if (accessToken) {
@@ -225,9 +239,25 @@ async function proxyRequest(
     }
   })
 
-  // Get request body for non-GET requests (need to read it once since it can only be read once)
-  const body =
-    request.method !== 'GET' && request.method !== 'HEAD' ? await request.text() : undefined
+  // Get request body for non-GET requests (need to read it once since it can only be read once).
+  // For multipart uploads (file attachments), read as raw bytes to preserve binary content.
+  // For JSON requests, read as text.
+  let body: BodyInit | undefined
+  if (request.method !== 'GET' && request.method !== 'HEAD') {
+    // Guard: reject oversized bodies before reading into memory (12MB max)
+    const contentLength = parseInt(request.headers.get('content-length') || '0', 10)
+    if (contentLength > 12 * 1024 * 1024) {
+      return NextResponse.json({ error: 'Request body too large' }, { status: 413 })
+    }
+    if (isMultipart) {
+      // Preserve binary content for file uploads — read as raw ArrayBuffer
+      // and wrap in Uint8Array which fetch() accepts as BodyInit.
+      const buffer = await request.arrayBuffer()
+      body = new Uint8Array(buffer)
+    } else {
+      body = await request.text()
+    }
+  }
 
   try {
     // Make request to backend
@@ -261,6 +291,40 @@ async function proxyRequest(
         statusText: 'No Content',
       })
       // Still set cookies if we refreshed
+      if (refreshedTokenData) {
+        setTokenCookies(proxyResponse, refreshedTokenData)
+      }
+      return proxyResponse
+    }
+
+    // For binary content (images, PDFs, videos, downloads) — stream the
+    // response body directly without reading as text. Reading binary data
+    // via response.text() corrupts it (encoding mismatch).
+    const backendContentType = response.headers.get('content-type') || ''
+    const isBinaryResponse =
+      backendContentType.startsWith('image/') ||
+      backendContentType.startsWith('video/') ||
+      backendContentType.startsWith('audio/') ||
+      backendContentType === 'application/pdf' ||
+      backendContentType === 'application/zip' ||
+      backendContentType === 'application/octet-stream' ||
+      backendContentType === 'application/x-gzip'
+
+    if (isBinaryResponse) {
+      const proxyResponse = new NextResponse(response.body, {
+        status: response.status,
+        statusText: response.statusText,
+      })
+      // Forward content headers
+      for (const key of [
+        'content-type',
+        'content-disposition',
+        'content-length',
+        'cache-control',
+      ]) {
+        const val = response.headers.get(key)
+        if (val) proxyResponse.headers.set(key, val)
+      }
       if (refreshedTokenData) {
         setTokenCookies(proxyResponse, refreshedTokenData)
       }

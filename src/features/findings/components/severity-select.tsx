@@ -73,7 +73,7 @@ export function SeveritySelect({
           ) : null}
           {currentConfig.label}
           {cvss !== undefined && <span className="ml-1 font-mono text-[10px]">({cvss})</span>}
-          <ChevronDown className="ml-1 h-3 w-3" />
+          {!disabled && <ChevronDown className="ml-1 h-3 w-3" />}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-52">

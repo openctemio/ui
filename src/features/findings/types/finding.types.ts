@@ -324,7 +324,7 @@ export interface FindingUser {
 // AFFECTED ASSET
 // ============================================
 
-export type AssetType = 'domain' | 'website' | 'service' | 'ip' | 'repository' | 'cloud'
+export type AssetType = 'domain' | 'website' | 'service' | 'ip' | 'repository' | 'cloud' | 'target'
 
 export interface AffectedAsset {
   id: string
