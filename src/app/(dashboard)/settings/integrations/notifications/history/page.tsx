@@ -1,7 +1,8 @@
 'use client'
 
-import { Suspense, useState, useCallback, useEffect, useMemo, useRef } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
+import { useRouter } from 'next/navigation'
+import { useUrlParam } from '@/hooks/use-url-param'
 import { formatDistanceToNow } from 'date-fns'
 import { Main } from '@/components/layout'
 import { Button } from '@/components/ui/button'
@@ -433,8 +434,7 @@ function HistoryList({
 
 function HistoryContent() {
   const router = useRouter()
-  const searchParams = useSearchParams()
-  const initialId = searchParams.get('integration') || ''
+  const initialId = useUrlParam('integration') || ''
 
   const [selectedId, setSelectedId] = useState(initialId)
   const [stats, setStats] = useState({ total: 0, success: 0, failed: 0, isLoading: true })
@@ -559,15 +559,7 @@ export default function NotificationHistoryPage() {
   return (
     <>
       <Main>
-        <Suspense
-          fallback={
-            <div className="flex justify-center py-20">
-              <Loader2 className="h-8 w-8 animate-spin" />
-            </div>
-          }
-        >
-          <HistoryContent />
-        </Suspense>
+        <HistoryContent />
       </Main>
     </>
   )
