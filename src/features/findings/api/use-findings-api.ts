@@ -193,8 +193,7 @@ export function useFindingsApi(filters?: FindingApiFilters, config?: SWRConfigur
   // Ensure user has a tenant before making requests
   const key = currentTenant ? buildFindingsEndpoint(filters) : null
 
-  const result = useSWR<ApiFindingListResponse>(key, fetchFindings, { ...defaultConfig, ...config })
-  return { ...result, isLoading: result.isLoading || !currentTenant }
+  return useSWR<ApiFindingListResponse>(key, fetchFindings, { ...defaultConfig, ...config })
 }
 
 /**
@@ -206,14 +205,7 @@ export function useFindingApi(findingId: string | null, config?: SWRConfiguratio
   // Ensure user has a tenant before making requests
   const key = currentTenant && findingId ? buildFindingEndpoint(findingId) : null
 
-  const result = useSWR<ApiFinding>(key, fetchFinding, { ...defaultConfig, ...config })
-
-  // When tenant is still loading, treat as loading (not "not found")
-  const tenantLoading = !currentTenant && !!findingId
-  return {
-    ...result,
-    isLoading: result.isLoading || tenantLoading,
-  }
+  return useSWR<ApiFinding>(key, fetchFinding, { ...defaultConfig, ...config })
 }
 
 /**
@@ -525,11 +517,7 @@ export function useFindingStatsApi(filters?: FindingStatsFilters, config?: SWRCo
 
   const key = currentTenant ? url : null
 
-  const result = useSWR<FindingStatsResponse>(key, fetchFindingStats, {
-    ...defaultConfig,
-    ...config,
-  })
-  return { ...result, isLoading: result.isLoading || !currentTenant }
+  return useSWR<FindingStatsResponse>(key, fetchFindingStats, { ...defaultConfig, ...config })
 }
 
 // ============================================
