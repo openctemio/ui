@@ -93,7 +93,7 @@ export function StatusSelect({
               >
                 {loading && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
                 {currentConfig.label}
-                <ChevronDown className="ml-1 h-3 w-3" />
+                {!disabled && <ChevronDown className="ml-1 h-3 w-3" />}
               </Button>
             </DropdownMenuTrigger>
           </TooltipTrigger>
