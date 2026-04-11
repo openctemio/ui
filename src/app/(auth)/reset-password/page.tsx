@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { Suspense, useState, useTransition } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import Link from 'next/link'
@@ -24,6 +24,14 @@ import { resetPasswordSchema, type ResetPasswordInput } from '@/features/auth/sc
 import { resetPasswordAction } from '@/features/auth/actions/local-auth-actions'
 
 export default function ResetPasswordPage() {
+  return (
+    <Suspense>
+      <ResetPasswordContent />
+    </Suspense>
+  )
+}
+
+function ResetPasswordContent() {
   const [isPending, startTransition] = useTransition()
   const [isSuccess, setIsSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)

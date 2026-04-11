@@ -1,6 +1,6 @@
 'use client'
 
-import { use, useState, useMemo, useCallback } from 'react'
+import { Suspense, use, useState, useMemo, useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Main } from '@/components/layout'
 import { RiskScoreBadge } from '@/features/shared'
@@ -122,6 +122,14 @@ interface PageProps {
 }
 
 export default function AssetGroupDetailPage({ params }: PageProps) {
+  return (
+    <Suspense>
+      <AssetGroupDetailContent params={params} />
+    </Suspense>
+  )
+}
+
+function AssetGroupDetailContent({ params }: PageProps) {
   const { id } = use(params)
   const router = useRouter()
 
