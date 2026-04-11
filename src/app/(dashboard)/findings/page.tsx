@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useCallback } from 'react'
+import { Suspense, useState, useMemo, useCallback } from 'react'
 import Link from 'next/link'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { ColumnDef } from '@tanstack/react-table'
@@ -237,6 +237,14 @@ function FindingsLoadingSkeleton() {
 }
 
 export default function FindingsPage() {
+  return (
+    <Suspense>
+      <FindingsContent />
+    </Suspense>
+  )
+}
+
+function FindingsContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const assetIdFilter = searchParams.get('assetId')

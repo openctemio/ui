@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useMemo, useState } from 'react'
+import { Suspense, useCallback, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 
 import { AssetPage } from '@/features/assets/components/asset-page'
@@ -18,6 +18,14 @@ import { buildDomainsConfig } from './config'
  * collapsed parent.
  */
 export default function DomainsPage() {
+  return (
+    <Suspense>
+      <DomainsContent />
+    </Suspense>
+  )
+}
+
+function DomainsContent() {
   const searchParams = useSearchParams()
   // A non-empty `q` (search) or `tags` filter forces the picker into
   // "show all" mode so a query like "api" still surfaces api.example.com
