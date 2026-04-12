@@ -147,9 +147,10 @@ export function BootstrapProvider({ children }: BootstrapProviderProps) {
   // Fetch on tenant change
   React.useEffect(() => {
     if (!tenantId) {
-      // Don't reset if we previously had a tenant — this is a transient null
-      // during forward navigation re-render. Wait for tenant to resolve.
-      if (previousTenantIdRef.current && isBootstrapped) {
+      // Don't reset if we previously had a tenant OR if we already have data.
+      // This handles transient null during component remount / forward navigation
+      // where TenantProvider hasn't set currentTenant from cookie yet.
+      if (previousTenantIdRef.current || isBootstrapped || fetchedTenantId) {
         return
       }
       setData(null)
@@ -172,7 +173,7 @@ export function BootstrapProvider({ children }: BootstrapProviderProps) {
     setIsLoading(true)
     previousTenantIdRef.current = tenantId
     fetchBootstrap()
-  }, [tenantId, fetchBootstrap])
+  }, [tenantId, fetchBootstrap, isBootstrapped, fetchedTenantId])
 
   // Refresh function
   const refresh = React.useCallback(async () => {
