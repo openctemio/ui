@@ -49,7 +49,7 @@ export const networksConfig: AssetPageConfig = {
   type: 'network',
   // After Phase 3: all network devices consolidated to type='network'
   // Backward compat: also fetch old types during transition
-  types: ['firewall', 'load_balancer', 'network'],
+  // All network devices now type='network' after consolidation
   // Also include hosts tagged as network-device via tag filter
   label: 'Network Device',
   labelPlural: 'Network & Security Devices',
