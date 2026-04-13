@@ -26,26 +26,38 @@ export const hostsConfig: AssetPageConfig = {
 
   columns: [
     {
-      // Primary identity for a host. Many hosts share a hostname (e.g. "web")
-      // but the IP is what makes a row meaningful at-a-glance. We render the
-      // primary IP plus any extras (ipv6, public_ip) inline if present.
+      // IP column: supports both legacy metadata.ip (string) and
+      // standardized metadata.ip_addresses (array).
       accessorKey: 'metadata.ip',
       header: 'IP',
       cell: ({ row }) => {
         const meta = row.original.metadata as Record<string, unknown>
-        const primary = (meta.ip as string) || ''
-        const extras = [meta.publicIp, meta.ipv6, meta.privateIp].filter(
-          (v): v is string => typeof v === 'string' && v.length > 0 && v !== primary
-        )
-        if (!primary && extras.length === 0) {
+        // Collect IPs from all possible sources
+        const ips: string[] = []
+        // Standard array format
+        if (Array.isArray(meta.ip_addresses)) {
+          ips.push(...(meta.ip_addresses as string[]))
+        }
+        // Legacy single IP
+        if (typeof meta.ip === 'string' && meta.ip && !ips.includes(meta.ip)) {
+          ips.push(meta.ip)
+        }
+        // Extra IPs
+        for (const key of ['publicIp', 'ipv6', 'privateIp']) {
+          const v = meta[key]
+          if (typeof v === 'string' && v && !ips.includes(v)) {
+            ips.push(v)
+          }
+        }
+        if (ips.length === 0) {
           return <span className="text-muted-foreground">-</span>
         }
         return (
-          <div className="max-w-[180px]" title={[primary, ...extras].filter(Boolean).join('\n')}>
-            {primary && <p className="text-sm font-mono truncate">{primary}</p>}
-            {extras.length > 0 && (
+          <div className="max-w-[200px]" title={ips.join('\n')}>
+            <p className="text-sm font-mono truncate">{ips[0]}</p>
+            {ips.length > 1 && (
               <p className="text-xs text-muted-foreground font-mono truncate">
-                {extras.length === 1 ? extras[0] : `+${extras.length} more`}
+                +{ips.length - 1} more
               </p>
             )}
           </div>
@@ -239,7 +251,11 @@ export const hostsConfig: AssetPageConfig = {
 
   copyAction: {
     label: 'Copy IP',
-    getValue: (asset: Asset) => (asset.metadata.ip as string) || asset.name,
+    getValue: (asset: Asset) => {
+      const ips = (asset.metadata as Record<string, unknown>).ip_addresses as string[] | undefined
+      if (ips && ips.length > 0) return ips.join(', ')
+      return (asset.metadata.ip as string) || asset.name
+    },
   },
 
   detailStats: [
@@ -264,14 +280,26 @@ export const hostsConfig: AssetPageConfig = {
       title: 'System Information',
       fields: [
         {
-          label: 'IP Address',
+          label: 'IP Addresses',
           getValue: (asset: Asset) => {
-            const ip = asset.metadata.ip as string | undefined
-            if (!ip) return <span className="text-muted-foreground">-</span>
+            // Support both standard ip_addresses array and legacy ip string
+            const ips: string[] = []
+            if (Array.isArray((asset.metadata as Record<string, unknown>).ip_addresses)) {
+              ips.push(...((asset.metadata as Record<string, unknown>).ip_addresses as string[]))
+            }
+            const legacyIp = asset.metadata.ip as string | undefined
+            if (legacyIp && !ips.includes(legacyIp)) {
+              ips.push(legacyIp)
+            }
+            if (ips.length === 0) return <span className="text-muted-foreground">-</span>
             return (
-              <div className="flex items-center gap-2">
-                <Globe className="h-4 w-4 text-purple-500" />
-                <span className="font-mono font-medium">{ip}</span>
+              <div className="space-y-1">
+                {ips.map((ip) => (
+                  <div key={ip} className="flex items-center gap-2">
+                    <Globe className="h-4 w-4 text-purple-500 shrink-0" />
+                    <span className="font-mono font-medium text-sm">{ip}</span>
+                  </div>
+                ))}
               </div>
             )
           },
