@@ -6,15 +6,14 @@ import type { AssetPageConfig } from '@/features/assets/types/page-config.types'
 import type { Asset } from '@/features/assets'
 
 const getDeviceTypeLabel = (asset: Asset): string => {
-  const meta = asset.metadata as Record<string, unknown>
-  // Check asset type first
-  if (asset.type === 'firewall') return 'Firewall'
-  if (asset.type === 'load_balancer') return 'Load Balancer'
-  // Then check device_role for hosts tagged as network-device
-  const role = (meta.device_role as string) || ''
-  switch (role) {
-    case 'core_switch':
-    case 'access_switch':
+  // After type consolidation: all network devices have type='network', sub_type differentiates
+  const subType = asset.subType || ''
+  switch (subType) {
+    case 'firewall':
+      return 'Firewall'
+    case 'load_balancer':
+      return 'Load Balancer'
+    case 'switch':
       return 'Switch'
     case 'router':
       return 'Router'
@@ -23,8 +22,7 @@ const getDeviceTypeLabel = (asset: Asset): string => {
     case 'ids_ips':
       return 'IDS/IPS'
     default:
-      if (asset.type === 'network') return 'Segment'
-      return asset.type
+      return 'Network Device'
   }
 }
 
@@ -61,7 +59,7 @@ export const networksConfig: AssetPageConfig = {
 
   columns: [
     {
-      accessorKey: 'type',
+      accessorKey: 'subType',
       header: 'Device Type',
       cell: ({ row }) => {
         const label = getDeviceTypeLabel(row.original)
@@ -162,22 +160,21 @@ export const networksConfig: AssetPageConfig = {
     {
       title: 'Firewalls',
       icon: Shield,
-      compute: (assets) => assets.filter((a) => a.type === 'firewall').length,
+      compute: (assets) => assets.filter((a) => a.subType === 'firewall').length,
     },
     {
       title: 'Load Balancers',
       icon: Router,
-      compute: (assets) => assets.filter((a) => a.type === 'load_balancer').length,
+      compute: (assets) => assets.filter((a) => a.subType === 'load_balancer').length,
     },
     {
       title: 'Switches/Routers',
       icon: Server,
-      compute: (assets) => {
-        return assets.filter((a) => {
-          const role = (a.metadata as Record<string, unknown>).device_role as string
-          return role === 'core_switch' || role === 'access_switch' || role === 'router'
-        }).length
-      },
+      compute: (assets) =>
+        assets.filter((a) => {
+          const st = a.subType || ''
+          return st === 'switch' || st === 'router'
+        }).length,
     },
     {
       title: 'With Findings',
@@ -187,28 +184,7 @@ export const networksConfig: AssetPageConfig = {
     },
   ],
 
-  customFilter: {
-    label: 'Device Type',
-    options: [
-      { label: 'Firewalls', value: 'firewall' },
-      { label: 'Load Balancers', value: 'load_balancer' },
-      { label: 'Switches', value: 'switch' },
-      { label: 'Routers', value: 'router' },
-      { label: 'Wireless APs', value: 'wireless_ap' },
-    ],
-    filterFn: (asset, value) => {
-      if (value === 'all') return true
-      // Works with both old types (firewall) and new sub_type
-      const subType = asset.subType || ''
-      if (value === 'firewall') return asset.type === 'firewall' || subType === 'firewall'
-      if (value === 'load_balancer')
-        return asset.type === 'load_balancer' || subType === 'load_balancer'
-      if (value === 'switch') return subType === 'core_switch' || subType === 'access_switch'
-      if (value === 'router') return subType === 'router'
-      if (value === 'wireless_ap') return subType === 'wireless_ap'
-      return true
-    },
-  },
+  // Filters are handled dynamically by PropertyFilter (fetches from /assets/facets)
 
   copyAction: {
     label: 'Copy IP',

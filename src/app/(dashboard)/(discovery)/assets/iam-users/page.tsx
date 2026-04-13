@@ -1,8 +1,5 @@
-'use client'
-
-import { AssetPage } from '@/features/assets/components/asset-page'
-import { iamUserConfig } from '@/features/assets/lib/category-templates'
+import { redirect } from 'next/navigation'
 
 export default function Page() {
-  return <AssetPage config={iamUserConfig} />
+  redirect('/assets/identity?sub_type=iam_user')
 }

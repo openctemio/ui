@@ -1,8 +1,5 @@
-'use client'
-
-import { AssetPage } from '@/features/assets/components/asset-page'
-import { openPortConfig } from '@/features/assets/lib/category-templates'
+import { redirect } from 'next/navigation'
 
 export default function Page() {
-  return <AssetPage config={openPortConfig} />
+  redirect('/assets/services?sub_type=open_port')
 }

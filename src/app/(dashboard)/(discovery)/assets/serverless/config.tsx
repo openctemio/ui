@@ -297,7 +297,15 @@ export const serverlessConfig: AssetPageConfig = {
           label: 'Triggers',
           fullWidth: true,
           getValue: (asset) => {
-            const triggers = (asset.metadata.functionTriggers as string[]) || []
+            const raw = asset.metadata.functionTriggers
+            const triggers: string[] = Array.isArray(raw)
+              ? raw
+              : raw
+                ? String(raw)
+                    .split(',')
+                    .map((s) => s.trim())
+                    .filter(Boolean)
+                : []
             if (triggers.length === 0) return '-'
             return (
               <div className="flex flex-wrap gap-1">
@@ -320,7 +328,15 @@ export const serverlessConfig: AssetPageConfig = {
           label: 'Layers',
           fullWidth: true,
           getValue: (asset) => {
-            const layers = (asset.metadata.functionLayers as string[]) || []
+            const raw = asset.metadata.functionLayers
+            const layers: string[] = Array.isArray(raw)
+              ? raw
+              : raw
+                ? String(raw)
+                    .split(',')
+                    .map((s) => s.trim())
+                    .filter(Boolean)
+                : []
             if (layers.length === 0) return '-'
             return (
               <div className="flex flex-wrap gap-1">

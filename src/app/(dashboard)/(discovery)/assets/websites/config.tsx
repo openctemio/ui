@@ -9,7 +9,8 @@ const columns: ColumnDef<Asset>[] = [
     id: 'technology',
     header: 'Technology',
     cell: ({ row }) => {
-      const tech = (row.original.metadata.technology as string[]) || []
+      const raw = row.original.metadata.technology
+      const tech: string[] = Array.isArray(raw) ? raw : raw ? [String(raw)] : []
       return (
         <div className="flex flex-wrap gap-1 max-w-[150px]">
           {tech.slice(0, 2).map((t) => (
@@ -216,7 +217,10 @@ export const websitesConfig: AssetPageConfig = {
         {
           label: 'Technologies',
           getValue: (asset) => {
-            const tech = (asset.metadata.technology as string[]) || []
+            const tech = (() => {
+              const r = asset.metadata.technology
+              return Array.isArray(r) ? r : r ? [String(r)] : []
+            })()
             if (!tech.length) return '-'
             return (
               <div className="flex flex-wrap gap-2">
@@ -238,7 +242,18 @@ export const websitesConfig: AssetPageConfig = {
     { header: 'URL', accessor: (a) => a.name },
     {
       header: 'Technology',
-      accessor: (a) => ((a.metadata.technology as string[]) || []).join(';'),
+      accessor: (a) => {
+        const raw = a.metadata.technology
+        const tech: string[] = Array.isArray(raw)
+          ? raw
+          : raw
+            ? String(raw)
+                .split(',')
+                .map((s) => s.trim())
+                .filter(Boolean)
+            : []
+        return tech.join(';')
+      },
     },
     { header: 'SSL', accessor: (a) => (a.metadata.ssl ? 'Yes' : 'No') },
     { header: 'HTTP Status', accessor: (a) => (a.metadata.httpStatus as number) || 200 },
