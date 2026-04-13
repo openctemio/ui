@@ -143,6 +143,7 @@ function transformAsset(backend: BackendAsset): Asset {
 interface BackendAssetStats {
   total: number
   by_type: Record<string, number>
+  by_sub_type?: Record<string, number>
   by_status: Record<string, number>
   by_criticality: Record<string, number>
   by_scope: Record<string, number>
@@ -156,6 +157,7 @@ interface BackendAssetStats {
 export interface AssetStatsData {
   total: number
   byType: Record<string, number>
+  bySubType: Record<string, number>
   byStatus: Record<string, number>
   byCriticality: Record<string, number>
   byScope: Record<string, number>
@@ -170,6 +172,7 @@ function transformAssetStats(backend: BackendAssetStats): AssetStatsData {
   return {
     total: backend.total || 0,
     byType: backend.by_type || {},
+    bySubType: backend.by_sub_type || {},
     byStatus: backend.by_status || {},
     byCriticality: backend.by_criticality || {},
     byScope: backend.by_scope || {},
@@ -518,6 +521,7 @@ export function useAssetStats(types?: string[], tags?: string[]) {
   const emptyStats: AssetStatsData = {
     total: 0,
     byType: {},
+    bySubType: {},
     byStatus: {},
     byCriticality: {},
     byScope: {},
