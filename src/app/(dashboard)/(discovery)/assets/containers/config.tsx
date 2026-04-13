@@ -15,7 +15,7 @@ import type { Asset } from '@/features/assets'
  */
 export const containersConfig: AssetPageConfig = {
   type: 'container',
-  types: ['container', 'kubernetes_cluster'],
+  types: ['container', 'kubernetes'],
   label: 'Container',
   labelPlural: 'Containers & Kubernetes',
   description: 'Container workloads and Kubernetes clusters',
@@ -29,8 +29,17 @@ export const containersConfig: AssetPageConfig = {
       accessorKey: 'metadata.kind',
       header: 'Kind',
       cell: ({ row }) => {
+        const subType = row.original.subType
         const t = row.original.type
-        return <span className="text-sm capitalize">{t.replace('_', ' ')}</span>
+        const label =
+          subType === 'cluster'
+            ? 'K8s Cluster'
+            : subType === 'namespace'
+              ? 'K8s Namespace'
+              : t === 'kubernetes'
+                ? 'Kubernetes'
+                : 'Container'
+        return <span className="text-sm">{label}</span>
       },
     },
     {
@@ -113,7 +122,8 @@ export const containersConfig: AssetPageConfig = {
     {
       title: 'Clusters',
       icon: Layers,
-      compute: (_assets, stats) => stats.byType.kubernetes_cluster ?? 0,
+      compute: (assets) =>
+        assets.filter((a) => a.type === 'kubernetes' || a.subType === 'cluster').length,
     },
     {
       title: 'With Findings',
