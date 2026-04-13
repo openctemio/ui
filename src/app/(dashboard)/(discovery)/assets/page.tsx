@@ -89,7 +89,7 @@ const ASSET_TYPE_URLS: Record<string, string> = {
   cloud_account: '/assets/cloud-accounts',
   storage: '/assets/storage',
   database: '/assets/databases',
-  identity: '/assets/iam-users',
+  identity: '/assets/identity',
   repository: '/assets/repositories',
   unclassified: '/assets/overview',
 }
@@ -148,7 +148,7 @@ const ASSET_TYPE_TO_SUBMODULE: Record<string, string> = {
   cloud_account: 'cloud-accounts',
   storage: 'storage',
   database: 'databases',
-  identity: 'hosts', // No dedicated sub-module yet, fallback
+  identity: 'identity',
   repository: 'repositories',
 }
 
@@ -185,9 +185,9 @@ export default function AssetsOverviewPage() {
         if (!subModuleSlug) return true // Show types without mapping
 
         const subModule = assetSubModules.find((m) => m.slug === subModuleSlug)
-        if (!subModule) return false // Hide if not found in API response
+        if (!subModule) return true // Show if sub-module not configured (graceful fallback)
 
-        // Hide if inactive or disabled
+        // Hide only if explicitly inactive or disabled
         if (!subModule.is_active) return false
         if (subModule.release_status === 'disabled') return false
 

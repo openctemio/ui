@@ -245,7 +245,7 @@ export const mobileConfig: AssetPageConfig = {
             <div className="flex items-center gap-2">
               <Star className="h-4 w-4 text-yellow-500" />
               <span className="font-bold">
-                {(asset.metadata.rating as number)?.toFixed(1) || '-'}
+                {asset.metadata.rating != null ? Number(asset.metadata.rating).toFixed(1) : '-'}
               </span>
             </div>
           ),
@@ -280,8 +280,16 @@ export const mobileConfig: AssetPageConfig = {
           label: 'App Permissions',
           fullWidth: true,
           getValue: (asset) => {
-            const permissions = asset.metadata.permissions as string[] | undefined
-            if (!permissions || permissions.length === 0) return '-'
+            const raw = asset.metadata.permissions
+            const permissions: string[] = Array.isArray(raw)
+              ? raw
+              : raw
+                ? String(raw)
+                    .split(',')
+                    .map((s) => s.trim())
+                    .filter(Boolean)
+                : []
+            if (permissions.length === 0) return '-'
             return (
               <div className="flex flex-wrap gap-1">
                 {permissions.map((permission: string, index: number) => (
@@ -302,8 +310,16 @@ export const mobileConfig: AssetPageConfig = {
           label: 'SDKs',
           fullWidth: true,
           getValue: (asset) => {
-            const sdks = asset.metadata.sdks as string[] | undefined
-            if (!sdks || sdks.length === 0) return '-'
+            const raw = asset.metadata.sdks
+            const sdks: string[] = Array.isArray(raw)
+              ? raw
+              : raw
+                ? String(raw)
+                    .split(',')
+                    .map((s) => s.trim())
+                    .filter(Boolean)
+                : []
+            if (sdks.length === 0) return '-'
             return (
               <div className="flex flex-wrap gap-1">
                 {sdks.map((sdk: string, index: number) => (

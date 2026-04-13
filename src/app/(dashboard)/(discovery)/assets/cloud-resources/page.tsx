@@ -1,8 +1,5 @@
-'use client'
+import { redirect } from 'next/navigation'
 
-import { AssetPage } from '@/features/assets/components/asset-page'
-import { cloudConfig } from './config'
-
-export default function CloudPage() {
-  return <AssetPage config={cloudConfig} />
+export default function CloudResourcesPage() {
+  redirect('/assets/cloud-accounts')
 }

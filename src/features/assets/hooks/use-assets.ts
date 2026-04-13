@@ -69,6 +69,9 @@ export interface AssetSearchFilters {
   // Has findings filter
   hasFindings?: boolean
 
+  // Properties filter: key=value pairs for JSONB containment (server-side)
+  propertiesFilter?: Record<string, string>
+
   // Sorting (e.g., "-created_at", "name", "-risk_score")
   sort?: string
 
@@ -288,6 +291,13 @@ function buildAssetQueryParams(filters?: AssetSearchFilters): Record<string, str
   if (filters.exposures?.length) params.exposures = filters.exposures.join(',')
   if (filters.tags?.length) params.tags = filters.tags.join(',')
 
+  // Properties filter (JSONB key:value pairs)
+  if (filters.propertiesFilter && Object.keys(filters.propertiesFilter).length > 0) {
+    params.properties = Object.entries(filters.propertiesFilter)
+      .map(([k, v]) => `${k}:${v}`)
+      .join(',')
+  }
+
   // Search
   if (filters.search) params.search = filters.search
 
@@ -489,7 +499,7 @@ export async function bulkDeleteAssets(assetIds: string[]): Promise<void> {
  * endpoint semantics so the stats card always reflects whatever the user has
  * filtered to in the table (e.g. type=host AND tag=production).
  */
-export function useAssetStats(types?: string[], tags?: string[]) {
+export function useAssetStats(types?: string[], tags?: string[], subType?: string) {
   const { currentTenant } = useTenant()
   const { can } = usePermissions()
   const canReadAssets = can(Permission.AssetsRead)
@@ -500,6 +510,7 @@ export function useAssetStats(types?: string[], tags?: string[]) {
   const params = new URLSearchParams()
   if (types && types.length > 0) params.set('types', types.join(','))
   if (tags && tags.length > 0) params.set('tags', tags.join(','))
+  if (subType) params.set('sub_type', subType)
   const queryString = params.toString()
   const querySuffix = queryString ? `?${queryString}` : ''
   const cacheKey = shouldFetch ? `asset-stats${querySuffix}` : null

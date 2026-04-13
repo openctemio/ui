@@ -104,18 +104,15 @@ export const hostsConfig: AssetPageConfig = {
       },
     },
     {
-      accessorKey: 'metadata.vendor',
-      header: 'Vendor / Model',
+      accessorKey: 'metadata.arch',
+      header: 'Arch',
       cell: ({ row }) => {
-        const meta = row.original.metadata as Record<string, unknown>
-        const vendor = (meta.vendor as string) || ''
-        const model = (meta.model as string) || ''
-        if (!vendor && !model) return <span className="text-muted-foreground">-</span>
+        const arch = (row.original.metadata as Record<string, unknown>).arch as string
+        if (!arch) return <span className="text-muted-foreground">-</span>
         return (
-          <div className="max-w-[160px]">
-            {vendor && <p className="text-sm font-medium truncate">{vendor}</p>}
-            {model && <p className="text-xs text-muted-foreground truncate">{model}</p>}
-          </div>
+          <Badge variant="outline" className="text-xs font-mono">
+            {arch}
+          </Badge>
         )
       },
     },
@@ -123,8 +120,16 @@ export const hostsConfig: AssetPageConfig = {
       accessorKey: 'metadata.openPorts',
       header: 'Ports',
       cell: ({ row }) => {
-        const ports = row.original.metadata.openPorts as string[] | undefined
-        if (!ports || ports.length === 0) return <span className="text-muted-foreground">-</span>
+        const raw = row.original.metadata.openPorts
+        const ports: string[] = Array.isArray(raw)
+          ? raw.map(String)
+          : raw
+            ? String(raw)
+                .split(',')
+                .map((s) => s.trim())
+                .filter(Boolean)
+            : []
+        if (ports.length === 0) return <span className="text-muted-foreground">-</span>
         return (
           <div className="flex flex-wrap gap-1">
             {ports.slice(0, 3).map((port: string) => (
@@ -384,9 +389,16 @@ export const hostsConfig: AssetPageConfig = {
           label: 'Ports',
           fullWidth: true,
           getValue: (asset: Asset) => {
-            const ports = asset.metadata.openPorts as string[] | undefined
-            if (!ports || ports.length === 0)
-              return <span className="text-muted-foreground">None</span>
+            const raw = asset.metadata.openPorts
+            const ports: string[] = Array.isArray(raw)
+              ? raw.map(String)
+              : raw
+                ? String(raw)
+                    .split(',')
+                    .map((s) => s.trim())
+                    .filter(Boolean)
+                : []
+            if (ports.length === 0) return <span className="text-muted-foreground">None</span>
             return (
               <div className="flex flex-wrap gap-1">
                 {ports.map((port: string) => (

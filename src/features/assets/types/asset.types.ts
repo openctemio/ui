@@ -126,11 +126,10 @@ export const ASSET_TYPE_CATEGORIES: Record<AssetTypeCategory, CategoryConfig> = 
       {
         key: 'web_application',
         label: 'Web Applications',
-        url: '/assets/websites',
+        url: '/assets/websites?sub_type=web_application',
         countKey: 'web_application',
       },
       { key: 'mobile_app', label: 'Mobile Apps', url: '/assets/mobile', countKey: 'mobile_app' },
-      { key: 'service', label: 'Services', url: '/assets/services', countKey: 'service' },
     ],
   },
   infrastructure: {
@@ -139,8 +138,18 @@ export const ASSET_TYPE_CATEGORIES: Record<AssetTypeCategory, CategoryConfig> = 
     types: ['host', 'container', 'kubernetes', 'service'],
     items: [
       { key: 'host', label: 'Hosts', url: '/assets/hosts', countKey: 'host' },
-      { key: 'container', label: 'Containers', url: '/assets/containers', countKey: 'container' },
-      { key: 'kubernetes', label: 'Kubernetes', url: '/assets/containers', countKey: 'kubernetes' },
+      {
+        key: 'container',
+        label: 'Containers',
+        url: '/assets/containers?type=container',
+        countKey: 'container',
+      },
+      {
+        key: 'kubernetes',
+        label: 'Kubernetes',
+        url: '/assets/containers?type=kubernetes',
+        countKey: 'kubernetes',
+      },
       { key: 'service', label: 'Services', url: '/assets/services', countKey: 'service' },
     ],
   },
@@ -149,15 +158,30 @@ export const ASSET_TYPE_CATEGORIES: Record<AssetTypeCategory, CategoryConfig> = 
     description: 'Firewalls, switches, routers, load balancers',
     types: ['network'],
     items: [
-      { key: 'firewall', label: 'Firewalls', url: '/assets/networks', countKey: 'firewall' },
+      {
+        key: 'firewall',
+        label: 'Firewalls',
+        url: '/assets/networks?sub_type=firewall',
+        countKey: 'firewall',
+      },
       {
         key: 'load_balancer',
         label: 'Load Balancers',
-        url: '/assets/networks',
+        url: '/assets/networks?sub_type=load_balancer',
         countKey: 'load_balancer',
       },
-      { key: 'switch', label: 'Switches', url: '/assets/networks', countKey: 'core_switch' },
-      { key: 'router', label: 'Routers', url: '/assets/networks', countKey: 'router' },
+      {
+        key: 'switch',
+        label: 'Switches',
+        url: '/assets/networks?sub_type=switch',
+        countKey: 'switch',
+      },
+      {
+        key: 'router',
+        label: 'Routers',
+        url: '/assets/networks?sub_type=router',
+        countKey: 'router',
+      },
     ],
   },
   cloud: {
@@ -187,12 +211,22 @@ export const ASSET_TYPE_CATEGORIES: Record<AssetTypeCategory, CategoryConfig> = 
     description: 'Users, roles, and service accounts',
     types: ['identity'],
     items: [
-      { key: 'iam_user', label: 'Users', url: '/assets/iam-users', countKey: 'iam_user' },
-      { key: 'iam_role', label: 'Roles', url: '/assets/iam-roles', countKey: 'iam_role' },
+      {
+        key: 'iam_user',
+        label: 'Users',
+        url: '/assets/identity?sub_type=iam_user',
+        countKey: 'iam_user',
+      },
+      {
+        key: 'iam_role',
+        label: 'Roles',
+        url: '/assets/identity?sub_type=iam_role',
+        countKey: 'iam_role',
+      },
       {
         key: 'service_account',
         label: 'Service Accounts',
-        url: '/assets/iam-users',
+        url: '/assets/identity?sub_type=service_account',
         countKey: 'service_account',
       },
     ],
@@ -215,7 +249,7 @@ export const ASSET_TYPE_CATEGORIES: Record<AssetTypeCategory, CategoryConfig> = 
 /**
  * Legacy asset types that are deprecated but still supported
  */
-export const LEGACY_ASSET_TYPES: AssetType[] = ['service', 'credential', 'mobile', 'endpoint']
+export const LEGACY_ASSET_TYPES: AssetType[] = ['credential', 'mobile', 'endpoint']
 
 /**
  * Check if an asset type is deprecated

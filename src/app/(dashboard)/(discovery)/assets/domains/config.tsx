@@ -18,29 +18,21 @@ import {
 
 export interface DomainsConfigOptions {
   /**
-   * Set of root domain names that are currently expanded. `null`
-   * means "always show every row" — used when the user is filtering
-   * (search / tags) so query results aren't hidden by a collapsed
-   * parent.
+   * Set of root domain names that are COLLAPSED. `null` = show all rows
+   * (filter active). Empty Set = all expanded (default).
    */
-  expandedRoots: Set<string> | null
-  /** Toggle expansion for a single root domain. */
+  collapsedRoots: Set<string> | null
+  /** Toggle collapse/expand for a single root domain. */
   toggleRoot: (rootName: string) => void
 }
 
-/**
- * Build the AssetPage config for the Domains page. The shape is the
- * same as the previous static export — the only difference is that
- * `dataTransform` and the type column close over the page's expansion
- * state, so the table can collapse/expand without AssetPage knowing
- * about the tree.
- */
 export function buildDomainsConfig({
-  expandedRoots,
+  collapsedRoots,
   toggleRoot,
 }: DomainsConfigOptions): AssetPageConfig {
+  // null = show all; empty Set = all expanded; Set with names = those are collapsed
   const isExpanded = (rootName: string) =>
-    expandedRoots === null ? true : expandedRoots.has(rootName)
+    collapsedRoots === null ? true : !collapsedRoots.has(rootName)
 
   const columns: ColumnDef<Asset>[] = [
     {
@@ -113,28 +105,49 @@ export function buildDomainsConfig({
       },
     },
     {
-      id: 'registrar',
-      header: 'Registrar',
-      cell: ({ row }) => (
-        <span className="text-sm">{(row.original.metadata.registrar as string) || '-'}</span>
-      ),
-    },
-    {
-      id: 'expiry',
-      header: 'Expiry',
+      id: 'dnsInfo',
+      header: 'DNS Info',
       cell: ({ row }) => {
-        const date = row.original.metadata.expiryDate as string
-        if (!date) return <span className="text-muted-foreground">-</span>
-        const expiry = new Date(date)
-        const now = new Date()
-        const daysLeft = Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
-        const isExpiringSoon = daysLeft <= 30
+        const meta = row.original.metadata as Record<string, unknown>
+        const domainRow = row.original as DomainTableRow
+        const isRoot = '_isRoot' in domainRow ? domainRow._isRoot : true
+
+        if (isRoot) {
+          // Root: Registrar + Expiry
+          const registrar = (meta.registrar as string) || ''
+          const expiry = meta.expiryDate as string
+          const parts: string[] = []
+          if (registrar) parts.push(registrar)
+          if (expiry) {
+            const d = new Date(expiry)
+            const now = new Date()
+            const daysLeft = Math.ceil((d.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+            const dateStr = d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+            if (daysLeft <= 30) {
+              parts.push(`⚠ ${dateStr}`)
+            } else {
+              parts.push(dateStr)
+            }
+          }
+          if (parts.length === 0) return <span className="text-muted-foreground">-</span>
+          return <span className="text-sm">{parts.join(' · ')}</span>
+        }
+
+        // Sub: Record Type + Provider
+        const recordType = (meta.record_type as string) || ''
+        const provider = (meta.provider as string) || (meta.nameserver as string) || ''
+        const parts: string[] = []
+        if (recordType) parts.push(recordType)
+        if (provider) parts.push(provider)
+        if (parts.length === 0) return <span className="text-muted-foreground">-</span>
         return (
-          <div className="flex items-center gap-1">
-            <span className={isExpiringSoon ? 'text-orange-500' : ''}>
-              {expiry.toLocaleDateString()}
-            </span>
-            {isExpiringSoon && <AlertTriangle className="h-3 w-3 text-orange-500" />}
+          <div className="flex items-center gap-1.5">
+            {recordType && (
+              <Badge variant="outline" className="text-xs px-1.5 py-0 font-mono">
+                {recordType}
+              </Badge>
+            )}
+            {provider && <span className="text-xs text-muted-foreground">{provider}</span>}
           </div>
         )
       },
@@ -143,23 +156,24 @@ export function buildDomainsConfig({
 
   return {
     type: 'domain',
+    types: ['domain', 'subdomain'],
     label: 'Domain',
-    labelPlural: 'Domains',
+    labelPlural: 'Domains & Subdomains',
     description: 'Manage your domain assets and track domain hierarchy',
     icon: Globe,
     iconColor: 'text-blue-500',
     gradientFrom: 'from-blue-500/20',
     gradientVia: 'via-blue-500/10',
 
-    // Build the full flat list, then drop subdomains whose root is
-    // collapsed. When the page passes `expandedRoots: null` (filter
-    // active) we keep every row so search results aren't hidden.
+    // Build flat list, then hide subdomains of collapsed roots.
+    // collapsedRoots=null → show all (filter active).
+    // collapsedRoots=Set → hide subs of roots in the Set.
     dataTransform: (assets) => {
       const allRows = flattenDomainTreeForTable(assets)
-      if (expandedRoots === null) {
+      if (collapsedRoots === null || collapsedRoots.size === 0) {
         return allRows as Asset[]
       }
-      return allRows.filter((row) => row._isRoot || expandedRoots.has(row._rootDomain)) as Asset[]
+      return allRows.filter((row) => row._isRoot || !collapsedRoots.has(row._rootDomain)) as Asset[]
     },
 
     columns,
@@ -267,8 +281,16 @@ export function buildDomainsConfig({
           {
             label: 'Nameservers',
             getValue: (asset) => {
-              const ns = asset.metadata.nameservers as string[] | undefined
-              if (!ns || ns.length === 0) return '-'
+              const raw = asset.metadata.nameservers
+              const ns: string[] = Array.isArray(raw)
+                ? raw
+                : raw
+                  ? String(raw)
+                      .split(',')
+                      .map((s) => s.trim())
+                      .filter(Boolean)
+                  : []
+              if (ns.length === 0) return '-'
               return (
                 <div className="flex flex-wrap gap-1">
                   {ns.map((n) => (

@@ -171,6 +171,8 @@ export interface CustomFilterConfig {
   label: string
   options: { label: string; value: string }[]
   filterFn: (asset: Asset, value: string) => boolean
+  /** When set, sends this key as a server-side properties filter instead of client-side filterFn */
+  propertiesKey?: string
 }
 
 /** Row action config (appears in row dropdown menu) */
