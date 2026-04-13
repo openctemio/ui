@@ -42,7 +42,7 @@ const apiTypeColors: Record<string, string> = {
 
 export const apisConfig: AssetPageConfig = {
   type: 'application',
-  // sub_type: 'api'
+  subType: 'api',
   label: 'API',
   labelPlural: 'APIs',
   description: 'Manage your API assets and endpoints',

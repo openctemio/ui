@@ -15,6 +15,9 @@ export interface AssetPageConfig {
   /** Multiple asset types to fetch (overrides `type` for API filter) */
   types?: string[]
 
+  /** Sub-type filter — when set, only assets with this sub_type are shown */
+  subType?: string
+
   /** Display name (singular) — e.g., "Service" */
   label: string
 

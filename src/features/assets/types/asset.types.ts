@@ -96,7 +96,7 @@ export const ASSET_TYPE_CATEGORIES: Record<
   applications: {
     label: 'Applications',
     description: 'Web, mobile, API, and network services',
-    types: ['application', 'service'],
+    types: ['application'],
   },
   infrastructure: {
     label: 'Infrastructure',

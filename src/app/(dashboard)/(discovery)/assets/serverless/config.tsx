@@ -30,7 +30,7 @@ const getRuntimeCategory = (runtime: string): string => {
 
 export const serverlessConfig: AssetPageConfig = {
   type: 'host',
-  // sub_type: 'serverless'
+  subType: 'serverless',
   label: 'Serverless Function',
   labelPlural: 'Serverless Functions',
   description: 'Lambda functions, Cloud Functions, and Azure Functions',

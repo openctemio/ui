@@ -190,6 +190,7 @@ export function AssetPage({ config }: AssetPageProps) {
   // `total` here is the FILTERED total (e.g. 50 of 1,427 prod hosts).
   const { assets, total, totalPages, isLoading, mutate } = useAssets({
     types: typeFilter,
+    subType: config.subType,
     page: currentPage,
     pageSize,
     search: debouncedSearch || undefined,
