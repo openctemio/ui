@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { ColumnDef } from '@tanstack/react-table'
 import { Main } from '@/components/layout'
 import { PageHeader, DataTable, DataTableColumnHeader, RiskScoreBadge } from '@/features/shared'
@@ -87,6 +87,7 @@ import {
   type DataClassification,
   type JewelStatus,
 } from '@/features/crown-jewels'
+import { useCrownJewels } from '@/features/crown-jewels/api/use-crown-jewels'
 
 const statusColors: Record<JewelStatus, string> = {
   protected: 'bg-green-500/10 text-green-500 border-green-500/20',
@@ -135,7 +136,35 @@ const categoryLabels: Record<AssetCategory, string> = {
 }
 
 export default function CrownJewelsPage() {
+  // Fetch from API, fallback to mock if no API data
+  const { data: apiCrownJewels } = useCrownJewels()
+  const apiMapped: CrownJewel[] = useMemo(() => {
+    if (!apiCrownJewels?.data?.length) return mockCrownJewels
+    return apiCrownJewels.data.map(
+      (a: Record<string, unknown>) =>
+        ({
+          id: a.id,
+          name: a.name,
+          category: (a.type || 'other') as AssetCategory,
+          description: a.description || '',
+          status: 'identified' as JewelStatus,
+          protectionLevel: 'standard' as ProtectionLevel,
+          dataClassification: 'internal' as DataClassification,
+          businessValueScore:
+            ((a.properties as Record<string, unknown>)?.business_impact_score as number) || 0,
+          riskScore: (a.risk_score as number) || 0,
+          findingCount: (a.finding_count as number) || 0,
+          owner: (a.owner_ref as string) || 'Unassigned',
+          dependencies: [],
+          tags: (a.tags as string[]) || [],
+          lastAssessedAt: (a.updated_at as string) || '',
+        }) as unknown as CrownJewel
+    )
+  }, [apiCrownJewels])
   const [crownJewels, setCrownJewels] = useState<CrownJewel[]>(mockCrownJewels)
+  useEffect(() => {
+    if (apiMapped !== mockCrownJewels) setCrownJewels(apiMapped)
+  }, [apiMapped])
   const [viewJewel, setViewJewel] = useState<CrownJewel | null>(null)
   const [editJewel, setEditJewel] = useState<CrownJewel | null>(null)
   const [deleteJewel, setDeleteJewel] = useState<CrownJewel | null>(null)
