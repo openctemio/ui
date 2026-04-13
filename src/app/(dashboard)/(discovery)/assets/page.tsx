@@ -134,24 +134,21 @@ const ASSET_TYPE_NAMES: Record<string, string> = {
 
 // Mapping from asset type to sub-module slug (for filtering based on module visibility)
 const ASSET_TYPE_TO_SUBMODULE: Record<string, string> = {
+  // Core types → sub-module slugs (must match Module Management config)
   domain: 'domains',
+  subdomain: 'domains',
   certificate: 'certificates',
   ip_address: 'ip-addresses',
-  website: 'websites',
-  api: 'apis',
-  mobile_app: 'mobile',
+  application: 'websites',
   service: 'services',
-  application: 'services', // Maps to services sub-module
-  endpoint: 'apis', // Maps to apis sub-module
-  compute: 'cloud-resources',
-  cloud_account: 'cloud-accounts',
-  storage: 'storage',
-  serverless: 'serverless',
-  cloud: 'cloud-resources',
   host: 'hosts',
   container: 'containers',
-  database: 'databases',
+  kubernetes: 'containers',
   network: 'networks',
+  cloud_account: 'cloud-accounts',
+  storage: 'storage',
+  database: 'databases',
+  identity: 'hosts', // No dedicated sub-module yet, fallback
   repository: 'repositories',
 }
 
