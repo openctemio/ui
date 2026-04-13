@@ -6,26 +6,28 @@ import type { AssetPageConfig } from '@/features/assets/types/page-config.types'
 
 const getNetworkTypeLabel = (type: string) => {
   switch (type) {
+    case 'lan':
+      return 'LAN'
+    case 'dmz':
+      return 'DMZ'
+    case 'management':
+      return 'Management'
+    case 'backup':
+      return 'Backup'
     case 'vpc':
       return 'VPC'
-    case 'load_balancer':
-      return 'Load Balancer'
-    case 'firewall':
-      return 'Firewall'
-    case 'route_table':
-      return 'Route Table'
+    case 'vlan':
+      return 'VLAN'
     default:
-      return type
+      return type || 'Unknown'
   }
 }
 
 const getNetworkTypeVariant = (type: string): 'default' | 'secondary' | 'outline' => {
   switch (type) {
-    case 'vpc':
+    case 'dmz':
       return 'default'
-    case 'load_balancer':
-      return 'secondary'
-    case 'firewall':
+    case 'management':
       return 'outline'
     default:
       return 'secondary'
@@ -44,10 +46,12 @@ export const networksConfig: AssetPageConfig = {
 
   columns: [
     {
-      accessorKey: 'metadata.networkType',
+      accessorKey: 'metadata.network_type',
       header: 'Type',
       cell: ({ row }) => {
-        const networkType = (row.original.metadata.networkType as string) || ''
+        const meta = row.original.metadata as Record<string, unknown>
+        const networkType = (meta.network_type as string) || (meta.networkType as string) || ''
+        if (!networkType) return <span className="text-muted-foreground">-</span>
         return (
           <Badge variant={getNetworkTypeVariant(networkType)}>
             {getNetworkTypeLabel(networkType)}
@@ -56,35 +60,33 @@ export const networksConfig: AssetPageConfig = {
       },
     },
     {
-      accessorKey: 'metadata.cloudProvider',
-      header: 'Provider / Region',
-      cell: ({ row }) => {
-        const provider = (row.original.metadata.cloudProvider as string) || '-'
-        const region = (row.original.metadata.region as string) || '-'
-        return (
-          <div>
-            <div className="font-medium">{provider}</div>
-            <div className="text-sm text-muted-foreground">{region}</div>
-          </div>
-        )
-      },
-    },
-    {
-      accessorKey: 'metadata.vpcCidr',
+      accessorKey: 'metadata.cidr',
       header: 'CIDR',
       cell: ({ row }) => {
-        const cidr = (row.original.metadata.vpcCidr as string) || '-'
+        const meta = row.original.metadata as Record<string, unknown>
+        const cidr = (meta.cidr as string) || (meta.vpcCidr as string) || ''
+        if (!cidr) return <span className="text-muted-foreground">-</span>
         return <span className="font-mono text-sm">{cidr}</span>
       },
     },
     {
-      id: 'subnets',
-      header: 'Subnets',
+      accessorKey: 'metadata.vlan_id',
+      header: 'VLAN',
       cell: ({ row }) => {
-        const subnetCidrs = row.original.metadata.subnetCidrs
-        const count = Array.isArray(subnetCidrs) ? subnetCidrs.length : 0
-        if (count === 0) return <span className="text-muted-foreground">-</span>
-        return <span className="text-sm">{count}</span>
+        const meta = row.original.metadata as Record<string, unknown>
+        const vlan = meta.vlan_id ?? meta.vlanId
+        if (!vlan) return <span className="text-muted-foreground">-</span>
+        return <span className="font-mono text-sm">{String(vlan)}</span>
+      },
+    },
+    {
+      accessorKey: 'metadata.gateway',
+      header: 'Gateway',
+      cell: ({ row }) => {
+        const meta = row.original.metadata as Record<string, unknown>
+        const gw = (meta.gateway as string) || ''
+        if (!gw) return <span className="text-muted-foreground">-</span>
+        return <span className="font-mono text-sm">{gw}</span>
       },
     },
   ],
@@ -94,7 +96,7 @@ export const networksConfig: AssetPageConfig = {
       name: 'name',
       label: 'Network Name',
       type: 'text',
-      placeholder: 'e.g., production-vpc',
+      placeholder: 'e.g., PROD-LAN, DMZ',
       required: true,
     },
     {
@@ -104,37 +106,38 @@ export const networksConfig: AssetPageConfig = {
       placeholder: 'Optional description',
     },
     {
-      name: 'networkType',
+      name: 'network_type',
       label: 'Network Type',
       type: 'select',
       isMetadata: true,
-      required: true,
       options: [
+        { label: 'LAN', value: 'lan' },
+        { label: 'DMZ', value: 'dmz' },
+        { label: 'Management', value: 'management' },
+        { label: 'Backup', value: 'backup' },
         { label: 'VPC', value: 'vpc' },
-        { label: 'Load Balancer', value: 'load_balancer' },
-        { label: 'Firewall', value: 'firewall' },
-        { label: 'Route Table', value: 'route_table' },
+        { label: 'VLAN', value: 'vlan' },
       ],
     },
     {
-      name: 'cloudProvider',
-      label: 'Provider',
-      type: 'text',
-      placeholder: 'e.g., AWS',
-      isMetadata: true,
-    },
-    {
-      name: 'region',
-      label: 'Region',
-      type: 'text',
-      placeholder: 'e.g., us-east-1',
-      isMetadata: true,
-    },
-    {
-      name: 'vpcCidr',
+      name: 'cidr',
       label: 'CIDR Block',
       type: 'text',
       placeholder: 'e.g., 10.0.0.0/16',
+      isMetadata: true,
+    },
+    {
+      name: 'vlan_id',
+      label: 'VLAN ID',
+      type: 'number',
+      placeholder: 'e.g., 100',
+      isMetadata: true,
+    },
+    {
+      name: 'gateway',
+      label: 'Gateway',
+      type: 'text',
+      placeholder: 'e.g., 10.0.0.1',
       isMetadata: true,
     },
     { name: 'tags', label: 'Tags', type: 'tags', placeholder: 'production, critical' },
@@ -142,31 +145,48 @@ export const networksConfig: AssetPageConfig = {
 
   statsCards: [
     {
-      title: 'VPCs',
+      title: 'LAN/VLAN',
       icon: Layers,
-      compute: (assets) => assets.filter((a) => a.metadata.networkType === 'vpc').length,
+      compute: (assets) => {
+        return assets.filter((a) => {
+          const t = (a.metadata as Record<string, unknown>).network_type as string
+          return t === 'lan' || t === 'vlan'
+        }).length
+      },
     },
     {
-      title: 'Load Balancers',
-      icon: Route,
-      compute: (assets) => assets.filter((a) => a.metadata.networkType === 'load_balancer').length,
-    },
-    {
-      title: 'Firewalls',
+      title: 'DMZ',
       icon: Shield,
-      compute: (assets) => assets.filter((a) => a.metadata.networkType === 'firewall').length,
+      compute: (assets) => {
+        return assets.filter((a) => (a.metadata as Record<string, unknown>).network_type === 'dmz')
+          .length
+      },
+    },
+    {
+      title: 'Management',
+      icon: Route,
+      compute: (assets) => {
+        return assets.filter(
+          (a) => (a.metadata as Record<string, unknown>).network_type === 'management'
+        ).length
+      },
     },
   ],
 
   customFilter: {
     label: 'Network Type',
     options: [
+      { label: 'LAN', value: 'lan' },
+      { label: 'DMZ', value: 'dmz' },
+      { label: 'Management', value: 'management' },
+      { label: 'Backup', value: 'backup' },
       { label: 'VPC', value: 'vpc' },
-      { label: 'Load Balancer', value: 'load_balancer' },
-      { label: 'Firewall', value: 'firewall' },
-      { label: 'Route Table', value: 'route_table' },
+      { label: 'VLAN', value: 'vlan' },
     ],
-    filterFn: (asset, value) => (asset.metadata.networkType as string) === value,
+    filterFn: (asset, value) => {
+      const meta = asset.metadata as Record<string, unknown>
+      return (meta.network_type as string) === value || (meta.networkType as string) === value
+    },
   },
 
   detailStats: [
@@ -203,7 +223,8 @@ export const networksConfig: AssetPageConfig = {
         {
           label: 'Network Type',
           getValue: (asset) => {
-            const networkType = (asset.metadata.networkType as string) || '-'
+            const meta = asset.metadata as Record<string, unknown>
+            const networkType = (meta.network_type as string) || (meta.networkType as string) || '-'
             return (
               <Badge variant={getNetworkTypeVariant(networkType)}>
                 {getNetworkTypeLabel(networkType)}
@@ -212,26 +233,37 @@ export const networksConfig: AssetPageConfig = {
           },
         },
         {
-          label: 'Provider',
-          getValue: (asset) => (asset.metadata.cloudProvider as string) || '-',
-        },
-        {
-          label: 'Region',
-          getValue: (asset) => (asset.metadata.region as string) || '-',
-        },
-        {
           label: 'CIDR Block',
           getValue: (asset) => {
-            const cidr = asset.metadata.vpcCidr
+            const meta = asset.metadata as Record<string, unknown>
+            const cidr = (meta.cidr as string) || (meta.vpcCidr as string)
             if (!cidr) return '-'
-            return <code className="text-sm bg-muted px-2 py-0.5 rounded">{cidr}</code>
+            return <code className="text-sm bg-muted px-2 py-0.5 rounded">{cidr as string}</code>
           },
         },
         {
-          label: 'Subnets',
+          label: 'VLAN ID',
           getValue: (asset) => {
-            const cidrs = asset.metadata.subnetCidrs
-            return Array.isArray(cidrs) ? cidrs.length : 0
+            const meta = asset.metadata as Record<string, unknown>
+            return String(meta.vlan_id ?? meta.vlanId ?? '-')
+          },
+        },
+        {
+          label: 'Gateway',
+          getValue: (asset) => {
+            const meta = asset.metadata as Record<string, unknown>
+            const gw = meta.gateway as string
+            if (!gw) return '-'
+            return <code className="text-sm bg-muted px-2 py-0.5 rounded">{gw}</code>
+          },
+        },
+        {
+          label: 'DNS Servers',
+          getValue: (asset) => {
+            const meta = asset.metadata as Record<string, unknown>
+            const dns = meta.dns_servers
+            if (!Array.isArray(dns) || dns.length === 0) return '-'
+            return (dns as string[]).join(', ')
           },
         },
       ],
@@ -240,14 +272,10 @@ export const networksConfig: AssetPageConfig = {
 
   exportFields: [
     { header: 'Name', accessor: (a) => a.name },
-    { header: 'Network Type', accessor: (a) => a.metadata.networkType || '' },
-    { header: 'Provider', accessor: (a) => a.metadata.cloudProvider || '' },
-    { header: 'Region', accessor: (a) => a.metadata.region || '' },
-    { header: 'CIDR', accessor: (a) => a.metadata.vpcCidr || '' },
-    {
-      header: 'Subnets',
-      accessor: (a) => (Array.isArray(a.metadata.subnetCidrs) ? a.metadata.subnetCidrs.length : 0),
-    },
+    { header: 'Type', accessor: (a) => (a.metadata as Record<string, unknown>).network_type || '' },
+    { header: 'CIDR', accessor: (a) => (a.metadata as Record<string, unknown>).cidr || '' },
+    { header: 'VLAN', accessor: (a) => (a.metadata as Record<string, unknown>).vlan_id || '' },
+    { header: 'Gateway', accessor: (a) => (a.metadata as Record<string, unknown>).gateway || '' },
     { header: 'Status', accessor: (a) => a.status },
     { header: 'Risk Score', accessor: (a) => a.riskScore },
     { header: 'Findings', accessor: (a) => a.findingCount },
