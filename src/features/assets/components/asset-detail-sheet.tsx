@@ -235,7 +235,9 @@ export function AssetDetailSheet<T extends Asset>({
               <Icon className={cn('h-6 w-6', iconColor)} />
             </div>
             <div className="flex-1 min-w-0">
-              <h2 className="text-xl font-bold truncate">{asset.name}</h2>
+              <h2 className="text-xl font-bold break-words" title={asset.name}>
+                {asset.name}
+              </h2>
               <p className="text-sm text-muted-foreground truncate">
                 {subtitle || asset.groupName}
               </p>
