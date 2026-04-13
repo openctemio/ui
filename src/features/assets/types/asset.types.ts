@@ -80,53 +80,134 @@ export type AssetTypeCategory =
   | 'identity'
   | 'code'
 
-export const ASSET_TYPE_CATEGORIES: Record<
-  AssetTypeCategory,
-  {
-    label: string
-    description: string
-    types: AssetType[]
-  }
-> = {
+export interface CategorySubItem {
+  key: string // sub_type key or asset_type
+  label: string
+  url: string
+  countKey: string // key in bySubType or byType to get count
+}
+
+export interface CategoryConfig {
+  label: string
+  description: string
+  types: AssetType[] // for total count calculation
+  items: CategorySubItem[] // individual rows in overview
+}
+
+export const ASSET_TYPE_CATEGORIES: Record<AssetTypeCategory, CategoryConfig> = {
   external: {
     label: 'External Attack Surface',
     description: 'Internet-facing assets and entry points',
     types: ['domain', 'subdomain', 'certificate', 'ip_address'],
+    items: [
+      { key: 'domain', label: 'Domains', url: '/assets/domains', countKey: 'domain' },
+      { key: 'subdomain', label: 'Subdomains', url: '/assets/domains', countKey: 'subdomain' },
+      {
+        key: 'certificate',
+        label: 'Certificates',
+        url: '/assets/certificates',
+        countKey: 'certificate',
+      },
+      {
+        key: 'ip_address',
+        label: 'IP Addresses',
+        url: '/assets/ip-addresses',
+        countKey: 'ip_address',
+      },
+    ],
   },
   applications: {
     label: 'Applications',
     description: 'Web, mobile, API, and network services',
-    types: ['application'],
+    types: ['application', 'service'],
+    items: [
+      { key: 'website', label: 'Websites', url: '/assets/websites', countKey: 'website' },
+      { key: 'api', label: 'APIs', url: '/assets/apis', countKey: 'api' },
+      {
+        key: 'web_application',
+        label: 'Web Applications',
+        url: '/assets/websites',
+        countKey: 'web_application',
+      },
+      { key: 'mobile_app', label: 'Mobile Apps', url: '/assets/mobile', countKey: 'mobile_app' },
+      { key: 'service', label: 'Services', url: '/assets/services', countKey: 'service' },
+    ],
   },
   infrastructure: {
     label: 'Infrastructure',
     description: 'Servers, VMs, containers, and Kubernetes',
     types: ['host', 'container', 'kubernetes'],
+    items: [
+      { key: 'host', label: 'Hosts', url: '/assets/hosts', countKey: 'host' },
+      { key: 'container', label: 'Containers', url: '/assets/containers', countKey: 'container' },
+      { key: 'kubernetes', label: 'Kubernetes', url: '/assets/containers', countKey: 'kubernetes' },
+    ],
   },
   network: {
     label: 'Network & Security',
     description: 'Firewalls, switches, routers, load balancers',
     types: ['network'],
+    items: [
+      { key: 'firewall', label: 'Firewalls', url: '/assets/networks', countKey: 'firewall' },
+      {
+        key: 'load_balancer',
+        label: 'Load Balancers',
+        url: '/assets/networks',
+        countKey: 'load_balancer',
+      },
+      { key: 'switch', label: 'Switches', url: '/assets/networks', countKey: 'core_switch' },
+      { key: 'router', label: 'Routers', url: '/assets/networks', countKey: 'router' },
+    ],
   },
   cloud: {
     label: 'Cloud',
     description: 'Cloud accounts and storage',
     types: ['cloud_account', 'storage'],
+    items: [
+      {
+        key: 'cloud_account',
+        label: 'Cloud Accounts',
+        url: '/assets/cloud-accounts',
+        countKey: 'cloud_account',
+      },
+      { key: 'storage', label: 'Storage', url: '/assets/storage', countKey: 'storage' },
+    ],
   },
   data: {
     label: 'Data',
     description: 'Databases and data stores',
     types: ['database'],
+    items: [
+      { key: 'database', label: 'Databases', url: '/assets/databases', countKey: 'database' },
+    ],
   },
   identity: {
     label: 'Identity & Access',
     description: 'Users, roles, and service accounts',
     types: ['identity'],
+    items: [
+      { key: 'iam_user', label: 'Users', url: '/assets/iam-users', countKey: 'iam_user' },
+      { key: 'iam_role', label: 'Roles', url: '/assets/iam-roles', countKey: 'iam_role' },
+      {
+        key: 'service_account',
+        label: 'Service Accounts',
+        url: '/assets/iam-users',
+        countKey: 'service_account',
+      },
+    ],
   },
   code: {
     label: 'Code & CI/CD',
     description: 'Source code repositories and pipelines',
     types: ['repository'],
+    items: [
+      {
+        key: 'repository',
+        label: 'Repositories',
+        url: '/assets/repositories',
+        countKey: 'repository',
+      },
+    ],
   },
 }
 

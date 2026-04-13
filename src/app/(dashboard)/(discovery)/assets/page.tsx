@@ -207,15 +207,16 @@ export default function AssetsOverviewPage() {
   const highRiskCount = stats.highRiskCount
   const totalFindings = stats.totalFindings
 
-  // Get count for an asset type
-  const getTypeCount = (type: string): number => {
-    return stats.byType[type] ?? 0
+  // Get count for an asset type or sub_type
+  const getItemCount = (key: string): number => {
+    // Check sub_type first (more specific), then type
+    return stats.bySubType[key] ?? stats.byType[key] ?? 0
   }
 
-  // Calculate category total based on filtered types
+  // Calculate category total based on type counts
   const getCategoryTotal = (category: AssetTypeCategory): number => {
-    const types = filteredCategoryTypes[category] || []
-    return types.reduce((sum, type) => sum + getTypeCount(type), 0)
+    const config = ASSET_TYPE_CATEGORIES[category]
+    return config.types.reduce((sum, type) => sum + (stats.byType[type] ?? 0), 0)
   }
 
   return (
@@ -389,26 +390,25 @@ export default function AssetsOverviewPage() {
                   </CardHeader>
                   <CardContent className="pt-0">
                     <div className="space-y-2">
-                      {(filteredCategoryTypes[categoryKey] || [])
-                        // Once stats are loaded, hide types with zero assets
-                        // so empty rows like "Networks 0" don't clutter the card
-                        .filter((type) => statsLoading || getTypeCount(type) > 0)
-                        .slice(0, 6) // Limit to 6 types per category
-                        .map((type) => {
-                          const TypeIcon = ASSET_TYPE_ICONS[type] || Container
-                          const count = getTypeCount(type)
-                          const url = ASSET_TYPE_URLS[type]
-                          const name = ASSET_TYPE_NAMES[type] || type
+                      {(category.items || [])
+                        .filter((item) => statsLoading || getItemCount(item.countKey) > 0)
+                        .slice(0, 8)
+                        .map((item) => {
+                          const TypeIcon =
+                            ASSET_TYPE_ICONS[item.key] ||
+                            ASSET_TYPE_ICONS[item.countKey] ||
+                            Container
+                          const count = getItemCount(item.countKey)
 
                           return (
                             <Link
-                              key={type}
-                              href={url}
+                              key={item.key}
+                              href={item.url}
                               className="flex items-center justify-between p-2 rounded-lg hover:bg-accent/50 transition-colors group"
                             >
                               <div className="flex items-center gap-2">
                                 <TypeIcon className="h-4 w-4 text-muted-foreground" />
-                                <span className="text-sm">{name}</span>
+                                <span className="text-sm">{item.label}</span>
                               </div>
                               <div className="flex items-center gap-2">
                                 {statsLoading ? (
