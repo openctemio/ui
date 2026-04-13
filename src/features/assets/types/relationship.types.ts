@@ -135,6 +135,8 @@ export const EXTENDED_ASSET_TYPE_LABELS: Record<ExtendedAssetType, string> = {
   web_application: 'Web Application',
   // Unclassified
   unclassified: 'Unclassified',
+  kubernetes: 'Kubernetes',
+  identity: 'Identity',
   // Legacy base types (deprecated)
   service: 'Service',
   credential: 'Credential',

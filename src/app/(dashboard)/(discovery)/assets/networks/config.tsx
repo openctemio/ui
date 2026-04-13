@@ -47,7 +47,8 @@ const getDeviceTypeColor = (label: string): string => {
 
 export const networksConfig: AssetPageConfig = {
   type: 'network',
-  // Fetch firewall + load_balancer + network types (all network devices)
+  // After Phase 3: all network devices consolidated to type='network'
+  // Backward compat: also fetch old types during transition
   types: ['firewall', 'load_balancer', 'network'],
   // Also include hosts tagged as network-device via tag filter
   label: 'Network Device',
@@ -197,12 +198,14 @@ export const networksConfig: AssetPageConfig = {
     ],
     filterFn: (asset, value) => {
       if (value === 'all') return true
-      if (value === 'firewall') return asset.type === 'firewall'
-      if (value === 'load_balancer') return asset.type === 'load_balancer'
-      const role = (asset.metadata as Record<string, unknown>).device_role as string
-      if (value === 'switch') return role === 'core_switch' || role === 'access_switch'
-      if (value === 'router') return role === 'router'
-      if (value === 'wireless_ap') return role === 'wireless_ap'
+      // Works with both old types (firewall) and new sub_type
+      const subType = asset.subType || ''
+      if (value === 'firewall') return asset.type === 'firewall' || subType === 'firewall'
+      if (value === 'load_balancer')
+        return asset.type === 'load_balancer' || subType === 'load_balancer'
+      if (value === 'switch') return subType === 'core_switch' || subType === 'access_switch'
+      if (value === 'router') return subType === 'router'
+      if (value === 'wireless_ap') return subType === 'wireless_ap'
       return true
     },
   },

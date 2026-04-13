@@ -78,6 +78,8 @@ const EXTENDED_ASSET_TYPE_COLORS: Record<ExtendedAssetType, { bg: string; text: 
   web_application: { bg: 'bg-cyan-500/20', text: 'text-cyan-500' },
   // Unclassified
   unclassified: { bg: 'bg-gray-400/20', text: 'text-gray-400' },
+  kubernetes: { bg: 'bg-sky-400/20', text: 'text-sky-400' },
+  identity: { bg: 'bg-pink-400/20', text: 'text-pink-400' },
   // Legacy types (deprecated)
   service: { bg: 'bg-purple-500/20', text: 'text-purple-500' },
   credential: { bg: 'bg-red-500/20', text: 'text-red-500' },
