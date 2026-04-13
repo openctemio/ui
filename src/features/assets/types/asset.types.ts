@@ -118,8 +118,8 @@ export const ASSET_TYPE_CATEGORIES: Record<AssetTypeCategory, CategoryConfig> = 
   },
   applications: {
     label: 'Applications',
-    description: 'Web, mobile, API, and network services',
-    types: ['application', 'service'],
+    description: 'Web, mobile, and API applications',
+    types: ['application'],
     items: [
       { key: 'website', label: 'Websites', url: '/assets/websites', countKey: 'website' },
       { key: 'api', label: 'APIs', url: '/assets/apis', countKey: 'api' },
@@ -135,12 +135,13 @@ export const ASSET_TYPE_CATEGORIES: Record<AssetTypeCategory, CategoryConfig> = 
   },
   infrastructure: {
     label: 'Infrastructure',
-    description: 'Servers, VMs, containers, and Kubernetes',
-    types: ['host', 'container', 'kubernetes'],
+    description: 'Servers, VMs, containers, Kubernetes, and services',
+    types: ['host', 'container', 'kubernetes', 'service'],
     items: [
       { key: 'host', label: 'Hosts', url: '/assets/hosts', countKey: 'host' },
       { key: 'container', label: 'Containers', url: '/assets/containers', countKey: 'container' },
       { key: 'kubernetes', label: 'Kubernetes', url: '/assets/containers', countKey: 'kubernetes' },
+      { key: 'service', label: 'Services', url: '/assets/services', countKey: 'service' },
     ],
   },
   network: {
