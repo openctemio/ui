@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { ColumnDef } from '@tanstack/react-table'
 import { Main } from '@/components/layout'
 import { PageHeader, DataTable, DataTableColumnHeader, RiskScoreBadge } from '@/features/shared'
@@ -77,6 +77,7 @@ import {
   type Criticality,
   type RiskTolerance,
 } from '@/features/business-units'
+import { useBusinessUnits } from '@/features/business-units/api/use-business-units'
 
 const criticalityColors: Record<Criticality, string> = {
   critical: 'bg-red-500/10 text-red-500 border-red-500/20',
@@ -102,7 +103,37 @@ const riskToleranceColors: Record<RiskTolerance, string> = {
 }
 
 export default function BusinessUnitsPage() {
+  // Fetch from API, fallback to mock data if API returns empty
+  const { data: apiData } = useBusinessUnits()
+  const apiBUs: BusinessUnit[] = useMemo(() => {
+    if (!apiData?.data?.length) return mockBusinessUnits
+    return apiData.data.map(
+      (bu) =>
+        ({
+          id: bu.id,
+          name: bu.name,
+          description: bu.description || '',
+          owner: bu.owner_name || 'Unassigned',
+          ownerEmail: bu.owner_email || '',
+          criticality: 'medium' as Criticality,
+          riskTolerance: 'medium' as RiskTolerance,
+          assetCount: bu.asset_count,
+          findingCount: bu.finding_count,
+          riskScore: bu.avg_risk_score,
+          criticalFindingCount: bu.critical_finding_count,
+          regulatoryFrameworks: [],
+          tags: bu.tags || [],
+          parentId: undefined,
+          childCount: 0,
+          createdAt: bu.created_at,
+          updatedAt: bu.updated_at,
+        }) as unknown as BusinessUnit
+    )
+  }, [apiData])
   const [businessUnits, setBusinessUnits] = useState<BusinessUnit[]>(mockBusinessUnits)
+  useEffect(() => {
+    if (apiBUs !== mockBusinessUnits) setBusinessUnits(apiBUs)
+  }, [apiBUs])
   const [viewUnit, setViewUnit] = useState<BusinessUnit | null>(null)
   const [editUnit, setEditUnit] = useState<BusinessUnit | null>(null)
   const [deleteUnit, setDeleteUnit] = useState<BusinessUnit | null>(null)

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { ColumnDef } from '@tanstack/react-table'
 import { Main } from '@/components/layout'
 import { PageHeader, SeverityBadge, DataTable, DataTableColumnHeader } from '@/features/shared'
@@ -82,6 +82,7 @@ import {
   TASK_STATUS_LABELS,
   TASK_PRIORITY_LABELS,
 } from '@/features/remediation'
+import { useRemediationCampaigns } from '@/features/remediation/api/use-remediation-campaigns'
 import { mockFindings } from '@/features/findings'
 import type { TaskStatus, TaskPriority, RemediationTask } from '@/features/remediation/types'
 import type { Severity } from '@/features/shared/types'
@@ -137,8 +138,42 @@ const defaultFilters: Filters = {
 }
 
 export default function RemediationPage() {
-  // Tasks state (local for demo)
+  // Fetch campaigns from API, map to existing task type for UI compatibility
+  const { data: campaignData } = useRemediationCampaigns()
+  const apiTasks: RemediationTask[] = useMemo(() => {
+    if (!campaignData?.data?.length) return mockRemediationTasks
+    return campaignData.data.map(
+      (c) =>
+        ({
+          id: c.id,
+          title: c.name,
+          description: c.description || '',
+          status:
+            c.status === 'active'
+              ? 'in_progress'
+              : c.status === 'completed'
+                ? 'resolved'
+                : c.status === 'draft'
+                  ? 'open'
+                  : c.status,
+          priority: c.priority,
+          severity: c.priority as 'critical' | 'high' | 'medium' | 'low',
+          assignee: '',
+          finding_count: c.finding_count,
+          resolved_count: c.resolved_count,
+          progress: c.progress,
+          due_date: c.due_date || '',
+          created_at: c.created_at,
+          updated_at: c.updated_at,
+          findingIds: [],
+          tags: c.tags || [],
+        }) as unknown as RemediationTask
+    )
+  }, [campaignData])
   const [tasks, setTasks] = useState<RemediationTask[]>(mockRemediationTasks)
+  useEffect(() => {
+    if (apiTasks !== mockRemediationTasks) setTasks(apiTasks)
+  }, [apiTasks])
 
   const stats = useMemo(() => {
     return {
