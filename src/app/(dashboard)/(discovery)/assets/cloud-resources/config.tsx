@@ -63,7 +63,7 @@ const allRegions = [
 ].map((r) => ({ label: r, value: r }))
 
 export const cloudConfig: AssetPageConfig = {
-  type: 'compute',
+  type: 'host', // consolidated from compute
   types: ['host', 'storage'],
   label: 'Cloud Asset',
   labelPlural: 'Cloud Assets',

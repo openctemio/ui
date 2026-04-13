@@ -228,10 +228,10 @@ export const hostsConfig: AssetPageConfig = {
       variant: 'success',
     },
     {
-      title: 'Network Devices',
+      title: 'Virtual',
       icon: Network,
       compute: (assets: Asset[]) =>
-        assets.filter((a) => (a.tags || []).includes('network-device')).length,
+        assets.filter((a) => (a.metadata as Record<string, unknown>).is_virtual).length,
     },
     {
       title: 'With Findings',
@@ -242,22 +242,14 @@ export const hostsConfig: AssetPageConfig = {
   ],
 
   customFilter: {
-    label: 'Category',
+    label: 'OS',
     options: [
-      { label: 'All Hosts', value: 'all' },
-      { label: 'Servers', value: 'server' },
-      { label: 'Network Devices', value: 'network-device' },
       { label: 'Linux', value: 'linux' },
       { label: 'Windows', value: 'windows' },
     ],
     filterFn: (asset: Asset, value: string) => {
-      if (value === 'all') return true
-      const tags = asset.tags || []
       const meta = asset.metadata as Record<string, unknown>
       const os = ((meta.os as string) || '').toLowerCase()
-
-      if (value === 'network-device') return tags.includes('network-device')
-      if (value === 'server') return !tags.includes('network-device')
       if (value === 'linux')
         return (
           os.includes('ubuntu') ||

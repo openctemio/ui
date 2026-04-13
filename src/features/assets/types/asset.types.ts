@@ -70,7 +70,15 @@ export type AssetType =
 /**
  * Asset Type Category for grouping in UI
  */
-export type AssetTypeCategory = 'external' | 'applications' | 'cloud' | 'infrastructure' | 'code'
+export type AssetTypeCategory =
+  | 'external'
+  | 'applications'
+  | 'infrastructure'
+  | 'network'
+  | 'cloud'
+  | 'data'
+  | 'identity'
+  | 'code'
 
 export const ASSET_TYPE_CATEGORIES: Record<
   AssetTypeCategory,
@@ -83,22 +91,37 @@ export const ASSET_TYPE_CATEGORIES: Record<
   external: {
     label: 'External Attack Surface',
     description: 'Internet-facing assets and entry points',
-    types: ['domain', 'certificate', 'ip_address'],
+    types: ['domain', 'subdomain', 'certificate', 'ip_address'],
   },
   applications: {
     label: 'Applications',
     description: 'Web, mobile, API, and network services',
-    types: ['website', 'api', 'mobile_app', 'service', 'application', 'endpoint'],
-  },
-  cloud: {
-    label: 'Cloud',
-    description: 'Cloud infrastructure and services',
-    types: ['cloud_account', 'compute', 'storage', 'serverless'],
+    types: ['application', 'service'],
   },
   infrastructure: {
     label: 'Infrastructure',
-    description: 'Servers, containers, and network infrastructure',
-    types: ['host', 'container', 'database', 'network'],
+    description: 'Servers, VMs, containers, and Kubernetes',
+    types: ['host', 'container', 'kubernetes'],
+  },
+  network: {
+    label: 'Network & Security',
+    description: 'Firewalls, switches, routers, load balancers',
+    types: ['network'],
+  },
+  cloud: {
+    label: 'Cloud',
+    description: 'Cloud accounts and storage',
+    types: ['cloud_account', 'storage'],
+  },
+  data: {
+    label: 'Data',
+    description: 'Databases and data stores',
+    types: ['database'],
+  },
+  identity: {
+    label: 'Identity & Access',
+    description: 'Users, roles, and service accounts',
+    types: ['identity'],
   },
   code: {
     label: 'Code & CI/CD',
