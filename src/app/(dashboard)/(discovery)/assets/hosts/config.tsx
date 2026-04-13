@@ -104,6 +104,22 @@ export const hostsConfig: AssetPageConfig = {
       },
     },
     {
+      accessorKey: 'metadata.vendor',
+      header: 'Vendor / Model',
+      cell: ({ row }) => {
+        const meta = row.original.metadata as Record<string, unknown>
+        const vendor = (meta.vendor as string) || ''
+        const model = (meta.model as string) || ''
+        if (!vendor && !model) return <span className="text-muted-foreground">-</span>
+        return (
+          <div className="max-w-[160px]">
+            {vendor && <p className="text-sm font-medium truncate">{vendor}</p>}
+            {model && <p className="text-xs text-muted-foreground truncate">{model}</p>}
+          </div>
+        )
+      },
+    },
+    {
       accessorKey: 'metadata.openPorts',
       header: 'Ports',
       cell: ({ row }) => {
@@ -212,12 +228,10 @@ export const hostsConfig: AssetPageConfig = {
       variant: 'success',
     },
     {
-      // Backend doesn't aggregate metadata.isVirtual, so this card still
-      // reflects only the current page. Acceptable trade-off until we add
-      // a dedicated host-stats endpoint.
-      title: 'Virtual',
+      title: 'Network Devices',
       icon: Network,
-      compute: (assets: Asset[]) => assets.filter((a) => a.metadata.isVirtual).length,
+      compute: (assets: Asset[]) =>
+        assets.filter((a) => (a.tags || []).includes('network-device')).length,
     },
     {
       title: 'With Findings',
@@ -228,14 +242,22 @@ export const hostsConfig: AssetPageConfig = {
   ],
 
   customFilter: {
-    label: 'OS',
+    label: 'Category',
     options: [
+      { label: 'All Hosts', value: 'all' },
+      { label: 'Servers', value: 'server' },
+      { label: 'Network Devices', value: 'network-device' },
       { label: 'Linux', value: 'linux' },
       { label: 'Windows', value: 'windows' },
-      { label: 'macOS', value: 'macos' },
     ],
     filterFn: (asset: Asset, value: string) => {
-      const os = (asset.metadata.os as string)?.toLowerCase() || ''
+      if (value === 'all') return true
+      const tags = asset.tags || []
+      const meta = asset.metadata as Record<string, unknown>
+      const os = ((meta.os as string) || '').toLowerCase()
+
+      if (value === 'network-device') return tags.includes('network-device')
+      if (value === 'server') return !tags.includes('network-device')
       if (value === 'linux')
         return (
           os.includes('ubuntu') ||
@@ -244,7 +266,6 @@ export const hostsConfig: AssetPageConfig = {
           os.includes('linux')
         )
       if (value === 'windows') return os.includes('windows')
-      if (value === 'macos') return os.includes('mac') || os.includes('darwin')
       return true
     },
   },
