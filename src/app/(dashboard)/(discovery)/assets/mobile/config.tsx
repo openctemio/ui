@@ -40,7 +40,7 @@ const formatDownloads = (downloads?: number) => {
 
 export const mobileConfig: AssetPageConfig = {
   type: 'application',
-  // sub_type: 'mobile_app'
+  subType: 'mobile_app',
   label: 'Mobile App',
   labelPlural: 'Mobile Apps',
   description: 'Manage your mobile application assets',

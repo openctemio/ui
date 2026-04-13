@@ -52,6 +52,7 @@ export interface AssetSearchFilters {
   // Filtering
   name?: string
   types?: AssetType[]
+  subType?: string
   criticalities?: Criticality[]
   statuses?: ('active' | 'inactive' | 'archived')[]
   scopes?: AssetScope[]
@@ -277,6 +278,7 @@ function buildAssetQueryParams(filters?: AssetSearchFilters): Record<string, str
   // Filtering - arrays need to be comma-separated for backend
   if (filters.name) params.name = filters.name
   if (filters.types?.length) params.types = filters.types.join(',')
+  if (filters.subType) params.sub_type = filters.subType
   if (filters.criticalities?.length) params.criticalities = filters.criticalities.join(',')
   if (filters.statuses?.length) params.statuses = filters.statuses.join(',')
   if (filters.scopes?.length) params.scopes = filters.scopes.join(',')
