@@ -64,7 +64,7 @@ const allRegions = [
 
 export const cloudConfig: AssetPageConfig = {
   type: 'compute',
-  types: ['compute', 'storage', 'serverless'],
+  types: ['host', 'storage'],
   label: 'Cloud Asset',
   labelPlural: 'Cloud Assets',
   description: 'Manage your cloud infrastructure resources across AWS, GCP, and Azure',

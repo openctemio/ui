@@ -22,51 +22,46 @@ import type { Status } from '@/features/shared/types'
  * - mobile: Use mobile_app instead
  */
 export type AssetType =
-  // External Attack Surface
+  // ─── Core Types (15) ───
   | 'domain'
+  | 'subdomain'
   | 'certificate'
   | 'ip_address'
-  // Applications
+  | 'application' // websites, web apps, APIs, mobile apps
+  | 'host' // servers, VMs, compute, serverless
+  | 'container'
+  | 'kubernetes' // clusters, namespaces, workloads
+  | 'network' // firewalls, load balancers, switches, routers, VPCs, subnets
+  | 'service' // network services, open ports, discovered URLs
+  | 'cloud_account'
+  | 'storage' // S3, GCS, container registries
+  | 'database' // all DB engines, data stores
+  | 'repository'
+  | 'identity' // IAM users, roles, service accounts
+  | 'unclassified'
+  // ─── Legacy Types (backward compat — still accepted by API) ───
   | 'website'
+  | 'web_application'
   | 'api'
   | 'mobile_app'
-  | 'application' // Network services/applications
-  | 'endpoint' // Service endpoints
-  // Cloud
-  | 'cloud_account'
+  | 'endpoint'
   | 'compute'
-  | 'storage'
   | 'serverless'
-  // Infrastructure
-  | 'host'
-  | 'container'
-  | 'database'
-  | 'network'
+  | 'container_registry'
   | 'vpc'
   | 'subnet'
-  | 'load_balancer'
   | 'firewall'
+  | 'load_balancer'
   | 'kubernetes_cluster'
   | 'kubernetes_namespace'
-  | 'container_registry'
-  // Data
   | 'data_store'
   | 's3_bucket'
-  // Identity
   | 'iam_user'
   | 'iam_role'
   | 'service_account'
-  // Code & CI/CD
-  | 'repository' // Git repositories (unified asset type)
-  // Recon-specific (auto-discovered)
   | 'http_service'
   | 'open_port'
   | 'discovered_url'
-  // Discovery
-  | 'subdomain'
-  | 'web_application'
-  // Unclassified
-  | 'unclassified' // Assets not yet classified
   // Legacy types (deprecated - kept for backwards compatibility)
   | 'service' // @deprecated - Use application instead
   | 'credential' // @deprecated - Moved to Identities module
@@ -248,6 +243,8 @@ export const ASSET_TYPE_LABELS: Record<AssetType, string> = {
   web_application: 'Web Application',
   // Unclassified
   unclassified: 'Unclassified',
+  kubernetes: 'Kubernetes',
+  identity: 'Identity',
   // Legacy types (deprecated)
   service: 'Service',
   credential: 'Credential',
@@ -290,6 +287,8 @@ export const ASSET_TYPE_ICONS: Record<AssetType, string> = {
   subdomain: 'Globe',
   web_application: 'MonitorSmartphone',
   unclassified: 'HelpCircle',
+  kubernetes: 'Cloud',
+  identity: 'User',
   // Legacy types (deprecated)
   service: 'Zap',
   credential: 'KeyRound',
@@ -332,6 +331,8 @@ export const ASSET_TYPE_DESCRIPTIONS: Record<AssetType, string> = {
   subdomain: 'Subdomains',
   web_application: 'Web applications',
   unclassified: 'Assets not yet classified',
+  kubernetes: 'Kubernetes clusters and namespaces',
+  identity: 'IAM users, roles, and service accounts',
   // Legacy types (deprecated)
   service: 'Network services (SSH, HTTP, DB services)',
   credential: 'Credentials (deprecated - moved to Identities)',
@@ -387,6 +388,8 @@ export const ASSET_TYPE_COLORS: Record<AssetType, { bg: string; text: string }> 
   web_application: { bg: 'bg-cyan-500/15', text: 'text-cyan-600' },
   // Unclassified
   unclassified: { bg: 'bg-gray-500/15', text: 'text-gray-600' },
+  kubernetes: { bg: 'bg-sky-500/15', text: 'text-sky-600' },
+  identity: { bg: 'bg-pink-500/15', text: 'text-pink-600' },
   // Legacy types (deprecated)
   service: { bg: 'bg-yellow-500/15', text: 'text-yellow-600' },
   credential: { bg: 'bg-red-500/15', text: 'text-red-600' },

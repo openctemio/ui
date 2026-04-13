@@ -65,7 +65,8 @@ const columns: ColumnDef<Asset>[] = [
 ]
 
 export const websitesConfig: AssetPageConfig = {
-  type: 'website',
+  type: 'application',
+  // sub_type: 'website' — after Phase 3 migration
   label: 'Website',
   labelPlural: 'Websites',
   description: 'Manage your web application assets',
