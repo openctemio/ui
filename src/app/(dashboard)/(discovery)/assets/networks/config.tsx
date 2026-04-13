@@ -189,7 +189,6 @@ export const networksConfig: AssetPageConfig = {
   customFilter: {
     label: 'Device Type',
     options: [
-      { label: 'All Devices', value: 'all' },
       { label: 'Firewalls', value: 'firewall' },
       { label: 'Load Balancers', value: 'load_balancer' },
       { label: 'Switches', value: 'switch' },
