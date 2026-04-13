@@ -144,13 +144,20 @@ export function BootstrapProvider({ children }: BootstrapProviderProps) {
     }
   }, [tenantId])
 
+  // Track fetched tenant for stale-data guard (ref avoids dep cycle)
+  const fetchedTenantIdRef = React.useRef<string | null>(fetchedTenantId)
+  fetchedTenantIdRef.current = fetchedTenantId
+
+  const isBootstrappedRef = React.useRef(isBootstrapped)
+  isBootstrappedRef.current = isBootstrapped
+
   // Fetch on tenant change
   React.useEffect(() => {
     if (!tenantId) {
       // Don't reset if we previously had a tenant OR if we already have data.
       // This handles transient null during component remount / forward navigation
       // where TenantProvider hasn't set currentTenant from cookie yet.
-      if (previousTenantIdRef.current || isBootstrapped || fetchedTenantId) {
+      if (previousTenantIdRef.current || isBootstrappedRef.current || fetchedTenantIdRef.current) {
         return
       }
       setData(null)
@@ -173,7 +180,7 @@ export function BootstrapProvider({ children }: BootstrapProviderProps) {
     setIsLoading(true)
     previousTenantIdRef.current = tenantId
     fetchBootstrap()
-  }, [tenantId, fetchBootstrap, isBootstrapped, fetchedTenantId])
+  }, [tenantId, fetchBootstrap])
 
   // Refresh function
   const refresh = React.useCallback(async () => {

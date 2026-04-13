@@ -815,6 +815,7 @@ export const ASSET_CATEGORY_LABELS: Record<AssetCategory, string> = {
 export interface Asset {
   id: string
   type: AssetType
+  subType?: string
   category?: AssetCategory
   name: string
   description?: string
