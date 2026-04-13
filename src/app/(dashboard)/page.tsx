@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Main } from '@/components/layout'
 import { ProcessStepper, StatsCard } from '@/features/shared'
 import { ActivityItem, QuickStat, useDashboardStats } from '@/features/dashboard'
+import { MTTRCard, RiskVelocityCard } from '@/features/dashboard/components/mttr-card'
 import { Can, Permission } from '@/lib/permissions'
 import {
   Server,
@@ -317,6 +318,14 @@ export default function Dashboard() {
               <PlatformStatsCard />
             </section>
           )
+        )}
+
+        {/* MTTR & Risk Velocity */}
+        {!isLoading && !error && (
+          <section className="mb-6 grid gap-4 md:grid-cols-2">
+            <MTTRCard />
+            <RiskVelocityCard />
+          </section>
         )}
 
         {/* Charts Row - Show inline skeletons while loading */}

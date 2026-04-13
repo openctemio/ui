@@ -7,8 +7,13 @@ import { get, patch } from '@/lib/api/client'
 // Crown jewels = assets with is_crown_jewel=true
 // Uses existing asset API with filter param
 
+interface PaginatedAssets {
+  data: Record<string, unknown>[]
+  total: number
+}
+
 export function useCrownJewels() {
-  return useSWR('/api/v1/assets?is_crown_jewel=true&per_page=100', get, {
+  return useSWR<PaginatedAssets>('/api/v1/assets?is_crown_jewel=true&per_page=100', get, {
     revalidateOnFocus: false,
   })
 }
