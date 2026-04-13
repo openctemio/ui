@@ -274,7 +274,7 @@ export const sidebarData: SidebarData = {
               subModuleKey: 'databases',
             },
             {
-              title: 'Networks',
+              title: 'Network Devices',
               url: '/assets/networks',
               icon: Target,
               subModuleKey: 'networks',
