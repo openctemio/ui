@@ -789,9 +789,33 @@ export interface AssetMetadata {
 /**
  * Asset represents a single discoverable asset
  */
+export type AssetCategory =
+  | 'external_surface'
+  | 'application'
+  | 'infrastructure'
+  | 'network'
+  | 'cloud'
+  | 'data'
+  | 'code'
+  | 'identity'
+  | 'other'
+
+export const ASSET_CATEGORY_LABELS: Record<AssetCategory, string> = {
+  external_surface: 'External Surface',
+  application: 'Applications',
+  infrastructure: 'Infrastructure',
+  network: 'Network',
+  cloud: 'Cloud',
+  data: 'Data',
+  code: 'Code',
+  identity: 'Identity',
+  other: 'Other',
+}
+
 export interface Asset {
   id: string
   type: AssetType
+  category?: AssetCategory
   name: string
   description?: string
   criticality: Criticality // Business importance level
