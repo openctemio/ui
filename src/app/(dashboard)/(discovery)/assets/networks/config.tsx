@@ -1,7 +1,7 @@
 'use client'
 
 import { Badge } from '@/components/ui/badge'
-import { Network, Shield, AlertTriangle, Router, Wifi, Server } from 'lucide-react'
+import { Network, Shield, AlertTriangle, Router, Server } from 'lucide-react'
 import type { AssetPageConfig } from '@/features/assets/types/page-config.types'
 import type { Asset } from '@/features/assets'
 
@@ -47,7 +47,7 @@ const getDeviceTypeColor = (label: string): string => {
 
 export const networksConfig: AssetPageConfig = {
   type: 'network',
-  // Fetch all network-related asset types in one query
+  // Fetch firewall + load_balancer + network types (all network devices)
   types: ['firewall', 'load_balancer', 'network'],
   // Also include hosts tagged as network-device via tag filter
   label: 'Network Device',

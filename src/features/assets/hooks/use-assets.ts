@@ -9,6 +9,7 @@ import { usePermissions, Permission } from '@/lib/permissions'
 import type {
   Asset,
   AssetType,
+  AssetCategory,
   AssetScope,
   ExposureLevel,
   Criticality,
@@ -80,6 +81,8 @@ interface BackendAsset {
   tenant_id?: string
   name: string
   type: string // Backend uses "type" in JSON
+  sub_type?: string // Sub-type for consolidated types
+  category?: string // Derived category for UI grouping
   provider?: string // SCM provider or asset source
   criticality: string // low, medium, high, critical
   status: string // active, inactive, archived
@@ -106,6 +109,8 @@ function transformAsset(backend: BackendAsset): Asset {
     id: backend.id,
     name: backend.name,
     type: backend.type as AssetType,
+    subType: backend.sub_type || undefined,
+    category: (backend.category as AssetCategory) || undefined,
     provider: backend.provider,
     criticality: backend.criticality as Criticality,
     status: backend.status as 'active' | 'inactive' | 'archived',
