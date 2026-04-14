@@ -445,8 +445,8 @@ export default function Dashboard() {
         ) : (
           !error && (
             <>
-              <section className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
-                {/* Asset Distribution */}
+              <section className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2 lg:grid-rows-1">
+                {/* Asset Distribution — this card determines the row height */}
                 <Card className="flex flex-col">
                   <CardHeader>
                     <CardTitle>Asset Distribution</CardTitle>
@@ -484,13 +484,13 @@ export default function Dashboard() {
                   </CardContent>
                 </Card>
 
-                {/* Recent Activity — stretches to match Asset Distribution height */}
-                <Card className="flex flex-col">
-                  <CardHeader>
+                {/* Recent Activity — height follows Asset Distribution, content scrolls */}
+                <Card className="flex flex-col overflow-hidden">
+                  <CardHeader className="flex-shrink-0">
                     <CardTitle>Recent Activity</CardTitle>
                     <CardDescription>Latest security events and updates</CardDescription>
                   </CardHeader>
-                  <CardContent className="flex-1 overflow-y-auto">
+                  <CardContent className="flex-1 min-h-0 overflow-y-auto">
                     {stats.recentActivity.length > 0 ? (
                       <div className="space-y-4">
                         {stats.recentActivity.slice(0, 10).map((activity, index) => (
