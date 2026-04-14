@@ -21,6 +21,9 @@ export default function DomainsPage() {
   const searchParams = useSearchParams()
   const urlParams = useUrlParams()
   const showAllForFilter = !!urlParams.get('q')?.trim() || !!urlParams.get('tags')?.trim()
+  // When URL has ?type= filter (e.g., type=subdomain), show flat list without tree
+  const urlType = searchParams.get('type')
+  const flatMode = !!urlType
 
   // Set of root domain names that are COLLAPSED. Empty = all expanded.
   const [collapsedRoots, setCollapsedRoots] = useState<Set<string>>(new Set())
@@ -39,8 +42,9 @@ export default function DomainsPage() {
       buildDomainsConfig({
         collapsedRoots: showAllForFilter ? null : collapsedRoots,
         toggleRoot,
+        flatMode,
       }),
-    [showAllForFilter, collapsedRoots, toggleRoot]
+    [showAllForFilter, collapsedRoots, toggleRoot, flatMode]
   )
 
   // Key on searchParams to force remount when ?type=subdomain changes

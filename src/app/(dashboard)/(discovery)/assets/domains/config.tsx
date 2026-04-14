@@ -24,11 +24,14 @@ export interface DomainsConfigOptions {
   collapsedRoots: Set<string> | null
   /** Toggle collapse/expand for a single root domain. */
   toggleRoot: (rootName: string) => void
+  /** When true, skip tree flattening — show flat list (e.g., ?type=subdomain) */
+  flatMode?: boolean
 }
 
 export function buildDomainsConfig({
   collapsedRoots,
   toggleRoot,
+  flatMode,
 }: DomainsConfigOptions): AssetPageConfig {
   // null = show all; empty Set = all expanded; Set with names = those are collapsed
   const isExpanded = (rootName: string) =>
@@ -166,17 +169,20 @@ export function buildDomainsConfig({
     gradientVia: 'via-blue-500/10',
 
     // Build flat list, then hide subdomains of collapsed roots.
-    // collapsedRoots=null → show all (filter active).
-    // collapsedRoots=Set → hide subs of roots in the Set.
-    dataTransform: (assets) => {
-      const allRows = flattenDomainTreeForTable(assets)
-      if (collapsedRoots === null || collapsedRoots.size === 0) {
-        return allRows as Asset[]
-      }
-      return allRows.filter((row) => row._isRoot || !collapsedRoots.has(row._rootDomain)) as Asset[]
-    },
+    // flatMode: skip tree logic entirely (e.g., when ?type=subdomain filters to single type)
+    dataTransform: flatMode
+      ? undefined
+      : (assets) => {
+          const allRows = flattenDomainTreeForTable(assets)
+          if (collapsedRoots === null || collapsedRoots.size === 0) {
+            return allRows as Asset[]
+          }
+          return allRows.filter(
+            (row) => row._isRoot || !collapsedRoots.has(row._rootDomain)
+          ) as Asset[]
+        },
 
-    columns,
+    columns: flatMode ? columns.filter((c) => 'id' in c && c.id !== 'hierarchy') : columns,
 
     formFields: [
       {
