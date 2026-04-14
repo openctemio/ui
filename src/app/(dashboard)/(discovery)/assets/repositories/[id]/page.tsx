@@ -2169,18 +2169,8 @@ export default function RepositoryDetailPage() {
   return (
     <>
       <Main>
-        {/* Breadcrumb & Back */}
+        {/* Repository Header */}
         <div className="mb-6">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => router.push('/assets/repositories')}
-            className="mb-4"
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Repositories
-          </Button>
-
           {/* Repository Header */}
           <div className="flex items-start justify-between">
             <div className="flex items-start gap-4">
