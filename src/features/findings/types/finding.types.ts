@@ -25,7 +25,8 @@ export type FindingStatus =
   | 'new' // Scanner just found it
   | 'confirmed' // Verified as real issue, needs fix
   | 'in_progress' // Developer working on fix
-  | 'resolved' // Fix applied - REMEDIATED
+  | 'fix_applied' // Dev/owner marked as fixed — awaiting scan verification
+  | 'resolved' // Verified fixed (by scan or security review)
   | 'false_positive' // Not a real issue (requires approval)
   | 'accepted' // Risk accepted (requires approval, has expiration)
   | 'duplicate' // Linked to another finding
@@ -73,6 +74,14 @@ export const FINDING_STATUS_CONFIG: Record<FindingStatus, StatusConfig> = {
     bgColor: 'bg-yellow-500/20',
     textColor: 'text-yellow-400',
     icon: 'loader',
+    category: 'in_progress',
+  },
+  fix_applied: {
+    label: 'Fix Applied',
+    color: 'border-yellow-600/50',
+    bgColor: 'bg-yellow-600/20',
+    textColor: 'text-yellow-500',
+    icon: 'wrench',
     category: 'in_progress',
   },
   resolved: {
@@ -174,7 +183,9 @@ export const STATUS_TRANSITIONS: Record<FindingStatus, FindingStatus[]> = {
   new: ['confirmed', 'duplicate', 'false_positive'],
   confirmed: ['in_progress', 'resolved', 'duplicate', 'false_positive', 'accepted'],
   // In progress
-  in_progress: ['resolved', 'confirmed'],
+  in_progress: ['fix_applied', 'confirmed'],
+  // Fix applied — awaiting verification scan or manual security review
+  fix_applied: ['resolved', 'in_progress'],
   // Closed states (can reopen to confirmed)
   resolved: ['confirmed'],
   false_positive: ['confirmed'],
@@ -194,6 +205,7 @@ export const AUTOMATED_STATUSES: FindingStatus[] = [
   'new',
   'confirmed',
   'in_progress',
+  'fix_applied',
   'resolved',
   'false_positive',
   'accepted',

@@ -21,7 +21,8 @@ export type FindingStatus =
   | 'new' // Scanner just found it
   | 'confirmed' // Verified as real issue, needs fix
   | 'in_progress' // Developer working on fix
-  | 'resolved' // Fix applied - REMEDIATED
+  | 'fix_applied' // Dev/owner marked as fixed — awaiting scan verification
+  | 'resolved' // Verified fixed (by scan or security review)
   | 'false_positive' // Not a real issue (requires approval)
   | 'accepted' // Risk accepted (requires approval, has expiration)
   | 'duplicate' // Linked to another finding
