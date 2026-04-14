@@ -737,8 +737,10 @@ function ActivityIcon({ action }: { action: ActivityAction }) {
   return iconMap[action] || <Activity className="h-4 w-4 text-gray-500" />
 }
 
-function formatTimeAgo(dateString: string): string {
+function formatTimeAgo(dateString: string | undefined | null): string {
+  if (!dateString) return 'Never'
   const date = new Date(dateString)
+  if (isNaN(date.getTime())) return 'Never'
   const now = new Date()
   const diffMs = now.getTime() - date.getTime()
   const diffMins = Math.floor(diffMs / 60000)
@@ -1393,23 +1395,38 @@ function FindingsTab({
   const [page, setPage] = useState(1)
   const pageSize = 20
 
-  // Fetch findings from API with server-side pagination
-  const { data: findingsData, isLoading: findingsLoading } = useFindingsApi({
-    asset_id: repositoryId,
-    page,
-    per_page: pageSize,
-    severities:
-      severityFilter !== 'all'
-        ? [severityFilter as 'critical' | 'high' | 'medium' | 'low' | 'info']
-        : undefined,
-    statuses:
-      statusFilter !== 'all'
-        ? [statusFilter as 'confirmed' | 'in_progress' | 'resolved']
-        : undefined,
-    sources:
-      scannerFilter !== 'all' ? [scannerFilter as 'sast' | 'sca' | 'secret' | 'dast'] : undefined,
-    search: searchQuery || undefined,
-  })
+  // Reset page when any filter changes
+  const handleFilterChange = useCallback((setter: (v: string) => void, value: string) => {
+    setter(value)
+    setPage(1)
+  }, [])
+
+  // Fetch findings from API with server-side filters
+  const apiFilters = useMemo(() => {
+    const f: Parameters<typeof useFindingsApi>[0] = {
+      asset_id: repositoryId,
+      page,
+      per_page: pageSize,
+    }
+    if (severityFilter !== 'all')
+      f.severities = [severityFilter as 'critical' | 'high' | 'medium' | 'low' | 'info']
+    if (statusFilter !== 'all')
+      f.statuses = [
+        statusFilter as
+          | 'confirmed'
+          | 'in_progress'
+          | 'fix_applied'
+          | 'resolved'
+          | 'false_positive'
+          | 'accepted_risk',
+      ]
+    if (scannerFilter !== 'all')
+      f.sources = [scannerFilter as 'sast' | 'sca' | 'secret' | 'dast' | 'iac' | 'container']
+    if (searchQuery) f.search = searchQuery
+    return f
+  }, [repositoryId, page, pageSize, severityFilter, statusFilter, scannerFilter, searchQuery])
+
+  const { data: findingsData, isLoading: findingsLoading } = useFindingsApi(apiFilters)
 
   const findings: FindingDetail[] = useMemo(() => {
     if (!findingsData?.data) return []
@@ -1419,7 +1436,7 @@ function FindingsTab({
   const total = findingsData?.total ?? 0
   const totalPages = findingsData?.total_pages ?? 0
 
-  // Client-side branch filter (API doesn't support branch filter directly yet)
+  // Branch filter is client-side (findings have branch name in first_detected_branch)
   const filteredFindings = useMemo(() => {
     if (branchFilter === 'all') return findings
     return findings.filter((f) => f.branches.includes(branchFilter))
@@ -1458,11 +1475,13 @@ function FindingsTab({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="new">New</SelectItem>
                 <SelectItem value="confirmed">Confirmed</SelectItem>
                 <SelectItem value="in_progress">In Progress</SelectItem>
                 <SelectItem value="fix_applied">Fix Applied</SelectItem>
                 <SelectItem value="resolved">Resolved</SelectItem>
                 <SelectItem value="false_positive">False Positive</SelectItem>
+                <SelectItem value="accepted_risk">Accepted Risk</SelectItem>
               </SelectContent>
             </Select>
             <Select value={scannerFilter} onValueChange={setScannerFilter}>
