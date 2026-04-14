@@ -1098,7 +1098,9 @@ function BranchesTab({
   onViewBranchFindings?: (branchName: string) => void
 }) {
   const [_selectedBranch, setSelectedBranch] = useState<string | null>(null)
-  const defaultBranchName = branches.find((b) => b.is_default)?.name || 'main'
+  const defaultBranch = branches.find((b) => b.is_default)
+  const defaultBranchName = defaultBranch?.name || 'main'
+  const defaultTotal = defaultBranch?.findings_summary?.total ?? 0
   const [baseBranch, setBaseBranch] = useState<string>(defaultBranchName)
   const [compareBranch, setCompareBranch] = useState<string>('')
   const [comparison, setComparison] = useState<ComparisonResult | null>(null)
@@ -1301,27 +1303,31 @@ function BranchesTab({
                     </div>
                   </TableCell>
                   <TableCell>
-                    {branch.compared_to_default ? (
-                      <div className="flex items-center gap-2 text-sm">
-                        {branch.compared_to_default.new_findings > 0 && (
-                          <span className="flex items-center gap-1 text-red-500">
-                            <TrendingUp className="h-3 w-3" />+
-                            {branch.compared_to_default.new_findings}
-                          </span>
-                        )}
-                        {branch.compared_to_default.resolved_findings > 0 && (
-                          <span className="flex items-center gap-1 text-green-500">
-                            <TrendingDown className="h-3 w-3" />-
-                            {branch.compared_to_default.resolved_findings}
-                          </span>
-                        )}
-                        {branch.compared_to_default.new_findings === 0 &&
-                          branch.compared_to_default.resolved_findings === 0 && (
-                            <span className="text-muted-foreground">No changes</span>
-                          )}
-                      </div>
+                    {branch.is_default ? (
+                      <span className="text-muted-foreground text-xs">base</span>
                     ) : (
-                      <span className="text-muted-foreground">-</span>
+                      (() => {
+                        const diff = branch.findings_summary.total - defaultTotal
+                        if (diff > 0)
+                          return (
+                            <span className="flex items-center gap-1 text-sm text-red-500">
+                              <TrendingUp className="h-3 w-3" />+{diff}
+                            </span>
+                          )
+                        if (diff < 0)
+                          return (
+                            <span className="flex items-center gap-1 text-sm text-green-500">
+                              <TrendingDown className="h-3 w-3" />
+                              {diff}
+                            </span>
+                          )
+                        return (
+                          <span className="flex items-center gap-1 text-sm text-muted-foreground">
+                            <Minus className="h-3 w-3" />
+                            same
+                          </span>
+                        )
+                      })()
                     )}
                   </TableCell>
                   <TableCell>
@@ -1330,16 +1336,27 @@ function BranchesTab({
                     </span>
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Avatar className="h-5 w-5">
-                        <AvatarImage src={branch.last_commit_author_avatar} />
-                        <AvatarFallback className="text-xs">
-                          {branch.last_commit_author?.[0]}
-                        </AvatarFallback>
-                      </Avatar>
-                      <code className="text-xs bg-muted px-1 rounded">
-                        {branch.last_commit_sha?.slice(0, 7)}
-                      </code>
+                    <div className="flex flex-col gap-0.5">
+                      <div className="flex items-center gap-1.5">
+                        <code className="text-xs bg-muted px-1 rounded font-mono">
+                          {branch.last_commit_sha?.slice(0, 7) || '-'}
+                        </code>
+                        <span
+                          className="text-xs text-muted-foreground truncate max-w-[150px]"
+                          title={branch.last_commit_message}
+                        >
+                          {branch.last_commit_message || ''}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                        <span>{branch.last_commit_author || 'unknown'}</span>
+                        {branch.last_commit_at && (
+                          <>
+                            <span>·</span>
+                            <span>{formatTimeAgo(branch.last_commit_at)}</span>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </TableCell>
                   <TableCell>
@@ -2394,9 +2411,11 @@ export default function RepositoryDetailPage() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem
-                    onClick={() => {
-                      copyToClipboard(repository.repository?.webUrl || '')
-                      toast.success('URL copied')
+                    onClick={async () => {
+                      const url = repository.repository?.webUrl || window.location.href
+                      const ok = await copyToClipboard(url)
+                      if (ok) toast.success('URL copied')
+                      else toast.error('Failed to copy')
                     }}
                   >
                     <Copy className="mr-2 h-4 w-4" />
