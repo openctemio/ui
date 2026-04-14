@@ -57,6 +57,8 @@ export const networksConfig: AssetPageConfig = {
   gradientFrom: 'from-cyan-500/20',
   gradientVia: 'via-cyan-500/10',
 
+  defaultSort: { field: 'updatedAt', direction: 'desc' },
+
   columns: [
     {
       accessorKey: 'subType',
@@ -276,6 +278,7 @@ export const networksConfig: AssetPageConfig = {
       header: 'Serial',
       accessor: (a) => (a.metadata as Record<string, unknown>).serial_number || '',
     },
+    { header: 'Last Update', accessor: (a) => a.updatedAt || '' },
     { header: 'Status', accessor: (a) => a.status },
     { header: 'Risk Score', accessor: (a) => a.riskScore },
     { header: 'Findings', accessor: (a) => a.findingCount },
