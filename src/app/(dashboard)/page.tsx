@@ -445,9 +445,9 @@ export default function Dashboard() {
         ) : (
           !error && (
             <>
-              <section className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
+              <section className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2 items-start">
                 {/* Asset Distribution */}
-                <Card>
+                <Card className="flex flex-col">
                   <CardHeader>
                     <CardTitle>Asset Distribution</CardTitle>
                     <CardDescription>{stats.assets.total} total assets by type</CardDescription>
@@ -484,16 +484,16 @@ export default function Dashboard() {
                   </CardContent>
                 </Card>
 
-                {/* Recent Activity */}
-                <Card>
+                {/* Recent Activity — max-height matches chart card, scrolls if needed */}
+                <Card className="flex flex-col max-h-[460px]">
                   <CardHeader>
                     <CardTitle>Recent Activity</CardTitle>
                     <CardDescription>Latest security events and updates</CardDescription>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="flex-1 overflow-y-auto">
                     {stats.recentActivity.length > 0 ? (
                       <div className="space-y-4">
-                        {stats.recentActivity.slice(0, 5).map((activity, index) => (
+                        {stats.recentActivity.slice(0, 10).map((activity, index) => (
                           <ActivityItem
                             key={index}
                             icon={<AlertTriangle className="h-4 w-4 text-yellow-500" />}
