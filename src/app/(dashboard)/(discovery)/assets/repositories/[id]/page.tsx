@@ -976,33 +976,46 @@ function OverviewTab({
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {activities.slice(0, 5).map((activity) => (
-                <div key={activity.id} className="flex items-start gap-3">
-                  <div className="mt-0.5">
-                    <ActivityIcon action={activity.action} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm">
-                      <span className="font-medium">{activity.actor_name}</span>{' '}
-                      {ACTIVITY_ACTION_LABELS[activity.action].toLowerCase()}
-                      {activity.entity_name && (
-                        <>
-                          {' '}
-                          on <span className="font-medium">{activity.entity_name}</span>
-                        </>
-                      )}
-                    </p>
-                    {activity.comment && (
-                      <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                        {activity.comment}
+              {activities.slice(0, 5).map((activity) => {
+                const findingId = activity.id.startsWith('finding-')
+                  ? activity.id.replace('finding-', '')
+                  : null
+                return (
+                  <div
+                    key={activity.id}
+                    className={
+                      findingId
+                        ? 'flex items-start gap-3 cursor-pointer hover:bg-muted/50 rounded-lg p-2 -mx-2 transition-colors'
+                        : 'flex items-start gap-3 p-2 -mx-2'
+                    }
+                    onClick={findingId ? () => router.push(`/findings/${findingId}`) : undefined}
+                  >
+                    <div className="mt-0.5">
+                      <ActivityIcon action={activity.action} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm">
+                        <span className="font-medium">{activity.actor_name}</span>{' '}
+                        {ACTIVITY_ACTION_LABELS[activity.action].toLowerCase()}
+                        {activity.entity_name && (
+                          <>
+                            {' '}
+                            on <span className="font-medium">{activity.entity_name}</span>
+                          </>
+                        )}
                       </p>
-                    )}
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {formatTimeAgo(activity.timestamp)}
-                    </p>
+                      {activity.comment && (
+                        <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                          {activity.comment}
+                        </p>
+                      )}
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {formatTimeAgo(activity.timestamp)}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </CardContent>
         </Card>
