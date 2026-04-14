@@ -447,7 +447,7 @@ export default function Dashboard() {
             <>
               <section className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2 lg:h-[420px]">
                 {/* Asset Distribution */}
-                <Card className="flex flex-col h-full">
+                <Card className="flex flex-col h-full min-h-[380px]">
                   <CardHeader>
                     <CardTitle>Asset Distribution</CardTitle>
                     <CardDescription>{stats.assets.total} total assets by type</CardDescription>
