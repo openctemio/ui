@@ -106,7 +106,7 @@ export default function BusinessUnitsPage() {
   // Fetch from API, fallback to mock data if API returns empty
   const { data: apiData } = useBusinessUnits()
   const apiBUs: BusinessUnit[] = useMemo(() => {
-    if (!apiData?.data?.length) return mockBusinessUnits
+    if (!apiData?.data?.length) return []
     return apiData.data.map(
       (bu) =>
         ({
@@ -130,9 +130,9 @@ export default function BusinessUnitsPage() {
         }) as unknown as BusinessUnit
     )
   }, [apiData])
-  const [businessUnits, setBusinessUnits] = useState<BusinessUnit[]>(mockBusinessUnits)
+  const [businessUnits, setBusinessUnits] = useState<BusinessUnit[]>([])
   useEffect(() => {
-    if (apiBUs !== mockBusinessUnits) setBusinessUnits(apiBUs)
+    setBusinessUnits(apiBUs)
   }, [apiBUs])
   const [viewUnit, setViewUnit] = useState<BusinessUnit | null>(null)
   const [editUnit, setEditUnit] = useState<BusinessUnit | null>(null)

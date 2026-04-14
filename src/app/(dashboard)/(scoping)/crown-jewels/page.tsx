@@ -139,7 +139,7 @@ export default function CrownJewelsPage() {
   // Fetch from API, fallback to mock if no API data
   const { data: apiCrownJewels } = useCrownJewels()
   const apiMapped: CrownJewel[] = useMemo(() => {
-    if (!apiCrownJewels?.data?.length) return mockCrownJewels
+    if (!apiCrownJewels?.data?.length) return []
     return apiCrownJewels.data.map(
       (a: Record<string, unknown>) =>
         ({
@@ -161,9 +161,9 @@ export default function CrownJewelsPage() {
         }) as unknown as CrownJewel
     )
   }, [apiCrownJewels])
-  const [crownJewels, setCrownJewels] = useState<CrownJewel[]>(mockCrownJewels)
+  const [crownJewels, setCrownJewels] = useState<CrownJewel[]>([])
   useEffect(() => {
-    if (apiMapped !== mockCrownJewels) setCrownJewels(apiMapped)
+    setCrownJewels(apiMapped)
   }, [apiMapped])
   const [viewJewel, setViewJewel] = useState<CrownJewel | null>(null)
   const [editJewel, setEditJewel] = useState<CrownJewel | null>(null)
