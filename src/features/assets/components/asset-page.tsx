@@ -10,6 +10,7 @@ import {
   type SortingState,
   useReactTable,
 } from '@tanstack/react-table'
+import { cn } from '@/lib/utils'
 import { Main } from '@/components/layout'
 import { PageHeader, StatusBadge, RiskScoreBadge } from '@/features/shared'
 import {
@@ -48,7 +49,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from 'sonner'
 import { copyToClipboard } from '@/lib/clipboard'
 import {
@@ -65,13 +65,16 @@ import {
   ChevronsRight,
   Download,
   Copy,
+  X,
+  TrendingUp,
 } from 'lucide-react'
+import Link from 'next/link'
 import { useAssets, useAssetStats, type Asset } from '@/features/assets'
 import { TagFilter } from './tag-filter'
+import { PropertyFilter } from './property-filter'
 import { Can, Permission, usePermissions } from '@/lib/permissions'
 import {
   ScopeBadge,
-  ScopeCoverageCard,
   getScopeMatchesForAsset,
   calculateScopeCoverage,
   useScopeTargetsApi,
@@ -180,16 +183,26 @@ export function AssetPage({ config }: AssetPageProps) {
     setCurrentPage(1)
   }, [tagFilters])
 
+  // URL query params can override type/sub_type filter (e.g. from overview click-through)
+  const urlType = searchParams.get('type')
+  const urlSubType = searchParams.get('sub_type')
+
   // Memoize array references to keep SWR cache keys stable across renders
   const typeFilter = useMemo(
-    () => (config.types || [config.type]) as AssetType[],
-    [config.types, config.type]
+    () => (urlType ? [urlType] : config.types || [config.type]) as AssetType[],
+    [config.types, config.type, urlType]
   )
 
-  // Data fetching with server-side pagination, search, and tag filter.
-  // `total` here is the FILTERED total (e.g. 50 of 1,427 prod hosts).
+  const subTypeFilter = urlSubType || config.subType
+
+  // Dynamic properties filter — controlled by PropertyFilter component
+  const [propertiesFilter, setPropertiesFilter] = useState<Record<string, string>>({})
+
+  // Data fetching with server-side pagination, search, tag, and properties filter.
   const { assets, total, totalPages, isLoading, mutate } = useAssets({
     types: typeFilter,
+    subType: subTypeFilter,
+    propertiesFilter: Object.keys(propertiesFilter).length > 0 ? propertiesFilter : undefined,
     page: currentPage,
     pageSize,
     search: debouncedSearch || undefined,
@@ -205,7 +218,14 @@ export function AssetPage({ config }: AssetPageProps) {
   // CRITICAL: We track `statsLoading` separately so the stat cards don't flash
   // a skeleton every time the user changes a filter (which only re-fetches
   // `useAssets`, not `useAssetStats`).
-  const { stats: typeStats, isLoading: statsLoading } = useAssetStats(typeFilter)
+  // Stats always show the full type scope (not filtered by URL sub_type)
+  // so stat cards like "Firewalls: 3, Routers: 1" remain visible even
+  // when the table is filtered to a specific sub_type via URL param.
+  const { stats: typeStats, isLoading: statsLoading } = useAssetStats(
+    urlType ? ([urlType] as AssetType[]) : ((config.types || [config.type]) as AssetType[]),
+    undefined,
+    config.subType // Only use config's static subType (e.g., websites page), not URL override
+  )
 
   // Headline assets — a separate query that fetches the FIRST page of assets
   // for this type with NO search/tag/page filters applied. Used by stat cards
@@ -217,44 +237,43 @@ export function AssetPage({ config }: AssetPageProps) {
   // Limitation: still page-bounded (only the first 50 rows of the type), so
   // it's an approximation. If a metadata aggregate is critical, the right
   // long-term fix is to extend GetAggregateStats to include those fields.
-  const { assets: headlineAssets } = useAssets({
-    types: typeFilter,
-    page: 1,
-    pageSize,
-  })
-
-  // Scope coverage assets — separate query for the Scope Status widget.
-  //
-  // The previous behaviour computed scope coverage from `transformedAssets`
-  // (the FILTERED current page). That was wrong on two axes:
-  //   1. Filters changed the widget — but Scope Status is a tenant-wide
-  //      concept, not "what I happen to be looking at right now".
-  //   2. Pagination cut off the count — for a list with 1500 hosts, the
-  //      widget would say "50 of 50 in scope" instead of "X of 1500".
-  //
-  // We fetch the maximum page allowed by the backend (100 — see
-  // `asset_service.go: PerPage int validate:"min=0,max=100"`) of assets
-  // of this type with NO search/tag/page filters applied. The widget
-  // then shows scope coverage for that sample, decoupled from whatever
-  // the user is doing in the table below.
-  //
-  // SCALE LIMIT: tenants with >100 assets of one type get a sample-based
-  // estimate. The proper fix is a backend `/api/v1/scope/asset-coverage`
-  // endpoint that runs the matching server-side and aggregates over the
-  // full dataset. Tracked as TODO(scope-stats-endpoint) above.
-  //
-  // We use the backend's hard cap (100) rather than guessing a higher
-  // number — the previous version requested 1000 which the validator
-  // rejected with 400, causing the widget to show "0 of 0" everywhere.
-  const { assets: scopeCoverageAssets = [], total: scopeCoverageAssetsTotal = 0 } = useAssets({
-    types: typeFilter,
-    page: 1,
-    pageSize: 100,
-  })
+  // Headline assets & scope coverage reuse the main table query.
+  // No extra API call — stat cards and scope widget work from the
+  // same page of data already fetched for the table.
+  const headlineAssets = assets
+  const scopeCoverageAssets = assets
 
   // True when the user has narrowed the view via a non-status filter.
   // Status tabs are intentionally excluded — they're navigation, not filtering.
-  const hasActiveFilter = debouncedSearch.length > 0 || tagFilters.length > 0
+  const hasActiveFilter =
+    debouncedSearch.length > 0 ||
+    tagFilters.length > 0 ||
+    !!urlSubType ||
+    !!urlType ||
+    Object.keys(propertiesFilter).length > 0
+
+  // Total stats card count (1 default "Total" + custom cards from config)
+  const statsCardCount = 1 + (config.statsCards?.length ?? 0)
+
+  const SUB_TYPE_LABELS: Record<string, string> = {
+    firewall: 'Firewalls',
+    load_balancer: 'Load Balancers',
+    switch: 'Switches',
+    router: 'Routers',
+    wireless_ap: 'Wireless APs',
+    iam_user: 'IAM Users',
+    iam_role: 'IAM Roles',
+    service_account: 'Service Accounts',
+    website: 'Websites',
+    api: 'APIs',
+    mobile_app: 'Mobile Apps',
+    serverless: 'Serverless',
+    http: 'HTTP Services',
+    open_port: 'Open Ports',
+    cluster: 'Clusters',
+    s3_bucket: 'S3 Buckets',
+    web_application: 'Web Applications',
+  }
 
   // Apply optional data transform (e.g., domain tree flattening)
   const transformedAssets = useMemo(
@@ -281,7 +300,7 @@ export function AssetPage({ config }: AssetPageProps) {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>(
     () => (searchParams.get('status') as StatusFilter) || 'all'
   )
-  const [customFilterValues, setCustomFilterValues] = useState<Record<string, string>>({})
+  // (customFilterValues removed — PropertyFilter handles properties directly)
   const [rowSelection, setRowSelection] = useState({})
 
   // Sync state to URL search params
@@ -293,6 +312,9 @@ export function AssetPage({ config }: AssetPageProps) {
       return
     }
     const params = new URLSearchParams()
+    // Preserve type/sub_type override params from overview click-through
+    if (urlType) params.set('type', urlType)
+    if (urlSubType) params.set('sub_type', urlSubType)
     if (currentPage > 1) params.set('page', String(currentPage))
     if (debouncedSearch) params.set('q', debouncedSearch)
     if (statusFilter !== 'all') params.set('status', statusFilter)
@@ -319,6 +341,8 @@ export function AssetPage({ config }: AssetPageProps) {
     pathname,
     router,
     config.defaultSort,
+    urlType,
+    urlSubType,
   ])
 
   // Scope integration — real API data
@@ -359,7 +383,6 @@ export function AssetPage({ config }: AssetPageProps) {
   // { total, in_scope, excluded, not_scoped } for the entire tenant
   // dataset. Then this widget will work for tenants with >1000 assets
   // of one type without the sample-based caveat.
-  const scopeCoverageFullyLoaded = scopeCoverageAssetsTotal <= (scopeCoverageAssets?.length ?? 0)
   const scopeCoverage = useMemo(
     () =>
       calculateScopeCoverage(
@@ -374,32 +397,20 @@ export function AssetPage({ config }: AssetPageProps) {
     [scopeCoverageAssets, scopeTargets, scopeExclusions]
   )
 
-  // Resolve filters: customFilters[] takes priority, fallback to single customFilter
-  const resolvedFilters = useMemo(
-    () => config.customFilters ?? (config.customFilter ? [config.customFilter] : []),
-    [config.customFilters, config.customFilter]
-  )
-
   // Resolve status filter options
   const statusFilterOptions = useMemo(
     () => config.statusFilters ?? defaultStatusFilters,
     [config.statusFilters]
   )
 
-  // Filter data
+  // Filter data — status is client-side, properties are server-side (via useAssets)
   const filteredData = useMemo(() => {
     let data = [...(transformedAssets ?? [])]
     if (statusFilter !== 'all') {
       data = data.filter((a) => a.status === statusFilter)
     }
-    for (const filter of resolvedFilters) {
-      const value = customFilterValues[filter.label] ?? 'all'
-      if (value !== 'all') {
-        data = data.filter((a) => filter.filterFn(a, value))
-      }
-    }
     return data
-  }, [transformedAssets, statusFilter, customFilterValues, resolvedFilters])
+  }, [transformedAssets, statusFilter])
 
   // Status counts — derived from the tenant-wide stats endpoint so the tab
   // badges reflect the entire dataset (e.g. 1427 hosts) instead of only the
@@ -640,6 +651,21 @@ export function AssetPage({ config }: AssetPageProps) {
         ),
       },
       // Tags
+      //
+      // Tag chips can hold values like "source:gcp-dns" (14 chars) which
+      // are wider than a tight max-w cap. The previous version applied
+      // truncate + max-w-[80px] directly on the Badge — but Badge is
+      // `inline-flex` with `justify-center` and `overflow-hidden`, and
+      // text-overflow:ellipsis does not work on flex items unless the
+      // child has `min-w-0`. The result was text clipped on both sides
+      // with no ellipsis, leaving operators staring at "urce:gcp-dns"
+      // and wondering what the actual tag name was.
+      //
+      // The fix: wrap each tag value in an inner <span> that owns the
+      // truncate behaviour (block display → ellipsis works), give the
+      // badge a roomier max width that fits typical "key:value" tags,
+      // and add a native title tooltip for the full value on hover.
+      // Two-tag preview + tooltip with the rest stays the same.
       {
         id: 'tags',
         header: 'Tags',
@@ -649,14 +675,15 @@ export function AssetPage({ config }: AssetPageProps) {
           const visible = tags.slice(0, 2)
           const remaining = tags.slice(2)
           return (
-            <div className="flex flex-wrap gap-1 max-w-[180px]">
+            <div className="flex flex-wrap items-center gap-1 max-w-[220px]">
               {visible.map((tag) => (
                 <Badge
                   key={tag}
                   variant="outline"
-                  className="text-xs px-1.5 py-0 truncate max-w-[80px]"
+                  className="text-xs px-1.5 py-0 max-w-[140px]"
+                  title={tag}
                 >
-                  {tag}
+                  <span className="block truncate">{tag}</span>
                 </Badge>
               ))}
               {remaining.length > 0 && (
@@ -667,12 +694,25 @@ export function AssetPage({ config }: AssetPageProps) {
                         +{remaining.length}
                       </Badge>
                     </TooltipTrigger>
-                    <TooltipContent side="bottom" className="max-w-[240px]">
+                    {/*
+                      TooltipContent uses bg-primary + text-primary-foreground
+                      (dark bg, light text) regardless of theme. The default
+                      Badge `variant="outline"` paints text in `text-foreground`
+                      which is the regular dark text — that gives BLACK chips
+                      on a BLACK tooltip background and the user can't read
+                      the tag names. Override the colours to use the popover
+                      foreground tokens so the chips contrast against the
+                      tooltip background in both light and dark themes.
+                    */}
+                    <TooltipContent side="bottom" className="max-w-[280px]">
                       <div className="flex flex-wrap gap-1">
                         {remaining.map((tag) => (
-                          <Badge key={tag} variant="outline" className="text-xs px-1.5 py-0">
+                          <span
+                            key={tag}
+                            className="rounded-md border border-primary-foreground/30 bg-primary-foreground/10 px-1.5 py-0.5 text-xs text-primary-foreground"
+                          >
                             {tag}
-                          </Badge>
+                          </span>
                         ))}
                       </div>
                     </TooltipContent>
@@ -845,7 +885,9 @@ export function AssetPage({ config }: AssetPageProps) {
     <>
       <Main>
         <PageHeader
-          title={`${config.labelPlural}`}
+          title={
+            urlSubType ? SUB_TYPE_LABELS[urlSubType] || config.labelPlural : config.labelPlural
+          }
           description={`${typeStats.total.toLocaleString()} ${config.labelPlural.toLowerCase()} in your infrastructure`}
         >
           <div className="flex gap-2">
@@ -867,8 +909,30 @@ export function AssetPage({ config }: AssetPageProps) {
           </div>
         </PageHeader>
 
-        {/* Stats cards */}
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4 mt-6">
+        {(urlSubType || urlType) && (
+          <div className="flex items-center gap-2 mt-2">
+            <Badge variant="secondary" className="gap-1">
+              {urlSubType
+                ? `Filtered: ${SUB_TYPE_LABELS[urlSubType] || urlSubType}`
+                : `Type: ${urlType}`}
+              <Link href={pathname}>
+                <X className="h-3 w-3 cursor-pointer hover:text-destructive" />
+              </Link>
+            </Badge>
+          </div>
+        )}
+
+        {/* Stats cards — dynamic grid to never leave orphan cards on last row */}
+        <div
+          className={cn('grid gap-4 mt-6', {
+            'grid-cols-2': statsCardCount <= 2,
+            'grid-cols-3': statsCardCount === 3,
+            'grid-cols-2 lg:grid-cols-4': statsCardCount === 4,
+            'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5': statsCardCount === 5,
+            'grid-cols-2 sm:grid-cols-3': statsCardCount === 6,
+            'grid-cols-2 sm:grid-cols-4': statsCardCount >= 7,
+          })}
+        >
           <Card
             className="cursor-pointer hover:border-primary transition-colors"
             onClick={() => setStatusFilter('all')}
@@ -911,27 +975,41 @@ export function AssetPage({ config }: AssetPageProps) {
           })}
         </div>
 
-        {/* Scope status — tenant-wide, NOT affected by the table's
-            search/tag filters or pagination. Driven by the dedicated
-            `scopeCoverageAssets` query which fetches up to 1000 assets
-            of this type with no filters applied. For tenants with more
-            than 1000 assets of one type the widget shows a sample
-            caveat until the proper backend stats endpoint is built
-            (see TODO(scope-stats-endpoint) above). */}
-        <div className="mt-4 space-y-2">
-          <ScopeCoverageCard coverage={scopeCoverage} showBreakdown={false} />
-          {!scopeCoverageFullyLoaded && (
-            <p className="text-[11px] text-muted-foreground px-1">
-              Showing scope coverage for the first {scopeCoverageAssets?.length ?? 0} of{' '}
-              {scopeCoverageAssetsTotal.toLocaleString()} assets. Tenant-wide breakdown for very
-              large lists requires a server-side stats endpoint —{' '}
-              <a href="/scope-config" className="underline hover:text-foreground">
-                view full coverage in Scope Configuration
-              </a>
-              .
-            </p>
-          )}
-        </div>
+        {/* Compact scope indicator — only show when scope targets are configured */}
+        {scopeTargets.length > 0 && scopeCoverage.totalAssets > 0 && (
+          <div className="mt-4 flex items-center gap-3 px-4 py-2.5 rounded-lg border bg-muted/30">
+            <TrendingUp className="h-4 w-4 text-muted-foreground shrink-0" />
+            <div className="flex items-center gap-2 text-sm flex-1 min-w-0">
+              <span className="text-muted-foreground">Scope:</span>
+              <span className="font-medium">{scopeCoverage.inScopeAssets}</span>
+              <span className="text-muted-foreground">in scope</span>
+              {scopeCoverage.excludedAssets > 0 && (
+                <>
+                  <span className="text-muted-foreground">/</span>
+                  <span className="font-medium text-orange-500">
+                    {scopeCoverage.excludedAssets}
+                  </span>
+                  <span className="text-muted-foreground">excluded</span>
+                </>
+              )}
+              <span className="text-muted-foreground">/</span>
+              <span className="text-muted-foreground">{scopeCoverage.totalAssets} total</span>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <div className="w-24 h-2 rounded-full bg-muted overflow-hidden">
+                <div
+                  className="h-full bg-green-500 rounded-full"
+                  style={{ width: `${scopeCoverage.coveragePercent}%` }}
+                />
+              </div>
+              <span
+                className={`text-xs font-medium ${scopeCoverage.coveragePercent === 100 ? 'text-green-600' : 'text-muted-foreground'}`}
+              >
+                {Math.round(scopeCoverage.coveragePercent)}%
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* Optional header content (banners, alerts) */}
         {config.headerContent && (
@@ -967,60 +1045,54 @@ export function AssetPage({ config }: AssetPageProps) {
             )}
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col gap-4 mb-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-4">
-                <Tabs
-                  value={statusFilter}
-                  onValueChange={(v) => setStatusFilter(v as StatusFilter)}
-                >
-                  <TabsList role="tablist">
-                    {statusFilterOptions.map((f) => (
-                      <TabsTrigger key={f.value} value={f.value} className="text-xs" role="tab">
-                        {f.label}
-                        <Badge variant="secondary" className="ml-1.5 px-1.5 py-0 text-xs">
-                          {statusCounts[f.value] ?? 0}
-                        </Badge>
-                      </TabsTrigger>
-                    ))}
-                  </TabsList>
-                </Tabs>
-
-                {resolvedFilters.map((filter) => (
-                  <Select
-                    key={filter.label}
-                    value={customFilterValues[filter.label] ?? 'all'}
-                    onValueChange={(v) =>
-                      setCustomFilterValues((prev) => ({ ...prev, [filter.label]: v }))
-                    }
-                  >
-                    <SelectTrigger className="w-[150px]">
-                      <SelectValue placeholder={filter.label} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All</SelectItem>
-                      {filter.options.map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                ))}
-
-                <TagFilter value={tagFilters} onChange={setTagFilters} />
-              </div>
-
-              <div className="flex items-center gap-2">
-                <div className="relative flex-1 max-w-sm">
+            <div className="flex flex-col gap-3 mb-4">
+              {/* Row 1: Search + Status + Filters + Bulk actions */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <div className="relative flex-1 min-w-[200px] max-w-md">
                   <SearchIcon className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
                     placeholder={`Search ${config.labelPlural.toLowerCase()}...`}
                     value={searchValue}
                     onChange={(e) => setSearchValue(e.target.value)}
-                    className="pl-8"
+                    className="pl-8 h-9"
                     aria-label="Search assets"
                   />
                 </div>
+
+                <Select
+                  value={statusFilter}
+                  onValueChange={(v) => setStatusFilter(v as StatusFilter)}
+                >
+                  <SelectTrigger className="w-[130px] h-9">
+                    <SelectValue>
+                      <span className="text-xs">
+                        Status:{' '}
+                        {statusFilterOptions.find((f) => f.value === statusFilter)?.label ?? 'All'}
+                      </span>
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {statusFilterOptions.map((f) => (
+                      <SelectItem key={f.value} value={f.value}>
+                        {f.label} ({statusCounts[f.value] ?? 0})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <TagFilter value={tagFilters} onChange={setTagFilters} />
+
+                <PropertyFilter
+                  types={typeFilter}
+                  subType={subTypeFilter}
+                  value={propertiesFilter}
+                  onChange={(pf) => {
+                    setPropertiesFilter(pf)
+                    setCurrentPage(1)
+                  }}
+                  filtered={total}
+                  total={typeStats.total}
+                />
 
                 {Object.keys(rowSelection).length > 0 && (
                   <DropdownMenu>
@@ -1057,6 +1129,8 @@ export function AssetPage({ config }: AssetPageProps) {
                   </DropdownMenu>
                 )}
               </div>
+
+              {/* PropertyFilter shows its own chips inline */}
             </div>
 
             {/* Table */}

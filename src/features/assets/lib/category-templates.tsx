@@ -42,7 +42,7 @@ import {
 // =============================================================================
 
 export const iamUserConfig: AssetPageConfig = buildAssetPageConfig({
-  type: 'iam_user',
+  type: 'identity',
   label: 'IAM User',
   labelPlural: 'IAM Users',
   description: 'Manage IAM user accounts across cloud providers',
@@ -89,7 +89,7 @@ export const iamUserConfig: AssetPageConfig = buildAssetPageConfig({
 })
 
 export const iamRoleConfig: AssetPageConfig = buildAssetPageConfig({
-  type: 'iam_role',
+  type: 'identity',
   label: 'IAM Role',
   labelPlural: 'IAM Roles',
   description: 'Manage IAM roles and their permissions',
@@ -117,7 +117,7 @@ export const iamRoleConfig: AssetPageConfig = buildAssetPageConfig({
 })
 
 export const serviceAccountConfig: AssetPageConfig = buildAssetPageConfig({
-  type: 'service_account',
+  type: 'identity',
   label: 'Service Account',
   labelPlural: 'Service Accounts',
   description: 'Manage service accounts and machine identities',
@@ -150,7 +150,7 @@ export const serviceAccountConfig: AssetPageConfig = buildAssetPageConfig({
 // =============================================================================
 
 export const httpServiceConfig: AssetPageConfig = buildAssetPageConfig({
-  type: 'http_service',
+  type: 'service',
   label: 'HTTP Service',
   labelPlural: 'HTTP Services',
   description: 'HTTP/HTTPS services discovered during reconnaissance',
@@ -177,7 +177,7 @@ export const httpServiceConfig: AssetPageConfig = buildAssetPageConfig({
 })
 
 export const openPortConfig: AssetPageConfig = buildAssetPageConfig({
-  type: 'open_port',
+  type: 'service',
   label: 'Open Port',
   labelPlural: 'Open Ports',
   description: 'Open ports discovered during network scanning',
@@ -214,7 +214,7 @@ export const openPortConfig: AssetPageConfig = buildAssetPageConfig({
 })
 
 export const discoveredUrlConfig: AssetPageConfig = buildAssetPageConfig({
-  type: 'discovered_url',
+  type: 'service',
   label: 'Discovered URL',
   labelPlural: 'Discovered URLs',
   description: 'URLs and endpoints discovered during web crawling',
@@ -255,7 +255,7 @@ export const discoveredUrlConfig: AssetPageConfig = buildAssetPageConfig({
 // =============================================================================
 
 export const kubernetesClusterConfig: AssetPageConfig = buildAssetPageConfig({
-  type: 'kubernetes_cluster',
+  type: 'kubernetes',
   label: 'K8s Cluster',
   labelPlural: 'Kubernetes Clusters',
   description: 'Manage Kubernetes clusters',
@@ -292,7 +292,7 @@ export const kubernetesClusterConfig: AssetPageConfig = buildAssetPageConfig({
 
 export const vpcConfig: AssetPageConfig = buildAssetPageConfig({
   type: 'vpc',
-  types: ['vpc', 'subnet'],
+  types: ['network'],
   label: 'VPC',
   labelPlural: 'VPCs & Subnets',
   description: 'Virtual Private Clouds and subnets',

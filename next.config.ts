@@ -91,9 +91,14 @@ const nextConfig: NextConfig = {
       },
     ]
   },
-  // Note: allowedDevOrigins intentionally NOT set.
-  // When defined, Next.js switches to 'block' mode and '*' wildcard doesn't work.
-  // When undefined, Next.js only warns but doesn't block — HMR works from any IP.
+  // Allowed dev origins for HMR/dev assets. Next.js 16 blocks cross-origin dev
+  // requests by default (including HMR WebSockets from LAN IPs), so each developer
+  // can add their IPs via NEXT_ALLOWED_DEV_ORIGINS=ip1,ip2 in .env.local.
+  // Wildcards are not supported — you must enumerate IPs/hostnames.
+  allowedDevOrigins: (process.env.NEXT_ALLOWED_DEV_ORIGINS ?? '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean),
 }
 
 export default withBundleAnalyzer(nextConfig)

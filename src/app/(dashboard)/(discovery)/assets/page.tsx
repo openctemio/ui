@@ -54,8 +54,11 @@ import { useTenantModules } from '@/features/integrations/api/use-tenant-modules
 const CATEGORY_ICONS: Record<AssetTypeCategory, LucideIcon> = {
   external: Globe,
   applications: MonitorSmartphone,
-  cloud: Cloud,
   infrastructure: Server,
+  network: Network,
+  cloud: Cloud,
+  data: Database,
+  identity: ShieldCheck,
   code: GitBranch,
 }
 
@@ -63,100 +66,89 @@ const CATEGORY_ICONS: Record<AssetTypeCategory, LucideIcon> = {
 const CATEGORY_COLORS: Record<AssetTypeCategory, { bg: string; text: string; border: string }> = {
   external: { bg: 'bg-purple-500/10', text: 'text-purple-600', border: 'border-purple-500/20' },
   applications: { bg: 'bg-cyan-500/10', text: 'text-cyan-600', border: 'border-cyan-500/20' },
-  cloud: { bg: 'bg-sky-500/10', text: 'text-sky-600', border: 'border-sky-500/20' },
   infrastructure: { bg: 'bg-slate-500/10', text: 'text-slate-600', border: 'border-slate-500/20' },
+  network: { bg: 'bg-orange-500/10', text: 'text-orange-600', border: 'border-orange-500/20' },
+  cloud: { bg: 'bg-sky-500/10', text: 'text-sky-600', border: 'border-sky-500/20' },
+  data: { bg: 'bg-emerald-500/10', text: 'text-emerald-600', border: 'border-emerald-500/20' },
+  identity: { bg: 'bg-pink-500/10', text: 'text-pink-600', border: 'border-pink-500/20' },
   code: { bg: 'bg-fuchsia-500/10', text: 'text-fuchsia-600', border: 'border-fuchsia-500/20' },
 }
 
 // Asset type to URL mapping
 const ASSET_TYPE_URLS: Record<string, string> = {
   domain: '/assets/domains',
+  subdomain: '/assets/domains',
   certificate: '/assets/certificates',
   ip_address: '/assets/ip-addresses',
-  website: '/assets/websites',
-  api: '/assets/apis',
-  mobile_app: '/assets/mobile',
+  application: '/assets/websites',
   service: '/assets/services',
-  application: '/assets/services',
-  endpoint: '/assets/apis',
-  cloud_account: '/assets/cloud-accounts',
-  compute: '/assets/cloud-resources',
-  storage: '/assets/storage',
-  serverless: '/assets/serverless',
-  cloud: '/assets/cloud-resources',
   host: '/assets/hosts',
   container: '/assets/containers',
-  database: '/assets/databases',
+  kubernetes: '/assets/containers',
   network: '/assets/networks',
+  cloud_account: '/assets/cloud-accounts',
+  storage: '/assets/storage',
+  database: '/assets/databases',
+  identity: '/assets/identity',
   repository: '/assets/repositories',
+  unclassified: '/assets/overview',
 }
 
-// Asset type icons
 const ASSET_TYPE_ICONS: Record<string, LucideIcon> = {
   domain: Globe,
+  subdomain: Globe,
   certificate: ShieldCheck,
   ip_address: Network,
-  website: MonitorSmartphone,
-  api: Zap,
-  mobile_app: Smartphone,
+  application: MonitorSmartphone,
   service: Zap,
-  application: Zap,
-  endpoint: Zap,
-  cloud_account: Cloud,
-  compute: Server,
-  storage: HardDrive,
-  serverless: Cpu,
-  cloud: Cloud,
   host: Server,
   container: Boxes,
-  database: Database,
+  kubernetes: Container,
   network: Network,
+  cloud_account: Cloud,
+  storage: HardDrive,
+  database: Database,
+  identity: ShieldCheck,
   repository: GitBranch,
+  unclassified: Boxes,
 }
 
-// Asset type display names
 const ASSET_TYPE_NAMES: Record<string, string> = {
   domain: 'Domains',
+  subdomain: 'Subdomains',
   certificate: 'Certificates',
   ip_address: 'IP Addresses',
-  website: 'Websites',
-  api: 'APIs',
-  mobile_app: 'Mobile Apps',
-  service: 'Services',
   application: 'Applications',
-  endpoint: 'Endpoints',
-  cloud_account: 'Cloud Accounts',
-  compute: 'Cloud Resources',
-  storage: 'Storage',
-  serverless: 'Serverless',
-  cloud: 'Cloud Resources',
+  service: 'Services',
   host: 'Hosts',
-  container: 'Kubernetes',
+  container: 'Containers',
+  kubernetes: 'Kubernetes',
+  network: 'Network Devices',
+  cloud_account: 'Cloud Accounts',
+  storage: 'Storage',
   database: 'Databases',
-  network: 'Networks',
+  identity: 'Identity',
   repository: 'Repositories',
+  unclassified: 'Unclassified',
 }
 
 // Mapping from asset type to sub-module slug (for filtering based on module visibility)
 const ASSET_TYPE_TO_SUBMODULE: Record<string, string> = {
+  // Core types → sub-module slugs (must match Module Management config)
   domain: 'domains',
+  subdomain: 'domains',
   certificate: 'certificates',
   ip_address: 'ip-addresses',
-  website: 'websites',
-  api: 'apis',
-  mobile_app: 'mobile',
+  application: 'websites',
   service: 'services',
-  application: 'services', // Maps to services sub-module
-  endpoint: 'apis', // Maps to apis sub-module
-  compute: 'cloud-resources',
-  cloud_account: 'cloud-accounts',
-  storage: 'storage',
-  serverless: 'serverless',
-  cloud: 'cloud-resources',
   host: 'hosts',
   container: 'containers',
-  database: 'databases',
+  kubernetes: 'containers',
   network: 'networks',
+  cloud_account: 'cloud-accounts',
+  storage: 'storage',
+  database: 'databases',
+  identity: 'identity',
   repository: 'repositories',
 }
 
@@ -193,9 +185,9 @@ export default function AssetsOverviewPage() {
         if (!subModuleSlug) return true // Show types without mapping
 
         const subModule = assetSubModules.find((m) => m.slug === subModuleSlug)
-        if (!subModule) return false // Hide if not found in API response
+        if (!subModule) return true // Show if sub-module not configured (graceful fallback)
 
-        // Hide if inactive or disabled
+        // Hide only if explicitly inactive or disabled
         if (!subModule.is_active) return false
         if (subModule.release_status === 'disabled') return false
 
@@ -212,15 +204,16 @@ export default function AssetsOverviewPage() {
   const highRiskCount = stats.highRiskCount
   const totalFindings = stats.totalFindings
 
-  // Get count for an asset type
-  const getTypeCount = (type: string): number => {
-    return stats.byType[type] ?? 0
+  // Get count for an asset type or sub_type
+  const getItemCount = (key: string): number => {
+    // Check sub_type first (more specific), then type
+    return stats.bySubType[key] ?? stats.byType[key] ?? 0
   }
 
-  // Calculate category total based on filtered types
+  // Calculate category total based on type counts
   const getCategoryTotal = (category: AssetTypeCategory): number => {
-    const types = filteredCategoryTypes[category] || []
-    return types.reduce((sum, type) => sum + getTypeCount(type), 0)
+    const config = ASSET_TYPE_CATEGORIES[category]
+    return config.types.reduce((sum, type) => sum + (stats.byType[type] ?? 0), 0)
   }
 
   return (
@@ -394,26 +387,25 @@ export default function AssetsOverviewPage() {
                   </CardHeader>
                   <CardContent className="pt-0">
                     <div className="space-y-2">
-                      {(filteredCategoryTypes[categoryKey] || [])
-                        // Once stats are loaded, hide types with zero assets
-                        // so empty rows like "Networks 0" don't clutter the card
-                        .filter((type) => statsLoading || getTypeCount(type) > 0)
-                        .slice(0, 6) // Limit to 6 types per category
-                        .map((type) => {
-                          const TypeIcon = ASSET_TYPE_ICONS[type] || Container
-                          const count = getTypeCount(type)
-                          const url = ASSET_TYPE_URLS[type]
-                          const name = ASSET_TYPE_NAMES[type] || type
+                      {(category.items || [])
+                        .filter((item) => statsLoading || getItemCount(item.countKey) > 0)
+                        .slice(0, 8)
+                        .map((item) => {
+                          const TypeIcon =
+                            ASSET_TYPE_ICONS[item.key] ||
+                            ASSET_TYPE_ICONS[item.countKey] ||
+                            Container
+                          const count = getItemCount(item.countKey)
 
                           return (
                             <Link
-                              key={type}
-                              href={url}
+                              key={item.key}
+                              href={item.url}
                               className="flex items-center justify-between p-2 rounded-lg hover:bg-accent/50 transition-colors group"
                             >
                               <div className="flex items-center gap-2">
                                 <TypeIcon className="h-4 w-4 text-muted-foreground" />
-                                <span className="text-sm">{name}</span>
+                                <span className="text-sm">{item.label}</span>
                               </div>
                               <div className="flex items-center gap-2">
                                 {statsLoading ? (

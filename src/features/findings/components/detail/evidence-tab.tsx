@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -106,6 +106,32 @@ function RepositoryLink({
 export function EvidenceTab({ evidence, finding }: EvidenceTabProps) {
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set())
   const [expandedStacks, setExpandedStacks] = useState<Set<number>>(new Set())
+  const [apiAttachments, setApiAttachments] = useState<
+    Array<{
+      id: string
+      filename: string
+      content_type: string
+      size: number
+      url: string
+    }>
+  >([])
+
+  // Fetch attachments from API for pentest/manual findings
+  const isPentestSource = ['pentest', 'bug_bounty', 'red_team', 'manual'].includes(
+    finding?.source || ''
+  )
+  useEffect(() => {
+    if (!isPentestSource || !finding?.id) return
+    const controller = new AbortController()
+    fetch(`/api/v1/attachments?context_type=finding&context_id=${finding.id}`, {
+      credentials: 'include',
+      signal: controller.signal,
+    })
+      .then((r) => (r.ok ? r.json() : { data: [] }))
+      .then((res) => setApiAttachments(res.data || []))
+      .catch(() => {})
+    return () => controller.abort()
+  }, [isPentestSource, finding?.id])
 
   // Extract stacks, related locations, and attachments from finding
   const stacks = finding?.stacks || []
@@ -277,13 +303,15 @@ export function EvidenceTab({ evidence, finding }: EvidenceTabProps) {
   const hasStacks = stacks.length > 0
   const hasRelatedLocations = relatedLocations.length > 0
   const hasAttachments = attachments.length > 0
+  const hasApiAttachments = apiAttachments.length > 0
   const hasAnyContent =
     hasAffectedCode ||
     hasCodeSnippets ||
     hasEvidence ||
     hasStacks ||
     hasRelatedLocations ||
-    hasAttachments
+    hasAttachments ||
+    hasApiAttachments
 
   if (!hasAnyContent) {
     return (
@@ -693,6 +721,65 @@ export function EvidenceTab({ evidence, finding }: EvidenceTabProps) {
                   </div>
                 )
               })}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Uploaded Attachments from API (pentest/manual findings) */}
+      {hasApiAttachments && (
+        <>
+          <Separator />
+          <div>
+            <h3 className="mb-3 flex items-center gap-2 font-semibold">
+              <Paperclip className="h-4 w-4" />
+              Uploaded Evidence ({apiAttachments.length})
+            </h3>
+            <div className="space-y-3">
+              {apiAttachments.filter((a) => a.content_type.startsWith('image/')).length > 0 && (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {apiAttachments
+                    .filter((a) => a.content_type.startsWith('image/'))
+                    .map((att) => (
+                      <a
+                        key={att.id}
+                        href={att.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="group relative aspect-video rounded-lg border bg-muted overflow-hidden"
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={att.url}
+                          alt={att.filename}
+                          className="absolute inset-0 w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-2">
+                          <p className="text-xs text-white font-medium truncate">{att.filename}</p>
+                        </div>
+                      </a>
+                    ))}
+                </div>
+              )}
+              {apiAttachments
+                .filter((a) => !a.content_type.startsWith('image/'))
+                .map((att) => (
+                  <a
+                    key={att.id}
+                    href={att.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 rounded-lg border p-3 hover:bg-muted/50 transition-colors"
+                  >
+                    <Paperclip className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{att.filename}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {att.content_type} · {(att.size / 1024).toFixed(1)} KB
+                      </p>
+                    </div>
+                  </a>
+                ))}
             </div>
           </div>
         </>

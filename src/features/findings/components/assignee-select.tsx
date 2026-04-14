@@ -156,7 +156,7 @@ export function AssigneeSelect({
               <span className="hidden sm:inline">{placeholder}</span>
             </>
           ) : null}
-          <ChevronDown className="h-3 w-3" />
+          {!disabled && <ChevronDown className="h-3 w-3" />}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-56 p-0" align="start">

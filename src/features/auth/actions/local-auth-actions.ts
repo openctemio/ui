@@ -51,6 +51,11 @@ export interface RegisterInput {
   password: string
   firstName: string
   lastName: string
+  // Optional invitation token: when the user reaches /register from
+  // an invitation link, the form forwards the token here so the
+  // backend can resolve the target tenant and apply that tenant's
+  // email-verification rule (instead of the platform default).
+  invitationToken?: string
 }
 
 export interface TokenResponse {
@@ -169,6 +174,10 @@ export async function registerAction(
           email: input.email,
           password: input.password,
           name: name,
+          // Forward the invitation token if the form picked one up from
+          // the URL — backend uses it to apply the inviting tenant's
+          // email-verification rule instead of the platform default.
+          ...(input.invitationToken ? { invitation_token: input.invitationToken } : {}),
         }),
       }
     )

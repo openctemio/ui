@@ -1,8 +1,5 @@
-'use client'
-
-import { AssetPage } from '@/features/assets/components/asset-page'
-import { serverlessConfig } from './config'
+import { redirect } from 'next/navigation'
 
 export default function ServerlessPage() {
-  return <AssetPage config={serverlessConfig} />
+  redirect('/assets/hosts?sub_type=serverless')
 }

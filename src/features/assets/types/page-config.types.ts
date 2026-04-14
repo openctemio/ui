@@ -15,6 +15,9 @@ export interface AssetPageConfig {
   /** Multiple asset types to fetch (overrides `type` for API filter) */
   types?: string[]
 
+  /** Sub-type filter — when set, only assets with this sub_type are shown */
+  subType?: string
+
   /** Display name (singular) — e.g., "Service" */
   label: string
 
@@ -168,6 +171,8 @@ export interface CustomFilterConfig {
   label: string
   options: { label: string; value: string }[]
   filterFn: (asset: Asset, value: string) => boolean
+  /** When set, sends this key as a server-side properties filter instead of client-side filterFn */
+  propertiesKey?: string
 }
 
 /** Row action config (appears in row dropdown menu) */

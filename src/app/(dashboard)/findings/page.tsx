@@ -2,7 +2,8 @@
 
 import { useState, useMemo, useCallback } from 'react'
 import Link from 'next/link'
-import { useSearchParams, useRouter } from 'next/navigation'
+import { useRouter } from 'next/navigation'
+import { useUrlParams } from '@/hooks/use-url-param'
 import { ColumnDef } from '@tanstack/react-table'
 import { Main } from '@/components/layout'
 import { PageHeader, SeverityBadge, DataTable, DataTableColumnHeader } from '@/features/shared'
@@ -85,14 +86,26 @@ import { usePermissions } from '@/context/permission-provider'
 // ============================================
 
 function transformApiToUiFinding(api: ApiFinding): Finding {
-  // Build location string with branch/commit context
-  let locationName = api.file_path || api.asset_id
-  if (api.first_detected_branch) {
-    locationName = `${api.first_detected_branch}:${locationName}`
+  // Build location string — different sources have different location semantics:
+  // Scanner findings: file_path[:line] with optional branch prefix
+  // Pentest findings: asset name or affected targets (no file_path)
+  let locationName = ''
+  if (api.file_path) {
+    locationName = api.file_path
+    if (api.first_detected_branch) {
+      locationName = `${api.first_detected_branch}:${locationName}`
+    }
+    if (api.start_line) {
+      locationName = `${locationName}:${api.start_line}`
+    }
+  } else if (api.asset?.name) {
+    locationName = api.asset.name
+  } else if (api.metadata?.affected_assets) {
+    const targets = api.metadata.affected_assets as string[]
+    locationName = targets.length > 0 ? targets[0] : ''
+    if (targets.length > 1) locationName += ` +${targets.length - 1}`
   }
-  if (api.start_line) {
-    locationName = `${locationName}:${api.start_line}`
-  }
+  if (!locationName) locationName = api.asset_id || '-'
 
   return {
     id: api.id,
@@ -225,7 +238,11 @@ function FindingsLoadingSkeleton() {
 }
 
 export default function FindingsPage() {
-  const searchParams = useSearchParams()
+  return <FindingsContent />
+}
+
+function FindingsContent() {
+  const searchParams = useUrlParams()
   const router = useRouter()
   const assetIdFilter = searchParams.get('assetId')
   const sourceIdFilter = searchParams.get('source')
@@ -240,6 +257,7 @@ export default function FindingsPage() {
   const [isDeleting, setIsDeleting] = useState(false)
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [sourceFilter, setSourceFilter] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [mainTab, setMainTab] = useState<'findings' | 'groups' | 'pending'>('findings')
   const [markFixedGroup, setMarkFixedGroup] = useState<FindingGroup | null>(null)
@@ -268,6 +286,11 @@ export default function FindingsPage() {
       // Default: exclude draft/in_review (pentest WIP not ready for dashboard)
       filters.exclude_statuses = HIDDEN_STATUSES
     }
+    if (sourceFilter !== 'all') {
+      filters.sources = [
+        sourceFilter as FindingApiFilters['sources'] extends (infer U)[] ? U : never,
+      ]
+    }
     if (searchQuery.trim()) {
       filters.search = searchQuery.trim()
     }
@@ -278,6 +301,7 @@ export default function FindingsPage() {
     scanIdFilter,
     severityTab,
     statusFilter,
+    sourceFilter,
     searchQuery,
     HIDDEN_STATUSES,
   ])
@@ -956,6 +980,35 @@ export default function FindingsPage() {
                   <DropdownMenuItem onClick={() => setStatusFilter('accepted_risk')}>
                     Accepted Risk
                   </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <Filter className="mr-2 h-4 w-4" />
+                    Source: {sourceFilter === 'all' ? 'All' : sourceFilter.toUpperCase()}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem onClick={() => setSourceFilter('all')}>All</DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => setSourceFilter('pentest')}>
+                    Pentest
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setSourceFilter('sast')}>SAST</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setSourceFilter('dast')}>DAST</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setSourceFilter('sca')}>SCA</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setSourceFilter('secret')}>
+                    Secret
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setSourceFilter('iac')}>IaC</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setSourceFilter('container')}>
+                    Container
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setSourceFilter('manual')}>
+                    Manual
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setSourceFilter('easm')}>EASM</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>

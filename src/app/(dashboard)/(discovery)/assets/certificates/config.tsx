@@ -320,9 +320,16 @@ export const certificatesConfig: AssetPageConfig = {
           label: 'SANs',
           fullWidth: true,
           getValue: (asset: Asset) => {
-            const sans = asset.metadata?.certSans as string[] | undefined
-            if (!sans || sans.length === 0)
-              return <span className="text-muted-foreground">None</span>
+            const raw = asset.metadata?.certSans
+            const sans: string[] = Array.isArray(raw)
+              ? raw
+              : raw
+                ? String(raw)
+                    .split(',')
+                    .map((s) => s.trim())
+                    .filter(Boolean)
+                : []
+            if (sans.length === 0) return <span className="text-muted-foreground">None</span>
             return (
               <div className="flex flex-wrap gap-1">
                 {sans.map((san: string) => (

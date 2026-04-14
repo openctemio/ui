@@ -11,6 +11,11 @@
  * IMPORTANT: We MUST wait for API response before deciding where to redirect.
  * The proxy only checks if cookie exists, not if it's valid.
  * So we need to let the tenant API call happen first to validate auth.
+ *
+ * Navigation strategy:
+ * - FIRST LOAD: Block rendering until bootstrap completes (max 15s timeout)
+ * - SUBSEQUENT: Never block — always render children. Auth is validated per-API-call.
+ *   This eliminates the persistent "Loading..." on browser back/forward navigation.
  */
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
@@ -22,11 +27,26 @@ import { getCookie, removeCookie } from '@/lib/cookies'
 import { env } from '@/lib/env'
 import { Loader2 } from 'lucide-react'
 
+// ============================================
+// Constants
+// ============================================
+
+/** Max time to wait for bootstrap on first load before showing children anyway. */
+const BOOTSTRAP_TIMEOUT_MS = 15_000
+
+/** sessionStorage key — NOT tenant-scoped because we just need to know
+ *  "has this tab ever successfully loaded the dashboard?" to skip
+ *  blocking on subsequent navigations. */
+const SESSION_KEY = 'tenant_gate_loaded'
+
+// ============================================
+// UI Components
+// ============================================
+
 interface TenantGateProps {
   children: React.ReactNode
 }
 
-// Loading UI component
 function LoadingScreen({ message = 'Loading...' }: { message?: string }) {
   return (
     <div className="flex h-screen w-full items-center justify-center">
@@ -49,9 +69,10 @@ function LoadingOverlay({ message = 'Switching workspace...' }: { message?: stri
   )
 }
 
-/**
- * Check if error is an authentication error
- */
+// ============================================
+// Helpers
+// ============================================
+
 function isAuthError(error: Error): boolean {
   const statusCode = (error as { statusCode?: number }).statusCode
   const code = (error as { code?: string }).code
@@ -73,158 +94,168 @@ function isAuthError(error: Error): boolean {
   )
 }
 
-/**
- * Clear auth cookies and redirect to login
- *
- * IMPORTANT: We clear ALL auth-related cookies including tenant cookie.
- * This prevents login loops caused by stale tenant cookie pointing to
- * invalid tenant (e.g., user removed from team, different user logging in).
- *
- * We cannot clear HttpOnly cookies from client-side JavaScript.
- * The server/middleware will handle clearing those.
- */
 function clearAuthAndRedirectToLogin() {
   devLog.log('[TenantGate] Auth error detected, clearing cookies and redirecting to login')
 
-  // Clear non-HttpOnly auth cookies (if any)
-  // Note: HttpOnly cookies (access_token, refresh_token) cannot be cleared from JS
-  // The server will handle clearing those when the user tries to use them
   removeCookie(env.auth.cookieName)
-
-  // Clear tenant cookie to prevent login loops
-  // When user logs in again, they'll go through proper tenant selection
   removeCookie(env.cookies.tenant)
-
-  // Clear pending tenants cookie
   removeCookie(env.cookies.pendingTenants)
 
-  // Use hard redirect to ensure clean state
+  // Clear session flag so next login goes through full bootstrap
+  try {
+    sessionStorage.removeItem(SESSION_KEY)
+  } catch {
+    /* ignore */
+  }
+
   window.location.href = '/login'
 }
 
+// ============================================
+// Component
+// ============================================
+
 export function TenantGate({ children }: TenantGateProps) {
-  const { tenants, isLoading, error } = useTenant()
-  const { isBootstrapped, data: bootstrapData } = useBootstrapContextSafe()
-  const { permissions } = usePermissionsSafe()
+  const { tenants, currentTenant, isLoading, error } = useTenant()
+  const { isBootstrapped, data: _bootstrapData } = useBootstrapContextSafe()
+  const { permissions: _permissions } = usePermissionsSafe()
   const hasRedirected = useRef(false)
 
-  // Check if tenant cookie exists directly (don't wait for state update)
-  // This prevents the flash redirect to onboarding when cookie exists
   const [hasCookieChecked, setHasCookieChecked] = useState(false)
   const [hasTenantCookie, setHasTenantCookie] = useState(false)
   const [hasInitiallyLoaded, setHasInitiallyLoaded] = useState(false)
 
+  // Track tenant ID for detecting real workspace switches
+  const [lastLoadedTenantId, setLastLoadedTenantId] = useState<string | null>(null)
+
+  // Timeout: if first-load bootstrap takes too long, show children anyway.
+  // Backend validates auth per-request, so this is safe.
+  const [timedOut, setTimedOut] = useState(false)
+
+  // ─── Synchronous cookie check (runs before paint)
   useLayoutEffect(() => {
     const cookie = getCookie(env.cookies.tenant)
     setHasTenantCookie(!!cookie)
+    try {
+      if (sessionStorage.getItem(SESSION_KEY) === '1') {
+        setHasInitiallyLoaded(true)
+      }
+    } catch {
+      /* ignore */
+    }
     setHasCookieChecked(true)
   }, [])
 
-  // Handle authentication errors - HIGHEST PRIORITY
-  // When token is invalid, API will return 401 - redirect to login
+  // ─── Auth error handler
   useEffect(() => {
-    if (error && !hasRedirected.current) {
-      if (isAuthError(error)) {
-        hasRedirected.current = true
-        clearAuthAndRedirectToLogin()
-      }
+    if (error && !hasRedirected.current && isAuthError(error)) {
+      hasRedirected.current = true
+      clearAuthAndRedirectToLogin()
     }
   }, [error])
 
-  // Handle tenant check AFTER API response (when needed)
-  // Only redirect to onboarding if:
-  // 1. Cookie check completed
-  // 2. API call completed (not loading) - only needed when no cookie
-  // 3. No auth error
-  // 4. User has no tenants AND no tenant cookie
-  //
-  // OPTIMIZATION: If user has a tenant cookie, we trust it and skip the
-  // tenants API call. The API is only called when user doesn't have a
-  // tenant cookie (to check if they need onboarding).
+  // ─── No-tenant redirect (onboarding)
   useEffect(() => {
-    // Wait for cookie check to complete
-    if (!hasCookieChecked) return
-
-    // If user has a tenant cookie, trust it - no need to check tenants
-    if (hasTenantCookie) return
-
-    // Wait for API to complete (only called when no tenant cookie)
-    if (isLoading) return
-
-    // If there's an auth error, let the auth error handler deal with it
+    if (!hasCookieChecked || hasTenantCookie || isLoading) return
     if (error && isAuthError(error)) return
-
-    // Already redirected
     if (hasRedirected.current) return
 
-    // Check if user has no tenants - redirect to onboarding
-    // This means auth is valid but user hasn't created a team yet
     if (tenants.length === 0) {
       hasRedirected.current = true
       devLog.log('[TenantGate] No tenants found - redirecting to onboarding')
       window.location.href = '/onboarding/create-team'
-      return
-    }
-
-    // Check if user has tenants but no tenant cookie selected
-    // This can happen if cookie was cleared but auth is still valid
-    if (tenants.length > 0) {
-      devLog.log('[TenantGate] No tenant selected, but has tenants - selecting first one')
-      // This will be handled by the first tenant selection flow
     }
   }, [hasCookieChecked, hasTenantCookie, isLoading, error, tenants.length])
 
-  // Show loading while cookie check hasn't completed
+  // ─── Track successful bootstrap
+  const currentTenantId = currentTenant?.id ?? null
+
+  useEffect(() => {
+    if (isBootstrapped) {
+      if (!hasInitiallyLoaded) {
+        setHasInitiallyLoaded(true)
+        try {
+          sessionStorage.setItem(SESSION_KEY, '1')
+        } catch {
+          /* ignore */
+        }
+      }
+      if (currentTenantId && currentTenantId !== lastLoadedTenantId) {
+        setLastLoadedTenantId(currentTenantId)
+      }
+      // Reset timeout flag if it was set
+      if (timedOut) setTimedOut(false)
+    }
+  }, [isBootstrapped, hasInitiallyLoaded, currentTenantId, lastLoadedTenantId, timedOut])
+
+  // ─── Timeout: prevent indefinite loading on first load
+  useEffect(() => {
+    // Only set timeout for first-load scenario (not after hasInitiallyLoaded)
+    if (hasInitiallyLoaded || isBootstrapped || timedOut) return
+
+    const timer = setTimeout(() => {
+      devLog.warn('[TenantGate] Bootstrap timeout — showing children anyway')
+      setTimedOut(true)
+    }, BOOTSTRAP_TIMEOUT_MS)
+
+    return () => clearTimeout(timer)
+  }, [hasInitiallyLoaded, isBootstrapped, timedOut])
+
+  // ════════════════════════════════════════════
+  // RENDER LOGIC
+  // ════════════════════════════════════════════
+
+  // ─── FAST PATH: After the first successful load in this browser tab,
+  // never block rendering again. Backend validates auth on every API call;
+  // if the token is invalid, SWR error handlers redirect to /login.
+  if (hasInitiallyLoaded || timedOut) {
+    // Auth error → redirect (already handled in effect, show interim screen)
+    if (error && isAuthError(error)) {
+      return <LoadingScreen message="Session expired..." />
+    }
+
+    // Only show overlay for REAL tenant switches
+    if (
+      !isBootstrapped &&
+      currentTenantId &&
+      lastLoadedTenantId &&
+      currentTenantId !== lastLoadedTenantId
+    ) {
+      return (
+        <>
+          <LoadingOverlay message="Switching workspace..." />
+          {children}
+        </>
+      )
+    }
+
+    return <>{children}</>
+  }
+
+  // ─── FIRST LOAD: Wait for cookie check + bootstrap
+
   if (!hasCookieChecked) {
     return <LoadingScreen message="Loading..." />
   }
 
-  // Show loading if auth error (will redirect to login)
   if (error && isAuthError(error)) {
     return <LoadingScreen message="Session expired..." />
   }
 
-  // If user has tenant cookie, wait for ALL data before showing dashboard
-  // Single loading screen approach - provides clean, professional UX
   if (hasTenantCookie) {
-    // Check if data is ready:
-    // 1. Bootstrap has completed for the current tenant (isBootstrapped = true)
-    // We intentionally removed the strict `hasProviderPermissions` check here
-    // because it can cause race conditions during tenant switches where the
-    // overlay gets stuck for up to 60 seconds if the permissions array is empty.
-    const isDataReady = isBootstrapped
-
-    if (isDataReady && !hasInitiallyLoaded) {
-      setHasInitiallyLoaded(true)
+    if (isBootstrapped) {
+      return <>{children}</>
     }
-
-    if (!isDataReady) {
-      if (hasInitiallyLoaded) {
-        // Log to understand why it hangs
-        devLog.log('[TenantGate] Waiting for data...', { isBootstrapped })
-        return (
-          <>
-            <LoadingOverlay message="Switching workspace..." />
-            {children}
-          </>
-        )
-      }
-      return <LoadingScreen message="Loading..." />
-    }
-    return <>{children}</>
+    return <LoadingScreen message="Loading..." />
   }
 
-  // No tenant cookie - need to check tenants API
-  // Show loading while API is fetching
+  // No tenant cookie — check tenants API
   if (isLoading) {
     return <LoadingScreen message="Verifying..." />
   }
-
-  // Show loading while redirecting for empty tenants
   if (tenants.length === 0) {
     return <LoadingScreen message="Redirecting..." />
   }
 
-  // User has tenants from API - show normal dashboard layout
   return <>{children}</>
 }

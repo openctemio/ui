@@ -93,17 +93,22 @@ export function BreadcrumbNav({ pageTitle, className, hideIdSegment = true }: Br
     return null
   }
 
-  // Build breadcrumb items with accumulated paths
-  // Filter out ID segments from the end if hideIdSegment is true
+  // Build breadcrumb items with accumulated paths.
+  // For detail pages (trailing UUID), keep the parent as a link and add "Detail" as current page.
   const filteredSegments = [...segments]
+  let detailPageLabel: string | null = null
   if (hideIdSegment) {
-    // Remove trailing ID segments (e.g., /asset-groups/[uuid] -> /asset-groups)
+    // Check if last segment(s) are IDs → this is a detail page
     while (
       filteredSegments.length > 0 &&
       isIdSegment(filteredSegments[filteredSegments.length - 1])
     ) {
-      filteredSegments.pop()
+      const idSegment = filteredSegments.pop()!
+      detailPageLabel = idSegment.slice(0, 8) + '...'
     }
+  }
+  if (pageTitle && detailPageLabel !== null) {
+    detailPageLabel = pageTitle
   }
 
   // If all segments were IDs, show at least home
@@ -114,14 +119,20 @@ export function BreadcrumbNav({ pageTitle, className, hideIdSegment = true }: Br
   const breadcrumbItems = filteredSegments.map((segment, index) => {
     const path = '/' + filteredSegments.slice(0, index + 1).join('/')
     const label = routeLabels[segment] || segment.replace(/-/g, ' ')
-    const isLast = index === filteredSegments.length - 1
+    // When on a detail page, the parent (e.g., "Findings") becomes a link, not current page
+    const isLast = index === filteredSegments.length - 1 && detailPageLabel === null
 
-    return {
-      path,
-      label: isLast && pageTitle ? pageTitle : label,
-      isLast,
-    }
+    return { path, label, isLast }
   })
+
+  // Append the detail page label as the current (non-link) segment
+  if (detailPageLabel) {
+    breadcrumbItems.push({
+      path: pathname,
+      label: detailPageLabel,
+      isLast: true,
+    })
+  }
 
   return (
     <Breadcrumb className={className}>

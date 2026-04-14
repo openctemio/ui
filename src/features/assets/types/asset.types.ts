@@ -22,51 +22,46 @@ import type { Status } from '@/features/shared/types'
  * - mobile: Use mobile_app instead
  */
 export type AssetType =
-  // External Attack Surface
+  // ─── Core Types (15) ───
   | 'domain'
+  | 'subdomain'
   | 'certificate'
   | 'ip_address'
-  // Applications
+  | 'application' // websites, web apps, APIs, mobile apps
+  | 'host' // servers, VMs, compute, serverless
+  | 'container'
+  | 'kubernetes' // clusters, namespaces, workloads
+  | 'network' // firewalls, load balancers, switches, routers, VPCs, subnets
+  | 'service' // network services, open ports, discovered URLs
+  | 'cloud_account'
+  | 'storage' // S3, GCS, container registries
+  | 'database' // all DB engines, data stores
+  | 'repository'
+  | 'identity' // IAM users, roles, service accounts
+  | 'unclassified'
+  // ─── Legacy Types (backward compat — still accepted by API) ───
   | 'website'
+  | 'web_application'
   | 'api'
   | 'mobile_app'
-  | 'application' // Network services/applications
-  | 'endpoint' // Service endpoints
-  // Cloud
-  | 'cloud_account'
+  | 'endpoint'
   | 'compute'
-  | 'storage'
   | 'serverless'
-  // Infrastructure
-  | 'host'
-  | 'container'
-  | 'database'
-  | 'network'
+  | 'container_registry'
   | 'vpc'
   | 'subnet'
-  | 'load_balancer'
   | 'firewall'
+  | 'load_balancer'
   | 'kubernetes_cluster'
   | 'kubernetes_namespace'
-  | 'container_registry'
-  // Data
   | 'data_store'
   | 's3_bucket'
-  // Identity
   | 'iam_user'
   | 'iam_role'
   | 'service_account'
-  // Code & CI/CD
-  | 'repository' // Git repositories (unified asset type)
-  // Recon-specific (auto-discovered)
   | 'http_service'
   | 'open_port'
   | 'discovered_url'
-  // Discovery
-  | 'subdomain'
-  | 'web_application'
-  // Unclassified
-  | 'unclassified' // Assets not yet classified
   // Legacy types (deprecated - kept for backwards compatibility)
   | 'service' // @deprecated - Use application instead
   | 'credential' // @deprecated - Moved to Identities module
@@ -75,47 +70,186 @@ export type AssetType =
 /**
  * Asset Type Category for grouping in UI
  */
-export type AssetTypeCategory = 'external' | 'applications' | 'cloud' | 'infrastructure' | 'code'
+export type AssetTypeCategory =
+  | 'external'
+  | 'applications'
+  | 'infrastructure'
+  | 'network'
+  | 'cloud'
+  | 'data'
+  | 'identity'
+  | 'code'
 
-export const ASSET_TYPE_CATEGORIES: Record<
-  AssetTypeCategory,
-  {
-    label: string
-    description: string
-    types: AssetType[]
-  }
-> = {
+export interface CategorySubItem {
+  key: string // sub_type key or asset_type
+  label: string
+  url: string
+  countKey: string // key in bySubType or byType to get count
+}
+
+export interface CategoryConfig {
+  label: string
+  description: string
+  types: AssetType[] // for total count calculation
+  items: CategorySubItem[] // individual rows in overview
+}
+
+export const ASSET_TYPE_CATEGORIES: Record<AssetTypeCategory, CategoryConfig> = {
   external: {
     label: 'External Attack Surface',
     description: 'Internet-facing assets and entry points',
-    types: ['domain', 'certificate', 'ip_address'],
+    types: ['domain', 'subdomain', 'certificate', 'ip_address'],
+    items: [
+      { key: 'domain', label: 'Domains', url: '/assets/domains', countKey: 'domain' },
+      { key: 'subdomain', label: 'Subdomains', url: '/assets/domains', countKey: 'subdomain' },
+      {
+        key: 'certificate',
+        label: 'Certificates',
+        url: '/assets/certificates',
+        countKey: 'certificate',
+      },
+      {
+        key: 'ip_address',
+        label: 'IP Addresses',
+        url: '/assets/ip-addresses',
+        countKey: 'ip_address',
+      },
+    ],
   },
   applications: {
     label: 'Applications',
-    description: 'Web, mobile, API, and network services',
-    types: ['website', 'api', 'mobile_app', 'service', 'application', 'endpoint'],
-  },
-  cloud: {
-    label: 'Cloud',
-    description: 'Cloud infrastructure and services',
-    types: ['cloud_account', 'compute', 'storage', 'serverless'],
+    description: 'Web, mobile, and API applications',
+    types: ['application'],
+    items: [
+      { key: 'website', label: 'Websites', url: '/assets/websites', countKey: 'website' },
+      { key: 'api', label: 'APIs', url: '/assets/apis', countKey: 'api' },
+      {
+        key: 'web_application',
+        label: 'Web Applications',
+        url: '/assets/websites?sub_type=web_application',
+        countKey: 'web_application',
+      },
+      { key: 'mobile_app', label: 'Mobile Apps', url: '/assets/mobile', countKey: 'mobile_app' },
+    ],
   },
   infrastructure: {
     label: 'Infrastructure',
-    description: 'Servers, containers, and network infrastructure',
-    types: ['host', 'container', 'database', 'network'],
+    description: 'Servers, VMs, containers, Kubernetes, and services',
+    types: ['host', 'container', 'kubernetes', 'service'],
+    items: [
+      { key: 'host', label: 'Hosts', url: '/assets/hosts', countKey: 'host' },
+      {
+        key: 'container',
+        label: 'Containers',
+        url: '/assets/containers?type=container',
+        countKey: 'container',
+      },
+      {
+        key: 'kubernetes',
+        label: 'Kubernetes',
+        url: '/assets/containers?type=kubernetes',
+        countKey: 'kubernetes',
+      },
+      { key: 'service', label: 'Services', url: '/assets/services', countKey: 'service' },
+    ],
+  },
+  network: {
+    label: 'Network & Security',
+    description: 'Firewalls, switches, routers, load balancers',
+    types: ['network'],
+    items: [
+      {
+        key: 'firewall',
+        label: 'Firewalls',
+        url: '/assets/networks?sub_type=firewall',
+        countKey: 'firewall',
+      },
+      {
+        key: 'load_balancer',
+        label: 'Load Balancers',
+        url: '/assets/networks?sub_type=load_balancer',
+        countKey: 'load_balancer',
+      },
+      {
+        key: 'switch',
+        label: 'Switches',
+        url: '/assets/networks?sub_type=switch',
+        countKey: 'switch',
+      },
+      {
+        key: 'router',
+        label: 'Routers',
+        url: '/assets/networks?sub_type=router',
+        countKey: 'router',
+      },
+    ],
+  },
+  cloud: {
+    label: 'Cloud',
+    description: 'Cloud accounts and storage',
+    types: ['cloud_account', 'storage'],
+    items: [
+      {
+        key: 'cloud_account',
+        label: 'Cloud Accounts',
+        url: '/assets/cloud-accounts',
+        countKey: 'cloud_account',
+      },
+      { key: 'storage', label: 'Storage', url: '/assets/storage', countKey: 'storage' },
+    ],
+  },
+  data: {
+    label: 'Data',
+    description: 'Databases and data stores',
+    types: ['database'],
+    items: [
+      { key: 'database', label: 'Databases', url: '/assets/databases', countKey: 'database' },
+    ],
+  },
+  identity: {
+    label: 'Identity & Access',
+    description: 'Users, roles, and service accounts',
+    types: ['identity'],
+    items: [
+      {
+        key: 'iam_user',
+        label: 'Users',
+        url: '/assets/identity?sub_type=iam_user',
+        countKey: 'iam_user',
+      },
+      {
+        key: 'iam_role',
+        label: 'Roles',
+        url: '/assets/identity?sub_type=iam_role',
+        countKey: 'iam_role',
+      },
+      {
+        key: 'service_account',
+        label: 'Service Accounts',
+        url: '/assets/identity?sub_type=service_account',
+        countKey: 'service_account',
+      },
+    ],
   },
   code: {
     label: 'Code & CI/CD',
     description: 'Source code repositories and pipelines',
     types: ['repository'],
+    items: [
+      {
+        key: 'repository',
+        label: 'Repositories',
+        url: '/assets/repositories',
+        countKey: 'repository',
+      },
+    ],
   },
 }
 
 /**
  * Legacy asset types that are deprecated but still supported
  */
-export const LEGACY_ASSET_TYPES: AssetType[] = ['service', 'credential', 'mobile', 'endpoint']
+export const LEGACY_ASSET_TYPES: AssetType[] = ['credential', 'mobile', 'endpoint']
 
 /**
  * Check if an asset type is deprecated
@@ -248,6 +382,8 @@ export const ASSET_TYPE_LABELS: Record<AssetType, string> = {
   web_application: 'Web Application',
   // Unclassified
   unclassified: 'Unclassified',
+  kubernetes: 'Kubernetes',
+  identity: 'Identity',
   // Legacy types (deprecated)
   service: 'Service',
   credential: 'Credential',
@@ -290,6 +426,8 @@ export const ASSET_TYPE_ICONS: Record<AssetType, string> = {
   subdomain: 'Globe',
   web_application: 'MonitorSmartphone',
   unclassified: 'HelpCircle',
+  kubernetes: 'Cloud',
+  identity: 'User',
   // Legacy types (deprecated)
   service: 'Zap',
   credential: 'KeyRound',
@@ -332,6 +470,8 @@ export const ASSET_TYPE_DESCRIPTIONS: Record<AssetType, string> = {
   subdomain: 'Subdomains',
   web_application: 'Web applications',
   unclassified: 'Assets not yet classified',
+  kubernetes: 'Kubernetes clusters and namespaces',
+  identity: 'IAM users, roles, and service accounts',
   // Legacy types (deprecated)
   service: 'Network services (SSH, HTTP, DB services)',
   credential: 'Credentials (deprecated - moved to Identities)',
@@ -387,6 +527,8 @@ export const ASSET_TYPE_COLORS: Record<AssetType, { bg: string; text: string }> 
   web_application: { bg: 'bg-cyan-500/15', text: 'text-cyan-600' },
   // Unclassified
   unclassified: { bg: 'bg-gray-500/15', text: 'text-gray-600' },
+  kubernetes: { bg: 'bg-sky-500/15', text: 'text-sky-600' },
+  identity: { bg: 'bg-pink-500/15', text: 'text-pink-600' },
   // Legacy types (deprecated)
   service: { bg: 'bg-yellow-500/15', text: 'text-yellow-600' },
   credential: { bg: 'bg-red-500/15', text: 'text-red-600' },
@@ -789,9 +931,34 @@ export interface AssetMetadata {
 /**
  * Asset represents a single discoverable asset
  */
+export type AssetCategory =
+  | 'external_surface'
+  | 'application'
+  | 'infrastructure'
+  | 'network'
+  | 'cloud'
+  | 'data'
+  | 'code'
+  | 'identity'
+  | 'other'
+
+export const ASSET_CATEGORY_LABELS: Record<AssetCategory, string> = {
+  external_surface: 'External Surface',
+  application: 'Applications',
+  infrastructure: 'Infrastructure',
+  network: 'Network',
+  cloud: 'Cloud',
+  data: 'Data',
+  code: 'Code',
+  identity: 'Identity',
+  other: 'Other',
+}
+
 export interface Asset {
   id: string
   type: AssetType
+  subType?: string
+  category?: AssetCategory
   name: string
   description?: string
   criticality: Criticality // Business importance level

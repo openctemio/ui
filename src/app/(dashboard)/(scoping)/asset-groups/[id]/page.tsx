@@ -1,7 +1,8 @@
 'use client'
 
 import { use, useState, useMemo, useCallback } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
+import { useUrlParams } from '@/hooks/use-url-param'
 import { Main } from '@/components/layout'
 import { RiskScoreBadge } from '@/features/shared'
 import { copyToClipboard } from '@/lib/clipboard'
@@ -122,6 +123,10 @@ interface PageProps {
 }
 
 export default function AssetGroupDetailPage({ params }: PageProps) {
+  return <AssetGroupDetailContent params={params} />
+}
+
+function AssetGroupDetailContent({ params }: PageProps) {
   const { id } = use(params)
   const router = useRouter()
 
@@ -137,7 +142,7 @@ export default function AssetGroupDetailPage({ params }: PageProps) {
   const { trigger: addAssets, isMutating: isAddingAssets } = useAddAssetsToGroup(id)
 
   // URL Search Params for tab sync
-  const searchParams = useSearchParams()
+  const searchParams = useUrlParams()
 
   // Use URL as source of truth for active tab
   const activeTab = searchParams.get('tab') || 'overview'

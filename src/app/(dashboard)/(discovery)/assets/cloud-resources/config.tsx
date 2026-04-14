@@ -63,8 +63,8 @@ const allRegions = [
 ].map((r) => ({ label: r, value: r }))
 
 export const cloudConfig: AssetPageConfig = {
-  type: 'compute',
-  types: ['compute', 'storage', 'serverless'],
+  type: 'cloud_account',
+  types: ['cloud_account', 'storage'],
   label: 'Cloud Asset',
   labelPlural: 'Cloud Assets',
   description: 'Manage your cloud infrastructure resources across AWS, GCP, and Azure',
@@ -78,7 +78,7 @@ export const cloudConfig: AssetPageConfig = {
       accessorKey: 'metadata.cloudProvider',
       header: 'Provider',
       cell: ({ row }) => {
-        const provider = row.original.metadata.cloudProvider as string
+        const provider = (row.original.metadata.cloudProvider as string) || '-'
         const style = providerStyles[provider || ''] || providerStyles.aws
         return (
           <Badge className={`${style.bg} ${style.text} border-0 uppercase font-semibold`}>
@@ -93,7 +93,7 @@ export const cloudConfig: AssetPageConfig = {
       cell: ({ row }) => (
         <span className="flex items-center gap-1 text-sm">
           <MapPin className="h-3 w-3 text-muted-foreground" />
-          {row.original.metadata.region as string}
+          {(row.original.metadata.region as string) || '-'}
         </span>
       ),
     },
@@ -101,7 +101,7 @@ export const cloudConfig: AssetPageConfig = {
       accessorKey: 'metadata.resourceType',
       header: 'Type',
       cell: ({ row }) => (
-        <Badge variant="outline">{row.original.metadata.resourceType as string}</Badge>
+        <Badge variant="outline">{(row.original.metadata.resourceType as string) || '-'}</Badge>
       ),
     },
   ],
@@ -227,7 +227,7 @@ export const cloudConfig: AssetPageConfig = {
         {
           label: 'Provider',
           getValue: (asset: Asset) => {
-            const provider = asset.metadata.cloudProvider as string
+            const provider = (asset.metadata.cloudProvider as string) || '-'
             const style = providerStyles[provider || ''] || providerStyles.aws
             return (
               <Badge className={`${style.bg} ${style.text} border-0 uppercase font-semibold`}>
@@ -241,14 +241,14 @@ export const cloudConfig: AssetPageConfig = {
           getValue: (asset: Asset) => (
             <span className="flex items-center gap-1">
               <MapPin className="h-3 w-3" />
-              {asset.metadata.region as string}
+              {(asset.metadata.region as string) || '-'}
             </span>
           ),
         },
         {
           label: 'Resource Type',
           getValue: (asset: Asset) => (
-            <Badge variant="outline">{asset.metadata.resourceType as string}</Badge>
+            <Badge variant="outline">{(asset.metadata.resourceType as string) || '-'}</Badge>
           ),
         },
       ],

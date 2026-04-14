@@ -82,6 +82,8 @@ export function FindingHeader({
   const [severity, setSeverity] = useState<Severity>(finding.severity)
   const [assigneeState, setAssigneeState] = useState(finding.assignee)
   const { currentTenant } = useTenant()
+  // Pentest findings: actions managed via pentest module (campaign RBAC), not here
+  const isPentestSource = ['pentest', 'bug_bounty', 'red_team', 'manual'].includes(finding.source)
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [isCompact, setIsCompact] = useState(false)
   const [approvalDialogOpen, setApprovalDialogOpen] = useState(false)
@@ -359,16 +361,19 @@ export function FindingHeader({
                 value={status}
                 onChange={handleStatusChange}
                 loading={isUpdatingStatus}
+                disabled={isPentestSource}
                 source={finding.source}
               />
               <SeveritySelect
                 value={severity}
                 onChange={handleSeverityChange}
                 loading={isUpdatingSeverity}
+                disabled={isPentestSource}
                 cvss={finding.cvss}
                 showIcon={false}
               />
               <AssigneeSelect
+                disabled={isPentestSource}
                 value={
                   assignee
                     ? {
@@ -448,12 +453,14 @@ export function FindingHeader({
               value={status}
               onChange={handleStatusChange}
               loading={isUpdatingStatus}
+              disabled={isPentestSource}
               source={finding.source}
             />
             <SeveritySelect
               value={severity}
               onChange={handleSeverityChange}
               loading={isUpdatingSeverity}
+              disabled={isPentestSource}
               cvss={finding.cvss}
               showIcon={false}
             />
@@ -583,16 +590,19 @@ export function FindingHeader({
                 value={status}
                 onChange={handleStatusChange}
                 loading={isUpdatingStatus}
+                disabled={isPentestSource}
                 source={finding.source}
               />
               <SeveritySelect
                 value={severity}
                 onChange={handleSeverityChange}
                 loading={isUpdatingSeverity}
+                disabled={isPentestSource}
                 cvss={finding.cvss}
               />
               <div className="h-4 w-px bg-border" />
               <AssigneeSelect
+                disabled={isPentestSource}
                 value={
                   assignee
                     ? {
@@ -633,10 +643,12 @@ export function FindingHeader({
               </div>
             </div>
 
-            {/* Row 4: Primary Repository with full URL */}
+            {/* Row 4: Primary Asset/Target */}
             {finding.assets.length > 0 && (
               <div className="flex items-center gap-2 text-sm">
-                <span className="text-muted-foreground">Repository:</span>
+                <span className="text-muted-foreground">
+                  {finding.assets[0].type === 'target' ? 'Target:' : 'Repository:'}
+                </span>
                 {finding.assets[0].url ? (
                   <a
                     href={sanitizeExternalUrl(finding.assets[0].url)}

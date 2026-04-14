@@ -2,6 +2,7 @@
 
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
+import { MarkdownPreview } from '@/components/ui/markdown-editor'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   ExternalLink,
@@ -53,6 +54,8 @@ interface AITriageActivityData {
 }
 
 export function OverviewTab({ finding, activities = [] }: OverviewTabProps) {
+  const isPentest = ['pentest', 'bug_bounty', 'red_team', 'manual'].includes(finding.source)
+
   // Find the most recent ai_triage activity (no API call needed!)
   const aiTriageActivity = useMemo(() => {
     const triageActivities = activities.filter((a) => a.type === 'ai_triage')
@@ -92,7 +95,11 @@ export function OverviewTab({ finding, activities = [] }: OverviewTabProps) {
           <FileText className="h-4 w-4" />
           Description
         </h3>
-        <p className="text-muted-foreground whitespace-pre-wrap text-sm">{finding.description}</p>
+        {isPentest ? (
+          <MarkdownPreview content={finding.description || ''} />
+        ) : (
+          <p className="text-muted-foreground whitespace-pre-wrap text-sm">{finding.description}</p>
+        )}
       </div>
 
       {/* Risk Assessment - show if any risk data exists */}
@@ -159,88 +166,89 @@ export function OverviewTab({ finding, activities = [] }: OverviewTabProps) {
         </>
       )}
 
-      {/* Security Context - show if any security context data exists */}
-      {(finding.exposureVector ||
-        finding.isNetworkAccessible !== undefined ||
-        finding.dataExposureRisk ||
-        finding.attackPrerequisites) && (
-        <>
-          <Separator />
-          <div>
-            <h3 className="mb-3 flex items-center gap-2 font-semibold">
-              <ShieldAlert className="h-4 w-4" />
-              Security Context
-            </h3>
-            <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-4">
-                {finding.exposureVector && (
-                  <div className="bg-muted/50 rounded-lg p-3">
-                    <p className="text-muted-foreground text-xs mb-1">Exposure Vector</p>
-                    <div className="flex items-center gap-1.5">
-                      <Network className="h-3.5 w-3.5" />
-                      <span className="font-medium capitalize">{finding.exposureVector}</span>
+      {/* Security Context - show if any security context data exists (scanner only) */}
+      {!isPentest &&
+        (finding.exposureVector ||
+          finding.isNetworkAccessible !== undefined ||
+          finding.dataExposureRisk ||
+          finding.attackPrerequisites) && (
+          <>
+            <Separator />
+            <div>
+              <h3 className="mb-3 flex items-center gap-2 font-semibold">
+                <ShieldAlert className="h-4 w-4" />
+                Security Context
+              </h3>
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-4">
+                  {finding.exposureVector && (
+                    <div className="bg-muted/50 rounded-lg p-3">
+                      <p className="text-muted-foreground text-xs mb-1">Exposure Vector</p>
+                      <div className="flex items-center gap-1.5">
+                        <Network className="h-3.5 w-3.5" />
+                        <span className="font-medium capitalize">{finding.exposureVector}</span>
+                      </div>
                     </div>
-                  </div>
-                )}
-                {finding.isNetworkAccessible !== undefined && (
-                  <div className="bg-muted/50 rounded-lg p-3">
-                    <p className="text-muted-foreground text-xs mb-1">Network Accessible</p>
-                    <div className="flex items-center gap-1.5">
-                      {finding.isNetworkAccessible ? (
-                        <>
-                          <CheckCircle2 className="h-3.5 w-3.5 text-red-400" />
-                          <span className="font-medium text-red-400">Yes</span>
-                        </>
-                      ) : (
-                        <>
-                          <XCircle className="h-3.5 w-3.5 text-green-400" />
-                          <span className="font-medium text-green-400">No</span>
-                        </>
-                      )}
+                  )}
+                  {finding.isNetworkAccessible !== undefined && (
+                    <div className="bg-muted/50 rounded-lg p-3">
+                      <p className="text-muted-foreground text-xs mb-1">Network Accessible</p>
+                      <div className="flex items-center gap-1.5">
+                        {finding.isNetworkAccessible ? (
+                          <>
+                            <CheckCircle2 className="h-3.5 w-3.5 text-red-400" />
+                            <span className="font-medium text-red-400">Yes</span>
+                          </>
+                        ) : (
+                          <>
+                            <XCircle className="h-3.5 w-3.5 text-green-400" />
+                            <span className="font-medium text-green-400">No</span>
+                          </>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                )}
-                {finding.dataExposureRisk && (
-                  <div className="bg-muted/50 rounded-lg p-3">
-                    <p className="text-muted-foreground text-xs mb-1">Data Exposure Risk</p>
-                    <Badge
-                      variant="outline"
-                      className={`capitalize ${
-                        finding.dataExposureRisk === 'critical'
-                          ? 'border-red-500/50 text-red-400'
-                          : finding.dataExposureRisk === 'high'
-                            ? 'border-orange-500/50 text-orange-400'
-                            : finding.dataExposureRisk === 'medium'
-                              ? 'border-yellow-500/50 text-yellow-400'
-                              : 'border-green-500/50 text-green-400'
-                      }`}
-                    >
-                      {finding.dataExposureRisk}
-                    </Badge>
-                  </div>
-                )}
-                {finding.reputationalImpact !== undefined && (
-                  <div className="bg-muted/50 rounded-lg p-3">
-                    <p className="text-muted-foreground text-xs mb-1">Reputational Impact</p>
-                    <div className="flex items-center gap-1.5">
-                      <Building2 className="h-3.5 w-3.5" />
-                      <span className="font-medium">
-                        {finding.reputationalImpact ? 'Yes' : 'No'}
-                      </span>
+                  )}
+                  {finding.dataExposureRisk && (
+                    <div className="bg-muted/50 rounded-lg p-3">
+                      <p className="text-muted-foreground text-xs mb-1">Data Exposure Risk</p>
+                      <Badge
+                        variant="outline"
+                        className={`capitalize ${
+                          finding.dataExposureRisk === 'critical'
+                            ? 'border-red-500/50 text-red-400'
+                            : finding.dataExposureRisk === 'high'
+                              ? 'border-orange-500/50 text-orange-400'
+                              : finding.dataExposureRisk === 'medium'
+                                ? 'border-yellow-500/50 text-yellow-400'
+                                : 'border-green-500/50 text-green-400'
+                        }`}
+                      >
+                        {finding.dataExposureRisk}
+                      </Badge>
                     </div>
+                  )}
+                  {finding.reputationalImpact !== undefined && (
+                    <div className="bg-muted/50 rounded-lg p-3">
+                      <p className="text-muted-foreground text-xs mb-1">Reputational Impact</p>
+                      <div className="flex items-center gap-1.5">
+                        <Building2 className="h-3.5 w-3.5" />
+                        <span className="font-medium">
+                          {finding.reputationalImpact ? 'Yes' : 'No'}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                {finding.attackPrerequisites && (
+                  <div className="bg-muted/50 rounded-lg p-3">
+                    <p className="text-muted-foreground text-xs mb-1">Attack Prerequisites</p>
+                    <p className="text-sm">{finding.attackPrerequisites}</p>
                   </div>
                 )}
               </div>
-              {finding.attackPrerequisites && (
-                <div className="bg-muted/50 rounded-lg p-3">
-                  <p className="text-muted-foreground text-xs mb-1">Attack Prerequisites</p>
-                  <p className="text-sm">{finding.attackPrerequisites}</p>
-                </div>
-              )}
             </div>
-          </div>
-        </>
-      )}
+          </>
+        )}
 
       {/* Compliance Impact - show if compliance data exists */}
       {finding.complianceImpact && finding.complianceImpact.length > 0 && (
@@ -266,79 +274,80 @@ export function OverviewTab({ finding, activities = [] }: OverviewTabProps) {
         </>
       )}
 
-      {/* Remediation Info - show if any remediation context exists */}
-      {(finding.remediationType ||
-        finding.estimatedFixTime !== undefined ||
-        finding.fixComplexity ||
-        finding.remedyAvailable !== undefined) && (
-        <>
-          <Separator />
-          <div>
-            <h3 className="mb-3 flex items-center gap-2 font-semibold">
-              <Wrench className="h-4 w-4" />
-              Remediation Info
-            </h3>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-4">
-              {finding.remediationType && (
-                <div className="bg-muted/50 rounded-lg p-3">
-                  <p className="text-muted-foreground text-xs mb-1">Remediation Type</p>
-                  <Badge variant="outline" className="capitalize">
-                    {finding.remediationType}
-                  </Badge>
-                </div>
-              )}
-              {finding.fixComplexity && (
-                <div className="bg-muted/50 rounded-lg p-3">
-                  <p className="text-muted-foreground text-xs mb-1">Fix Complexity</p>
-                  <Badge
-                    variant="outline"
-                    className={`capitalize ${
-                      finding.fixComplexity === 'complex'
-                        ? 'border-red-500/50 text-red-400'
-                        : finding.fixComplexity === 'moderate'
-                          ? 'border-yellow-500/50 text-yellow-400'
-                          : 'border-green-500/50 text-green-400'
-                    }`}
-                  >
-                    {finding.fixComplexity}
-                  </Badge>
-                </div>
-              )}
-              {finding.estimatedFixTime !== undefined && (
-                <div className="bg-muted/50 rounded-lg p-3">
-                  <p className="text-muted-foreground text-xs mb-1">Estimated Fix Time</p>
-                  <div className="flex items-center gap-1.5">
-                    <Clock className="h-3.5 w-3.5" />
-                    <span className="font-medium">
-                      {finding.estimatedFixTime >= 60
-                        ? `${Math.floor(finding.estimatedFixTime / 60)}h ${finding.estimatedFixTime % 60}m`
-                        : `${finding.estimatedFixTime}m`}
-                    </span>
+      {/* Remediation Info - show if any remediation context exists (scanner only) */}
+      {!isPentest &&
+        (finding.remediationType ||
+          finding.estimatedFixTime !== undefined ||
+          finding.fixComplexity ||
+          finding.remedyAvailable !== undefined) && (
+          <>
+            <Separator />
+            <div>
+              <h3 className="mb-3 flex items-center gap-2 font-semibold">
+                <Wrench className="h-4 w-4" />
+                Remediation Info
+              </h3>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-4">
+                {finding.remediationType && (
+                  <div className="bg-muted/50 rounded-lg p-3">
+                    <p className="text-muted-foreground text-xs mb-1">Remediation Type</p>
+                    <Badge variant="outline" className="capitalize">
+                      {finding.remediationType}
+                    </Badge>
                   </div>
-                </div>
-              )}
-              {finding.remedyAvailable !== undefined && (
-                <div className="bg-muted/50 rounded-lg p-3">
-                  <p className="text-muted-foreground text-xs mb-1">Remedy Available</p>
-                  <div className="flex items-center gap-1.5">
-                    {finding.remedyAvailable ? (
-                      <>
-                        <CheckCircle2 className="h-3.5 w-3.5 text-green-400" />
-                        <span className="font-medium text-green-400">Yes</span>
-                      </>
-                    ) : (
-                      <>
-                        <XCircle className="h-3.5 w-3.5 text-yellow-400" />
-                        <span className="font-medium text-yellow-400">No</span>
-                      </>
-                    )}
+                )}
+                {finding.fixComplexity && (
+                  <div className="bg-muted/50 rounded-lg p-3">
+                    <p className="text-muted-foreground text-xs mb-1">Fix Complexity</p>
+                    <Badge
+                      variant="outline"
+                      className={`capitalize ${
+                        finding.fixComplexity === 'complex'
+                          ? 'border-red-500/50 text-red-400'
+                          : finding.fixComplexity === 'moderate'
+                            ? 'border-yellow-500/50 text-yellow-400'
+                            : 'border-green-500/50 text-green-400'
+                      }`}
+                    >
+                      {finding.fixComplexity}
+                    </Badge>
                   </div>
-                </div>
-              )}
+                )}
+                {finding.estimatedFixTime !== undefined && (
+                  <div className="bg-muted/50 rounded-lg p-3">
+                    <p className="text-muted-foreground text-xs mb-1">Estimated Fix Time</p>
+                    <div className="flex items-center gap-1.5">
+                      <Clock className="h-3.5 w-3.5" />
+                      <span className="font-medium">
+                        {finding.estimatedFixTime >= 60
+                          ? `${Math.floor(finding.estimatedFixTime / 60)}h ${finding.estimatedFixTime % 60}m`
+                          : `${finding.estimatedFixTime}m`}
+                      </span>
+                    </div>
+                  </div>
+                )}
+                {finding.remedyAvailable !== undefined && (
+                  <div className="bg-muted/50 rounded-lg p-3">
+                    <p className="text-muted-foreground text-xs mb-1">Remedy Available</p>
+                    <div className="flex items-center gap-1.5">
+                      {finding.remedyAvailable ? (
+                        <>
+                          <CheckCircle2 className="h-3.5 w-3.5 text-green-400" />
+                          <span className="font-medium text-green-400">Yes</span>
+                        </>
+                      ) : (
+                        <>
+                          <XCircle className="h-3.5 w-3.5 text-yellow-400" />
+                          <span className="font-medium text-yellow-400">No</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        </>
-      )}
+          </>
+        )}
 
       {/* Linked Issues - show if work item URIs exist */}
       {finding.workItemUris && finding.workItemUris.length > 0 && (
@@ -455,59 +464,66 @@ export function OverviewTab({ finding, activities = [] }: OverviewTabProps) {
       {/* Code Snippet - Show context snippet if available, otherwise regular snippet */}
       {(finding.contextSnippet || finding.snippet) && <CodeSnippetSection finding={finding} />}
 
-      {/* Scanner Info - Always show for context */}
-      <div>
-        <h3 className="mb-3 flex items-center gap-2 font-semibold">
-          <Scan className="h-4 w-4" />
-          Scanner Details
-        </h3>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-4 md:grid-cols-3">
-          {finding.toolName && (
-            <div>
-              <p className="text-muted-foreground text-xs">Scanner</p>
-              <p className="font-medium">
-                {finding.toolName}
-                {finding.toolVersion && (
-                  <span className="text-muted-foreground ml-1 text-xs">v{finding.toolVersion}</span>
-                )}
-              </p>
-            </div>
-          )}
-          {finding.ruleId && (
-            <div>
-              <p className="text-muted-foreground text-xs">Rule ID</p>
-              <p className="font-mono text-sm">{finding.ruleId}</p>
-            </div>
-          )}
-          {finding.ruleName && (
-            <div>
-              <p className="text-muted-foreground text-xs">Rule Name</p>
-              <p className="text-sm">{finding.ruleName}</p>
-            </div>
-          )}
+      {/* Scanner Info - hide for pentest (details are in Pentest tab instead) */}
+      {!isPentest && (
+        <>
+          <Separator />
           <div>
-            <p className="text-muted-foreground text-xs">Source Type</p>
-            <Badge variant="outline" className="mt-1 capitalize">
-              {finding.source}
-            </Badge>
-          </div>
-          {finding.findingType && FINDING_TYPE_CONFIG[finding.findingType as FindingType] && (
-            <div>
-              <p className="text-muted-foreground text-xs">Finding Type</p>
-              <Badge
-                variant="outline"
-                className={cn(
-                  'mt-1',
-                  FINDING_TYPE_CONFIG[finding.findingType as FindingType].color,
-                  FINDING_TYPE_CONFIG[finding.findingType as FindingType].bgColor
-                )}
-              >
-                {FINDING_TYPE_CONFIG[finding.findingType as FindingType].label}
-              </Badge>
+            <h3 className="mb-3 flex items-center gap-2 font-semibold">
+              <Scan className="h-4 w-4" />
+              Scanner Details
+            </h3>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-4 md:grid-cols-3">
+              {finding.toolName && (
+                <div>
+                  <p className="text-muted-foreground text-xs">Scanner</p>
+                  <p className="font-medium">
+                    {finding.toolName}
+                    {finding.toolVersion && (
+                      <span className="text-muted-foreground ml-1 text-xs">
+                        v{finding.toolVersion}
+                      </span>
+                    )}
+                  </p>
+                </div>
+              )}
+              {finding.ruleId && (
+                <div>
+                  <p className="text-muted-foreground text-xs">Rule ID</p>
+                  <p className="font-mono text-sm">{finding.ruleId}</p>
+                </div>
+              )}
+              {finding.ruleName && (
+                <div>
+                  <p className="text-muted-foreground text-xs">Rule Name</p>
+                  <p className="text-sm">{finding.ruleName}</p>
+                </div>
+              )}
+              <div>
+                <p className="text-muted-foreground text-xs">Source Type</p>
+                <Badge variant="outline" className="mt-1 capitalize">
+                  {finding.source}
+                </Badge>
+              </div>
+              {finding.findingType && FINDING_TYPE_CONFIG[finding.findingType as FindingType] && (
+                <div>
+                  <p className="text-muted-foreground text-xs">Finding Type</p>
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      'mt-1',
+                      FINDING_TYPE_CONFIG[finding.findingType as FindingType].color,
+                      FINDING_TYPE_CONFIG[finding.findingType as FindingType].bgColor
+                    )}
+                  >
+                    {FINDING_TYPE_CONFIG[finding.findingType as FindingType].label}
+                  </Badge>
+                </div>
+              )}
             </div>
-          )}
-        </div>
-      </div>
+          </div>
+        </>
+      )}
 
       {/* Technical Details - CVE/CWE/CVSS (only show section if any values exist) */}
       {(finding.cvss !== undefined ||
@@ -619,8 +635,9 @@ export function OverviewTab({ finding, activities = [] }: OverviewTabProps) {
         </div>
       </div>
 
-      {/* Scanner Metadata - shown when metadata exists and no source panel already displays it */}
-      {finding.metadata &&
+      {/* Scanner Metadata - hidden for pentest (data shown in Pentest Details tab) */}
+      {!isPentest &&
+        finding.metadata &&
         Object.keys(finding.metadata).filter(
           (k) => finding.metadata![k] != null && finding.metadata![k] !== '' && !k.startsWith('_')
         ).length > 0 && (

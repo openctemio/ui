@@ -532,6 +532,12 @@ export const assetEndpoints = {
    */
   stats: () => `${API_BASE.ASSETS}/stats`,
 
+  /**
+   * Get property facets for dynamic filtering
+   * Returns distinct property keys and their values for the given asset types
+   */
+  facets: () => `${API_BASE.ASSETS}/facets`,
+
   // ============================================
   // ASSET OWNERS
   // ============================================
