@@ -130,12 +130,12 @@ export const domainsConfig: AssetPageConfig = {
     {
       title: 'Root Domains',
       icon: Globe,
-      compute: (assets) => assets.filter((a) => a.type === 'domain').length,
+      compute: (_assets, stats) => stats.byType?.domain ?? 0,
     },
     {
       title: 'Subdomains',
       icon: Globe,
-      compute: (assets) => assets.filter((a) => a.type === 'subdomain').length,
+      compute: (_assets, stats) => stats.byType?.subdomain ?? 0,
     },
     {
       title: 'With Findings',
