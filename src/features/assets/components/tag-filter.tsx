@@ -23,6 +23,8 @@ interface TagFilterProps {
   onChange: (next: string[]) => void
   /** Optional custom placeholder */
   placeholder?: string
+  /** Optional asset types to scope tag suggestions */
+  types?: string[]
 }
 
 /**
@@ -34,14 +36,19 @@ interface TagFilterProps {
  * - Backend matches with overlap semantics (tags && [...]) — i.e. asset must
  *   carry at least ONE of the selected tags. The trigger label reflects this.
  */
-export function TagFilter({ value, onChange, placeholder = 'Filter by tags' }: TagFilterProps) {
+export function TagFilter({
+  value,
+  onChange,
+  placeholder = 'Filter by tags',
+  types,
+}: TagFilterProps) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const debouncedQuery = useDebounce(query, 200)
 
   // Only fetch tags while the popover is open to avoid an extra request on
   // every page mount. Pass the debounced query as prefix for autocomplete.
-  const { tags, isLoading } = useAssetTags(debouncedQuery || undefined, open)
+  const { tags, isLoading } = useAssetTags(debouncedQuery || undefined, open, types)
 
   // Soft cap on selected tags. Backend `parseQueryArray` enforces 100, but
   // anything past ~20 gets unwieldy in the UI and bloats the URL — warn the
@@ -63,79 +70,91 @@ export function TagFilter({ value, onChange, placeholder = 'Filter by tags' }: T
   const clearAll = () => onChange([])
 
   return (
-    <div className="flex items-center gap-2 flex-wrap">
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            size="sm"
-            role="combobox"
-            aria-expanded={open}
-            aria-label="Filter by tags"
-            className="h-9 gap-2"
-          >
-            <TagIcon className="h-3.5 w-3.5" />
-            <span className="text-sm">
-              {value.length > 0
-                ? `${value.length} tag${value.length === 1 ? '' : 's'}`
-                : placeholder}
-            </span>
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-[260px] p-0" align="start">
-          <Command shouldFilter={false}>
-            <CommandInput placeholder="Search tags..." value={query} onValueChange={setQuery} />
-            <CommandList>
-              {isLoading && <div className="p-2 text-xs text-muted-foreground">Loading…</div>}
-              {!isLoading && tags.length === 0 && <CommandEmpty>No tags found.</CommandEmpty>}
-              {!isLoading && tags.length > 0 && (
-                <CommandGroup>
-                  {tags.map((tag) => {
-                    const selected = value.includes(tag)
-                    return (
-                      <CommandItem
-                        key={tag}
-                        value={tag}
-                        onSelect={() => toggleTag(tag)}
-                        className="flex items-center justify-between"
-                      >
-                        <span className="truncate">{tag}</span>
-                        <Check
-                          className={cn('h-4 w-4 shrink-0', selected ? 'opacity-100' : 'opacity-0')}
-                        />
-                      </CommandItem>
-                    )
-                  })}
-                </CommandGroup>
-              )}
-            </CommandList>
-          </Command>
-        </PopoverContent>
-      </Popover>
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          size="sm"
+          role="combobox"
+          aria-expanded={open}
+          aria-label="Filter by tags"
+          className="h-9 gap-2"
+        >
+          <TagIcon className="h-3.5 w-3.5" />
+          <span className="text-sm">
+            {value.length > 0 ? `${value.length} tag${value.length === 1 ? '' : 's'}` : placeholder}
+          </span>
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[260px] p-0" align="start">
+        <Command shouldFilter={false}>
+          <CommandInput placeholder="Search tags..." value={query} onValueChange={setQuery} />
+          <CommandList>
+            {isLoading && <div className="p-2 text-xs text-muted-foreground">Loading…</div>}
+            {!isLoading && tags.length === 0 && <CommandEmpty>No tags found.</CommandEmpty>}
+            {!isLoading && tags.length > 0 && (
+              <CommandGroup>
+                {tags.map((tag) => {
+                  const selected = value.includes(tag)
+                  return (
+                    <CommandItem
+                      key={tag}
+                      value={tag}
+                      onSelect={() => toggleTag(tag)}
+                      className="flex items-center justify-between"
+                    >
+                      <span className="truncate">{tag}</span>
+                      <Check
+                        className={cn('h-4 w-4 shrink-0', selected ? 'opacity-100' : 'opacity-0')}
+                      />
+                    </CommandItem>
+                  )
+                })}
+              </CommandGroup>
+            )}
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  )
+}
 
+/**
+ * Tag filter chips — rendered separately on row 2.
+ */
+export function TagFilterChips({
+  value,
+  onChange,
+}: {
+  value: string[]
+  onChange: (next: string[]) => void
+}) {
+  if (value.length === 0) return null
+
+  return (
+    <div className="flex items-center gap-1.5 flex-wrap">
       {value.map((tag) => (
         <Badge key={tag} variant="secondary" className="gap-1 pl-2 pr-1 py-0.5 text-xs">
-          <span className="truncate max-w-[160px]">{tag}</span>
+          <span className="text-muted-foreground">tag:</span>
+          <span className="truncate max-w-[160px] font-medium">{tag}</span>
           <button
             type="button"
-            onClick={() => toggleTag(tag)}
+            onClick={() => onChange(value.filter((t) => t !== tag))}
             aria-label={`Remove tag ${tag}`}
-            className="hover:bg-muted rounded-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1"
+            className="hover:bg-muted rounded-sm"
           >
             <X className="h-3 w-3" />
           </button>
         </Badge>
       ))}
-
       {value.length > 1 && (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={clearAll}
-          className="h-7 text-xs text-muted-foreground"
+        <button
+          type="button"
+          className="text-xs text-muted-foreground hover:text-foreground underline-offset-2 hover:underline"
+          onClick={() => onChange([])}
         >
-          Clear all
-        </Button>
+          Clear tags
+        </button>
       )}
     </div>
   )

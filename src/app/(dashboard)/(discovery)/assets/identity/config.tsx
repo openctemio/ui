@@ -73,10 +73,10 @@ export const identityConfig: AssetPageConfig = {
       },
     },
     {
-      accessorKey: 'metadata.mfaEnabled',
+      accessorKey: 'metadata.mfa_enabled',
       header: 'MFA',
       cell: ({ row }) => {
-        const mfa = (row.original.metadata as Record<string, unknown>).mfaEnabled
+        const mfa = (row.original.metadata as Record<string, unknown>).mfa_enabled
         if (mfa === undefined || mfa === null)
           return <span className="text-muted-foreground">-</span>
         return mfa ? (
@@ -121,7 +121,7 @@ export const identityConfig: AssetPageConfig = {
       placeholder: 'user@example.com',
       isMetadata: true,
     },
-    { name: 'mfaEnabled', label: 'MFA Enabled', type: 'boolean', isMetadata: true },
+    { name: 'mfa_enabled', label: 'MFA Enabled', type: 'boolean', isMetadata: true },
     { name: 'tags', label: 'Tags', type: 'tags', placeholder: 'admin, production' },
   ],
 
@@ -129,22 +129,22 @@ export const identityConfig: AssetPageConfig = {
     {
       title: 'Users',
       icon: User,
-      compute: (assets) => assets.filter((a) => a.subType === 'iam_user').length,
+      compute: (_assets, stats) => stats.bySubType?.iam_user ?? 0,
     },
     {
       title: 'Roles',
       icon: Key,
-      compute: (assets) => assets.filter((a) => a.subType === 'iam_role').length,
+      compute: (_assets, stats) => stats.bySubType?.iam_role ?? 0,
     },
     {
       title: 'Service Accounts',
       icon: UserCheck,
-      compute: (assets) => assets.filter((a) => a.subType === 'service_account').length,
+      compute: (_assets, stats) => stats.bySubType?.service_account ?? 0,
     },
     {
       title: 'With Findings',
       icon: AlertTriangle,
-      compute: (assets) => assets.filter((a) => a.findingCount > 0).length,
+      compute: (_assets, stats) => stats.withFindings,
       variant: 'warning',
     },
   ],
@@ -208,7 +208,7 @@ export const identityConfig: AssetPageConfig = {
         {
           label: 'MFA',
           getValue: (asset: Asset) => {
-            const mfa = (asset.metadata as Record<string, unknown>).mfaEnabled
+            const mfa = (asset.metadata as Record<string, unknown>).mfa_enabled
             if (mfa === undefined) return '-'
             return mfa ? 'Enabled' : 'Disabled'
           },
@@ -229,7 +229,7 @@ export const identityConfig: AssetPageConfig = {
     { header: 'Email', accessor: (a) => (a.metadata as Record<string, unknown>).email || '' },
     {
       header: 'MFA',
-      accessor: (a) => ((a.metadata as Record<string, unknown>).mfaEnabled ? 'Yes' : 'No'),
+      accessor: (a) => ((a.metadata as Record<string, unknown>).mfa_enabled ? 'Yes' : 'No'),
     },
     { header: 'Status', accessor: (a) => a.status },
     { header: 'Risk Score', accessor: (a) => a.riskScore },

@@ -32,7 +32,7 @@ export const API_BASE = {
   PLATFORM_TOOLS: '/api/v1/tools/platform',
   CUSTOM_TOOLS: '/api/v1/custom-tools',
   TENANT_TOOLS: '/api/v1/tenant-tools',
-  TOOL_STATS: '/api/v1/tool-stats',
+  TOOL_STATS: '/api/v1/tenant-tools/stats',
   TOOL_CATEGORIES: '/api/v1/tool-categories',
   CUSTOM_TOOL_CATEGORIES: '/api/v1/custom-tool-categories',
   CAPABILITIES: '/api/v1/capabilities',
@@ -1287,12 +1287,12 @@ export const tenantToolEndpoints = {
   /**
    * Bulk enable tools for tenant
    */
-  bulkEnable: () => `${API_BASE.TENANT_TOOLS}/bulk-enable`,
+  bulkEnable: () => `${API_BASE.TENANT_TOOLS}/bulk/enable`,
 
   /**
    * Bulk disable tools for tenant
    */
-  bulkDisable: () => `${API_BASE.TENANT_TOOLS}/bulk-disable`,
+  bulkDisable: () => `${API_BASE.TENANT_TOOLS}/bulk/disable`,
 
   /**
    * List all tools with tenant-specific enabled status
@@ -1571,12 +1571,12 @@ export const scanManagementEndpoints = {
   /**
    * Get overview stats (pipelines, scans, jobs)
    */
-  stats: () => '/api/v1/scan-management/stats',
+  stats: () => '/api/v1/scans/overview-stats',
 
   /**
-   * Quick scan targets
+   * Quick scan
    */
-  quickScan: () => '/api/v1/quick-scan',
+  quickScan: () => '/api/v1/scans/quick',
 } as const
 
 // ============================================

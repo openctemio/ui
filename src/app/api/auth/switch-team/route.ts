@@ -112,7 +112,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // Update access token cookie
     clientResponse.cookies.set(ACCESS_TOKEN_COOKIE, data.access_token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: process.env.SECURE_COOKIES === 'true',
       sameSite: 'lax',
       maxAge: data.expires_in || 900,
       path: '/',
@@ -122,7 +122,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     if (data.refresh_token) {
       clientResponse.cookies.set(REFRESH_TOKEN_COOKIE, data.refresh_token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: process.env.SECURE_COOKIES === 'true',
         sameSite: 'lax',
         maxAge: 7 * 24 * 60 * 60,
         path: '/',
@@ -140,7 +140,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       }),
       {
         httpOnly: false,
-        secure: process.env.NODE_ENV === 'production',
+        secure: process.env.SECURE_COOKIES === 'true',
         sameSite: 'lax',
         maxAge: 7 * 24 * 60 * 60,
         path: '/',

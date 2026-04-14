@@ -57,7 +57,7 @@ export function useComponentStats(options?: UseComponentsOptions) {
     ...options,
     filters: {
       ...options?.filters,
-      per_page: 1000, // Get all components for stats
+      per_page: 100, // Fetch a reasonable batch for client-side stats
     },
   })
 
@@ -126,7 +126,7 @@ export function useEcosystemStats(options?: UseComponentsOptions) {
     ...options,
     filters: {
       ...options?.filters,
-      per_page: 1000,
+      per_page: 100,
     },
   })
 
@@ -150,7 +150,7 @@ export function useLicenseStats(options?: UseComponentsOptions) {
     ...options,
     filters: {
       ...options?.filters,
-      per_page: 1000,
+      per_page: 100,
     },
   })
 
@@ -172,7 +172,7 @@ export function useLicenseStats(options?: UseComponentsOptions) {
  */
 export function useComponentsOverview() {
   const { components, isLoading, error, mutate } = useComponents({
-    filters: { per_page: 1000 },
+    filters: { per_page: 100 },
   })
 
   const stats = useMemo(() => {

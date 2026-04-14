@@ -29,7 +29,7 @@ export const databasesConfig: AssetPageConfig = {
       header: 'Engine',
       cell: ({ row }) => {
         const engine = row.original.metadata.engine as string
-        const version = row.original.metadata.dbVersion as string
+        const version = row.original.metadata.db_version as string
         return (
           <div>
             <Badge variant="secondary" className={engineColors[engine || 'postgresql']}>
@@ -41,10 +41,10 @@ export const databasesConfig: AssetPageConfig = {
       },
     },
     {
-      accessorKey: 'metadata.sizeGB',
+      accessorKey: 'metadata.size_gb',
       header: 'Size',
       cell: ({ row }) => {
-        const size = row.original.metadata.sizeGB as unknown as string
+        const size = row.original.metadata.size_gb as unknown as string
         return (
           <div className="flex items-center gap-1">
             <HardDrive className="h-3 w-3 text-muted-foreground" />
@@ -78,6 +78,8 @@ export const databasesConfig: AssetPageConfig = {
     },
   ],
 
+  countBy: ['encryption'],
+
   statsCards: [
     {
       title: 'Active',
@@ -86,16 +88,16 @@ export const databasesConfig: AssetPageConfig = {
       variant: 'success',
     },
     {
-      // metadata.encryption isn't aggregated — current page only
       title: 'Encrypted',
       icon: Lock,
-      compute: (assets) => assets.filter((a) => a.metadata.encryption).length,
+      compute: (_assets, stats) => stats.metadataCounts?.encryption?.true ?? 0,
+      variant: 'success',
     },
     {
-      // metadata.backupEnabled isn't aggregated — current page only
-      title: 'With Backup',
-      icon: Save,
-      compute: (assets) => assets.filter((a) => a.metadata.backupEnabled).length,
+      title: 'With Findings',
+      icon: AlertTriangle,
+      compute: (_assets, stats) => stats.withFindings,
+      variant: 'warning',
     },
   ],
 
@@ -125,14 +127,14 @@ export const databasesConfig: AssetPageConfig = {
       ],
     },
     {
-      name: 'dbVersion',
+      name: 'db_version',
       label: 'Version',
       type: 'text',
       placeholder: '8.0, 14.1, etc.',
       isMetadata: true,
     },
     {
-      name: 'dbHost',
+      name: 'db_host',
       label: 'Host',
       type: 'text',
       placeholder: 'db.example.com',
@@ -140,7 +142,7 @@ export const databasesConfig: AssetPageConfig = {
       isMetadata: true,
     },
     {
-      name: 'dbPort',
+      name: 'db_port',
       label: 'Port',
       type: 'number',
       placeholder: '3306, 5432...',
@@ -154,7 +156,7 @@ export const databasesConfig: AssetPageConfig = {
       fullWidth: true,
     },
     {
-      name: 'sizeGB',
+      name: 'size_gb',
       label: 'Size (GB)',
       type: 'number',
       placeholder: '100',
@@ -226,11 +228,11 @@ export const databasesConfig: AssetPageConfig = {
         },
         {
           label: 'Version',
-          getValue: (asset) => (asset.metadata.dbVersion as string) || '-',
+          getValue: (asset) => (asset.metadata.db_version as string) || '-',
         },
         {
           label: 'Size',
-          getValue: (asset) => (asset.metadata.sizeGB ? `${asset.metadata.sizeGB} GB` : '-'),
+          getValue: (asset) => (asset.metadata.size_gb ? `${asset.metadata.size_gb} GB` : '-'),
         },
         {
           label: 'Replication',
@@ -271,16 +273,16 @@ export const databasesConfig: AssetPageConfig = {
 
   copyAction: {
     label: 'Copy Connection',
-    getValue: (asset) => `${asset.metadata.dbHost}:${asset.metadata.dbPort}`,
+    getValue: (asset) => `${asset.metadata.db_host}:${asset.metadata.db_port}`,
   },
 
   exportFields: [
     { header: 'Name', accessor: (a: Asset) => a.name },
     { header: 'Engine', accessor: (a: Asset) => (a.metadata.engine as string) || '' },
-    { header: 'Version', accessor: (a: Asset) => (a.metadata.dbVersion as string) || '' },
-    { header: 'Host', accessor: (a: Asset) => (a.metadata.dbHost as string) || '' },
-    { header: 'Port', accessor: (a: Asset) => String(a.metadata.dbPort ?? '') },
-    { header: 'Size (GB)', accessor: (a: Asset) => String(a.metadata.sizeGB ?? '') },
+    { header: 'Version', accessor: (a: Asset) => (a.metadata.db_version as string) || '' },
+    { header: 'Host', accessor: (a: Asset) => (a.metadata.db_host as string) || '' },
+    { header: 'Port', accessor: (a: Asset) => String(a.metadata.db_port ?? '') },
+    { header: 'Size (GB)', accessor: (a: Asset) => String(a.metadata.size_gb ?? '') },
     {
       header: 'Encrypted',
       accessor: (a: Asset) => a.metadata.encryption,

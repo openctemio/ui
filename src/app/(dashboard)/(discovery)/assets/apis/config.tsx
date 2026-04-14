@@ -53,10 +53,11 @@ export const apisConfig: AssetPageConfig = {
 
   columns: [
     {
-      accessorKey: 'metadata.apiType',
+      accessorKey: 'metadata.api_type',
       header: 'Type',
       cell: ({ row }) => {
-        const apiType = row.original.metadata.apiType || 'rest'
+        const meta = row.original.metadata as Record<string, unknown>
+        const apiType = (meta.api_type as string) || 'rest'
         return (
           <div className="flex items-center gap-2">
             <div className={`h-2 w-2 rounded-full ${apiTypeColors[apiType] || 'bg-gray-500'}`} />
@@ -68,10 +69,11 @@ export const apisConfig: AssetPageConfig = {
       },
     },
     {
-      accessorKey: 'metadata.authType',
+      accessorKey: 'metadata.auth_type',
       header: 'Auth',
       cell: ({ row }) => {
-        const authType = row.original.metadata.authType || 'none'
+        const meta = row.original.metadata as Record<string, unknown>
+        const authType = (meta.auth_type as string) || 'none'
         return (
           <div className="flex items-center gap-1.5">
             <Lock className="h-3.5 w-3.5 text-muted-foreground" />
@@ -81,17 +83,19 @@ export const apisConfig: AssetPageConfig = {
       },
     },
     {
-      accessorKey: 'metadata.endpointCount',
+      accessorKey: 'metadata.endpoint_count',
       header: 'Endpoints',
-      cell: ({ row }) => (
-        <Badge variant="secondary">{row.original.metadata.endpointCount ?? 0}</Badge>
-      ),
+      cell: ({ row }) => {
+        const meta = row.original.metadata as Record<string, unknown>
+        return <Badge variant="secondary">{(meta.endpoint_count as number) ?? 0}</Badge>
+      },
     },
     {
-      accessorKey: 'metadata.baseUrl',
+      accessorKey: 'metadata.base_url',
       header: 'Base URL',
       cell: ({ row }) => {
-        const url = row.original.metadata.baseUrl
+        const meta = row.original.metadata as Record<string, unknown>
+        const url = meta.base_url as string
         if (!url) return <span className="text-muted-foreground">-</span>
         return (
           <span className="text-xs text-muted-foreground truncate max-w-[200px] block">{url}</span>
@@ -109,7 +113,7 @@ export const apisConfig: AssetPageConfig = {
       required: true,
     },
     {
-      name: 'apiType',
+      name: 'api_type',
       label: 'API Type',
       type: 'select',
       isMetadata: true,
@@ -123,7 +127,7 @@ export const apisConfig: AssetPageConfig = {
       ],
     },
     {
-      name: 'baseUrl',
+      name: 'base_url',
       label: 'Base URL',
       type: 'text',
       placeholder: 'https://api.example.com/v1',
@@ -139,7 +143,7 @@ export const apisConfig: AssetPageConfig = {
       isMetadata: true,
     },
     {
-      name: 'authType',
+      name: 'auth_type',
       label: 'Authentication',
       type: 'select',
       isMetadata: true,
@@ -161,7 +165,7 @@ export const apisConfig: AssetPageConfig = {
       fullWidth: true,
     },
     {
-      name: 'documentationUrl',
+      name: 'documentation_url',
       label: 'Documentation URL',
       type: 'text',
       placeholder: 'https://docs.example.com',
@@ -183,19 +187,19 @@ export const apisConfig: AssetPageConfig = {
       isMetadata: true,
     },
     {
-      name: 'openApiSpec',
+      name: 'open_api_spec',
       label: 'Has OpenAPI Spec',
       type: 'boolean',
       isMetadata: true,
     },
     {
-      name: 'corsEnabled',
+      name: 'cors_enabled',
       label: 'CORS Enabled',
       type: 'boolean',
       isMetadata: true,
     },
     {
-      name: 'rateLimitEnabled',
+      name: 'rate_limit_enabled',
       label: 'Rate Limited',
       type: 'boolean',
       isMetadata: true,
@@ -211,10 +215,9 @@ export const apisConfig: AssetPageConfig = {
       variant: 'success',
     },
     {
-      // metadata.endpointCount isn't aggregated — current page only
-      title: 'Total Endpoints',
-      icon: Zap,
-      compute: (assets) => assets.reduce((acc, a) => acc + (a.metadata.endpointCount || 0), 0),
+      title: 'Total',
+      icon: Webhook,
+      compute: (_assets, stats) => stats.total,
     },
     {
       title: 'With Findings',
@@ -240,12 +243,13 @@ export const apisConfig: AssetPageConfig = {
       { label: 'WebSocket', value: 'websocket' },
       { label: 'SOAP', value: 'soap' },
     ],
-    filterFn: (asset, value) => asset.metadata.apiType === value,
+    filterFn: (asset, value) => (asset.metadata as Record<string, unknown>).api_type === value,
   },
 
   copyAction: {
     label: 'Copy URL',
-    getValue: (asset) => asset.metadata.baseUrl || asset.name,
+    getValue: (asset) =>
+      ((asset.metadata as Record<string, unknown>).base_url as string) || asset.name,
   },
 
   rowActions: [
@@ -253,7 +257,7 @@ export const apisConfig: AssetPageConfig = {
       label: 'View Docs',
       icon: ExternalLink,
       onClick: (asset) => {
-        const url = asset.metadata.documentationUrl
+        const url = (asset.metadata as Record<string, unknown>).documentation_url as string
         if (url) {
           window.open(sanitizeExternalUrl(url), '_blank', 'noopener,noreferrer')
         } else {
@@ -283,7 +287,8 @@ export const apisConfig: AssetPageConfig = {
       iconBg: 'bg-blue-500/10',
       iconColor: 'text-blue-500',
       label: 'Endpoints',
-      getValue: (asset) => asset.metadata.endpointCount || 0,
+      getValue: (asset) =>
+        ((asset.metadata as Record<string, unknown>).endpoint_count as number) || 0,
     },
   ],
 
@@ -305,23 +310,27 @@ export const apisConfig: AssetPageConfig = {
           label: 'Type',
           // Don't default to "REST" — that's a confident claim about
           // an API protocol that we may not actually know.
-          getValue: (asset) =>
-            asset.metadata.apiType ? (
+          getValue: (asset) => {
+            const meta = asset.metadata as Record<string, unknown>
+            return meta.api_type ? (
               <Badge variant="outline" className="uppercase">
-                {asset.metadata.apiType}
+                {meta.api_type as string}
               </Badge>
-            ) : null,
+            ) : null
+          },
         },
         {
           label: 'Version',
-          getValue: (asset) => asset.metadata.version || null,
+          getValue: (asset) =>
+            ((asset.metadata as Record<string, unknown>).version as string) || null,
         },
         {
           label: 'Authentication',
           // Auth type defaults to 'none' which is a meaningful claim
           // ("we know there's no auth") so we keep showing it.
           getValue: (asset) => {
-            const authType = asset.metadata.authType || 'none'
+            const meta = asset.metadata as Record<string, unknown>
+            const authType = (meta.auth_type as string) || 'none'
             return (
               <span className="flex items-center gap-1">
                 <Lock className="h-3.5 w-3.5" />
@@ -332,26 +341,29 @@ export const apisConfig: AssetPageConfig = {
         },
         {
           label: 'Base URL',
-          // Fall back to the asset's name when metadata.baseUrl is
+          // Fall back to the asset's name when metadata.base_url is
           // missing — for ingested API assets the name IS the URL
           // (e.g. `https://api.vndirect.com.vn/v2`). The previous
           // code showed "-" in that case which was the most jarring
           // empty cell on the screen.
           getValue: (asset) => {
+            const meta = asset.metadata as Record<string, unknown>
             const url =
-              asset.metadata.baseUrl || (asset.name?.startsWith('http') ? asset.name : null)
+              (meta.base_url as string) || (asset.name?.startsWith('http') ? asset.name : null)
             if (!url) return null
             return <code className="text-xs bg-muted px-1.5 py-0.5 rounded break-all">{url}</code>
           },
         },
         {
           label: 'TLS Version',
-          getValue: (asset) => asset.metadata.tlsVersion || null,
+          getValue: (asset) =>
+            ((asset.metadata as Record<string, unknown>).tls_version as string) || null,
         },
         {
           label: 'Documentation',
           getValue: (asset) => {
-            const url = asset.metadata.documentationUrl
+            const meta = asset.metadata as Record<string, unknown>
+            const url = meta.documentation_url as string
             if (!url) return null
             return (
               <a
@@ -379,15 +391,16 @@ export const apisConfig: AssetPageConfig = {
           // which is a false negative — it claims we verified the API
           // has no rate limiting when in fact we just never asked.
           getValue: (asset) => {
-            const cors = asset.metadata.corsEnabled
-            const rl = asset.metadata.rateLimitEnabled
-            const oas = asset.metadata.openApiSpec
+            const meta = asset.metadata as Record<string, unknown>
+            const cors = meta.cors_enabled as boolean | undefined
+            const rl = meta.rate_limit_enabled as boolean | undefined
+            const oas = meta.open_api_spec as boolean | undefined
             // If all three are undefined, the whole row is meaningless.
             if (cors === undefined && rl === undefined && oas === undefined) return null
             const corsLabel = cors === true ? 'Enabled' : cors === false ? 'Disabled' : 'Unknown'
             const rlLabel =
               rl === true
-                ? `(${asset.metadata.rateLimit ?? '?'}/min)`
+                ? `(${(meta.rate_limit as number) ?? '?'}/min)`
                 : rl === false
                   ? 'Disabled'
                   : 'Unknown'
@@ -412,7 +425,8 @@ export const apisConfig: AssetPageConfig = {
           label: 'Stats',
           fullWidth: true,
           getValue: (asset) => {
-            const reqPerDay = asset.metadata.requestsPerDay
+            const meta = asset.metadata as Record<string, unknown>
+            const reqPerDay = meta.requests_per_day as number
             // No traffic data → return null. The renderer will skip
             // this field, the section will end up empty, and the
             // whole "Traffic Statistics" card disappears instead of
@@ -435,7 +449,7 @@ export const apisConfig: AssetPageConfig = {
                 <div className="flex items-center gap-2">
                   <Zap className="h-4 w-4 text-blue-500" />
                   <div>
-                    <p className="text-sm font-bold">{asset.metadata.avgResponseTime}ms</p>
+                    <p className="text-sm font-bold">{meta.avg_response_time as number}ms</p>
                     <p className="text-xs text-muted-foreground">Avg Response</p>
                   </div>
                 </div>
@@ -443,7 +457,7 @@ export const apisConfig: AssetPageConfig = {
                   <AlertTriangle className="h-4 w-4 text-orange-500" />
                   <div>
                     <p className="text-sm font-bold">
-                      {((asset.metadata.errorRate || 0) * 100).toFixed(2)}%
+                      {(((meta.error_rate as number) || 0) * 100).toFixed(2)}%
                     </p>
                     <p className="text-xs text-muted-foreground">Error Rate</p>
                   </div>
@@ -458,11 +472,26 @@ export const apisConfig: AssetPageConfig = {
 
   exportFields: [
     { header: 'Name', accessor: (a) => a.name },
-    { header: 'Type', accessor: (a) => a.metadata.apiType || 'rest' },
-    { header: 'Base URL', accessor: (a) => a.metadata.baseUrl || '' },
-    { header: 'Version', accessor: (a) => a.metadata.version || '' },
-    { header: 'Auth Type', accessor: (a) => a.metadata.authType || 'none' },
-    { header: 'Endpoints', accessor: (a) => a.metadata.endpointCount || 0 },
+    {
+      header: 'Type',
+      accessor: (a) => ((a.metadata as Record<string, unknown>).api_type as string) || 'rest',
+    },
+    {
+      header: 'Base URL',
+      accessor: (a) => ((a.metadata as Record<string, unknown>).base_url as string) || '',
+    },
+    {
+      header: 'Version',
+      accessor: (a) => ((a.metadata as Record<string, unknown>).version as string) || '',
+    },
+    {
+      header: 'Auth Type',
+      accessor: (a) => ((a.metadata as Record<string, unknown>).auth_type as string) || 'none',
+    },
+    {
+      header: 'Endpoints',
+      accessor: (a) => ((a.metadata as Record<string, unknown>).endpoint_count as number) || 0,
+    },
     { header: 'Status', accessor: (a) => a.status },
     { header: 'Risk Score', accessor: (a) => a.riskScore },
     { header: 'Findings', accessor: (a) => a.findingCount },

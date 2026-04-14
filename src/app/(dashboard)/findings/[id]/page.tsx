@@ -56,6 +56,7 @@ function transformApiToFindingDetail(api: ApiFinding): FindingDetail {
     open: 'new',
     confirmed: 'confirmed',
     in_progress: 'in_progress',
+    fix_applied: 'fix_applied',
     resolved: 'resolved',
     false_positive: 'false_positive',
     accepted: 'accepted',

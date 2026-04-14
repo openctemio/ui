@@ -79,9 +79,48 @@ const nextConfig: NextConfig = {
               "style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com", // Google Fonts stylesheets
               "img-src 'self' data: https:",
               "font-src 'self' data: https://fonts.gstatic.com", // Google Fonts files
-              process.env.NODE_ENV === 'development'
-                ? "connect-src 'self' http: ws: wss:" // Dev: allow all origins for HMR WebSocket
-                : "connect-src 'self' https://*.openctem.io wss://*.openctem.io", // Prod: strict origins only
+              (() => {
+                if (process.env.NODE_ENV === 'development') {
+                  return "connect-src 'self' http: ws: wss:" // Dev: allow all for HMR
+                }
+                // Prod: derive allowed origins from existing config
+                const origins: string[] = ["'self'"]
+                const appUrl = process.env.NEXT_PUBLIC_APP_URL
+                const backendUrl = process.env.BACKEND_API_URL
+                const wsUrl = process.env.NEXT_PUBLIC_WS_BASE_URL
+                // Add app URL origins (HTTPS + WSS)
+                if (appUrl) {
+                  try {
+                    const u = new URL(appUrl)
+                    origins.push(`https://${u.hostname}`)
+                    origins.push(`wss://${u.hostname}`)
+                    // Also allow API port if different (e.g., :8080)
+                    if (backendUrl) {
+                      const b = new URL(backendUrl)
+                      if (b.port && b.port !== '443') {
+                        origins.push(`https://${u.hostname}:${b.port}`)
+                        origins.push(`wss://${u.hostname}:${b.port}`)
+                      }
+                    }
+                  } catch {
+                    /* ignore invalid URL */
+                  }
+                }
+                // WebSocket on separate host/port (e.g., NEXT_PUBLIC_WS_BASE_URL=https://ws.example.com:9090)
+                if (wsUrl) {
+                  try {
+                    const w = new URL(wsUrl)
+                    origins.push(`wss://${w.host}`)
+                    origins.push(`https://${w.host}`)
+                  } catch {
+                    /* ignore invalid URL */
+                  }
+                }
+                // Fallback: if no URL config provided, allow all HTTPS/WSS
+                // (self-hosted platform — backend auth is the real gate, not CSP)
+                if (origins.length === 1) origins.push('https:', 'wss:')
+                return `connect-src ${origins.join(' ')}`
+              })(),
               "frame-ancestors 'none'",
               "base-uri 'self'",
               "form-action 'self'",

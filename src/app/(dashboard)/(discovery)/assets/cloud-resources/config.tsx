@@ -1,7 +1,7 @@
 'use client'
 
 import { Badge } from '@/components/ui/badge'
-import { Cloud, MapPin, AlertTriangle, Shield } from 'lucide-react'
+import { Cloud, MapPin, AlertTriangle, Shield, CheckCircle } from 'lucide-react'
 import type { Asset } from '@/features/assets'
 import type { AssetPageConfig } from '@/features/assets/types/page-config.types'
 
@@ -75,10 +75,10 @@ export const cloudConfig: AssetPageConfig = {
 
   columns: [
     {
-      accessorKey: 'metadata.cloudProvider',
+      accessorKey: 'metadata.cloud_provider',
       header: 'Provider',
       cell: ({ row }) => {
-        const provider = (row.original.metadata.cloudProvider as string) || '-'
+        const provider = (row.original.metadata.cloud_provider as string) || '-'
         const style = providerStyles[provider || ''] || providerStyles.aws
         return (
           <Badge className={`${style.bg} ${style.text} border-0 uppercase font-semibold`}>
@@ -98,10 +98,10 @@ export const cloudConfig: AssetPageConfig = {
       ),
     },
     {
-      accessorKey: 'metadata.resourceType',
+      accessorKey: 'metadata.resource_type',
       header: 'Type',
       cell: ({ row }) => (
-        <Badge variant="outline">{(row.original.metadata.resourceType as string) || '-'}</Badge>
+        <Badge variant="outline">{(row.original.metadata.resource_type as string) || '-'}</Badge>
       ),
     },
   ],
@@ -121,7 +121,7 @@ export const cloudConfig: AssetPageConfig = {
       placeholder: 'Optional description',
     },
     {
-      name: 'cloudProvider',
+      name: 'cloud_provider',
       label: 'Cloud Provider',
       type: 'select',
       isMetadata: true,
@@ -142,7 +142,7 @@ export const cloudConfig: AssetPageConfig = {
       options: allRegions,
     },
     {
-      name: 'resourceType',
+      name: 'resource_type',
       label: 'Resource Type',
       type: 'select',
       isMetadata: true,
@@ -159,24 +159,10 @@ export const cloudConfig: AssetPageConfig = {
 
   statsCards: [
     {
-      // metadata.cloudProvider isn't aggregated by /assets/stats — current
-      // page only. Once backend exposes by_provider, switch to stats.byProvider.
-      title: 'AWS',
-      icon: Cloud,
-      compute: (assets: Asset[]) =>
-        assets.filter((a) => (a.metadata.cloudProvider as string) === 'aws').length,
-    },
-    {
-      title: 'GCP',
-      icon: Cloud,
-      compute: (assets: Asset[]) =>
-        assets.filter((a) => (a.metadata.cloudProvider as string) === 'gcp').length,
-    },
-    {
-      title: 'Azure',
-      icon: Cloud,
-      compute: (assets: Asset[]) =>
-        assets.filter((a) => (a.metadata.cloudProvider as string) === 'azure').length,
+      title: 'Active',
+      icon: CheckCircle,
+      compute: (_assets, stats) => stats.byStatus?.active ?? 0,
+      variant: 'success',
     },
     {
       title: 'With Findings',
@@ -193,7 +179,7 @@ export const cloudConfig: AssetPageConfig = {
       { label: 'GCP', value: 'gcp' },
       { label: 'Azure', value: 'azure' },
     ],
-    filterFn: (asset: Asset, value: string) => (asset.metadata.cloudProvider as string) === value,
+    filterFn: (asset: Asset, value: string) => (asset.metadata.cloud_provider as string) === value,
   },
 
   detailStats: [
@@ -202,7 +188,7 @@ export const cloudConfig: AssetPageConfig = {
       iconBg: 'bg-sky-500/10',
       iconColor: 'text-sky-500',
       label: 'Provider',
-      getValue: (asset: Asset) => (asset.metadata.cloudProvider as string)?.toUpperCase() || '-',
+      getValue: (asset: Asset) => (asset.metadata.cloud_provider as string)?.toUpperCase() || '-',
     },
     {
       icon: Shield,
@@ -227,7 +213,7 @@ export const cloudConfig: AssetPageConfig = {
         {
           label: 'Provider',
           getValue: (asset: Asset) => {
-            const provider = (asset.metadata.cloudProvider as string) || '-'
+            const provider = (asset.metadata.cloud_provider as string) || '-'
             const style = providerStyles[provider || ''] || providerStyles.aws
             return (
               <Badge className={`${style.bg} ${style.text} border-0 uppercase font-semibold`}>
@@ -248,7 +234,7 @@ export const cloudConfig: AssetPageConfig = {
         {
           label: 'Resource Type',
           getValue: (asset: Asset) => (
-            <Badge variant="outline">{(asset.metadata.resourceType as string) || '-'}</Badge>
+            <Badge variant="outline">{(asset.metadata.resource_type as string) || '-'}</Badge>
           ),
         },
       ],
@@ -257,9 +243,9 @@ export const cloudConfig: AssetPageConfig = {
 
   exportFields: [
     { header: 'Name', accessor: (a: Asset) => a.name },
-    { header: 'Provider', accessor: (a: Asset) => a.metadata.cloudProvider || '' },
-    { header: 'Region', accessor: (a: Asset) => a.metadata.region || '' },
-    { header: 'Type', accessor: (a: Asset) => a.metadata.resourceType || '' },
+    { header: 'Provider', accessor: (a: Asset) => (a.metadata.cloud_provider as string) || '' },
+    { header: 'Region', accessor: (a: Asset) => (a.metadata.region as string) || '' },
+    { header: 'Type', accessor: (a: Asset) => (a.metadata.resource_type as string) || '' },
     { header: 'Status', accessor: (a: Asset) => a.status },
     { header: 'Risk Score', accessor: (a: Asset) => a.riskScore },
     { header: 'Findings', accessor: (a: Asset) => a.findingCount },

@@ -226,7 +226,7 @@ export function getTriageCacheKey(findingId: string): string {
 // AI CONFIG HOOK
 // ============================================
 
-const AI_CONFIG_ENDPOINT = '/api/v1/ai-triage/config'
+const AI_CONFIG_ENDPOINT = '/api/v1/findings/ai-triage/config'
 
 /**
  * Transform API AI config to domain type

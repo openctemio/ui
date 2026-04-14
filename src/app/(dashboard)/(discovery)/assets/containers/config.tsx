@@ -122,8 +122,10 @@ export const containersConfig: AssetPageConfig = {
     {
       title: 'Clusters',
       icon: Layers,
-      compute: (assets) =>
-        assets.filter((a) => a.type === 'kubernetes' || a.subType === 'cluster').length,
+      compute: (_assets, stats) =>
+        (stats.byType?.kubernetes ?? 0) > 0
+          ? stats.byType.kubernetes
+          : (stats.bySubType?.cluster ?? 0),
     },
     {
       title: 'With Findings',

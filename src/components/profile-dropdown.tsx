@@ -29,15 +29,15 @@ export function ProfileDropdown() {
   const [open, setOpen] = useDialogState()
   const [user, setUser] = useState<UserData | null>(null)
 
-  // Get user from localStorage on mount
+  // Get user from sessionStorage on mount
   useEffect(() => {
     try {
-      const storedUser = localStorage.getItem('app_user')
+      const storedUser = sessionStorage.getItem('app_user')
       if (storedUser) {
         setUser(JSON.parse(storedUser))
       }
     } catch {
-      // Ignore localStorage errors
+      // Ignore sessionStorage errors
     }
   }, [])
 

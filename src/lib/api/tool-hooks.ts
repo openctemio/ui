@@ -103,7 +103,7 @@ export const tenantToolKeys = {
 }
 
 export const toolStatsKeys = {
-  all: ['tool-stats'] as const,
+  all: ['tenant-tools-stats'] as const,
   tool: (toolId: string) => [...toolStatsKeys.all, 'tool', toolId] as const,
   tenant: () => [...toolStatsKeys.all, 'tenant'] as const,
   executions: (filters?: ToolExecutionListFilters) =>
@@ -692,9 +692,13 @@ export async function invalidateTenantToolsCache() {
  */
 export async function invalidateToolStatsCache() {
   const { mutate } = await import('swr')
-  await mutate((key) => typeof key === 'string' && key.includes('/api/v1/tool-stats'), undefined, {
-    revalidate: true,
-  })
+  await mutate(
+    (key) => typeof key === 'string' && key.includes('/api/v1/tenant-tools/stats'),
+    undefined,
+    {
+      revalidate: true,
+    }
+  )
 }
 
 /**

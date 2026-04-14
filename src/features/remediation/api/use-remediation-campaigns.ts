@@ -17,6 +17,8 @@ export interface RemediationCampaign {
   risk_before: number | null
   risk_after: number | null
   risk_reduction: number | null
+  assigned_to: string | null
+  assigned_team: string | null
   is_overdue: boolean
   start_date: string | null
   due_date: string | null
@@ -58,6 +60,13 @@ export function useCreateRemediationCampaign() {
   return useSWRMutation(
     '/api/v1/remediation/campaigns',
     (url: string, { arg }: { arg: Partial<RemediationCampaign> }) => post(url, arg)
+  )
+}
+
+export function useUpdateRemediationCampaign(id: string) {
+  return useSWRMutation(
+    `/api/v1/remediation/campaigns/${id}`,
+    (url: string, { arg }: { arg: Partial<RemediationCampaign> }) => patch(url, arg)
   )
 }
 

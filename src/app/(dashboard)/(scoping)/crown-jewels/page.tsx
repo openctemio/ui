@@ -87,7 +87,13 @@ import {
   type DataClassification,
   type JewelStatus,
 } from '@/features/crown-jewels'
-import { useCrownJewels } from '@/features/crown-jewels/api/use-crown-jewels'
+import {
+  useCrownJewels,
+  useAllAssets,
+  useDesignateCrownJewel,
+  useUndesignateCrownJewel,
+} from '@/features/crown-jewels/api/use-crown-jewels'
+import { mutate } from 'swr'
 
 const statusColors: Record<JewelStatus, string> = {
   protected: 'bg-green-500/10 text-green-500 border-green-500/20',
@@ -135,11 +141,20 @@ const categoryLabels: Record<AssetCategory, string> = {
   financial: 'Financial',
 }
 
+const CROWN_JEWELS_KEY = '/api/v1/assets?is_crown_jewel=true&per_page=100'
+
 export default function CrownJewelsPage() {
   // Fetch from API, fallback to mock if no API data
   const { data: apiCrownJewels } = useCrownJewels()
+  const { trigger: designate, isMutating: isDesignating } = useDesignateCrownJewel()
+  const { trigger: undesignate, isMutating: isUndesignating } = useUndesignateCrownJewel()
+
+  // Asset search for the "designate" create dialog
+  const [assetSearch, setAssetSearch] = useState('')
+  const [selectedAssetId, setSelectedAssetId] = useState<string>('')
+  const { data: allAssets } = useAllAssets(assetSearch)
   const apiMapped: CrownJewel[] = useMemo(() => {
-    if (!apiCrownJewels?.data?.length) return mockCrownJewels
+    if (!apiCrownJewels?.data?.length) return []
     return apiCrownJewels.data.map(
       (a: Record<string, unknown>) =>
         ({
@@ -161,9 +176,9 @@ export default function CrownJewelsPage() {
         }) as unknown as CrownJewel
     )
   }, [apiCrownJewels])
-  const [crownJewels, setCrownJewels] = useState<CrownJewel[]>(mockCrownJewels)
+  const [crownJewels, setCrownJewels] = useState<CrownJewel[]>([])
   useEffect(() => {
-    if (apiMapped !== mockCrownJewels) setCrownJewels(apiMapped)
+    setCrownJewels(apiMapped)
   }, [apiMapped])
   const [viewJewel, setViewJewel] = useState<CrownJewel | null>(null)
   const [editJewel, setEditJewel] = useState<CrownJewel | null>(null)
@@ -223,84 +238,62 @@ export default function CrownJewelsPage() {
     })
   }
 
-  const handleCreate = () => {
-    if (
-      !formData.name ||
-      !formData.businessImpact ||
-      !formData.owner ||
-      !formData.ownerEmail ||
-      !formData.businessUnit
-    ) {
+  const handleCreate = async () => {
+    if (!selectedAssetId) {
+      toast.error('Please select an asset to designate as a Crown Jewel')
+      return
+    }
+    if (!formData.businessImpact) {
+      toast.error('Please provide a business impact description')
+      return
+    }
+    try {
+      await designate({
+        assetId: selectedAssetId,
+        businessImpactScore: 75,
+        businessImpactNotes: formData.businessImpact,
+      })
+      await mutate(CROWN_JEWELS_KEY)
+      toast.success('Asset designated as Crown Jewel')
+      setIsCreateOpen(false)
+      setSelectedAssetId('')
+      setAssetSearch('')
+      resetForm()
+    } catch {
+      toast.error('Failed to designate Crown Jewel')
+    }
+  }
+
+  const handleEdit = async () => {
+    if (!editJewel || !formData.businessImpact) {
       toast.error('Please fill in all required fields')
       return
     }
-    const newJewel: CrownJewel = {
-      id: `cj-${Date.now()}`,
-      name: formData.name,
-      description: formData.description || undefined,
-      category: formData.category,
-      protectionLevel: formData.protectionLevel,
-      dataClassification: formData.dataClassification,
-      status: 'under_review',
-      businessImpact: formData.businessImpact,
-      owner: formData.owner,
-      ownerEmail: formData.ownerEmail,
-      businessUnit: formData.businessUnit,
-      riskScore: 50,
-      exposureCount: 0,
-      dependencyCount: 0,
-      lastAssessed: new Date().toISOString(),
-      tags: formData.tags ? formData.tags.split(',').map((t) => t.trim()) : [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+    try {
+      await designate({
+        assetId: editJewel.id as string,
+        businessImpactScore: 75,
+        businessImpactNotes: formData.businessImpact,
+      })
+      await mutate(CROWN_JEWELS_KEY)
+      toast.success('Crown jewel updated successfully')
+      setEditJewel(null)
+      resetForm()
+    } catch {
+      toast.error('Failed to update Crown Jewel')
     }
-    setCrownJewels((prev) => [...prev, newJewel])
-    toast.success('Crown jewel added successfully')
-    setIsCreateOpen(false)
-    resetForm()
   }
 
-  const handleEdit = () => {
-    if (
-      !editJewel ||
-      !formData.name ||
-      !formData.businessImpact ||
-      !formData.owner ||
-      !formData.ownerEmail
-    ) {
-      toast.error('Please fill in all required fields')
-      return
-    }
-    setCrownJewels((prev) =>
-      prev.map((jewel) =>
-        jewel.id === editJewel.id
-          ? {
-              ...jewel,
-              name: formData.name,
-              description: formData.description || undefined,
-              category: formData.category,
-              protectionLevel: formData.protectionLevel,
-              dataClassification: formData.dataClassification,
-              businessImpact: formData.businessImpact,
-              owner: formData.owner,
-              ownerEmail: formData.ownerEmail,
-              businessUnit: formData.businessUnit,
-              tags: formData.tags ? formData.tags.split(',').map((t) => t.trim()) : [],
-              updatedAt: new Date().toISOString(),
-            }
-          : jewel
-      )
-    )
-    toast.success('Crown jewel updated successfully')
-    setEditJewel(null)
-    resetForm()
-  }
-
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!deleteJewel) return
-    setCrownJewels((prev) => prev.filter((jewel) => jewel.id !== deleteJewel.id))
-    toast.success('Crown jewel removed successfully')
-    setDeleteJewel(null)
+    try {
+      await undesignate({ assetId: deleteJewel.id as string })
+      await mutate(CROWN_JEWELS_KEY)
+      toast.success('Crown jewel removed successfully')
+      setDeleteJewel(null)
+    } catch {
+      toast.error('Failed to remove Crown Jewel')
+    }
   }
 
   const openEdit = (jewel: CrownJewel) => {
@@ -732,37 +725,122 @@ export default function CrownJewelsPage() {
       </Main>
 
       {/* Create Dialog */}
-      <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+      <Dialog
+        open={isCreateOpen}
+        onOpenChange={(open) => {
+          setIsCreateOpen(open)
+          if (!open) {
+            setSelectedAssetId('')
+            setAssetSearch('')
+            resetForm()
+          }
+        }}
+      >
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Add Crown Jewel</DialogTitle>
+            <DialogTitle>Designate Crown Jewel</DialogTitle>
             <DialogDescription>
-              Identify a critical asset that requires special protection
+              Select an existing asset to designate as a Crown Jewel requiring special protection
             </DialogDescription>
           </DialogHeader>
-          {formFields}
+          <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+            <div className="space-y-2">
+              <Label htmlFor="asset-search">Search Asset *</Label>
+              <Input
+                id="asset-search"
+                value={assetSearch}
+                onChange={(e) => {
+                  setAssetSearch(e.target.value)
+                  setSelectedAssetId('')
+                }}
+                placeholder="Type to search assets..."
+              />
+              {allAssets?.data && allAssets.data.length > 0 && (
+                <div className="border rounded-md max-h-40 overflow-y-auto">
+                  {allAssets.data.map((a) => (
+                    <button
+                      key={a.id as string}
+                      type="button"
+                      className={`w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors ${
+                        selectedAssetId === a.id ? 'bg-muted font-medium' : ''
+                      }`}
+                      onClick={() => {
+                        setSelectedAssetId(a.id as string)
+                        setAssetSearch(a.name as string)
+                      }}
+                    >
+                      <span className="font-medium">{a.name as string}</span>
+                      {(a.type as string | undefined) && (
+                        <span className="ml-2 text-xs text-muted-foreground">
+                          {a.type as string}
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {selectedAssetId && (
+                <p className="text-xs text-green-600">Asset selected: {assetSearch}</p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="businessImpact">Business Impact Notes *</Label>
+              <Textarea
+                id="businessImpact"
+                value={formData.businessImpact}
+                onChange={(e) => setFormData({ ...formData, businessImpact: e.target.value })}
+                placeholder="Describe the impact if this asset is compromised..."
+                rows={3}
+              />
+            </div>
+          </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsCreateOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleCreate}>Add</Button>
+            <Button onClick={handleCreate} disabled={isDesignating}>
+              {isDesignating ? 'Designating...' : 'Designate'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Edit Dialog */}
-      <Dialog open={!!editJewel} onOpenChange={(open) => !open && setEditJewel(null)}>
+      <Dialog
+        open={!!editJewel}
+        onOpenChange={(open) => {
+          if (!open) {
+            setEditJewel(null)
+            resetForm()
+          }
+        }}
+      >
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Edit Crown Jewel</DialogTitle>
-            <DialogDescription>Update critical asset details</DialogDescription>
+            <DialogDescription>
+              Update business impact notes for {editJewel?.name}
+            </DialogDescription>
           </DialogHeader>
-          {formFields}
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-businessImpact">Business Impact Notes *</Label>
+              <Textarea
+                id="edit-businessImpact"
+                value={formData.businessImpact}
+                onChange={(e) => setFormData({ ...formData, businessImpact: e.target.value })}
+                placeholder="Describe the impact if this asset is compromised..."
+                rows={4}
+              />
+            </div>
+          </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditJewel(null)}>
               Cancel
             </Button>
-            <Button onClick={handleEdit}>Save Changes</Button>
+            <Button onClick={handleEdit} disabled={isDesignating}>
+              {isDesignating ? 'Saving...' : 'Save Changes'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -977,8 +1055,9 @@ export default function CrownJewelsPage() {
             <AlertDialogAction
               onClick={handleDelete}
               className="bg-destructive text-destructive-foreground"
+              disabled={isUndesignating}
             >
-              Remove
+              {isUndesignating ? 'Removing...' : 'Remove'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
