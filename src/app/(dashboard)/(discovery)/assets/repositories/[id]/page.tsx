@@ -3,7 +3,7 @@
 import { useState, useMemo, useCallback } from 'react'
 import { useFindingsApi } from '@/features/findings/api/use-findings-api'
 import type { ApiFinding } from '@/features/findings/api/finding-api.types'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { Main } from '@/components/layout'
 import { RiskScoreBadge } from '@/features/shared'
 import { Button } from '@/components/ui/button'
@@ -1380,18 +1380,22 @@ function BranchesTab({
 function FindingsTab({
   repositoryId,
   branches,
-  initialBranch,
+  branchFromUrl,
 }: {
   repositoryId: string
   branches: BranchDetail[]
-  initialBranch?: string
+  branchFromUrl?: string
 }) {
   const router = useRouter()
   const [searchQuery, setSearchQuery] = useState('')
   const [severityFilter, setSeverityFilter] = useState<string>('all')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [scannerFilter, setScannerFilter] = useState<string>('all')
-  const [branchFilter, setBranchFilter] = useState<string>(initialBranch || 'all')
+  // Sync branch filter with URL reactively
+  const [branchFilter, setBranchFilter] = useState<string>(branchFromUrl || 'all')
+  if (branchFromUrl && branchFromUrl !== branchFilter && branchFromUrl !== 'all') {
+    setBranchFilter(branchFromUrl)
+  }
   const [page, setPage] = useState(1)
   const pageSize = 20
 
@@ -2115,13 +2119,25 @@ export default function RepositoryDetailPage() {
   const router = useRouter()
   const repositoryId = params.id as string
 
-  // Sync tab with URL for shareable links
-  const searchParams = new URLSearchParams(
-    typeof window !== 'undefined' ? window.location.search : ''
+  // Reactive URL params for shareable links
+  const searchParams = useSearchParams()
+  const urlTab = searchParams.get('tab') as DetailTab | null
+  const urlBranch = searchParams.get('branch')
+  const [activeTab, setActiveTabState] = useState<DetailTab>(urlTab || 'overview')
+  // Sync tab state when URL changes (e.g. from branch click)
+  if (urlTab && urlTab !== activeTab) {
+    setActiveTabState(urlTab)
+  }
+  const setActiveTab = useCallback(
+    (tab: DetailTab) => {
+      setActiveTabState(tab)
+      const p = new URLSearchParams(searchParams.toString())
+      p.set('tab', tab)
+      router.replace(`?${p.toString()}`, { scroll: false })
+    },
+    [searchParams, router]
   )
-  const [activeTab, setActiveTab] = useState<DetailTab>(
-    (searchParams.get('tab') as DetailTab) || 'overview'
-  )
+
   const [isSyncing, setIsSyncing] = useState(false)
   const [isScanning, setIsScanning] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -2404,9 +2420,6 @@ export default function RepositoryDetailPage() {
           value={activeTab}
           onValueChange={(v) => {
             setActiveTab(v as DetailTab)
-            const p = new URLSearchParams(window.location.search)
-            p.set('tab', v)
-            router.replace(`?${p.toString()}`, { scroll: false })
           }}
         >
           <TabsList className="mb-6">
@@ -2467,7 +2480,7 @@ export default function RepositoryDetailPage() {
             <FindingsTab
               repositoryId={repositoryId}
               branches={branches}
-              initialBranch={searchParams.get('branch') || undefined}
+              branchFromUrl={urlBranch || undefined}
             />
           </TabsContent>
 
