@@ -100,7 +100,7 @@ export const ASSET_TYPE_CATEGORIES: Record<AssetTypeCategory, CategoryConfig> = 
     description: 'Internet-facing assets and entry points',
     types: ['domain', 'subdomain', 'certificate', 'ip_address'],
     items: [
-      { key: 'domain', label: 'Domains', url: '/assets/domains', countKey: 'domain' },
+      { key: 'domain', label: 'Domains', url: '/assets/domains?type=domain', countKey: 'domain' },
       {
         key: 'subdomain',
         label: 'Subdomains',
