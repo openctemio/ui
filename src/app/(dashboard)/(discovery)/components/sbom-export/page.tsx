@@ -30,17 +30,29 @@ import {
 } from 'lucide-react'
 import { SBOM_FORMAT_LABELS } from '@/features/components'
 import type { SbomFormat } from '@/features/components'
-import {
-  useComponentStatsApi,
-  useComponentsApi,
-} from '@/features/components/api/use-components-api'
+import { useComponentStatsApi } from '@/features/components/api/use-components-api'
+import { get } from '@/lib/api/client'
+import useSWR from 'swr'
 import { toast } from 'sonner'
 
 type FileFormat = 'json' | 'xml'
 
 export default function SBOMExportPage() {
   const { data: apiStats } = useComponentStatsApi()
-  const { data: apiComponents } = useComponentsApi({ per_page: 100 })
+
+  interface ExportComponent {
+    name: string
+    version: string
+    ecosystem: string
+    purl: string
+    license?: string
+    vulnerability_count: number
+  }
+  const { data: exportData } = useSWR<{ data: ExportComponent[]; total: number }>(
+    '/api/v1/components/export',
+    (url: string) => get(url),
+    { revalidateOnFocus: false }
+  )
 
   const stats = useMemo(
     () => ({
@@ -51,7 +63,7 @@ export default function SBOMExportPage() {
     }),
     [apiStats]
   )
-  const components = useMemo(() => apiComponents?.data ?? [], [apiComponents])
+  const components = useMemo(() => exportData?.data ?? [], [exportData])
   const [exportFormat, setExportFormat] = useState<SbomFormat>('cyclonedx-json')
   const [fileFormat, setFileFormat] = useState<FileFormat>('json')
   const [includeVulnerabilities, setIncludeVulnerabilities] = useState(true)
