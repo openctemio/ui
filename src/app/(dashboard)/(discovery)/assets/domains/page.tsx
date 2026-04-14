@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useMemo, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { useUrlParams } from '@/hooks/use-url-param'
 
 import { AssetPage } from '@/features/assets/components/asset-page'
@@ -12,10 +13,14 @@ import { buildDomainsConfig } from './config'
  * Uses "collapsed roots" model: empty Set = all expanded (default).
  * User clicks chevron to collapse a root → its name is added to the Set.
  * Search/tag filter overrides to always show all rows.
+ *
+ * When ?type=subdomain is in URL (from overview click), shows only subdomains
+ * as flat list (no tree nesting).
  */
 export default function DomainsPage() {
-  const searchParams = useUrlParams()
-  const showAllForFilter = !!searchParams.get('q')?.trim() || !!searchParams.get('tags')?.trim()
+  const searchParams = useSearchParams()
+  const urlParams = useUrlParams()
+  const showAllForFilter = !!urlParams.get('q')?.trim() || !!urlParams.get('tags')?.trim()
 
   // Set of root domain names that are COLLAPSED. Empty = all expanded.
   const [collapsedRoots, setCollapsedRoots] = useState<Set<string>>(new Set())
@@ -23,9 +28,8 @@ export default function DomainsPage() {
   const toggleRoot = useCallback((rootName: string) => {
     setCollapsedRoots((prev) => {
       const next = new Set(prev)
-      if (next.has(rootName))
-        next.delete(rootName) // was collapsed → expand
-      else next.add(rootName) // was expanded → collapse
+      if (next.has(rootName)) next.delete(rootName)
+      else next.add(rootName)
       return next
     })
   }, [])
@@ -33,13 +37,12 @@ export default function DomainsPage() {
   const config = useMemo(
     () =>
       buildDomainsConfig({
-        // null = show all rows (filter active or default expand-all)
-        // Set = only roots NOT in the set are expanded
         collapsedRoots: showAllForFilter ? null : collapsedRoots,
         toggleRoot,
       }),
     [showAllForFilter, collapsedRoots, toggleRoot]
   )
 
-  return <AssetPage config={config} />
+  // Key on searchParams to force remount when ?type=subdomain changes
+  return <AssetPage key={searchParams.toString()} config={config} />
 }
