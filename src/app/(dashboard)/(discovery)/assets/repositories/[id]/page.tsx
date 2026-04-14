@@ -770,6 +770,7 @@ function OverviewTab({
   findings: FindingDetail[]
   activities: ActivityLog[]
 }) {
+  const router = useRouter()
   const overdueFindingsCount = getOverdueFindingsCount(findings)
   const slaWarningsCount = getSLAWarningsCount(findings)
   const defaultBranch = branches.find((b) => b.is_default)
@@ -1028,6 +1029,7 @@ function OverviewTab({
                 <div
                   key={finding.id}
                   className="flex items-center gap-4 p-3 rounded-lg border hover:bg-muted/50 cursor-pointer"
+                  onClick={() => router.push(`/findings/${finding.id}`)}
                 >
                   <SeverityBadge severity={finding.severity} />
                   <div className="flex-1 min-w-0">
