@@ -115,42 +115,46 @@ export function buildDomainsConfig({
         const domainRow = row.original as DomainTableRow
         const isRoot = '_isRoot' in domainRow ? domainRow._isRoot : true
 
-        if (isRoot) {
-          // Root: Registrar + Expiry
-          const registrar = (meta.registrar as string) || ''
-          const expiry = meta.expiryDate as string
-          const parts: string[] = []
-          if (registrar) parts.push(registrar)
-          if (expiry) {
-            const d = new Date(expiry)
-            const now = new Date()
-            const daysLeft = Math.ceil((d.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
-            const dateStr = d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
-            if (daysLeft <= 30) {
-              parts.push(`⚠ ${dateStr}`)
-            } else {
-              parts.push(dateStr)
-            }
-          }
-          if (parts.length === 0) return <span className="text-muted-foreground">-</span>
-          return <span className="text-sm">{parts.join(' · ')}</span>
+        // DNS Info: show record type + resolved IP/CNAME target
+        const recordType = (meta.record_type as string) || (meta.dns_record_types as string) || ''
+        const resolvedIp = (meta.resolved_ip as string) || (meta.resolved_ips as string) || ''
+        const cnameTarget = (meta.cname_target as string) || ''
+        const registrar = (meta.registrar as string) || ''
+        const collector = (meta.collector_source as string) || ''
+
+        // For root domains: show registrar if available, otherwise DNS info
+        if (isRoot && registrar) {
+          return <span className="text-sm">{registrar}</span>
         }
 
-        // Sub: Record Type + Provider
-        const recordType = (meta.record_type as string) || ''
-        const provider = (meta.provider as string) || (meta.nameserver as string) || ''
-        const parts: string[] = []
-        if (recordType) parts.push(recordType)
-        if (provider) parts.push(provider)
-        if (parts.length === 0) return <span className="text-muted-foreground">-</span>
+        // Show DNS record info
+        if (!recordType && !resolvedIp && !cnameTarget) {
+          return <span className="text-muted-foreground">-</span>
+        }
+
         return (
           <div className="flex items-center gap-1.5">
             {recordType && (
               <Badge variant="outline" className="text-xs px-1.5 py-0 font-mono">
-                {recordType}
+                {recordType.split(',')[0].trim()}
               </Badge>
             )}
-            {provider && <span className="text-xs text-muted-foreground">{provider}</span>}
+            {resolvedIp && (
+              <span className="text-xs font-mono text-muted-foreground" title={resolvedIp}>
+                {resolvedIp.split(',')[0].trim()}
+              </span>
+            )}
+            {cnameTarget && !resolvedIp && (
+              <span
+                className="text-xs text-muted-foreground truncate max-w-[150px]"
+                title={cnameTarget}
+              >
+                {cnameTarget}
+              </span>
+            )}
+            {!resolvedIp && !cnameTarget && collector && (
+              <span className="text-xs text-muted-foreground">{collector}</span>
+            )}
           </div>
         )
       },
@@ -285,29 +289,87 @@ export function buildDomainsConfig({
                 : '-',
           },
           {
-            label: 'Nameservers',
+            label: 'Root Domain',
+            getValue: (asset) =>
+              ((asset.metadata as Record<string, unknown>).root_domain as string) || '-',
+          },
+          {
+            label: 'Collector',
             getValue: (asset) => {
-              const raw = asset.metadata.nameservers
-              const ns: string[] = Array.isArray(raw)
-                ? raw
-                : raw
-                  ? String(raw)
-                      .split(',')
-                      .map((s) => s.trim())
-                      .filter(Boolean)
-                  : []
-              if (ns.length === 0) return '-'
+              const type =
+                ((asset.metadata as Record<string, unknown>).collector_type as string) || ''
+              const source =
+                ((asset.metadata as Record<string, unknown>).collector_source as string) || ''
+              if (!type && !source) return '-'
+              return `${type}${source ? ` (${source})` : ''}`
+            },
+          },
+        ],
+      },
+      {
+        title: 'DNS Records',
+        fields: [
+          {
+            label: 'Record Types',
+            getValue: (asset) => {
+              const types =
+                ((asset.metadata as Record<string, unknown>).dns_record_types as string) ||
+                ((asset.metadata as Record<string, unknown>).record_type as string) ||
+                ''
+              if (!types) return '-'
               return (
                 <div className="flex flex-wrap gap-1">
-                  {ns.map((n) => (
-                    <Badge key={n} variant="outline" className="text-xs">
-                      {n}
+                  {types.split(',').map((t) => (
+                    <Badge key={t.trim()} variant="outline" className="text-xs font-mono">
+                      {t.trim()}
+                    </Badge>
+                  ))}
+                </div>
+              )
+            },
+          },
+          {
+            label: 'Records',
+            getValue: (asset) =>
+              ((asset.metadata as Record<string, unknown>).dns_record_count as string) || '-',
+          },
+          {
+            label: 'Resolved IPs',
+            getValue: (asset) => {
+              const ips =
+                ((asset.metadata as Record<string, unknown>).resolved_ips as string) ||
+                ((asset.metadata as Record<string, unknown>).resolved_ip as string) ||
+                ''
+              if (!ips) return '-'
+              return (
+                <div className="flex flex-wrap gap-1">
+                  {ips.split(',').map((ip) => (
+                    <Badge key={ip.trim()} variant="secondary" className="text-xs font-mono">
+                      {ip.trim()}
                     </Badge>
                   ))}
                 </div>
               )
             },
             fullWidth: true,
+          },
+          {
+            label: 'CNAME Target',
+            getValue: (asset) => {
+              const target =
+                ((asset.metadata as Record<string, unknown>).cname_target as string) || ''
+              if (!target) return '-'
+              return <code className="text-xs bg-muted px-2 py-0.5 rounded">{target}</code>
+            },
+            fullWidth: true,
+          },
+          {
+            label: 'TTL',
+            getValue: (asset) => {
+              const ttl = (asset.metadata as Record<string, unknown>).ttl
+              if (!ttl) return '-'
+              return `${ttl}s`
+            },
           },
         ],
       },
