@@ -72,7 +72,7 @@ import {
 import Link from 'next/link'
 import { useAssets, useAssetStats, type Asset } from '@/features/assets'
 import { TagFilter } from './tag-filter'
-import { PropertyFilter } from './property-filter'
+import { PropertyFilter, PropertyFilterChips } from './property-filter'
 import { Can, Permission, usePermissions } from '@/lib/permissions'
 import {
   ScopeBadge,
@@ -1071,9 +1071,9 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
             )}
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col gap-3 mb-4">
-              {/* Row 1: Search + Status + Filters + Bulk actions */}
-              <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex flex-col gap-2 mb-4">
+              {/* Row 1: Search + Status + Tags + Add Filter + headerExtra (scrollable, no wrap) */}
+              <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
                 <div className="relative flex-1 min-w-[200px] max-w-md">
                   <SearchIcon className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -1116,8 +1116,6 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
                     setPropertiesFilter(pf)
                     setCurrentPage(1)
                   }}
-                  filtered={total}
-                  total={typeStats.total}
                 />
 
                 {headerExtra}
@@ -1158,7 +1156,16 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
                 )}
               </div>
 
-              {/* PropertyFilter shows its own chips inline */}
+              {/* Row 2: Active property filter chips (separate row to avoid wrapping into controls) */}
+              <PropertyFilterChips
+                value={propertiesFilter}
+                onChange={(pf) => {
+                  setPropertiesFilter(pf)
+                  setCurrentPage(1)
+                }}
+                filtered={total}
+                total={typeStats.total}
+              />
             </div>
 
             {/* Table */}
