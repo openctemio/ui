@@ -28,7 +28,12 @@ import {
   Plus,
   Target,
 } from 'lucide-react'
-import { useSimulations, type Simulation } from '@/features/simulation/api/use-simulation-api'
+import { toast } from 'sonner'
+import {
+  useSimulations,
+  useRunSimulation,
+  type Simulation,
+} from '@/features/simulation/api/use-simulation-api'
 
 const statusConfig: Record<string, { icon: React.ReactNode; color: string; bgColor: string }> = {
   draft: {
@@ -61,7 +66,7 @@ const resultConfig: Record<string, string> = {
   error: 'bg-gray-500/20 text-gray-400',
 }
 
-function SimulationRow({ sim }: { sim: Simulation }) {
+function SimulationRow({ sim, onRun }: { sim: Simulation; onRun: (id: string) => void }) {
   const status = statusConfig[sim.status] ?? statusConfig.draft
   const result = resultConfig[sim.last_result] ?? ''
 
@@ -103,6 +108,21 @@ function SimulationRow({ sim }: { sim: Simulation }) {
           <span className="ml-1 capitalize">{sim.status}</span>
         </Badge>
       </TableCell>
+      <TableCell>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 gap-1"
+          disabled={sim.status !== 'active'}
+          onClick={(e) => {
+            e.stopPropagation()
+            onRun(sim.id)
+          }}
+        >
+          <Play className="h-3.5 w-3.5" />
+          Run
+        </Button>
+      </TableCell>
     </TableRow>
   )
 }
@@ -140,7 +160,18 @@ function LoadingSkeleton() {
 }
 
 export default function AttackSimulationPage() {
-  const { data, isLoading } = useSimulations()
+  const { data, isLoading, mutate } = useSimulations()
+  const { trigger: runSimulation } = useRunSimulation()
+
+  const handleRun = async (simId: string) => {
+    try {
+      const result = await runSimulation(simId)
+      toast.success(`Simulation completed: ${result?.result ?? 'done'}`)
+      mutate()
+    } catch {
+      toast.error('Failed to run simulation')
+    }
+  }
 
   const stats = useMemo(() => {
     const sims = data?.data ?? []
@@ -233,11 +264,12 @@ export default function AttackSimulationPage() {
                   <TableHead>Detection Rate</TableHead>
                   <TableHead>Result</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {simulations.map((sim) => (
-                  <SimulationRow key={sim.id} sim={sim} />
+                  <SimulationRow key={sim.id} sim={sim} onRun={handleRun} />
                 ))}
               </TableBody>
             </Table>
