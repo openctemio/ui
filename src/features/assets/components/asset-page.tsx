@@ -951,7 +951,7 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
           </div>
         </PageHeader>
 
-        {(urlSubType || urlType) && (
+        {(urlSubType || urlType) && !headerExtra && (
           <div className="flex items-center gap-2 mt-2">
             <Badge variant="secondary" className="gap-1">
               {urlSubType
