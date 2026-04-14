@@ -1,16 +1,7 @@
 'use client'
 
 import { Badge } from '@/components/ui/badge'
-import {
-  HardDrive,
-  Globe,
-  Lock,
-  Database,
-  AlertTriangle,
-  Shield,
-  RefreshCw,
-  CheckCircle,
-} from 'lucide-react'
+import { HardDrive, Globe, Lock, Database, AlertTriangle, Shield, RefreshCw } from 'lucide-react'
 import type { Asset } from '@/features/assets'
 import type { AssetPageConfig } from '@/features/assets/types/page-config.types'
 

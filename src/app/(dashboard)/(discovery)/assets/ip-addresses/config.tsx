@@ -1,7 +1,7 @@
 'use client'
 
 import { Badge } from '@/components/ui/badge'
-import { Network, Globe, Lock, Server, Shield, AlertTriangle, CheckCircle } from 'lucide-react'
+import { Network, Shield, AlertTriangle, CheckCircle } from 'lucide-react'
 import type { AssetPageConfig } from '@/features/assets/types/page-config.types'
 import type { Asset } from '@/features/assets'
 

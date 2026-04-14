@@ -254,7 +254,7 @@ export default function AttackPathAnalysisPage() {
 
       {isLoading ? (
         <LoadingSkeleton />
-      ) : !hasData && !isLoading ? (
+      ) : !hasData ? (
         <NoRelationshipData />
       ) : (
         <>
