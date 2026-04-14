@@ -228,17 +228,27 @@ export function useEcosystemStatsApi(config?: SWRConfiguration) {
  * Fetch vulnerable components for current tenant
  * Only fetches if user has components:read permission
  */
-export function useVulnerableComponentsApi(limit: number = 10, config?: SWRConfiguration) {
+export function useVulnerableComponentsApi(
+  page: number = 1,
+  perPage: number = 20,
+  config?: SWRConfiguration
+) {
   const { currentTenant } = useTenant()
   const { can } = usePermissions()
   const canReadComponents = can(Permission.ComponentsRead)
-
-  // Only fetch if user has permission
   const shouldFetch = currentTenant && canReadComponents
 
-  return useSWR<ApiVulnerableComponent[]>(
-    shouldFetch ? `/api/v1/components/vulnerable?limit=${limit}` : null,
-    (url: string) => get<ApiVulnerableComponent[]>(url),
+  const params = new URLSearchParams({ page: String(page), per_page: String(perPage) })
+
+  return useSWR<{
+    data: ApiVulnerableComponent[]
+    total: number
+    page: number
+    per_page: number
+    total_pages: number
+  }>(
+    shouldFetch ? `/api/v1/components/vulnerable?${params.toString()}` : null,
+    (url: string) => get(url),
     { ...defaultConfig, ...config }
   )
 }

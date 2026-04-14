@@ -33,15 +33,18 @@ import { toast } from 'sonner'
 type SeverityFilter = 'all' | 'critical' | 'high' | 'medium' | 'kev'
 
 export default function VulnerableComponentsPage() {
-  const VULNERABLE_LIMIT = 100
-  const { data: apiVulnerableComponents, isLoading } = useVulnerableComponentsApi(VULNERABLE_LIMIT)
-  // Use stats API for accurate counts (not limited by the 100 item cap)
+  const [page, setPage] = useState(1)
+  const pageSize = 20
+  const { data: apiData, isLoading } = useVulnerableComponentsApi(page, pageSize)
   const { data: apiStats } = useComponentStatsApi()
 
   const vulnerableComponents = useMemo(() => {
-    if (!apiVulnerableComponents) return []
-    return transformVulnerableComponents(apiVulnerableComponents)
-  }, [apiVulnerableComponents])
+    if (!apiData?.data) return []
+    return transformVulnerableComponents(apiData.data)
+  }, [apiData])
+
+  const total = apiData?.total ?? 0
+  const totalPages = apiData?.total_pages ?? 0
 
   const [searchQuery, setSearchQuery] = useState('')
   const [severityFilter, setSeverityFilter] = useState<SeverityFilter>('all')
@@ -300,9 +303,7 @@ export default function VulnerableComponentsPage() {
                 <CardDescription>
                   {isLoading
                     ? 'Loading...'
-                    : vulnerableComponents.length >= VULNERABLE_LIMIT
-                      ? `${filteredComponents.length} of top ${VULNERABLE_LIMIT} most vulnerable components`
-                      : `${filteredComponents.length} components requiring remediation`}
+                    : `${total} vulnerable components (page ${page} of ${totalPages || 1})`}
                 </CardDescription>
               </div>
             </div>

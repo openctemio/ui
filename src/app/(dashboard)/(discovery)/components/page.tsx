@@ -32,7 +32,8 @@ export default function ComponentsOverviewPage() {
   // Fetch data from real API
   const { data: stats, isLoading: statsLoading } = useComponentStatsApi()
   const { data: ecosystemStats, isLoading: ecosystemLoading } = useEcosystemStatsApi()
-  const { data: vulnerableComponents, isLoading: vulnerableLoading } = useVulnerableComponentsApi(5)
+  const { data: vulnerableData, isLoading: vulnerableLoading } = useVulnerableComponentsApi(1, 5)
+  const vulnerableComponents = vulnerableData?.data
 
   const _isLoading = statsLoading || ecosystemLoading || vulnerableLoading
 
