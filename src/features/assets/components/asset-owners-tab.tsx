@@ -205,6 +205,18 @@ function OwnerCard({
   )
 }
 
+// Module-level constant — ownership hierarchy (RACI-ish). Lower = higher priority.
+const OWNERSHIP_PRIORITY: Record<string, number> = {
+  primary: 0,
+  secondary: 1,
+  stakeholder: 2,
+  accountable: 2,
+  responsible: 3,
+  informed: 4,
+  consulted: 4,
+  regulatory: 5,
+}
+
 export function AssetOwnersTab({ assetId }: AssetOwnersTabProps) {
   const { owners, isLoading, mutate } = useAssetOwners(assetId)
   const { can } = usePermissions()
@@ -307,31 +319,15 @@ export function AssetOwnersTab({ assetId }: AssetOwnersTabProps) {
   const SEARCH_THRESHOLD = 5
   const [ownerSearch, setOwnerSearch] = useState('')
 
-  // Lower number = higher priority. Order matches the canonical
-  // ownership hierarchy (RACI-ish). Unknown values sort last.
-  const ownershipPriority: Record<string, number> = {
-    primary: 0,
-    secondary: 1,
-    stakeholder: 2,
-    accountable: 2,
-    responsible: 3,
-    informed: 4,
-    consulted: 4,
-    regulatory: 5,
-  }
-
   const sortedOwners = useMemo(() => {
     return [...owners].sort((a, b) => {
-      const pa = ownershipPriority[a.ownershipType] ?? 99
-      const pb = ownershipPriority[b.ownershipType] ?? 99
+      const pa = OWNERSHIP_PRIORITY[a.ownershipType] ?? 99
+      const pb = OWNERSHIP_PRIORITY[b.ownershipType] ?? 99
       if (pa !== pb) return pa - pb
-      // Same priority: newest assignment first.
       const ta = a.assignedAt ? new Date(a.assignedAt).getTime() : 0
       const tb = b.assignedAt ? new Date(b.assignedAt).getTime() : 0
       return tb - ta
     })
-    // ownershipPriority is module-level constant; safe to omit from deps
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [owners])
 
   const visibleOwners = useMemo(() => {
