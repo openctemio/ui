@@ -74,7 +74,7 @@ export const pipelineRunKeys = {
 }
 
 export const scanManagementKeys = {
-  stats: ['scan-management', 'stats'] as const,
+  stats: ['scans', 'overview-stats'] as const,
 }
 
 // ============================================
@@ -407,7 +407,7 @@ export async function invalidatePipelineRunsCache() {
 export async function invalidateScanManagementStatsCache() {
   const { mutate } = await import('swr')
   await mutate(
-    (key) => typeof key === 'string' && key.includes('/api/v1/scan-management/stats'),
+    (key) => typeof key === 'string' && key.includes('/api/v1/scans/overview-stats'),
     undefined,
     {
       revalidate: true,
