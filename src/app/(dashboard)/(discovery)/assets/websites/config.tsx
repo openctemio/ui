@@ -2,7 +2,15 @@ import type { ColumnDef } from '@tanstack/react-table'
 import type { AssetPageConfig } from '@/features/assets/types/page-config.types'
 import type { Asset } from '@/features/assets'
 import { Badge } from '@/components/ui/badge'
-import { MonitorSmartphone, ShieldCheck, ShieldX, AlertTriangle, Shield, Zap } from 'lucide-react'
+import {
+  MonitorSmartphone,
+  ShieldCheck,
+  ShieldX,
+  CheckCircle,
+  AlertTriangle,
+  Shield,
+  Zap,
+} from 'lucide-react'
 
 const columns: ColumnDef<Asset>[] = [
   {
@@ -141,17 +149,10 @@ export const websitesConfig: AssetPageConfig = {
 
   statsCards: [
     {
-      // metadata.ssl isn't aggregated — current page only
-      title: 'SSL Secure',
-      icon: ShieldCheck,
-      compute: (assets) => assets.filter((a) => a.metadata.ssl).length,
+      title: 'Active',
+      icon: CheckCircle,
+      compute: (_assets, stats) => stats.byStatus?.active ?? 0,
       variant: 'success',
-    },
-    {
-      title: 'SSL Insecure',
-      icon: ShieldX,
-      compute: (assets) => assets.filter((a) => !a.metadata.ssl).length,
-      variant: 'danger',
     },
     {
       title: 'With Findings',

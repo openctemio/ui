@@ -154,7 +154,8 @@ interface BackendAssetStats {
   with_findings: number
   risk_score_avg: number
   findings_total: number
-  high_risk_count?: number // Assets with risk_score >= 70
+  high_risk_count?: number
+  metadata_counts?: Record<string, Record<string, number>>
 }
 
 export interface AssetStatsData {
@@ -169,6 +170,8 @@ export interface AssetStatsData {
   averageRiskScore: number
   totalFindings: number
   highRiskCount: number
+  /** Server-side metadata property counts. Key=field, Value=map[value]count */
+  metadataCounts: Record<string, Record<string, number>>
 }
 
 function transformAssetStats(backend: BackendAssetStats): AssetStatsData {
@@ -184,6 +187,7 @@ function transformAssetStats(backend: BackendAssetStats): AssetStatsData {
     averageRiskScore: backend.risk_score_avg || 0,
     totalFindings: backend.findings_total || 0,
     highRiskCount: backend.high_risk_count || 0,
+    metadataCounts: backend.metadata_counts || {},
   }
 }
 
@@ -499,7 +503,12 @@ export async function bulkDeleteAssets(assetIds: string[]): Promise<void> {
  * endpoint semantics so the stats card always reflects whatever the user has
  * filtered to in the table (e.g. type=host AND tag=production).
  */
-export function useAssetStats(types?: string[], tags?: string[], subType?: string) {
+export function useAssetStats(
+  types?: string[],
+  tags?: string[],
+  subType?: string,
+  countBy?: string[]
+) {
   const { currentTenant } = useTenant()
   const { can } = usePermissions()
   const canReadAssets = can(Permission.AssetsRead)
@@ -511,6 +520,7 @@ export function useAssetStats(types?: string[], tags?: string[], subType?: strin
   if (types && types.length > 0) params.set('types', types.join(','))
   if (tags && tags.length > 0) params.set('tags', tags.join(','))
   if (subType) params.set('sub_type', subType)
+  if (countBy && countBy.length > 0) params.set('count_by', countBy.join(','))
   const queryString = params.toString()
   const querySuffix = queryString ? `?${queryString}` : ''
   const cacheKey = shouldFetch ? `asset-stats${querySuffix}` : null
@@ -541,6 +551,7 @@ export function useAssetStats(types?: string[], tags?: string[], subType?: strin
     averageRiskScore: 0,
     totalFindings: 0,
     highRiskCount: 0,
+    metadataCounts: {},
   }
 
   return {

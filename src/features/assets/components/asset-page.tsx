@@ -238,7 +238,8 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
   const { stats: typeStats, isLoading: statsLoading } = useAssetStats(
     (config.types || [config.type]) as AssetType[],
     undefined,
-    config.subType
+    config.subType,
+    config.countBy
   )
 
   // Headline assets — a separate query that fetches the FIRST page of assets

@@ -189,22 +189,22 @@ export const certificatesConfig: AssetPageConfig = {
 
   statsCards: [
     {
-      title: 'Valid',
+      title: 'Active',
       icon: CheckCircle,
-      compute: (assets: Asset[]) => assets.filter((a) => getCertStatus(a) === 'valid').length,
+      compute: (_assets, stats) => stats.byStatus?.active ?? 0,
       variant: 'success',
     },
     {
-      title: 'Expiring Soon',
-      icon: Clock,
-      compute: (assets: Asset[]) => assets.filter((a) => getCertStatus(a) === 'expiring').length,
-      variant: 'warning',
+      title: 'Inactive',
+      icon: XCircle,
+      compute: (_assets, stats) => stats.byStatus?.inactive ?? 0,
+      variant: 'danger',
     },
     {
-      title: 'Expired',
-      icon: XCircle,
-      compute: (assets: Asset[]) => assets.filter((a) => getCertStatus(a) === 'expired').length,
-      variant: 'danger',
+      title: 'With Findings',
+      icon: AlertTriangle,
+      compute: (_assets, stats) => stats.withFindings,
+      variant: 'warning',
     },
   ],
 

@@ -1,16 +1,7 @@
 'use client'
 
 import { Badge } from '@/components/ui/badge'
-import {
-  Server,
-  CheckCircle,
-  Network,
-  AlertTriangle,
-  Shield,
-  Cpu,
-  HardDrive,
-  Globe,
-} from 'lucide-react'
+import { Server, CheckCircle, AlertTriangle, Shield, Cpu, HardDrive, Globe } from 'lucide-react'
 import type { AssetPageConfig } from '@/features/assets/types/page-config.types'
 import type { Asset } from '@/features/assets'
 
@@ -242,13 +233,10 @@ export const hostsConfig: AssetPageConfig = {
       variant: 'success',
     },
     {
-      title: 'Virtual',
-      icon: Network,
-      compute: (assets: Asset[]) =>
-        assets.filter((a) => {
-          const meta = a.metadata as Record<string, unknown>
-          return meta.is_virtual
-        }).length,
+      title: 'With Findings',
+      icon: AlertTriangle,
+      compute: (_assets, stats) => stats.withFindings,
+      variant: 'warning',
     },
     {
       title: 'With Findings',

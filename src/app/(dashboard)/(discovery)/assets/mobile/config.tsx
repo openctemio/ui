@@ -10,6 +10,7 @@ import {
   Download,
   Star,
   ExternalLink,
+  CheckCircle,
 } from 'lucide-react'
 import type { Asset } from '@/features/assets'
 import type { AssetPageConfig } from '@/features/assets/types/page-config.types'
@@ -127,16 +128,9 @@ export const mobileConfig: AssetPageConfig = {
 
   statsCards: [
     {
-      // metadata.platform isn't aggregated by /assets/stats — current page only
-      title: 'iOS Apps',
-      icon: Apple,
-      compute: (assets) => assets.filter((a) => (a.metadata.platform as string) === 'ios').length,
-    },
-    {
-      title: 'Android Apps',
-      icon: Smartphone,
-      compute: (assets) =>
-        assets.filter((a) => (a.metadata.platform as string) === 'android').length,
+      title: 'Active',
+      icon: CheckCircle,
+      compute: (_assets, stats) => stats.byStatus?.active ?? 0,
       variant: 'success',
     },
     {
