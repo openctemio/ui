@@ -116,9 +116,9 @@ const nextConfig: NextConfig = {
                     /* ignore invalid URL */
                   }
                 }
-                // Fallback if no config
-                if (origins.length === 1)
-                  origins.push('https://*.openctem.io', 'wss://*.openctem.io')
+                // Fallback: if no URL config provided, allow all HTTPS/WSS
+                // (self-hosted platform — backend auth is the real gate, not CSP)
+                if (origins.length === 1) origins.push('https:', 'wss:')
                 return `connect-src ${origins.join(' ')}`
               })(),
               "frame-ancestors 'none'",
