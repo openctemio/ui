@@ -1104,7 +1104,7 @@ export function AssetPage({ config }: AssetPageProps) {
                   </SelectContent>
                 </Select>
 
-                <TagFilter value={tagFilters} onChange={setTagFilters} />
+                <TagFilter value={tagFilters} onChange={setTagFilters} types={typeFilter} />
 
                 <PropertyFilter
                   types={typeFilter}
