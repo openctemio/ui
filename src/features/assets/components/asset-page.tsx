@@ -1073,19 +1073,6 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
                 <span className="font-medium text-foreground">{total.toLocaleString()}</span> of{' '}
                 <span className="font-medium">{typeStats.total.toLocaleString()}</span>{' '}
                 {config.labelPlural.toLowerCase()}
-                {tagFilters.length > 0 && (
-                  <>
-                    {' '}
-                    — matching tag{tagFilters.length === 1 ? '' : 's'}{' '}
-                    <span className="font-medium">{tagFilters.join(', ')}</span>
-                  </>
-                )}
-                {debouncedSearch && (
-                  <>
-                    {' '}
-                    — search <span className="font-medium">&ldquo;{debouncedSearch}&rdquo;</span>
-                  </>
-                )}
               </CardDescription>
             )}
           </CardHeader>
