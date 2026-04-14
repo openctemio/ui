@@ -70,8 +70,16 @@ export const ipAddressesConfig: AssetPageConfig = {
       id: 'openPorts',
       header: 'Open Ports',
       cell: ({ row }) => {
-        const ports = row.original.metadata?.openPorts as number[] | undefined
-        if (!ports || ports.length === 0) {
+        const raw = row.original.metadata?.openPorts
+        const ports: (string | number)[] = Array.isArray(raw)
+          ? raw
+          : raw
+            ? String(raw)
+                .split(',')
+                .map((s) => s.trim())
+                .filter(Boolean)
+            : []
+        if (ports.length === 0) {
           return <span className="text-muted-foreground">-</span>
         }
         return (
@@ -194,8 +202,16 @@ export const ipAddressesConfig: AssetPageConfig = {
           label: 'Open Ports',
           fullWidth: true,
           getValue: (asset: Asset) => {
-            const ports = asset.metadata?.openPorts as number[] | undefined
-            if (!ports || ports.length === 0) {
+            const raw = asset.metadata?.openPorts
+            const ports: (string | number)[] = Array.isArray(raw)
+              ? raw
+              : raw
+                ? String(raw)
+                    .split(',')
+                    .map((s) => s.trim())
+                    .filter(Boolean)
+                : []
+            if (ports.length === 0) {
               return <span className="text-muted-foreground">None</span>
             }
             return (

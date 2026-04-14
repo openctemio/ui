@@ -8,7 +8,7 @@
 
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useMemo, useState, useTransition } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import Link from 'next/link'
@@ -103,6 +103,22 @@ export function RegisterForm({
   // to — error-prone and high friction.
   const prefillEmail = searchParams.get('email') ?? ''
 
+  // Extract the invitation token from the returnTo param if it points
+  // at an invitation page. The backend uses this to apply the inviting
+  // tenant's email-verification rule (e.g. "never") to the new user
+  // instead of falling back to the platform default. Without this,
+  // setting EmailVerificationMode=never on a tenant has no effect for
+  // brand-new users who don't yet have a membership in any tenant.
+  const invitationToken = useMemo(() => {
+    const returnTo = searchParams.get('returnTo')
+    if (!returnTo) return undefined
+    // Match /invitations/{token} or /invitations/{token}/anything. The
+    // token is opaque (40-100 chars from the backend) so we just take
+    // the next path segment.
+    const match = returnTo.match(/^\/invitations\/([^/?#]+)/)
+    return match?.[1]
+  }, [searchParams])
+
   // Form setup with centralized schema
   const form = useForm<RegisterInput>({
     resolver: zodResolver(registerSchema),
@@ -125,6 +141,7 @@ export function RegisterForm({
         password: data.password,
         firstName: data.firstName,
         lastName: data.lastName,
+        invitationToken,
       })
 
       if (result.success) {

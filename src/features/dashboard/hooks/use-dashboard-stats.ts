@@ -172,3 +172,39 @@ export function useRecentActivity(tenantId: string | null) {
     error,
   }
 }
+
+// ─── MTTR Metrics ───
+
+interface MTTRMetrics {
+  [severity: string]: number // hours
+}
+
+export function useMTTRMetrics(tenantId: string | null) {
+  const { can } = usePermissions()
+  const hasPerm = can(Permission.DashboardRead)
+
+  return useSWR<MTTRMetrics>(tenantId && hasPerm ? '/api/v1/dashboard/mttr' : null, get, {
+    revalidateOnFocus: false,
+    dedupingInterval: 30000,
+  })
+}
+
+// ─── Risk Velocity ───
+
+export interface RiskVelocityPoint {
+  week: string
+  new_count: number
+  resolved_count: number
+  velocity: number // positive = losing ground
+}
+
+export function useRiskVelocity(tenantId: string | null, weeks = 12) {
+  const { can } = usePermissions()
+  const hasPerm = can(Permission.DashboardRead)
+
+  return useSWR<RiskVelocityPoint[]>(
+    tenantId && hasPerm ? `/api/v1/dashboard/velocity?weeks=${weeks}` : null,
+    get,
+    { revalidateOnFocus: false, dedupingInterval: 30000 }
+  )
+}

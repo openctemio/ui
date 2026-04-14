@@ -185,7 +185,7 @@ export const sidebarData: SidebarData = {
               url: '/assets',
               icon: Container,
             },
-            // External Attack Surface - Internet-facing assets
+            // External Attack Surface
             {
               title: 'Domains',
               url: '/assets/domains',
@@ -204,7 +204,7 @@ export const sidebarData: SidebarData = {
               icon: Target,
               subModuleKey: 'ip-addresses',
             },
-            // Applications - Web, mobile, API services
+            // Applications
             {
               title: 'Websites',
               url: '/assets/websites',
@@ -229,32 +229,7 @@ export const sidebarData: SidebarData = {
               icon: Zap,
               subModuleKey: 'services',
             },
-            // Cloud Infrastructure
-            {
-              title: 'Cloud Accounts',
-              url: '/assets/cloud-accounts',
-              icon: Cloud,
-              subModuleKey: 'cloud-accounts',
-            },
-            {
-              title: 'Cloud Resources',
-              url: '/assets/cloud-resources',
-              icon: Cloud,
-              subModuleKey: 'cloud-resources',
-            },
-            {
-              title: 'Storage',
-              url: '/assets/storage',
-              icon: Database,
-              subModuleKey: 'storage',
-            },
-            {
-              title: 'Serverless',
-              url: '/assets/serverless',
-              icon: Zap,
-              subModuleKey: 'serverless',
-            },
-            // Infrastructure - Servers, containers, networks
+            // Infrastructure
             {
               title: 'Hosts',
               url: '/assets/hosts',
@@ -262,11 +237,18 @@ export const sidebarData: SidebarData = {
               subModuleKey: 'hosts',
             },
             {
-              title: 'Kubernetes',
+              title: 'Containers & K8s',
               url: '/assets/containers',
               icon: Boxes,
               subModuleKey: 'containers',
             },
+            {
+              title: 'Network Devices',
+              url: '/assets/networks',
+              icon: Target,
+              subModuleKey: 'networks',
+            },
+            // Data
             {
               title: 'Databases',
               url: '/assets/databases',
@@ -274,10 +256,24 @@ export const sidebarData: SidebarData = {
               subModuleKey: 'databases',
             },
             {
-              title: 'Networks',
-              url: '/assets/networks',
-              icon: Target,
-              subModuleKey: 'networks',
+              title: 'Storage',
+              url: '/assets/storage',
+              icon: Database,
+              subModuleKey: 'storage',
+            },
+            // Cloud
+            {
+              title: 'Cloud Accounts',
+              url: '/assets/cloud-accounts',
+              icon: Cloud,
+              subModuleKey: 'cloud-accounts',
+            },
+            // Identity
+            {
+              title: 'Identity & Access',
+              url: '/assets/identity',
+              icon: KeyRound,
+              subModuleKey: 'identity',
             },
             // Code & CI/CD
             {

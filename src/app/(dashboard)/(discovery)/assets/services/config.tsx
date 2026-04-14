@@ -56,7 +56,15 @@ export const servicesConfig: AssetPageConfig = {
       id: 'technology',
       header: 'Technology',
       cell: ({ row }) => {
-        const tech = (row.original.metadata.technology as string[]) || []
+        const raw = row.original.metadata.technology
+        const tech: string[] = Array.isArray(raw)
+          ? raw
+          : raw
+            ? String(raw)
+                .split(',')
+                .map((s) => s.trim())
+                .filter(Boolean)
+            : []
         if (tech.length === 0) return <span className="text-muted-foreground">-</span>
         return (
           <div className="flex flex-wrap gap-1 max-w-[150px]">
@@ -229,7 +237,15 @@ export const servicesConfig: AssetPageConfig = {
           label: 'Technologies',
           fullWidth: true,
           getValue: (asset) => {
-            const tech = (asset.metadata.technology as string[]) || []
+            const raw = asset.metadata.technology
+            const tech: string[] = Array.isArray(raw)
+              ? raw
+              : raw
+                ? String(raw)
+                    .split(',')
+                    .map((s) => s.trim())
+                    .filter(Boolean)
+                : []
             if (tech.length === 0) return '-'
             return (
               <div className="flex flex-wrap gap-2">
@@ -253,7 +269,18 @@ export const servicesConfig: AssetPageConfig = {
     { header: 'Version', accessor: (a) => a.metadata.version || '' },
     {
       header: 'Technologies',
-      accessor: (a) => ((a.metadata.technology as string[]) || []).join(';'),
+      accessor: (a) => {
+        const raw = a.metadata.technology
+        const tech: string[] = Array.isArray(raw)
+          ? raw
+          : raw
+            ? String(raw)
+                .split(',')
+                .map((s) => s.trim())
+                .filter(Boolean)
+            : []
+        return tech.join(';')
+      },
     },
     { header: 'Status', accessor: (a) => a.status },
     { header: 'Risk Score', accessor: (a) => a.riskScore },

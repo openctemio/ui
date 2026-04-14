@@ -170,7 +170,7 @@ export const cloudAccountsConfig: AssetPageConfig = {
       title: 'Total Resources',
       icon: Shield,
       compute: (assets) =>
-        assets.reduce((acc, a) => acc + ((a.metadata.resourceCount as number) || 0), 0),
+        assets.reduce((acc, a) => acc + (Number(a.metadata.resourceCount) || 0), 0),
     },
     {
       title: 'Without MFA',
@@ -182,7 +182,7 @@ export const cloudAccountsConfig: AssetPageConfig = {
       title: 'Monthly Spend',
       icon: DollarSign,
       compute: (assets) => {
-        const total = assets.reduce((acc, a) => acc + ((a.metadata.monthlySpend as number) || 0), 0)
+        const total = assets.reduce((acc, a) => acc + (Number(a.metadata.monthlySpend) || 0), 0)
         return `$${(total / 1000).toFixed(0)}k`
       },
       variant: 'success',

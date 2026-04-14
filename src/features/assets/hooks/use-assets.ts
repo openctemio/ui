@@ -9,6 +9,7 @@ import { usePermissions, Permission } from '@/lib/permissions'
 import type {
   Asset,
   AssetType,
+  AssetCategory,
   AssetScope,
   ExposureLevel,
   Criticality,
@@ -51,6 +52,7 @@ export interface AssetSearchFilters {
   // Filtering
   name?: string
   types?: AssetType[]
+  subType?: string
   criticalities?: Criticality[]
   statuses?: ('active' | 'inactive' | 'archived')[]
   scopes?: AssetScope[]
@@ -67,6 +69,9 @@ export interface AssetSearchFilters {
   // Has findings filter
   hasFindings?: boolean
 
+  // Properties filter: key=value pairs for JSONB containment (server-side)
+  propertiesFilter?: Record<string, string>
+
   // Sorting (e.g., "-created_at", "name", "-risk_score")
   sort?: string
 
@@ -80,6 +85,8 @@ interface BackendAsset {
   tenant_id?: string
   name: string
   type: string // Backend uses "type" in JSON
+  sub_type?: string // Sub-type for consolidated types
+  category?: string // Derived category for UI grouping
   provider?: string // SCM provider or asset source
   criticality: string // low, medium, high, critical
   status: string // active, inactive, archived
@@ -106,6 +113,8 @@ function transformAsset(backend: BackendAsset): Asset {
     id: backend.id,
     name: backend.name,
     type: backend.type as AssetType,
+    subType: backend.sub_type || undefined,
+    category: (backend.category as AssetCategory) || undefined,
     provider: backend.provider,
     criticality: backend.criticality as Criticality,
     status: backend.status as 'active' | 'inactive' | 'archived',
@@ -137,6 +146,7 @@ function transformAsset(backend: BackendAsset): Asset {
 interface BackendAssetStats {
   total: number
   by_type: Record<string, number>
+  by_sub_type?: Record<string, number>
   by_status: Record<string, number>
   by_criticality: Record<string, number>
   by_scope: Record<string, number>
@@ -150,6 +160,7 @@ interface BackendAssetStats {
 export interface AssetStatsData {
   total: number
   byType: Record<string, number>
+  bySubType: Record<string, number>
   byStatus: Record<string, number>
   byCriticality: Record<string, number>
   byScope: Record<string, number>
@@ -164,6 +175,7 @@ function transformAssetStats(backend: BackendAssetStats): AssetStatsData {
   return {
     total: backend.total || 0,
     byType: backend.by_type || {},
+    bySubType: backend.by_sub_type || {},
     byStatus: backend.by_status || {},
     byCriticality: backend.by_criticality || {},
     byScope: backend.by_scope || {},
@@ -272,11 +284,19 @@ function buildAssetQueryParams(filters?: AssetSearchFilters): Record<string, str
   // Filtering - arrays need to be comma-separated for backend
   if (filters.name) params.name = filters.name
   if (filters.types?.length) params.types = filters.types.join(',')
+  if (filters.subType) params.sub_type = filters.subType
   if (filters.criticalities?.length) params.criticalities = filters.criticalities.join(',')
   if (filters.statuses?.length) params.statuses = filters.statuses.join(',')
   if (filters.scopes?.length) params.scopes = filters.scopes.join(',')
   if (filters.exposures?.length) params.exposures = filters.exposures.join(',')
   if (filters.tags?.length) params.tags = filters.tags.join(',')
+
+  // Properties filter (JSONB key:value pairs)
+  if (filters.propertiesFilter && Object.keys(filters.propertiesFilter).length > 0) {
+    params.properties = Object.entries(filters.propertiesFilter)
+      .map(([k, v]) => `${k}:${v}`)
+      .join(',')
+  }
 
   // Search
   if (filters.search) params.search = filters.search
@@ -479,7 +499,7 @@ export async function bulkDeleteAssets(assetIds: string[]): Promise<void> {
  * endpoint semantics so the stats card always reflects whatever the user has
  * filtered to in the table (e.g. type=host AND tag=production).
  */
-export function useAssetStats(types?: string[], tags?: string[]) {
+export function useAssetStats(types?: string[], tags?: string[], subType?: string) {
   const { currentTenant } = useTenant()
   const { can } = usePermissions()
   const canReadAssets = can(Permission.AssetsRead)
@@ -490,6 +510,7 @@ export function useAssetStats(types?: string[], tags?: string[]) {
   const params = new URLSearchParams()
   if (types && types.length > 0) params.set('types', types.join(','))
   if (tags && tags.length > 0) params.set('tags', tags.join(','))
+  if (subType) params.set('sub_type', subType)
   const queryString = params.toString()
   const querySuffix = queryString ? `?${queryString}` : ''
   const cacheKey = shouldFetch ? `asset-stats${querySuffix}` : null
@@ -511,6 +532,7 @@ export function useAssetStats(types?: string[], tags?: string[]) {
   const emptyStats: AssetStatsData = {
     total: 0,
     byType: {},
+    bySubType: {},
     byStatus: {},
     byCriticality: {},
     byScope: {},

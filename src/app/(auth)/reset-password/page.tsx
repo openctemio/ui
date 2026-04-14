@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
+import { useUrlParam } from '@/hooks/use-url-param'
 import { ArrowLeft, CheckCircle, Loader2, KeyRound } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -24,12 +24,15 @@ import { resetPasswordSchema, type ResetPasswordInput } from '@/features/auth/sc
 import { resetPasswordAction } from '@/features/auth/actions/local-auth-actions'
 
 export default function ResetPasswordPage() {
+  return <ResetPasswordContent />
+}
+
+function ResetPasswordContent() {
   const [isPending, startTransition] = useTransition()
   const [isSuccess, setIsSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const searchParams = useSearchParams()
 
-  const token = searchParams.get('token') || ''
+  const token = useUrlParam('token') || ''
 
   const form = useForm<ResetPasswordInput>({
     resolver: zodResolver(resetPasswordSchema),

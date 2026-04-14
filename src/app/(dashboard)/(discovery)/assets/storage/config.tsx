@@ -50,7 +50,9 @@ export const storageConfig: AssetPageConfig = {
     {
       accessorKey: 'metadata.region',
       header: 'Region',
-      cell: ({ row }) => <span className="text-sm">{row.original.metadata.region as string}</span>,
+      cell: ({ row }) => (
+        <span className="text-sm">{(row.original.metadata.region as string) || '-'}</span>
+      ),
     },
     {
       accessorKey: 'metadata.totalSizeGB',

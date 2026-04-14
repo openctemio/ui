@@ -233,7 +233,12 @@ interface ClassificationBadgesProps {
 }
 
 /**
- * Combined component showing scope, exposure, and optionally criticality badges
+ * Combined component showing scope, exposure, and optionally criticality badges.
+ *
+ * The exposure badge is hidden when the value is "unknown" (the default for
+ * assets created without an explicit exposure level). Showing a row of grey
+ * "Unknown" pills next to every asset adds noise without information — once a
+ * real exposure level is set the badge will appear automatically.
  */
 export function ClassificationBadges({
   scope,
@@ -244,6 +249,7 @@ export function ClassificationBadges({
   size = 'md',
   className,
 }: ClassificationBadgesProps) {
+  const showExposure = exposure && exposure !== 'unknown'
   return (
     <div className={cn('flex items-center gap-1.5', className)}>
       {criticality && (
@@ -255,12 +261,14 @@ export function ClassificationBadges({
         />
       )}
       <AssetScopeBadge scope={scope} showIcon={showIcons} showTooltip={showTooltips} size={size} />
-      <ExposureBadge
-        exposure={exposure}
-        showIcon={showIcons}
-        showTooltip={showTooltips}
-        size={size}
-      />
+      {showExposure && (
+        <ExposureBadge
+          exposure={exposure}
+          showIcon={showIcons}
+          showTooltip={showTooltips}
+          size={size}
+        />
+      )}
     </div>
   )
 }

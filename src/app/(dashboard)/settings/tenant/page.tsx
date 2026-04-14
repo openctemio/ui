@@ -53,7 +53,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { toast } from 'sonner'
 import { getErrorMessage } from '@/lib/api/error-handler'
-import { post, put, del } from '@/lib/api/client'
+import { get, post, put, del, patch } from '@/lib/api/client'
 import { useTenant } from '@/context/tenant-provider'
 import {
   useTenantSettings,
@@ -81,6 +81,170 @@ import {
   type IdentityProvider,
   type SSOProviderType,
 } from '@/features/sso/types/sso.types'
+
+function StorageConfigTab() {
+  const [provider, setProvider] = useState('local')
+  const [bucket, setBucket] = useState('')
+  const [region, setRegion] = useState('')
+  const [endpoint, setEndpoint] = useState('')
+  const [accessKey, setAccessKey] = useState('')
+  const [secretKey, setSecretKey] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [loaded, setLoaded] = useState(false)
+
+  // Load current config via API client (includes CSRF + auth)
+  useEffect(() => {
+    get('/api/v1/attachments/storage-config')
+      .then((data: unknown) => {
+        const d = data as Record<string, unknown> | null
+        if (!d) {
+          setLoaded(true)
+          return
+        }
+        if (d?.configured) {
+          setProvider((d.provider as string) || 'local')
+          setBucket((d.bucket as string) || '')
+          setRegion((d.region as string) || '')
+          setEndpoint((d.endpoint as string) || '')
+        }
+        setLoaded(true)
+      })
+      .catch(() => setLoaded(true))
+  }, [])
+
+  const handleSave = async () => {
+    setSaving(true)
+    try {
+      await patch('/api/v1/attachments/storage-config', {
+        provider,
+        bucket,
+        region,
+        endpoint,
+        access_key: accessKey,
+        secret_key: secretKey,
+      })
+      toast.success('Storage configuration saved')
+      setAccessKey('')
+      setSecretKey('')
+    } catch {
+      toast.error('Failed to save storage configuration')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const isCloud = provider === 's3' || provider === 'minio'
+
+  if (!loaded) return <Skeleton className="h-48 w-full" />
+
+  return (
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle>Storage Provider</CardTitle>
+          <CardDescription>
+            Choose where uploaded evidence and attachments are stored
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label>Provider</Label>
+            <Select value={provider} onValueChange={setProvider}>
+              <SelectTrigger className="w-full sm:w-[280px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="local">
+                  <span className="flex items-center gap-2">Local Filesystem</span>
+                </SelectItem>
+                <SelectItem value="s3">Amazon S3</SelectItem>
+                <SelectItem value="minio">MinIO (S3-compatible)</SelectItem>
+              </SelectContent>
+            </Select>
+            {!isCloud && (
+              <p className="text-sm text-muted-foreground">
+                Files stored on the server disk at the default storage path.
+              </p>
+            )}
+          </div>
+
+          {isCloud && (
+            <>
+              <Separator />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Bucket Name *</Label>
+                  <Input
+                    value={bucket}
+                    onChange={(e) => setBucket(e.target.value)}
+                    placeholder="my-pentest-evidence"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Region</Label>
+                  <Input
+                    value={region}
+                    onChange={(e) => setRegion(e.target.value)}
+                    placeholder="ap-southeast-1"
+                  />
+                </div>
+                {provider === 'minio' && (
+                  <div className="space-y-2 sm:col-span-2">
+                    <Label>Endpoint *</Label>
+                    <Input
+                      value={endpoint}
+                      onChange={(e) => setEndpoint(e.target.value)}
+                      placeholder="https://minio.internal:9000"
+                    />
+                  </div>
+                )}
+                <div className="space-y-2">
+                  <Label>Access Key</Label>
+                  <Input
+                    value={accessKey}
+                    onChange={(e) => setAccessKey(e.target.value)}
+                    placeholder="AKIA..."
+                    type="password"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Leave empty to keep existing credentials
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label>Secret Key</Label>
+                  <Input
+                    value={secretKey}
+                    onChange={(e) => setSecretKey(e.target.value)}
+                    placeholder="••••••••"
+                    type="password"
+                  />
+                </div>
+              </div>
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  Existing files on local storage will remain accessible after switching. Each file
+                  remembers which provider stores it.
+                </AlertDescription>
+              </Alert>
+            </>
+          )}
+
+          <div className="flex justify-end">
+            <Button onClick={handleSave} disabled={saving || (isCloud && !bucket)}>
+              {saving ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Save className="mr-2 h-4 w-4" />
+              )}
+              Save Configuration
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </>
+  )
+}
 
 export default function TenantPage() {
   const { currentTenant, updateCurrentTenant, refreshTenants } = useTenant()
@@ -556,6 +720,10 @@ export default function TenantPage() {
             <TabsTrigger value="api">
               <Key className="mr-2 h-4 w-4" />
               API & Webhooks
+            </TabsTrigger>
+            <TabsTrigger value="storage">
+              <Upload className="mr-2 h-4 w-4" />
+              File Storage
             </TabsTrigger>
           </TabsList>
 
@@ -1473,6 +1641,11 @@ export default function TenantPage() {
                 </Tooltip>
               </TooltipProvider>
             </div>
+          </TabsContent>
+
+          {/* Storage Tab */}
+          <TabsContent value="storage" className="mt-4 space-y-6">
+            <StorageConfigTab />
           </TabsContent>
         </Tabs>
       </Main>

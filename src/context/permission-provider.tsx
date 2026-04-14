@@ -116,90 +116,9 @@ export function PermissionProvider({ children }: PermissionProviderProps) {
     cleanupExpiredPermissions()
   }, [])
 
-  // Main effect: Handle initial load and tenant switches
-  // This is the ONLY effect that decides whether to use bootstrap or fetch from API
-  React.useEffect(() => {
-    // Skip if no tenant
-    if (!tenantId) {
-      setPermissions([])
-      setVersion(0)
-      setIsLoading(false)
-      usedBootstrapRef.current = false
-      previousTenantIdRef.current = null
-      return
-    }
-
-    // Tenant changed - reset state immediately before checking isLoading
-    const tenantChanged = previousTenantIdRef.current !== tenantId
-    if (tenantChanged) {
-      previousTenantIdRef.current = tenantId
-      etagRef.current = null
-      lastFetchTimeRef.current = 0
-      setError(null)
-      setIsStale(false)
-      usedBootstrapRef.current = false
-    }
-
-    // OPTIMIZATION: Wait for bootstrap to finish loading first
-    // This prevents fetching /sync before bootstrap has a chance to provide permissions
-    if (bootstrap.isLoading) {
-      // Show cached permissions while waiting (instant UI)
-      if (tenantChanged) {
-        const stored = getStoredPermissions(tenantId)
-        if (stored) {
-          setPermissions(stored.permissions)
-          setVersion(stored.version)
-        }
-        setIsLoading(true)
-      }
-      return
-    }
-
-    // CASE 1: Bootstrap has permissions - use them, DON'T fetch
-    if (bootstrap.isBootstrapped && bootstrap.data?.permissions) {
-      const bootstrapPerms = bootstrap.data.permissions
-
-      // Only update if we haven't used bootstrap yet or tenant changed
-      if (!usedBootstrapRef.current || tenantChanged) {
-        setPermissions(bootstrapPerms.list)
-        setVersion(bootstrapPerms.version)
-        setIsLoading(false)
-        usedBootstrapRef.current = true
-
-        // Store in localStorage for future reference
-        storePermissions(tenantId, bootstrapPerms.list, bootstrapPerms.version)
-
-        devLog.log('[PermissionProvider] Using bootstrap permissions - NO /sync call needed', {
-          count: bootstrapPerms.list.length,
-          version: bootstrapPerms.version,
-        })
-      }
-      return // IMPORTANT: Return here to prevent falling through to fetch
-    }
-
-    // CASE 2: Bootstrap finished but no permissions - fetch from API
-    // This only happens if bootstrap failed or returned empty permissions
-    if (!usedBootstrapRef.current) {
-      devLog.log('[PermissionProvider] Bootstrap has no permissions, fetching from /sync')
-
-      setIsLoading(true)
-
-      // Show cached permissions while fetching
-      const stored = getStoredPermissions(tenantId)
-      if (stored) {
-        setPermissions(stored.permissions)
-        setVersion(stored.version)
-      } else {
-        setPermissions([])
-        setVersion(0)
-      }
-
-      // Fetch from API (fetchPermissions will be called by the next effect)
-    }
-  }, [tenantId, bootstrap.isLoading, bootstrap.isBootstrapped, bootstrap.data?.permissions])
-
   // Fetch permissions from server
-  // NOTE: This callback is stable (no etag in deps) to prevent cascading effect re-runs
+  // NOTE: This callback is stable (no etag in deps) to prevent cascading effect re-runs.
+  // Declared before the main effect so it can be called directly.
   const fetchPermissions = React.useCallback(
     async (force = false) => {
       if (!tenantId) {
@@ -221,7 +140,6 @@ export function PermissionProvider({ children }: PermissionProviderProps) {
         }
       }
 
-      // Update last fetch time
       lastFetchTimeRef.current = now
 
       try {
@@ -229,7 +147,6 @@ export function PermissionProvider({ children }: PermissionProviderProps) {
           'Content-Type': 'application/json',
         }
 
-        // Use ETag for conditional request (unless forced)
         if (!force && etagRef.current) {
           headers['If-None-Match'] = etagRef.current
         }
@@ -243,7 +160,6 @@ export function PermissionProvider({ children }: PermissionProviderProps) {
         // Prevent race conditions: ignore response if tenant changed while fetching
         if (previousTenantIdRef.current !== tenantId) return
 
-        // 304 Not Modified - permissions unchanged
         if (response.status === 304) {
           setIsStale(false)
           setIsLoading(false)
@@ -256,28 +172,23 @@ export function PermissionProvider({ children }: PermissionProviderProps) {
 
         const data: PermissionsResponse = await response.json()
 
-        // Store in state
         setPermissions(data.permissions)
         setVersion(data.version)
         setError(null)
         setIsStale(false)
 
-        // Update ETag (using ref to avoid triggering re-renders)
         const newEtag = response.headers.get('ETag')
         if (newEtag) {
           etagRef.current = newEtag
         }
 
-        // Store in localStorage
         storePermissions(tenantId, data.permissions, data.version)
       } catch (err) {
-        // Prevent race conditions: ignore response if tenant changed while fetching
         if (previousTenantIdRef.current !== tenantId) return
 
         devLog.error('[PermissionProvider] Failed to fetch permissions:', err)
         setError(err instanceof Error ? err : new Error('Unknown error'))
 
-        // On error, use cached permissions if available
         const stored = getStoredPermissions(tenantId)
         if (stored) {
           setPermissions(stored.permissions)
@@ -289,39 +200,94 @@ export function PermissionProvider({ children }: PermissionProviderProps) {
         }
       }
     },
-    [tenantId] // Removed etag from deps - using ref instead
+    [tenantId]
   )
 
   // Force refresh (ignores ETag and debounce)
   const refreshPermissions = React.useCallback(async () => {
     setIsLoading(true)
-    etagRef.current = null // Clear ETag to force full fetch
-    lastFetchTimeRef.current = 0 // Reset debounce timer
+    etagRef.current = null
+    lastFetchTimeRef.current = 0
     await fetchPermissions(true)
   }, [fetchPermissions])
 
-  // Initial fetch - ONLY if bootstrap doesn't have permissions
+  // Main effect: Handle initial load, tenant switches, and bootstrap → API fallback.
+  // This is the SINGLE effect that decides whether to use bootstrap or fetch from API.
   React.useEffect(() => {
-    if (!tenantId) return
+    // Skip if no tenant
+    if (!tenantId) {
+      setPermissions([])
+      setVersion(0)
+      setIsLoading(false)
+      usedBootstrapRef.current = false
+      previousTenantIdRef.current = null
+      return
+    }
 
-    // Wait for bootstrap to finish loading
+    // Tenant changed - reset state immediately
+    const tenantChanged = previousTenantIdRef.current !== tenantId
+    if (tenantChanged) {
+      previousTenantIdRef.current = tenantId
+      etagRef.current = null
+      lastFetchTimeRef.current = 0
+      setError(null)
+      setIsStale(false)
+      usedBootstrapRef.current = false
+    }
+
+    // OPTIMIZATION: Wait for bootstrap to finish loading first.
+    // This prevents fetching /sync before bootstrap has a chance to provide permissions.
     if (bootstrap.isLoading) {
+      // Show cached permissions while waiting (instant UI)
+      if (tenantChanged) {
+        const stored = getStoredPermissions(tenantId)
+        if (stored) {
+          setPermissions(stored.permissions)
+          setVersion(stored.version)
+        }
+        setIsLoading(true)
+      }
       return
     }
 
-    // Skip if bootstrap has permissions (check directly, not via ref)
+    // CASE 1: Bootstrap has permissions — use them, DON'T fetch
     if (bootstrap.isBootstrapped && bootstrap.data?.permissions) {
+      const bootstrapPerms = bootstrap.data.permissions
+
+      if (!usedBootstrapRef.current || tenantChanged) {
+        setPermissions(bootstrapPerms.list)
+        setVersion(bootstrapPerms.version)
+        setIsLoading(false)
+        usedBootstrapRef.current = true
+
+        storePermissions(tenantId, bootstrapPerms.list, bootstrapPerms.version)
+
+        devLog.log('[PermissionProvider] Using bootstrap permissions — NO /sync call needed', {
+          count: bootstrapPerms.list.length,
+          version: bootstrapPerms.version,
+        })
+      }
       return
     }
 
-    // Skip if we already used bootstrap (ref-based check as backup)
-    if (usedBootstrapRef.current) {
-      return
-    }
+    // CASE 2: Bootstrap finished but no permissions — fetch from API directly.
+    if (!usedBootstrapRef.current) {
+      devLog.log('[PermissionProvider] Bootstrap has no permissions, fetching from /sync')
 
-    // Bootstrap finished but no permissions - fetch from API
-    devLog.log('[PermissionProvider] Fetching from /sync (bootstrap has no permissions)')
-    fetchPermissions()
+      // Show cached permissions while fetching
+      const stored = getStoredPermissions(tenantId)
+      if (stored) {
+        setPermissions(stored.permissions)
+        setVersion(stored.version)
+      } else {
+        setPermissions([])
+        setVersion(0)
+      }
+      setIsLoading(true)
+
+      // Fetch directly — no second effect needed
+      fetchPermissions()
+    }
   }, [
     tenantId,
     bootstrap.isLoading,

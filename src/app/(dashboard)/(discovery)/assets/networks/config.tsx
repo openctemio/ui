@@ -1,42 +1,57 @@
 'use client'
 
 import { Badge } from '@/components/ui/badge'
-import { Network, Layers, Route, Shield, AlertTriangle } from 'lucide-react'
+import { Network, Shield, AlertTriangle, Router, Server } from 'lucide-react'
 import type { AssetPageConfig } from '@/features/assets/types/page-config.types'
+import type { Asset } from '@/features/assets'
 
-const getNetworkTypeLabel = (type: string) => {
-  switch (type) {
-    case 'vpc':
-      return 'VPC'
-    case 'load_balancer':
-      return 'Load Balancer'
+const getDeviceTypeLabel = (asset: Asset): string => {
+  // After type consolidation: all network devices have type='network', sub_type differentiates
+  const subType = asset.subType || ''
+  switch (subType) {
     case 'firewall':
       return 'Firewall'
-    case 'route_table':
-      return 'Route Table'
+    case 'load_balancer':
+      return 'Load Balancer'
+    case 'switch':
+      return 'Switch'
+    case 'router':
+      return 'Router'
+    case 'wireless_ap':
+      return 'Wireless AP'
+    case 'ids_ips':
+      return 'IDS/IPS'
     default:
-      return type
+      return 'Network Device'
   }
 }
 
-const getNetworkTypeVariant = (type: string): 'default' | 'secondary' | 'outline' => {
-  switch (type) {
-    case 'vpc':
-      return 'default'
-    case 'load_balancer':
-      return 'secondary'
-    case 'firewall':
-      return 'outline'
+const getDeviceTypeColor = (label: string): string => {
+  switch (label) {
+    case 'Firewall':
+      return 'bg-red-500/20 text-red-600 dark:text-red-400'
+    case 'Load Balancer':
+      return 'bg-blue-500/20 text-blue-600 dark:text-blue-400'
+    case 'Switch':
+      return 'bg-purple-500/20 text-purple-600 dark:text-purple-400'
+    case 'Router':
+      return 'bg-orange-500/20 text-orange-600 dark:text-orange-400'
+    case 'Wireless AP':
+      return 'bg-green-500/20 text-green-600 dark:text-green-400'
     default:
-      return 'secondary'
+      return 'bg-gray-500/20 text-gray-600 dark:text-gray-400'
   }
 }
 
 export const networksConfig: AssetPageConfig = {
   type: 'network',
-  label: 'Network',
-  labelPlural: 'Networks',
-  description: 'VPCs, firewalls, and load balancers',
+  // After Phase 3: all network devices consolidated to type='network'
+  // Backward compat: also fetch old types during transition
+  // All network devices now type='network' after consolidation
+  // Also include hosts tagged as network-device via tag filter
+  label: 'Network Device',
+  labelPlural: 'Network & Security Devices',
+  description: 'Firewalls, switches, routers, load balancers, and other network infrastructure',
   icon: Network,
   iconColor: 'text-cyan-500',
   gradientFrom: 'from-cyan-500/20',
@@ -44,47 +59,47 @@ export const networksConfig: AssetPageConfig = {
 
   columns: [
     {
-      accessorKey: 'metadata.networkType',
-      header: 'Type',
+      accessorKey: 'subType',
+      header: 'Device Type',
       cell: ({ row }) => {
-        const networkType = (row.original.metadata.networkType as string) || ''
-        return (
-          <Badge variant={getNetworkTypeVariant(networkType)}>
-            {getNetworkTypeLabel(networkType)}
-          </Badge>
-        )
+        const label = getDeviceTypeLabel(row.original)
+        return <Badge className={`${getDeviceTypeColor(label)} border-0 text-xs`}>{label}</Badge>
       },
     },
     {
-      accessorKey: 'metadata.cloudProvider',
-      header: 'Provider / Region',
+      accessorKey: 'metadata.vendor',
+      header: 'Vendor / Model',
       cell: ({ row }) => {
-        const provider = (row.original.metadata.cloudProvider as string) || '-'
-        const region = (row.original.metadata.region as string) || '-'
+        const meta = row.original.metadata as Record<string, unknown>
+        const vendor = (meta.vendor as string) || ''
+        const model = (meta.model as string) || ''
+        if (!vendor && !model) return <span className="text-muted-foreground">-</span>
         return (
-          <div>
-            <div className="font-medium">{provider}</div>
-            <div className="text-sm text-muted-foreground">{region}</div>
+          <div className="max-w-[180px]">
+            {vendor && <p className="text-sm font-medium truncate">{vendor}</p>}
+            {model && <p className="text-xs text-muted-foreground truncate">{model}</p>}
           </div>
         )
       },
     },
     {
-      accessorKey: 'metadata.vpcCidr',
-      header: 'CIDR',
+      accessorKey: 'metadata.firmware_version',
+      header: 'Firmware',
       cell: ({ row }) => {
-        const cidr = (row.original.metadata.vpcCidr as string) || '-'
-        return <span className="font-mono text-sm">{cidr}</span>
+        const meta = row.original.metadata as Record<string, unknown>
+        const fw = (meta.firmware_version as string) || ''
+        if (!fw) return <span className="text-muted-foreground">-</span>
+        return <span className="text-sm font-mono">{fw}</span>
       },
     },
     {
-      id: 'subnets',
-      header: 'Subnets',
+      accessorKey: 'metadata.management_ip',
+      header: 'Management IP',
       cell: ({ row }) => {
-        const subnetCidrs = row.original.metadata.subnetCidrs
-        const count = Array.isArray(subnetCidrs) ? subnetCidrs.length : 0
-        if (count === 0) return <span className="text-muted-foreground">-</span>
-        return <span className="text-sm">{count}</span>
+        const meta = row.original.metadata as Record<string, unknown>
+        const ip = (meta.management_ip as string) || ''
+        if (!ip) return <span className="text-muted-foreground">-</span>
+        return <span className="text-sm font-mono">{ip}</span>
       },
     },
   ],
@@ -92,9 +107,9 @@ export const networksConfig: AssetPageConfig = {
   formFields: [
     {
       name: 'name',
-      label: 'Network Name',
+      label: 'Device Name',
       type: 'text',
-      placeholder: 'e.g., production-vpc',
+      placeholder: 'e.g., FW-PERIMETER-01',
       required: true,
     },
     {
@@ -104,135 +119,141 @@ export const networksConfig: AssetPageConfig = {
       placeholder: 'Optional description',
     },
     {
-      name: 'networkType',
-      label: 'Network Type',
-      type: 'select',
-      isMetadata: true,
-      required: true,
-      options: [
-        { label: 'VPC', value: 'vpc' },
-        { label: 'Load Balancer', value: 'load_balancer' },
-        { label: 'Firewall', value: 'firewall' },
-        { label: 'Route Table', value: 'route_table' },
-      ],
-    },
-    {
-      name: 'cloudProvider',
-      label: 'Provider',
+      name: 'vendor',
+      label: 'Vendor',
       type: 'text',
-      placeholder: 'e.g., AWS',
+      placeholder: 'Cisco, Palo Alto, Fortinet...',
       isMetadata: true,
     },
     {
-      name: 'region',
-      label: 'Region',
+      name: 'model',
+      label: 'Model',
       type: 'text',
-      placeholder: 'e.g., us-east-1',
+      placeholder: 'PA-3260, Catalyst 9500...',
       isMetadata: true,
     },
     {
-      name: 'vpcCidr',
-      label: 'CIDR Block',
+      name: 'firmware_version',
+      label: 'Firmware Version',
       type: 'text',
-      placeholder: 'e.g., 10.0.0.0/16',
+      placeholder: 'PAN-OS 11.1.2, IOS-XE 17.9.4...',
       isMetadata: true,
     },
-    { name: 'tags', label: 'Tags', type: 'tags', placeholder: 'production, critical' },
+    {
+      name: 'management_ip',
+      label: 'Management IP',
+      type: 'text',
+      placeholder: '10.20.0.10',
+      isMetadata: true,
+    },
+    {
+      name: 'serial_number',
+      label: 'Serial Number',
+      type: 'text',
+      placeholder: 'Optional',
+      isMetadata: true,
+    },
+    { name: 'tags', label: 'Tags', type: 'tags', placeholder: 'firewall, cisco, perimeter' },
   ],
 
   statsCards: [
     {
-      title: 'VPCs',
-      icon: Layers,
-      compute: (assets) => assets.filter((a) => a.metadata.networkType === 'vpc').length,
+      title: 'Firewalls',
+      icon: Shield,
+      compute: (assets) => assets.filter((a) => a.subType === 'firewall').length,
     },
     {
       title: 'Load Balancers',
-      icon: Route,
-      compute: (assets) => assets.filter((a) => a.metadata.networkType === 'load_balancer').length,
+      icon: Router,
+      compute: (assets) => assets.filter((a) => a.subType === 'load_balancer').length,
     },
     {
-      title: 'Firewalls',
-      icon: Shield,
-      compute: (assets) => assets.filter((a) => a.metadata.networkType === 'firewall').length,
+      title: 'Switches/Routers',
+      icon: Server,
+      compute: (assets) =>
+        assets.filter((a) => {
+          const st = a.subType || ''
+          return st === 'switch' || st === 'router'
+        }).length,
+    },
+    {
+      title: 'With Findings',
+      icon: AlertTriangle,
+      compute: (assets) => assets.filter((a) => a.findingCount > 0).length,
+      variant: 'warning',
     },
   ],
 
-  customFilter: {
-    label: 'Network Type',
-    options: [
-      { label: 'VPC', value: 'vpc' },
-      { label: 'Load Balancer', value: 'load_balancer' },
-      { label: 'Firewall', value: 'firewall' },
-      { label: 'Route Table', value: 'route_table' },
-    ],
-    filterFn: (asset, value) => (asset.metadata.networkType as string) === value,
+  // Filters are handled dynamically by PropertyFilter (fetches from /assets/facets)
+
+  copyAction: {
+    label: 'Copy IP',
+    getValue: (asset: Asset) => {
+      const meta = asset.metadata as Record<string, unknown>
+      return (meta.management_ip as string) || asset.name
+    },
   },
 
   detailStats: [
     {
-      icon: Layers,
-      iconBg: 'bg-cyan-500/10',
-      iconColor: 'text-cyan-500',
-      label: 'Subnets',
-      getValue: (asset) => {
-        const cidrs = asset.metadata.subnetCidrs
-        return Array.isArray(cidrs) ? cidrs.length : 0
-      },
-    },
-    {
       icon: Shield,
       iconBg: 'bg-orange-500/10',
       iconColor: 'text-orange-500',
-      label: 'Risk',
-      getValue: (asset) => asset.riskScore,
+      label: 'Risk Score',
+      getValue: (asset: Asset) => asset.riskScore,
     },
     {
       icon: AlertTriangle,
       iconBg: 'bg-red-500/10',
       iconColor: 'text-red-500',
       label: 'Findings',
-      getValue: (asset) => asset.findingCount,
+      getValue: (asset: Asset) => asset.findingCount,
     },
   ],
 
   detailSections: [
     {
-      title: 'Network Information',
+      title: 'Device Information',
       fields: [
         {
-          label: 'Network Type',
-          getValue: (asset) => {
-            const networkType = (asset.metadata.networkType as string) || '-'
-            return (
-              <Badge variant={getNetworkTypeVariant(networkType)}>
-                {getNetworkTypeLabel(networkType)}
-              </Badge>
-            )
+          label: 'Device Type',
+          getValue: (asset: Asset) => {
+            const label = getDeviceTypeLabel(asset)
+            return <Badge className={`${getDeviceTypeColor(label)} border-0`}>{label}</Badge>
           },
         },
         {
-          label: 'Provider',
-          getValue: (asset) => (asset.metadata.cloudProvider as string) || '-',
+          label: 'Vendor',
+          getValue: (asset: Asset) =>
+            ((asset.metadata as Record<string, unknown>).vendor as string) || '-',
         },
         {
-          label: 'Region',
-          getValue: (asset) => (asset.metadata.region as string) || '-',
+          label: 'Model',
+          getValue: (asset: Asset) =>
+            ((asset.metadata as Record<string, unknown>).model as string) || '-',
         },
         {
-          label: 'CIDR Block',
-          getValue: (asset) => {
-            const cidr = asset.metadata.vpcCidr
-            if (!cidr) return '-'
-            return <code className="text-sm bg-muted px-2 py-0.5 rounded">{cidr}</code>
+          label: 'Firmware',
+          getValue: (asset: Asset) =>
+            ((asset.metadata as Record<string, unknown>).firmware_version as string) || '-',
+        },
+        {
+          label: 'Serial Number',
+          getValue: (asset: Asset) =>
+            ((asset.metadata as Record<string, unknown>).serial_number as string) || '-',
+        },
+        {
+          label: 'Management IP',
+          getValue: (asset: Asset) => {
+            const ip = (asset.metadata as Record<string, unknown>).management_ip as string
+            if (!ip) return '-'
+            return <code className="text-sm bg-muted px-2 py-0.5 rounded">{ip}</code>
           },
         },
         {
-          label: 'Subnets',
-          getValue: (asset) => {
-            const cidrs = asset.metadata.subnetCidrs
-            return Array.isArray(cidrs) ? cidrs.length : 0
-          },
+          label: 'HA Mode',
+          getValue: (asset: Asset) =>
+            ((asset.metadata as Record<string, unknown>).ha_mode as string) || '-',
         },
       ],
     },
@@ -240,13 +261,20 @@ export const networksConfig: AssetPageConfig = {
 
   exportFields: [
     { header: 'Name', accessor: (a) => a.name },
-    { header: 'Network Type', accessor: (a) => a.metadata.networkType || '' },
-    { header: 'Provider', accessor: (a) => a.metadata.cloudProvider || '' },
-    { header: 'Region', accessor: (a) => a.metadata.region || '' },
-    { header: 'CIDR', accessor: (a) => a.metadata.vpcCidr || '' },
+    { header: 'Device Type', accessor: (a) => getDeviceTypeLabel(a) },
+    { header: 'Vendor', accessor: (a) => (a.metadata as Record<string, unknown>).vendor || '' },
+    { header: 'Model', accessor: (a) => (a.metadata as Record<string, unknown>).model || '' },
     {
-      header: 'Subnets',
-      accessor: (a) => (Array.isArray(a.metadata.subnetCidrs) ? a.metadata.subnetCidrs.length : 0),
+      header: 'Firmware',
+      accessor: (a) => (a.metadata as Record<string, unknown>).firmware_version || '',
+    },
+    {
+      header: 'Management IP',
+      accessor: (a) => (a.metadata as Record<string, unknown>).management_ip || '',
+    },
+    {
+      header: 'Serial',
+      accessor: (a) => (a.metadata as Record<string, unknown>).serial_number || '',
     },
     { header: 'Status', accessor: (a) => a.status },
     { header: 'Risk Score', accessor: (a) => a.riskScore },
