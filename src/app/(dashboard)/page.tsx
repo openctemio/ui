@@ -445,7 +445,7 @@ export default function Dashboard() {
         ) : (
           !error && (
             <>
-              <section className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2 items-start">
+              <section className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
                 {/* Asset Distribution */}
                 <Card className="flex flex-col">
                   <CardHeader>
@@ -484,8 +484,8 @@ export default function Dashboard() {
                   </CardContent>
                 </Card>
 
-                {/* Recent Activity — max-height matches chart card, scrolls if needed */}
-                <Card className="flex flex-col max-h-[460px]">
+                {/* Recent Activity — stretches to match Asset Distribution height */}
+                <Card className="flex flex-col">
                   <CardHeader>
                     <CardTitle>Recent Activity</CardTitle>
                     <CardDescription>Latest security events and updates</CardDescription>
