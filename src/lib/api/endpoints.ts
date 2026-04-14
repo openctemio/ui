@@ -1287,12 +1287,12 @@ export const tenantToolEndpoints = {
   /**
    * Bulk enable tools for tenant
    */
-  bulkEnable: () => `${API_BASE.TENANT_TOOLS}/bulk-enable`,
+  bulkEnable: () => `${API_BASE.TENANT_TOOLS}/bulk/enable`,
 
   /**
    * Bulk disable tools for tenant
    */
-  bulkDisable: () => `${API_BASE.TENANT_TOOLS}/bulk-disable`,
+  bulkDisable: () => `${API_BASE.TENANT_TOOLS}/bulk/disable`,
 
   /**
    * List all tools with tenant-specific enabled status

@@ -117,7 +117,7 @@ export function useFindingSourcesApi(config?: SWRConfiguration) {
   const { currentTenant } = useTenant()
 
   const key = currentTenant
-    ? '/api/v1/config/finding-sources?active_only=true&include_category=true'
+    ? '/api/v1/finding-sources?active_only=true&include_category=true'
     : null
 
   return useSWR<ApiFindingSourceListResponse>(key, fetchFindingSources, {
@@ -132,7 +132,7 @@ export function useFindingSourcesApi(config?: SWRConfiguration) {
 export function useFindingSourceCategoriesApi(config?: SWRConfiguration) {
   const { currentTenant } = useTenant()
 
-  const key = currentTenant ? '/api/v1/config/finding-sources/categories?active_only=true' : null
+  const key = currentTenant ? '/api/v1/finding-sources/categories?active_only=true' : null
 
   return useSWR<ApiFindingSourceCategoryListResponse>(key, fetchFindingSourceCategories, {
     ...defaultConfig,
@@ -146,7 +146,7 @@ export function useFindingSourceCategoriesApi(config?: SWRConfiguration) {
 export function useFindingSourceByCodeApi(code: string | null, config?: SWRConfiguration) {
   const { currentTenant } = useTenant()
 
-  const key = currentTenant && code ? `/api/v1/config/finding-sources/code/${code}` : null
+  const key = currentTenant && code ? `/api/v1/finding-sources/code/${code}` : null
 
   return useSWR<ApiFindingSource>(key, fetchFindingSource, { ...defaultConfig, ...config })
 }
@@ -157,7 +157,7 @@ export function useFindingSourceByCodeApi(code: string | null, config?: SWRConfi
 export function useFindingSourceByIdApi(id: string | null, config?: SWRConfiguration) {
   const { currentTenant } = useTenant()
 
-  const key = currentTenant && id ? `/api/v1/config/finding-sources/${id}` : null
+  const key = currentTenant && id ? `/api/v1/finding-sources/${id}` : null
 
   return useSWR<ApiFindingSource>(key, fetchFindingSource, { ...defaultConfig, ...config })
 }
