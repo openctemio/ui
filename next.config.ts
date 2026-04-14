@@ -79,9 +79,37 @@ const nextConfig: NextConfig = {
               "style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com", // Google Fonts stylesheets
               "img-src 'self' data: https:",
               "font-src 'self' data: https://fonts.gstatic.com", // Google Fonts files
-              process.env.NODE_ENV === 'development'
-                ? "connect-src 'self' http: ws: wss:" // Dev: allow all origins for HMR WebSocket
-                : `connect-src 'self' ${process.env.CSP_CONNECT_SRC || 'https://*.openctem.io wss://*.openctem.io'}`, // Prod: configurable via CSP_CONNECT_SRC env
+              (() => {
+                if (process.env.NODE_ENV === 'development') {
+                  return "connect-src 'self' http: ws: wss:" // Dev: allow all for HMR
+                }
+                // Prod: derive allowed origins from existing config
+                const origins: string[] = ["'self'"]
+                const appUrl = process.env.NEXT_PUBLIC_APP_URL
+                const backendUrl = process.env.BACKEND_API_URL
+                const wsUrl = process.env.NEXT_PUBLIC_WS_BASE_URL
+                if (appUrl) {
+                  try {
+                    const u = new URL(appUrl)
+                    origins.push(`https://${u.hostname}`)
+                    origins.push(`wss://${u.hostname}`)
+                    // Also allow API port if different (e.g., :8080)
+                    if (backendUrl) {
+                      const b = new URL(backendUrl)
+                      if (b.port && b.port !== '443') {
+                        origins.push(`https://${u.hostname}:${b.port}`)
+                        origins.push(`wss://${u.hostname}:${b.port}`)
+                      }
+                    }
+                  } catch {
+                    /* ignore invalid URL */
+                  }
+                }
+                // Fallback if no config
+                if (origins.length === 1)
+                  origins.push('https://*.openctem.io', 'wss://*.openctem.io')
+                return `connect-src ${origins.join(' ')}`
+              })(),
               "frame-ancestors 'none'",
               "base-uri 'self'",
               "form-action 'self'",
