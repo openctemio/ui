@@ -148,9 +148,11 @@ const defaultStatusFilters: { value: string; label: string }[] = [
 
 interface AssetPageProps {
   config: AssetPageConfig
+  /** Extra content rendered in the filter bar (e.g., type filter buttons) */
+  headerExtra?: React.ReactNode
 }
 
-export function AssetPage({ config }: AssetPageProps) {
+export function AssetPage({ config, headerExtra }: AssetPageProps) {
   const { can } = usePermissions()
   const canWriteAssets = can(Permission.AssetsWrite)
   const canDeleteAssets = can(Permission.AssetsDelete)
@@ -1117,6 +1119,8 @@ export function AssetPage({ config }: AssetPageProps) {
                   filtered={total}
                   total={typeStats.total}
                 />
+
+                {headerExtra}
 
                 {Object.keys(rowSelection).length > 0 && (
                   <DropdownMenu>
