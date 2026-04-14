@@ -43,9 +43,16 @@ interface CountResponse {
 
 const BASE_URL = '/api/v1/relationships/suggestions'
 
-export function useRelationshipSuggestions(status = 'pending', page = 1, perPage = 50) {
+export function useRelationshipSuggestions(
+  status = 'pending',
+  page = 1,
+  perPage = 50,
+  search?: string
+) {
   const { currentTenant } = useTenant()
-  const key = currentTenant ? `${BASE_URL}?status=${status}&page=${page}&per_page=${perPage}` : null
+  const params = new URLSearchParams({ status, page: String(page), per_page: String(perPage) })
+  if (search) params.set('search', search)
+  const key = currentTenant ? `${BASE_URL}?${params.toString()}` : null
 
   return useSWR<SuggestionListResponse>(key, (url: string) => get<SuggestionListResponse>(url), {
     revalidateOnFocus: false,
