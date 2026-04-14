@@ -6,5 +6,6 @@ import { containersConfig } from './config'
 
 export default function ContainersPage() {
   const searchParams = useSearchParams()
-  return <AssetPage key={searchParams.toString()} config={containersConfig} />
+  const remountKey = `${searchParams.get('type') ?? ''}_${searchParams.get('sub_type') ?? ''}`
+  return <AssetPage key={remountKey} config={containersConfig} />
 }

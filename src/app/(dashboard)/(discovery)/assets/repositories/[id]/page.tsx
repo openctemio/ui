@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useMemo, useCallback } from 'react'
+import { useFindingsApi } from '@/features/findings/api/use-findings-api'
+import type { ApiFinding } from '@/features/findings/api/finding-api.types'
 import { useParams, useRouter } from 'next/navigation'
 import { Main } from '@/components/layout'
 import { RiskScoreBadge } from '@/features/shared'
@@ -339,44 +341,28 @@ const mockBranchDetails: BranchDetail[] = [
   },
 ]
 
-const mockFindings: FindingDetail[] = [
-  {
-    id: 'finding-1',
-    title: 'SQL Injection vulnerability',
-    description: 'User input not sanitized before database query',
-    severity: 'critical',
-    status: 'open',
-    triage_status: 'triaged',
-    scanner_type: 'sast',
-    file_path: 'src/api/users.go',
-    line_start: 45,
-    branches: ['main'],
-    sla_status: 'warning',
-    sla_days_remaining: 5,
-    first_detected_at: '2024-01-10T00:00:00Z',
-    assigned_to_name: 'John Doe',
+/** Map API finding response to the local FindingDetail shape used by the UI */
+function mapApiFindingToDetail(f: ApiFinding): FindingDetail {
+  return {
+    id: f.id,
+    title: f.title || f.message,
+    description: f.description || f.message,
+    severity: f.severity as Severity,
+    status: (f.status === 'new' ? 'open' : f.status) as FindingStatus,
+    triage_status: f.is_triaged ? 'triaged' : 'needs_triage',
+    scanner_type: f.source as ScannerType,
+    file_path: f.file_path,
+    line_start: f.start_line,
+    branches: [],
+    sla_status: (f.sla_status as SLAStatus) || 'not_applicable',
+    sla_days_remaining: undefined,
+    first_detected_at: f.first_detected_at || f.created_at,
+    assigned_to_name: f.assigned_to_user?.name,
     assigned_to_avatar: '',
-    comments_count: 2,
-    cwe_ids: ['CWE-89'],
-  },
-  {
-    id: 'finding-2',
-    title: 'Vulnerable dependency: lodash < 4.17.21',
-    description: 'Known prototype pollution vulnerability',
-    severity: 'high',
-    status: 'in_progress',
-    triage_status: 'triaged',
-    scanner_type: 'sca',
-    file_path: 'package.json',
-    line_start: 15,
-    branches: ['main', 'develop'],
-    sla_status: 'on_track',
-    sla_days_remaining: 10,
-    first_detected_at: '2024-01-12T00:00:00Z',
-    comments_count: 1,
-    cwe_ids: ['CWE-1321'],
-  },
-]
+    comments_count: f.comments_count || 0,
+    cwe_ids: f.cwe_ids,
+  }
+}
 
 const mockActivities: ActivityLog[] = [
   {
@@ -1955,10 +1941,19 @@ export default function RepositoryDetailPage() {
     return transformToRepositoryView(repositoryData as unknown as ApiAssetResponse)
   }, [repositoryData])
 
+  // Fetch findings from API
+  const { data: findingsData } = useFindingsApi(
+    repositoryData ? { asset_id: repositoryId, per_page: 20 } : undefined
+  )
+
+  const findings: FindingDetail[] = useMemo(() => {
+    if (!findingsData?.data) return []
+    return findingsData.data.map(mapApiFindingToDetail)
+  }, [findingsData])
+
   // Uses mock data — wire to repository detail API when backend endpoint is available.
-  // Currently using mock data for branches, findings, and activities
+  // Currently using mock data for branches and activities
   const branches = mockBranchDetails
-  const findings = mockFindings
   const activities = mockActivities
 
   // Action handlers

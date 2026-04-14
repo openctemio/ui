@@ -10,6 +10,7 @@ import {
   Download,
   Star,
   ExternalLink,
+  CheckCircle,
 } from 'lucide-react'
 import type { Asset } from '@/features/assets'
 import type { AssetPageConfig } from '@/features/assets/types/page-config.types'
@@ -51,11 +52,12 @@ export const mobileConfig: AssetPageConfig = {
 
   columns: [
     {
-      accessorKey: 'metadata.appVersion',
+      accessorKey: 'metadata.app_version',
       header: 'Version',
       cell: ({ row }) => {
-        const version = row.original.metadata.appVersion
-        const build = row.original.metadata.buildNumber
+        const meta = row.original.metadata as Record<string, unknown>
+        const version = meta.app_version as string | undefined
+        const build = meta.build_number as string | undefined
         return (
           <div>
             <span className="font-mono">{(version as string) || 'N/A'}</span>
@@ -81,7 +83,7 @@ export const mobileConfig: AssetPageConfig = {
       placeholder: 'Optional description',
     },
     {
-      name: 'bundleId',
+      name: 'bundle_id',
       label: 'Bundle ID',
       type: 'text',
       placeholder: 'com.company.appname',
@@ -102,14 +104,14 @@ export const mobileConfig: AssetPageConfig = {
       ],
     },
     {
-      name: 'appVersion',
+      name: 'app_version',
       label: 'Version',
       type: 'text',
       placeholder: '1.0.0',
       isMetadata: true,
     },
     {
-      name: 'storeUrl',
+      name: 'store_url',
       label: 'Store URL',
       type: 'text',
       placeholder: 'https://play.google.com/store/apps/...',
@@ -124,19 +126,18 @@ export const mobileConfig: AssetPageConfig = {
     },
   ],
 
+  countBy: ['platform'],
+
   statsCards: [
     {
-      // metadata.platform isn't aggregated by /assets/stats — current page only
-      title: 'iOS Apps',
+      title: 'iOS',
       icon: Apple,
-      compute: (assets) => assets.filter((a) => (a.metadata.platform as string) === 'ios').length,
+      compute: (_assets, stats) => stats.metadataCounts?.platform?.ios ?? 0,
     },
     {
-      title: 'Android Apps',
+      title: 'Android',
       icon: Smartphone,
-      compute: (assets) =>
-        assets.filter((a) => (a.metadata.platform as string) === 'android').length,
-      variant: 'success',
+      compute: (_assets, stats) => stats.metadataCounts?.platform?.android ?? 0,
     },
     {
       title: 'With Findings',
@@ -158,7 +159,7 @@ export const mobileConfig: AssetPageConfig = {
 
   copyAction: {
     label: 'Copy Bundle ID',
-    getValue: (asset) => (asset.metadata.bundleId as string) || asset.name,
+    getValue: (asset) => (asset.metadata.bundle_id as string) || asset.name,
   },
 
   detailStats: [
@@ -194,33 +195,35 @@ export const mobileConfig: AssetPageConfig = {
         {
           label: 'Version',
           getValue: (asset) => (
-            <span className="font-mono">{(asset.metadata.appVersion as string) || '-'}</span>
+            <span className="font-mono">{(asset.metadata.app_version as string) || '-'}</span>
           ),
         },
         {
           label: 'Build Number',
           getValue: (asset) => (
-            <span className="font-mono">{(asset.metadata.buildNumber as string) || '-'}</span>
+            <span className="font-mono">{(asset.metadata.build_number as string) || '-'}</span>
           ),
         },
         {
           label: 'Bundle ID',
           getValue: (asset) => (
             <span className="font-mono text-xs break-all">
-              {(asset.metadata.bundleId as string) || '-'}
+              {(asset.metadata.bundle_id as string) || '-'}
             </span>
           ),
         },
         {
           label: 'Min SDK',
           getValue: (asset) => (
-            <span className="font-mono">{(asset.metadata.minSdkVersion as string) || '-'}</span>
+            <span className="font-mono">{(asset.metadata.min_sdk_version as string) || '-'}</span>
           ),
         },
         {
           label: 'Target SDK',
           getValue: (asset) => (
-            <span className="font-mono">{(asset.metadata.targetSdkVersion as string) || '-'}</span>
+            <span className="font-mono">
+              {(asset.metadata.target_sdk_version as string) || '-'}
+            </span>
           ),
         },
       ],
@@ -253,7 +256,7 @@ export const mobileConfig: AssetPageConfig = {
         {
           label: 'Last Release',
           getValue: (asset) => {
-            const lastRelease = asset.metadata.lastRelease as string
+            const lastRelease = asset.metadata.last_release as string
             if (!lastRelease) return '-'
             return new Date(lastRelease).toLocaleDateString()
           },
@@ -261,7 +264,7 @@ export const mobileConfig: AssetPageConfig = {
         {
           label: 'Store Link',
           getValue: (asset) => {
-            const storeUrl = asset.metadata.storeUrl as string
+            const storeUrl = asset.metadata.store_url as string
             if (!storeUrl) return '-'
             return (
               <Button variant="outline" size="sm" onClick={() => window.open(storeUrl, '_blank')}>
@@ -339,7 +342,7 @@ export const mobileConfig: AssetPageConfig = {
     { header: 'Name', accessor: (a: Asset) => a.name },
     {
       header: 'Bundle ID',
-      accessor: (a: Asset) => (a.metadata.bundleId as string) || '',
+      accessor: (a: Asset) => (a.metadata.bundle_id as string) || '',
     },
     {
       header: 'Platform',
@@ -347,7 +350,7 @@ export const mobileConfig: AssetPageConfig = {
     },
     {
       header: 'Version',
-      accessor: (a: Asset) => (a.metadata.appVersion as string) || '',
+      accessor: (a: Asset) => (a.metadata.app_version as string) || '',
     },
     { header: 'Status', accessor: (a: Asset) => a.status },
     { header: 'Risk Score', accessor: (a: Asset) => a.riskScore },

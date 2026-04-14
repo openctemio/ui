@@ -253,14 +253,20 @@ export function flattenDomainTreeForTable(domains: Asset[]): DomainTableRow[] {
   tree.forEach((rootNode) => {
     const childIds = rootNode.subdomains.map((s) => s.domain.id)
 
+    // Use DB asset_type to determine Root vs Sub — more reliable than tree
+    // position because pagination may split root and subdomains across pages.
+    const rootIsActuallyDomain = rootNode.domain.type === 'domain'
+
     // Add root domain row
     rows.push({
       ...rootNode.domain,
       _level: 0,
-      _isRoot: true,
+      _isRoot: rootIsActuallyDomain,
       _hasChildren: rootNode.subdomains.length > 0,
       _subdomainCount: rootNode.subdomains.length,
-      _rootDomain: rootNode.domain.name,
+      _rootDomain: rootIsActuallyDomain
+        ? rootNode.domain.name
+        : extractRootDomain(rootNode.domain.name),
       _childIds: childIds,
     })
 
@@ -269,11 +275,13 @@ export function flattenDomainTreeForTable(domains: Asset[]): DomainTableRow[] {
       rows.push({
         ...subNode.domain,
         _level: subNode.level,
-        _isRoot: false,
+        _isRoot: subNode.domain.type === 'domain',
         _hasChildren: false,
         _subdomainCount: 0,
         _parentDomain: getParentDomain(subNode.domain.name) || rootNode.domain.name,
-        _rootDomain: rootNode.domain.name,
+        _rootDomain: rootIsActuallyDomain
+          ? rootNode.domain.name
+          : extractRootDomain(subNode.domain.name),
         _childIds: [],
       })
     })

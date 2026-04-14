@@ -118,7 +118,7 @@ export async function POST(_request: NextRequest): Promise<NextResponse> {
         // Clear access token cookie
         errorResponse.cookies.set(ACCESS_TOKEN_COOKIE, '', {
           httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
+          secure: process.env.SECURE_COOKIES === 'true',
           sameSite: 'lax',
           maxAge: 0,
           path: '/',
@@ -127,7 +127,7 @@ export async function POST(_request: NextRequest): Promise<NextResponse> {
         // Clear refresh token cookie
         errorResponse.cookies.set(REFRESH_TOKEN_COOKIE, '', {
           httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
+          secure: process.env.SECURE_COOKIES === 'true',
           sameSite: 'lax',
           maxAge: 0,
           path: '/',
@@ -137,7 +137,7 @@ export async function POST(_request: NextRequest): Promise<NextResponse> {
         // When user logs in again, they'll go through proper tenant selection
         errorResponse.cookies.set(TENANT_COOKIE, '', {
           httpOnly: false,
-          secure: process.env.NODE_ENV === 'production',
+          secure: process.env.SECURE_COOKIES === 'true',
           sameSite: 'lax',
           maxAge: 0,
           path: '/',
@@ -181,7 +181,7 @@ export async function POST(_request: NextRequest): Promise<NextResponse> {
     }
     clientResponse.cookies.set(ACCESS_TOKEN_COOKIE, data.access_token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: process.env.SECURE_COOKIES === 'true',
       sameSite: 'lax',
       maxAge: data.expires_in || 900,
       path: '/',
@@ -191,7 +191,7 @@ export async function POST(_request: NextRequest): Promise<NextResponse> {
     if (data.refresh_token) {
       clientResponse.cookies.set(REFRESH_TOKEN_COOKIE, data.refresh_token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: process.env.SECURE_COOKIES === 'true',
         sameSite: 'lax',
         maxAge: 7 * 24 * 60 * 60, // 7 days
         path: '/',
@@ -209,7 +209,7 @@ export async function POST(_request: NextRequest): Promise<NextResponse> {
       }),
       {
         httpOnly: false,
-        secure: process.env.NODE_ENV === 'production',
+        secure: process.env.SECURE_COOKIES === 'true',
         sameSite: 'lax',
         maxAge: 7 * 24 * 60 * 60,
         path: '/',

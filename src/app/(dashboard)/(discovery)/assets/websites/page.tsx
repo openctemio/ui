@@ -6,5 +6,6 @@ import { websitesConfig } from './config'
 
 export default function WebsitesPage() {
   const searchParams = useSearchParams()
-  return <AssetPage key={searchParams.toString()} config={websitesConfig} />
+  const remountKey = `${searchParams.get('type') ?? ''}_${searchParams.get('sub_type') ?? ''}`
+  return <AssetPage key={remountKey} config={websitesConfig} />
 }

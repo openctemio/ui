@@ -146,11 +146,13 @@ export default function Dashboard() {
     color: (SEVERITY_COLORS as Record<string, string>)[name.toLowerCase()] || '#6b7280',
   }))
 
-  // Prepare asset distribution for bar chart
-  const assetDistribution = Object.entries(assetsByType).map(([name, count]) => ({
-    name: name.charAt(0).toUpperCase() + name.slice(1).replace(/_/g, ' '),
-    count,
-  }))
+  // Prepare asset distribution for bar chart — sorted by count descending
+  const assetDistribution = Object.entries(assetsByType)
+    .map(([name, count]) => ({
+      name: name.charAt(0).toUpperCase() + name.slice(1).replace(/_/g, ' '),
+      count,
+    }))
+    .sort((a, b) => b.count - a.count)
 
   // Derive CTEM process step from real data
   // 0: Scoping (no assets yet)
@@ -443,28 +445,35 @@ export default function Dashboard() {
         ) : (
           !error && (
             <>
-              <section className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
+              <section className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2 lg:h-[420px]">
                 {/* Asset Distribution */}
-                <Card>
+                <Card className="flex flex-col h-full min-h-[380px]">
                   <CardHeader>
                     <CardTitle>Asset Distribution</CardTitle>
                     <CardDescription>{stats.assets.total} total assets by type</CardDescription>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="flex-1 min-h-0">
                     {assetDistribution.length > 0 ? (
-                      <ResponsiveContainer width="100%" height={assetDistribution.length * 40}>
-                        <BarChart data={assetDistribution} layout="vertical" barCategoryGap="20%">
-                          <XAxis type="number" hide />
-                          <YAxis
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={assetDistribution} barCategoryGap="15%">
+                          <XAxis
                             dataKey="name"
-                            type="category"
-                            tick={{ fontSize: 12 }}
+                            tick={{ fontSize: 11 }}
                             tickLine={false}
                             axisLine={false}
-                            width={100}
+                            interval={0}
+                            angle={-45}
+                            textAnchor="end"
+                            height={80}
+                          />
+                          <YAxis
+                            tick={{ fontSize: 11 }}
+                            tickLine={false}
+                            axisLine={false}
+                            width={40}
                           />
                           <Tooltip />
-                          <Bar dataKey="count" fill="#3b82f6" radius={[0, 4, 4, 0]} barSize={20} />
+                          <Bar dataKey="count" fill="#3b82f6" radius={[4, 4, 0, 0]} />
                         </BarChart>
                       </ResponsiveContainer>
                     ) : (
@@ -475,16 +484,16 @@ export default function Dashboard() {
                   </CardContent>
                 </Card>
 
-                {/* Recent Activity */}
-                <Card>
-                  <CardHeader>
+                {/* Recent Activity — same height as Asset Distribution, scrolls */}
+                <Card className="flex flex-col h-full overflow-hidden">
+                  <CardHeader className="flex-shrink-0">
                     <CardTitle>Recent Activity</CardTitle>
                     <CardDescription>Latest security events and updates</CardDescription>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="flex-1 min-h-0 overflow-y-auto">
                     {stats.recentActivity.length > 0 ? (
                       <div className="space-y-4">
-                        {stats.recentActivity.slice(0, 5).map((activity, index) => (
+                        {stats.recentActivity.slice(0, 10).map((activity, index) => (
                           <ActivityItem
                             key={index}
                             icon={<AlertTriangle className="h-4 w-4 text-yellow-500" />}

@@ -398,6 +398,33 @@ export function useVerifyFindingApi(findingId: string) {
 }
 
 /**
+ * Request a verification scan on the asset associated with a fix_applied finding.
+ */
+export interface RequestVerificationScanInput {
+  scanner_name?: string
+  workflow_id?: string
+}
+
+export interface RequestVerificationScanResult {
+  finding_id: string
+  asset_id: string
+  asset_name: string
+  pipeline_run_id: string
+  scan_id: string
+}
+
+export function useRequestVerificationScanApi(findingId: string) {
+  const { currentTenant } = useTenant()
+
+  return useSWRMutation(
+    currentTenant && findingId ? `${buildFindingEndpoint(findingId)}/request-verification` : null,
+    async (url: string, { arg }: { arg: RequestVerificationScanInput }) => {
+      return post<RequestVerificationScanResult>(url, arg)
+    }
+  )
+}
+
+/**
  * Set finding tags
  */
 export function useSetFindingTagsApi(findingId: string) {

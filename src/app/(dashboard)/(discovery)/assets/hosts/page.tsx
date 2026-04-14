@@ -6,5 +6,7 @@ import { hostsConfig } from './config'
 
 export default function HostsPage() {
   const searchParams = useSearchParams()
-  return <AssetPage key={searchParams.toString()} config={hostsConfig} />
+  // Only remount when type/sub_type changes (overview click-through), NOT on page/q/sort changes
+  const remountKey = `${searchParams.get('type') ?? ''}_${searchParams.get('sub_type') ?? ''}`
+  return <AssetPage key={remountKey} config={hostsConfig} />
 }

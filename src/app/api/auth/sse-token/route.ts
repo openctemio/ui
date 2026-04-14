@@ -94,7 +94,7 @@ export async function GET() {
 
       response.cookies.set(ACCESS_TOKEN_COOKIE, accessToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: process.env.SECURE_COOKIES === 'true',
         sameSite: 'lax',
         maxAge: refreshResult.expiresIn,
         path: '/',
@@ -103,7 +103,7 @@ export async function GET() {
       if (refreshResult.refreshToken) {
         response.cookies.set(REFRESH_TOKEN_COOKIE, refreshResult.refreshToken, {
           httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
+          secure: process.env.SECURE_COOKIES === 'true',
           sameSite: 'lax',
           maxAge: 7 * 24 * 60 * 60, // 7 days
           path: '/',

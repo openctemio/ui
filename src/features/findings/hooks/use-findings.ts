@@ -297,6 +297,7 @@ const emptyStats: FindingStats = {
     new: 0,
     confirmed: 0,
     in_progress: 0,
+    fix_applied: 0,
     resolved: 0,
     false_positive: 0,
     accepted: 0,

@@ -100,8 +100,13 @@ export const ASSET_TYPE_CATEGORIES: Record<AssetTypeCategory, CategoryConfig> = 
     description: 'Internet-facing assets and entry points',
     types: ['domain', 'subdomain', 'certificate', 'ip_address'],
     items: [
-      { key: 'domain', label: 'Domains', url: '/assets/domains', countKey: 'domain' },
-      { key: 'subdomain', label: 'Subdomains', url: '/assets/domains', countKey: 'subdomain' },
+      { key: 'domain', label: 'Domains', url: '/assets/domains?type=domain', countKey: 'domain' },
+      {
+        key: 'subdomain',
+        label: 'Subdomains',
+        url: '/assets/domains?type=subdomain',
+        countKey: 'subdomain',
+      },
       {
         key: 'certificate',
         label: 'Certificates',
@@ -591,7 +596,13 @@ export type DomainDiscoverySource =
   | 'web_crawl' // Web crawler discovery
 
 /**
- * Asset metadata varies by asset type
+ * Asset metadata varies by asset type.
+ *
+ * IMPORTANT: All metadata keys use snake_case convention (e.g., cpu_cores, os_version).
+ * The backend normalizes camelCase keys to snake_case on ingest.
+ * Config files should access metadata via `Record<string, unknown>` with snake_case keys.
+ *
+ * @deprecated Use `Record<string, unknown>` with snake_case keys instead of this typed interface.
  */
 export interface AssetMetadata {
   // ============================================
@@ -977,7 +988,7 @@ export interface Asset {
    * exists. Persisted to assets.owner_ref (max 500 chars).
    */
   ownerRef?: string
-  metadata: AssetMetadata
+  metadata: AssetMetadata & Record<string, unknown>
   tags?: string[]
   primaryOwner?: OwnerBrief
   firstSeen: string
@@ -1002,7 +1013,7 @@ export interface CreateAssetInput {
   groupId?: string // Optional - can create ungrouped assets
   /** Free-text owner reference (team / contact / cost center). Max 500 chars. */
   ownerRef?: string
-  metadata?: Partial<AssetMetadata>
+  metadata?: Partial<AssetMetadata> & Record<string, unknown>
   tags?: string[]
 }
 
@@ -1018,7 +1029,7 @@ export interface UpdateAssetInput {
   groupId?: string | null // null to remove from group
   /** Free-text owner reference (team / contact / cost center). Max 500 chars. */
   ownerRef?: string
-  metadata?: Partial<AssetMetadata>
+  metadata?: Partial<AssetMetadata> & Record<string, unknown>
   tags?: string[]
 }
 

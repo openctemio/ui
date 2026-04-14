@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
+import { formatDistanceToNow } from 'date-fns'
 import {
   type ColumnDef,
   flexRender,
@@ -70,15 +71,15 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { useAssets, useAssetStats, type Asset } from '@/features/assets'
-import { TagFilter } from './tag-filter'
-import { PropertyFilter } from './property-filter'
+import { TagFilter, TagFilterChips } from './tag-filter'
+import { PropertyFilter, PropertyFilterChips } from './property-filter'
 import { Can, Permission, usePermissions } from '@/lib/permissions'
 import {
   ScopeBadge,
   getScopeMatchesForAsset,
-  calculateScopeCoverage,
   useScopeTargetsApi,
   useScopeExclusionsApi,
+  useScopeStatsApi,
   type ScopeMatchResult,
   type ScopeTarget,
   type ScopeExclusion,
@@ -147,9 +148,11 @@ const defaultStatusFilters: { value: string; label: string }[] = [
 
 interface AssetPageProps {
   config: AssetPageConfig
+  /** Extra content rendered in the filter bar (e.g., type filter buttons) */
+  headerExtra?: React.ReactNode
 }
 
-export function AssetPage({ config }: AssetPageProps) {
+export function AssetPage({ config, headerExtra }: AssetPageProps) {
   const { can } = usePermissions()
   const canWriteAssets = can(Permission.AssetsWrite)
   const canDeleteAssets = can(Permission.AssetsDelete)
@@ -195,8 +198,15 @@ export function AssetPage({ config }: AssetPageProps) {
 
   const subTypeFilter = urlSubType || config.subType
 
-  // Dynamic properties filter — controlled by PropertyFilter component
-  const [propertiesFilter, setPropertiesFilter] = useState<Record<string, string>>({})
+  // Dynamic properties filter — initialise from URL ?pf=key:value params (shareable)
+  const [propertiesFilter, setPropertiesFilter] = useState<Record<string, string>>(() => {
+    const pf: Record<string, string> = {}
+    for (const v of searchParams.getAll('pf')) {
+      const idx = v.indexOf(':')
+      if (idx > 0) pf[v.slice(0, idx)] = v.slice(idx + 1)
+    }
+    return pf
+  })
 
   // Data fetching with server-side pagination, search, tag, and properties filter.
   const { assets, total, totalPages, isLoading, mutate } = useAssets({
@@ -221,10 +231,15 @@ export function AssetPage({ config }: AssetPageProps) {
   // Stats always show the full type scope (not filtered by URL sub_type)
   // so stat cards like "Firewalls: 3, Routers: 1" remain visible even
   // when the table is filtered to a specific sub_type via URL param.
+  // Stats always reflect the FULL scope of this page (all types in config),
+  // never narrowed by URL ?type= filter. This way stat cards show the global
+  // picture (e.g., "15 Total, 2 Root, 13 Sub") even when the table is
+  // filtered to show only Root or only Sub.
   const { stats: typeStats, isLoading: statsLoading } = useAssetStats(
-    urlType ? ([urlType] as AssetType[]) : ((config.types || [config.type]) as AssetType[]),
+    (config.types || [config.type]) as AssetType[],
     undefined,
-    config.subType // Only use config's static subType (e.g., websites page), not URL override
+    config.subType,
+    config.countBy
   )
 
   // Headline assets — a separate query that fetches the FIRST page of assets
@@ -241,7 +256,6 @@ export function AssetPage({ config }: AssetPageProps) {
   // No extra API call — stat cards and scope widget work from the
   // same page of data already fetched for the table.
   const headlineAssets = assets
-  const scopeCoverageAssets = assets
 
   // True when the user has narrowed the view via a non-status filter.
   // Status tabs are intentionally excluded — they're navigation, not filtering.
@@ -319,6 +333,10 @@ export function AssetPage({ config }: AssetPageProps) {
     if (debouncedSearch) params.set('q', debouncedSearch)
     if (statusFilter !== 'all') params.set('status', statusFilter)
     if (tagFilters.length > 0) params.set('tags', tagFilters.join(','))
+    // Property filters as repeated ?pf=key:value params
+    for (const [key, val] of Object.entries(propertiesFilter)) {
+      params.append('pf', `${key}:${val}`)
+    }
     if (sorting.length > 0) {
       const defaultField = config.defaultSort?.field
       const defaultDesc = config.defaultSort?.direction === 'desc'
@@ -337,6 +355,7 @@ export function AssetPage({ config }: AssetPageProps) {
     debouncedSearch,
     statusFilter,
     tagFilters,
+    propertiesFilter,
     sorting,
     pathname,
     router,
@@ -345,9 +364,11 @@ export function AssetPage({ config }: AssetPageProps) {
     urlSubType,
   ])
 
-  // Scope integration — real API data
-  const { data: scopeTargetsData } = useScopeTargetsApi({ status: 'active', per_page: 500 })
-  const { data: scopeExclusionsData } = useScopeExclusionsApi({ status: 'active', per_page: 500 })
+  // Scope integration — server-side stats for the coverage bar,
+  // client-side matching for per-row scope badges.
+  const { data: scopeStats } = useScopeStatsApi()
+  const { data: scopeTargetsData } = useScopeTargetsApi({ status: 'active', per_page: 100 })
+  const { data: scopeExclusionsData } = useScopeExclusionsApi({ status: 'active', per_page: 100 })
   const scopeTargets = useMemo(
     () => (scopeTargetsData?.data ?? []).map(transformApiTarget),
     [scopeTargetsData]
@@ -372,30 +393,19 @@ export function AssetPage({ config }: AssetPageProps) {
     return map
   }, [transformedAssets, scopeTargets, scopeExclusions])
 
-  // Computes scope coverage from the dedicated `scopeCoverageAssets`
-  // query (above), NOT from the user-filtered `transformedAssets`.
-  // This means the widget reflects tenant-wide scope status for the
-  // current asset type and is unaffected by the search/tag filters
-  // and pagination state of the table below it.
-  //
-  // TODO(scope-stats-endpoint): build `/api/v1/scope/asset-coverage?type=…`
-  // that runs the scope-rule matching server-side and returns
-  // { total, in_scope, excluded, not_scoped } for the entire tenant
-  // dataset. Then this widget will work for tenants with >1000 assets
-  // of one type without the sample-based caveat.
-  const scopeCoverage = useMemo(
-    () =>
-      calculateScopeCoverage(
-        (scopeCoverageAssets ?? []).map((a) => ({
-          id: a.id,
-          name: a.name,
-          type: a.type ?? 'unclassified',
-        })),
-        scopeTargets,
-        scopeExclusions
-      ),
-    [scopeCoverageAssets, scopeTargets, scopeExclusions]
-  )
+  // Scope coverage from server-side stats endpoint (tenant-wide, not page-bounded).
+  const scopeCoverage = useMemo(() => {
+    const total = typeStats.total || transformedAssets.length
+    const coveragePercent = scopeStats?.coverage ?? 0
+    const inScope = Math.round((coveragePercent / 100) * total)
+    return {
+      totalAssets: total,
+      inScopeAssets: inScope,
+      excludedAssets: scopeStats?.active_exclusions ?? 0,
+      notScopedAssets: total - inScope,
+      coveragePercent,
+    }
+  }, [typeStats.total, transformedAssets.length, scopeStats])
 
   // Resolve status filter options
   const statusFilterOptions = useMemo(
@@ -763,6 +773,39 @@ export function AssetPage({ config }: AssetPageProps) {
         ),
         cell: ({ row }) => <RiskScoreBadge score={row.original.riskScore} size="sm" />,
       },
+      // Last Update — built-in for all asset pages, sortable
+      {
+        accessorKey: 'updatedAt',
+        header: ({ column }) => (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+            className="-ml-4"
+          >
+            Last Update
+            <ArrowUpDown className="ml-2 h-4 w-4" />
+          </Button>
+        ),
+        cell: ({ row }) => {
+          const raw = row.original.updatedAt
+          if (!raw) return <span className="text-muted-foreground">-</span>
+          const date = new Date(raw)
+          const now = new Date()
+          const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24))
+          const label = formatDistanceToNow(date, { addSuffix: true })
+          const color =
+            diffDays > 30
+              ? 'text-red-500'
+              : diffDays > 7
+                ? 'text-yellow-600 dark:text-yellow-400'
+                : 'text-muted-foreground'
+          return (
+            <span className={`text-xs ${color}`} title={date.toLocaleString()}>
+              {label}
+            </span>
+          )
+        },
+      },
       // Scope
       {
         id: 'scope-match',
@@ -890,7 +933,7 @@ export function AssetPage({ config }: AssetPageProps) {
           }
           description={`${typeStats.total.toLocaleString()} ${config.labelPlural.toLowerCase()} in your infrastructure`}
         >
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
             <Button variant="outline" onClick={handleExport}>
               <Download className="mr-2 h-4 w-4" />
               Export
@@ -909,7 +952,7 @@ export function AssetPage({ config }: AssetPageProps) {
           </div>
         </PageHeader>
 
-        {(urlSubType || urlType) && (
+        {(urlSubType || urlType) && !headerExtra && (
           <div className="flex items-center gap-2 mt-2">
             <Badge variant="secondary" className="gap-1">
               {urlSubType
@@ -1021,33 +1064,23 @@ export function AssetPage({ config }: AssetPageProps) {
         {/* Table */}
         <Card className="mt-6">
           <CardHeader>
-            <CardTitle>All {config.labelPlural}</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle>All {config.labelPlural}</CardTitle>
+              {headerExtra}
+            </div>
             {hasActiveFilter && !isLoading && (
               <CardDescription className="text-xs">
                 Filtered:{' '}
                 <span className="font-medium text-foreground">{total.toLocaleString()}</span> of{' '}
                 <span className="font-medium">{typeStats.total.toLocaleString()}</span>{' '}
                 {config.labelPlural.toLowerCase()}
-                {tagFilters.length > 0 && (
-                  <>
-                    {' '}
-                    — matching tag{tagFilters.length === 1 ? '' : 's'}{' '}
-                    <span className="font-medium">{tagFilters.join(', ')}</span>
-                  </>
-                )}
-                {debouncedSearch && (
-                  <>
-                    {' '}
-                    — search <span className="font-medium">&ldquo;{debouncedSearch}&rdquo;</span>
-                  </>
-                )}
               </CardDescription>
             )}
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col gap-3 mb-4">
-              {/* Row 1: Search + Status + Filters + Bulk actions */}
-              <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex flex-col gap-2 mb-4">
+              {/* Row 1: Search + Status + Tags + Add Filter (scrollable, no wrap) */}
+              <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
                 <div className="relative flex-1 min-w-[200px] max-w-md">
                   <SearchIcon className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -1080,7 +1113,7 @@ export function AssetPage({ config }: AssetPageProps) {
                   </SelectContent>
                 </Select>
 
-                <TagFilter value={tagFilters} onChange={setTagFilters} />
+                <TagFilter value={tagFilters} onChange={setTagFilters} types={typeFilter} />
 
                 <PropertyFilter
                   types={typeFilter}
@@ -1090,8 +1123,6 @@ export function AssetPage({ config }: AssetPageProps) {
                     setPropertiesFilter(pf)
                     setCurrentPage(1)
                   }}
-                  filtered={total}
-                  total={typeStats.total}
                 />
 
                 {Object.keys(rowSelection).length > 0 && (
@@ -1130,7 +1161,17 @@ export function AssetPage({ config }: AssetPageProps) {
                 )}
               </div>
 
-              {/* PropertyFilter shows its own chips inline */}
+              {/* Row 2: Active filter chips — tags + properties (separate row) */}
+              <TagFilterChips value={tagFilters} onChange={setTagFilters} />
+              <PropertyFilterChips
+                value={propertiesFilter}
+                onChange={(pf) => {
+                  setPropertiesFilter(pf)
+                  setCurrentPage(1)
+                }}
+                filtered={total}
+                total={typeStats.total}
+              />
             </div>
 
             {/* Table */}

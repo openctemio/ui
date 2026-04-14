@@ -44,10 +44,10 @@ const columns: ColumnDef<Asset>[] = [
       ),
   },
   {
-    id: 'httpStatus',
+    id: 'http_status',
     header: 'Status Code',
     cell: ({ row }) => {
-      const status = (row.original.metadata.httpStatus as number) || 200
+      const status = (row.original.metadata.http_status as number) || 200
       const statusClass =
         status >= 200 && status < 300
           ? 'text-green-500 bg-green-500/10'
@@ -101,14 +101,14 @@ export const websitesConfig: AssetPageConfig = {
       isMetadata: true,
     },
     {
-      name: 'httpStatus',
+      name: 'http_status',
       label: 'HTTP Status Code',
       type: 'number',
       placeholder: '200',
       isMetadata: true,
     },
     {
-      name: 'responseTime',
+      name: 'response_time',
       label: 'Response Time (ms)',
       type: 'number',
       placeholder: '150',
@@ -139,18 +139,19 @@ export const websitesConfig: AssetPageConfig = {
 
   includeGroupSelect: true,
 
+  countBy: ['ssl'],
+
   statsCards: [
     {
-      // metadata.ssl isn't aggregated — current page only
       title: 'SSL Secure',
       icon: ShieldCheck,
-      compute: (assets) => assets.filter((a) => a.metadata.ssl).length,
+      compute: (_assets, stats) => stats.metadataCounts?.ssl?.true ?? 0,
       variant: 'success',
     },
     {
       title: 'SSL Insecure',
       icon: ShieldX,
-      compute: (assets) => assets.filter((a) => !a.metadata.ssl).length,
+      compute: (_assets, stats) => stats.metadataCounts?.ssl?.false ?? 0,
       variant: 'danger',
     },
     {
@@ -181,7 +182,7 @@ export const websitesConfig: AssetPageConfig = {
       iconBg: 'bg-blue-500/10',
       iconColor: 'text-blue-500',
       label: 'Response (ms)',
-      getValue: (asset) => (asset.metadata.responseTime as number) || '-',
+      getValue: (asset) => (asset.metadata.response_time as number) || '-',
     },
   ],
 
@@ -192,7 +193,7 @@ export const websitesConfig: AssetPageConfig = {
         {
           label: 'HTTP Status',
           getValue: (asset) => {
-            const status = (asset.metadata.httpStatus as number) || 200
+            const status = (asset.metadata.http_status as number) || 200
             return (
               <Badge variant="outline" className={status < 400 ? 'text-green-500' : 'text-red-500'}>
                 {status}
@@ -256,7 +257,7 @@ export const websitesConfig: AssetPageConfig = {
       },
     },
     { header: 'SSL', accessor: (a) => (a.metadata.ssl ? 'Yes' : 'No') },
-    { header: 'HTTP Status', accessor: (a) => (a.metadata.httpStatus as number) || 200 },
+    { header: 'HTTP Status', accessor: (a) => (a.metadata.http_status as number) || 200 },
     { header: 'Status', accessor: (a) => a.status },
     { header: 'Risk Score', accessor: (a) => a.riskScore },
     { header: 'Findings', accessor: (a) => a.findingCount },

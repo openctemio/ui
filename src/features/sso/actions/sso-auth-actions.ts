@@ -81,7 +81,7 @@ export async function getSSOAuthorizeUrl(
     const cookieStore = await cookies()
     cookieStore.set('sso_state', data.state, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: process.env.SECURE_COOKIES === 'true',
       sameSite: 'lax',
       maxAge: 600, // 10 minutes
       path: '/',
@@ -90,7 +90,7 @@ export async function getSSOAuthorizeUrl(
     // Store org slug for callback
     cookieStore.set('sso_org', orgSlug, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: process.env.SECURE_COOKIES === 'true',
       sameSite: 'lax',
       maxAge: 600,
       path: '/',
@@ -100,7 +100,7 @@ export async function getSSOAuthorizeUrl(
     if (redirectTo) {
       cookieStore.set('sso_redirect', validateRedirectUrl(redirectTo, '/'), {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: process.env.SECURE_COOKIES === 'true',
         sameSite: 'lax',
         maxAge: 600,
         path: '/',
@@ -169,7 +169,7 @@ export async function handleSSOCallback(
     // Store tokens in HttpOnly cookies
     await setServerCookie(env.auth.cookieName, data.access_token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: process.env.SECURE_COOKIES === 'true',
       sameSite: 'lax',
       maxAge: data.expires_in || 900,
       path: '/',
@@ -178,7 +178,7 @@ export async function handleSSOCallback(
     if (data.refresh_token) {
       await setServerCookie(env.auth.refreshCookieName, data.refresh_token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: process.env.SECURE_COOKIES === 'true',
         sameSite: 'lax',
         maxAge: 7 * 24 * 60 * 60, // 7 days
         path: '/',
@@ -189,7 +189,7 @@ export async function handleSSOCallback(
     if (data.tenant_slug) {
       cookieStore.set(env.cookies.tenant, data.tenant_slug, {
         httpOnly: false,
-        secure: process.env.NODE_ENV === 'production',
+        secure: process.env.SECURE_COOKIES === 'true',
         sameSite: 'lax',
         maxAge: 30 * 24 * 60 * 60, // 30 days
         path: '/',

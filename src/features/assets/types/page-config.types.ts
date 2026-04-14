@@ -48,6 +48,9 @@ export interface AssetPageConfig {
   /** Stats card definitions (beyond the default "Total" card) */
   statsCards?: StatsCardConfig[]
 
+  /** JSONB property fields to count server-side (passed as ?count_by=field1,field2) */
+  countBy?: string[]
+
   /** Detail sheet overview sections */
   detailSections?: DetailSectionConfig[]
 

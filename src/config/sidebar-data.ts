@@ -54,6 +54,7 @@ import {
   FileSliders,
   Wrench,
   // New icons for CTEM architecture
+  LayoutGrid,
   ShieldAlert,
   Package,
   Scale,
@@ -61,6 +62,7 @@ import {
   // CTEM Phase 1 icons
   TrendingUp,
   AlertTriangle,
+  Link2,
   // Access Control icons
   FolderKey,
   Key,
@@ -141,6 +143,13 @@ export const sidebarData: SidebarData = {
           url: '/scope-config',
           icon: Settings2,
           permission: Permission.ScopeRead,
+          module: 'assets',
+        },
+        {
+          title: 'Relationships',
+          url: '/relationships/suggestions',
+          icon: Link2,
+          permission: Permission.AssetsRead,
           module: 'assets',
         },
         {
@@ -426,6 +435,11 @@ export const sidebarData: SidebarData = {
               title: 'Templates',
               url: '/pentest/templates',
               icon: BookTemplate,
+            },
+            {
+              title: 'MITRE Coverage',
+              url: '/pentest/mitre-coverage',
+              icon: LayoutGrid,
             },
           ],
         },

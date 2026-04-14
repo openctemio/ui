@@ -235,7 +235,7 @@ export async function loginAction(input: LoginInput): Promise<LoginResult> {
     // Store refresh token in httpOnly cookie
     await setServerCookie(env.auth.refreshCookieName, loginData.refresh_token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: process.env.SECURE_COOKIES === 'true',
       sameSite: 'lax',
       maxAge: loginData.expires_in || 7 * 24 * 60 * 60, // Default 7 days
       path: '/',
@@ -284,7 +284,7 @@ export async function loginAction(input: LoginInput): Promise<LoginResult> {
         }),
         {
           httpOnly: false, // Frontend needs to read this
-          secure: process.env.NODE_ENV === 'production',
+          secure: process.env.SECURE_COOKIES === 'true',
           sameSite: 'lax',
           maxAge: 5 * 60, // 5 minutes - short lived, only needed for initial team creation
           path: '/',
@@ -320,7 +320,7 @@ export async function loginAction(input: LoginInput): Promise<LoginResult> {
       // when this cookie is missing as a defence-in-depth.
       await setServerCookie(env.cookies.pendingTenants, JSON.stringify(loginData.tenants), {
         httpOnly: false, // Client needs to read this
-        secure: process.env.NODE_ENV === 'production',
+        secure: process.env.SECURE_COOKIES === 'true',
         sameSite: 'lax',
         maxAge: 60 * 60, // 1 hour
         path: '/',
@@ -358,7 +358,7 @@ export async function loginAction(input: LoginInput): Promise<LoginResult> {
       )
       await setServerCookie(env.auth.cookieName, tokenData.access_token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: process.env.SECURE_COOKIES === 'true',
         sameSite: 'lax',
         maxAge: tokenData.expires_in || 900, // Default 15 minutes
         path: '/',
@@ -369,7 +369,7 @@ export async function loginAction(input: LoginInput): Promise<LoginResult> {
       if (tokenData.refresh_token) {
         await setServerCookie(env.auth.refreshCookieName, tokenData.refresh_token, {
           httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
+          secure: process.env.SECURE_COOKIES === 'true',
           sameSite: 'lax',
           maxAge: 7 * 24 * 60 * 60, // 7 days
           path: '/',
@@ -388,7 +388,7 @@ export async function loginAction(input: LoginInput): Promise<LoginResult> {
         }),
         {
           httpOnly: false, // Can be read by client
-          secure: process.env.NODE_ENV === 'production',
+          secure: process.env.SECURE_COOKIES === 'true',
           sameSite: 'lax',
           maxAge: 7 * 24 * 60 * 60,
           path: '/',
@@ -463,7 +463,7 @@ export async function selectTenantAction(tenantId: string): Promise<LoginResult>
     // Store access token in httpOnly cookie
     await setServerCookie(env.auth.cookieName, tokenData.access_token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: process.env.SECURE_COOKIES === 'true',
       sameSite: 'lax',
       maxAge: tokenData.expires_in || 900,
       path: '/',
@@ -473,7 +473,7 @@ export async function selectTenantAction(tenantId: string): Promise<LoginResult>
     if (tokenData.refresh_token) {
       await setServerCookie(env.auth.refreshCookieName, tokenData.refresh_token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: process.env.SECURE_COOKIES === 'true',
         sameSite: 'lax',
         maxAge: 7 * 24 * 60 * 60,
         path: '/',
@@ -491,7 +491,7 @@ export async function selectTenantAction(tenantId: string): Promise<LoginResult>
       }),
       {
         httpOnly: false,
-        secure: process.env.NODE_ENV === 'production',
+        secure: process.env.SECURE_COOKIES === 'true',
         sameSite: 'lax',
         maxAge: 7 * 24 * 60 * 60,
         path: '/',
@@ -544,7 +544,7 @@ export async function refreshLocalTokenAction(): Promise<RefreshTokenResult> {
     // Update cookies with new tokens
     await setServerCookie(env.auth.cookieName, data.access_token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: process.env.SECURE_COOKIES === 'true',
       sameSite: 'lax',
       maxAge: data.expires_in || 900,
       path: '/',
@@ -553,7 +553,7 @@ export async function refreshLocalTokenAction(): Promise<RefreshTokenResult> {
     if (data.refresh_token) {
       await setServerCookie(env.auth.refreshCookieName, data.refresh_token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: process.env.SECURE_COOKIES === 'true',
         sameSite: 'lax',
         maxAge: 7 * 24 * 60 * 60,
         path: '/',
@@ -825,7 +825,7 @@ export async function createFirstTeamAction(
     // Store access token in httpOnly cookie
     await setServerCookie(env.auth.cookieName, data.access_token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: process.env.SECURE_COOKIES === 'true',
       sameSite: 'lax',
       maxAge: data.expires_in || 900,
       path: '/',
@@ -834,7 +834,7 @@ export async function createFirstTeamAction(
     // Store new refresh token
     await setServerCookie(env.auth.refreshCookieName, data.refresh_token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: process.env.SECURE_COOKIES === 'true',
       sameSite: 'lax',
       maxAge: 7 * 24 * 60 * 60,
       path: '/',
@@ -851,7 +851,7 @@ export async function createFirstTeamAction(
       }),
       {
         httpOnly: false, // Frontend needs to read this
-        secure: process.env.NODE_ENV === 'production',
+        secure: process.env.SECURE_COOKIES === 'true',
         sameSite: 'lax',
         maxAge: 7 * 24 * 60 * 60,
         path: '/',

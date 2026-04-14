@@ -6,5 +6,6 @@ import { servicesConfig } from './config'
 
 export default function ServicesPage() {
   const searchParams = useSearchParams()
-  return <AssetPage key={searchParams.toString()} config={servicesConfig} />
+  const remountKey = `${searchParams.get('type') ?? ''}_${searchParams.get('sub_type') ?? ''}`
+  return <AssetPage key={remountKey} config={servicesConfig} />
 }

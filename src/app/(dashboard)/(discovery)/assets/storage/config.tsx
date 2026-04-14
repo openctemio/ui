@@ -38,10 +38,10 @@ export const storageConfig: AssetPageConfig = {
 
   columns: [
     {
-      accessorKey: 'metadata.cloudProvider',
+      accessorKey: 'metadata.cloud_provider',
       header: 'Provider',
       cell: ({ row }) => {
-        const provider = row.original.metadata.cloudProvider as string
+        const provider = row.original.metadata.cloud_provider as string
         const style = providerStyles[provider || ''] || providerStyles.aws
         const label = providerLabels[provider || ''] || provider
         return <Badge className={`${style.bg} ${style.text} border-0 font-semibold`}>{label}</Badge>
@@ -55,10 +55,10 @@ export const storageConfig: AssetPageConfig = {
       ),
     },
     {
-      accessorKey: 'metadata.totalSizeGB',
+      accessorKey: 'metadata.total_size_gb',
       header: 'Size',
       cell: ({ row }) => {
-        const size = row.original.metadata.totalSizeGB as number
+        const size = row.original.metadata.total_size_gb as number
         if (!size) return <span className="text-muted-foreground">-</span>
         return (
           <span className="text-sm font-medium">
@@ -68,11 +68,11 @@ export const storageConfig: AssetPageConfig = {
       },
     },
     {
-      accessorKey: 'metadata.isPubliclyAccessible',
+      accessorKey: 'metadata.is_publicly_accessible',
       header: 'Security',
       cell: ({ row }) => {
-        const isPublic = row.original.metadata.isPubliclyAccessible as boolean
-        const encrypted = row.original.metadata.encryptionEnabled as boolean
+        const isPublic = row.original.metadata.is_publicly_accessible as boolean
+        const encrypted = row.original.metadata.encryption_enabled as boolean
         return (
           <div className="flex items-center gap-1">
             {isPublic ? (
@@ -97,24 +97,26 @@ export const storageConfig: AssetPageConfig = {
     },
   ],
 
+  countBy: ['is_publicly_accessible', 'encryption_enabled'],
+
   statsCards: [
     {
-      title: 'Public Buckets',
+      title: 'Public',
       icon: Globe,
-      compute: (assets) => assets.filter((a) => a.metadata.isPubliclyAccessible).length,
-      variant: 'warning',
+      compute: (_assets, stats) => stats.metadataCounts?.is_publicly_accessible?.true ?? 0,
+      variant: 'danger',
     },
     {
       title: 'Encrypted',
       icon: Lock,
-      compute: (assets) => assets.filter((a) => a.metadata.encryptionEnabled).length,
+      compute: (_assets, stats) => stats.metadataCounts?.encryption_enabled?.true ?? 0,
       variant: 'success',
     },
     {
       title: 'With Findings',
       icon: AlertTriangle,
-      compute: (assets) => assets.filter((a) => a.findingCount > 0).length,
-      variant: 'danger',
+      compute: (_assets, stats) => stats.withFindings,
+      variant: 'warning',
     },
   ],
 
@@ -134,7 +136,7 @@ export const storageConfig: AssetPageConfig = {
       fullWidth: true,
     },
     {
-      name: 'cloudProvider',
+      name: 'cloud_provider',
       label: 'Cloud Provider',
       type: 'select',
       isMetadata: true,
@@ -155,35 +157,35 @@ export const storageConfig: AssetPageConfig = {
       required: true,
     },
     {
-      name: 'totalSizeGB',
+      name: 'total_size_gb',
       label: 'Size (GB)',
       type: 'number',
       placeholder: '1250',
       isMetadata: true,
     },
     {
-      name: 'objectCount',
+      name: 'object_count',
       label: 'Object Count',
       type: 'number',
       placeholder: '45000',
       isMetadata: true,
     },
     {
-      name: 'isPubliclyAccessible',
+      name: 'is_publicly_accessible',
       label: 'Publicly Accessible',
       type: 'boolean',
       isMetadata: true,
       defaultValue: false,
     },
     {
-      name: 'encryptionEnabled',
+      name: 'encryption_enabled',
       label: 'Encryption Enabled',
       type: 'boolean',
       isMetadata: true,
       defaultValue: false,
     },
     {
-      name: 'versioningEnabled',
+      name: 'versioning_enabled',
       label: 'Versioning Enabled',
       type: 'boolean',
       isMetadata: true,
@@ -221,7 +223,7 @@ export const storageConfig: AssetPageConfig = {
       iconColor: 'text-blue-500',
       label: 'Objects',
       getValue: (asset) => {
-        const count = asset.metadata.objectCount as number
+        const count = asset.metadata.object_count as number
         return count ? count.toLocaleString() : '-'
       },
     },
@@ -234,7 +236,7 @@ export const storageConfig: AssetPageConfig = {
         {
           label: 'Provider',
           getValue: (asset) => {
-            const provider = asset.metadata.cloudProvider as string
+            const provider = asset.metadata.cloud_provider as string
             const style = providerStyles[provider || ''] || providerStyles.aws
             const label = providerLabels[provider || ''] || provider
             return (
@@ -249,7 +251,7 @@ export const storageConfig: AssetPageConfig = {
         {
           label: 'Size',
           getValue: (asset) => {
-            const size = asset.metadata.totalSizeGB as number
+            const size = asset.metadata.total_size_gb as number
             if (!size) return '-'
             return size >= 1000 ? `${(size / 1000).toFixed(1)} TB` : `${size} GB`
           },
@@ -257,7 +259,7 @@ export const storageConfig: AssetPageConfig = {
         {
           label: 'Object Count',
           getValue: (asset) => {
-            const count = asset.metadata.objectCount as number
+            const count = asset.metadata.object_count as number
             return count ? count.toLocaleString() : '-'
           },
         },
@@ -269,7 +271,7 @@ export const storageConfig: AssetPageConfig = {
         {
           label: 'Access',
           getValue: (asset) => {
-            const isPublic = asset.metadata.isPubliclyAccessible as boolean
+            const isPublic = asset.metadata.is_publicly_accessible as boolean
             return isPublic ? (
               <div className="flex items-center gap-2">
                 <Globe className="h-4 w-4 text-yellow-500" />
@@ -288,9 +290,9 @@ export const storageConfig: AssetPageConfig = {
           getValue: (asset) => (
             <div className="flex items-center gap-2">
               <Lock
-                className={`h-4 w-4 ${asset.metadata.encryptionEnabled ? 'text-green-500' : 'text-muted-foreground'}`}
+                className={`h-4 w-4 ${asset.metadata.encryption_enabled ? 'text-green-500' : 'text-muted-foreground'}`}
               />
-              <span>{asset.metadata.encryptionEnabled ? 'Encrypted' : 'Not Encrypted'}</span>
+              <span>{asset.metadata.encryption_enabled ? 'Encrypted' : 'Not Encrypted'}</span>
             </div>
           ),
         },
@@ -299,9 +301,9 @@ export const storageConfig: AssetPageConfig = {
           getValue: (asset) => (
             <div className="flex items-center gap-2">
               <RefreshCw
-                className={`h-4 w-4 ${asset.metadata.versioningEnabled ? 'text-blue-500' : 'text-muted-foreground'}`}
+                className={`h-4 w-4 ${asset.metadata.versioning_enabled ? 'text-blue-500' : 'text-muted-foreground'}`}
               />
-              <span>{asset.metadata.versioningEnabled ? 'Enabled' : 'Disabled'}</span>
+              <span>{asset.metadata.versioning_enabled ? 'Enabled' : 'Disabled'}</span>
             </div>
           ),
         },
@@ -316,29 +318,29 @@ export const storageConfig: AssetPageConfig = {
 
   exportFields: [
     { header: 'Name', accessor: (a: Asset) => a.name },
-    { header: 'Provider', accessor: (a: Asset) => (a.metadata.cloudProvider as string) || '' },
+    { header: 'Provider', accessor: (a: Asset) => (a.metadata.cloud_provider as string) || '' },
     { header: 'Region', accessor: (a: Asset) => (a.metadata.region as string) || '' },
     {
       header: 'Size (GB)',
-      accessor: (a: Asset) => String(a.metadata.totalSizeGB ?? ''),
+      accessor: (a: Asset) => String(a.metadata.total_size_gb ?? ''),
     },
     {
       header: 'Objects',
-      accessor: (a: Asset) => String(a.metadata.objectCount ?? ''),
+      accessor: (a: Asset) => String(a.metadata.object_count ?? ''),
     },
     {
       header: 'Public',
-      accessor: (a: Asset) => a.metadata.isPubliclyAccessible,
+      accessor: (a: Asset) => a.metadata.is_publicly_accessible,
       transform: (v: unknown) => (v ? 'Yes' : 'No'),
     },
     {
       header: 'Encrypted',
-      accessor: (a: Asset) => a.metadata.encryptionEnabled,
+      accessor: (a: Asset) => a.metadata.encryption_enabled,
       transform: (v: unknown) => (v ? 'Yes' : 'No'),
     },
     {
       header: 'Versioning',
-      accessor: (a: Asset) => a.metadata.versioningEnabled,
+      accessor: (a: Asset) => a.metadata.versioning_enabled,
       transform: (v: unknown) => (v ? 'Yes' : 'No'),
     },
     { header: 'Status', accessor: (a: Asset) => a.status },
@@ -353,6 +355,6 @@ export const storageConfig: AssetPageConfig = {
       { label: 'GCP (GCS)', value: 'gcp' },
       { label: 'Azure (Blob)', value: 'azure' },
     ],
-    filterFn: (asset, value) => (asset.metadata.cloudProvider as string) === value,
+    filterFn: (asset, value) => (asset.metadata.cloud_provider as string) === value,
   },
 }

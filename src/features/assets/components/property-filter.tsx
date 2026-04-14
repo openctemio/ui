@@ -101,8 +101,8 @@ export function PropertyFilter({
   const handleClearAll = () => onChange({})
 
   return (
-    <div className="flex items-center gap-1.5 flex-wrap">
-      {/* Add filter button — always first, stable position */}
+    <>
+      {/* Add filter button — inline in the controls row */}
       <Popover
         open={open}
         onOpenChange={(o) => {
@@ -169,11 +169,40 @@ export function PropertyFilter({
           )}
         </PopoverContent>
       </Popover>
+    </>
+  )
+}
 
-      {/* Active filter chips — after button so button stays in place */}
+/**
+ * Active filter chips — rendered separately so they can be placed on their own row.
+ */
+export function PropertyFilterChips({
+  value,
+  onChange,
+  facetLabels,
+  filtered,
+  total,
+}: {
+  value: Record<string, string>
+  onChange: (value: Record<string, string>) => void
+  facetLabels?: Record<string, string>
+  filtered?: number
+  total?: number
+}) {
+  const activeFilters = Object.entries(value)
+  if (activeFilters.length === 0) return null
+
+  const handleRemove = (key: string) => {
+    const next = { ...value }
+    delete next[key]
+    onChange(next)
+  }
+
+  return (
+    <div className="flex items-center gap-1.5 flex-wrap">
       {activeFilters.map(([key, val]) => (
         <Badge key={key} variant="secondary" className="gap-1 text-xs h-7 pl-2 pr-1">
-          <span className="text-muted-foreground">{facetLabelMap[key] || key}:</span>
+          <span className="text-muted-foreground">{facetLabels?.[key] || key}:</span>
           <span className="font-medium">{val}</span>
           <button
             type="button"
@@ -189,7 +218,7 @@ export function PropertyFilter({
         </Badge>
       ))}
 
-      {activeFilters.length > 0 && filtered !== undefined && total !== undefined && (
+      {filtered !== undefined && total !== undefined && (
         <span className="text-xs text-muted-foreground">
           {filtered.toLocaleString()} / {total.toLocaleString()}
         </span>
@@ -199,7 +228,7 @@ export function PropertyFilter({
         <button
           type="button"
           className="text-xs text-muted-foreground hover:text-foreground underline-offset-2 hover:underline"
-          onClick={handleClearAll}
+          onClick={() => onChange({})}
         >
           Clear all
         </button>

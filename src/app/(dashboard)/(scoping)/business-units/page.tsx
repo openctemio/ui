@@ -70,14 +70,13 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from 'sonner'
+import { type BusinessUnit, type Criticality, type RiskTolerance } from '@/features/business-units'
 import {
-  mockBusinessUnits,
-  getChildBusinessUnits,
-  type BusinessUnit,
-  type Criticality,
-  type RiskTolerance,
-} from '@/features/business-units'
-import { useBusinessUnits } from '@/features/business-units/api/use-business-units'
+  useBusinessUnits,
+  useCreateBusinessUnit,
+  useUpdateBusinessUnit,
+} from '@/features/business-units/api/use-business-units'
+import { del } from '@/lib/api/client'
 
 const criticalityColors: Record<Criticality, string> = {
   critical: 'bg-red-500/10 text-red-500 border-red-500/20',
@@ -102,11 +101,18 @@ const riskToleranceColors: Record<RiskTolerance, string> = {
   very_high: 'bg-red-500/10 text-red-500 border-red-500/20',
 }
 
+/** Filter children of a given parent from the full list */
+function getChildUnits(allUnits: BusinessUnit[], parentId: string): BusinessUnit[] {
+  return allUnits.filter((bu) => bu.parentId === parentId)
+}
+
 export default function BusinessUnitsPage() {
   // Fetch from API, fallback to mock data if API returns empty
-  const { data: apiData } = useBusinessUnits()
+  const { data: apiData, mutate: refreshList } = useBusinessUnits()
+  const { trigger: createBU } = useCreateBusinessUnit()
+  const { trigger: updateBU } = useUpdateBusinessUnit()
   const apiBUs: BusinessUnit[] = useMemo(() => {
-    if (!apiData?.data?.length) return mockBusinessUnits
+    if (!apiData?.data?.length) return []
     return apiData.data.map(
       (bu) =>
         ({
@@ -130,9 +136,9 @@ export default function BusinessUnitsPage() {
         }) as unknown as BusinessUnit
     )
   }, [apiData])
-  const [businessUnits, setBusinessUnits] = useState<BusinessUnit[]>(mockBusinessUnits)
+  const [businessUnits, setBusinessUnits] = useState<BusinessUnit[]>([])
   useEffect(() => {
-    if (apiBUs !== mockBusinessUnits) setBusinessUnits(apiBUs)
+    setBusinessUnits(apiBUs)
   }, [apiBUs])
   const [viewUnit, setViewUnit] = useState<BusinessUnit | null>(null)
   const [editUnit, setEditUnit] = useState<BusinessUnit | null>(null)
@@ -193,68 +199,71 @@ export default function BusinessUnitsPage() {
     })
   }
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!formData.name || !formData.owner || !formData.ownerEmail) {
       toast.error('Please fill in all required fields')
       return
     }
-    const newUnit: BusinessUnit = {
-      id: `bu-${Date.now()}`,
-      name: formData.name,
-      description: formData.description || undefined,
-      parentId: formData.parentId || undefined,
-      status: 'active',
-      criticality: formData.criticality,
-      riskTolerance: formData.riskTolerance,
-      owner: formData.owner,
-      ownerEmail: formData.ownerEmail,
-      assetCount: 0,
-      employeeCount: 0,
-      riskScore: 50,
-      complianceScore: 80,
-      tags: formData.tags ? formData.tags.split(',').map((t) => t.trim()) : [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+    try {
+      await createBU({
+        name: formData.name,
+        description: formData.description || '',
+        owner_name: formData.owner,
+        owner_email: formData.ownerEmail,
+        tags: formData.tags
+          ? formData.tags
+              .split(',')
+              .map((t) => t.trim())
+              .filter(Boolean)
+          : [],
+      })
+      await refreshList()
+      toast.success('Business unit created successfully')
+      setIsCreateOpen(false)
+      resetForm()
+    } catch {
+      toast.error('Failed to create business unit')
     }
-    setBusinessUnits((prev) => [...prev, newUnit])
-    toast.success('Business unit created successfully')
-    setIsCreateOpen(false)
-    resetForm()
   }
 
-  const handleEdit = () => {
+  const handleEdit = async () => {
     if (!editUnit || !formData.name || !formData.owner || !formData.ownerEmail) {
       toast.error('Please fill in all required fields')
       return
     }
-    setBusinessUnits((prev) =>
-      prev.map((unit) =>
-        unit.id === editUnit.id
-          ? {
-              ...unit,
-              name: formData.name,
-              description: formData.description || undefined,
-              parentId: formData.parentId || undefined,
-              criticality: formData.criticality,
-              riskTolerance: formData.riskTolerance,
-              owner: formData.owner,
-              ownerEmail: formData.ownerEmail,
-              tags: formData.tags ? formData.tags.split(',').map((t) => t.trim()) : [],
-              updatedAt: new Date().toISOString(),
-            }
-          : unit
-      )
-    )
-    toast.success('Business unit updated successfully')
-    setEditUnit(null)
-    resetForm()
+    try {
+      await updateBU({
+        id: editUnit.id,
+        name: formData.name,
+        description: formData.description || '',
+        owner_name: formData.owner,
+        owner_email: formData.ownerEmail,
+        tags: formData.tags
+          ? formData.tags
+              .split(',')
+              .map((t) => t.trim())
+              .filter(Boolean)
+          : [],
+      })
+      await refreshList()
+      toast.success('Business unit updated successfully')
+      setEditUnit(null)
+      resetForm()
+    } catch {
+      toast.error('Failed to update business unit')
+    }
   }
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!deleteUnit) return
-    setBusinessUnits((prev) => prev.filter((unit) => unit.id !== deleteUnit.id))
-    toast.success('Business unit deleted successfully')
-    setDeleteUnit(null)
+    try {
+      await del(`/api/v1/business-units/${deleteUnit.id}`)
+      await refreshList()
+      toast.success('Business unit deleted successfully')
+      setDeleteUnit(null)
+    } catch {
+      toast.error('Failed to delete business unit')
+    }
   }
 
   const openEdit = (unit: BusinessUnit) => {
@@ -277,7 +286,7 @@ export default function BusinessUnitsPage() {
       header: ({ column }) => <DataTableColumnHeader column={column} title="Business Unit" />,
       cell: ({ row }) => {
         const unit = row.original
-        const children = getChildBusinessUnits(unit.id)
+        const children = getChildUnits(businessUnits, unit.id)
         return (
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
@@ -820,7 +829,7 @@ export default function BusinessUnitsPage() {
                         <div className="flex flex-wrap items-center gap-2">
                           <ChevronRight className="h-4 w-4 text-muted-foreground" />
                           <span className="font-medium">
-                            {mockBusinessUnits.find((u) => u.id === viewUnit.parentId)?.name}
+                            {businessUnits.find((u) => u.id === viewUnit.parentId)?.name}
                           </span>
                         </div>
                       </Card>
@@ -829,9 +838,9 @@ export default function BusinessUnitsPage() {
 
                   <div>
                     <p className="text-sm text-muted-foreground mb-2">Sub-units</p>
-                    {getChildBusinessUnits(viewUnit.id).length > 0 ? (
+                    {getChildUnits(businessUnits, viewUnit.id).length > 0 ? (
                       <div className="space-y-2">
-                        {getChildBusinessUnits(viewUnit.id).map((child) => (
+                        {getChildUnits(businessUnits, viewUnit.id).map((child) => (
                           <Card key={child.id} className="p-3">
                             <div className="flex items-center justify-between">
                               <div className="flex flex-wrap items-center gap-2">
@@ -885,7 +894,7 @@ export default function BusinessUnitsPage() {
             <AlertDialogDescription>
               Are you sure you want to delete &quot;{deleteUnit?.name}&quot;? This action cannot be
               undone.
-              {getChildBusinessUnits(deleteUnit?.id || '').length > 0 && (
+              {getChildUnits(businessUnits, deleteUnit?.id || '').length > 0 && (
                 <span className="block mt-2 text-destructive">
                   Warning: This unit has sub-units that will also be affected.
                 </span>

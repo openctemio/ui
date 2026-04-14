@@ -149,11 +149,9 @@ export const servicesConfig: AssetPageConfig = {
       variant: 'success',
     },
     {
-      // metadata.protocol isn't aggregated by /assets/stats — current page only
-      title: 'TCP Services',
-      icon: Network,
-      compute: (assets) =>
-        assets.filter((a) => (a.metadata.protocol as string)?.toLowerCase() === 'tcp').length,
+      title: 'Total',
+      icon: Server,
+      compute: (_assets, stats) => stats.total,
     },
     {
       title: 'With Findings',

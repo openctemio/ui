@@ -77,13 +77,9 @@ import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
 import { toast } from 'sonner'
 import { copyToClipboard } from '@/lib/clipboard'
 import { Can, Permission } from '@/lib/permissions'
-import {
-  mockRemediationTasks,
-  TASK_STATUS_LABELS,
-  TASK_PRIORITY_LABELS,
-} from '@/features/remediation'
+import { TASK_STATUS_LABELS, TASK_PRIORITY_LABELS } from '@/features/remediation'
 import { useRemediationCampaigns } from '@/features/remediation/api/use-remediation-campaigns'
-import { mockFindings } from '@/features/findings'
+import { useFindingsApi } from '@/features/findings/api/use-findings-api'
 import type { TaskStatus, TaskPriority, RemediationTask } from '@/features/remediation/types'
 import type { Severity } from '@/features/shared/types'
 
@@ -138,10 +134,17 @@ const defaultFilters: Filters = {
 }
 
 export default function RemediationPage() {
+  // Fetch findings from real API for linking dropdowns
+  const { data: findingsData } = useFindingsApi({
+    per_page: 20,
+    statuses: ['new', 'confirmed', 'in_progress'],
+  })
+  const findings = findingsData?.data ?? []
+
   // Fetch campaigns from API, map to existing task type for UI compatibility
   const { data: campaignData } = useRemediationCampaigns()
   const apiTasks: RemediationTask[] = useMemo(() => {
-    if (!campaignData?.data?.length) return mockRemediationTasks
+    if (!campaignData?.data?.length) return []
     return campaignData.data.map(
       (c) =>
         ({
@@ -159,6 +162,7 @@ export default function RemediationPage() {
           priority: c.priority,
           severity: c.priority as 'critical' | 'high' | 'medium' | 'low',
           assignee: '',
+          assigneeName: '',
           finding_count: c.finding_count,
           resolved_count: c.resolved_count,
           progress: c.progress,
@@ -170,9 +174,9 @@ export default function RemediationPage() {
         }) as unknown as RemediationTask
     )
   }, [campaignData])
-  const [tasks, setTasks] = useState<RemediationTask[]>(mockRemediationTasks)
+  const [tasks, setTasks] = useState<RemediationTask[]>([])
   useEffect(() => {
-    if (apiTasks !== mockRemediationTasks) setTasks(apiTasks)
+    setTasks(apiTasks)
   }, [apiTasks])
 
   const stats = useMemo(() => {
@@ -329,7 +333,7 @@ export default function RemediationPage() {
       return
     }
 
-    const finding = mockFindings.find((f) => f.id === formData.findingId)
+    const finding = findings.find((f) => f.id === formData.findingId)
     const newTask: RemediationTask = {
       id: `task-${Date.now()}`,
       title: formData.title,
@@ -359,7 +363,7 @@ export default function RemediationPage() {
       return
     }
 
-    const finding = mockFindings.find((f) => f.id === formData.findingId)
+    const finding = findings.find((f) => f.id === formData.findingId)
     const updatedTasks = tasks.map((t) =>
       t.id === editTask.id
         ? {
@@ -925,7 +929,7 @@ export default function RemediationPage() {
                             <div className="flex flex-wrap items-center gap-2">
                               <Avatar className="h-5 w-5">
                                 <AvatarFallback className="text-[10px]">
-                                  {task.assigneeName
+                                  {(task.assigneeName || '?')
                                     .split(' ')
                                     .map((n) => n[0])
                                     .join('')}
@@ -1306,9 +1310,9 @@ export default function RemediationPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="">None</SelectItem>
-                    {mockFindings.slice(0, 10).map((finding) => (
+                    {findings.map((finding) => (
                       <SelectItem key={finding.id} value={finding.id}>
-                        {finding.title.substring(0, 40)}...
+                        {(finding.title || finding.message || finding.id).substring(0, 50)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -1461,9 +1465,9 @@ export default function RemediationPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="">None</SelectItem>
-                    {mockFindings.slice(0, 10).map((finding) => (
+                    {findings.map((finding) => (
                       <SelectItem key={finding.id} value={finding.id}>
-                        {finding.title.substring(0, 40)}...
+                        {(finding.title || finding.message || finding.id).substring(0, 50)}
                       </SelectItem>
                     ))}
                   </SelectContent>
