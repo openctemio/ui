@@ -346,8 +346,10 @@ export function AssetPage({ config }: AssetPageProps) {
   ])
 
   // Scope integration — real API data
-  const { data: scopeTargetsData } = useScopeTargetsApi({ status: 'active', per_page: 500 })
-  const { data: scopeExclusionsData } = useScopeExclusionsApi({ status: 'active', per_page: 500 })
+  // Only fetch enough rules for client-side matching (scope rules are typically <100 per tenant).
+  // If a tenant has >100 rules, the scope bar will be approximate — see TODO below.
+  const { data: scopeTargetsData } = useScopeTargetsApi({ status: 'active', per_page: 100 })
+  const { data: scopeExclusionsData } = useScopeExclusionsApi({ status: 'active', per_page: 100 })
   const scopeTargets = useMemo(
     () => (scopeTargetsData?.data ?? []).map(transformApiTarget),
     [scopeTargetsData]
