@@ -301,6 +301,9 @@ export const repositoriesConfig: AssetPageConfig = {
   gradientFrom: 'from-primary/20',
   gradientVia: 'via-primary/10',
 
+  // Click row → navigate to dedicated repository detail page
+  detailPagePath: '/assets/repositories/{id}',
+
   headerContent: SCMConnectionsBanner,
 
   columns: [

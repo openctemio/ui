@@ -844,7 +844,11 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
                 <DropdownMenuItem
                   onClick={(e) => {
                     e.stopPropagation()
-                    dialogs.setSelectedAsset(asset)
+                    if (config.detailPagePath) {
+                      router.push(config.detailPagePath.replace('{id}', asset.id))
+                    } else {
+                      dialogs.setSelectedAsset(asset)
+                    }
                   }}
                 >
                   <Eye className="mr-2 h-4 w-4" />
@@ -1218,7 +1222,13 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
                             key={row.id}
                             data-state={row.getIsSelected() && 'selected'}
                             className="cursor-pointer"
-                            onClick={() => dialogs.setSelectedAsset(row.original)}
+                            onClick={() => {
+                              if (config.detailPagePath) {
+                                router.push(config.detailPagePath.replace('{id}', row.original.id))
+                              } else {
+                                dialogs.setSelectedAsset(row.original)
+                              }
+                            }}
                           >
                             {row.getVisibleCells().map((cell) => {
                               const hideOnMobile = [
