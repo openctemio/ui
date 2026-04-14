@@ -88,6 +88,7 @@ const nextConfig: NextConfig = {
                 const appUrl = process.env.NEXT_PUBLIC_APP_URL
                 const backendUrl = process.env.BACKEND_API_URL
                 const wsUrl = process.env.NEXT_PUBLIC_WS_BASE_URL
+                // Add app URL origins (HTTPS + WSS)
                 if (appUrl) {
                   try {
                     const u = new URL(appUrl)
@@ -101,6 +102,16 @@ const nextConfig: NextConfig = {
                         origins.push(`wss://${u.hostname}:${b.port}`)
                       }
                     }
+                  } catch {
+                    /* ignore invalid URL */
+                  }
+                }
+                // WebSocket on separate host/port (e.g., NEXT_PUBLIC_WS_BASE_URL=https://ws.example.com:9090)
+                if (wsUrl) {
+                  try {
+                    const w = new URL(wsUrl)
+                    origins.push(`wss://${w.host}`)
+                    origins.push(`https://${w.host}`)
                   } catch {
                     /* ignore invalid URL */
                   }
