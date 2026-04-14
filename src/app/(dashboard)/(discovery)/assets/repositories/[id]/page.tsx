@@ -674,8 +674,9 @@ function BranchStatusBadge({ status }: { status: BranchStatus }) {
 }
 
 function SeverityBadge({ severity, count }: { severity: Severity; count?: number }) {
+  const colors = SEVERITY_COLORS[severity]
   return (
-    <Badge variant="outline" className={cn('gap-1', SEVERITY_COLORS[severity])}>
+    <Badge className={cn('gap-1 border-0 font-medium', colors?.bg, colors?.text)}>
       {count !== undefined ? `${count} ${SEVERITY_LABELS[severity]}` : SEVERITY_LABELS[severity]}
     </Badge>
   )
@@ -771,6 +772,10 @@ function OverviewTab({
   const slaWarningsCount = getSLAWarningsCount(findings)
   const defaultBranch = branches.find((b) => b.is_default)
 
+  // Compute severity from actual findings data (not from repo extension which may be stale)
+  const criticalCount = findings.filter((f) => f.severity === 'critical').length
+  const highCount = findings.filter((f) => f.severity === 'high').length
+
   return (
     <div className="space-y-6">
       {/* Key Metrics */}
@@ -781,15 +786,10 @@ function OverviewTab({
               <AlertTriangle className="h-4 w-4 text-red-500" />
               Critical/High
             </CardDescription>
-            <CardTitle className="text-3xl text-red-500">
-              {repository.findings_summary.by_severity.critical +
-                repository.findings_summary.by_severity.high}
-            </CardTitle>
+            <CardTitle className="text-3xl text-red-500">{criticalCount + highCount}</CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
-            <p className="text-xs text-muted-foreground">
-              {repository.findings_summary.total} total findings
-            </p>
+            <p className="text-xs text-muted-foreground">{findings.length} total findings</p>
           </CardContent>
         </Card>
 
@@ -1088,10 +1088,12 @@ function BranchesTab({
   branches,
   repositoryName,
   repositoryId,
+  onViewBranchFindings,
 }: {
   branches: BranchDetail[]
   repositoryName: string
   repositoryId: string
+  onViewBranchFindings?: (branchName: string) => void
 }) {
   const [_selectedBranch, setSelectedBranch] = useState<string | null>(null)
   const defaultBranchName = branches.find((b) => b.is_default)?.name || 'main'
@@ -1260,7 +1262,10 @@ function BranchesTab({
                 <TableRow
                   key={branch.id}
                   className="cursor-pointer"
-                  onClick={() => setSelectedBranch(branch.id)}
+                  onClick={() => {
+                    setSelectedBranch(branch.id)
+                    onViewBranchFindings?.(branch.name)
+                  }}
                 >
                   <TableCell>
                     <div className="flex items-center gap-2">
@@ -1370,27 +1375,55 @@ function BranchesTab({
 }
 
 // Findings Tab
-function FindingsTab({ findings }: { findings: FindingDetail[] }) {
+function FindingsTab({
+  repositoryId,
+  branches,
+  initialBranch,
+}: {
+  repositoryId: string
+  branches: BranchDetail[]
+  initialBranch?: string
+}) {
+  const router = useRouter()
   const [searchQuery, setSearchQuery] = useState('')
   const [severityFilter, setSeverityFilter] = useState<string>('all')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [scannerFilter, setScannerFilter] = useState<string>('all')
+  const [branchFilter, setBranchFilter] = useState<string>(initialBranch || 'all')
+  const [page, setPage] = useState(1)
+  const pageSize = 20
 
+  // Fetch findings from API with server-side pagination
+  const { data: findingsData, isLoading: findingsLoading } = useFindingsApi({
+    asset_id: repositoryId,
+    page,
+    per_page: pageSize,
+    severities:
+      severityFilter !== 'all'
+        ? [severityFilter as 'critical' | 'high' | 'medium' | 'low' | 'info']
+        : undefined,
+    statuses:
+      statusFilter !== 'all'
+        ? [statusFilter as 'confirmed' | 'in_progress' | 'resolved']
+        : undefined,
+    sources:
+      scannerFilter !== 'all' ? [scannerFilter as 'sast' | 'sca' | 'secret' | 'dast'] : undefined,
+    search: searchQuery || undefined,
+  })
+
+  const findings: FindingDetail[] = useMemo(() => {
+    if (!findingsData?.data) return []
+    return findingsData.data.map(mapApiFindingToDetail)
+  }, [findingsData])
+
+  const total = findingsData?.total ?? 0
+  const totalPages = findingsData?.total_pages ?? 0
+
+  // Client-side branch filter (API doesn't support branch filter directly yet)
   const filteredFindings = useMemo(() => {
-    return findings.filter((f) => {
-      if (
-        searchQuery &&
-        !f.title.toLowerCase().includes(searchQuery.toLowerCase()) &&
-        !f.id.toLowerCase().includes(searchQuery.toLowerCase())
-      ) {
-        return false
-      }
-      if (severityFilter !== 'all' && f.severity !== severityFilter) return false
-      if (statusFilter !== 'all' && f.status !== statusFilter) return false
-      if (scannerFilter !== 'all' && f.scanner_type !== scannerFilter) return false
-      return true
-    })
-  }, [findings, searchQuery, severityFilter, statusFilter, scannerFilter])
+    if (branchFilter === 'all') return findings
+    return findings.filter((f) => f.branches.includes(branchFilter))
+  }, [findings, branchFilter])
 
   return (
     <div className="space-y-6">
@@ -1425,8 +1458,9 @@ function FindingsTab({ findings }: { findings: FindingDetail[] }) {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="open">Open</SelectItem>
+                <SelectItem value="confirmed">Confirmed</SelectItem>
                 <SelectItem value="in_progress">In Progress</SelectItem>
+                <SelectItem value="fix_applied">Fix Applied</SelectItem>
                 <SelectItem value="resolved">Resolved</SelectItem>
                 <SelectItem value="false_positive">False Positive</SelectItem>
               </SelectContent>
@@ -1444,6 +1478,30 @@ function FindingsTab({ findings }: { findings: FindingDetail[] }) {
                 <SelectItem value="container">Container</SelectItem>
               </SelectContent>
             </Select>
+            {branches.length > 0 && (
+              <Select
+                value={branchFilter}
+                onValueChange={(v) => {
+                  setBranchFilter(v)
+                  setPage(1)
+                }}
+              >
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Branch" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Branches</SelectItem>
+                  {branches.map((b) => (
+                    <SelectItem key={b.id} value={b.name}>
+                      <span className="flex items-center gap-1">
+                        <GitBranch className="h-3 w-3" />
+                        {b.name}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -1456,7 +1514,7 @@ function FindingsTab({ findings }: { findings: FindingDetail[] }) {
               <Shield className="h-4 w-4" />
               Findings
             </span>
-            <Badge variant="secondary">{filteredFindings.length} results</Badge>
+            <Badge variant="secondary">{total} results</Badge>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -1465,6 +1523,7 @@ function FindingsTab({ findings }: { findings: FindingDetail[] }) {
               <div
                 key={finding.id}
                 className="p-4 rounded-lg border hover:bg-muted/50 cursor-pointer transition-colors"
+                onClick={() => router.push(`/findings/${finding.id}`)}
               >
                 <div className="flex items-start gap-4">
                   <div className="shrink-0 mt-1">
@@ -1542,13 +1601,47 @@ function FindingsTab({ findings }: { findings: FindingDetail[] }) {
                 </div>
               </div>
             ))}
-            {filteredFindings.length === 0 && (
+            {filteredFindings.length === 0 && !findingsLoading && (
               <div className="text-center py-12 text-muted-foreground">
                 <Shield className="h-12 w-12 mx-auto mb-4 opacity-50" />
                 <p>No findings match your filters</p>
               </div>
             )}
+            {findingsLoading && (
+              <div className="space-y-3">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <Skeleton key={i} className="h-24 w-full rounded-lg" />
+                ))}
+              </div>
+            )}
           </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between border-t pt-4 mt-4">
+              <span className="text-xs text-muted-foreground">
+                Page {page} of {totalPages} ({total} total)
+              </span>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page <= 1}
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page >= totalPages}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
@@ -2003,7 +2096,13 @@ export default function RepositoryDetailPage() {
   const router = useRouter()
   const repositoryId = params.id as string
 
-  const [activeTab, setActiveTab] = useState<DetailTab>('overview')
+  // Sync tab with URL for shareable links
+  const searchParams = new URLSearchParams(
+    typeof window !== 'undefined' ? window.location.search : ''
+  )
+  const [activeTab, setActiveTab] = useState<DetailTab>(
+    (searchParams.get('tab') as DetailTab) || 'overview'
+  )
   const [isSyncing, setIsSyncing] = useState(false)
   const [isScanning, setIsScanning] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -2282,7 +2381,15 @@ export default function RepositoryDetailPage() {
         </div>
 
         {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as DetailTab)}>
+        <Tabs
+          value={activeTab}
+          onValueChange={(v) => {
+            setActiveTab(v as DetailTab)
+            const p = new URLSearchParams(window.location.search)
+            p.set('tab', v)
+            router.replace(`?${p.toString()}`, { scroll: false })
+          }}
+        >
           <TabsList className="mb-6">
             <TabsTrigger value="overview" className="gap-2">
               <Layers className="h-4 w-4" />
@@ -2326,11 +2433,23 @@ export default function RepositoryDetailPage() {
               branches={branches}
               repositoryName={repository.name}
               repositoryId={repositoryId}
+              onViewBranchFindings={(branchName) => {
+                setActiveTab('findings')
+                // Branch filter will be picked up by FindingsTab
+                const params = new URLSearchParams(window.location.search)
+                params.set('tab', 'findings')
+                params.set('branch', branchName)
+                router.replace(`?${params.toString()}`, { scroll: false })
+              }}
             />
           </TabsContent>
 
           <TabsContent value="findings">
-            <FindingsTab findings={findings} />
+            <FindingsTab
+              repositoryId={repositoryId}
+              branches={branches}
+              initialBranch={searchParams.get('branch') || undefined}
+            />
           </TabsContent>
 
           <TabsContent value="activity">
