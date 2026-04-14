@@ -392,7 +392,7 @@ export function useRepositoryBranches(assetId: string | null, config?: SWRConfig
   // Only fetch if user has permission
   const shouldFetch = currentTenant && assetId && canReadAssets
 
-  const key = shouldFetch ? `/api/v1/assets/${assetId}/branches` : null
+  const key = shouldFetch ? `/api/v1/repositories/${assetId}/branches` : null
 
   return useSWR<Branch[]>(key, fetchRepositoryBranches, {
     ...defaultConfig,
@@ -565,7 +565,7 @@ export function useUpdateBranchConfig(assetId: string, branchName: string) {
 
   return useSWRMutation(
     currentTenant && assetId && branchName
-      ? `/api/v1/assets/${assetId}/branches/${encodeURIComponent(branchName)}`
+      ? `/api/v1/repositories/${assetId}/branches/${encodeURIComponent(branchName)}`
       : null,
     async (url: string, { arg }: { arg: BranchConfig }) => {
       return put<Branch>(url, arg)
