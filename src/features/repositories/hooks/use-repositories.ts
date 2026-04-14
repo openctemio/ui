@@ -544,13 +544,13 @@ export interface BulkSyncInput {
 
 /**
  * Bulk sync multiple repositories with SCM
- * Uses POST /api/v1/assets/bulk-sync
+ * Uses POST /api/v1/assets/bulk/sync
  */
 export function useBulkSyncRepositories() {
   const { currentTenant } = useTenant()
 
   return useSWRMutation(
-    currentTenant ? '/api/v1/assets/bulk-sync' : null,
+    currentTenant ? '/api/v1/assets/bulk/sync' : null,
     async (url: string, { arg }: { arg: BulkSyncInput }) => {
       return post<BulkSyncResponse>(url, arg)
     }
