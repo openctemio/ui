@@ -77,7 +77,11 @@ import {
   type Criticality,
   type RiskTolerance,
 } from '@/features/business-units'
-import { useBusinessUnits } from '@/features/business-units/api/use-business-units'
+import {
+  useBusinessUnits,
+  useCreateBusinessUnit,
+  useDeleteBusinessUnit,
+} from '@/features/business-units/api/use-business-units'
 
 const criticalityColors: Record<Criticality, string> = {
   critical: 'bg-red-500/10 text-red-500 border-red-500/20',
@@ -104,7 +108,8 @@ const riskToleranceColors: Record<RiskTolerance, string> = {
 
 export default function BusinessUnitsPage() {
   // Fetch from API, fallback to mock data if API returns empty
-  const { data: apiData } = useBusinessUnits()
+  const { data: apiData, mutate: refreshList } = useBusinessUnits()
+  const { trigger: createBU } = useCreateBusinessUnit()
   const apiBUs: BusinessUnit[] = useMemo(() => {
     if (!apiData?.data?.length) return []
     return apiData.data.map(
@@ -193,33 +198,31 @@ export default function BusinessUnitsPage() {
     })
   }
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!formData.name || !formData.owner || !formData.ownerEmail) {
       toast.error('Please fill in all required fields')
       return
     }
-    const newUnit: BusinessUnit = {
-      id: `bu-${Date.now()}`,
-      name: formData.name,
-      description: formData.description || undefined,
-      parentId: formData.parentId || undefined,
-      status: 'active',
-      criticality: formData.criticality,
-      riskTolerance: formData.riskTolerance,
-      owner: formData.owner,
-      ownerEmail: formData.ownerEmail,
-      assetCount: 0,
-      employeeCount: 0,
-      riskScore: 50,
-      complianceScore: 80,
-      tags: formData.tags ? formData.tags.split(',').map((t) => t.trim()) : [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+    try {
+      await createBU({
+        name: formData.name,
+        description: formData.description || '',
+        owner_name: formData.owner,
+        owner_email: formData.ownerEmail,
+        tags: formData.tags
+          ? formData.tags
+              .split(',')
+              .map((t) => t.trim())
+              .filter(Boolean)
+          : [],
+      })
+      await refreshList()
+      toast.success('Business unit created successfully')
+      setIsCreateOpen(false)
+      resetForm()
+    } catch {
+      toast.error('Failed to create business unit')
     }
-    setBusinessUnits((prev) => [...prev, newUnit])
-    toast.success('Business unit created successfully')
-    setIsCreateOpen(false)
-    resetForm()
   }
 
   const handleEdit = () => {

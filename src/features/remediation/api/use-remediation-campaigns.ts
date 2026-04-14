@@ -61,6 +61,13 @@ export function useCreateRemediationCampaign() {
   )
 }
 
+export function useUpdateRemediationCampaign(id: string) {
+  return useSWRMutation(
+    `/api/v1/remediation/campaigns/${id}`,
+    (url: string, { arg }: { arg: Partial<RemediationCampaign> }) => patch(url, arg)
+  )
+}
+
 export function useUpdateCampaignStatus(id: string) {
   return useSWRMutation(
     `/api/v1/remediation/campaigns/${id}/status`,

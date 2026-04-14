@@ -141,7 +141,7 @@ export default function RemediationPage() {
   // Fetch campaigns from API, map to existing task type for UI compatibility
   const { data: campaignData } = useRemediationCampaigns()
   const apiTasks: RemediationTask[] = useMemo(() => {
-    if (!campaignData?.data?.length) return mockRemediationTasks
+    if (!campaignData?.data?.length) return []
     return campaignData.data.map(
       (c) =>
         ({
@@ -170,9 +170,9 @@ export default function RemediationPage() {
         }) as unknown as RemediationTask
     )
   }, [campaignData])
-  const [tasks, setTasks] = useState<RemediationTask[]>(mockRemediationTasks)
+  const [tasks, setTasks] = useState<RemediationTask[]>([])
   useEffect(() => {
-    if (apiTasks !== mockRemediationTasks) setTasks(apiTasks)
+    setTasks(apiTasks)
   }, [apiTasks])
 
   const stats = useMemo(() => {
