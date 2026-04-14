@@ -617,9 +617,11 @@ function transformToRepositoryView(asset: ApiAssetResponse): RepositoryView {
           contributorsCount: repo.contributor_count || 0,
           sizeKb: repo.size_kb || 0,
           branchCount: repo.branch_count || 0,
-          protectedBranchCount: 0,
-          componentCount: 0,
-          vulnerableComponentCount: 0,
+          protectedBranchCount:
+            ((repo as Record<string, unknown>).protected_branch_count as number) || 0,
+          componentCount: ((repo as Record<string, unknown>).component_count as number) || 0,
+          vulnerableComponentCount:
+            ((repo as Record<string, unknown>).vulnerable_component_count as number) || 0,
           findingCount: asset.finding_count,
           scanEnabled: scanSettings.auto_scan,
           lastScannedAt: repo.last_scanned_at,
