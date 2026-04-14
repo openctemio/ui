@@ -3,7 +3,7 @@
 import type { AssetPageConfig } from '@/features/assets/types/page-config.types'
 import type { Asset } from '@/features/assets'
 import { Badge } from '@/components/ui/badge'
-import { Globe, CheckCircle, Clock, AlertTriangle, Shield } from 'lucide-react'
+import { Globe, AlertTriangle, Shield } from 'lucide-react'
 
 export const domainsConfig: AssetPageConfig = {
   type: 'domain',
