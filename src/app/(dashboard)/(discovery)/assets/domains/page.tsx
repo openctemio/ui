@@ -8,8 +8,8 @@ import { cn } from '@/lib/utils'
 
 const TYPE_FILTERS = [
   { label: 'All', value: '' },
-  { label: 'Root Domains', value: 'domain' },
-  { label: 'Subdomains', value: 'subdomain' },
+  { label: 'Root', value: 'domain' },
+  { label: 'Sub', value: 'subdomain' },
 ] as const
 
 export default function DomainsPage() {
@@ -31,11 +31,10 @@ export default function DomainsPage() {
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
   }
 
-  const remountKey = `${currentType}_${searchParams.get('sub_type') ?? ''}`
-
+  // No remount key based on type — switching Root/Sub should preserve filters.
+  // AssetPage reacts to ?type= via urlType and re-fetches automatically.
   return (
     <AssetPage
-      key={remountKey}
       config={domainsConfig}
       headerExtra={
         <div className="flex items-center gap-1 rounded-lg border p-0.5">
