@@ -18,6 +18,7 @@ const STATUS_DESCRIPTIONS: Partial<Record<FindingStatus, string>> = {
   new: 'Newly discovered finding awaiting triage',
   confirmed: 'Verified as a real security issue',
   in_progress: 'Remediation work has begun',
+  fix_applied: 'Dev marked as fixed — awaiting verification scan',
   resolved: 'Issue has been fixed and verified',
   accepted: 'Risk acknowledged and accepted by stakeholders',
   false_positive: 'Determined to be a non-issue',

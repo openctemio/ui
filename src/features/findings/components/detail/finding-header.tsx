@@ -3,6 +3,15 @@
 import { useState, useEffect } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog'
 import {
   ExternalLink,
   Calendar,
@@ -11,6 +20,8 @@ import {
   AlertTriangle,
   ChevronDown,
   ChevronUp,
+  ScanSearch,
+  Loader2,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { getErrorMessage } from '@/lib/api/error-handler'
@@ -25,6 +36,7 @@ import {
   useUpdateFindingSeverityApi,
   useAssignFindingApi,
   useUnassignFindingApi,
+  useRequestVerificationScanApi,
   invalidateFindingsCache,
 } from '../../api/use-findings-api'
 import { FINDING_STATUS_CONFIG, SEVERITY_CONFIG, requiresApproval } from '../../types'
@@ -102,6 +114,10 @@ export function FindingHeader({
     setAssigneeState(finding.assignee)
   }, [finding.assignee])
 
+  // Verification scan state
+  const [verificationScanOpen, setVerificationScanOpen] = useState(false)
+  const [verificationScannerName, setVerificationScannerName] = useState('')
+
   // API mutation hooks
   const { trigger: updateStatus, isMutating: isUpdatingStatus } = useUpdateFindingStatusApi(
     finding.id
@@ -111,6 +127,8 @@ export function FindingHeader({
   )
   const { trigger: assignUser, isMutating: isAssigning } = useAssignFindingApi(finding.id)
   const { trigger: unassignUser, isMutating: isUnassigning } = useUnassignFindingApi(finding.id)
+  const { trigger: requestVerificationScan, isMutating: isRequestingVerificationScan } =
+    useRequestVerificationScanApi(finding.id)
 
   // Assignee comes from API with full user info (assigned_to_user)
   const assignee = assigneeState
@@ -290,6 +308,23 @@ export function FindingHeader({
     }
   }
 
+  const handleRequestVerificationScan = async () => {
+    if (!verificationScannerName.trim()) {
+      toast.error('Scanner name is required')
+      return
+    }
+    try {
+      const result = await requestVerificationScan({ scanner_name: verificationScannerName.trim() })
+      toast.success(`Verification scan triggered for asset: ${result.asset_name}`, {
+        duration: 5000,
+      })
+      setVerificationScanOpen(false)
+      setVerificationScannerName('')
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Failed to trigger verification scan'))
+    }
+  }
+
   return (
     <div className="space-y-2">
       {/* Mobile: Collapsible header */}
@@ -403,6 +438,18 @@ export function FindingHeader({
                 size="sm"
                 onTriageCompleted={onTriageCompleted}
               />
+              {/* Verification Scan Button - Mobile (fix_applied only) */}
+              {status === 'fix_applied' && !isPentestSource && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setVerificationScanOpen(true)}
+                  className="h-7 gap-1 border-yellow-500/50 text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-950"
+                >
+                  <ScanSearch className="h-3.5 w-3.5" />
+                  Verify Scan
+                </Button>
+              )}
             </div>
 
             {/* Meta info */}
@@ -632,6 +679,21 @@ export function FindingHeader({
                 size="sm"
                 onTriageCompleted={onTriageCompleted}
               />
+              {/* Verification Scan Button - Desktop (fix_applied only) */}
+              {status === 'fix_applied' && !isPentestSource && (
+                <>
+                  <div className="h-4 w-px bg-border" />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setVerificationScanOpen(true)}
+                    className="h-7 gap-1 border-yellow-500/50 text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-950"
+                  >
+                    <ScanSearch className="h-3.5 w-3.5" />
+                    Request Verification Scan
+                  </Button>
+                </>
+              )}
               <div className="text-muted-foreground flex items-center gap-1">
                 <Calendar className="h-3.5 w-3.5" />
                 <span>{formatDate(finding.discoveredAt)}</span>
@@ -682,6 +744,70 @@ export function FindingHeader({
           onOpenChange={setApprovalDialogOpen}
         />
       )}
+
+      {/* Verification Scan Dialog */}
+      <Dialog open={verificationScanOpen} onOpenChange={setVerificationScanOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Request Verification Scan</DialogTitle>
+            <DialogDescription>
+              Trigger a targeted scan on this asset to verify the fix was applied correctly. If the
+              scanner finds the vulnerability again, the finding will be re-raised.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Scanner Name</label>
+              <Input
+                placeholder="e.g., trivy, semgrep, nuclei"
+                value={verificationScannerName}
+                onChange={(e) => setVerificationScannerName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    void handleRequestVerificationScan()
+                  }
+                }}
+              />
+              <p className="text-xs text-muted-foreground">
+                The scanner tool to use for this verification scan.
+              </p>
+            </div>
+            {finding.assets.length > 0 && (
+              <div className="rounded-lg border bg-muted/50 p-3 text-sm">
+                <span className="text-muted-foreground">Target asset: </span>
+                <span className="font-medium">
+                  {finding.assets[0].name || finding.assets[0].url}
+                </span>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setVerificationScanOpen(false)}
+              disabled={isRequestingVerificationScan}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => void handleRequestVerificationScan()}
+              disabled={isRequestingVerificationScan || !verificationScannerName.trim()}
+            >
+              {isRequestingVerificationScan ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Triggering...
+                </>
+              ) : (
+                <>
+                  <ScanSearch className="mr-2 h-4 w-4" />
+                  Trigger Scan
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
