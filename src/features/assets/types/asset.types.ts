@@ -101,7 +101,12 @@ export const ASSET_TYPE_CATEGORIES: Record<AssetTypeCategory, CategoryConfig> = 
     types: ['domain', 'subdomain', 'certificate', 'ip_address'],
     items: [
       { key: 'domain', label: 'Domains', url: '/assets/domains', countKey: 'domain' },
-      { key: 'subdomain', label: 'Subdomains', url: '/assets/domains', countKey: 'subdomain' },
+      {
+        key: 'subdomain',
+        label: 'Subdomains',
+        url: '/assets/domains?type=subdomain',
+        countKey: 'subdomain',
+      },
       {
         key: 'certificate',
         label: 'Certificates',
