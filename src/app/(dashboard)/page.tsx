@@ -445,9 +445,9 @@ export default function Dashboard() {
         ) : (
           !error && (
             <>
-              <section className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2 lg:grid-rows-1">
-                {/* Asset Distribution — this card determines the row height */}
-                <Card className="flex flex-col">
+              <section className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2 lg:h-[460px]">
+                {/* Asset Distribution */}
+                <Card className="flex flex-col h-full">
                   <CardHeader>
                     <CardTitle>Asset Distribution</CardTitle>
                     <CardDescription>{stats.assets.total} total assets by type</CardDescription>
@@ -484,8 +484,8 @@ export default function Dashboard() {
                   </CardContent>
                 </Card>
 
-                {/* Recent Activity — height follows Asset Distribution, content scrolls */}
-                <Card className="flex flex-col overflow-hidden">
+                {/* Recent Activity — same height as Asset Distribution, scrolls */}
+                <Card className="flex flex-col h-full overflow-hidden">
                   <CardHeader className="flex-shrink-0">
                     <CardTitle>Recent Activity</CardTitle>
                     <CardDescription>Latest security events and updates</CardDescription>
