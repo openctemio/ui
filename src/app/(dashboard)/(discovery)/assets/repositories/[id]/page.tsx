@@ -335,7 +335,11 @@ function mapApiFindingToDetail(f: ApiFinding): FindingDetail {
     scanner_type: f.source as ScannerType,
     file_path: f.file_path,
     line_start: f.start_line,
-    branches: [],
+    branches: [
+      ...new Set(
+        [f.first_detected_branch, f.last_seen_branch].filter((b): b is string => !!b && b !== '')
+      ),
+    ],
     sla_status: (f.sla_status as SLAStatus) || 'not_applicable',
     sla_days_remaining: undefined,
     first_detected_at: f.first_detected_at || f.created_at,
@@ -1064,15 +1068,61 @@ function OverviewTab({
 }
 
 // Branches Tab
+interface ComparisonResult {
+  base_branch: string
+  compare_branch: string
+  new_findings: number
+  resolved_findings: number
+  common_findings: number
+  new_by_severity: Record<string, number>
+  new_items?: Array<{
+    id: string
+    title: string
+    severity: string
+    file_path?: string
+    source: string
+  }>
+}
+
 function BranchesTab({
   branches,
   repositoryName,
+  repositoryId,
 }: {
   branches: BranchDetail[]
   repositoryName: string
+  repositoryId: string
 }) {
   const [_selectedBranch, setSelectedBranch] = useState<string | null>(null)
+  const defaultBranchName = branches.find((b) => b.is_default)?.name || 'main'
+  const [baseBranch, setBaseBranch] = useState<string>(defaultBranchName)
   const [compareBranch, setCompareBranch] = useState<string>('')
+  const [comparison, setComparison] = useState<ComparisonResult | null>(null)
+  const [isComparing, setIsComparing] = useState(false)
+
+  const handleCompare = async () => {
+    if (!baseBranch || !compareBranch) {
+      toast.error('Select both branches to compare')
+      return
+    }
+    setIsComparing(true)
+    try {
+      const params = new URLSearchParams({ base: baseBranch, compare: compareBranch })
+      const response = await fetch(
+        `/api/v1/repositories/${repositoryId}/branches/compare?${params}`,
+        {
+          credentials: 'include',
+        }
+      )
+      if (!response.ok) throw new Error('Comparison failed')
+      const data = await response.json()
+      setComparison(data)
+    } catch {
+      toast.error('Failed to compare branches')
+    } finally {
+      setIsComparing(false)
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -1084,12 +1134,9 @@ function BranchesTab({
             Compare Branches
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           <div className="flex items-center gap-4">
-            <Select
-              value={compareBranch || branches.find((b) => b.is_default)?.name}
-              onValueChange={setCompareBranch}
-            >
+            <Select value={baseBranch} onValueChange={setBaseBranch}>
               <SelectTrigger className="w-[200px]">
                 <SelectValue placeholder="Base branch" />
               </SelectTrigger>
@@ -1102,15 +1149,13 @@ function BranchesTab({
               </SelectContent>
             </Select>
             <ChevronRight className="h-4 w-4 text-muted-foreground" />
-            <Select>
+            <Select value={compareBranch} onValueChange={setCompareBranch}>
               <SelectTrigger className="w-[200px]">
                 <SelectValue placeholder="Compare branch" />
               </SelectTrigger>
               <SelectContent>
                 {branches
-                  .filter(
-                    (b) => b.name !== (compareBranch || branches.find((b) => b.is_default)?.name)
-                  )
+                  .filter((b) => b.name !== baseBranch)
                   .map((branch) => (
                     <SelectItem key={branch.id} value={branch.name}>
                       {branch.name}
@@ -1118,8 +1163,71 @@ function BranchesTab({
                   ))}
               </SelectContent>
             </Select>
-            <Button variant="outline">Compare</Button>
+            <Button
+              variant="outline"
+              onClick={handleCompare}
+              disabled={isComparing || !compareBranch}
+            >
+              {isComparing ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
+              Compare
+            </Button>
           </div>
+
+          {comparison && (
+            <div className="border rounded-lg p-4 space-y-3">
+              <div className="flex items-center gap-6 text-sm">
+                <div className="flex items-center gap-2">
+                  <Badge variant="destructive">{comparison.new_findings}</Badge>
+                  <span>
+                    New findings in{' '}
+                    <code className="text-xs bg-muted px-1 rounded">
+                      {comparison.compare_branch}
+                    </code>
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge className="bg-green-500">{comparison.resolved_findings}</Badge>
+                  <span>
+                    Resolved (not in{' '}
+                    <code className="text-xs bg-muted px-1 rounded">
+                      {comparison.compare_branch}
+                    </code>
+                    )
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary">{comparison.common_findings}</Badge>
+                  <span>Common</span>
+                </div>
+              </div>
+
+              {comparison.new_items && comparison.new_items.length > 0 && (
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground mb-2">
+                    New findings introduced:
+                  </p>
+                  <div className="space-y-1">
+                    {comparison.new_items.slice(0, 10).map((item) => (
+                      <div key={item.id} className="flex items-center gap-2 text-xs">
+                        <Badge
+                          variant={item.severity === 'critical' ? 'destructive' : 'outline'}
+                          className="text-[10px] px-1.5"
+                        >
+                          {item.severity}
+                        </Badge>
+                        <span className="truncate">{item.title}</span>
+                        {item.file_path && (
+                          <span className="text-muted-foreground truncate max-w-[200px]">
+                            {item.file_path}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -1381,9 +1489,17 @@ function FindingsTab({ findings }: { findings: FindingDetail[] }) {
                         <FileCode className="h-3 w-3" />
                         {finding.file_path}:{finding.line_start}
                       </span>
-                      <span className="flex items-center gap-1">
+                      <span className="flex items-center gap-1" title={finding.branches.join(', ')}>
                         <GitBranch className="h-3 w-3" />
-                        {finding.branches.length} branches
+                        {finding.branches.length > 0 ? (
+                          finding.branches.map((b) => (
+                            <code key={b} className="bg-muted px-1 rounded text-[10px]">
+                              {b}
+                            </code>
+                          ))
+                        ) : (
+                          <span className="text-muted-foreground">no branch</span>
+                        )}
                       </span>
                       {finding.cwe_ids && finding.cwe_ids.length > 0 && (
                         <span className="flex items-center gap-1">
@@ -2216,7 +2332,11 @@ export default function RepositoryDetailPage() {
           </TabsContent>
 
           <TabsContent value="branches">
-            <BranchesTab branches={branches} repositoryName={repository.name} />
+            <BranchesTab
+              branches={branches}
+              repositoryName={repository.name}
+              repositoryId={repositoryId}
+            />
           </TabsContent>
 
           <TabsContent value="findings">
