@@ -1,7 +1,16 @@
 'use client'
 
 import { Badge } from '@/components/ui/badge'
-import { Server, CheckCircle, AlertTriangle, Shield, Cpu, HardDrive, Globe } from 'lucide-react'
+import {
+  Server,
+  CheckCircle,
+  AlertTriangle,
+  Shield,
+  Cpu,
+  HardDrive,
+  Globe,
+  Monitor,
+} from 'lucide-react'
 import type { AssetPageConfig } from '@/features/assets/types/page-config.types'
 import type { Asset } from '@/features/assets'
 
@@ -225,6 +234,8 @@ export const hostsConfig: AssetPageConfig = {
     { name: 'tags', label: 'Tags', type: 'tags', placeholder: 'production, web, critical' },
   ],
 
+  countBy: ['is_virtual'],
+
   statsCards: [
     {
       title: 'Active',
@@ -233,10 +244,9 @@ export const hostsConfig: AssetPageConfig = {
       variant: 'success',
     },
     {
-      title: 'With Findings',
-      icon: AlertTriangle,
-      compute: (_assets, stats) => stats.withFindings,
-      variant: 'warning',
+      title: 'Virtual',
+      icon: Monitor,
+      compute: (_assets, stats) => stats.metadataCounts?.is_virtual?.true ?? 0,
     },
     {
       title: 'With Findings',

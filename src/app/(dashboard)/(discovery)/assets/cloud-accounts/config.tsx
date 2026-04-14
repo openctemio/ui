@@ -1,7 +1,7 @@
 'use client'
 
 import { Badge } from '@/components/ui/badge'
-import { Cloud, Shield, AlertTriangle, CheckCircle } from 'lucide-react'
+import { Cloud, Shield, AlertTriangle, CheckCircle, ShieldCheck, ShieldX } from 'lucide-react'
 import type { AssetPageConfig } from '@/features/assets/types/page-config.types'
 
 const providerConfig: Record<string, { label: string; color: string }> = {
@@ -165,12 +165,20 @@ export const cloudAccountsConfig: AssetPageConfig = {
     { name: 'tags', label: 'Tags', type: 'tags', placeholder: 'production, aws' },
   ],
 
+  countBy: ['mfa_enabled'],
+
   statsCards: [
     {
-      title: 'Active',
-      icon: CheckCircle,
-      compute: (_assets, stats) => stats.byStatus?.active ?? 0,
+      title: 'MFA Enabled',
+      icon: ShieldCheck,
+      compute: (_assets, stats) => stats.metadataCounts?.mfa_enabled?.true ?? 0,
       variant: 'success',
+    },
+    {
+      title: 'Without MFA',
+      icon: ShieldX,
+      compute: (_assets, stats) => stats.metadataCounts?.mfa_enabled?.false ?? 0,
+      variant: 'danger',
     },
     {
       title: 'With Findings',

@@ -126,12 +126,18 @@ export const mobileConfig: AssetPageConfig = {
     },
   ],
 
+  countBy: ['platform'],
+
   statsCards: [
     {
-      title: 'Active',
-      icon: CheckCircle,
-      compute: (_assets, stats) => stats.byStatus?.active ?? 0,
-      variant: 'success',
+      title: 'iOS',
+      icon: Apple,
+      compute: (_assets, stats) => stats.metadataCounts?.platform?.ios ?? 0,
+    },
+    {
+      title: 'Android',
+      icon: Smartphone,
+      compute: (_assets, stats) => stats.metadataCounts?.platform?.android ?? 0,
     },
     {
       title: 'With Findings',
