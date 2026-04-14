@@ -36,6 +36,8 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Input } from '@/components/ui/input'
+import { Switch } from '@/components/ui/switch'
+import { useDebounce } from '@/hooks/use-debounce'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
 import {
@@ -1419,23 +1421,74 @@ function FindingsTab({
   branchFromUrl?: string
 }) {
   const router = useRouter()
-  const [searchQuery, setSearchQuery] = useState('')
-  const [severityFilter, setSeverityFilter] = useState<string>('all')
-  const [statusFilter, setStatusFilter] = useState<string>('all')
-  const [scannerFilter, setScannerFilter] = useState<string>('all')
-  // Sync branch filter with URL reactively
-  const [branchFilter, setBranchFilter] = useState<string>(branchFromUrl || 'all')
+  const searchParams = useSearchParams()
+
+  // Read filters from URL (shareable)
+  const [searchInput, setSearchInput] = useState(searchParams.get('q') || '')
+  const debouncedSearch = useDebounce(searchInput, 300)
+  const [severityFilter, setSeverityFilter] = useState<string>(
+    searchParams.get('severity') || 'all'
+  )
+  const [statusFilter, setStatusFilter] = useState<string>(searchParams.get('status') || 'all')
+  const [scannerFilter, setScannerFilter] = useState<string>(searchParams.get('scanner') || 'all')
+  const [branchFilter, setBranchFilter] = useState<string>(
+    branchFromUrl || searchParams.get('branch') || 'all'
+  )
+  const [page, setPage] = useState(Number(searchParams.get('page')) || 1)
+  const pageSize = 20
+
+  // Sync branch from URL when it changes externally (e.g. click branch in Branches tab)
   if (branchFromUrl && branchFromUrl !== branchFilter && branchFromUrl !== 'all') {
     setBranchFilter(branchFromUrl)
   }
-  const [page, setPage] = useState(1)
-  const pageSize = 20
 
-  // Reset page when any filter changes
-  const handleFilterChange = useCallback((setter: (v: string) => void, value: string) => {
-    setter(value)
-    setPage(1)
-  }, [])
+  // Sync all filters to URL for shareable links
+  const syncFiltersToUrl = useCallback(
+    (overrides?: Record<string, string>) => {
+      const p = new URLSearchParams(searchParams.toString())
+      p.set('tab', 'findings')
+      const vals: Record<string, string> = {
+        severity: severityFilter,
+        status: statusFilter,
+        scanner: scannerFilter,
+        branch: branchFilter,
+        q: debouncedSearch,
+        page: String(page),
+        ...overrides,
+      }
+      for (const [k, v] of Object.entries(vals)) {
+        if (v && v !== 'all' && v !== '' && v !== '1') p.set(k, v)
+        else p.delete(k)
+      }
+      router.replace(`?${p.toString()}`, { scroll: false })
+    },
+    [
+      searchParams,
+      severityFilter,
+      statusFilter,
+      scannerFilter,
+      branchFilter,
+      debouncedSearch,
+      page,
+      router,
+    ]
+  )
+
+  // Update URL when filters change
+  const handleFilterChange = useCallback(
+    (setter: (v: string) => void, key: string, value: string) => {
+      setter(value)
+      setPage(1)
+      // Sync immediately
+      const p = new URLSearchParams(window.location.search)
+      p.set('tab', 'findings')
+      if (value && value !== 'all') p.set(key, value)
+      else p.delete(key)
+      p.delete('page')
+      router.replace(`?${p.toString()}`, { scroll: false })
+    },
+    [router]
+  )
 
   // Fetch findings from API with server-side filters
   const apiFilters = useMemo(() => {
@@ -1458,9 +1511,9 @@ function FindingsTab({
       ]
     if (scannerFilter !== 'all')
       f.sources = [scannerFilter as 'sast' | 'sca' | 'secret' | 'dast' | 'iac' | 'container']
-    if (searchQuery) f.search = searchQuery
+    if (debouncedSearch) f.search = debouncedSearch
     return f
-  }, [repositoryId, page, pageSize, severityFilter, statusFilter, scannerFilter, searchQuery])
+  }, [repositoryId, page, pageSize, severityFilter, statusFilter, scannerFilter, debouncedSearch])
 
   const { data: findingsData, isLoading: findingsLoading } = useFindingsApi(apiFilters)
 
@@ -1495,12 +1548,15 @@ function FindingsTab({
                 <SearchIcon className="absolute left-2 top-[7px] h-3.5 w-3.5 text-muted-foreground" />
                 <Input
                   placeholder="Search..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
                   className="pl-7 h-7 text-xs w-[140px]"
                 />
               </div>
-              <Select value={severityFilter} onValueChange={setSeverityFilter}>
+              <Select
+                value={severityFilter}
+                onValueChange={(v) => handleFilterChange(setSeverityFilter, 'severity', v)}
+              >
                 <SelectTrigger className="w-[110px] h-7 text-xs">
                   <SelectValue placeholder="Severity" />
                 </SelectTrigger>
@@ -1512,7 +1568,10 @@ function FindingsTab({
                   <SelectItem value="low">Low</SelectItem>
                 </SelectContent>
               </Select>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <Select
+                value={statusFilter}
+                onValueChange={(v) => handleFilterChange(setStatusFilter, 'status', v)}
+              >
                 <SelectTrigger className="w-[110px] h-7 text-xs">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
@@ -1526,7 +1585,10 @@ function FindingsTab({
                   <SelectItem value="false_positive">False Positive</SelectItem>
                 </SelectContent>
               </Select>
-              <Select value={scannerFilter} onValueChange={setScannerFilter}>
+              <Select
+                value={scannerFilter}
+                onValueChange={(v) => handleFilterChange(setScannerFilter, 'scanner', v)}
+              >
                 <SelectTrigger className="w-[120px] h-8 text-xs">
                   <SelectValue placeholder="Scanner" />
                 </SelectTrigger>
@@ -1542,10 +1604,7 @@ function FindingsTab({
               {branches.length > 0 && (
                 <Select
                   value={branchFilter}
-                  onValueChange={(v) => {
-                    setBranchFilter(v)
-                    setPage(1)
-                  }}
+                  onValueChange={(v) => handleFilterChange(setBranchFilter, 'branch', v)}
                 >
                   <SelectTrigger className="w-[160px] h-8 text-xs">
                     <SelectValue placeholder="Branch" />
@@ -1886,6 +1945,70 @@ function ActivityTab({ activities }: { activities: ActivityLog[] }) {
 
 // Settings Tab
 function SettingsTab({ repository }: { repository: Repository }) {
+  const [autoScan, setAutoScan] = useState(repository.scan_settings?.auto_scan ?? false)
+  const [scanOnPush, setScanOnPush] = useState(repository.scan_settings?.scan_on_push ?? false)
+  const [scanOnPR, setScanOnPR] = useState(repository.scan_settings?.scan_on_pr ?? false)
+  const [branchPatternInput, setBranchPatternInput] = useState('')
+  const [branchPatterns, setBranchPatterns] = useState<string[]>(
+    repository.scan_settings?.branch_patterns ?? ['main', 'develop', 'release/*']
+  )
+
+  const handleAddPattern = () => {
+    const pattern = branchPatternInput.trim()
+    if (pattern && !branchPatterns.includes(pattern)) {
+      setBranchPatterns([...branchPatterns, pattern])
+      setBranchPatternInput('')
+      toast.success(`Pattern "${pattern}" added`)
+    }
+  }
+
+  const handleRemovePattern = (pattern: string) => {
+    setBranchPatterns(branchPatterns.filter((p) => p !== pattern))
+    toast.success(`Pattern "${pattern}" removed`)
+  }
+
+  const handleToggle = (name: string, value: boolean, setter: (v: boolean) => void) => {
+    setter(value)
+    toast.success(`${name} ${value ? 'enabled' : 'disabled'}`)
+  }
+
+  // Security features from repo data or defaults
+  const securityFeatures = [
+    {
+      key: 'branch_protection',
+      label: 'Branch Protection',
+      enabled: (repository.repository?.protectedBranchCount ?? 0) > 0,
+    },
+    {
+      key: 'secret_scanning',
+      label: 'Secret Scanning',
+      enabled: repository.security_features?.secret_scanning ?? false,
+    },
+    {
+      key: 'dependabot',
+      label: 'Dependency Scanning',
+      enabled: repository.security_features?.dependabot ?? false,
+    },
+    {
+      key: 'code_scanning',
+      label: 'Code Scanning (SAST)',
+      enabled:
+        repository.security_features?.code_scanning ?? repository.scan_settings?.auto_scan ?? false,
+    },
+    {
+      key: 'security_policy',
+      label: 'Security Policy',
+      enabled: repository.security_features?.security_policy ?? false,
+    },
+    {
+      key: 'signed_commits',
+      label: 'Signed Commits',
+      enabled: repository.security_features?.signed_commits ?? false,
+    },
+  ]
+
+  const enabledScanners = repository.scan_settings?.enabled_scanners ?? ['sast', 'sca', 'secret']
+
   return (
     <div className="space-y-6">
       {/* Scan Settings */}
@@ -1895,54 +2018,58 @@ function SettingsTab({ repository }: { repository: Repository }) {
             <Play className="h-4 w-4" />
             Scan Configuration
           </CardTitle>
+          <CardDescription>Configure automated scanning for this repository</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div>
             <h4 className="text-sm font-medium mb-3">Enabled Scanners</h4>
             <div className="flex flex-wrap gap-2">
-              {repository.scan_settings.enabled_scanners.map((scanner) => (
-                <Badge key={scanner} className="uppercase">
-                  {scanner}
-                </Badge>
-              ))}
+              {enabledScanners.length > 0 ? (
+                enabledScanners.map((scanner) => (
+                  <Badge key={scanner} variant="outline" className="uppercase text-xs">
+                    {SCANNER_TYPE_LABELS[scanner as ScannerType] || scanner}
+                  </Badge>
+                ))
+              ) : (
+                <span className="text-sm text-muted-foreground">No scanners configured</span>
+              )}
             </div>
           </div>
 
           <Separator />
 
-          <div className="grid grid-cols-3 gap-6">
-            <div className="flex items-center gap-3">
-              {repository.scan_settings.auto_scan ? (
-                <CheckCircle className="h-5 w-5 text-green-500" />
-              ) : (
-                <XCircle className="h-5 w-5 text-muted-foreground" />
-              )}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium">Auto Scan</p>
-                <p className="text-xs text-muted-foreground">Scan automatically</p>
+                <p className="font-medium text-sm">Auto Scan</p>
+                <p className="text-xs text-muted-foreground">Automatically scan on schedule</p>
               </div>
+              <Switch
+                checked={autoScan}
+                onCheckedChange={(v) => handleToggle('Auto Scan', v, setAutoScan)}
+              />
             </div>
-            <div className="flex items-center gap-3">
-              {repository.scan_settings.scan_on_push ? (
-                <CheckCircle className="h-5 w-5 text-green-500" />
-              ) : (
-                <XCircle className="h-5 w-5 text-muted-foreground" />
-              )}
+            <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium">Scan on Push</p>
-                <p className="text-xs text-muted-foreground">Trigger on commits</p>
+                <p className="font-medium text-sm">Scan on Push</p>
+                <p className="text-xs text-muted-foreground">Trigger scan when code is pushed</p>
               </div>
+              <Switch
+                checked={scanOnPush}
+                onCheckedChange={(v) => handleToggle('Scan on Push', v, setScanOnPush)}
+              />
             </div>
-            <div className="flex items-center gap-3">
-              {repository.scan_settings.scan_on_pr ? (
-                <CheckCircle className="h-5 w-5 text-green-500" />
-              ) : (
-                <XCircle className="h-5 w-5 text-muted-foreground" />
-              )}
+            <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium">Scan on PR</p>
-                <p className="text-xs text-muted-foreground">Trigger on pull requests</p>
+                <p className="font-medium text-sm">Scan on Pull Request</p>
+                <p className="text-xs text-muted-foreground">
+                  Trigger scan when PR is opened/updated
+                </p>
               </div>
+              <Switch
+                checked={scanOnPR}
+                onCheckedChange={(v) => handleToggle('Scan on PR', v, setScanOnPR)}
+              />
             </div>
           </div>
 
@@ -1950,12 +2077,42 @@ function SettingsTab({ repository }: { repository: Repository }) {
 
           <div>
             <h4 className="text-sm font-medium mb-3">Branch Patterns</h4>
+            <p className="text-xs text-muted-foreground mb-3">
+              Only branches matching these patterns will be scanned. Use * for wildcards.
+            </p>
+            <div className="flex gap-2 mb-3">
+              <Input
+                placeholder="e.g. main, develop, release/*"
+                value={branchPatternInput}
+                onChange={(e) => setBranchPatternInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleAddPattern()}
+                className="h-8 text-sm"
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleAddPattern}
+                className="h-8 shrink-0"
+              >
+                Add
+              </Button>
+            </div>
             <div className="flex flex-wrap gap-2">
-              {repository.scan_settings.branch_patterns?.map((pattern) => (
-                <code key={pattern} className="text-sm bg-muted px-2 py-1 rounded">
+              {branchPatterns.map((pattern) => (
+                <Badge key={pattern} variant="secondary" className="gap-1 text-xs">
+                  <GitBranch className="h-3 w-3" />
                   {pattern}
-                </code>
+                  <button
+                    className="ml-1 hover:text-destructive"
+                    onClick={() => handleRemovePattern(pattern)}
+                  >
+                    <XCircle className="h-3 w-3" />
+                  </button>
+                </Badge>
               ))}
+              {branchPatterns.length === 0 && (
+                <span className="text-xs text-muted-foreground">All branches will be scanned</span>
+              )}
             </div>
           </div>
         </CardContent>
@@ -2001,28 +2158,26 @@ function SettingsTab({ repository }: { repository: Repository }) {
             <Shield className="h-4 w-4" />
             Security Features
           </CardTitle>
+          <CardDescription>Repository security configuration from SCM provider</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 gap-4">
-            {repository.security_features &&
-              Object.entries(repository.security_features).map(([key, enabled]) => (
-                <div
-                  key={key}
-                  className={cn(
-                    'flex items-center gap-3 p-3 rounded-lg border',
-                    enabled ? 'bg-green-500/5 border-green-500/20' : 'bg-muted/30'
-                  )}
-                >
-                  {enabled ? (
-                    <CheckCircle className="h-5 w-5 text-green-500" />
-                  ) : (
-                    <XCircle className="h-5 w-5 text-muted-foreground" />
-                  )}
-                  <span className={cn('text-sm', !enabled && 'text-muted-foreground')}>
-                    {key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
-                  </span>
-                </div>
-              ))}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {securityFeatures.map(({ key, label, enabled }) => (
+              <div
+                key={key}
+                className={cn(
+                  'flex items-center gap-3 p-3 rounded-lg border',
+                  enabled ? 'bg-green-500/5 border-green-500/20' : 'bg-muted/30'
+                )}
+              >
+                {enabled ? (
+                  <CheckCircle className="h-5 w-5 text-green-500 shrink-0" />
+                ) : (
+                  <XCircle className="h-5 w-5 text-muted-foreground shrink-0" />
+                )}
+                <span className={cn('text-sm', !enabled && 'text-muted-foreground')}>{label}</span>
+              </div>
+            ))}
           </div>
         </CardContent>
       </Card>
