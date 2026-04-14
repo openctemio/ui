@@ -198,8 +198,15 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
 
   const subTypeFilter = urlSubType || config.subType
 
-  // Dynamic properties filter — controlled by PropertyFilter component
-  const [propertiesFilter, setPropertiesFilter] = useState<Record<string, string>>({})
+  // Dynamic properties filter — initialise from URL ?pf=key:value params (shareable)
+  const [propertiesFilter, setPropertiesFilter] = useState<Record<string, string>>(() => {
+    const pf: Record<string, string> = {}
+    for (const v of searchParams.getAll('pf')) {
+      const idx = v.indexOf(':')
+      if (idx > 0) pf[v.slice(0, idx)] = v.slice(idx + 1)
+    }
+    return pf
+  })
 
   // Data fetching with server-side pagination, search, tag, and properties filter.
   const { assets, total, totalPages, isLoading, mutate } = useAssets({
@@ -321,6 +328,10 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
     if (debouncedSearch) params.set('q', debouncedSearch)
     if (statusFilter !== 'all') params.set('status', statusFilter)
     if (tagFilters.length > 0) params.set('tags', tagFilters.join(','))
+    // Property filters as repeated ?pf=key:value params
+    for (const [key, val] of Object.entries(propertiesFilter)) {
+      params.append('pf', `${key}:${val}`)
+    }
     if (sorting.length > 0) {
       const defaultField = config.defaultSort?.field
       const defaultDesc = config.defaultSort?.direction === 'desc'
@@ -339,6 +350,7 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
     debouncedSearch,
     statusFilter,
     tagFilters,
+    propertiesFilter,
     sorting,
     pathname,
     router,
