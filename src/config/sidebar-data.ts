@@ -54,6 +54,7 @@ import {
   FileSliders,
   Wrench,
   // New icons for CTEM architecture
+  LayoutGrid,
   ShieldAlert,
   Package,
   Scale,
@@ -426,6 +427,11 @@ export const sidebarData: SidebarData = {
               title: 'Templates',
               url: '/pentest/templates',
               icon: BookTemplate,
+            },
+            {
+              title: 'MITRE Coverage',
+              url: '/pentest/mitre-coverage',
+              icon: LayoutGrid,
             },
           ],
         },
