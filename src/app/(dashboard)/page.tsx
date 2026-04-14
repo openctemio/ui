@@ -146,11 +146,13 @@ export default function Dashboard() {
     color: (SEVERITY_COLORS as Record<string, string>)[name.toLowerCase()] || '#6b7280',
   }))
 
-  // Prepare asset distribution for bar chart
-  const assetDistribution = Object.entries(assetsByType).map(([name, count]) => ({
-    name: name.charAt(0).toUpperCase() + name.slice(1).replace(/_/g, ' '),
-    count,
-  }))
+  // Prepare asset distribution for bar chart — sorted by count descending
+  const assetDistribution = Object.entries(assetsByType)
+    .map(([name, count]) => ({
+      name: name.charAt(0).toUpperCase() + name.slice(1).replace(/_/g, ' '),
+      count,
+    }))
+    .sort((a, b) => b.count - a.count)
 
   // Derive CTEM process step from real data
   // 0: Scoping (no assets yet)
@@ -452,19 +454,26 @@ export default function Dashboard() {
                   </CardHeader>
                   <CardContent>
                     {assetDistribution.length > 0 ? (
-                      <ResponsiveContainer width="100%" height={assetDistribution.length * 40}>
-                        <BarChart data={assetDistribution} layout="vertical" barCategoryGap="20%">
-                          <XAxis type="number" hide />
-                          <YAxis
+                      <ResponsiveContainer width="100%" height={300}>
+                        <BarChart data={assetDistribution} barCategoryGap="15%">
+                          <XAxis
                             dataKey="name"
-                            type="category"
-                            tick={{ fontSize: 12 }}
+                            tick={{ fontSize: 11 }}
                             tickLine={false}
                             axisLine={false}
-                            width={100}
+                            interval={0}
+                            angle={-45}
+                            textAnchor="end"
+                            height={80}
+                          />
+                          <YAxis
+                            tick={{ fontSize: 11 }}
+                            tickLine={false}
+                            axisLine={false}
+                            width={40}
                           />
                           <Tooltip />
-                          <Bar dataKey="count" fill="#3b82f6" radius={[0, 4, 4, 0]} barSize={20} />
+                          <Bar dataKey="count" fill="#3b82f6" radius={[4, 4, 0, 0]} />
                         </BarChart>
                       </ResponsiveContainer>
                     ) : (
