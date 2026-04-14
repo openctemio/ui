@@ -26,12 +26,12 @@ import {
   Filter,
 } from 'lucide-react'
 import {
-  getComponentStats,
   ComponentTable,
   ComponentDetailSheet,
   useComponentsApi,
   type ApiComponentEcosystem,
 } from '@/features/components'
+import { useComponentStatsApi } from '@/features/components/api/use-components-api'
 import { mapApiComponentToUi } from '@/features/components/api/mapper' // Best to export this from features/components/index.ts
 import type { Component } from '@/features/components'
 import { toast } from 'sonner'
@@ -72,34 +72,23 @@ export default function AllComponentsPage() {
   }, [apiData])
 
   // Stats: prefer the API total for "Total Components" so the headline number
-  // matches reality (the previous mock stats showed a fake 8000+ even when
-  // tenants had 0 components). The other 3 stat cards (direct/outdated/
-  // vulnerable) still use the mock helper because the components API does
-  // not yet expose those breakdowns; we display them with a "—" hint until
-  // a /components/stats endpoint exists.
-  const apiTotalComponents = apiData?.total ?? 0
-  const mockStats = useMemo(() => getComponentStats(), [])
+  const { data: apiStats } = useComponentStatsApi()
   const stats = {
-    ...mockStats,
-    totalComponents: apiTotalComponents,
+    totalComponents: apiData?.total ?? 0,
+    directDependencies: apiStats?.direct_dependencies ?? 0,
+    transitiveDependencies: apiStats?.transitive_dependencies ?? 0,
+    outdatedComponents: apiStats?.outdated_components ?? 0,
+    componentsWithVulnerabilities: apiStats?.vulnerable_components ?? 0,
   }
 
-  // Reset page when filters change
-  // useEffect(() => setPage(1), [searchQuery, filterType, ecosystemFilter]);
-  // ^ Handled by setting state directly in handlers if needed, or allow standard behavior.
+  const ecosystems = ['npm', 'pypi', 'go', 'maven', 'cargo', 'nuget', 'rubygems', 'composer']
 
-  // Get unique ecosystems (from mock or API? API doesn't give us list of all available)
-  // We'll stick to a predefined list or formatted list for now.
-  const ecosystems = ['npm', 'pypi', 'go', 'maven', 'docker'] // Simplified
-
-  // Filter counts - currently broken with server-side pagination (we only know total)
-  // We will display data from API response 'total' for "All", but others we can't know without separate queries.
   const filterCounts = {
     all: apiData?.total || 0,
-    direct: 0, // Unknown
-    transitive: 0, // Unknown
-    outdated: 0, // Unknown
-    vulnerable: 0, // Unknown
+    direct: stats.directDependencies,
+    transitive: stats.transitiveDependencies,
+    outdated: stats.outdatedComponents,
+    vulnerable: stats.componentsWithVulnerabilities,
   }
 
   const handleExport = () => {
