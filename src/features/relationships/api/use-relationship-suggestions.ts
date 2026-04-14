@@ -1,8 +1,8 @@
 'use client'
 
-import useSWR from 'swr'
+import useSWR, { useSWRConfig } from 'swr'
 import useSWRMutation from 'swr/mutation'
-import { get, post } from '@/lib/api/client'
+import { get, post, patch } from '@/lib/api/client'
 import { useTenant } from '@/context/tenant-provider'
 
 // ============================================
@@ -69,26 +69,74 @@ export function useSuggestionCount() {
   })
 }
 
+/**
+ * Invalidate all suggestion-related SWR caches (list + count).
+ */
+function useInvalidateSuggestions() {
+  const { mutate } = useSWRConfig()
+  return () => {
+    // Invalidate all keys matching the suggestions base URL
+    mutate((key: unknown) => typeof key === 'string' && key.startsWith(BASE_URL), undefined, {
+      revalidate: true,
+    })
+  }
+}
+
 export function useApproveSuggestion() {
+  const invalidate = useInvalidateSuggestions()
   return useSWRMutation(BASE_URL, async (_url: string, { arg }: { arg: string }) => {
-    return post(`${BASE_URL}/${arg}/approve`, {})
+    const result = await post(`${BASE_URL}/${arg}/approve`, {})
+    invalidate()
+    return result
   })
 }
 
 export function useDismissSuggestion() {
+  const invalidate = useInvalidateSuggestions()
   return useSWRMutation(BASE_URL, async (_url: string, { arg }: { arg: string }) => {
-    return post(`${BASE_URL}/${arg}/dismiss`, {})
+    const result = await post(`${BASE_URL}/${arg}/dismiss`, {})
+    invalidate()
+    return result
   })
 }
 
 export function useApproveAllSuggestions() {
+  const invalidate = useInvalidateSuggestions()
   return useSWRMutation(BASE_URL, async () => {
-    return post(`${BASE_URL}/approve-all`, {})
+    const result = await post(`${BASE_URL}/approve-all`, {})
+    invalidate()
+    return result
   })
 }
 
 export function useGenerateSuggestions() {
+  const invalidate = useInvalidateSuggestions()
   return useSWRMutation(BASE_URL, async () => {
-    return post(`${BASE_URL}/generate`, {})
+    const result = await post(`${BASE_URL}/generate`, {})
+    invalidate()
+    return result
+  })
+}
+
+export function useUpdateSuggestionType() {
+  const invalidate = useInvalidateSuggestions()
+  return useSWRMutation(
+    `${BASE_URL}/update-type`,
+    async (_url: string, { arg }: { arg: { id: string; relationship_type: string } }) => {
+      const result = await patch(`${BASE_URL}/${arg.id}/type`, {
+        relationship_type: arg.relationship_type,
+      })
+      invalidate()
+      return result
+    }
+  )
+}
+
+export function useApproveBatchSuggestions() {
+  const invalidate = useInvalidateSuggestions()
+  return useSWRMutation(BASE_URL, async (_url: string, { arg }: { arg: string[] }) => {
+    const result = await post<{ count: number }>(`${BASE_URL}/approve-batch`, { ids: arg })
+    invalidate()
+    return result
   })
 }

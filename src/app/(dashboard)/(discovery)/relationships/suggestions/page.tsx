@@ -9,6 +9,17 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -23,7 +34,17 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { ArrowRight, Check, CheckCheck, RefreshCw, Search, Sparkles, X, Link2 } from 'lucide-react'
+import {
+  AlertTriangle,
+  ArrowRight,
+  Check,
+  CheckCheck,
+  RefreshCw,
+  Search,
+  Sparkles,
+  X,
+  Link2,
+} from 'lucide-react'
 import { toast } from 'sonner'
 import { useDebounce } from '@/hooks/use-debounce'
 import { getErrorMessage } from '@/lib/api/error-handler'
@@ -33,26 +54,39 @@ import {
   useDismissSuggestion,
   useApproveAllSuggestions,
   useGenerateSuggestions,
-  type RelationshipSuggestion,
+  useUpdateSuggestionType,
+  useApproveBatchSuggestions,
 } from '@/features/relationships/api/use-relationship-suggestions'
 
 const TYPE_LABELS: Record<string, string> = {
-  member_of: 'Member Of',
-  cname_of: 'CNAME Of',
+  contains: 'Contains',
   resolves_to: 'Resolves To',
+  cname_of: 'CNAME Of',
   runs_on: 'Runs On',
   deployed_to: 'Deployed To',
   depends_on: 'Depends On',
   exposes: 'Exposes',
-  contains: 'Contains',
+  sends_data_to: 'Sends Data To',
+  stores_data_in: 'Stores Data In',
+  authenticates_to: 'Authenticates To',
+  granted_to: 'Granted To',
+  has_access_to: 'Has Access To',
+  load_balances: 'Load Balances',
+  protected_by: 'Protected By',
+  monitors: 'Monitors',
+  manages: 'Manages',
+  peer_of: 'Peer Of',
+  replicates_to: 'Replicates To',
 }
 
 const TYPE_COLORS: Record<string, string> = {
-  member_of: 'bg-blue-500/10 text-blue-600',
-  cname_of: 'bg-blue-500/10 text-blue-600',
+  contains: 'bg-indigo-500/10 text-indigo-600',
   resolves_to: 'bg-green-500/10 text-green-600',
+  cname_of: 'bg-cyan-500/10 text-cyan-600',
   runs_on: 'bg-purple-500/10 text-purple-600',
   deployed_to: 'bg-orange-500/10 text-orange-600',
+  depends_on: 'bg-yellow-500/10 text-yellow-600',
+  exposes: 'bg-red-500/10 text-red-600',
 }
 
 const ALL_RELATIONSHIP_TYPES = Object.keys(TYPE_LABELS)
@@ -71,7 +105,7 @@ export default function RelationshipSuggestionsPage() {
   const [editingType, setEditingType] = useState<string | null>(null)
 
   const pageSize = 20
-  const { data, isLoading, mutate } = useRelationshipSuggestions(
+  const { data, error, isLoading, isValidating } = useRelationshipSuggestions(
     'pending',
     page,
     pageSize,
@@ -81,10 +115,13 @@ export default function RelationshipSuggestionsPage() {
   const { trigger: dismiss, isMutating: isDismissing } = useDismissSuggestion()
   const { trigger: approveAll, isMutating: isApprovingAll } = useApproveAllSuggestions()
   const { trigger: generate, isMutating: isGenerating } = useGenerateSuggestions()
+  const { trigger: updateType } = useUpdateSuggestionType()
+  const { trigger: approveBatch, isMutating: isBatchApproving } = useApproveBatchSuggestions()
 
   const suggestions = data?.data ?? []
   const total = data?.total ?? 0
   const totalPages = Math.ceil(total / pageSize)
+  const isMutating = isApproving || isDismissing || isApprovingAll || isBatchApproving
 
   const toggleSelect = useCallback((id: string) => {
     setSelected((prev) => {
@@ -112,7 +149,6 @@ export default function RelationshipSuggestionsPage() {
         n.delete(id)
         return n
       })
-      mutate()
     } catch (err) {
       toast.error(getErrorMessage(err, 'Failed to approve'))
     }
@@ -127,7 +163,6 @@ export default function RelationshipSuggestionsPage() {
         n.delete(id)
         return n
       })
-      mutate()
     } catch (err) {
       toast.error(getErrorMessage(err, 'Failed to dismiss'))
     }
@@ -136,17 +171,9 @@ export default function RelationshipSuggestionsPage() {
   const handleApproveSelected = async () => {
     const ids = Array.from(selected)
     try {
-      const response = await fetch('/api/v1/relationships/suggestions/approve-batch', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ ids }),
-      })
-      if (!response.ok) throw new Error('Failed to approve batch')
-      const result = await response.json()
-      toast.success(`${result.count} relationships created`)
+      const result = await approveBatch(ids)
+      toast.success(`${result?.count ?? ids.length} relationships created`)
       setSelected(new Set())
-      mutate()
     } catch (err) {
       toast.error(getErrorMessage(err, 'Failed to approve selected'))
     }
@@ -155,9 +182,8 @@ export default function RelationshipSuggestionsPage() {
   const handleApproveAll = async () => {
     try {
       await approveAll()
-      toast.success(`All relationships created`)
+      toast.success('All relationships created')
       setSelected(new Set())
-      mutate()
     } catch (err) {
       toast.error(getErrorMessage(err, 'Failed to approve all'))
     }
@@ -167,9 +193,18 @@ export default function RelationshipSuggestionsPage() {
     try {
       await generate()
       toast.success('Suggestions generated')
-      mutate()
     } catch (err) {
       toast.error(getErrorMessage(err, 'Failed to generate'))
+    }
+  }
+
+  const handleUpdateType = async (id: string, newType: string) => {
+    setEditingType(null)
+    try {
+      await updateType({ id, relationship_type: newType })
+      toast.success(`Changed to ${TYPE_LABELS[newType] || newType}`)
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to update type'))
     }
   }
 
@@ -192,10 +227,27 @@ export default function RelationshipSuggestionsPage() {
             Scan
           </Button>
           {total > 0 && (
-            <Button variant="outline" onClick={handleApproveAll} disabled={isApprovingAll}>
-              <CheckCheck className="h-4 w-4 mr-2" />
-              Approve All ({total})
-            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="outline" disabled={isApprovingAll}>
+                  <CheckCheck className="h-4 w-4 mr-2" />
+                  Approve All ({total})
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Approve all {total} suggestions?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will create {total} relationships between your assets. This action cannot
+                    be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleApproveAll}>Approve All</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           )}
         </div>
       </div>
@@ -230,20 +282,51 @@ export default function RelationshipSuggestionsPage() {
               />
             </div>
             {selected.size > 0 && (
-              <Button size="sm" onClick={handleApproveSelected} disabled={isApproving}>
-                <Check className="h-3.5 w-3.5 mr-1" />
-                Approve Selected ({selected.size})
-              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button size="sm" disabled={isBatchApproving}>
+                    <Check className="h-3.5 w-3.5 mr-1" />
+                    Approve Selected ({selected.size})
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>
+                      Approve {selected.size} selected suggestion{selected.size > 1 ? 's' : ''}?
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will create {selected.size} relationships between your assets.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleApproveSelected}>Approve</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             )}
           </div>
 
-          {isLoading ? (
+          {/* Error state */}
+          {error && !isLoading && (
+            <div className="flex items-center gap-3 rounded-lg border border-destructive/50 bg-destructive/5 p-4 mb-4">
+              <AlertTriangle className="h-5 w-5 text-destructive shrink-0" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-destructive">Failed to load suggestions</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {getErrorMessage(error, 'Please try again later')}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {isLoading || (isValidating && !data) ? (
             <div className="space-y-3">
               {Array.from({ length: 5 }).map((_, i) => (
                 <Skeleton key={i} className="h-12 w-full" />
               ))}
             </div>
-          ) : suggestions.length === 0 ? (
+          ) : suggestions.length === 0 && !error ? (
             <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
               <Link2 className="h-10 w-10 mb-3 opacity-30" />
               <p className="text-sm font-medium">
@@ -255,7 +338,7 @@ export default function RelationshipSuggestionsPage() {
                   : 'Click "Scan" to detect new connections'}
               </p>
             </div>
-          ) : (
+          ) : suggestions.length > 0 ? (
             <>
               <div className="overflow-x-auto">
                 <Table>
@@ -265,13 +348,13 @@ export default function RelationshipSuggestionsPage() {
                         <Checkbox
                           checked={selected.size === suggestions.length && suggestions.length > 0}
                           onCheckedChange={toggleSelectAll}
-                          aria-label="Select all"
+                          aria-label="Select all on this page"
                         />
                       </TableHead>
                       <TableHead>Source</TableHead>
                       <TableHead>Relationship</TableHead>
                       <TableHead>Target</TableHead>
-                      <TableHead>Reason</TableHead>
+                      <TableHead className="hidden lg:table-cell">Reason</TableHead>
                       <TableHead>Confidence</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
@@ -287,7 +370,7 @@ export default function RelationshipSuggestionsPage() {
                           />
                         </TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-2 min-w-[160px]">
+                          <div className="flex items-center gap-2 min-w-[120px]">
                             <Badge variant="outline" className="text-xs shrink-0">
                               {s.source_asset_type}
                             </Badge>
@@ -303,11 +386,9 @@ export default function RelationshipSuggestionsPage() {
                           {editingType === s.id ? (
                             <Select
                               defaultValue={s.relationship_type}
-                              onValueChange={(val) => {
-                                // Inline edit — for now just show the new label
-                                // TODO: wire to PATCH endpoint when backend supports it
-                                setEditingType(null)
-                                toast.info(`Changed to ${TYPE_LABELS[val] || val}`)
+                              onValueChange={(val) => handleUpdateType(s.id, val)}
+                              onOpenChange={(open) => {
+                                if (!open) setEditingType(null)
                               }}
                             >
                               <SelectTrigger className="h-7 w-[140px] text-xs">
@@ -336,7 +417,7 @@ export default function RelationshipSuggestionsPage() {
                           )}
                         </TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-2 min-w-[160px]">
+                          <div className="flex items-center gap-2 min-w-[120px]">
                             <Badge variant="outline" className="text-xs shrink-0">
                               {s.target_asset_type}
                             </Badge>
@@ -348,7 +429,7 @@ export default function RelationshipSuggestionsPage() {
                             </span>
                           </div>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="hidden lg:table-cell">
                           <span
                             className="text-xs text-muted-foreground max-w-[200px] truncate block"
                             title={s.reason}
@@ -366,17 +447,17 @@ export default function RelationshipSuggestionsPage() {
                               size="sm"
                               className="h-7 text-green-600 hover:text-green-700 hover:bg-green-50"
                               onClick={() => handleApprove(s.id)}
-                              disabled={isApproving || isDismissing}
+                              disabled={isMutating}
                             >
                               <Check className="h-3.5 w-3.5 mr-1" />
-                              Approve
+                              <span className="hidden sm:inline">Approve</span>
                             </Button>
                             <Button
                               variant="ghost"
                               size="sm"
                               className="h-7 text-muted-foreground hover:text-destructive"
                               onClick={() => handleDismiss(s.id)}
-                              disabled={isApproving || isDismissing}
+                              disabled={isMutating}
                             >
                               <X className="h-3.5 w-3.5" />
                             </Button>
@@ -415,7 +496,7 @@ export default function RelationshipSuggestionsPage() {
                 </div>
               )}
             </>
-          )}
+          ) : null}
         </CardContent>
       </Card>
     </Main>

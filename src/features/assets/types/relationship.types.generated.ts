@@ -76,14 +76,14 @@ export const GENERATED_RELATIONSHIP_LABELS: Record<
     direct: 'Resolves To',
     inverse: 'Resolved By',
     description:
-      'Literal DNS A/AAAA resolution — a domain resolves to an IP record or a load balancer that owns that IP. STRICT semantic: target MUST be the network endpoint, not the server that happens to own the IP. For "this domain leads to this server / website" use Exposes. For subdomain → parent domain or CNAME aliases use Cname Of.',
+      'Literal DNS A/AAAA resolution — a domain or subdomain resolves to an IP record or a load balancer that owns that IP. STRICT semantic: target MUST be the network endpoint, not the server that happens to own the IP. For "this domain leads to this server / website" use Exposes. For subdomain → parent domain hierarchy use Contains.',
     category: 'attack_surface_mapping',
   },
   cname_of: {
     direct: 'CNAME Of',
     inverse: 'Has CNAME',
     description:
-      'DNS aliasing — this name is a CNAME for that name. Also used for subdomain → parent domain logical relationships. Distinct from Resolves To which captures the final IP/host record.',
+      'DNS CNAME aliasing — this name is a CNAME record pointing to another name. Strictly for actual DNS CNAME records, NOT for subdomain hierarchy (use Contains for that). Distinct from Resolves To which captures the final A/AAAA IP record.',
     category: 'attack_surface_mapping',
   },
   depends_on: {
@@ -243,6 +243,10 @@ export const GENERATED_RELATIONSHIP_CONSTRAINTS: Record<
       sourceTypes: ['repository'],
       targetTypes: ['container_image'],
     },
+    {
+      sourceTypes: ['domain'],
+      targetTypes: ['subdomain'],
+    },
   ],
   exposes: [
     {
@@ -260,14 +264,14 @@ export const GENERATED_RELATIONSHIP_CONSTRAINTS: Record<
   ],
   resolves_to: [
     {
-      sourceTypes: ['domain'],
+      sourceTypes: ['domain', 'subdomain'],
       targetTypes: ['ip_address', 'load_balancer'],
     },
   ],
   cname_of: [
     {
-      sourceTypes: ['domain'],
-      targetTypes: ['domain'],
+      sourceTypes: ['domain', 'subdomain'],
+      targetTypes: ['domain', 'subdomain'],
     },
   ],
   depends_on: [
