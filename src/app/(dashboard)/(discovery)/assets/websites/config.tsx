@@ -2,15 +2,7 @@ import type { ColumnDef } from '@tanstack/react-table'
 import type { AssetPageConfig } from '@/features/assets/types/page-config.types'
 import type { Asset } from '@/features/assets'
 import { Badge } from '@/components/ui/badge'
-import {
-  MonitorSmartphone,
-  ShieldCheck,
-  ShieldX,
-  CheckCircle,
-  AlertTriangle,
-  Shield,
-  Zap,
-} from 'lucide-react'
+import { MonitorSmartphone, ShieldCheck, ShieldX, AlertTriangle, Shield, Zap } from 'lucide-react'
 
 const columns: ColumnDef<Asset>[] = [
   {
