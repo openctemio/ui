@@ -1482,86 +1482,88 @@ function FindingsTab({
     <div className="space-y-6">
       <Card>
         <CardHeader className="pb-3">
-          <div className="flex items-center justify-between mb-3">
-            <CardTitle className="flex items-center gap-2 text-base">
+          <div className="flex items-center justify-between gap-3">
+            <CardTitle className="flex items-center gap-2 text-base shrink-0">
               <Shield className="h-4 w-4" />
               Findings
+              <Badge variant="secondary" className="ml-1">
+                {total}
+              </Badge>
             </CardTitle>
-            <Badge variant="secondary">{total} results</Badge>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="relative flex-1 min-w-[180px] max-w-sm">
-              <SearchIcon className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search findings..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-8 h-8 text-sm"
-              />
-            </div>
-            <Select value={severityFilter} onValueChange={setSeverityFilter}>
-              <SelectTrigger className="w-[130px] h-8 text-xs">
-                <SelectValue placeholder="Severity" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Severities</SelectItem>
-                <SelectItem value="critical">Critical</SelectItem>
-                <SelectItem value="high">High</SelectItem>
-                <SelectItem value="medium">Medium</SelectItem>
-                <SelectItem value="low">Low</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[130px] h-8 text-xs">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="new">New</SelectItem>
-                <SelectItem value="confirmed">Confirmed</SelectItem>
-                <SelectItem value="in_progress">In Progress</SelectItem>
-                <SelectItem value="fix_applied">Fix Applied</SelectItem>
-                <SelectItem value="resolved">Resolved</SelectItem>
-                <SelectItem value="false_positive">False Positive</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={scannerFilter} onValueChange={setScannerFilter}>
-              <SelectTrigger className="w-[120px] h-8 text-xs">
-                <SelectValue placeholder="Scanner" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Scanners</SelectItem>
-                <SelectItem value="sast">SAST</SelectItem>
-                <SelectItem value="sca">SCA</SelectItem>
-                <SelectItem value="secret">Secret</SelectItem>
-                <SelectItem value="iac">IaC</SelectItem>
-                <SelectItem value="container">Container</SelectItem>
-              </SelectContent>
-            </Select>
-            {branches.length > 0 && (
-              <Select
-                value={branchFilter}
-                onValueChange={(v) => {
-                  setBranchFilter(v)
-                  setPage(1)
-                }}
-              >
-                <SelectTrigger className="w-[160px] h-8 text-xs">
-                  <SelectValue placeholder="Branch" />
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+              <div className="relative min-w-[140px]">
+                <SearchIcon className="absolute left-2 top-[7px] h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  placeholder="Search..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-7 h-7 text-xs w-[140px]"
+                />
+              </div>
+              <Select value={severityFilter} onValueChange={setSeverityFilter}>
+                <SelectTrigger className="w-[110px] h-7 text-xs">
+                  <SelectValue placeholder="Severity" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Branches</SelectItem>
-                  {branches.map((b) => (
-                    <SelectItem key={b.id} value={b.name}>
-                      <span className="flex items-center gap-1">
-                        <GitBranch className="h-3 w-3" />
-                        {b.name}
-                      </span>
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="all">All Severities</SelectItem>
+                  <SelectItem value="critical">Critical</SelectItem>
+                  <SelectItem value="high">High</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem>
+                  <SelectItem value="low">Low</SelectItem>
                 </SelectContent>
               </Select>
-            )}
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-[110px] h-7 text-xs">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="new">New</SelectItem>
+                  <SelectItem value="confirmed">Confirmed</SelectItem>
+                  <SelectItem value="in_progress">In Progress</SelectItem>
+                  <SelectItem value="fix_applied">Fix Applied</SelectItem>
+                  <SelectItem value="resolved">Resolved</SelectItem>
+                  <SelectItem value="false_positive">False Positive</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={scannerFilter} onValueChange={setScannerFilter}>
+                <SelectTrigger className="w-[120px] h-8 text-xs">
+                  <SelectValue placeholder="Scanner" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Scanners</SelectItem>
+                  <SelectItem value="sast">SAST</SelectItem>
+                  <SelectItem value="sca">SCA</SelectItem>
+                  <SelectItem value="secret">Secret</SelectItem>
+                  <SelectItem value="iac">IaC</SelectItem>
+                  <SelectItem value="container">Container</SelectItem>
+                </SelectContent>
+              </Select>
+              {branches.length > 0 && (
+                <Select
+                  value={branchFilter}
+                  onValueChange={(v) => {
+                    setBranchFilter(v)
+                    setPage(1)
+                  }}
+                >
+                  <SelectTrigger className="w-[160px] h-8 text-xs">
+                    <SelectValue placeholder="Branch" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Branches</SelectItem>
+                    {branches.map((b) => (
+                      <SelectItem key={b.id} value={b.name}>
+                        <span className="flex items-center gap-1">
+                          <GitBranch className="h-3 w-3" />
+                          {b.name}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
           </div>
         </CardHeader>
         <CardContent>
