@@ -1480,21 +1480,27 @@ function FindingsTab({
 
   return (
     <div className="space-y-6">
-      {/* Filters */}
       <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-wrap items-center gap-4">
-            <div className="relative flex-1 min-w-[200px]">
-              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between mb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Shield className="h-4 w-4" />
+              Findings
+            </CardTitle>
+            <Badge variant="secondary">{total} results</Badge>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative flex-1 min-w-[180px] max-w-sm">
+              <SearchIcon className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search findings..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
+                className="pl-8 h-8 text-sm"
               />
             </div>
             <Select value={severityFilter} onValueChange={setSeverityFilter}>
-              <SelectTrigger className="w-[140px]">
+              <SelectTrigger className="w-[130px] h-8 text-xs">
                 <SelectValue placeholder="Severity" />
               </SelectTrigger>
               <SelectContent>
@@ -1506,7 +1512,7 @@ function FindingsTab({
               </SelectContent>
             </Select>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[140px]">
+              <SelectTrigger className="w-[130px] h-8 text-xs">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -1517,11 +1523,10 @@ function FindingsTab({
                 <SelectItem value="fix_applied">Fix Applied</SelectItem>
                 <SelectItem value="resolved">Resolved</SelectItem>
                 <SelectItem value="false_positive">False Positive</SelectItem>
-                <SelectItem value="accepted_risk">Accepted Risk</SelectItem>
               </SelectContent>
             </Select>
             <Select value={scannerFilter} onValueChange={setScannerFilter}>
-              <SelectTrigger className="w-[140px]">
+              <SelectTrigger className="w-[120px] h-8 text-xs">
                 <SelectValue placeholder="Scanner" />
               </SelectTrigger>
               <SelectContent>
@@ -1541,7 +1546,7 @@ function FindingsTab({
                   setPage(1)
                 }}
               >
-                <SelectTrigger className="w-[180px]">
+                <SelectTrigger className="w-[160px] h-8 text-xs">
                   <SelectValue placeholder="Branch" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1558,19 +1563,6 @@ function FindingsTab({
               </Select>
             )}
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Findings list */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <span className="flex items-center gap-2 text-base">
-              <Shield className="h-4 w-4" />
-              Findings
-            </span>
-            <Badge variant="secondary">{total} results</Badge>
-          </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
