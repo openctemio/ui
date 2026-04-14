@@ -205,18 +205,7 @@ const SCM_PROVIDER_COLORS: Record<SCMProvider, string> = {
   local: 'bg-gray-500 text-white',
 }
 
-// Mock data for detail page
-interface BranchFindingsSummary {
-  total: number
-  by_severity: {
-    critical: number
-    high: number
-    medium: number
-    low: number
-    info: number
-  }
-}
-
+// Branch detail type — maps from API Branch type
 interface BranchDetail {
   id: string
   name: string
@@ -229,7 +218,10 @@ interface BranchDetail {
   last_commit_author: string
   last_commit_author_avatar?: string
   last_commit_at: string
-  findings_summary: BranchFindingsSummary
+  findings_summary: {
+    total: number
+    by_severity: { critical: number; high: number; medium: number; low: number; info: number }
+  }
   compared_to_default?: {
     new_findings: number
     resolved_findings: number
@@ -298,48 +290,38 @@ interface SLAPolicy {
   }>
 }
 
-const mockBranchDetails: BranchDetail[] = [
-  {
-    id: 'branch-1',
-    name: 'main',
-    type: 'main',
-    is_default: true,
-    is_protected: true,
-    scan_status: 'passed',
-    last_commit_sha: 'abc123',
-    last_commit_message: 'feat: add new feature',
-    last_commit_author: 'John Doe',
-    last_commit_author_avatar: '',
-    last_commit_at: '2024-01-15T10:30:00Z',
+/** Map API Branch to local BranchDetail shape */
+function mapBranchToDetail(b: import('@/features/repositories').Branch): BranchDetail {
+  return {
+    id: b.id,
+    name: b.name,
+    type: b.type as BranchDetail['type'],
+    is_default: b.isDefault,
+    is_protected: b.isProtected,
+    scan_status: b.scanStatus || 'not_scanned',
+    last_commit_sha: b.lastCommitSha || '',
+    last_commit_message: b.lastCommitMessage || '',
+    last_commit_author: b.lastCommitAuthor || '',
+    last_commit_at: b.lastCommitAt || '',
     findings_summary: {
-      total: 5,
-      by_severity: { critical: 1, high: 2, medium: 1, low: 1, info: 0 },
+      total: b.findingsSummary?.total ?? 0,
+      by_severity: {
+        critical: b.findingsSummary?.bySeverity?.critical ?? 0,
+        high: b.findingsSummary?.bySeverity?.high ?? 0,
+        medium: b.findingsSummary?.bySeverity?.medium ?? 0,
+        low: b.findingsSummary?.bySeverity?.low ?? 0,
+        info: b.findingsSummary?.bySeverity?.info ?? 0,
+      },
     },
-    last_scanned_at: '2024-01-15T10:30:00Z',
-  },
-  {
-    id: 'branch-2',
-    name: 'develop',
-    type: 'develop',
-    is_default: false,
-    is_protected: true,
-    scan_status: 'warning',
-    last_commit_sha: 'def456',
-    last_commit_message: 'fix: resolve bug',
-    last_commit_author: 'Jane Smith',
-    last_commit_author_avatar: '',
-    last_commit_at: '2024-01-14T14:00:00Z',
-    findings_summary: {
-      total: 8,
-      by_severity: { critical: 0, high: 3, medium: 3, low: 2, info: 0 },
-    },
-    compared_to_default: {
-      new_findings: 3,
-      resolved_findings: 0,
-    },
-    last_scanned_at: '2024-01-14T14:00:00Z',
-  },
-]
+    compared_to_default: b.comparedToDefault
+      ? {
+          new_findings: b.comparedToDefault.newFindings,
+          resolved_findings: b.comparedToDefault.resolvedFindings,
+        }
+      : undefined,
+    last_scanned_at: b.lastScannedAt,
+  }
+}
 
 /** Map API finding response to the local FindingDetail shape used by the UI */
 function mapApiFindingToDetail(f: ApiFinding): FindingDetail {
@@ -364,37 +346,23 @@ function mapApiFindingToDetail(f: ApiFinding): FindingDetail {
   }
 }
 
-const mockActivities: ActivityLog[] = [
-  {
-    id: 'activity-1',
-    action: 'scan_completed',
-    actor_type: 'system',
-    actor_name: 'System',
-    entity_name: 'main',
-    timestamp: '2024-01-15T10:30:00Z',
-    scan_summary: {
-      branch: 'main',
-      findings_total: 5,
-      findings_new: 3,
-      findings_resolved: 0,
-      duration_seconds: 180,
-      quality_gate_passed: true,
-    },
-  },
-  {
-    id: 'activity-2',
-    action: 'finding_resolved',
-    actor_type: 'user',
-    actor_name: 'John Doe',
-    actor_avatar: '',
-    entity_name: 'SQL Injection in login',
-    timestamp: '2024-01-14T14:00:00Z',
-    changes: [{ field: 'status', old_value: 'open', new_value: 'resolved' }],
-  },
-]
+/** Derive activity logs from findings (real data, no mock) */
+function deriveActivitiesFromFindings(findingsList: FindingDetail[]): ActivityLog[] {
+  return findingsList.slice(0, 20).map((f) => ({
+    id: `finding-${f.id}`,
+    action:
+      f.status === 'resolved'
+        ? ('finding_resolved' as ActivityAction)
+        : ('finding_created' as ActivityAction),
+    actor_type: 'system' as const,
+    actor_name: f.assigned_to_name || 'Scanner',
+    entity_name: f.title,
+    timestamp: f.first_detected_at,
+  }))
+}
 
-const mockSLAPolicy: SLAPolicy = {
-  id: 'sla-1',
+const defaultSLAPolicy: SLAPolicy = {
+  id: 'default',
   name: 'Default Security SLA',
   rules: [
     { severity: 'critical', days_to_remediate: 2, warning_threshold_percent: 50 },
@@ -1735,7 +1703,7 @@ function SettingsTab({ repository }: { repository: Repository }) {
             <Timer className="h-4 w-4" />
             SLA Policy
           </CardTitle>
-          <CardDescription>{mockSLAPolicy.name}</CardDescription>
+          <CardDescription>{defaultSLAPolicy.name}</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
@@ -1747,7 +1715,7 @@ function SettingsTab({ repository }: { repository: Repository }) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {mockSLAPolicy.rules.map((rule) => (
+              {defaultSLAPolicy.rules.map((rule) => (
                 <TableRow key={rule.severity}>
                   <TableCell>
                     <SeverityBadge severity={rule.severity} />
@@ -1930,8 +1898,8 @@ export default function RepositoryDetailPage() {
     mutate: mutateRepo,
   } = useRepository(repositoryId)
 
-  // Fetch branches from API only after repository is successfully loaded
-  const { data: _branchesData, isLoading: _branchesLoading } = useRepositoryBranches(
+  // Fetch branches from API
+  const { data: branchesData, isLoading: _branchesLoading } = useRepositoryBranches(
     repositoryData ? repositoryId : null
   )
 
@@ -1951,10 +1919,16 @@ export default function RepositoryDetailPage() {
     return findingsData.data.map(mapApiFindingToDetail)
   }, [findingsData])
 
-  // Uses mock data — wire to repository detail API when backend endpoint is available.
-  // Currently using mock data for branches and activities
-  const branches = mockBranchDetails
-  const activities = mockActivities
+  // Map API branches to local BranchDetail shape
+  const branches: BranchDetail[] = useMemo(() => {
+    if (!branchesData || !Array.isArray(branchesData)) return []
+    return branchesData.map(mapBranchToDetail)
+  }, [branchesData])
+
+  // Derive activity from findings (real data)
+  const activities: ActivityLog[] = useMemo(() => {
+    return deriveActivitiesFromFindings(findings)
+  }, [findings])
 
   // Action handlers
   const handleSync = useCallback(async () => {
