@@ -71,20 +71,23 @@ export default function AllComponentsPage() {
     return apiData.data.map(mapApiComponentToUi)
   }, [apiData])
 
-  // Stats: prefer the API total for "Total Components" so the headline number
+  // Stats from dedicated endpoint — stable regardless of list filters
   const { data: apiStats } = useComponentStatsApi()
   const stats = {
-    totalComponents: apiData?.total ?? 0,
+    totalComponents: apiStats?.total_components ?? 0,
     directDependencies: apiStats?.direct_dependencies ?? 0,
     transitiveDependencies: apiStats?.transitive_dependencies ?? 0,
     outdatedComponents: apiStats?.outdated_components ?? 0,
     componentsWithVulnerabilities: apiStats?.vulnerable_components ?? 0,
   }
 
+  // Filtered count from list API (changes with filters)
+  const filteredTotal = apiData?.total ?? 0
+
   const ecosystems = ['npm', 'pypi', 'go', 'maven', 'cargo', 'nuget', 'rubygems', 'composer']
 
   const filterCounts = {
-    all: apiData?.total || 0,
+    all: stats.totalComponents,
     direct: stats.directDependencies,
     transitive: stats.transitiveDependencies,
     outdated: stats.outdatedComponents,
