@@ -339,7 +339,6 @@ export const sidebarData: SidebarData = {
               title: 'Vulnerable',
               url: '/components/vulnerable',
               icon: ShieldAlert,
-              badge: '4',
             },
             {
               title: 'Ecosystems',
@@ -472,7 +471,6 @@ export const sidebarData: SidebarData = {
           title: 'Remediation Tasks',
           url: '/remediation',
           icon: ListChecks,
-          badge: '24',
           permission: Permission.RemediationRead,
           module: 'remediation',
         },
