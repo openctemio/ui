@@ -1707,28 +1707,33 @@ function ActivityTab({ activities }: { activities: ActivityLog[] }) {
 
   return (
     <div className="space-y-6">
-      {/* Filters */}
-      <Card>
-        <CardContent className="pt-6">
-          <Tabs value={actionFilter} onValueChange={setActionFilter}>
-            <TabsList>
-              <TabsTrigger value="all">All Activity</TabsTrigger>
-              <TabsTrigger value="scans">Scans</TabsTrigger>
-              <TabsTrigger value="findings">Findings</TabsTrigger>
-              <TabsTrigger value="branches">Branches & PRs</TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </CardContent>
-      </Card>
-
-      {/* Activity Timeline */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <History className="h-4 w-4" />
-            Activity Timeline
-          </CardTitle>
-          <CardDescription>{filteredActivities.length} events</CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <History className="h-4 w-4" />
+                Activity Timeline
+              </CardTitle>
+              <CardDescription>{filteredActivities.length} events</CardDescription>
+            </div>
+            <Tabs value={actionFilter} onValueChange={setActionFilter}>
+              <TabsList className="h-8">
+                <TabsTrigger value="all" className="text-xs px-2.5 h-7">
+                  All
+                </TabsTrigger>
+                <TabsTrigger value="scans" className="text-xs px-2.5 h-7">
+                  Scans
+                </TabsTrigger>
+                <TabsTrigger value="findings" className="text-xs px-2.5 h-7">
+                  Findings
+                </TabsTrigger>
+                <TabsTrigger value="branches" className="text-xs px-2.5 h-7">
+                  Branches
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="relative">
