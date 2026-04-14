@@ -231,10 +231,14 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
   // Stats always show the full type scope (not filtered by URL sub_type)
   // so stat cards like "Firewalls: 3, Routers: 1" remain visible even
   // when the table is filtered to a specific sub_type via URL param.
+  // Stats always reflect the FULL scope of this page (all types in config),
+  // never narrowed by URL ?type= filter. This way stat cards show the global
+  // picture (e.g., "15 Total, 2 Root, 13 Sub") even when the table is
+  // filtered to show only Root or only Sub.
   const { stats: typeStats, isLoading: statsLoading } = useAssetStats(
-    urlType ? ([urlType] as AssetType[]) : ((config.types || [config.type]) as AssetType[]),
+    (config.types || [config.type]) as AssetType[],
     undefined,
-    config.subType // Only use config's static subType (e.g., websites page), not URL override
+    config.subType
   )
 
   // Headline assets — a separate query that fetches the FIRST page of assets
@@ -929,7 +933,6 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
           description={`${typeStats.total.toLocaleString()} ${config.labelPlural.toLowerCase()} in your infrastructure`}
         >
           <div className="flex items-center gap-2">
-            {headerExtra}
             <Button variant="outline" onClick={handleExport}>
               <Download className="mr-2 h-4 w-4" />
               Export
@@ -1060,7 +1063,10 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
         {/* Table */}
         <Card className="mt-6">
           <CardHeader>
-            <CardTitle>All {config.labelPlural}</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle>All {config.labelPlural}</CardTitle>
+              {headerExtra}
+            </div>
             {hasActiveFilter && !isLoading && (
               <CardDescription className="text-xs">
                 Filtered:{' '}
@@ -1085,7 +1091,7 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
           </CardHeader>
           <CardContent>
             <div className="flex flex-col gap-2 mb-4">
-              {/* Row 1: Search + Status + Tags + Add Filter + headerExtra (scrollable, no wrap) */}
+              {/* Row 1: Search + Status + Tags + Add Filter (scrollable, no wrap) */}
               <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
                 <div className="relative flex-1 min-w-[200px] max-w-md">
                   <SearchIcon className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
