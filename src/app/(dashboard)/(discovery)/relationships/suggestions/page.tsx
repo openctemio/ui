@@ -128,8 +128,9 @@ function SuggestionRow({
 }
 
 export default function RelationshipSuggestionsPage() {
-  const [page] = useState(1)
-  const { data, isLoading, mutate } = useRelationshipSuggestions('pending', page, 100)
+  const [page, setPage] = useState(1)
+  const pageSize = 20
+  const { data, isLoading, mutate } = useRelationshipSuggestions('pending', page, pageSize)
   const { trigger: approve, isMutating: isApproving } = useApproveSuggestion()
   const { trigger: dismiss, isMutating: isDismissing } = useDismissSuggestion()
   const { trigger: approveAll, isMutating: isApprovingAll } = useApproveAllSuggestions()
@@ -260,6 +261,32 @@ export default function RelationshipSuggestionsPage() {
                   ))}
                 </TableBody>
               </Table>
+              {/* Pagination */}
+              {total > pageSize && (
+                <div className="flex items-center justify-between border-t px-4 py-3 mt-2">
+                  <span className="text-xs text-muted-foreground">
+                    Page {page} of {Math.ceil(total / pageSize)} ({total} total)
+                  </span>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                      disabled={page <= 1}
+                    >
+                      Previous
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPage((p) => Math.min(Math.ceil(total / pageSize), p + 1))}
+                      disabled={page >= Math.ceil(total / pageSize)}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </CardContent>
