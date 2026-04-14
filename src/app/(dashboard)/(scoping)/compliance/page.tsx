@@ -144,7 +144,7 @@ export default function CompliancePage() {
   const { data: frameworksData, isLoading: loadingFrameworks } = useFrameworks()
   const { data: apiStats } = useComplianceStats()
 
-  const frameworks = frameworksData?.data ?? []
+  const frameworks = useMemo(() => frameworksData?.data ?? [], [frameworksData])
 
   // Selected framework for controls tab
   const [selectedFrameworkId, setSelectedFrameworkId] = useState<string>('all')
