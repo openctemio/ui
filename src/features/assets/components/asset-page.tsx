@@ -243,7 +243,6 @@ export function AssetPage({ config }: AssetPageProps) {
   // same page of data already fetched for the table.
   const headlineAssets = assets
   const scopeCoverageAssets = assets
-  const scopeCoverageAssetsTotal = total
 
   // True when the user has narrowed the view via a non-status filter.
   // Status tabs are intentionally excluded — they're navigation, not filtering.
