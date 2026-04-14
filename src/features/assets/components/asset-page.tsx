@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
+import { formatDistanceToNow } from 'date-fns'
 import {
   type ColumnDef,
   flexRender,
@@ -752,6 +753,39 @@ export function AssetPage({ config }: AssetPageProps) {
           </Button>
         ),
         cell: ({ row }) => <RiskScoreBadge score={row.original.riskScore} size="sm" />,
+      },
+      // Last Update — built-in for all asset pages, sortable
+      {
+        accessorKey: 'updatedAt',
+        header: ({ column }) => (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+            className="-ml-4"
+          >
+            Last Update
+            <ArrowUpDown className="ml-2 h-4 w-4" />
+          </Button>
+        ),
+        cell: ({ row }) => {
+          const raw = row.original.updatedAt
+          if (!raw) return <span className="text-muted-foreground">-</span>
+          const date = new Date(raw)
+          const now = new Date()
+          const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24))
+          const label = formatDistanceToNow(date, { addSuffix: true })
+          const color =
+            diffDays > 30
+              ? 'text-red-500'
+              : diffDays > 7
+                ? 'text-yellow-600 dark:text-yellow-400'
+                : 'text-muted-foreground'
+          return (
+            <span className={`text-xs ${color}`} title={date.toLocaleString()}>
+              {label}
+            </span>
+          )
+        },
       },
       // Scope
       {
