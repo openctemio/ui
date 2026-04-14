@@ -23,21 +23,21 @@ import {
   ComponentDetailSheet,
   transformVulnerableComponents,
 } from '@/features/components'
-import { useVulnerableComponentsApi } from '@/features/components/api/use-components-api'
+import {
+  useVulnerableComponentsApi,
+  useComponentStatsApi,
+} from '@/features/components/api/use-components-api'
 import type { Component } from '@/features/components'
 import { toast } from 'sonner'
 
 type SeverityFilter = 'all' | 'critical' | 'high' | 'medium' | 'kev'
 
 export default function VulnerableComponentsPage() {
-  // Fetch vulnerable components from API (no limit to get all)
-  // limit=100 is the API cap — this endpoint returns the TOP N most-vulnerable
-  // components, not a paginated list. All counts derived from this array are
-  // bounded by 100; the UI labels reflect that ("Top 100 most vulnerable").
   const VULNERABLE_LIMIT = 100
   const { data: apiVulnerableComponents, isLoading } = useVulnerableComponentsApi(VULNERABLE_LIMIT)
+  // Use stats API for accurate counts (not limited by the 100 item cap)
+  const { data: apiStats } = useComponentStatsApi()
 
-  // Transform API data to UI Component type
   const vulnerableComponents = useMemo(() => {
     if (!apiVulnerableComponents) return []
     return transformVulnerableComponents(apiVulnerableComponents)
@@ -47,27 +47,20 @@ export default function VulnerableComponentsPage() {
   const [severityFilter, setSeverityFilter] = useState<SeverityFilter>('all')
   const [selectedComponent, setSelectedComponent] = useState<Component | null>(null)
 
-  // Calculate stats
+  // Stats from dedicated stats API — accurate counts regardless of list limit
   const stats = useMemo(() => {
-    let criticalCount = 0
-    let highCount = 0
-    let kevCount = 0
-
-    vulnerableComponents.forEach((c) => {
-      if (c.vulnerabilityCount.critical > 0) criticalCount++
-      if (c.vulnerabilityCount.high > 0) highCount++
-      if (c.vulnerabilities.some((v) => v.inCisaKev)) kevCount++
-    })
+    const criticalCount = apiStats?.vuln_by_severity?.critical ?? 0
+    const highCount = apiStats?.vuln_by_severity?.high ?? 0
+    const kevCount = apiStats?.cisa_kev_components ?? 0
 
     return {
-      total: vulnerableComponents.length,
+      total: apiStats?.vulnerable_components ?? vulnerableComponents.length,
       critical: criticalCount,
       high: highCount,
-      // Note: exploitable count requires additional API data we don't have yet
       exploitable: 0,
       kev: kevCount,
     }
-  }, [vulnerableComponents])
+  }, [apiStats])
 
   // Filter components
   const filteredComponents = useMemo(() => {
