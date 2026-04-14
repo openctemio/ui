@@ -274,7 +274,13 @@ async function syncRepository(assetId: string, name: string) {
 }
 
 function getProviderFromAsset(asset: Asset): string {
-  return asset.provider || asset.metadata.projectProvider || asset.metadata.repoProvider || 'github'
+  const meta = asset.metadata as Record<string, unknown>
+  return (
+    asset.provider ||
+    (meta.project_provider as string) ||
+    (meta.repo_provider as string) ||
+    'github'
+  )
 }
 
 function getWebUrl(asset: Asset): string | undefined {
@@ -378,7 +384,7 @@ export const repositoriesConfig: AssetPageConfig = {
       isMetadata: true,
     },
     {
-      name: 'defaultBranch',
+      name: 'default_branch',
       label: 'Default Branch',
       type: 'text',
       placeholder: 'main',
@@ -590,7 +596,9 @@ export const repositoriesConfig: AssetPageConfig = {
         {
           label: 'Default Branch',
           getValue: (asset) => {
-            const branch = asset.metadata.defaultBranch || asset.repository?.defaultBranch
+            const branch =
+              ((asset.metadata as Record<string, unknown>).default_branch as string) ||
+              asset.repository?.defaultBranch
             return branch ? (
               <code className="text-xs bg-muted px-2 py-1 rounded">{branch}</code>
             ) : (

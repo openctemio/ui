@@ -51,11 +51,11 @@ export function SignOutDialog({ open, onOpenChange, redirectTo }: SignOutDialogP
     // Close dialog first
     onOpenChange(false)
 
-    // Clear localStorage user data
+    // Clear sessionStorage user data
     try {
-      localStorage.removeItem('app_user')
+      sessionStorage.removeItem('app_user')
     } catch {
-      // Ignore localStorage errors
+      // Ignore sessionStorage errors
     }
 
     // Clear client-side state first
@@ -103,11 +103,11 @@ export function SignOutButton({
   const [isPending, startTransition] = useTransition()
 
   const handleClick = () => {
-    // Clear localStorage user data
+    // Clear sessionStorage user data
     try {
-      localStorage.removeItem('app_user')
+      sessionStorage.removeItem('app_user')
     } catch {
-      // Ignore localStorage errors
+      // Ignore sessionStorage errors
     }
 
     clearAuth()

@@ -123,6 +123,9 @@ services:
       # Cookie settings
       SECURE_COOKIES: ${SECURE_COOKIES:-true}
       COOKIE_MAX_AGE: ${COOKIE_MAX_AGE:-604800}
+      # CSP connect-src for WebSocket and API connections (space-separated origins)
+      # Example: "https://ctem.example.com wss://ctem.example.com:8080"
+      CSP_CONNECT_SRC: ${CSP_CONNECT_SRC:-https://*.openctem.io wss://*.openctem.io}
       # Token refresh
       ENABLE_TOKEN_REFRESH: ${ENABLE_TOKEN_REFRESH:-true}
       TOKEN_REFRESH_BEFORE_EXPIRY: ${TOKEN_REFRESH_BEFORE_EXPIRY:-300}

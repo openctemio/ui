@@ -51,16 +51,16 @@ export function SidebarUser({ initialUser }: SidebarUserProps) {
   const [open, setOpen] = useDialogState()
   const [user, setUser] = useState<UserData | null>(initialUser || null)
 
-  // Try to get user from localStorage on mount (for local auth) - syncing with external storage
+  // Try to get user from sessionStorage on mount (for local auth) - syncing with external storage
   useEffect(() => {
     if (!user) {
       try {
-        const storedUser = localStorage.getItem('app_user')
+        const storedUser = sessionStorage.getItem('app_user')
         if (storedUser) {
           setUser(JSON.parse(storedUser))
         }
       } catch {
-        // Ignore localStorage errors
+        // Ignore sessionStorage errors
       }
     }
   }, [user])

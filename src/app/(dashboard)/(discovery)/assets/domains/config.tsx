@@ -211,7 +211,7 @@ export function buildDomainsConfig({
         isMetadata: true,
       },
       {
-        name: 'expiryDate',
+        name: 'expiry_date',
         label: 'Expiry Date',
         type: 'text',
         placeholder: 'YYYY-MM-DD',
@@ -284,8 +284,8 @@ export function buildDomainsConfig({
           {
             label: 'Expiry Date',
             getValue: (asset) =>
-              asset.metadata.expiryDate
-                ? new Date(asset.metadata.expiryDate as string).toLocaleDateString()
+              asset.metadata.expiry_date
+                ? new Date(asset.metadata.expiry_date as string).toLocaleDateString()
                 : '-',
           },
           {
@@ -378,7 +378,7 @@ export function buildDomainsConfig({
     exportFields: [
       { header: 'Name', accessor: (a) => a.name },
       { header: 'Registrar', accessor: (a) => (a.metadata.registrar as string) || '' },
-      { header: 'Expiry Date', accessor: (a) => (a.metadata.expiryDate as string) || '' },
+      { header: 'Expiry Date', accessor: (a) => (a.metadata.expiry_date as string) || '' },
       { header: 'Status', accessor: (a) => a.status },
       { header: 'Risk Score', accessor: (a) => a.riskScore },
       { header: 'Findings', accessor: (a) => a.findingCount },

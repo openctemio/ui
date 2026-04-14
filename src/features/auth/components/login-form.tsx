@@ -30,6 +30,8 @@ import { Input } from '@/components/ui/input'
 import { PasswordInput } from '@/components/password-input'
 import { IconGoogle, IconGithub, IconMicrosoft } from '@/assets/brand-icons'
 
+import { validateRedirectUrl } from '@/lib/redirect'
+
 // Import schema and server actions
 import { loginSchema, type LoginInput } from '../schemas/auth.schema'
 import { loginAction } from '../actions/local-auth-actions'
@@ -95,6 +97,9 @@ export function LoginForm({
   const router = useRouter()
   const searchParams = useSearchParams()
 
+  // Validate redirectTo to prevent open redirect attacks
+  const safeRedirectTo = validateRedirectUrl(redirectTo, '/')
+
   // Fetch tenant-specific SSO providers when ?org= is present
   const { data: ssoProviders } = useTenantSSOProviders(orgSlug ?? null)
 
@@ -126,10 +131,10 @@ export function LoginForm({
       })
 
       if (result.success) {
-        // Store user data in localStorage for sidebar display
+        // Store user data in sessionStorage for sidebar display
         if (result.user) {
           try {
-            localStorage.setItem(
+            sessionStorage.setItem(
               'app_user',
               JSON.stringify({
                 id: result.user.id,
@@ -138,7 +143,7 @@ export function LoginForm({
               })
             )
           } catch {
-            // Ignore localStorage errors
+            // Ignore sessionStorage errors
           }
         }
 
@@ -152,9 +157,9 @@ export function LoginForm({
         // Case 2: No tenants - check if user has a specific destination (e.g., invitation)
         if (result.tenants && result.tenants.length === 0) {
           // If returnTo is an invitation page, go there first (user can accept and get a tenant)
-          if (redirectTo.includes('/invitations/')) {
+          if (safeRedirectTo.includes('/invitations/')) {
             toast.success('Logged in successfully')
-            window.location.href = redirectTo
+            window.location.href = safeRedirectTo
             return
           }
           // Otherwise, redirect to onboarding to create first team
@@ -167,7 +172,7 @@ export function LoginForm({
         // IMPORTANT: Use window.location.href for full page navigation
         // to ensure cookies set by Server Action are picked up properly
         toast.success('Logged in successfully')
-        window.location.href = redirectTo
+        window.location.href = safeRedirectTo
       } else {
         toast.error(result.error || 'Login failed')
       }
@@ -181,7 +186,7 @@ export function LoginForm({
     setLoadingProvider(provider)
     try {
       // This will redirect to the OAuth provider
-      await initiateSocialLogin(provider, redirectTo)
+      await initiateSocialLogin(provider, safeRedirectTo)
     } catch (error) {
       setLoadingProvider(null)
       console.error(`Social login error (${provider}):`, error)
@@ -196,7 +201,7 @@ export function LoginForm({
     if (!orgSlug) return
     setLoadingSSOProvider(provider)
     try {
-      await initiateSSOLogin(provider, orgSlug, redirectTo)
+      await initiateSSOLogin(provider, orgSlug, safeRedirectTo)
     } catch (error) {
       setLoadingSSOProvider(null)
       console.error(`SSO login error (${provider}):`, error)

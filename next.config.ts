@@ -81,7 +81,7 @@ const nextConfig: NextConfig = {
               "font-src 'self' data: https://fonts.gstatic.com", // Google Fonts files
               process.env.NODE_ENV === 'development'
                 ? "connect-src 'self' http: ws: wss:" // Dev: allow all origins for HMR WebSocket
-                : "connect-src 'self' https://*.openctem.io wss://*.openctem.io", // Prod: strict origins only
+                : `connect-src 'self' ${process.env.CSP_CONNECT_SRC || 'https://*.openctem.io wss://*.openctem.io'}`, // Prod: configurable via CSP_CONNECT_SRC env
               "frame-ancestors 'none'",
               "base-uri 'self'",
               "form-action 'self'",

@@ -45,7 +45,7 @@ export const ipAddressesConfig: AssetPageConfig = {
       cell: ({ row }) => {
         const ip = row.original
         const asn = (ip.metadata?.asn as string) || '-'
-        const org = (ip.metadata?.asnOrganization as string) || '-'
+        const org = (ip.metadata?.asn_organization as string) || '-'
         return (
           <div>
             <p className="font-medium">{asn}</p>
@@ -67,10 +67,10 @@ export const ipAddressesConfig: AssetPageConfig = {
       },
     },
     {
-      id: 'openPorts',
+      id: 'open_ports',
       header: 'Open Ports',
       cell: ({ row }) => {
-        const raw = row.original.metadata?.openPorts
+        const raw = row.original.metadata?.open_ports
         const ports: (string | number)[] = Array.isArray(raw)
           ? raw
           : raw
@@ -110,7 +110,7 @@ export const ipAddressesConfig: AssetPageConfig = {
     },
     { name: 'asn', label: 'ASN', type: 'text', placeholder: 'AS12345', isMetadata: true },
     {
-      name: 'asnOrganization',
+      name: 'asn_organization',
       label: 'Organization',
       type: 'text',
       placeholder: 'Example Corp',
@@ -196,13 +196,13 @@ export const ipAddressesConfig: AssetPageConfig = {
         },
         {
           label: 'Organization',
-          getValue: (asset: Asset) => (asset.metadata?.asnOrganization as string) || '-',
+          getValue: (asset: Asset) => (asset.metadata?.asn_organization as string) || '-',
         },
         {
           label: 'Open Ports',
           fullWidth: true,
           getValue: (asset: Asset) => {
-            const raw = asset.metadata?.openPorts
+            const raw = asset.metadata?.open_ports
             const ports: (string | number)[] = Array.isArray(raw)
               ? raw
               : raw
@@ -236,7 +236,7 @@ export const ipAddressesConfig: AssetPageConfig = {
     { header: 'ASN', accessor: (a: Asset) => (a.metadata?.asn as string) || '' },
     {
       header: 'Organization',
-      accessor: (a: Asset) => (a.metadata?.asnOrganization as string) || '',
+      accessor: (a: Asset) => (a.metadata?.asn_organization as string) || '',
     },
     { header: 'Status', accessor: (a: Asset) => a.status },
     { header: 'Risk Score', accessor: (a: Asset) => a.riskScore },

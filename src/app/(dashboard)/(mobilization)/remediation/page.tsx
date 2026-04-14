@@ -79,7 +79,7 @@ import { copyToClipboard } from '@/lib/clipboard'
 import { Can, Permission } from '@/lib/permissions'
 import { TASK_STATUS_LABELS, TASK_PRIORITY_LABELS } from '@/features/remediation'
 import { useRemediationCampaigns } from '@/features/remediation/api/use-remediation-campaigns'
-import { mockFindings } from '@/features/findings'
+import { useFindingsApi } from '@/features/findings/api/use-findings-api'
 import type { TaskStatus, TaskPriority, RemediationTask } from '@/features/remediation/types'
 import type { Severity } from '@/features/shared/types'
 
@@ -134,6 +134,13 @@ const defaultFilters: Filters = {
 }
 
 export default function RemediationPage() {
+  // Fetch findings from real API for linking dropdowns
+  const { data: findingsData } = useFindingsApi({
+    per_page: 20,
+    statuses: ['new', 'confirmed', 'in_progress'],
+  })
+  const findings = findingsData?.data ?? []
+
   // Fetch campaigns from API, map to existing task type for UI compatibility
   const { data: campaignData } = useRemediationCampaigns()
   const apiTasks: RemediationTask[] = useMemo(() => {
@@ -326,7 +333,7 @@ export default function RemediationPage() {
       return
     }
 
-    const finding = mockFindings.find((f) => f.id === formData.findingId)
+    const finding = findings.find((f) => f.id === formData.findingId)
     const newTask: RemediationTask = {
       id: `task-${Date.now()}`,
       title: formData.title,
@@ -356,7 +363,7 @@ export default function RemediationPage() {
       return
     }
 
-    const finding = mockFindings.find((f) => f.id === formData.findingId)
+    const finding = findings.find((f) => f.id === formData.findingId)
     const updatedTasks = tasks.map((t) =>
       t.id === editTask.id
         ? {
@@ -1303,9 +1310,9 @@ export default function RemediationPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="">None</SelectItem>
-                    {mockFindings.slice(0, 10).map((finding) => (
+                    {findings.map((finding) => (
                       <SelectItem key={finding.id} value={finding.id}>
-                        {finding.title.substring(0, 40)}...
+                        {(finding.title || finding.message || finding.id).substring(0, 50)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -1458,9 +1465,9 @@ export default function RemediationPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="">None</SelectItem>
-                    {mockFindings.slice(0, 10).map((finding) => (
+                    {findings.map((finding) => (
                       <SelectItem key={finding.id} value={finding.id}>
-                        {finding.title.substring(0, 40)}...
+                        {(finding.title || finding.message || finding.id).substring(0, 50)}
                       </SelectItem>
                     ))}
                   </SelectContent>
