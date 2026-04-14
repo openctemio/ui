@@ -107,7 +107,7 @@ export async function getOAuthAuthorizationUrl(
     const cookieStore = await cookies()
     cookieStore.set('oauth_state', data.state, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: process.env.SECURE_COOKIES === 'true',
       sameSite: 'lax',
       maxAge: 600, // 10 minutes
       path: '/',
@@ -117,7 +117,7 @@ export async function getOAuthAuthorizationUrl(
     if (redirectTo) {
       cookieStore.set('oauth_redirect', validateRedirectUrl(redirectTo, '/'), {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: process.env.SECURE_COOKIES === 'true',
         sameSite: 'lax',
         maxAge: 600, // 10 minutes
         path: '/',
@@ -185,7 +185,7 @@ export async function handleOAuthCallback(
     // Store tokens in HttpOnly cookies
     await setServerCookie(env.auth.cookieName, data.access_token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: process.env.SECURE_COOKIES === 'true',
       sameSite: 'lax',
       maxAge: data.expires_in || 900, // Default 15 minutes
       path: '/',
@@ -194,7 +194,7 @@ export async function handleOAuthCallback(
     if (data.refresh_token) {
       await setServerCookie(env.auth.refreshCookieName, data.refresh_token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: process.env.SECURE_COOKIES === 'true',
         sameSite: 'lax',
         maxAge: 7 * 24 * 60 * 60, // 7 days
         path: '/',

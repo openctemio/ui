@@ -192,7 +192,7 @@ export async function handleOAuthCallback(
     // Store tokens in HttpOnly cookies (server-side only)
     await setServerCookie(env.auth.cookieName, tokens.access_token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: process.env.SECURE_COOKIES === 'true',
       sameSite: 'lax',
       maxAge: tokens.expires_in || 300, // Default 5 minutes
     })
@@ -200,7 +200,7 @@ export async function handleOAuthCallback(
     if (tokens.refresh_token) {
       await setServerCookie(env.auth.refreshCookieName, tokens.refresh_token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: process.env.SECURE_COOKIES === 'true',
         sameSite: 'lax',
         maxAge: tokens.refresh_expires_in || 1800, // Default 30 minutes
       })
@@ -305,7 +305,7 @@ export async function refreshTokenAction(): Promise<RefreshTokenResult> {
     // Update cookies with new tokens
     await setServerCookie(env.auth.cookieName, tokens.access_token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: process.env.SECURE_COOKIES === 'true',
       sameSite: 'lax',
       maxAge: tokens.expires_in || 300,
     })
@@ -313,7 +313,7 @@ export async function refreshTokenAction(): Promise<RefreshTokenResult> {
     if (tokens.refresh_token) {
       await setServerCookie(env.auth.refreshCookieName, tokens.refresh_token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: process.env.SECURE_COOKIES === 'true',
         sameSite: 'lax',
         maxAge: tokens.refresh_expires_in || 1800,
       })
