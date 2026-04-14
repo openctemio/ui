@@ -40,7 +40,7 @@ type FileFormat = 'json' | 'xml'
 
 export default function SBOMExportPage() {
   const { data: apiStats } = useComponentStatsApi()
-  const { data: apiComponents } = useComponentsApi({ per_page: 500 })
+  const { data: apiComponents } = useComponentsApi({ per_page: 100 })
 
   const stats = useMemo(
     () => ({

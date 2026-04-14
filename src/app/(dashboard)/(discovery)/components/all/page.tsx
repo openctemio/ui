@@ -72,7 +72,7 @@ export default function AllComponentsPage() {
   }, [apiData])
 
   // Stats from dedicated endpoint — stable regardless of list filters
-  const { data: apiStats } = useComponentStatsApi()
+  const { data: apiStats, isLoading: statsLoading } = useComponentStatsApi()
   const stats = {
     totalComponents: apiStats?.total_components ?? 0,
     directDependencies: apiStats?.direct_dependencies ?? 0,
@@ -147,7 +147,7 @@ export default function AllComponentsPage() {
                 <Package className="h-4 w-4" />
                 Total Components
               </CardDescription>
-              {isLoading ? (
+              {statsLoading ? (
                 <Skeleton className="h-9 w-16 mt-1" />
               ) : (
                 <CardTitle className="text-3xl">{stats.totalComponents}</CardTitle>
@@ -171,7 +171,7 @@ export default function AllComponentsPage() {
                 <CheckCircle className="h-4 w-4 text-green-500" />
                 Direct Dependencies
               </CardDescription>
-              {isLoading ? (
+              {statsLoading ? (
                 <Skeleton className="h-9 w-16 mt-1" />
               ) : (
                 <CardTitle className="text-3xl text-green-500">
@@ -195,7 +195,7 @@ export default function AllComponentsPage() {
                 <Clock className="h-4 w-4 text-yellow-500" />
                 Outdated
               </CardDescription>
-              {isLoading ? (
+              {statsLoading ? (
                 <Skeleton className="h-9 w-16 mt-1" />
               ) : (
                 <CardTitle className="text-3xl text-yellow-500">
@@ -219,7 +219,7 @@ export default function AllComponentsPage() {
                 <AlertTriangle className="h-4 w-4 text-red-500" />
                 Vulnerable
               </CardDescription>
-              {isLoading ? (
+              {statsLoading ? (
                 <Skeleton className="h-9 w-16 mt-1" />
               ) : (
                 <CardTitle className="text-3xl text-red-500">

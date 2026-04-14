@@ -195,13 +195,17 @@ export function useComponentStatsApi(config?: SWRConfiguration) {
   const { can } = usePermissions()
   const canReadComponents = can(Permission.ComponentsRead)
 
-  // Only fetch if user has permission
   const shouldFetch = currentTenant && canReadComponents
 
   return useSWR<ApiComponentStats>(
     shouldFetch ? `/api/v1/components/stats` : null,
     (url: string) => get<ApiComponentStats>(url),
-    { ...defaultConfig, ...config }
+    {
+      ...defaultConfig,
+      dedupingInterval: 60000, // Cache 60s — stats don't change on filter
+      revalidateOnFocus: false,
+      ...config,
+    }
   )
 }
 
