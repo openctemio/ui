@@ -928,7 +928,8 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
           }
           description={`${typeStats.total.toLocaleString()} ${config.labelPlural.toLowerCase()} in your infrastructure`}
         >
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
+            {headerExtra}
             <Button variant="outline" onClick={handleExport}>
               <Download className="mr-2 h-4 w-4" />
               Export
@@ -1129,8 +1130,6 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
                     setCurrentPage(1)
                   }}
                 />
-
-                {headerExtra}
 
                 {Object.keys(rowSelection).length > 0 && (
                   <DropdownMenu>
