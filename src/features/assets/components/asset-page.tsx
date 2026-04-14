@@ -71,7 +71,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { useAssets, useAssetStats, type Asset } from '@/features/assets'
-import { TagFilter } from './tag-filter'
+import { TagFilter, TagFilterChips } from './tag-filter'
 import { PropertyFilter, PropertyFilterChips } from './property-filter'
 import { Can, Permission, usePermissions } from '@/lib/permissions'
 import {
@@ -1173,7 +1173,8 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
                 )}
               </div>
 
-              {/* Row 2: Active property filter chips (separate row to avoid wrapping into controls) */}
+              {/* Row 2: Active filter chips — tags + properties (separate row) */}
+              <TagFilterChips value={tagFilters} onChange={setTagFilters} />
               <PropertyFilterChips
                 value={propertiesFilter}
                 onChange={(pf) => {
