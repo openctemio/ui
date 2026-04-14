@@ -23,6 +23,8 @@ interface TagFilterProps {
   onChange: (next: string[]) => void
   /** Optional custom placeholder */
   placeholder?: string
+  /** Optional asset types to scope tag suggestions */
+  types?: string[]
 }
 
 /**
@@ -34,14 +36,19 @@ interface TagFilterProps {
  * - Backend matches with overlap semantics (tags && [...]) — i.e. asset must
  *   carry at least ONE of the selected tags. The trigger label reflects this.
  */
-export function TagFilter({ value, onChange, placeholder = 'Filter by tags' }: TagFilterProps) {
+export function TagFilter({
+  value,
+  onChange,
+  placeholder = 'Filter by tags',
+  types,
+}: TagFilterProps) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const debouncedQuery = useDebounce(query, 200)
 
   // Only fetch tags while the popover is open to avoid an extra request on
   // every page mount. Pass the debounced query as prefix for autocomplete.
-  const { tags, isLoading } = useAssetTags(debouncedQuery || undefined, open)
+  const { tags, isLoading } = useAssetTags(debouncedQuery || undefined, open, types)
 
   // Soft cap on selected tags. Backend `parseQueryArray` enforces 100, but
   // anything past ~20 gets unwieldy in the UI and bloats the URL — warn the
