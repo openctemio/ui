@@ -445,16 +445,16 @@ export default function Dashboard() {
         ) : (
           !error && (
             <>
-              <section className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2 lg:h-[460px]">
+              <section className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2 lg:h-[420px]">
                 {/* Asset Distribution */}
                 <Card className="flex flex-col h-full">
                   <CardHeader>
                     <CardTitle>Asset Distribution</CardTitle>
                     <CardDescription>{stats.assets.total} total assets by type</CardDescription>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="flex-1 min-h-0">
                     {assetDistribution.length > 0 ? (
-                      <ResponsiveContainer width="100%" height={300}>
+                      <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={assetDistribution} barCategoryGap="15%">
                           <XAxis
                             dataKey="name"
