@@ -1,7 +1,7 @@
 'use client'
 
 import { Badge } from '@/components/ui/badge'
-import { Cloud, Shield, AlertTriangle, DollarSign, CheckCircle } from 'lucide-react'
+import { Cloud, Shield, AlertTriangle, CheckCircle } from 'lucide-react'
 import type { AssetPageConfig } from '@/features/assets/types/page-config.types'
 
 const providerConfig: Record<string, { label: string; color: string }> = {
@@ -167,25 +167,16 @@ export const cloudAccountsConfig: AssetPageConfig = {
 
   statsCards: [
     {
-      title: 'Total Resources',
-      icon: Shield,
-      compute: (assets) =>
-        assets.reduce((acc, a) => acc + (Number(a.metadata.resource_count) || 0), 0),
-    },
-    {
-      title: 'Without MFA',
-      icon: AlertTriangle,
-      compute: (assets) => assets.filter((a) => !(a.metadata.mfa_enabled as boolean)).length,
-      variant: 'warning',
-    },
-    {
-      title: 'Monthly Spend',
-      icon: DollarSign,
-      compute: (assets) => {
-        const total = assets.reduce((acc, a) => acc + (Number(a.metadata.monthly_spend) || 0), 0)
-        return `$${(total / 1000).toFixed(0)}k`
-      },
+      title: 'Active',
+      icon: CheckCircle,
+      compute: (_assets, stats) => stats.byStatus?.active ?? 0,
       variant: 'success',
+    },
+    {
+      title: 'With Findings',
+      icon: AlertTriangle,
+      compute: (_assets, stats) => stats.withFindings,
+      variant: 'warning',
     },
   ],
 

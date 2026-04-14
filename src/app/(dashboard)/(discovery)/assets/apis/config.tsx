@@ -215,15 +215,9 @@ export const apisConfig: AssetPageConfig = {
       variant: 'success',
     },
     {
-      // metadata.endpoint_count isn't aggregated — current page only
-      title: 'Total Endpoints',
-      icon: Zap,
-      compute: (assets) =>
-        assets.reduce(
-          (acc, a) =>
-            acc + (((a.metadata as Record<string, unknown>).endpoint_count as number) || 0),
-          0
-        ),
+      title: 'Total',
+      icon: Webhook,
+      compute: (_assets, stats) => stats.total,
     },
     {
       title: 'With Findings',

@@ -408,10 +408,9 @@ export const repositoriesConfig: AssetPageConfig = {
       variant: 'warning',
     },
     {
-      // repository.componentCount isn't aggregated by /assets/stats — current page only
-      title: 'Components',
-      icon: Package,
-      compute: (assets) => assets.reduce((acc, a) => acc + (a.repository?.componentCount || 0), 0),
+      title: 'Total',
+      icon: GitBranch,
+      compute: (_assets, stats) => stats.total,
     },
     {
       // Backend exposes risk_score_avg across the type-filtered set

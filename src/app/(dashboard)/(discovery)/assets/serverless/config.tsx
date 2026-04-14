@@ -1,7 +1,7 @@
 'use client'
 
 import { Badge } from '@/components/ui/badge'
-import { Cpu, Network, CheckCircle, AlertTriangle, Shield, Zap } from 'lucide-react'
+import { Cpu, CheckCircle, AlertTriangle, Shield, Zap } from 'lucide-react'
 import type { AssetPageConfig } from '@/features/assets/types/page-config.types'
 
 const runtimeColors: Record<string, string> = {
@@ -162,10 +162,9 @@ export const serverlessConfig: AssetPageConfig = {
       variant: 'success',
     },
     {
-      // metadata.functionVpcEnabled isn't aggregated — current page only
-      title: 'VPC Enabled',
-      icon: Network,
-      compute: (assets) => assets.filter((a) => a.metadata.function_vpc_enabled).length,
+      title: 'Serverless',
+      icon: Cpu,
+      compute: (_assets, stats) => stats.bySubType?.serverless ?? 0,
     },
     {
       title: 'With Findings',

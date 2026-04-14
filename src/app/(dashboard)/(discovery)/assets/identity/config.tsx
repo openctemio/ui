@@ -129,22 +129,22 @@ export const identityConfig: AssetPageConfig = {
     {
       title: 'Users',
       icon: User,
-      compute: (assets) => assets.filter((a) => a.subType === 'iam_user').length,
+      compute: (_assets, stats) => stats.bySubType?.iam_user ?? 0,
     },
     {
       title: 'Roles',
       icon: Key,
-      compute: (assets) => assets.filter((a) => a.subType === 'iam_role').length,
+      compute: (_assets, stats) => stats.bySubType?.iam_role ?? 0,
     },
     {
       title: 'Service Accounts',
       icon: UserCheck,
-      compute: (assets) => assets.filter((a) => a.subType === 'service_account').length,
+      compute: (_assets, stats) => stats.bySubType?.service_account ?? 0,
     },
     {
       title: 'With Findings',
       icon: AlertTriangle,
-      compute: (assets) => assets.filter((a) => a.findingCount > 0).length,
+      compute: (_assets, stats) => stats.withFindings,
       variant: 'warning',
     },
   ],

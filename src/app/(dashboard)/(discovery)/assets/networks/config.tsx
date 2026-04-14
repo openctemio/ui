@@ -162,26 +162,22 @@ export const networksConfig: AssetPageConfig = {
     {
       title: 'Firewalls',
       icon: Shield,
-      compute: (assets) => assets.filter((a) => a.subType === 'firewall').length,
+      compute: (_assets, stats) => stats.bySubType?.firewall ?? 0,
     },
     {
       title: 'Load Balancers',
       icon: Router,
-      compute: (assets) => assets.filter((a) => a.subType === 'load_balancer').length,
+      compute: (_assets, stats) => stats.bySubType?.load_balancer ?? 0,
     },
     {
       title: 'Switches/Routers',
       icon: Server,
-      compute: (assets) =>
-        assets.filter((a) => {
-          const st = a.subType || ''
-          return st === 'switch' || st === 'router'
-        }).length,
+      compute: (_assets, stats) => (stats.bySubType?.switch ?? 0) + (stats.bySubType?.router ?? 0),
     },
     {
       title: 'With Findings',
       icon: AlertTriangle,
-      compute: (assets) => assets.filter((a) => a.findingCount > 0).length,
+      compute: (_assets, stats) => stats.withFindings,
       variant: 'warning',
     },
   ],

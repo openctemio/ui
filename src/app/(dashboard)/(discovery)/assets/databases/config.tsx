@@ -86,16 +86,10 @@ export const databasesConfig: AssetPageConfig = {
       variant: 'success',
     },
     {
-      // metadata.encryption isn't aggregated — current page only
-      title: 'Encrypted',
-      icon: Lock,
-      compute: (assets) => assets.filter((a) => a.metadata.encryption).length,
-    },
-    {
-      // metadata.backupEnabled isn't aggregated — current page only
-      title: 'With Backup',
-      icon: Save,
-      compute: (assets) => assets.filter((a) => a.metadata.backupEnabled).length,
+      title: 'With Findings',
+      icon: AlertTriangle,
+      compute: (_assets, stats) => stats.withFindings,
+      variant: 'warning',
     },
   ],
 

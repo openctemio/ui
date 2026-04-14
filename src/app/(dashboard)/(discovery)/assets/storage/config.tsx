@@ -1,7 +1,16 @@
 'use client'
 
 import { Badge } from '@/components/ui/badge'
-import { HardDrive, Globe, Lock, Database, AlertTriangle, Shield, RefreshCw } from 'lucide-react'
+import {
+  HardDrive,
+  Globe,
+  Lock,
+  Database,
+  AlertTriangle,
+  Shield,
+  RefreshCw,
+  CheckCircle,
+} from 'lucide-react'
 import type { Asset } from '@/features/assets'
 import type { AssetPageConfig } from '@/features/assets/types/page-config.types'
 
@@ -99,22 +108,16 @@ export const storageConfig: AssetPageConfig = {
 
   statsCards: [
     {
-      title: 'Public Buckets',
-      icon: Globe,
-      compute: (assets) => assets.filter((a) => a.metadata.is_publicly_accessible).length,
-      variant: 'warning',
-    },
-    {
-      title: 'Encrypted',
-      icon: Lock,
-      compute: (assets) => assets.filter((a) => a.metadata.encryption_enabled).length,
+      title: 'Active',
+      icon: CheckCircle,
+      compute: (_assets, stats) => stats.byStatus?.active ?? 0,
       variant: 'success',
     },
     {
       title: 'With Findings',
       icon: AlertTriangle,
-      compute: (assets) => assets.filter((a) => a.findingCount > 0).length,
-      variant: 'danger',
+      compute: (_assets, stats) => stats.withFindings,
+      variant: 'warning',
     },
   ],
 

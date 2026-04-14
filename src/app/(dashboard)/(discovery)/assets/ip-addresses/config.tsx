@@ -1,7 +1,7 @@
 'use client'
 
 import { Badge } from '@/components/ui/badge'
-import { Network, Globe, Lock, Server, Shield, AlertTriangle } from 'lucide-react'
+import { Network, Globe, Lock, Server, Shield, AlertTriangle, CheckCircle } from 'lucide-react'
 import type { AssetPageConfig } from '@/features/assets/types/page-config.types'
 import type { Asset } from '@/features/assets'
 
@@ -128,19 +128,16 @@ export const ipAddressesConfig: AssetPageConfig = {
 
   statsCards: [
     {
-      title: 'Public',
-      icon: Globe,
-      compute: (assets: Asset[]) => assets.filter((a) => isPublicIp(a.name)).length,
+      title: 'Active',
+      icon: CheckCircle,
+      compute: (_assets, stats) => stats.byStatus?.active ?? 0,
+      variant: 'success',
     },
     {
-      title: 'Private',
-      icon: Lock,
-      compute: (assets: Asset[]) => assets.filter((a) => !isPublicIp(a.name)).length,
-    },
-    {
-      title: 'IPv6',
-      icon: Server,
-      compute: (assets: Asset[]) => assets.filter((a) => getIpVersion(a.name) === 'ipv6').length,
+      title: 'With Findings',
+      icon: AlertTriangle,
+      compute: (_assets, stats) => stats.withFindings,
+      variant: 'warning',
     },
   ],
 

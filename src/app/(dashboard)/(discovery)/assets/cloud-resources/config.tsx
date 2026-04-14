@@ -1,7 +1,7 @@
 'use client'
 
 import { Badge } from '@/components/ui/badge'
-import { Cloud, MapPin, AlertTriangle, Shield } from 'lucide-react'
+import { Cloud, MapPin, AlertTriangle, Shield, CheckCircle } from 'lucide-react'
 import type { Asset } from '@/features/assets'
 import type { AssetPageConfig } from '@/features/assets/types/page-config.types'
 
@@ -159,24 +159,10 @@ export const cloudConfig: AssetPageConfig = {
 
   statsCards: [
     {
-      // metadata.cloudProvider isn't aggregated by /assets/stats — current
-      // page only. Once backend exposes by_provider, switch to stats.byProvider.
-      title: 'AWS',
-      icon: Cloud,
-      compute: (assets: Asset[]) =>
-        assets.filter((a) => (a.metadata.cloud_provider as string) === 'aws').length,
-    },
-    {
-      title: 'GCP',
-      icon: Cloud,
-      compute: (assets: Asset[]) =>
-        assets.filter((a) => (a.metadata.cloud_provider as string) === 'gcp').length,
-    },
-    {
-      title: 'Azure',
-      icon: Cloud,
-      compute: (assets: Asset[]) =>
-        assets.filter((a) => (a.metadata.cloud_provider as string) === 'azure').length,
+      title: 'Active',
+      icon: CheckCircle,
+      compute: (_assets, stats) => stats.byStatus?.active ?? 0,
+      variant: 'success',
     },
     {
       title: 'With Findings',
