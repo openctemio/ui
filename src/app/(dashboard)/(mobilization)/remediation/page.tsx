@@ -77,11 +77,7 @@ import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
 import { toast } from 'sonner'
 import { copyToClipboard } from '@/lib/clipboard'
 import { Can, Permission } from '@/lib/permissions'
-import {
-  mockRemediationTasks,
-  TASK_STATUS_LABELS,
-  TASK_PRIORITY_LABELS,
-} from '@/features/remediation'
+import { TASK_STATUS_LABELS, TASK_PRIORITY_LABELS } from '@/features/remediation'
 import { useRemediationCampaigns } from '@/features/remediation/api/use-remediation-campaigns'
 import { mockFindings } from '@/features/findings'
 import type { TaskStatus, TaskPriority, RemediationTask } from '@/features/remediation/types'
@@ -159,6 +155,7 @@ export default function RemediationPage() {
           priority: c.priority,
           severity: c.priority as 'critical' | 'high' | 'medium' | 'low',
           assignee: '',
+          assigneeName: '',
           finding_count: c.finding_count,
           resolved_count: c.resolved_count,
           progress: c.progress,
@@ -925,7 +922,7 @@ export default function RemediationPage() {
                             <div className="flex flex-wrap items-center gap-2">
                               <Avatar className="h-5 w-5">
                                 <AvatarFallback className="text-[10px]">
-                                  {task.assigneeName
+                                  {(task.assigneeName || '?')
                                     .split(' ')
                                     .map((n) => n[0])
                                     .join('')}
