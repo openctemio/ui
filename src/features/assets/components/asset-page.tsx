@@ -76,9 +76,9 @@ import { Can, Permission, usePermissions } from '@/lib/permissions'
 import {
   ScopeBadge,
   getScopeMatchesForAsset,
-  calculateScopeCoverage,
   useScopeTargetsApi,
   useScopeExclusionsApi,
+  useScopeStatsApi,
   type ScopeMatchResult,
   type ScopeTarget,
   type ScopeExclusion,
@@ -241,7 +241,6 @@ export function AssetPage({ config }: AssetPageProps) {
   // No extra API call — stat cards and scope widget work from the
   // same page of data already fetched for the table.
   const headlineAssets = assets
-  const scopeCoverageAssets = assets
 
   // True when the user has narrowed the view via a non-status filter.
   // Status tabs are intentionally excluded — they're navigation, not filtering.
@@ -345,9 +344,9 @@ export function AssetPage({ config }: AssetPageProps) {
     urlSubType,
   ])
 
-  // Scope integration — real API data
-  // Only fetch enough rules for client-side matching (scope rules are typically <100 per tenant).
-  // If a tenant has >100 rules, the scope bar will be approximate — see TODO below.
+  // Scope integration — server-side stats for the coverage bar,
+  // client-side matching for per-row scope badges.
+  const { data: scopeStats } = useScopeStatsApi()
   const { data: scopeTargetsData } = useScopeTargetsApi({ status: 'active', per_page: 100 })
   const { data: scopeExclusionsData } = useScopeExclusionsApi({ status: 'active', per_page: 100 })
   const scopeTargets = useMemo(
@@ -374,30 +373,19 @@ export function AssetPage({ config }: AssetPageProps) {
     return map
   }, [transformedAssets, scopeTargets, scopeExclusions])
 
-  // Computes scope coverage from the dedicated `scopeCoverageAssets`
-  // query (above), NOT from the user-filtered `transformedAssets`.
-  // This means the widget reflects tenant-wide scope status for the
-  // current asset type and is unaffected by the search/tag filters
-  // and pagination state of the table below it.
-  //
-  // TODO(scope-stats-endpoint): build `/api/v1/scope/asset-coverage?type=…`
-  // that runs the scope-rule matching server-side and returns
-  // { total, in_scope, excluded, not_scoped } for the entire tenant
-  // dataset. Then this widget will work for tenants with >1000 assets
-  // of one type without the sample-based caveat.
-  const scopeCoverage = useMemo(
-    () =>
-      calculateScopeCoverage(
-        (scopeCoverageAssets ?? []).map((a) => ({
-          id: a.id,
-          name: a.name,
-          type: a.type ?? 'unclassified',
-        })),
-        scopeTargets,
-        scopeExclusions
-      ),
-    [scopeCoverageAssets, scopeTargets, scopeExclusions]
-  )
+  // Scope coverage from server-side stats endpoint (tenant-wide, not page-bounded).
+  const scopeCoverage = useMemo(() => {
+    const total = typeStats.total || transformedAssets.length
+    const coveragePercent = scopeStats?.coverage ?? 0
+    const inScope = Math.round((coveragePercent / 100) * total)
+    return {
+      totalAssets: total,
+      inScopeAssets: inScope,
+      excludedAssets: scopeStats?.active_exclusions ?? 0,
+      notScopedAssets: total - inScope,
+      coveragePercent,
+    }
+  }, [typeStats.total, transformedAssets.length, scopeStats])
 
   // Resolve status filter options
   const statusFilterOptions = useMemo(

@@ -17,6 +17,8 @@ export interface RemediationCampaign {
   risk_before: number | null
   risk_after: number | null
   risk_reduction: number | null
+  assigned_to: string | null
+  assigned_team: string | null
   is_overdue: boolean
   start_date: string | null
   due_date: string | null

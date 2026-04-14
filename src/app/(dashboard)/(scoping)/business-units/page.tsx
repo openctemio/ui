@@ -74,8 +74,9 @@ import { type BusinessUnit, type Criticality, type RiskTolerance } from '@/featu
 import {
   useBusinessUnits,
   useCreateBusinessUnit,
-  useDeleteBusinessUnit,
+  useUpdateBusinessUnit,
 } from '@/features/business-units/api/use-business-units'
+import { del } from '@/lib/api/client'
 
 const criticalityColors: Record<Criticality, string> = {
   critical: 'bg-red-500/10 text-red-500 border-red-500/20',
@@ -109,6 +110,7 @@ export default function BusinessUnitsPage() {
   // Fetch from API, fallback to mock data if API returns empty
   const { data: apiData, mutate: refreshList } = useBusinessUnits()
   const { trigger: createBU } = useCreateBusinessUnit()
+  const { trigger: updateBU } = useUpdateBusinessUnit()
   const apiBUs: BusinessUnit[] = useMemo(() => {
     if (!apiData?.data?.length) return []
     return apiData.data.map(
@@ -224,39 +226,44 @@ export default function BusinessUnitsPage() {
     }
   }
 
-  const handleEdit = () => {
+  const handleEdit = async () => {
     if (!editUnit || !formData.name || !formData.owner || !formData.ownerEmail) {
       toast.error('Please fill in all required fields')
       return
     }
-    setBusinessUnits((prev) =>
-      prev.map((unit) =>
-        unit.id === editUnit.id
-          ? {
-              ...unit,
-              name: formData.name,
-              description: formData.description || undefined,
-              parentId: formData.parentId || undefined,
-              criticality: formData.criticality,
-              riskTolerance: formData.riskTolerance,
-              owner: formData.owner,
-              ownerEmail: formData.ownerEmail,
-              tags: formData.tags ? formData.tags.split(',').map((t) => t.trim()) : [],
-              updatedAt: new Date().toISOString(),
-            }
-          : unit
-      )
-    )
-    toast.success('Business unit updated successfully')
-    setEditUnit(null)
-    resetForm()
+    try {
+      await updateBU({
+        id: editUnit.id,
+        name: formData.name,
+        description: formData.description || '',
+        owner_name: formData.owner,
+        owner_email: formData.ownerEmail,
+        tags: formData.tags
+          ? formData.tags
+              .split(',')
+              .map((t) => t.trim())
+              .filter(Boolean)
+          : [],
+      })
+      await refreshList()
+      toast.success('Business unit updated successfully')
+      setEditUnit(null)
+      resetForm()
+    } catch {
+      toast.error('Failed to update business unit')
+    }
   }
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!deleteUnit) return
-    setBusinessUnits((prev) => prev.filter((unit) => unit.id !== deleteUnit.id))
-    toast.success('Business unit deleted successfully')
-    setDeleteUnit(null)
+    try {
+      await del(`/api/v1/business-units/${deleteUnit.id}`)
+      await refreshList()
+      toast.success('Business unit deleted successfully')
+      setDeleteUnit(null)
+    } catch {
+      toast.error('Failed to delete business unit')
+    }
   }
 
   const openEdit = (unit: BusinessUnit) => {

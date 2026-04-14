@@ -2,7 +2,7 @@
 
 import useSWR from 'swr'
 import useSWRMutation from 'swr/mutation'
-import { get, post, del } from '@/lib/api/client'
+import { get, post, put, del } from '@/lib/api/client'
 
 export interface BusinessUnit {
   id: string
@@ -41,6 +41,14 @@ export function useCreateBusinessUnit() {
   return useSWRMutation(
     '/api/v1/business-units',
     (url: string, { arg }: { arg: Partial<BusinessUnit> }) => post(url, arg)
+  )
+}
+
+export function useUpdateBusinessUnit() {
+  return useSWRMutation(
+    '/api/v1/business-units',
+    (url: string, { arg }: { arg: { id: string } & Partial<BusinessUnit> }) =>
+      put(`${url}/${arg.id}`, arg)
   )
 }
 
