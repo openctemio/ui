@@ -6,5 +6,6 @@ import { identityConfig } from './config'
 
 export default function IdentityPage() {
   const searchParams = useSearchParams()
-  return <AssetPage key={searchParams.toString()} config={identityConfig} />
+  const remountKey = `${searchParams.get('type') ?? ''}_${searchParams.get('sub_type') ?? ''}`
+  return <AssetPage key={remountKey} config={identityConfig} />
 }

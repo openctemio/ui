@@ -43,7 +43,7 @@ export const hostsConfig: AssetPageConfig = {
           ips.push(meta.ip)
         }
         // Extra IPs
-        for (const key of ['publicIp', 'ipv6', 'privateIp']) {
+        for (const key of ['public_ip', 'ipv6', 'private_ip']) {
           const v = meta[key]
           if (typeof v === 'string' && v && !ips.includes(v)) {
             ips.push(v)
@@ -68,8 +68,9 @@ export const hostsConfig: AssetPageConfig = {
       accessorKey: 'metadata.os',
       header: 'OS',
       cell: ({ row }) => {
-        const os = row.original.metadata.os as string
-        const version = row.original.metadata.osVersion as string
+        const meta = row.original.metadata as Record<string, unknown>
+        const os = (meta.os as string) || ''
+        const version = (meta.os_version as string) || ''
         const fullLabel = [os, version].filter(Boolean).join(' ')
         return (
           <div className="max-w-[180px]" title={fullLabel}>
@@ -80,11 +81,12 @@ export const hostsConfig: AssetPageConfig = {
       },
     },
     {
-      accessorKey: 'metadata.cpuCores',
+      accessorKey: 'metadata.cpu_cores',
       header: 'Resources',
       cell: ({ row }) => {
-        const cpu = row.original.metadata.cpuCores
-        const mem = row.original.metadata.memoryGB
+        const meta = row.original.metadata as Record<string, unknown>
+        const cpu = String(meta.cpu_cores || '')
+        const mem = String(meta.memory_gb || '')
         return (
           <div className="flex flex-wrap items-center gap-2">
             {cpu && (
@@ -117,10 +119,11 @@ export const hostsConfig: AssetPageConfig = {
       },
     },
     {
-      accessorKey: 'metadata.openPorts',
+      accessorKey: 'metadata.open_ports',
       header: 'Ports',
       cell: ({ row }) => {
-        const raw = row.original.metadata.openPorts
+        const meta = row.original.metadata as Record<string, unknown>
+        const raw = meta.open_ports
         const ports: string[] = Array.isArray(raw)
           ? raw.map(String)
           : raw
@@ -181,7 +184,7 @@ export const hostsConfig: AssetPageConfig = {
       isMetadata: true,
     },
     {
-      name: 'osVersion',
+      name: 'os_version',
       label: 'OS Version',
       type: 'text',
       placeholder: '22.04 LTS, 2019...',
@@ -199,10 +202,16 @@ export const hostsConfig: AssetPageConfig = {
         { label: 'ARM64', value: 'arm64' },
       ],
     },
-    { name: 'cpuCores', label: 'CPU Cores', type: 'number', placeholder: '8', isMetadata: true },
-    { name: 'memoryGB', label: 'Memory (GB)', type: 'number', placeholder: '32', isMetadata: true },
+    { name: 'cpu_cores', label: 'CPU Cores', type: 'number', placeholder: '8', isMetadata: true },
     {
-      name: 'isVirtual',
+      name: 'memory_gb',
+      label: 'Memory (GB)',
+      type: 'number',
+      placeholder: '32',
+      isMetadata: true,
+    },
+    {
+      name: 'is_virtual',
       label: 'Virtual Machine',
       type: 'boolean',
       isMetadata: true,
@@ -216,7 +225,7 @@ export const hostsConfig: AssetPageConfig = {
       isMetadata: true,
     },
     {
-      name: 'openPorts',
+      name: 'open_ports',
       label: 'Open Ports (comma separated)',
       type: 'text',
       placeholder: '22, 80, 443',
@@ -236,7 +245,10 @@ export const hostsConfig: AssetPageConfig = {
       title: 'Virtual',
       icon: Network,
       compute: (assets: Asset[]) =>
-        assets.filter((a) => (a.metadata as Record<string, unknown>).is_virtual).length,
+        assets.filter((a) => {
+          const meta = a.metadata as Record<string, unknown>
+          return meta.is_virtual
+        }).length,
     },
     {
       title: 'With Findings',
@@ -328,19 +340,26 @@ export const hostsConfig: AssetPageConfig = {
         },
         {
           label: 'Operating System',
-          getValue: (asset: Asset) =>
-            `${(asset.metadata.os as string) || ''} ${(asset.metadata.osVersion as string) || ''}`.trim() ||
-            '-',
+          getValue: (asset: Asset) => {
+            const meta = asset.metadata as Record<string, unknown>
+            const os = (meta.os as string) || ''
+            const version = (meta.os_version as string) || ''
+            return `${os} ${version}`.trim() || '-'
+          },
         },
         {
           label: 'Architecture',
-          getValue: (asset: Asset) => (asset.metadata.architecture as string) || '-',
+          getValue: (asset: Asset) => {
+            const meta = asset.metadata as Record<string, unknown>
+            return (meta.architecture as string) || (meta.arch as string) || '-'
+          },
         },
         {
           label: 'Type',
           getValue: (asset: Asset) => {
-            const isVirtual = asset.metadata.isVirtual
-            const hypervisor = asset.metadata.hypervisor as string
+            const meta = asset.metadata as Record<string, unknown>
+            const isVirtual = meta.is_virtual
+            const hypervisor = (meta.hypervisor as string) || ''
             return (
               <span>
                 {isVirtual ? 'Virtual' : 'Physical'}
@@ -357,7 +376,8 @@ export const hostsConfig: AssetPageConfig = {
         {
           label: 'CPU Cores',
           getValue: (asset: Asset) => {
-            const cpu = asset.metadata.cpuCores
+            const meta = asset.metadata as Record<string, unknown>
+            const cpu = String(meta.cpu_cores || '')
             if (!cpu) return '-'
             return (
               <div className="flex items-center gap-2">
@@ -370,7 +390,8 @@ export const hostsConfig: AssetPageConfig = {
         {
           label: 'Memory',
           getValue: (asset: Asset) => {
-            const mem = asset.metadata.memoryGB
+            const meta = asset.metadata as Record<string, unknown>
+            const mem = String(meta.memory_gb || '')
             if (!mem) return '-'
             return (
               <div className="flex items-center gap-2">
@@ -389,7 +410,8 @@ export const hostsConfig: AssetPageConfig = {
           label: 'Ports',
           fullWidth: true,
           getValue: (asset: Asset) => {
-            const raw = asset.metadata.openPorts
+            const meta = asset.metadata as Record<string, unknown>
+            const raw = meta.open_ports
             const ports: string[] = Array.isArray(raw)
               ? raw.map(String)
               : raw
@@ -416,12 +438,48 @@ export const hostsConfig: AssetPageConfig = {
 
   exportFields: [
     { header: 'Name', accessor: (a: Asset) => a.name },
-    { header: 'IP', accessor: (a: Asset) => a.metadata.ip || '' },
-    { header: 'Hostname', accessor: (a: Asset) => a.metadata.hostname || '' },
-    { header: 'OS', accessor: (a: Asset) => a.metadata.os || '' },
-    { header: 'Version', accessor: (a: Asset) => a.metadata.osVersion || '' },
-    { header: 'CPU', accessor: (a: Asset) => a.metadata.cpuCores || '' },
-    { header: 'Memory', accessor: (a: Asset) => a.metadata.memoryGB || '' },
+    {
+      header: 'IP',
+      accessor: (a: Asset) => {
+        const m = a.metadata as Record<string, unknown>
+        return (m.ip as string) || ''
+      },
+    },
+    {
+      header: 'Hostname',
+      accessor: (a: Asset) => {
+        const m = a.metadata as Record<string, unknown>
+        return (m.hostname as string) || ''
+      },
+    },
+    {
+      header: 'OS',
+      accessor: (a: Asset) => {
+        const m = a.metadata as Record<string, unknown>
+        return (m.os as string) || ''
+      },
+    },
+    {
+      header: 'Version',
+      accessor: (a: Asset) => {
+        const m = a.metadata as Record<string, unknown>
+        return (m.os_version as string) || ''
+      },
+    },
+    {
+      header: 'CPU',
+      accessor: (a: Asset) => {
+        const m = a.metadata as Record<string, unknown>
+        return (m.cpu_cores || '') as string
+      },
+    },
+    {
+      header: 'Memory',
+      accessor: (a: Asset) => {
+        const m = a.metadata as Record<string, unknown>
+        return (m.memory_gb || '') as string
+      },
+    },
     { header: 'Status', accessor: (a: Asset) => a.status },
     { header: 'Risk Score', accessor: (a: Asset) => a.riskScore },
     { header: 'Findings', accessor: (a: Asset) => a.findingCount },

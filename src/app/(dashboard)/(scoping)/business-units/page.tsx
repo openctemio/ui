@@ -70,13 +70,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from 'sonner'
-import {
-  mockBusinessUnits,
-  getChildBusinessUnits,
-  type BusinessUnit,
-  type Criticality,
-  type RiskTolerance,
-} from '@/features/business-units'
+import { type BusinessUnit, type Criticality, type RiskTolerance } from '@/features/business-units'
 import {
   useBusinessUnits,
   useCreateBusinessUnit,
@@ -104,6 +98,11 @@ const riskToleranceColors: Record<RiskTolerance, string> = {
   medium: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20',
   high: 'bg-orange-500/10 text-orange-500 border-orange-500/20',
   very_high: 'bg-red-500/10 text-red-500 border-red-500/20',
+}
+
+/** Filter children of a given parent from the full list */
+function getChildUnits(allUnits: BusinessUnit[], parentId: string): BusinessUnit[] {
+  return allUnits.filter((bu) => bu.parentId === parentId)
 }
 
 export default function BusinessUnitsPage() {
@@ -280,7 +279,7 @@ export default function BusinessUnitsPage() {
       header: ({ column }) => <DataTableColumnHeader column={column} title="Business Unit" />,
       cell: ({ row }) => {
         const unit = row.original
-        const children = getChildBusinessUnits(unit.id)
+        const children = getChildUnits(businessUnits, unit.id)
         return (
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
@@ -823,7 +822,7 @@ export default function BusinessUnitsPage() {
                         <div className="flex flex-wrap items-center gap-2">
                           <ChevronRight className="h-4 w-4 text-muted-foreground" />
                           <span className="font-medium">
-                            {mockBusinessUnits.find((u) => u.id === viewUnit.parentId)?.name}
+                            {businessUnits.find((u) => u.id === viewUnit.parentId)?.name}
                           </span>
                         </div>
                       </Card>
@@ -832,9 +831,9 @@ export default function BusinessUnitsPage() {
 
                   <div>
                     <p className="text-sm text-muted-foreground mb-2">Sub-units</p>
-                    {getChildBusinessUnits(viewUnit.id).length > 0 ? (
+                    {getChildUnits(businessUnits, viewUnit.id).length > 0 ? (
                       <div className="space-y-2">
-                        {getChildBusinessUnits(viewUnit.id).map((child) => (
+                        {getChildUnits(businessUnits, viewUnit.id).map((child) => (
                           <Card key={child.id} className="p-3">
                             <div className="flex items-center justify-between">
                               <div className="flex flex-wrap items-center gap-2">
@@ -888,7 +887,7 @@ export default function BusinessUnitsPage() {
             <AlertDialogDescription>
               Are you sure you want to delete &quot;{deleteUnit?.name}&quot;? This action cannot be
               undone.
-              {getChildBusinessUnits(deleteUnit?.id || '').length > 0 && (
+              {getChildUnits(businessUnits, deleteUnit?.id || '').length > 0 && (
                 <span className="block mt-2 text-destructive">
                   Warning: This unit has sub-units that will also be affected.
                 </span>

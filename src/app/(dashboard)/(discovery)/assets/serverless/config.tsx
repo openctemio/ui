@@ -41,10 +41,10 @@ export const serverlessConfig: AssetPageConfig = {
 
   columns: [
     {
-      accessorKey: 'metadata.functionRuntime',
+      accessorKey: 'metadata.function_runtime',
       header: 'Runtime',
       cell: ({ row }) => {
-        const runtime = (row.original.metadata.functionRuntime as string) || ''
+        const runtime = (row.original.metadata.function_runtime as string) || ''
         const category = getRuntimeCategory(runtime)
         return (
           <Badge variant="secondary" className={runtimeColors[category]}>
@@ -54,10 +54,10 @@ export const serverlessConfig: AssetPageConfig = {
       },
     },
     {
-      accessorKey: 'metadata.cloudProvider',
+      accessorKey: 'metadata.cloud_provider',
       header: 'Provider',
       cell: ({ row }) => {
-        const provider = (row.original.metadata.cloudProvider as string) || 'aws'
+        const provider = (row.original.metadata.cloud_provider as string) || 'aws'
         return (
           <Badge variant="secondary" className={providerColors[provider]}>
             {provider.toUpperCase()}
@@ -66,18 +66,18 @@ export const serverlessConfig: AssetPageConfig = {
       },
     },
     {
-      accessorKey: 'metadata.functionMemory',
+      accessorKey: 'metadata.function_memory',
       header: 'Memory',
       cell: ({ row }) => {
-        const memory = row.original.metadata.functionMemory
+        const memory = row.original.metadata.function_memory
         return <span className="text-sm">{memory ? `${memory} MB` : '-'}</span>
       },
     },
     {
-      accessorKey: 'metadata.functionTimeout',
+      accessorKey: 'metadata.function_timeout',
       header: 'Timeout',
       cell: ({ row }) => {
-        const timeout = row.original.metadata.functionTimeout
+        const timeout = row.original.metadata.function_timeout
         return <span className="text-sm">{timeout ? `${timeout}s` : '-'}</span>
       },
     },
@@ -98,35 +98,35 @@ export const serverlessConfig: AssetPageConfig = {
       placeholder: 'Optional description',
     },
     {
-      name: 'functionRuntime',
+      name: 'function_runtime',
       label: 'Runtime',
       type: 'text',
       placeholder: 'e.g., nodejs18.x',
       isMetadata: true,
     },
     {
-      name: 'functionHandler',
+      name: 'function_handler',
       label: 'Handler',
       type: 'text',
       placeholder: 'e.g., index.handler',
       isMetadata: true,
     },
     {
-      name: 'functionMemory',
+      name: 'function_memory',
       label: 'Memory (MB)',
       type: 'number',
       placeholder: '128',
       isMetadata: true,
     },
     {
-      name: 'functionTimeout',
+      name: 'function_timeout',
       label: 'Timeout (s)',
       type: 'number',
       placeholder: '30',
       isMetadata: true,
     },
     {
-      name: 'cloudProvider',
+      name: 'cloud_provider',
       label: 'Cloud Provider',
       type: 'select',
       isMetadata: true,
@@ -145,7 +145,7 @@ export const serverlessConfig: AssetPageConfig = {
       isMetadata: true,
     },
     {
-      name: 'functionVpcEnabled',
+      name: 'function_vpc_enabled',
       label: 'VPC Enabled',
       type: 'boolean',
       isMetadata: true,
@@ -165,7 +165,7 @@ export const serverlessConfig: AssetPageConfig = {
       // metadata.functionVpcEnabled isn't aggregated — current page only
       title: 'VPC Enabled',
       icon: Network,
-      compute: (assets) => assets.filter((a) => a.metadata.functionVpcEnabled).length,
+      compute: (assets) => assets.filter((a) => a.metadata.function_vpc_enabled).length,
     },
     {
       title: 'With Findings',
@@ -185,7 +185,7 @@ export const serverlessConfig: AssetPageConfig = {
       { label: 'Go', value: 'go' },
     ],
     filterFn: (asset, value) => {
-      const runtime = (asset.metadata.functionRuntime as string) || ''
+      const runtime = (asset.metadata.function_runtime as string) || ''
       return getRuntimeCategory(runtime) === value
     },
   },
@@ -193,7 +193,7 @@ export const serverlessConfig: AssetPageConfig = {
   copyAction: {
     label: 'Copy ARN',
     getValue: (asset) =>
-      `arn:${asset.metadata.cloudProvider}:lambda:${asset.metadata.region}:${asset.metadata.functionName}`,
+      `arn:${asset.metadata.cloud_provider}:lambda:${asset.metadata.region}:${asset.metadata.function_name}`,
   },
 
   detailStats: [
@@ -220,7 +220,7 @@ export const serverlessConfig: AssetPageConfig = {
         {
           label: 'Runtime',
           getValue: (asset) => {
-            const runtime = (asset.metadata.functionRuntime as string) || ''
+            const runtime = (asset.metadata.function_runtime as string) || ''
             if (!runtime) return '-'
             const category = getRuntimeCategory(runtime)
             return (
@@ -234,30 +234,30 @@ export const serverlessConfig: AssetPageConfig = {
           label: 'Handler',
           getValue: (asset) => (
             <span className="font-mono text-xs">
-              {(asset.metadata.functionHandler as string) || '-'}
+              {(asset.metadata.function_handler as string) || '-'}
             </span>
           ),
         },
         {
           label: 'Memory',
           getValue: (asset) =>
-            asset.metadata.functionMemory ? `${asset.metadata.functionMemory} MB` : '-',
+            asset.metadata.function_memory ? `${asset.metadata.function_memory} MB` : '-',
         },
         {
           label: 'Timeout',
           getValue: (asset) =>
-            asset.metadata.functionTimeout ? `${asset.metadata.functionTimeout}s` : '-',
+            asset.metadata.function_timeout ? `${asset.metadata.function_timeout}s` : '-',
         },
         {
           label: 'Code Size',
           getValue: (asset) =>
-            asset.metadata.functionCodeSize
-              ? `${((asset.metadata.functionCodeSize as number) / 1024).toFixed(1)} MB`
+            asset.metadata.function_code_size
+              ? `${((asset.metadata.function_code_size as number) / 1024).toFixed(1)} MB`
               : '-',
         },
         {
           label: 'Environment Variables',
-          getValue: (asset) => String(asset.metadata.functionEnvVars || 0),
+          getValue: (asset) => String(asset.metadata.function_env_vars || 0),
         },
       ],
     },
@@ -267,7 +267,7 @@ export const serverlessConfig: AssetPageConfig = {
         {
           label: 'Provider',
           getValue: (asset) => {
-            const provider = (asset.metadata.cloudProvider as string) || ''
+            const provider = (asset.metadata.cloud_provider as string) || ''
             if (!provider) return '-'
             return (
               <Badge variant="secondary" className={providerColors[provider]}>
@@ -279,8 +279,8 @@ export const serverlessConfig: AssetPageConfig = {
         {
           label: 'VPC',
           getValue: (asset) => (
-            <Badge variant={asset.metadata.functionVpcEnabled ? 'default' : 'secondary'}>
-              {asset.metadata.functionVpcEnabled ? 'Enabled' : 'Disabled'}
+            <Badge variant={asset.metadata.function_vpc_enabled ? 'default' : 'secondary'}>
+              {asset.metadata.function_vpc_enabled ? 'Enabled' : 'Disabled'}
             </Badge>
           ),
         },
@@ -297,7 +297,7 @@ export const serverlessConfig: AssetPageConfig = {
           label: 'Triggers',
           fullWidth: true,
           getValue: (asset) => {
-            const raw = asset.metadata.functionTriggers
+            const raw = asset.metadata.function_triggers
             const triggers: string[] = Array.isArray(raw)
               ? raw
               : raw
@@ -328,7 +328,7 @@ export const serverlessConfig: AssetPageConfig = {
           label: 'Layers',
           fullWidth: true,
           getValue: (asset) => {
-            const raw = asset.metadata.functionLayers
+            const raw = asset.metadata.function_layers
             const layers: string[] = Array.isArray(raw)
               ? raw
               : raw
@@ -355,11 +355,11 @@ export const serverlessConfig: AssetPageConfig = {
 
   exportFields: [
     { header: 'Name', accessor: (a) => a.name },
-    { header: 'Runtime', accessor: (a) => a.metadata.functionRuntime || '' },
-    { header: 'Provider', accessor: (a) => a.metadata.cloudProvider || '' },
-    { header: 'Memory (MB)', accessor: (a) => a.metadata.functionMemory || '' },
-    { header: 'Timeout (s)', accessor: (a) => a.metadata.functionTimeout || '' },
-    { header: 'VPC Enabled', accessor: (a) => (a.metadata.functionVpcEnabled ? 'Yes' : 'No') },
+    { header: 'Runtime', accessor: (a) => (a.metadata.function_runtime as string) || '' },
+    { header: 'Provider', accessor: (a) => (a.metadata.cloud_provider as string) || '' },
+    { header: 'Memory (MB)', accessor: (a) => (a.metadata.function_memory as number) || '' },
+    { header: 'Timeout (s)', accessor: (a) => (a.metadata.function_timeout as number) || '' },
+    { header: 'VPC Enabled', accessor: (a) => (a.metadata.function_vpc_enabled ? 'Yes' : 'No') },
     { header: 'Status', accessor: (a) => a.status },
     { header: 'Risk Score', accessor: (a) => a.riskScore },
     { header: 'Findings', accessor: (a) => a.findingCount },

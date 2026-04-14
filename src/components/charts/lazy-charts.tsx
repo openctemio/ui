@@ -32,7 +32,18 @@ const LazyLineChart = dynamic(
 )
 
 const LazyResponsiveContainer = dynamic(
-  () => import('recharts').then((mod) => ({ default: mod.ResponsiveContainer })),
+  () =>
+    import('recharts').then((mod) => {
+      // Wrap ResponsiveContainer with minWidth={0} to prevent
+      // "width(-1) and height(-1) should be greater than 0" error
+      // when the chart renders before its container is visible.
+      const Original = mod.ResponsiveContainer
+      const Wrapped = (props: React.ComponentProps<typeof Original>) => (
+        <Original minWidth={0} {...props} />
+      )
+      Wrapped.displayName = 'ResponsiveContainer'
+      return { default: Wrapped }
+    }),
   { ssr: false }
 )
 

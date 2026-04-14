@@ -9,7 +9,7 @@ import type { Asset } from '@/features/assets'
 type CertStatus = 'valid' | 'expiring' | 'expired'
 
 function getCertStatus(asset: Asset): CertStatus {
-  const notAfter = asset.metadata?.certNotAfter as string | undefined
+  const notAfter = asset.metadata?.cert_not_after as string | undefined
   if (!notAfter) return 'valid'
 
   const expiryDate = new Date(notAfter)
@@ -22,7 +22,7 @@ function getCertStatus(asset: Asset): CertStatus {
 }
 
 function getDaysUntilExpiry(asset: Asset): number | null {
-  const notAfter = asset.metadata?.certNotAfter as string | undefined
+  const notAfter = asset.metadata?.cert_not_after as string | undefined
   if (!notAfter) return null
 
   const expiryDate = new Date(notAfter)
@@ -73,16 +73,16 @@ export const certificatesConfig: AssetPageConfig = {
       id: 'issuer',
       header: 'Issuer',
       cell: ({ row }) => {
-        const issuer = (row.original.metadata?.certIssuer as string) || '-'
+        const issuer = (row.original.metadata?.cert_issuer as string) || '-'
         return <span className="text-muted-foreground">{issuer}</span>
       },
     },
     {
       id: 'validUntil',
-      accessorFn: (row) => row.metadata?.certNotAfter || '',
+      accessorFn: (row) => row.metadata?.cert_not_after || '',
       header: 'Valid Until',
       cell: ({ row }) => {
-        const notAfter = row.original.metadata?.certNotAfter as string | undefined
+        const notAfter = row.original.metadata?.cert_not_after as string | undefined
         if (!notAfter) return <span className="text-muted-foreground">-</span>
         return <span className="text-sm">{new Date(notAfter).toLocaleDateString()}</span>
       },
@@ -115,49 +115,49 @@ export const certificatesConfig: AssetPageConfig = {
       required: true,
     },
     {
-      name: 'certIssuer',
+      name: 'cert_issuer',
       label: 'Issuer',
       type: 'text',
       placeholder: "Let's Encrypt, DigiCert...",
       isMetadata: true,
     },
     {
-      name: 'certSubject',
+      name: 'cert_subject',
       label: 'Subject',
       type: 'text',
       placeholder: 'CN=*.example.com',
       isMetadata: true,
     },
     {
-      name: 'certNotBefore',
+      name: 'cert_not_before',
       label: 'Valid From',
       type: 'text',
       placeholder: 'YYYY-MM-DD',
       isMetadata: true,
     },
     {
-      name: 'certNotAfter',
+      name: 'cert_not_after',
       label: 'Valid Until',
       type: 'text',
       placeholder: 'YYYY-MM-DD',
       isMetadata: true,
     },
     {
-      name: 'certSignatureAlgorithm',
+      name: 'cert_signature_algorithm',
       label: 'Signature Algorithm',
       type: 'text',
       placeholder: 'SHA256withRSA',
       isMetadata: true,
     },
     {
-      name: 'certKeySize',
+      name: 'cert_key_size',
       label: 'Key Size (bits)',
       type: 'text',
       placeholder: '2048',
       isMetadata: true,
     },
     {
-      name: 'certSerialNumber',
+      name: 'cert_serial_number',
       label: 'Serial Number',
       type: 'text',
       placeholder: '03:A1:...',
@@ -165,7 +165,7 @@ export const certificatesConfig: AssetPageConfig = {
       fullWidth: true,
     },
     {
-      name: 'certSans',
+      name: 'cert_sans',
       label: 'Subject Alternative Names (comma separated)',
       type: 'text',
       placeholder: 'example.com, *.example.com, api.example.com',
@@ -270,46 +270,46 @@ export const certificatesConfig: AssetPageConfig = {
       fields: [
         {
           label: 'Issuer',
-          getValue: (asset: Asset) => (asset.metadata?.certIssuer as string) || '-',
+          getValue: (asset: Asset) => (asset.metadata?.cert_issuer as string) || '-',
         },
         {
           label: 'Subject',
-          getValue: (asset: Asset) => (asset.metadata?.certSubject as string) || '-',
+          getValue: (asset: Asset) => (asset.metadata?.cert_subject as string) || '-',
         },
         {
           label: 'Valid From',
           getValue: (asset: Asset) =>
-            asset.metadata?.certNotBefore
-              ? new Date(asset.metadata.certNotBefore as string).toLocaleDateString()
+            asset.metadata?.cert_not_before
+              ? new Date(asset.metadata.cert_not_before as string).toLocaleDateString()
               : '-',
         },
         {
           label: 'Valid Until',
           getValue: (asset: Asset) =>
-            asset.metadata?.certNotAfter
-              ? new Date(asset.metadata.certNotAfter as string).toLocaleDateString()
+            asset.metadata?.cert_not_after
+              ? new Date(asset.metadata.cert_not_after as string).toLocaleDateString()
               : '-',
         },
         {
           label: 'Algorithm',
-          getValue: (asset: Asset) => (asset.metadata?.certSignatureAlgorithm as string) || '-',
+          getValue: (asset: Asset) => (asset.metadata?.cert_signature_algorithm as string) || '-',
         },
         {
           label: 'Key Size',
           getValue: (asset: Asset) =>
-            asset.metadata?.certKeySize ? `${asset.metadata.certKeySize} bits` : '-',
+            asset.metadata?.cert_key_size ? `${asset.metadata.cert_key_size} bits` : '-',
         },
         {
           label: 'Serial Number',
           getValue: (asset: Asset) => (
             <span className="break-all font-mono text-xs">
-              {(asset.metadata?.certSerialNumber as string) || '-'}
+              {(asset.metadata?.cert_serial_number as string) || '-'}
             </span>
           ),
         },
         {
           label: 'Wildcard',
-          getValue: (asset: Asset) => (asset.metadata?.certIsWildcard ? 'Yes' : 'No'),
+          getValue: (asset: Asset) => (asset.metadata?.cert_is_wildcard ? 'Yes' : 'No'),
         },
       ],
     },
@@ -320,7 +320,7 @@ export const certificatesConfig: AssetPageConfig = {
           label: 'SANs',
           fullWidth: true,
           getValue: (asset: Asset) => {
-            const raw = asset.metadata?.certSans
+            const raw = asset.metadata?.cert_sans
             const sans: string[] = Array.isArray(raw)
               ? raw
               : raw
@@ -347,10 +347,10 @@ export const certificatesConfig: AssetPageConfig = {
 
   exportFields: [
     { header: 'Certificate', accessor: (a: Asset) => a.name },
-    { header: 'Issuer', accessor: (a: Asset) => (a.metadata?.certIssuer as string) || '' },
-    { header: 'Subject', accessor: (a: Asset) => (a.metadata?.certSubject as string) || '' },
-    { header: 'Valid From', accessor: (a: Asset) => (a.metadata?.certNotBefore as string) || '' },
-    { header: 'Valid To', accessor: (a: Asset) => (a.metadata?.certNotAfter as string) || '' },
+    { header: 'Issuer', accessor: (a: Asset) => (a.metadata?.cert_issuer as string) || '' },
+    { header: 'Subject', accessor: (a: Asset) => (a.metadata?.cert_subject as string) || '' },
+    { header: 'Valid From', accessor: (a: Asset) => (a.metadata?.cert_not_before as string) || '' },
+    { header: 'Valid To', accessor: (a: Asset) => (a.metadata?.cert_not_after as string) || '' },
     {
       header: 'Days Left',
       accessor: (a: Asset) => {

@@ -47,6 +47,7 @@ export default function DomainsPage() {
     [showAllForFilter, collapsedRoots, toggleRoot, flatMode]
   )
 
-  // Key on searchParams to force remount when ?type=subdomain changes
-  return <AssetPage key={searchParams.toString()} config={config} />
+  // Only remount when type/sub_type changes (overview click-through), NOT on page/q/sort changes
+  const remountKey = `${searchParams.get('type') ?? ''}_${searchParams.get('sub_type') ?? ''}`
+  return <AssetPage key={remountKey} config={config} />
 }
