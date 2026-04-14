@@ -78,11 +78,19 @@ export const databasesConfig: AssetPageConfig = {
     },
   ],
 
+  countBy: ['encryption'],
+
   statsCards: [
     {
       title: 'Active',
       icon: CheckCircle,
       compute: (_assets, stats) => stats.byStatus.active ?? 0,
+      variant: 'success',
+    },
+    {
+      title: 'Encrypted',
+      icon: Lock,
+      compute: (_assets, stats) => stats.metadataCounts?.encryption?.true ?? 0,
       variant: 'success',
     },
     {

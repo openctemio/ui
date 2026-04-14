@@ -147,12 +147,20 @@ export const websitesConfig: AssetPageConfig = {
 
   includeGroupSelect: true,
 
+  countBy: ['ssl'],
+
   statsCards: [
     {
-      title: 'Active',
-      icon: CheckCircle,
-      compute: (_assets, stats) => stats.byStatus?.active ?? 0,
+      title: 'SSL Secure',
+      icon: ShieldCheck,
+      compute: (_assets, stats) => stats.metadataCounts?.ssl?.true ?? 0,
       variant: 'success',
+    },
+    {
+      title: 'SSL Insecure',
+      icon: ShieldX,
+      compute: (_assets, stats) => stats.metadataCounts?.ssl?.false ?? 0,
+      variant: 'danger',
     },
     {
       title: 'With Findings',

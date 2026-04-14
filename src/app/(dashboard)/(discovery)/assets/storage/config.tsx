@@ -106,11 +106,19 @@ export const storageConfig: AssetPageConfig = {
     },
   ],
 
+  countBy: ['is_publicly_accessible', 'encryption_enabled'],
+
   statsCards: [
     {
-      title: 'Active',
-      icon: CheckCircle,
-      compute: (_assets, stats) => stats.byStatus?.active ?? 0,
+      title: 'Public',
+      icon: Globe,
+      compute: (_assets, stats) => stats.metadataCounts?.is_publicly_accessible?.true ?? 0,
+      variant: 'danger',
+    },
+    {
+      title: 'Encrypted',
+      icon: Lock,
+      compute: (_assets, stats) => stats.metadataCounts?.encryption_enabled?.true ?? 0,
       variant: 'success',
     },
     {
