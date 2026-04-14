@@ -78,16 +78,6 @@ export const domainsConfig: AssetPageConfig = {
     },
   ],
 
-  // Filter by Root or Subdomain
-  customFilter: {
-    label: 'Type',
-    options: [
-      { label: 'Root Domains', value: 'domain' },
-      { label: 'Subdomains', value: 'subdomain' },
-    ],
-    filterFn: (asset: Asset, value: string) => asset.type === value,
-  },
-
   formFields: [
     {
       name: 'name',
