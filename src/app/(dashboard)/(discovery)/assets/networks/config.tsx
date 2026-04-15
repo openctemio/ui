@@ -5,6 +5,16 @@ import { Network, Shield, AlertTriangle, Router, Server } from 'lucide-react'
 import type { AssetPageConfig } from '@/features/assets/types/page-config.types'
 import type { Asset } from '@/features/assets'
 
+/** Get management IP from properties with fallback: management_ip → ip → ip_addresses[0] */
+const getManagementIP = (asset: Asset): string => {
+  const meta = asset.metadata as Record<string, unknown>
+  if (meta.management_ip) return meta.management_ip as string
+  if (meta.ip) return meta.ip as string
+  const ips = meta.ip_addresses as string[] | undefined
+  if (ips && ips.length > 0) return ips[0]
+  return ''
+}
+
 const getDeviceTypeLabel = (asset: Asset): string => {
   // After type consolidation: all network devices have type='network', sub_type differentiates
   const subType = asset.subType || ''
@@ -98,8 +108,7 @@ export const networksConfig: AssetPageConfig = {
       accessorKey: 'metadata.management_ip',
       header: 'Management IP',
       cell: ({ row }) => {
-        const meta = row.original.metadata as Record<string, unknown>
-        const ip = (meta.management_ip as string) || ''
+        const ip = getManagementIP(row.original)
         if (!ip) return <span className="text-muted-foreground">-</span>
         return <span className="text-sm font-mono">{ip}</span>
       },
@@ -188,7 +197,7 @@ export const networksConfig: AssetPageConfig = {
     label: 'Copy IP',
     getValue: (asset: Asset) => {
       const meta = asset.metadata as Record<string, unknown>
-      return (meta.management_ip as string) || asset.name
+      return getManagementIP(asset) || asset.name
     },
   },
 
@@ -243,7 +252,7 @@ export const networksConfig: AssetPageConfig = {
         {
           label: 'Management IP',
           getValue: (asset: Asset) => {
-            const ip = (asset.metadata as Record<string, unknown>).management_ip as string
+            const ip = getManagementIP(asset)
             if (!ip) return '-'
             return <code className="text-sm bg-muted px-2 py-0.5 rounded">{ip}</code>
           },
@@ -268,7 +277,7 @@ export const networksConfig: AssetPageConfig = {
     },
     {
       header: 'Management IP',
-      accessor: (a) => (a.metadata as Record<string, unknown>).management_ip || '',
+      accessor: (a) => getManagementIP(a),
     },
     {
       header: 'Serial',
