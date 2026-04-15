@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Progress } from '@/components/ui/progress'
-import { Search, CheckCircle, XCircle, Loader2, ShieldCheck } from 'lucide-react'
+import { CheckCircle, XCircle, Loader2, ShieldCheck } from 'lucide-react'
 import {
   AlertDialog,
   AlertDialogAction,
