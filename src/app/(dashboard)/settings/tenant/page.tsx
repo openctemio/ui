@@ -638,15 +638,6 @@ export default function TenantPage() {
     }
   }
 
-  const handleCopyApiKey = () => {
-    // API key display not yet implemented — shows placeholder message.
-    toast.info('API key feature coming soon')
-  }
-
-  const handleRegenerateApiKey = () => {
-    toast.info('API key regeneration coming soon')
-  }
-
   const handleTestWebhook = () => {
     toast.info('Webhook test coming soon')
   }
@@ -1546,15 +1537,10 @@ export default function TenantPage() {
                           readOnly
                           className="font-mono"
                         />
-                        <Button variant="outline" size="icon" onClick={handleCopyApiKey}>
+                        <Button variant="outline" size="icon" disabled title="Coming soon">
                           <Copy className="h-4 w-4" />
                         </Button>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={handleRegenerateApiKey}
-                          disabled={!canUpdateTenant}
-                        >
+                        <Button variant="outline" size="icon" disabled title="Coming soon">
                           <RefreshCw className="h-4 w-4" />
                         </Button>
                       </div>

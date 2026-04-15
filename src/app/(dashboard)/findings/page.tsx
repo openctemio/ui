@@ -436,7 +436,8 @@ function FindingsContent() {
       URL.revokeObjectURL(url)
       toast.success('JSON exported successfully')
     } else {
-      toast.info('PDF export coming soon')
+      // PDF export not yet implemented
+      return
     }
   }
 
@@ -834,9 +835,7 @@ function FindingsContent() {
                 <DropdownMenuItem onClick={() => handleExport('JSON')}>
                   Export as JSON
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('PDF')}>
-                  Export as PDF Report
-                </DropdownMenuItem>
+                <DropdownMenuItem disabled>Export as PDF Report</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
             {hasPermission('findings:write') && (

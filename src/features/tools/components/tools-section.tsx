@@ -489,10 +489,7 @@ export function ToolsSection({ onToolSelect, selectedToolId }: ToolsSectionProps
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start">
-                    <DropdownMenuItem
-                      className="text-red-500"
-                      onClick={() => toast.info('Bulk delete coming soon')}
-                    >
+                    <DropdownMenuItem className="text-red-500" disabled>
                       <Trash2 className="mr-2 h-4 w-4" />
                       Delete Selected
                     </DropdownMenuItem>
