@@ -79,6 +79,7 @@ import type { Severity } from '@/features/shared/types'
 import { toast } from 'sonner'
 import { copyToClipboard } from '@/lib/clipboard'
 import { getErrorMessage } from '@/lib/api/error-handler'
+import { patch, post, del } from '@/lib/api/client'
 import { usePermissions } from '@/context/permission-provider'
 
 // ============================================
@@ -491,41 +492,52 @@ function FindingsContent() {
     setDrawerOpen(true)
   }, [])
 
-  const handleStatusChange = (findingId: string, status: FindingStatus) => {
-    const statusConfig = FINDING_STATUS_CONFIG[status]
-    toast.success(`Status updated to "${statusConfig.label}"`, {
-      description: `Finding ${findingId}`,
-    })
-    mutateFindings()
-    mutateStats()
-  }
-
-  const handleSeverityChange = (findingId: string, severity: Severity) => {
-    const severityConfig = SEVERITY_CONFIG[severity]
-    toast.success(`Severity updated to "${severityConfig.label}"`, {
-      description: `Finding ${findingId}`,
-    })
-    mutateFindings()
-    mutateStats()
-  }
-
-  const handleAssigneeChange = (findingId: string, assignee: FindingUser | null) => {
-    if (assignee) {
-      toast.success(`Assigned to ${assignee.name}`, {
-        description: `Finding ${findingId}`,
-      })
-    } else {
-      toast.info('Finding unassigned', {
-        description: `Finding ${findingId}`,
-      })
+  const handleStatusChange = async (findingId: string, status: FindingStatus) => {
+    try {
+      await patch(`/api/v1/findings/${findingId}/status`, { status })
+      const statusConfig = FINDING_STATUS_CONFIG[status]
+      toast.success(`Status updated to "${statusConfig.label}"`)
+      mutateFindings()
+      mutateStats()
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Failed to update status'))
     }
-    mutateFindings()
   }
 
-  const handleAddComment = (findingId: string, comment: string) => {
-    toast.success('Comment added', {
-      description: comment.slice(0, 50) + (comment.length > 50 ? '...' : ''),
-    })
+  const handleSeverityChange = async (findingId: string, severity: Severity) => {
+    try {
+      await patch(`/api/v1/findings/${findingId}/severity`, { severity })
+      const severityConfig = SEVERITY_CONFIG[severity]
+      toast.success(`Severity updated to "${severityConfig.label}"`)
+      mutateFindings()
+      mutateStats()
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Failed to update severity'))
+    }
+  }
+
+  const handleAssigneeChange = async (findingId: string, assignee: FindingUser | null) => {
+    try {
+      if (assignee) {
+        await post(`/api/v1/findings/${findingId}/assign`, { user_id: assignee.id })
+        toast.success(`Assigned to ${assignee.name}`)
+      } else {
+        await del(`/api/v1/findings/${findingId}/assign`)
+        toast.info('Finding unassigned')
+      }
+      mutateFindings()
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Failed to update assignee'))
+    }
+  }
+
+  const handleAddComment = async (findingId: string, comment: string) => {
+    try {
+      await post(`/api/v1/findings/${findingId}/comments`, { content: comment })
+      toast.success('Comment added')
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Failed to add comment'))
+    }
   }
 
   const handleDeleteClick = (finding: Finding) => {
