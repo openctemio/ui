@@ -12,9 +12,11 @@ import {
   SheetTitle,
   SheetDescription,
 } from '@/components/ui/sheet'
+import { TooltipProvider } from '@/components/ui/tooltip'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
+import { SheetDetailToolbar } from '@/features/shared'
 import { Progress } from '@/components/ui/progress'
 import { Textarea } from '@/components/ui/textarea'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -451,9 +453,8 @@ export function FindingDetailDrawer({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
-        className="flex w-full flex-col p-0 sm:max-w-xl"
+        className="flex w-full flex-col p-0 sm:max-w-xl [&>button]:hidden"
         onOpenAutoFocus={(e) => {
-          // Prevent auto-focus on mobile to avoid keyboard popup
           e.preventDefault()
         }}
       >
@@ -463,44 +464,35 @@ export function FindingDetailDrawer({
         {/* Content - only show when not loading and finding exists */}
         {!isLoading && finding && (
           <>
-            {/* Header */}
-            <SheetHeader className="relative space-y-3 border-b px-4 sm:px-6 py-4 text-left">
-              {/* More Actions - positioned at top right, next to close button */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="absolute right-12 top-4 h-8 w-8 p-0"
-                    aria-label="More actions"
-                  >
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuItem
-                    onClick={() => {
-                      copyToClipboard(finding.id)
-                      toast.success('Finding ID copied to clipboard')
-                    }}
-                  >
-                    <Copy className="mr-2 h-4 w-4" />
-                    Copy Finding ID
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => {
+            {/* Toolbar */}
+            <TooltipProvider>
+              <SheetDetailToolbar
+                title="Finding Details"
+                onClose={() => onOpenChange(false)}
+                onCopyId={() => {
+                  copyToClipboard(finding.id)
+                  toast.success('Finding ID copied to clipboard')
+                }}
+                onOpenExternal={() => {
+                  router.push(`/findings/${finding.id}`)
+                }}
+                extraActions={[
+                  {
+                    label: 'Copy link',
+                    icon: Link2,
+                    onClick: () => {
                       copyToClipboard(window.location.origin + `/findings/${finding.id}`)
                       toast.success('Finding URL copied to clipboard')
-                    }}
-                  >
-                    <Link2 className="mr-2 h-4 w-4" />
-                    Copy Link
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                    },
+                  },
+                ]}
+              />
+            </TooltipProvider>
 
+            {/* Header */}
+            <SheetHeader className="space-y-3 border-b px-4 sm:px-6 pb-4 text-left">
               {/* Title */}
-              <SheetTitle className="text-lg leading-snug pr-16">{finding.title}</SheetTitle>
+              <SheetTitle className="text-lg leading-snug">{finding.title}</SheetTitle>
 
               {/* CVE/CWE badges */}
               {(finding.cve || finding.cwe) && (

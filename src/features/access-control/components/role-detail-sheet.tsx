@@ -18,6 +18,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { toast } from 'sonner'
+import { copyToClipboard } from '@/lib/clipboard'
 import {
   Shield,
   Search,
@@ -41,6 +42,7 @@ import {
   UserMinus,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { SheetDetailToolbar } from '@/features/shared'
 import {
   useRoleMembers,
   useTenantPermissionModules,
@@ -302,9 +304,23 @@ export function RoleDetailSheet({
 
   return (
     <Sheet open={open} onOpenChange={handleOpenChange}>
-      <SheetContent className="sm:max-w-3xl p-0 flex flex-col h-full max-h-screen">
+      <SheetContent
+        className="sm:max-w-3xl p-0 flex flex-col h-full max-h-screen [&>button]:hidden"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
+        <TooltipProvider>
+          <SheetDetailToolbar
+            title="Role Details"
+            onClose={() => handleOpenChange(false)}
+            onCopyId={() => {
+              copyToClipboard(role.id)
+            }}
+            onEdit={!role.is_system && onEdit ? () => onEdit(role) : undefined}
+          />
+        </TooltipProvider>
+
         {/* Header */}
-        <SheetHeader className="px-6 py-4 border-b shrink-0 pr-12">
+        <SheetHeader className="px-6 py-4 border-b shrink-0">
           <div className="flex items-center gap-4">
             <div className={cn('p-3 rounded-xl shrink-0', config.bgColor)}>
               <Icon className={cn('h-6 w-6', config.color)} />

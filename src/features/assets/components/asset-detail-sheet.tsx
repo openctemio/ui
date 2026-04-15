@@ -9,12 +9,15 @@
 
 import * as React from 'react'
 import { Pencil, Link2 } from 'lucide-react'
+import { toast } from 'sonner'
+import { copyToClipboard } from '@/lib/clipboard'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { TooltipProvider } from '@/components/ui/tooltip'
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
 import { cn } from '@/lib/utils'
-import { StatusBadge } from '@/features/shared'
+import { StatusBadge, SheetDetailToolbar } from '@/features/shared'
 import { AssetFindings } from './asset-findings'
 import {
   TimelineSection,
@@ -22,6 +25,7 @@ import {
   DangerZoneSection,
   TagsSection,
 } from './sheet-sections'
+import { AssetMergeHistory } from './asset-merge-history'
 import { RelationshipPreview } from './relationships'
 import { AssetRelationshipsTab } from './asset-relationships-tab'
 import { ClassificationBadges } from './classification-badges'
@@ -203,11 +207,10 @@ export function AssetDetailSheet<T extends Asset>({
           scrolls. This replaces the previous "scroll the whole sheet"
           behaviour where the header + tabs scrolled out of view together
           with the body content. */}
-      <SheetContent className="sm:max-w-xl flex flex-col p-0 overflow-hidden">
-        {/* SheetTitle + SheetDescription are wrapped in VisuallyHidden because
-            the visible header below has its own custom layout. Radix requires
-            these for accessibility (screen readers); without them React logs a
-            "Missing Description for DialogContent" warning. */}
+      <SheetContent
+        className="sm:max-w-xl flex flex-col p-0 overflow-hidden [&>button]:hidden"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
         <VisuallyHidden>
           <SheetTitle>{assetTypeName} Details</SheetTitle>
           <SheetDescription>
@@ -217,56 +220,58 @@ export function AssetDetailSheet<T extends Asset>({
         </VisuallyHidden>
 
         {/* Header — pinned at the top */}
-        <div
-          className={cn(
-            'px-6 pt-6 pb-4 bg-gradient-to-br to-transparent shrink-0',
-            gradientFrom,
-            gradientVia
-          )}
-        >
-          {/* pr-14 reserves space for the Sheet's built-in close button (X)
-              which is absolutely positioned at top-3 right-3 with a 44x44
-              hit area. Without this, the StatusBadge at the end of the row
-              slides under the X and they visually overlap. */}
-          <div className="flex items-center gap-3 mb-3 pr-14">
-            <div
-              className={cn('h-12 w-12 rounded-xl flex items-center justify-center', iconBgColor)}
-            >
-              <Icon className={cn('h-6 w-6', iconColor)} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <h2 className="text-xl font-bold break-words" title={asset.name}>
-                {asset.name}
-              </h2>
-              <p className="text-sm text-muted-foreground truncate">
-                {subtitle || asset.groupName}
-              </p>
-            </div>
-            <StatusBadge status={asset.status} />
-          </div>
-
-          {/* Classification Badges */}
-          <div className="flex items-center gap-2 mb-2">
-            <ClassificationBadges
-              scope={asset.scope}
-              exposure={asset.exposure}
-              criticality={asset.criticality}
-              size="md"
-              showTooltips
+        <TooltipProvider>
+          <div
+            className={cn('bg-gradient-to-br to-transparent shrink-0', gradientFrom, gradientVia)}
+          >
+            {/* Toolbar: title left, actions right */}
+            <SheetDetailToolbar
+              title={`${assetTypeName} Details`}
+              onClose={() => onOpenChange(false)}
+              onEdit={canEdit ? onEdit : undefined}
+              onCopyId={() => {
+                copyToClipboard(asset.id)
+                toast.success('Asset ID copied')
+              }}
             />
-          </div>
 
-          {/* Quick Actions */}
-          <div className="flex flex-wrap gap-2 mt-4">
-            {canEdit && (
-              <Button size="sm" variant="secondary" onClick={onEdit}>
-                <Pencil className="mr-2 h-4 w-4" />
-                Edit
-              </Button>
-            )}
-            {quickActions}
+            <div className="px-6 pb-4">
+              <div className="flex items-center gap-3 mb-3">
+                <div
+                  className={cn(
+                    'h-12 w-12 rounded-xl flex items-center justify-center',
+                    iconBgColor
+                  )}
+                >
+                  <Icon className={cn('h-6 w-6', iconColor)} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-xl font-bold break-words" title={asset.name}>
+                    {asset.name}
+                  </h2>
+                  <p className="text-sm text-muted-foreground truncate">
+                    {subtitle || asset.groupName}
+                  </p>
+                </div>
+                <StatusBadge status={asset.status} />
+              </div>
+
+              {/* Classification Badges */}
+              <div className="flex items-center gap-2 mb-2">
+                <ClassificationBadges
+                  scope={asset.scope}
+                  exposure={asset.exposure}
+                  criticality={asset.criticality}
+                  size="md"
+                  showTooltips
+                />
+              </div>
+
+              {/* Quick Actions (secondary buttons below header) */}
+              {quickActions && <div className="flex flex-wrap gap-2 mt-4">{quickActions}</div>}
+            </div>
           </div>
-        </div>
+        </TooltipProvider>
 
         {/* Tabs — flex-1 + min-h-0 lets the Tabs region take all the
             remaining vertical space below the header. The TabsList is
@@ -416,6 +421,7 @@ export function AssetDetailSheet<T extends Asset>({
                 updatedAt={asset.updatedAt}
               />
               <TechnicalDetailsSection id={asset.id} type={asset.type} groupId={asset.groupId} />
+              <AssetMergeHistory assetId={asset.id} />
               {canDelete && <DangerZoneSection onDelete={onDelete} assetTypeName={assetTypeName} />}
             </TabsContent>
           )}

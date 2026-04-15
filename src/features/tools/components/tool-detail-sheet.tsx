@@ -3,6 +3,8 @@
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { TooltipProvider } from '@/components/ui/tooltip'
+import { SheetDetailToolbar } from '@/features/shared'
 import {
   Settings,
   Trash2,
@@ -152,7 +154,18 @@ export function ToolDetailSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="sm:max-w-lg overflow-y-auto p-0">
+      <SheetContent
+        className="sm:max-w-lg overflow-y-auto p-0 [&>button]:hidden"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
+        <TooltipProvider>
+          <SheetDetailToolbar
+            title="Tool Details"
+            onClose={() => onOpenChange(false)}
+            onEdit={!readOnly && !tool.is_builtin && onEdit ? () => onEdit(tool) : undefined}
+            onCopyId={() => copyToClipboard(tool.id)}
+          />
+        </TooltipProvider>
         {/* Hero Header */}
         <div className="relative">
           {/* Background gradient */}

@@ -14,8 +14,10 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { TooltipProvider } from '@/components/ui/tooltip'
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
 import { toast } from 'sonner'
+import { copyToClipboard } from '@/lib/clipboard'
 import { Users, Calendar, Loader2, Trash2, Box } from 'lucide-react'
 import {
   useGroup,
@@ -30,6 +32,7 @@ import {
   formatDate,
 } from '@/features/access-control'
 import { getErrorMessage } from '@/lib/api/error-handler'
+import { SheetDetailToolbar } from '@/features/shared'
 import { useMembers } from '@/features/organization'
 import { useTenant } from '@/context/tenant-provider'
 
@@ -252,10 +255,27 @@ export function GroupDetailSheet({ groupId, open, onOpenChange, onUpdate }: Grou
   return (
     <>
       <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent className="sm:max-w-lg p-0 overflow-y-auto">
+        <SheetContent
+          className="sm:max-w-lg p-0 overflow-y-auto [&>button]:hidden"
+          onOpenAutoFocus={(e) => e.preventDefault()}
+        >
           <VisuallyHidden>
             <SheetTitle>Team Details</SheetTitle>
           </VisuallyHidden>
+
+          <TooltipProvider>
+            <SheetDetailToolbar
+              title="Group Details"
+              onClose={() => onOpenChange(false)}
+              onCopyId={
+                group
+                  ? () => {
+                      copyToClipboard(group.id)
+                    }
+                  : undefined
+              }
+            />
+          </TooltipProvider>
 
           {groupLoading ? (
             <div className="p-6 space-y-4">
