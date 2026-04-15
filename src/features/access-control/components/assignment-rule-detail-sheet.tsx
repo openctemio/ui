@@ -24,8 +24,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { TooltipProvider } from '@/components/ui/tooltip'
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
 import { toast } from 'sonner'
+import { copyToClipboard } from '@/lib/clipboard'
 import {
   GitBranch,
   Pencil,
@@ -48,6 +50,7 @@ import {
 } from '@/features/access-control'
 import { fetcherWithOptions } from '@/lib/api/client'
 import { getErrorMessage } from '@/lib/api/error-handler'
+import { SheetDetailToolbar } from '@/features/shared'
 import { Can, Permission } from '@/lib/permissions'
 
 interface AssignmentRuleDetailSheetProps {
@@ -202,10 +205,28 @@ export function AssignmentRuleDetailSheet({
   return (
     <>
       <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent className="sm:max-w-lg p-0 overflow-y-auto">
+        <SheetContent
+          className="sm:max-w-lg p-0 overflow-y-auto [&>button]:hidden"
+          onOpenAutoFocus={(e) => e.preventDefault()}
+        >
           <VisuallyHidden>
             <SheetTitle>Assignment Rule Details</SheetTitle>
           </VisuallyHidden>
+
+          <TooltipProvider>
+            <SheetDetailToolbar
+              title="Assignment Rule Details"
+              onClose={() => onOpenChange(false)}
+              onCopyId={
+                assignmentRule
+                  ? () => {
+                      copyToClipboard(assignmentRule.id)
+                    }
+                  : undefined
+              }
+              onEdit={assignmentRule ? handleStartEdit : undefined}
+            />
+          </TooltipProvider>
 
           {isLoading ? (
             <div className="p-6 space-y-4">
@@ -228,7 +249,7 @@ export function AssignmentRuleDetailSheet({
           ) : (
             <div className="flex flex-col">
               {/* Header */}
-              <div className="p-6 pr-14 border-b">
+              <div className="p-6 border-b">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
                     <div className="p-2 rounded-lg bg-primary/10">

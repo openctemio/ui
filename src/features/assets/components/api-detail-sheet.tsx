@@ -12,8 +12,12 @@ import { Pencil } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { TooltipProvider } from '@/components/ui/tooltip'
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
 import { cn } from '@/lib/utils'
+import { copyToClipboard } from '@/lib/clipboard'
+import { SheetDetailToolbar } from '@/features/shared'
+import { toast } from 'sonner'
 import { AssetFindings } from './asset-findings'
 import { TagsSection } from './sheet-sections'
 import type { Api } from '../types/asset.types'
@@ -116,10 +120,25 @@ export function ApiDetailSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="sm:max-w-xl overflow-y-auto p-0">
+      <SheetContent
+        className="sm:max-w-xl overflow-y-auto p-0 [&>button]:hidden"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
         <VisuallyHidden>
           <SheetTitle>API Details</SheetTitle>
         </VisuallyHidden>
+
+        <TooltipProvider>
+          <SheetDetailToolbar
+            title="API Details"
+            onClose={() => onOpenChange(false)}
+            onEdit={onEdit}
+            onCopyId={() => {
+              copyToClipboard(api.id)
+              toast.success('ID copied to clipboard')
+            }}
+          />
+        </TooltipProvider>
 
         {/* Header */}
         <div
@@ -129,9 +148,7 @@ export function ApiDetailSheet({
             gradientVia
           )}
         >
-          {/* pr-14 reserves space for the Sheet's built-in close button (X)
-              so the status badge doesn't overlap with it. */}
-          <div className="flex items-center gap-3 mb-3 pr-14">
+          <div className="flex items-center gap-3 mb-3">
             <div
               className={cn('h-12 w-12 rounded-xl flex items-center justify-center', iconBgColor)}
             >
