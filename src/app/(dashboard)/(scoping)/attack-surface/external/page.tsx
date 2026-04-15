@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
+import { useAssets } from '@/features/assets'
 import { Main } from '@/components/layout'
 import { PageHeader } from '@/features/shared'
 import { Button } from '@/components/ui/button'
@@ -241,7 +242,42 @@ const typeIcons: Record<AssetType, React.ElementType> = {
 }
 
 export default function ExternalSurfacePage() {
+  // Fetch external assets from API
+  const { assets: apiAssets } = useAssets({
+    types: ['domain', 'subdomain', 'service', 'ip_address'],
+    scopes: ['external'],
+    pageSize: 100,
+  })
+  const apiMapped = useMemo<ExternalAsset[]>(() => {
+    if (!apiAssets || apiAssets.length === 0) return []
+    return apiAssets.map(
+      (a): ExternalAsset => ({
+        id: a.id,
+        name: a.name,
+        type: a.type as ExternalAsset['type'],
+        ipAddress:
+          (a.metadata?.ip_address as string) || (a.metadata?.resolved_ip as string) || undefined,
+        status: a.status === 'active' ? 'active' : 'inactive',
+        riskLevel:
+          a.riskScore >= 70
+            ? 'critical'
+            : a.riskScore >= 50
+              ? 'high'
+              : a.riskScore >= 30
+                ? 'medium'
+                : 'low',
+        lastSeen: a.updatedAt || a.createdAt,
+        discoveredAt: a.createdAt,
+        findingsCount: a.findingCount || 0,
+        technologies: a.tags,
+      })
+    )
+  }, [apiAssets])
+
   const [assets, setAssets] = useState<ExternalAsset[]>(mockExternalAssets)
+  useEffect(() => {
+    if (apiMapped.length > 0) setAssets(apiMapped)
+  }, [apiMapped])
   const [searchQuery, setSearchQuery] = useState('')
   const [filterType, setFilterType] = useState<AssetType | 'all'>('all')
   const [filterRisk, setFilterRisk] = useState<RiskLevel | 'all'>('all')
