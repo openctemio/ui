@@ -1430,6 +1430,7 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
         title={`Add ${config.label}`}
         description={`Add a new ${config.label.toLowerCase()} to your infrastructure.`}
         fields={config.formFields}
+        assetType={config.type}
         onSubmit={handleFormCreate}
         isSubmitting={crud.isSubmitting}
         includeGroupSelect={config.includeGroupSelect}
@@ -1442,6 +1443,7 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
         title={`Edit ${config.label}`}
         description={`Update the details for this ${config.label.toLowerCase()}.`}
         fields={config.formFields}
+        assetType={config.type}
         asset={dialogs.selectedAsset}
         onSubmit={handleFormUpdate}
         isSubmitting={crud.isSubmitting}
