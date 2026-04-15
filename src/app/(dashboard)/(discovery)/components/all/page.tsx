@@ -31,7 +31,10 @@ import {
   useComponentsApi,
   type ApiComponentEcosystem,
 } from '@/features/components'
-import { useComponentStatsApi } from '@/features/components/api/use-components-api'
+import {
+  useComponentStatsApi,
+  useEcosystemStatsApi,
+} from '@/features/components/api/use-components-api'
 import { mapApiComponentToUi } from '@/features/components/api/mapper' // Best to export this from features/components/index.ts
 import type { Component } from '@/features/components'
 import { toast } from 'sonner'
@@ -81,10 +84,12 @@ export default function AllComponentsPage() {
     componentsWithVulnerabilities: apiStats?.vulnerable_components ?? 0,
   }
 
-  // Filtered count from list API (changes with filters)
-  const _filteredTotal = apiData?.total ?? 0
-
-  const ecosystems = ['npm', 'pypi', 'go', 'maven', 'cargo', 'nuget', 'rubygems', 'composer']
+  // Fetch ecosystem list from API instead of hardcoding
+  const { data: ecosystemStats } = useEcosystemStatsApi()
+  const ecosystems = useMemo(
+    () => ecosystemStats?.map((e) => e.ecosystem).filter(Boolean) ?? [],
+    [ecosystemStats]
+  )
 
   const filterCounts = {
     all: stats.totalComponents,
