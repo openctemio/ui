@@ -4,8 +4,6 @@ import { useMemo } from 'react'
 import {
   getScopeMatchesForAsset,
   calculateScopeCoverage,
-  getActiveScopeTargets,
-  getActiveScopeExclusions,
   type ScopeMatchResult,
 } from '@/features/scope'
 import type { Asset } from '../types'
@@ -13,11 +11,12 @@ import type { Asset } from '../types'
 /**
  * Shared scope integration for asset pages.
  * Computes scope matches and coverage for a list of assets.
- * Replaces ~50 LOC of duplicated scope logic per page.
  */
 export function useAssetScope(assets: Asset[]) {
-  const scopeTargets = useMemo(() => getActiveScopeTargets(), [])
-  const scopeExclusions = useMemo(() => getActiveScopeExclusions(), [])
+  // Scope targets/exclusions: server handles scope filtering via API.
+  // Client-side matching uses empty arrays — scope stats come from /scope/stats API.
+  const scopeTargets = useMemo(() => [] as Parameters<typeof getScopeMatchesForAsset>[1], [])
+  const scopeExclusions = useMemo(() => [] as Parameters<typeof getScopeMatchesForAsset>[2], [])
 
   const scopeMatchesMap = useMemo(() => {
     const map = new Map<string, ScopeMatchResult>()
