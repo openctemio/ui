@@ -185,6 +185,19 @@ export interface ApiFinding {
   comments_count?: number // number of comments
   sla_status?: string // on_track/at_risk/breached/not_applicable
 
+  // Threat Intel Enrichment (RFC-004)
+  epss_score?: number // 0.0-1.0 exploitation probability
+  epss_percentile?: number // 0.0-100.0
+  is_in_kev?: boolean // CISA Known Exploited Vulnerabilities
+  kev_due_date?: string // CISA remediation deadline
+
+  // Priority Classification (RFC-004)
+  priority_class?: 'P0' | 'P1' | 'P2' | 'P3'
+  priority_class_reason?: string
+  priority_class_override?: boolean
+  is_reachable?: boolean // reachable from attack entry points
+  reachable_from_count?: number
+
   // Security context
   exposure_vector?: string // network/local/adjacent/physical
   is_network_accessible?: boolean // whether accessible from network
