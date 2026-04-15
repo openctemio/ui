@@ -3,6 +3,7 @@
 import { Badge } from '@/components/ui/badge'
 import { Cpu, CheckCircle, AlertTriangle, Shield, Zap, Network } from 'lucide-react'
 import type { AssetPageConfig } from '@/features/assets/types/page-config.types'
+import { toStringArray } from '@/features/assets/lib/property-utils'
 
 const runtimeColors: Record<string, string> = {
   nodejs: 'bg-green-500/10 text-green-500',
@@ -299,14 +300,7 @@ export const serverlessConfig: AssetPageConfig = {
           fullWidth: true,
           getValue: (asset) => {
             const raw = asset.metadata.function_triggers
-            const triggers: string[] = Array.isArray(raw)
-              ? raw
-              : raw
-                ? String(raw)
-                    .split(',')
-                    .map((s) => s.trim())
-                    .filter(Boolean)
-                : []
+            const triggers = toStringArray(raw)
             if (triggers.length === 0) return '-'
             return (
               <div className="flex flex-wrap gap-1">
@@ -330,14 +324,7 @@ export const serverlessConfig: AssetPageConfig = {
           fullWidth: true,
           getValue: (asset) => {
             const raw = asset.metadata.function_layers
-            const layers: string[] = Array.isArray(raw)
-              ? raw
-              : raw
-                ? String(raw)
-                    .split(',')
-                    .map((s) => s.trim())
-                    .filter(Boolean)
-                : []
+            const layers = toStringArray(raw)
             if (layers.length === 0) return '-'
             return (
               <div className="flex flex-wrap gap-1">
