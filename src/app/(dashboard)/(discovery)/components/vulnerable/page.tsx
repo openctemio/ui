@@ -226,10 +226,7 @@ export default function VulnerableComponentsPage() {
             </CardContent>
           </Card>
 
-          <Card
-            className="cursor-pointer hover:border-orange-500 transition-colors"
-            onClick={() => toast.info('Filter by exploitable coming soon')}
-          >
+          <Card className="transition-colors opacity-60 cursor-not-allowed" title="Coming soon">
             <CardHeader className="pb-2">
               <CardDescription className="flex items-center gap-2">
                 <Zap className="h-4 w-4 text-orange-500" />
