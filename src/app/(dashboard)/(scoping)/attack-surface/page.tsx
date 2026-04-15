@@ -19,6 +19,10 @@ import {
   Layers,
   Network,
   Eye,
+  Database,
+  HardDrive,
+  Key,
+  Lock,
 } from 'lucide-react'
 import { useAttackSurfaceStats } from '@/features/attack-surface'
 import { formatDistanceToNow } from 'date-fns'
@@ -27,19 +31,45 @@ import { LucideIcon } from 'lucide-react'
 // Asset type to icon mapping
 const assetTypeIcons: Record<string, { icon: LucideIcon; color: string }> = {
   domain: { icon: Globe, color: 'text-blue-400' },
+  subdomain: { icon: Globe, color: 'text-blue-300' },
   website: { icon: Layers, color: 'text-purple-400' },
   service: { icon: Server, color: 'text-green-400' },
   repository: { icon: GitBranch, color: 'text-orange-400' },
   cloud: { icon: Cloud, color: 'text-cyan-400' },
+  cloud_account: { icon: Cloud, color: 'text-cyan-400' },
+  host: { icon: Server, color: 'text-slate-400' },
+  container: { icon: Layers, color: 'text-indigo-400' },
+  database: { icon: Database, color: 'text-amber-400' },
+  network: { icon: Shield, color: 'text-teal-400' },
+  storage: { icon: HardDrive, color: 'text-pink-400' },
+  identity: { icon: Key, color: 'text-violet-400' },
+  ip_address: { icon: Globe, color: 'text-emerald-400' },
+  certificate: { icon: Lock, color: 'text-yellow-400' },
+  kubernetes: { icon: Layers, color: 'text-blue-500' },
+  application: { icon: Layers, color: 'text-red-400' },
 }
 
 // Asset type display names
 const assetTypeNames: Record<string, string> = {
   domain: 'Domains',
+  subdomain: 'Subdomains',
   website: 'Websites',
   service: 'Services',
   repository: 'Repositories',
   cloud: 'Cloud Assets',
+  cloud_account: 'Cloud Accounts',
+  host: 'Hosts',
+  container: 'Containers',
+  database: 'Databases',
+  network: 'Networks',
+  storage: 'Storage',
+  identity: 'Identities',
+  ip_address: 'IP Addresses',
+  certificate: 'Certificates',
+  kubernetes: 'Kubernetes',
+  application: 'Applications',
+  mobile: 'Mobile Apps',
+  serverless: 'Serverless',
 }
 
 // Risk/criticality config for styling
