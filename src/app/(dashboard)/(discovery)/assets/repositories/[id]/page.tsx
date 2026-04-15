@@ -1442,38 +1442,6 @@ function FindingsTab({
     setBranchFilter(branchFromUrl)
   }
 
-  // Sync all filters to URL for shareable links
-  const _syncFiltersToUrl = useCallback(
-    (overrides?: Record<string, string>) => {
-      const p = new URLSearchParams(searchParams.toString())
-      p.set('tab', 'findings')
-      const vals: Record<string, string> = {
-        severity: severityFilter,
-        status: statusFilter,
-        scanner: scannerFilter,
-        branch: branchFilter,
-        q: debouncedSearch,
-        page: String(page),
-        ...overrides,
-      }
-      for (const [k, v] of Object.entries(vals)) {
-        if (v && v !== 'all' && v !== '' && v !== '1') p.set(k, v)
-        else p.delete(k)
-      }
-      router.replace(`?${p.toString()}`, { scroll: false })
-    },
-    [
-      searchParams,
-      severityFilter,
-      statusFilter,
-      scannerFilter,
-      branchFilter,
-      debouncedSearch,
-      page,
-      router,
-    ]
-  )
-
   // Update URL when filters change
   const handleFilterChange = useCallback(
     (setter: (v: string) => void, key: string, value: string) => {
