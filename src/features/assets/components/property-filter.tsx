@@ -92,18 +92,6 @@ export function PropertyFilter({
     setSelectedFacet(null)
   }
 
-  const handleRemoveValue = (key: string, val: string) => {
-    const existing = value[key] ?? []
-    const updated = existing.filter((v) => v !== val)
-    if (updated.length === 0) {
-      const next = { ...value }
-      delete next[key]
-      onChange(next)
-    } else {
-      onChange({ ...value, [key]: updated })
-    }
-  }
-
   const handleRemove = (key: string) => {
     const next = { ...value }
     delete next[key]

@@ -33,7 +33,7 @@ import { toast } from 'sonner'
 type SeverityFilter = 'all' | 'critical' | 'high' | 'medium' | 'kev'
 
 export default function VulnerableComponentsPage() {
-  const [page, setPage] = useState(1)
+  const [page, _setPage] = useState(1)
   const pageSize = 20
   const { data: apiData, isLoading } = useVulnerableComponentsApi(page, pageSize)
   const { data: apiStats } = useComponentStatsApi()
@@ -63,7 +63,7 @@ export default function VulnerableComponentsPage() {
       exploitable: 0,
       kev: kevCount,
     }
-  }, [apiStats])
+  }, [apiStats, vulnerableComponents.length])
 
   // Filter components
   const filteredComponents = useMemo(() => {
