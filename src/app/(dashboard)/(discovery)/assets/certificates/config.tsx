@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge'
 import { ShieldCheck, CheckCircle, Clock, XCircle, AlertTriangle, Shield } from 'lucide-react'
 import type { AssetPageConfig } from '@/features/assets/types/page-config.types'
 import type { Asset } from '@/features/assets'
+import { toStringArray } from '@/features/assets/lib/property-utils'
 
 // Helper to compute certificate validity status from metadata
 type CertStatus = 'valid' | 'expiring' | 'expired'
@@ -321,14 +322,7 @@ export const certificatesConfig: AssetPageConfig = {
           fullWidth: true,
           getValue: (asset: Asset) => {
             const raw = asset.metadata?.cert_sans
-            const sans: string[] = Array.isArray(raw)
-              ? raw
-              : raw
-                ? String(raw)
-                    .split(',')
-                    .map((s) => s.trim())
-                    .filter(Boolean)
-                : []
+            const sans = toStringArray(raw)
             if (sans.length === 0) return <span className="text-muted-foreground">None</span>
             return (
               <div className="flex flex-wrap gap-1">

@@ -1,6 +1,7 @@
 import type { ColumnDef } from '@tanstack/react-table'
 import type { AssetPageConfig } from '@/features/assets/types/page-config.types'
 import type { Asset } from '@/features/assets'
+import { toStringArray } from '@/features/assets/lib/property-utils'
 import { Badge } from '@/components/ui/badge'
 import { MonitorSmartphone, ShieldCheck, ShieldX, AlertTriangle, Shield, Zap } from 'lucide-react'
 
@@ -245,14 +246,7 @@ export const websitesConfig: AssetPageConfig = {
       header: 'Technology',
       accessor: (a) => {
         const raw = a.metadata.technology
-        const tech: string[] = Array.isArray(raw)
-          ? raw
-          : raw
-            ? String(raw)
-                .split(',')
-                .map((s) => s.trim())
-                .filter(Boolean)
-            : []
+        const tech = toStringArray(raw)
         return tech.join(';')
       },
     },
