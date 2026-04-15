@@ -28,12 +28,13 @@ import {
   TrendingUp,
 } from 'lucide-react'
 
-// Mock data for reports
+// Report stats — will be replaced with API when report backend is implemented
+// TODO: Wire to GET /api/v1/reports/stats when available
 const reportStats = {
-  totalReports: 24,
-  scheduled: 6,
-  generatedThisMonth: 18,
-  sharedExternal: 4,
+  totalReports: 0,
+  scheduled: 0,
+  generatedThisMonth: 0,
+  sharedExternal: 0,
 }
 
 const reportTemplates = [
@@ -71,85 +72,25 @@ const reportTemplates = [
   },
 ]
 
-const recentReports = [
-  {
-    id: 'rpt-001',
-    name: 'Q1 2024 Executive Summary',
-    template: 'Executive Summary',
-    generatedBy: 'Nguyen Van An',
-    generatedAt: '2024-03-10',
-    status: 'completed',
-    format: 'PDF',
-    size: '2.4 MB',
-  },
-  {
-    id: 'rpt-002',
-    name: 'March Vulnerability Assessment',
-    template: 'Vulnerability Report',
-    generatedBy: 'Tran Thi Binh',
-    generatedAt: '2024-03-08',
-    status: 'completed',
-    format: 'PDF',
-    size: '5.1 MB',
-  },
-  {
-    id: 'rpt-003',
-    name: 'PCI-DSS Q1 Compliance',
-    template: 'PCI-DSS Compliance',
-    generatedBy: 'Le Van Cuong',
-    generatedAt: '2024-03-05',
-    status: 'completed',
-    format: 'PDF',
-    size: '3.8 MB',
-  },
-  {
-    id: 'rpt-004',
-    name: 'Weekly Technical Report #10',
-    template: 'Technical Assessment',
-    generatedBy: 'Pham Thi Dung',
-    generatedAt: '2024-03-04',
-    status: 'completed',
-    format: 'PDF',
-    size: '4.2 MB',
-  },
-  {
-    id: 'rpt-005',
-    name: 'Monthly Security Posture',
-    template: 'Executive Summary',
-    generatedBy: 'System',
-    generatedAt: '2024-03-01',
-    status: 'scheduled',
-    format: 'PDF',
-    size: '--',
-  },
-]
+// Recent reports — TODO: wire to GET /api/v1/reports when backend implements
+const recentReports: {
+  id: string
+  name: string
+  template: string
+  generatedBy: string
+  generatedAt: string
+  status: string
+  format: string
+  size: string
+}[] = []
 
-const scheduledReports = [
-  {
-    name: 'Weekly Vulnerability Summary',
-    schedule: 'Every Monday 8:00 AM',
-    recipients: 5,
-    nextRun: 'Tomorrow',
-  },
-  {
-    name: 'Monthly Executive Report',
-    schedule: '1st of month 9:00 AM',
-    recipients: 3,
-    nextRun: 'Apr 1, 2024',
-  },
-  {
-    name: 'Daily Scan Results',
-    schedule: 'Daily 6:00 AM',
-    recipients: 8,
-    nextRun: 'Tomorrow',
-  },
-  {
-    name: 'Quarterly Compliance Report',
-    schedule: 'Quarterly',
-    recipients: 4,
-    nextRun: 'Apr 1, 2024',
-  },
-]
+// Scheduled reports — TODO: wire to API
+const scheduledReports: {
+  name: string
+  schedule: string
+  recipients: number
+  nextRun: string
+}[] = []
 
 const statusConfig: Record<string, { color: string; bgColor: string }> = {
   completed: { color: 'text-green-400', bgColor: 'bg-green-500/20' },
