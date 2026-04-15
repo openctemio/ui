@@ -124,7 +124,7 @@ function transformAsset(backend: BackendAsset): Asset {
     exposure: backend.exposure as ExposureLevel,
     riskScore: backend.risk_score,
     findingCount: backend.finding_count,
-    metadata: { ...(backend.properties || {}), ...(backend.metadata || {}) },
+    metadata: backend.properties || {},
     tags: backend.tags || [],
     primaryOwner: backend.primary_owner
       ? {

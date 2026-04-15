@@ -219,13 +219,23 @@ export const domainsConfig: AssetPageConfig = {
           label: 'Resolved IPs',
           getValue: (asset) => {
             const meta = asset.metadata as Record<string, unknown>
-            const ips = (meta.resolved_ips as string) || (meta.resolved_ip as string) || ''
-            if (!ips) return '-'
+            // resolved_ips can be array or comma-separated string
+            let ipList: string[] = []
+            const raw = meta.resolved_ips ?? meta.resolved_ip
+            if (Array.isArray(raw)) {
+              ipList = raw.filter(Boolean) as string[]
+            } else if (typeof raw === 'string' && raw) {
+              ipList = raw
+                .split(',')
+                .map((s) => s.trim())
+                .filter(Boolean)
+            }
+            if (ipList.length === 0) return '-'
             return (
               <div className="flex flex-wrap gap-1">
-                {ips.split(',').map((ip) => (
-                  <Badge key={ip.trim()} variant="secondary" className="text-xs font-mono">
-                    {ip.trim()}
+                {ipList.map((ip) => (
+                  <Badge key={ip} variant="secondary" className="text-xs font-mono">
+                    {ip}
                   </Badge>
                 ))}
               </div>
