@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
+import { useAssets } from '@/features/assets'
 import { Main } from '@/components/layout'
 import { PageHeader } from '@/features/shared'
 import { Button } from '@/components/ui/button'
@@ -307,7 +308,42 @@ const typeIcons: Record<AssetType, React.ElementType> = {
 }
 
 export default function InternalSurfacePage() {
+  // Fetch internal assets from API
+  const { assets: apiAssets } = useAssets({
+    types: ['host', 'database', 'network', 'container'],
+    scopes: ['internal'],
+    pageSize: 100,
+  })
+  const apiMapped = useMemo<InternalAsset[]>(() => {
+    if (!apiAssets || apiAssets.length === 0) return []
+    return apiAssets.map(
+      (a): InternalAsset => ({
+        id: a.id,
+        hostname: a.name,
+        type: a.type as InternalAsset['type'],
+        ipAddress: (a.metadata?.ip as string) || (a.metadata?.ip_address as string) || '',
+        operatingSystem: (a.metadata?.os as string) || undefined,
+        networkZone: (a.scope === 'internal' ? 'internal' : 'dmz') as InternalAsset['networkZone'],
+        status: (a.status === 'active' ? 'active' : 'inactive') as InternalAsset['status'],
+        riskLevel:
+          a.riskScore >= 70
+            ? 'critical'
+            : a.riskScore >= 50
+              ? 'high'
+              : a.riskScore >= 30
+                ? 'medium'
+                : 'low',
+        lastSeen: a.updatedAt || a.createdAt,
+        discoveredAt: a.createdAt,
+        findingsCount: a.findingCount || 0,
+      })
+    )
+  }, [apiAssets])
+
   const [assets, setAssets] = useState<InternalAsset[]>(mockInternalAssets)
+  useEffect(() => {
+    if (apiMapped.length > 0) setAssets(apiMapped)
+  }, [apiMapped])
   const [searchQuery, setSearchQuery] = useState('')
   const [filterType, setFilterType] = useState<AssetType | 'all'>('all')
   const [filterZone, setFilterZone] = useState<NetworkZone | 'all'>('all')
