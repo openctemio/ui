@@ -28,8 +28,8 @@ interface PropertyFacet {
 interface PropertyFilterProps {
   types: AssetType[]
   subType?: string
-  value: Record<string, string>
-  onChange: (value: Record<string, string>) => void
+  value: Record<string, string[]>
+  onChange: (value: Record<string, string[]>) => void
   /** Filtered count (current result) */
   filtered?: number
   /** Total count (without properties filter) */
@@ -65,11 +65,8 @@ export function PropertyFilter({
     { revalidateOnFocus: false, dedupingInterval: 60000 }
   )
 
-  // Filter out already-applied keys
-  const availableFacets = useMemo(
-    () => (facets ?? []).filter((f) => !value[f.Key]),
-    [facets, value]
-  )
+  // All facets are available (user can add more values to existing keys)
+  const availableFacets = useMemo(() => facets ?? [], [facets])
 
   const activeFilters = Object.entries(value)
   const facetLabelMap = useMemo(() => {
@@ -85,8 +82,11 @@ export function PropertyFilter({
   }
 
   const handleSelectValue = (val: string) => {
-    onChange({ ...value, [selectedKey]: val })
-    // Stay open and go back to key selection for adding more filters
+    const existing = value[selectedKey] ?? []
+    if (!existing.includes(val)) {
+      onChange({ ...value, [selectedKey]: [...existing, val] })
+    }
+    // Stay open for adding more values or keys
     setStep('key')
     setSelectedKey('')
     setSelectedFacet(null)
@@ -160,7 +160,7 @@ export function PropertyFilter({
                       className="flex items-center justify-between"
                     >
                       <span>{val}</span>
-                      {value[selectedKey] === val && <Check className="h-3 w-3" />}
+                      {value[selectedKey]?.includes(val) && <Check className="h-3 w-3" />}
                     </CommandItem>
                   ))}
                 </CommandGroup>
@@ -175,6 +175,7 @@ export function PropertyFilter({
 
 /**
  * Active filter chips — rendered separately so they can be placed on their own row.
+ * Each value gets its own chip for easy removal.
  */
 export function PropertyFilterChips({
   value,
@@ -183,8 +184,8 @@ export function PropertyFilterChips({
   filtered,
   total,
 }: {
-  value: Record<string, string>
-  onChange: (value: Record<string, string>) => void
+  value: Record<string, string[]>
+  onChange: (value: Record<string, string[]>) => void
   facetLabels?: Record<string, string>
   filtered?: number
   total?: number
@@ -192,39 +193,49 @@ export function PropertyFilterChips({
   const activeFilters = Object.entries(value)
   if (activeFilters.length === 0) return null
 
-  const handleRemove = (key: string) => {
-    const next = { ...value }
-    delete next[key]
-    onChange(next)
+  const totalChips = activeFilters.reduce((sum, [, vals]) => sum + vals.length, 0)
+
+  const handleRemoveValue = (key: string, val: string) => {
+    const existing = value[key] ?? []
+    const updated = existing.filter((v) => v !== val)
+    if (updated.length === 0) {
+      const next = { ...value }
+      delete next[key]
+      onChange(next)
+    } else {
+      onChange({ ...value, [key]: updated })
+    }
   }
 
   return (
     <div className="flex items-center gap-1.5 flex-wrap">
-      {activeFilters.map(([key, val]) => (
-        <Badge key={key} variant="secondary" className="gap-1 text-xs h-7 pl-2 pr-1">
-          <span className="text-muted-foreground">{facetLabels?.[key] || key}:</span>
-          <span className="font-medium">{val}</span>
-          <button
-            type="button"
-            className="ml-0.5 rounded-sm hover:bg-destructive/20 p-0.5"
-            onClick={(e) => {
-              e.preventDefault()
-              e.stopPropagation()
-              handleRemove(key)
-            }}
-          >
-            <X className="h-3 w-3 hover:text-destructive" />
-          </button>
-        </Badge>
-      ))}
+      {activeFilters.flatMap(([key, vals]) =>
+        vals.map((val) => (
+          <Badge key={`${key}:${val}`} variant="secondary" className="gap-1 text-xs h-7 pl-2 pr-1">
+            <span className="text-muted-foreground">{facetLabels?.[key] || key}:</span>
+            <span className="font-medium truncate max-w-[150px]">{val}</span>
+            <button
+              type="button"
+              className="ml-0.5 rounded-sm hover:bg-destructive/20 p-0.5"
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                handleRemoveValue(key, val)
+              }}
+            >
+              <X className="h-3 w-3 hover:text-destructive" />
+            </button>
+          </Badge>
+        ))
+      )}
 
-      {filtered !== undefined && total !== undefined && (
+      {filtered !== undefined && total !== undefined && total > 0 && (
         <span className="text-xs text-muted-foreground">
           {filtered.toLocaleString()} / {total.toLocaleString()}
         </span>
       )}
 
-      {activeFilters.length > 1 && (
+      {totalChips > 1 && (
         <button
           type="button"
           className="text-xs text-muted-foreground hover:text-foreground underline-offset-2 hover:underline"

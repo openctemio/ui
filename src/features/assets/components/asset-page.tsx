@@ -198,12 +198,17 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
 
   const subTypeFilter = urlSubType || config.subType
 
-  // Dynamic properties filter — initialise from URL ?pf=key:value params (shareable)
-  const [propertiesFilter, setPropertiesFilter] = useState<Record<string, string>>(() => {
-    const pf: Record<string, string> = {}
+  // Dynamic properties filter — initialise from URL ?pf=key:value params (shareable, multi-value)
+  const [propertiesFilter, setPropertiesFilter] = useState<Record<string, string[]>>(() => {
+    const pf: Record<string, string[]> = {}
     for (const v of searchParams.getAll('pf')) {
       const idx = v.indexOf(':')
-      if (idx > 0) pf[v.slice(0, idx)] = v.slice(idx + 1)
+      if (idx > 0) {
+        const key = v.slice(0, idx)
+        const val = v.slice(idx + 1)
+        if (!pf[key]) pf[key] = []
+        pf[key].push(val)
+      }
     }
     return pf
   })
@@ -333,9 +338,11 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
     if (debouncedSearch) params.set('q', debouncedSearch)
     if (statusFilter !== 'all') params.set('status', statusFilter)
     if (tagFilters.length > 0) params.set('tags', tagFilters.join(','))
-    // Property filters as repeated ?pf=key:value params
-    for (const [key, val] of Object.entries(propertiesFilter)) {
-      params.append('pf', `${key}:${val}`)
+    // Property filters as repeated ?pf=key:value params (multi-value per key)
+    for (const [key, vals] of Object.entries(propertiesFilter)) {
+      for (const val of vals) {
+        params.append('pf', `${key}:${val}`)
+      }
     }
     if (sorting.length > 0) {
       const defaultField = config.defaultSort?.field
@@ -837,7 +844,11 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
                 <DropdownMenuItem
                   onClick={(e) => {
                     e.stopPropagation()
-                    dialogs.setSelectedAsset(asset)
+                    if (config.detailPagePath) {
+                      router.push(config.detailPagePath.replace('{id}', asset.id))
+                    } else {
+                      dialogs.setSelectedAsset(asset)
+                    }
                   }}
                 >
                   <Eye className="mr-2 h-4 w-4" />
@@ -1068,7 +1079,7 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
               <CardTitle>All {config.labelPlural}</CardTitle>
               {headerExtra}
             </div>
-            {hasActiveFilter && !isLoading && (
+            {hasActiveFilter && !isLoading && typeStats.total > 0 && (
               <CardDescription className="text-xs">
                 Filtered:{' '}
                 <span className="font-medium text-foreground">{total.toLocaleString()}</span> of{' '}
@@ -1211,7 +1222,13 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
                             key={row.id}
                             data-state={row.getIsSelected() && 'selected'}
                             className="cursor-pointer"
-                            onClick={() => dialogs.setSelectedAsset(row.original)}
+                            onClick={() => {
+                              if (config.detailPagePath) {
+                                router.push(config.detailPagePath.replace('{id}', row.original.id))
+                              } else {
+                                dialogs.setSelectedAsset(row.original)
+                              }
+                            }}
                           >
                             {row.getVisibleCells().map((cell) => {
                               const hideOnMobile = [
@@ -1413,6 +1430,7 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
         title={`Add ${config.label}`}
         description={`Add a new ${config.label.toLowerCase()} to your infrastructure.`}
         fields={config.formFields}
+        assetType={config.type}
         onSubmit={handleFormCreate}
         isSubmitting={crud.isSubmitting}
         includeGroupSelect={config.includeGroupSelect}
@@ -1425,6 +1443,7 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
         title={`Edit ${config.label}`}
         description={`Update the details for this ${config.label.toLowerCase()}.`}
         fields={config.formFields}
+        assetType={config.type}
         asset={dialogs.selectedAsset}
         onSubmit={handleFormUpdate}
         isSubmitting={crud.isSubmitting}

@@ -17,8 +17,7 @@ export * from './hooks'
 // Lib (utilities)
 export * from './lib'
 
-// Data (mock data - legacy, can be removed when fully migrated)
-export * from './data'
+// Data directory removed — all pages now use real API
 
 // Components
 export * from './components'

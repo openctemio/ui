@@ -58,7 +58,7 @@ export function RouteGuard({ children }: RouteGuardProps) {
   // Use the same permission hook as sidebar for consistency
   const { can, isLoading: permissionsLoading } = usePermissions()
   const { moduleIds, isLoading: modulesLoading } = useBootstrapModules()
-  const { isBootstrapped, data: bootstrapData } = useBootstrapContextSafe()
+  const { isBootstrapped } = useBootstrapContextSafe()
 
   // Ensure permission sync has fully settled during tenant switches
   // We mirror TenantGate by only waiting for isBootstrapped to avoid 60s race conditions

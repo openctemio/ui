@@ -3,6 +3,8 @@
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet'
+import { TooltipProvider } from '@/components/ui/tooltip'
+import { SheetDetailToolbar } from '@/features/shared'
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -207,13 +209,24 @@ export function GroupQuickView({
 
   return (
     <Sheet open={!!group} onOpenChange={() => onClose()}>
-      <SheetContent className="sm:max-w-xl p-0 overflow-y-auto">
+      <SheetContent
+        className="sm:max-w-xl p-0 overflow-y-auto [&>button]:hidden"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
         <VisuallyHidden>
           <SheetTitle>Asset Group Details</SheetTitle>
           <SheetDescription>View details of the selected asset group</SheetDescription>
         </VisuallyHidden>
         {group && colors && (
           <>
+            <TooltipProvider>
+              <SheetDetailToolbar
+                title="Asset Group"
+                onClose={onClose}
+                onEdit={() => onEdit(group)}
+                onCopyId={() => handleCopyId(group.id)}
+              />
+            </TooltipProvider>
             {/* Header */}
             <div className={`relative p-6 ${colors.gradient}`}>
               <div className="flex items-start justify-between">

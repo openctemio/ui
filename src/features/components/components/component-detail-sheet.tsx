@@ -26,6 +26,7 @@ import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Separator } from '@/components/ui/separator'
+import { TooltipProvider } from '@/components/ui/tooltip'
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
 import { copyToClipboard } from '@/lib/clipboard'
 import { cn, sanitizeExternalUrl } from '@/lib/utils'
@@ -33,7 +34,7 @@ import { toast } from 'sonner'
 import { EcosystemBadge } from './ecosystem-badge'
 import { SeverityBadge } from './severity-badge'
 import { LicenseRiskBadge, LicenseCategoryBadge } from './license-badge'
-import { RiskScoreBadge } from '@/features/shared'
+import { RiskScoreBadge, SheetDetailToolbar } from '@/features/shared'
 import type { Component } from '../types'
 
 // ============================================
@@ -148,10 +149,24 @@ export function ComponentDetailSheet({ component, open, onOpenChange }: Componen
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="sm:max-w-xl overflow-y-auto p-0">
+      <SheetContent
+        className="sm:max-w-xl overflow-y-auto p-0 [&>button]:hidden"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
         <VisuallyHidden>
           <SheetTitle>Component Details</SheetTitle>
         </VisuallyHidden>
+
+        <TooltipProvider>
+          <SheetDetailToolbar
+            title="Component Details"
+            onClose={() => onOpenChange(false)}
+            onCopyId={() => {
+              copyToClipboard(component.id)
+              toast.success('ID copied to clipboard')
+            }}
+          />
+        </TooltipProvider>
 
         {/* Header with gradient */}
         <div
@@ -161,9 +176,7 @@ export function ComponentDetailSheet({ component, open, onOpenChange }: Componen
             gradientVia
           )}
         >
-          {/* pr-14 reserves space for the Sheet's built-in close button (X)
-              so the RiskScoreBadge doesn't overlap with it. */}
-          <div className="flex items-start gap-3 mb-3 pr-14">
+          <div className="flex items-start gap-3 mb-3">
             <div
               className={cn(
                 'h-12 w-12 rounded-xl flex items-center justify-center shrink-0',

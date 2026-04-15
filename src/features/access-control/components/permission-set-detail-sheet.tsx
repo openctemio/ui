@@ -17,8 +17,10 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { TooltipProvider } from '@/components/ui/tooltip'
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
 import { toast } from 'sonner'
+import { copyToClipboard } from '@/lib/clipboard'
 import {
   Shield,
   Pencil,
@@ -42,6 +44,7 @@ import {
   getPermissionInfo,
 } from '@/features/access-control'
 import { getErrorMessage } from '@/lib/api/error-handler'
+import { SheetDetailToolbar } from '@/features/shared'
 
 interface PermissionSetDetailSheetProps {
   permissionSetId: string | null
@@ -212,10 +215,28 @@ export function PermissionSetDetailSheet({
   return (
     <>
       <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent className="sm:max-w-lg p-0 overflow-y-auto">
+        <SheetContent
+          className="sm:max-w-lg p-0 overflow-y-auto [&>button]:hidden"
+          onOpenAutoFocus={(e) => e.preventDefault()}
+        >
           <VisuallyHidden>
             <SheetTitle>Permission Set Details</SheetTitle>
           </VisuallyHidden>
+
+          <TooltipProvider>
+            <SheetDetailToolbar
+              title="Permission Set Details"
+              onClose={() => onOpenChange(false)}
+              onCopyId={
+                permissionSet
+                  ? () => {
+                      copyToClipboard(permissionSet.id)
+                    }
+                  : undefined
+              }
+              onEdit={permissionSet && !permissionSet.is_system ? handleStartEdit : undefined}
+            />
+          </TooltipProvider>
 
           {isLoading ? (
             <div className="p-6 space-y-4">

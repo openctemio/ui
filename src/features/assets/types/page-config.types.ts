@@ -95,6 +95,11 @@ export interface AssetPageConfig {
 
   /** Optional: pre-table content (e.g., banners, alerts) */
   headerContent?: React.ComponentType<{ assets: Asset[] }>
+
+  /** Optional: path pattern for dedicated detail page (e.g., '/assets/repositories/{id}')
+   *  When set, clicking a row navigates to this page instead of opening the detail sheet.
+   *  Use {id} as placeholder for the asset ID. */
+  detailPagePath?: string
 }
 
 /** Form field configuration */

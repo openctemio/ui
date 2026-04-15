@@ -3,7 +3,7 @@
 import { useState, useMemo, useCallback } from 'react'
 import { useFindingsApi } from '@/features/findings/api/use-findings-api'
 import type { ApiFinding } from '@/features/findings/api/finding-api.types'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { Main } from '@/components/layout'
 import { RiskScoreBadge } from '@/features/shared'
 import { Button } from '@/components/ui/button'
@@ -36,6 +36,8 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Input } from '@/components/ui/input'
+import { Switch } from '@/components/ui/switch'
+import { useDebounce } from '@/hooks/use-debounce'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
 import {
@@ -205,18 +207,7 @@ const SCM_PROVIDER_COLORS: Record<SCMProvider, string> = {
   local: 'bg-gray-500 text-white',
 }
 
-// Mock data for detail page
-interface BranchFindingsSummary {
-  total: number
-  by_severity: {
-    critical: number
-    high: number
-    medium: number
-    low: number
-    info: number
-  }
-}
-
+// Branch detail type — maps from API Branch type
 interface BranchDetail {
   id: string
   name: string
@@ -229,7 +220,10 @@ interface BranchDetail {
   last_commit_author: string
   last_commit_author_avatar?: string
   last_commit_at: string
-  findings_summary: BranchFindingsSummary
+  findings_summary: {
+    total: number
+    by_severity: { critical: number; high: number; medium: number; low: number; info: number }
+  }
   compared_to_default?: {
     new_findings: number
     resolved_findings: number
@@ -298,48 +292,38 @@ interface SLAPolicy {
   }>
 }
 
-const mockBranchDetails: BranchDetail[] = [
-  {
-    id: 'branch-1',
-    name: 'main',
-    type: 'main',
-    is_default: true,
-    is_protected: true,
-    scan_status: 'passed',
-    last_commit_sha: 'abc123',
-    last_commit_message: 'feat: add new feature',
-    last_commit_author: 'John Doe',
-    last_commit_author_avatar: '',
-    last_commit_at: '2024-01-15T10:30:00Z',
+/** Map API Branch to local BranchDetail shape */
+function mapBranchToDetail(b: import('@/features/repositories').Branch): BranchDetail {
+  return {
+    id: b.id,
+    name: b.name,
+    type: b.type as BranchDetail['type'],
+    is_default: b.isDefault,
+    is_protected: b.isProtected,
+    scan_status: b.scanStatus || 'not_scanned',
+    last_commit_sha: b.lastCommitSha || '',
+    last_commit_message: b.lastCommitMessage || '',
+    last_commit_author: b.lastCommitAuthor || '',
+    last_commit_at: b.lastCommitAt || '',
     findings_summary: {
-      total: 5,
-      by_severity: { critical: 1, high: 2, medium: 1, low: 1, info: 0 },
+      total: b.findingsSummary?.total ?? 0,
+      by_severity: {
+        critical: b.findingsSummary?.bySeverity?.critical ?? 0,
+        high: b.findingsSummary?.bySeverity?.high ?? 0,
+        medium: b.findingsSummary?.bySeverity?.medium ?? 0,
+        low: b.findingsSummary?.bySeverity?.low ?? 0,
+        info: b.findingsSummary?.bySeverity?.info ?? 0,
+      },
     },
-    last_scanned_at: '2024-01-15T10:30:00Z',
-  },
-  {
-    id: 'branch-2',
-    name: 'develop',
-    type: 'develop',
-    is_default: false,
-    is_protected: true,
-    scan_status: 'warning',
-    last_commit_sha: 'def456',
-    last_commit_message: 'fix: resolve bug',
-    last_commit_author: 'Jane Smith',
-    last_commit_author_avatar: '',
-    last_commit_at: '2024-01-14T14:00:00Z',
-    findings_summary: {
-      total: 8,
-      by_severity: { critical: 0, high: 3, medium: 3, low: 2, info: 0 },
-    },
-    compared_to_default: {
-      new_findings: 3,
-      resolved_findings: 0,
-    },
-    last_scanned_at: '2024-01-14T14:00:00Z',
-  },
-]
+    compared_to_default: b.comparedToDefault
+      ? {
+          new_findings: b.comparedToDefault.newFindings,
+          resolved_findings: b.comparedToDefault.resolvedFindings,
+        }
+      : undefined,
+    last_scanned_at: b.lastScannedAt,
+  }
+}
 
 /** Map API finding response to the local FindingDetail shape used by the UI */
 function mapApiFindingToDetail(f: ApiFinding): FindingDetail {
@@ -353,7 +337,11 @@ function mapApiFindingToDetail(f: ApiFinding): FindingDetail {
     scanner_type: f.source as ScannerType,
     file_path: f.file_path,
     line_start: f.start_line,
-    branches: [],
+    branches: [
+      ...new Set(
+        [f.first_detected_branch, f.last_seen_branch].filter((b): b is string => !!b && b !== '')
+      ),
+    ],
     sla_status: (f.sla_status as SLAStatus) || 'not_applicable',
     sla_days_remaining: undefined,
     first_detected_at: f.first_detected_at || f.created_at,
@@ -364,37 +352,23 @@ function mapApiFindingToDetail(f: ApiFinding): FindingDetail {
   }
 }
 
-const mockActivities: ActivityLog[] = [
-  {
-    id: 'activity-1',
-    action: 'scan_completed',
-    actor_type: 'system',
-    actor_name: 'System',
-    entity_name: 'main',
-    timestamp: '2024-01-15T10:30:00Z',
-    scan_summary: {
-      branch: 'main',
-      findings_total: 5,
-      findings_new: 3,
-      findings_resolved: 0,
-      duration_seconds: 180,
-      quality_gate_passed: true,
-    },
-  },
-  {
-    id: 'activity-2',
-    action: 'finding_resolved',
-    actor_type: 'user',
-    actor_name: 'John Doe',
-    actor_avatar: '',
-    entity_name: 'SQL Injection in login',
-    timestamp: '2024-01-14T14:00:00Z',
-    changes: [{ field: 'status', old_value: 'open', new_value: 'resolved' }],
-  },
-]
+/** Derive activity logs from findings (real data, no mock) */
+function deriveActivitiesFromFindings(findingsList: FindingDetail[]): ActivityLog[] {
+  return findingsList.slice(0, 20).map((f) => ({
+    id: `finding-${f.id}`,
+    action:
+      f.status === 'resolved'
+        ? ('finding_resolved' as ActivityAction)
+        : ('finding_created' as ActivityAction),
+    actor_type: 'system' as const,
+    actor_name: f.assigned_to_name || 'Scanner',
+    entity_name: f.title,
+    timestamp: f.first_detected_at,
+  }))
+}
 
-const mockSLAPolicy: SLAPolicy = {
-  id: 'sla-1',
+const defaultSLAPolicy: SLAPolicy = {
+  id: 'default',
   name: 'Default Security SLA',
   rules: [
     { severity: 'critical', days_to_remediate: 2, warning_threshold_percent: 50 },
@@ -649,9 +623,11 @@ function transformToRepositoryView(asset: ApiAssetResponse): RepositoryView {
           contributorsCount: repo.contributor_count || 0,
           sizeKb: repo.size_kb || 0,
           branchCount: repo.branch_count || 0,
-          protectedBranchCount: 0,
-          componentCount: 0,
-          vulnerableComponentCount: 0,
+          protectedBranchCount:
+            ((repo as Record<string, unknown>).protected_branch_count as number) || 0,
+          componentCount: ((repo as Record<string, unknown>).component_count as number) || 0,
+          vulnerableComponentCount:
+            ((repo as Record<string, unknown>).vulnerable_component_count as number) || 0,
           findingCount: asset.finding_count,
           scanEnabled: scanSettings.auto_scan,
           lastScannedAt: repo.last_scanned_at,
@@ -700,8 +676,9 @@ function BranchStatusBadge({ status }: { status: BranchStatus }) {
 }
 
 function SeverityBadge({ severity, count }: { severity: Severity; count?: number }) {
+  const colors = SEVERITY_COLORS[severity]
   return (
-    <Badge variant="outline" className={cn('gap-1', SEVERITY_COLORS[severity])}>
+    <Badge className={cn('gap-1 border-0 font-medium', colors?.bg, colors?.text)}>
       {count !== undefined ? `${count} ${SEVERITY_LABELS[severity]}` : SEVERITY_LABELS[severity]}
     </Badge>
   )
@@ -762,8 +739,10 @@ function ActivityIcon({ action }: { action: ActivityAction }) {
   return iconMap[action] || <Activity className="h-4 w-4 text-gray-500" />
 }
 
-function formatTimeAgo(dateString: string): string {
+function formatTimeAgo(dateString: string | undefined | null): string {
+  if (!dateString) return 'Never'
   const date = new Date(dateString)
+  if (isNaN(date.getTime())) return 'Never'
   const now = new Date()
   const diffMs = now.getTime() - date.getTime()
   const diffMins = Math.floor(diffMs / 60000)
@@ -793,9 +772,14 @@ function OverviewTab({
   findings: FindingDetail[]
   activities: ActivityLog[]
 }) {
+  const router = useRouter()
   const overdueFindingsCount = getOverdueFindingsCount(findings)
   const slaWarningsCount = getSLAWarningsCount(findings)
   const defaultBranch = branches.find((b) => b.is_default)
+
+  // Compute severity from actual findings data (not from repo extension which may be stale)
+  const criticalCount = findings.filter((f) => f.severity === 'critical').length
+  const highCount = findings.filter((f) => f.severity === 'high').length
 
   return (
     <div className="space-y-6">
@@ -807,15 +791,10 @@ function OverviewTab({
               <AlertTriangle className="h-4 w-4 text-red-500" />
               Critical/High
             </CardDescription>
-            <CardTitle className="text-3xl text-red-500">
-              {repository.findings_summary.by_severity.critical +
-                repository.findings_summary.by_severity.high}
-            </CardTitle>
+            <CardTitle className="text-3xl text-red-500">{criticalCount + highCount}</CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
-            <p className="text-xs text-muted-foreground">
-              {repository.findings_summary.total} total findings
-            </p>
+            <p className="text-xs text-muted-foreground">{findings.length} total findings</p>
           </CardContent>
         </Card>
 
@@ -999,33 +978,46 @@ function OverviewTab({
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {activities.slice(0, 5).map((activity) => (
-                <div key={activity.id} className="flex items-start gap-3">
-                  <div className="mt-0.5">
-                    <ActivityIcon action={activity.action} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm">
-                      <span className="font-medium">{activity.actor_name}</span>{' '}
-                      {ACTIVITY_ACTION_LABELS[activity.action].toLowerCase()}
-                      {activity.entity_name && (
-                        <>
-                          {' '}
-                          on <span className="font-medium">{activity.entity_name}</span>
-                        </>
-                      )}
-                    </p>
-                    {activity.comment && (
-                      <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                        {activity.comment}
+              {activities.slice(0, 5).map((activity) => {
+                const findingId = activity.id.startsWith('finding-')
+                  ? activity.id.replace('finding-', '')
+                  : null
+                return (
+                  <div
+                    key={activity.id}
+                    className={
+                      findingId
+                        ? 'flex items-start gap-3 cursor-pointer hover:bg-muted/50 rounded-lg p-2 -mx-2 transition-colors'
+                        : 'flex items-start gap-3 p-2 -mx-2'
+                    }
+                    onClick={findingId ? () => router.push(`/findings/${findingId}`) : undefined}
+                  >
+                    <div className="mt-0.5">
+                      <ActivityIcon action={activity.action} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm">
+                        <span className="font-medium">{activity.actor_name}</span>{' '}
+                        {ACTIVITY_ACTION_LABELS[activity.action].toLowerCase()}
+                        {activity.entity_name && (
+                          <>
+                            {' '}
+                            on <span className="font-medium">{activity.entity_name}</span>
+                          </>
+                        )}
                       </p>
-                    )}
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {formatTimeAgo(activity.timestamp)}
-                    </p>
+                      {activity.comment && (
+                        <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                          {activity.comment}
+                        </p>
+                      )}
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {formatTimeAgo(activity.timestamp)}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </CardContent>
         </Card>
@@ -1052,6 +1044,7 @@ function OverviewTab({
                 <div
                   key={finding.id}
                   className="flex items-center gap-4 p-3 rounded-lg border hover:bg-muted/50 cursor-pointer"
+                  onClick={() => router.push(`/findings/${finding.id}`)}
                 >
                   <SeverityBadge severity={finding.severity} />
                   <div className="flex-1 min-w-0">
@@ -1094,15 +1087,65 @@ function OverviewTab({
 }
 
 // Branches Tab
+interface ComparisonResult {
+  base_branch: string
+  compare_branch: string
+  new_findings: number
+  resolved_findings: number
+  common_findings: number
+  new_by_severity: Record<string, number>
+  new_items?: Array<{
+    id: string
+    title: string
+    severity: string
+    file_path?: string
+    source: string
+  }>
+}
+
 function BranchesTab({
   branches,
   repositoryName,
+  repositoryId,
+  onViewBranchFindings,
 }: {
   branches: BranchDetail[]
   repositoryName: string
+  repositoryId: string
+  onViewBranchFindings?: (branchName: string) => void
 }) {
   const [_selectedBranch, setSelectedBranch] = useState<string | null>(null)
+  const defaultBranch = branches.find((b) => b.is_default)
+  const defaultBranchName = defaultBranch?.name || 'main'
+  const defaultTotal = defaultBranch?.findings_summary?.total ?? 0
+  const [baseBranch, setBaseBranch] = useState<string>(defaultBranchName)
   const [compareBranch, setCompareBranch] = useState<string>('')
+  const [comparison, setComparison] = useState<ComparisonResult | null>(null)
+  const [isComparing, setIsComparing] = useState(false)
+
+  const handleCompare = async () => {
+    if (!baseBranch || !compareBranch) {
+      toast.error('Select both branches to compare')
+      return
+    }
+    setIsComparing(true)
+    try {
+      const params = new URLSearchParams({ base: baseBranch, compare: compareBranch })
+      const response = await fetch(
+        `/api/v1/repositories/${repositoryId}/branches/compare?${params}`,
+        {
+          credentials: 'include',
+        }
+      )
+      if (!response.ok) throw new Error('Comparison failed')
+      const data = await response.json()
+      setComparison(data)
+    } catch {
+      toast.error('Failed to compare branches')
+    } finally {
+      setIsComparing(false)
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -1114,12 +1157,9 @@ function BranchesTab({
             Compare Branches
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           <div className="flex items-center gap-4">
-            <Select
-              value={compareBranch || branches.find((b) => b.is_default)?.name}
-              onValueChange={setCompareBranch}
-            >
+            <Select value={baseBranch} onValueChange={setBaseBranch}>
               <SelectTrigger className="w-[200px]">
                 <SelectValue placeholder="Base branch" />
               </SelectTrigger>
@@ -1132,15 +1172,13 @@ function BranchesTab({
               </SelectContent>
             </Select>
             <ChevronRight className="h-4 w-4 text-muted-foreground" />
-            <Select>
+            <Select value={compareBranch} onValueChange={setCompareBranch}>
               <SelectTrigger className="w-[200px]">
                 <SelectValue placeholder="Compare branch" />
               </SelectTrigger>
               <SelectContent>
                 {branches
-                  .filter(
-                    (b) => b.name !== (compareBranch || branches.find((b) => b.is_default)?.name)
-                  )
+                  .filter((b) => b.name !== baseBranch)
                   .map((branch) => (
                     <SelectItem key={branch.id} value={branch.name}>
                       {branch.name}
@@ -1148,8 +1186,71 @@ function BranchesTab({
                   ))}
               </SelectContent>
             </Select>
-            <Button variant="outline">Compare</Button>
+            <Button
+              variant="outline"
+              onClick={handleCompare}
+              disabled={isComparing || !compareBranch}
+            >
+              {isComparing ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
+              Compare
+            </Button>
           </div>
+
+          {comparison && (
+            <div className="border rounded-lg p-4 space-y-3">
+              <div className="flex items-center gap-6 text-sm">
+                <div className="flex items-center gap-2">
+                  <Badge variant="destructive">{comparison.new_findings}</Badge>
+                  <span>
+                    New findings in{' '}
+                    <code className="text-xs bg-muted px-1 rounded">
+                      {comparison.compare_branch}
+                    </code>
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge className="bg-green-500">{comparison.resolved_findings}</Badge>
+                  <span>
+                    Resolved (not in{' '}
+                    <code className="text-xs bg-muted px-1 rounded">
+                      {comparison.compare_branch}
+                    </code>
+                    )
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary">{comparison.common_findings}</Badge>
+                  <span>Common</span>
+                </div>
+              </div>
+
+              {comparison.new_items && comparison.new_items.length > 0 && (
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground mb-2">
+                    New findings introduced:
+                  </p>
+                  <div className="space-y-1">
+                    {comparison.new_items.slice(0, 10).map((item) => (
+                      <div key={item.id} className="flex items-center gap-2 text-xs">
+                        <Badge
+                          variant={item.severity === 'critical' ? 'destructive' : 'outline'}
+                          className="text-[10px] px-1.5"
+                        >
+                          {item.severity}
+                        </Badge>
+                        <span className="truncate">{item.title}</span>
+                        {item.file_path && (
+                          <span className="text-muted-foreground truncate max-w-[200px]">
+                            {item.file_path}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -1182,7 +1283,10 @@ function BranchesTab({
                 <TableRow
                   key={branch.id}
                   className="cursor-pointer"
-                  onClick={() => setSelectedBranch(branch.id)}
+                  onClick={() => {
+                    setSelectedBranch(branch.id)
+                    onViewBranchFindings?.(branch.name)
+                  }}
                 >
                   <TableCell>
                     <div className="flex items-center gap-2">
@@ -1216,27 +1320,31 @@ function BranchesTab({
                     </div>
                   </TableCell>
                   <TableCell>
-                    {branch.compared_to_default ? (
-                      <div className="flex items-center gap-2 text-sm">
-                        {branch.compared_to_default.new_findings > 0 && (
-                          <span className="flex items-center gap-1 text-red-500">
-                            <TrendingUp className="h-3 w-3" />+
-                            {branch.compared_to_default.new_findings}
-                          </span>
-                        )}
-                        {branch.compared_to_default.resolved_findings > 0 && (
-                          <span className="flex items-center gap-1 text-green-500">
-                            <TrendingDown className="h-3 w-3" />-
-                            {branch.compared_to_default.resolved_findings}
-                          </span>
-                        )}
-                        {branch.compared_to_default.new_findings === 0 &&
-                          branch.compared_to_default.resolved_findings === 0 && (
-                            <span className="text-muted-foreground">No changes</span>
-                          )}
-                      </div>
+                    {branch.is_default ? (
+                      <span className="text-muted-foreground text-xs">base</span>
                     ) : (
-                      <span className="text-muted-foreground">-</span>
+                      (() => {
+                        const diff = branch.findings_summary.total - defaultTotal
+                        if (diff > 0)
+                          return (
+                            <span className="flex items-center gap-1 text-sm text-red-500">
+                              <TrendingUp className="h-3 w-3" />+{diff}
+                            </span>
+                          )
+                        if (diff < 0)
+                          return (
+                            <span className="flex items-center gap-1 text-sm text-green-500">
+                              <TrendingDown className="h-3 w-3" />
+                              {diff}
+                            </span>
+                          )
+                        return (
+                          <span className="flex items-center gap-1 text-sm text-muted-foreground">
+                            <Minus className="h-3 w-3" />
+                            same
+                          </span>
+                        )
+                      })()
                     )}
                   </TableCell>
                   <TableCell>
@@ -1245,16 +1353,27 @@ function BranchesTab({
                     </span>
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Avatar className="h-5 w-5">
-                        <AvatarImage src={branch.last_commit_author_avatar} />
-                        <AvatarFallback className="text-xs">
-                          {branch.last_commit_author?.[0]}
-                        </AvatarFallback>
-                      </Avatar>
-                      <code className="text-xs bg-muted px-1 rounded">
-                        {branch.last_commit_sha?.slice(0, 7)}
-                      </code>
+                    <div className="flex flex-col gap-0.5">
+                      <div className="flex items-center gap-1.5">
+                        <code className="text-xs bg-muted px-1 rounded font-mono">
+                          {branch.last_commit_sha?.slice(0, 7) || '-'}
+                        </code>
+                        <span
+                          className="text-xs text-muted-foreground truncate max-w-[150px]"
+                          title={branch.last_commit_message}
+                        >
+                          {branch.last_commit_message || ''}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                        <span>{branch.last_commit_author || 'unknown'}</span>
+                        {branch.last_commit_at && (
+                          <>
+                            <span>·</span>
+                            <span>{formatTimeAgo(branch.last_commit_at)}</span>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </TableCell>
                   <TableCell>
@@ -1292,94 +1411,219 @@ function BranchesTab({
 }
 
 // Findings Tab
-function FindingsTab({ findings }: { findings: FindingDetail[] }) {
-  const [searchQuery, setSearchQuery] = useState('')
-  const [severityFilter, setSeverityFilter] = useState<string>('all')
-  const [statusFilter, setStatusFilter] = useState<string>('all')
-  const [scannerFilter, setScannerFilter] = useState<string>('all')
+function FindingsTab({
+  repositoryId,
+  branches,
+  branchFromUrl,
+}: {
+  repositoryId: string
+  branches: BranchDetail[]
+  branchFromUrl?: string
+}) {
+  const router = useRouter()
+  const searchParams = useSearchParams()
 
-  const filteredFindings = useMemo(() => {
-    return findings.filter((f) => {
-      if (
-        searchQuery &&
-        !f.title.toLowerCase().includes(searchQuery.toLowerCase()) &&
-        !f.id.toLowerCase().includes(searchQuery.toLowerCase())
-      ) {
-        return false
+  // Read filters from URL (shareable)
+  const [searchInput, setSearchInput] = useState(searchParams.get('q') || '')
+  const debouncedSearch = useDebounce(searchInput, 300)
+  const [severityFilter, setSeverityFilter] = useState<string>(
+    searchParams.get('severity') || 'all'
+  )
+  const [statusFilter, setStatusFilter] = useState<string>(searchParams.get('status') || 'all')
+  const [scannerFilter, setScannerFilter] = useState<string>(searchParams.get('scanner') || 'all')
+  const [branchFilter, setBranchFilter] = useState<string>(
+    branchFromUrl || searchParams.get('branch') || 'all'
+  )
+  const [page, setPage] = useState(Number(searchParams.get('page')) || 1)
+  const pageSize = 20
+
+  // Sync branch from URL when it changes externally (e.g. click branch in Branches tab)
+  if (branchFromUrl && branchFromUrl !== branchFilter && branchFromUrl !== 'all') {
+    setBranchFilter(branchFromUrl)
+  }
+
+  // Sync all filters to URL for shareable links
+  const _syncFiltersToUrl = useCallback(
+    (overrides?: Record<string, string>) => {
+      const p = new URLSearchParams(searchParams.toString())
+      p.set('tab', 'findings')
+      const vals: Record<string, string> = {
+        severity: severityFilter,
+        status: statusFilter,
+        scanner: scannerFilter,
+        branch: branchFilter,
+        q: debouncedSearch,
+        page: String(page),
+        ...overrides,
       }
-      if (severityFilter !== 'all' && f.severity !== severityFilter) return false
-      if (statusFilter !== 'all' && f.status !== statusFilter) return false
-      if (scannerFilter !== 'all' && f.scanner_type !== scannerFilter) return false
-      return true
-    })
-  }, [findings, searchQuery, severityFilter, statusFilter, scannerFilter])
+      for (const [k, v] of Object.entries(vals)) {
+        if (v && v !== 'all' && v !== '' && v !== '1') p.set(k, v)
+        else p.delete(k)
+      }
+      router.replace(`?${p.toString()}`, { scroll: false })
+    },
+    [
+      searchParams,
+      severityFilter,
+      statusFilter,
+      scannerFilter,
+      branchFilter,
+      debouncedSearch,
+      page,
+      router,
+    ]
+  )
+
+  // Update URL when filters change
+  const handleFilterChange = useCallback(
+    (setter: (v: string) => void, key: string, value: string) => {
+      setter(value)
+      setPage(1)
+      // Sync immediately
+      const p = new URLSearchParams(window.location.search)
+      p.set('tab', 'findings')
+      if (value && value !== 'all') p.set(key, value)
+      else p.delete(key)
+      p.delete('page')
+      router.replace(`?${p.toString()}`, { scroll: false })
+    },
+    [router]
+  )
+
+  // Fetch findings from API with server-side filters
+  const apiFilters = useMemo(() => {
+    const f: Parameters<typeof useFindingsApi>[0] = {
+      asset_id: repositoryId,
+      page,
+      per_page: pageSize,
+    }
+    if (severityFilter !== 'all')
+      f.severities = [severityFilter as 'critical' | 'high' | 'medium' | 'low' | 'info']
+    if (statusFilter !== 'all')
+      f.statuses = [
+        statusFilter as
+          | 'confirmed'
+          | 'in_progress'
+          | 'fix_applied'
+          | 'resolved'
+          | 'false_positive'
+          | 'accepted_risk',
+      ]
+    if (scannerFilter !== 'all')
+      f.sources = [scannerFilter as 'sast' | 'sca' | 'secret' | 'dast' | 'iac' | 'container']
+    if (debouncedSearch) f.search = debouncedSearch
+    return f
+  }, [repositoryId, page, pageSize, severityFilter, statusFilter, scannerFilter, debouncedSearch])
+
+  const { data: findingsData, isLoading: findingsLoading } = useFindingsApi(apiFilters)
+
+  const findings: FindingDetail[] = useMemo(() => {
+    if (!findingsData?.data) return []
+    return findingsData.data.map(mapApiFindingToDetail)
+  }, [findingsData])
+
+  const total = findingsData?.total ?? 0
+  const totalPages = findingsData?.total_pages ?? 0
+
+  // Branch filter is client-side (findings have branch name in first_detected_branch)
+  const filteredFindings = useMemo(() => {
+    if (branchFilter === 'all') return findings
+    return findings.filter((f) => f.branches.includes(branchFilter))
+  }, [findings, branchFilter])
 
   return (
     <div className="space-y-6">
-      {/* Filters */}
       <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-wrap items-center gap-4">
-            <div className="relative flex-1 min-w-[200px]">
-              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search findings..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-            <Select value={severityFilter} onValueChange={setSeverityFilter}>
-              <SelectTrigger className="w-[140px]">
-                <SelectValue placeholder="Severity" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Severities</SelectItem>
-                <SelectItem value="critical">Critical</SelectItem>
-                <SelectItem value="high">High</SelectItem>
-                <SelectItem value="medium">Medium</SelectItem>
-                <SelectItem value="low">Low</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[140px]">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="open">Open</SelectItem>
-                <SelectItem value="in_progress">In Progress</SelectItem>
-                <SelectItem value="resolved">Resolved</SelectItem>
-                <SelectItem value="false_positive">False Positive</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={scannerFilter} onValueChange={setScannerFilter}>
-              <SelectTrigger className="w-[140px]">
-                <SelectValue placeholder="Scanner" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Scanners</SelectItem>
-                <SelectItem value="sast">SAST</SelectItem>
-                <SelectItem value="sca">SCA</SelectItem>
-                <SelectItem value="secret">Secret</SelectItem>
-                <SelectItem value="iac">IaC</SelectItem>
-                <SelectItem value="container">Container</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Findings list */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <span className="flex items-center gap-2 text-base">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between gap-3">
+            <CardTitle className="flex items-center gap-2 text-base shrink-0">
               <Shield className="h-4 w-4" />
               Findings
-            </span>
-            <Badge variant="secondary">{filteredFindings.length} results</Badge>
-          </CardTitle>
+              <Badge variant="secondary" className="ml-1">
+                {total}
+              </Badge>
+            </CardTitle>
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+              <div className="relative min-w-[140px]">
+                <SearchIcon className="absolute left-2 top-[7px] h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  placeholder="Search..."
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  className="pl-7 h-7 text-xs w-[140px]"
+                />
+              </div>
+              <Select
+                value={severityFilter}
+                onValueChange={(v) => handleFilterChange(setSeverityFilter, 'severity', v)}
+              >
+                <SelectTrigger className="w-[110px] h-7 text-xs">
+                  <SelectValue placeholder="Severity" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Severities</SelectItem>
+                  <SelectItem value="critical">Critical</SelectItem>
+                  <SelectItem value="high">High</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem>
+                  <SelectItem value="low">Low</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select
+                value={statusFilter}
+                onValueChange={(v) => handleFilterChange(setStatusFilter, 'status', v)}
+              >
+                <SelectTrigger className="w-[110px] h-7 text-xs">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="new">New</SelectItem>
+                  <SelectItem value="confirmed">Confirmed</SelectItem>
+                  <SelectItem value="in_progress">In Progress</SelectItem>
+                  <SelectItem value="fix_applied">Fix Applied</SelectItem>
+                  <SelectItem value="resolved">Resolved</SelectItem>
+                  <SelectItem value="false_positive">False Positive</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select
+                value={scannerFilter}
+                onValueChange={(v) => handleFilterChange(setScannerFilter, 'scanner', v)}
+              >
+                <SelectTrigger className="w-[120px] h-8 text-xs">
+                  <SelectValue placeholder="Scanner" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Scanners</SelectItem>
+                  <SelectItem value="sast">SAST</SelectItem>
+                  <SelectItem value="sca">SCA</SelectItem>
+                  <SelectItem value="secret">Secret</SelectItem>
+                  <SelectItem value="iac">IaC</SelectItem>
+                  <SelectItem value="container">Container</SelectItem>
+                </SelectContent>
+              </Select>
+              {branches.length > 0 && (
+                <Select
+                  value={branchFilter}
+                  onValueChange={(v) => handleFilterChange(setBranchFilter, 'branch', v)}
+                >
+                  <SelectTrigger className="w-[160px] h-8 text-xs">
+                    <SelectValue placeholder="Branch" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Branches</SelectItem>
+                    {branches.map((b) => (
+                      <SelectItem key={b.id} value={b.name}>
+                        <span className="flex items-center gap-1">
+                          <GitBranch className="h-3 w-3" />
+                          {b.name}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
@@ -1387,6 +1631,7 @@ function FindingsTab({ findings }: { findings: FindingDetail[] }) {
               <div
                 key={finding.id}
                 className="p-4 rounded-lg border hover:bg-muted/50 cursor-pointer transition-colors"
+                onClick={() => router.push(`/findings/${finding.id}`)}
               >
                 <div className="flex items-start gap-4">
                   <div className="shrink-0 mt-1">
@@ -1411,9 +1656,17 @@ function FindingsTab({ findings }: { findings: FindingDetail[] }) {
                         <FileCode className="h-3 w-3" />
                         {finding.file_path}:{finding.line_start}
                       </span>
-                      <span className="flex items-center gap-1">
+                      <span className="flex items-center gap-1" title={finding.branches.join(', ')}>
                         <GitBranch className="h-3 w-3" />
-                        {finding.branches.length} branches
+                        {finding.branches.length > 0 ? (
+                          finding.branches.map((b) => (
+                            <code key={b} className="bg-muted px-1 rounded text-[10px]">
+                              {b}
+                            </code>
+                          ))
+                        ) : (
+                          <span className="text-muted-foreground">no branch</span>
+                        )}
                       </span>
                       {finding.cwe_ids && finding.cwe_ids.length > 0 && (
                         <span className="flex items-center gap-1">
@@ -1456,13 +1709,47 @@ function FindingsTab({ findings }: { findings: FindingDetail[] }) {
                 </div>
               </div>
             ))}
-            {filteredFindings.length === 0 && (
+            {filteredFindings.length === 0 && !findingsLoading && (
               <div className="text-center py-12 text-muted-foreground">
                 <Shield className="h-12 w-12 mx-auto mb-4 opacity-50" />
                 <p>No findings match your filters</p>
               </div>
             )}
+            {findingsLoading && (
+              <div className="space-y-3">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <Skeleton key={i} className="h-24 w-full rounded-lg" />
+                ))}
+              </div>
+            )}
           </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between border-t pt-4 mt-4">
+              <span className="text-xs text-muted-foreground">
+                Page {page} of {totalPages} ({total} total)
+              </span>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page <= 1}
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page >= totalPages}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
@@ -1486,28 +1773,33 @@ function ActivityTab({ activities }: { activities: ActivityLog[] }) {
 
   return (
     <div className="space-y-6">
-      {/* Filters */}
-      <Card>
-        <CardContent className="pt-6">
-          <Tabs value={actionFilter} onValueChange={setActionFilter}>
-            <TabsList>
-              <TabsTrigger value="all">All Activity</TabsTrigger>
-              <TabsTrigger value="scans">Scans</TabsTrigger>
-              <TabsTrigger value="findings">Findings</TabsTrigger>
-              <TabsTrigger value="branches">Branches & PRs</TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </CardContent>
-      </Card>
-
-      {/* Activity Timeline */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <History className="h-4 w-4" />
-            Activity Timeline
-          </CardTitle>
-          <CardDescription>{filteredActivities.length} events</CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <History className="h-4 w-4" />
+                Activity Timeline
+              </CardTitle>
+              <CardDescription>{filteredActivities.length} events</CardDescription>
+            </div>
+            <Tabs value={actionFilter} onValueChange={setActionFilter}>
+              <TabsList className="h-8">
+                <TabsTrigger value="all" className="text-xs px-2.5 h-7">
+                  All
+                </TabsTrigger>
+                <TabsTrigger value="scans" className="text-xs px-2.5 h-7">
+                  Scans
+                </TabsTrigger>
+                <TabsTrigger value="findings" className="text-xs px-2.5 h-7">
+                  Findings
+                </TabsTrigger>
+                <TabsTrigger value="branches" className="text-xs px-2.5 h-7">
+                  Branches
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="relative">
@@ -1653,6 +1945,70 @@ function ActivityTab({ activities }: { activities: ActivityLog[] }) {
 
 // Settings Tab
 function SettingsTab({ repository }: { repository: Repository }) {
+  const [autoScan, setAutoScan] = useState(repository.scan_settings?.auto_scan ?? false)
+  const [scanOnPush, setScanOnPush] = useState(repository.scan_settings?.scan_on_push ?? false)
+  const [scanOnPR, setScanOnPR] = useState(repository.scan_settings?.scan_on_pr ?? false)
+  const [branchPatternInput, setBranchPatternInput] = useState('')
+  const [branchPatterns, setBranchPatterns] = useState<string[]>(
+    repository.scan_settings?.branch_patterns ?? ['main', 'develop', 'release/*']
+  )
+
+  const handleAddPattern = () => {
+    const pattern = branchPatternInput.trim()
+    if (pattern && !branchPatterns.includes(pattern)) {
+      setBranchPatterns([...branchPatterns, pattern])
+      setBranchPatternInput('')
+      toast.success(`Pattern "${pattern}" added`)
+    }
+  }
+
+  const handleRemovePattern = (pattern: string) => {
+    setBranchPatterns(branchPatterns.filter((p) => p !== pattern))
+    toast.success(`Pattern "${pattern}" removed`)
+  }
+
+  const handleToggle = (name: string, value: boolean, setter: (v: boolean) => void) => {
+    setter(value)
+    toast.success(`${name} ${value ? 'enabled' : 'disabled'}`)
+  }
+
+  // Security features from repo data or defaults
+  const securityFeatures = [
+    {
+      key: 'branch_protection',
+      label: 'Branch Protection',
+      enabled: (repository.repository?.protectedBranchCount ?? 0) > 0,
+    },
+    {
+      key: 'secret_scanning',
+      label: 'Secret Scanning',
+      enabled: repository.security_features?.secret_scanning ?? false,
+    },
+    {
+      key: 'dependabot',
+      label: 'Dependency Scanning',
+      enabled: repository.security_features?.dependabot ?? false,
+    },
+    {
+      key: 'code_scanning',
+      label: 'Code Scanning (SAST)',
+      enabled:
+        repository.security_features?.code_scanning ?? repository.scan_settings?.auto_scan ?? false,
+    },
+    {
+      key: 'security_policy',
+      label: 'Security Policy',
+      enabled: repository.security_features?.security_policy ?? false,
+    },
+    {
+      key: 'signed_commits',
+      label: 'Signed Commits',
+      enabled: repository.security_features?.signed_commits ?? false,
+    },
+  ]
+
+  const enabledScanners = repository.scan_settings?.enabled_scanners ?? ['sast', 'sca', 'secret']
+
   return (
     <div className="space-y-6">
       {/* Scan Settings */}
@@ -1662,54 +2018,58 @@ function SettingsTab({ repository }: { repository: Repository }) {
             <Play className="h-4 w-4" />
             Scan Configuration
           </CardTitle>
+          <CardDescription>Configure automated scanning for this repository</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div>
             <h4 className="text-sm font-medium mb-3">Enabled Scanners</h4>
             <div className="flex flex-wrap gap-2">
-              {repository.scan_settings.enabled_scanners.map((scanner) => (
-                <Badge key={scanner} className="uppercase">
-                  {scanner}
-                </Badge>
-              ))}
+              {enabledScanners.length > 0 ? (
+                enabledScanners.map((scanner) => (
+                  <Badge key={scanner} variant="outline" className="uppercase text-xs">
+                    {SCANNER_TYPE_LABELS[scanner as ScannerType] || scanner}
+                  </Badge>
+                ))
+              ) : (
+                <span className="text-sm text-muted-foreground">No scanners configured</span>
+              )}
             </div>
           </div>
 
           <Separator />
 
-          <div className="grid grid-cols-3 gap-6">
-            <div className="flex items-center gap-3">
-              {repository.scan_settings.auto_scan ? (
-                <CheckCircle className="h-5 w-5 text-green-500" />
-              ) : (
-                <XCircle className="h-5 w-5 text-muted-foreground" />
-              )}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium">Auto Scan</p>
-                <p className="text-xs text-muted-foreground">Scan automatically</p>
+                <p className="font-medium text-sm">Auto Scan</p>
+                <p className="text-xs text-muted-foreground">Automatically scan on schedule</p>
               </div>
+              <Switch
+                checked={autoScan}
+                onCheckedChange={(v) => handleToggle('Auto Scan', v, setAutoScan)}
+              />
             </div>
-            <div className="flex items-center gap-3">
-              {repository.scan_settings.scan_on_push ? (
-                <CheckCircle className="h-5 w-5 text-green-500" />
-              ) : (
-                <XCircle className="h-5 w-5 text-muted-foreground" />
-              )}
+            <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium">Scan on Push</p>
-                <p className="text-xs text-muted-foreground">Trigger on commits</p>
+                <p className="font-medium text-sm">Scan on Push</p>
+                <p className="text-xs text-muted-foreground">Trigger scan when code is pushed</p>
               </div>
+              <Switch
+                checked={scanOnPush}
+                onCheckedChange={(v) => handleToggle('Scan on Push', v, setScanOnPush)}
+              />
             </div>
-            <div className="flex items-center gap-3">
-              {repository.scan_settings.scan_on_pr ? (
-                <CheckCircle className="h-5 w-5 text-green-500" />
-              ) : (
-                <XCircle className="h-5 w-5 text-muted-foreground" />
-              )}
+            <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium">Scan on PR</p>
-                <p className="text-xs text-muted-foreground">Trigger on pull requests</p>
+                <p className="font-medium text-sm">Scan on Pull Request</p>
+                <p className="text-xs text-muted-foreground">
+                  Trigger scan when PR is opened/updated
+                </p>
               </div>
+              <Switch
+                checked={scanOnPR}
+                onCheckedChange={(v) => handleToggle('Scan on PR', v, setScanOnPR)}
+              />
             </div>
           </div>
 
@@ -1717,12 +2077,42 @@ function SettingsTab({ repository }: { repository: Repository }) {
 
           <div>
             <h4 className="text-sm font-medium mb-3">Branch Patterns</h4>
+            <p className="text-xs text-muted-foreground mb-3">
+              Only branches matching these patterns will be scanned. Use * for wildcards.
+            </p>
+            <div className="flex gap-2 mb-3">
+              <Input
+                placeholder="e.g. main, develop, release/*"
+                value={branchPatternInput}
+                onChange={(e) => setBranchPatternInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleAddPattern()}
+                className="h-8 text-sm"
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleAddPattern}
+                className="h-8 shrink-0"
+              >
+                Add
+              </Button>
+            </div>
             <div className="flex flex-wrap gap-2">
-              {repository.scan_settings.branch_patterns?.map((pattern) => (
-                <code key={pattern} className="text-sm bg-muted px-2 py-1 rounded">
+              {branchPatterns.map((pattern) => (
+                <Badge key={pattern} variant="secondary" className="gap-1 text-xs">
+                  <GitBranch className="h-3 w-3" />
                   {pattern}
-                </code>
+                  <button
+                    className="ml-1 hover:text-destructive"
+                    onClick={() => handleRemovePattern(pattern)}
+                  >
+                    <XCircle className="h-3 w-3" />
+                  </button>
+                </Badge>
               ))}
+              {branchPatterns.length === 0 && (
+                <span className="text-xs text-muted-foreground">All branches will be scanned</span>
+              )}
             </div>
           </div>
         </CardContent>
@@ -1735,7 +2125,7 @@ function SettingsTab({ repository }: { repository: Repository }) {
             <Timer className="h-4 w-4" />
             SLA Policy
           </CardTitle>
-          <CardDescription>{mockSLAPolicy.name}</CardDescription>
+          <CardDescription>{defaultSLAPolicy.name}</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
@@ -1747,7 +2137,7 @@ function SettingsTab({ repository }: { repository: Repository }) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {mockSLAPolicy.rules.map((rule) => (
+              {defaultSLAPolicy.rules.map((rule) => (
                 <TableRow key={rule.severity}>
                   <TableCell>
                     <SeverityBadge severity={rule.severity} />
@@ -1768,28 +2158,26 @@ function SettingsTab({ repository }: { repository: Repository }) {
             <Shield className="h-4 w-4" />
             Security Features
           </CardTitle>
+          <CardDescription>Repository security configuration from SCM provider</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 gap-4">
-            {repository.security_features &&
-              Object.entries(repository.security_features).map(([key, enabled]) => (
-                <div
-                  key={key}
-                  className={cn(
-                    'flex items-center gap-3 p-3 rounded-lg border',
-                    enabled ? 'bg-green-500/5 border-green-500/20' : 'bg-muted/30'
-                  )}
-                >
-                  {enabled ? (
-                    <CheckCircle className="h-5 w-5 text-green-500" />
-                  ) : (
-                    <XCircle className="h-5 w-5 text-muted-foreground" />
-                  )}
-                  <span className={cn('text-sm', !enabled && 'text-muted-foreground')}>
-                    {key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
-                  </span>
-                </div>
-              ))}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {securityFeatures.map(({ key, label, enabled }) => (
+              <div
+                key={key}
+                className={cn(
+                  'flex items-center gap-3 p-3 rounded-lg border',
+                  enabled ? 'bg-green-500/5 border-green-500/20' : 'bg-muted/30'
+                )}
+              >
+                {enabled ? (
+                  <CheckCircle className="h-5 w-5 text-green-500 shrink-0" />
+                ) : (
+                  <XCircle className="h-5 w-5 text-muted-foreground shrink-0" />
+                )}
+                <span className={cn('text-sm', !enabled && 'text-muted-foreground')}>{label}</span>
+              </div>
+            ))}
           </div>
         </CardContent>
       </Card>
@@ -1917,7 +2305,25 @@ export default function RepositoryDetailPage() {
   const router = useRouter()
   const repositoryId = params.id as string
 
-  const [activeTab, setActiveTab] = useState<DetailTab>('overview')
+  // Reactive URL params for shareable links
+  const searchParams = useSearchParams()
+  const urlTab = searchParams.get('tab') as DetailTab | null
+  const urlBranch = searchParams.get('branch')
+  const [activeTab, setActiveTabState] = useState<DetailTab>(urlTab || 'overview')
+  // Sync tab state when URL changes (e.g. from branch click)
+  if (urlTab && urlTab !== activeTab) {
+    setActiveTabState(urlTab)
+  }
+  const setActiveTab = useCallback(
+    (tab: DetailTab) => {
+      setActiveTabState(tab)
+      const p = new URLSearchParams(searchParams.toString())
+      p.set('tab', tab)
+      router.replace(`?${p.toString()}`, { scroll: false })
+    },
+    [searchParams, router]
+  )
+
   const [isSyncing, setIsSyncing] = useState(false)
   const [isScanning, setIsScanning] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -1930,8 +2336,8 @@ export default function RepositoryDetailPage() {
     mutate: mutateRepo,
   } = useRepository(repositoryId)
 
-  // Fetch branches from API only after repository is successfully loaded
-  const { data: _branchesData, isLoading: _branchesLoading } = useRepositoryBranches(
+  // Fetch branches from API
+  const { data: branchesData, isLoading: _branchesLoading } = useRepositoryBranches(
     repositoryData ? repositoryId : null
   )
 
@@ -1951,10 +2357,16 @@ export default function RepositoryDetailPage() {
     return findingsData.data.map(mapApiFindingToDetail)
   }, [findingsData])
 
-  // Uses mock data — wire to repository detail API when backend endpoint is available.
-  // Currently using mock data for branches and activities
-  const branches = mockBranchDetails
-  const activities = mockActivities
+  // Map API branches to local BranchDetail shape
+  const branches: BranchDetail[] = useMemo(() => {
+    if (!branchesData || !Array.isArray(branchesData)) return []
+    return branchesData.map(mapBranchToDetail)
+  }, [branchesData])
+
+  // Derive activity from findings (real data)
+  const activities: ActivityLog[] = useMemo(() => {
+    return deriveActivitiesFromFindings(findings)
+  }, [findings])
 
   // Action handlers
   const handleSync = useCallback(async () => {
@@ -1972,7 +2384,6 @@ export default function RepositoryDetailPage() {
       mutateRepo()
     } catch (error) {
       toast.error(getErrorMessage(error, 'Failed to sync repository'))
-      console.error('Sync error:', error)
     } finally {
       setIsSyncing(false)
     }
@@ -1994,7 +2405,6 @@ export default function RepositoryDetailPage() {
       mutateRepo()
     } catch (error) {
       toast.error(getErrorMessage(error, 'Failed to trigger scan'))
-      console.error('Scan error:', error)
     } finally {
       setIsScanning(false)
     }
@@ -2021,7 +2431,6 @@ export default function RepositoryDetailPage() {
       router.push('/assets/repositories')
     } catch (error) {
       toast.error(getErrorMessage(error, 'Failed to delete repository'))
-      console.error('Delete error:', error)
       setIsDeleting(false)
     }
   }, [repository, router])
@@ -2077,18 +2486,8 @@ export default function RepositoryDetailPage() {
   return (
     <>
       <Main>
-        {/* Breadcrumb & Back */}
+        {/* Repository Header */}
         <div className="mb-6">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => router.push('/assets/repositories')}
-            className="mb-4"
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Repositories
-          </Button>
-
           {/* Repository Header */}
           <div className="flex items-start justify-between">
             <div className="flex items-start gap-4">
@@ -2178,9 +2577,11 @@ export default function RepositoryDetailPage() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem
-                    onClick={() => {
-                      copyToClipboard(repository.repository?.webUrl || '')
-                      toast.success('URL copied')
+                    onClick={async () => {
+                      const url = repository.repository?.webUrl || window.location.href
+                      const ok = await copyToClipboard(url)
+                      if (ok) toast.success('URL copied')
+                      else toast.error('Failed to copy')
                     }}
                   >
                     <Copy className="mr-2 h-4 w-4" />
@@ -2200,7 +2601,12 @@ export default function RepositoryDetailPage() {
         </div>
 
         {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as DetailTab)}>
+        <Tabs
+          value={activeTab}
+          onValueChange={(v) => {
+            setActiveTab(v as DetailTab)
+          }}
+        >
           <TabsList className="mb-6">
             <TabsTrigger value="overview" className="gap-2">
               <Layers className="h-4 w-4" />
@@ -2240,11 +2646,27 @@ export default function RepositoryDetailPage() {
           </TabsContent>
 
           <TabsContent value="branches">
-            <BranchesTab branches={branches} repositoryName={repository.name} />
+            <BranchesTab
+              branches={branches}
+              repositoryName={repository.name}
+              repositoryId={repositoryId}
+              onViewBranchFindings={(branchName) => {
+                setActiveTab('findings')
+                // Branch filter will be picked up by FindingsTab
+                const params = new URLSearchParams(window.location.search)
+                params.set('tab', 'findings')
+                params.set('branch', branchName)
+                router.replace(`?${params.toString()}`, { scroll: false })
+              }}
+            />
           </TabsContent>
 
           <TabsContent value="findings">
-            <FindingsTab findings={findings} />
+            <FindingsTab
+              repositoryId={repositoryId}
+              branches={branches}
+              branchFromUrl={urlBranch || undefined}
+            />
           </TabsContent>
 
           <TabsContent value="activity">

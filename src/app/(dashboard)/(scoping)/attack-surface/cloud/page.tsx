@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
+import { useAssets } from '@/features/assets'
 import { Main } from '@/components/layout'
 import { PageHeader } from '@/features/shared'
 import { Button } from '@/components/ui/button'
@@ -318,7 +319,46 @@ const typeIcons: Record<ResourceType, React.ElementType> = {
 }
 
 export default function CloudSurfacePage() {
+  // Fetch real cloud assets from API, fallback to mock for demo
+  const { assets: apiAssets } = useAssets({
+    types: ['cloud_account'],
+    pageSize: 100,
+  })
+
+  const apiResources = useMemo<CloudResource[]>(() => {
+    if (!apiAssets || apiAssets.length === 0) return []
+    return apiAssets.map(
+      (a): CloudResource => ({
+        id: a.id,
+        name: a.name,
+        provider: (a.metadata?.cloud_provider as CloudProvider) || 'aws',
+        resourceType: (a.metadata?.resource_type as ResourceType) || 'compute',
+        region: (a.metadata?.region as string) || 'unknown',
+        accountId: (a.metadata?.account_id as string) || '',
+        accountName: a.name,
+        status: a.status === 'active' ? 'running' : 'stopped',
+        exposure: String(a.exposure) === 'external' ? 'public' : 'private',
+        riskLevel:
+          a.riskScore >= 70
+            ? 'critical'
+            : a.riskScore >= 50
+              ? 'high'
+              : a.riskScore >= 30
+                ? 'medium'
+                : 'low',
+        lastSeen: a.updatedAt || a.createdAt,
+        discoveredAt: a.createdAt,
+        findingsCount: a.findingCount || 0,
+        tags: {},
+      })
+    )
+  }, [apiAssets])
+
+  // Use API data if available, fallback to mock for demo
   const [resources, setResources] = useState<CloudResource[]>(mockCloudResources)
+  useEffect(() => {
+    if (apiResources.length > 0) setResources(apiResources)
+  }, [apiResources])
   const [searchQuery, setSearchQuery] = useState('')
   const [filterProvider, setFilterProvider] = useState<CloudProvider | 'all'>('all')
   const [filterType, setFilterType] = useState<ResourceType | 'all'>('all')

@@ -14,8 +14,7 @@ export * from './api'
 // Utilities
 export * from './lib/scope-matcher'
 
-// Mock Data (for development)
-export * from './lib/mock-scope-data'
+// Mock data removed — all pages use real API
 
 // Components
 export { ScopeBadge, ScopeBadgeSimple } from './components/scope-badge'

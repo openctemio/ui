@@ -28,15 +28,42 @@ import {
   Clock,
   AlertTriangle,
 } from 'lucide-react'
-import { getComponentStats, getComponents, SBOM_FORMAT_LABELS } from '@/features/components'
+import { SBOM_FORMAT_LABELS } from '@/features/components'
 import type { SbomFormat } from '@/features/components'
+import { useComponentStatsApi } from '@/features/components/api/use-components-api'
+import { get } from '@/lib/api/client'
+import useSWR from 'swr'
 import { toast } from 'sonner'
 
 type FileFormat = 'json' | 'xml'
 
 export default function SBOMExportPage() {
-  const stats = useMemo(() => getComponentStats(), [])
-  const components = useMemo(() => getComponents(), [])
+  const { data: apiStats } = useComponentStatsApi()
+
+  interface ExportComponent {
+    name: string
+    version: string
+    ecosystem: string
+    purl: string
+    license?: string
+    vulnerability_count: number
+  }
+  const { data: exportData } = useSWR<{ data: ExportComponent[]; total: number }>(
+    '/api/v1/components/export',
+    (url: string) => get(url),
+    { revalidateOnFocus: false }
+  )
+
+  const stats = useMemo(
+    () => ({
+      totalComponents: apiStats?.total_components ?? 0,
+      totalVulnerabilities: apiStats?.total_vulnerabilities ?? 0,
+      uniqueLicenses: Object.keys(apiStats?.license_risks ?? {}).length,
+      cisaKevCount: apiStats?.cisa_kev_components ?? 0,
+    }),
+    [apiStats]
+  )
+  const components = useMemo(() => exportData?.data ?? [], [exportData])
   const [exportFormat, setExportFormat] = useState<SbomFormat>('cyclonedx-json')
   const [fileFormat, setFileFormat] = useState<FileFormat>('json')
   const [includeVulnerabilities, setIncludeVulnerabilities] = useState(true)
@@ -66,20 +93,14 @@ export default function SBOMExportPage() {
           }
         : undefined,
       components: components.map((c) => ({
-        type: c.type,
+        type: 'library',
         name: c.name,
         version: c.version,
         purl: c.purl,
-        licenses: includeLicenses ? [{ license: { id: c.licenseId, name: c.license } }] : undefined,
-        vulnerabilities:
-          includeVulnerabilities && c.vulnerabilities.length > 0
-            ? c.vulnerabilities.map((v) => ({
-                id: v.cveId,
-                severity: v.severity,
-                cvss: v.cvssScore,
-                description: v.title,
-              }))
-            : undefined,
+        licenses: includeLicenses && c.license ? [{ license: { id: c.license } }] : undefined,
+        ...(includeVulnerabilities && c.vulnerability_count > 0
+          ? { vulnerabilityCount: c.vulnerability_count }
+          : {}),
       })),
     }
 
@@ -102,10 +123,10 @@ export default function SBOMExportPage() {
   <components>
 ${components
   .map(
-    (c) => `    <component type="${c.type}">
+    (c) => `    <component type="library">
       <name>${c.name}</name>
-      <version>${c.version}</version>
-      <purl>${c.purl}</purl>
+      <version>${c.version || ''}</version>
+      <purl>${c.purl || ''}</purl>
     </component>`
   )
   .join('\n')}
@@ -172,9 +193,7 @@ ${components
                 <Scale className="h-4 w-4 text-blue-500" />
                 Licenses
               </CardDescription>
-              <CardTitle className="text-3xl text-blue-500">
-                {Object.keys(stats.byLicenseCategory || {}).length}
-              </CardTitle>
+              <CardTitle className="text-3xl text-blue-500">{stats.uniqueLicenses}</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-xs text-muted-foreground">
@@ -400,14 +419,14 @@ ${components
                 </p>
               </div>
 
-              {stats.componentsInCisaKev > 0 && (
+              {stats.cisaKevCount > 0 && (
                 <div className="p-4 rounded-lg border border-red-500/30 bg-red-500/5">
                   <div className="flex items-center gap-2 mb-2">
                     <AlertTriangle className="h-4 w-4 text-red-500" />
                     <h4 className="font-medium text-red-600">CISA KEV Notice</h4>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    {stats.componentsInCisaKev} component(s) contain vulnerabilities from CISA Known
+                    {stats.cisaKevCount} component(s) contain vulnerabilities from CISA Known
                     Exploited Vulnerabilities catalog.
                   </p>
                 </div>

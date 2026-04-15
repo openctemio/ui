@@ -261,7 +261,52 @@ async function fetchRepositoryScans(url: string): Promise<RepositoryScan[]> {
 }
 
 async function fetchRepositoryBranches(url: string): Promise<Branch[]> {
-  return get<Branch[]>(url)
+  const response = await get<{ data: Record<string, unknown>[]; total: number }>(url)
+  // API returns paginated result — extract data array and transform
+  if (response && 'data' in response && Array.isArray(response.data)) {
+    return response.data.map(transformBranchResponse)
+  }
+  // Fallback: API might return array directly
+  if (Array.isArray(response)) {
+    return (response as unknown as Record<string, unknown>[]).map(transformBranchResponse)
+  }
+  return []
+}
+
+function transformBranchResponse(b: Record<string, unknown>): Branch {
+  return {
+    id: (b.id as string) || '',
+    assetId: (b.repository_id as string) || '',
+    name: (b.name as string) || '',
+    type: ((b.branch_type as string) || 'other') as Branch['type'],
+    isDefault: (b.is_default as boolean) || false,
+    isProtected: (b.is_protected as boolean) || false,
+    scanOnPush: (b.scan_on_push as boolean) || false,
+    scanOnPr: (b.scan_on_pr as boolean) || false,
+    lastCommitSha: b.last_commit_sha as string | undefined,
+    lastCommitMessage: b.last_commit_message as string | undefined,
+    lastCommitAuthor: b.last_commit_author as string | undefined,
+    lastCommitAt: b.last_commit_at as string | undefined,
+    lastScanId: b.last_scan_id as string | undefined,
+    lastScannedAt: b.last_scanned_at as string | undefined,
+    scanStatus: ((b.scan_status as string) || 'not_scanned') as Branch['scanStatus'],
+    qualityGateStatus: ((b.quality_gate_status as string) ||
+      'not_computed') as Branch['qualityGateStatus'],
+    findingsSummary: {
+      total: (b.findings_total as number) || 0,
+      bySeverity: {
+        critical: (b.findings_critical as number) || 0,
+        high: (b.findings_high as number) || 0,
+        medium: (b.findings_medium as number) || 0,
+        low: (b.findings_low as number) || 0,
+        info: 0,
+      },
+      byStatus: {} as Record<string, number>,
+      byType: {} as Record<string, number>,
+    },
+    createdAt: (b.created_at as string) || '',
+    updatedAt: (b.updated_at as string) || '',
+  }
 }
 
 async function fetchImportJob(url: string): Promise<ImportJob> {
@@ -392,7 +437,7 @@ export function useRepositoryBranches(assetId: string | null, config?: SWRConfig
   // Only fetch if user has permission
   const shouldFetch = currentTenant && assetId && canReadAssets
 
-  const key = shouldFetch ? `/api/v1/assets/${assetId}/branches` : null
+  const key = shouldFetch ? `/api/v1/repositories/${assetId}/branches` : null
 
   return useSWR<Branch[]>(key, fetchRepositoryBranches, {
     ...defaultConfig,
@@ -565,7 +610,7 @@ export function useUpdateBranchConfig(assetId: string, branchName: string) {
 
   return useSWRMutation(
     currentTenant && assetId && branchName
-      ? `/api/v1/assets/${assetId}/branches/${encodeURIComponent(branchName)}`
+      ? `/api/v1/repositories/${assetId}/branches/${encodeURIComponent(branchName)}`
       : null,
     async (url: string, { arg }: { arg: BranchConfig }) => {
       return put<Branch>(url, arg)
