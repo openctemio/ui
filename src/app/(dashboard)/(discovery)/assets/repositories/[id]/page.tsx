@@ -1443,7 +1443,7 @@ function FindingsTab({
   }
 
   // Sync all filters to URL for shareable links
-  const syncFiltersToUrl = useCallback(
+  const _syncFiltersToUrl = useCallback(
     (overrides?: Record<string, string>) => {
       const p = new URLSearchParams(searchParams.toString())
       p.set('tab', 'findings')

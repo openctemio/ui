@@ -82,7 +82,7 @@ export default function AllComponentsPage() {
   }
 
   // Filtered count from list API (changes with filters)
-  const filteredTotal = apiData?.total ?? 0
+  const _filteredTotal = apiData?.total ?? 0
 
   const ecosystems = ['npm', 'pypi', 'go', 'maven', 'cargo', 'nuget', 'rubygems', 'composer']
 
