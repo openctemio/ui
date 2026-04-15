@@ -105,6 +105,15 @@ export function useDeleteSimulation(id: string) {
   return useSWRMutation(`/api/v1/simulations/${id}`, (url: string) => del(url))
 }
 
+export function useRunSimulation() {
+  return useSWRMutation('/api/v1/simulations/run', (_url: string, { arg }: { arg: string }) =>
+    post<{ id: string; status: string; result: string; detection: string }>(
+      `/api/v1/simulations/${arg}/run`,
+      {}
+    )
+  )
+}
+
 // ============================================
 // Control Test Hooks
 // ============================================

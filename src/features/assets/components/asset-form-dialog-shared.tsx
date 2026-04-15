@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo, useEffect, useCallback } from 'react'
+import { normalizeAssetName } from '@/features/assets/lib/normalize'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -32,6 +33,7 @@ interface AssetFormDialogSharedProps {
   description?: string
   fields: FormFieldConfig[]
   asset?: Asset | null
+  assetType?: string // For normalize preview (RFC-001)
   onSubmit: (data: Record<string, unknown>) => Promise<boolean>
   isSubmitting: boolean
   includeGroupSelect?: boolean
@@ -70,6 +72,7 @@ export function AssetFormDialogShared({
   onOpenChange,
   title,
   description,
+  assetType,
   fields,
   asset,
   onSubmit,
@@ -277,6 +280,22 @@ export function AssetFormDialogShared({
               {errors[field.name] && (
                 <p className="text-xs text-red-500 mt-1">{errors[field.name]}</p>
               )}
+              {/* Normalize preview for name field (RFC-001) */}
+              {field.name === 'name' &&
+                assetType &&
+                formData.name &&
+                (() => {
+                  const normalized = normalizeAssetName(String(formData.name), assetType)
+                  if (normalized && normalized !== String(formData.name)) {
+                    return (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Will be saved as:{' '}
+                        <code className="bg-muted px-1 rounded">{normalized}</code>
+                      </p>
+                    )
+                  }
+                  return null
+                })()}
             </div>
           ))}
 

@@ -70,7 +70,7 @@ export interface AssetSearchFilters {
   hasFindings?: boolean
 
   // Properties filter: key=value pairs for JSONB containment (server-side)
-  propertiesFilter?: Record<string, string>
+  propertiesFilter?: Record<string, string[]>
 
   // Sorting (e.g., "-created_at", "name", "-risk_score")
   sort?: string
@@ -295,10 +295,10 @@ function buildAssetQueryParams(filters?: AssetSearchFilters): Record<string, str
   if (filters.exposures?.length) params.exposures = filters.exposures.join(',')
   if (filters.tags?.length) params.tags = filters.tags.join(',')
 
-  // Properties filter (JSONB key:value pairs)
+  // Properties filter (JSONB key:value pairs, multi-value per key)
   if (filters.propertiesFilter && Object.keys(filters.propertiesFilter).length > 0) {
     params.properties = Object.entries(filters.propertiesFilter)
-      .map(([k, v]) => `${k}:${v}`)
+      .flatMap(([k, vals]) => vals.map((v) => `${k}:${v}`))
       .join(',')
   }
 

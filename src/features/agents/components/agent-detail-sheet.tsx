@@ -1,10 +1,14 @@
 'use client'
 
+import { toast } from 'sonner'
+import { copyToClipboard } from '@/lib/clipboard'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { TooltipProvider } from '@/components/ui/tooltip'
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
+import { SheetDetailToolbar } from '@/features/shared'
 import {
   Settings,
   KeyRound,
@@ -133,13 +137,30 @@ export function AgentDetailSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="overflow-y-auto p-0 sm:max-w-xl">
+      <SheetContent
+        className="overflow-y-auto p-0 sm:max-w-xl [&>button]:hidden"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
         <VisuallyHidden>
           <SheetTitle>Agent Details</SheetTitle>
         </VisuallyHidden>
 
+        {/* Toolbar */}
+        <TooltipProvider>
+          <SheetDetailToolbar
+            title="Agent Details"
+            onClose={() => onOpenChange(false)}
+            onEdit={() => onEdit(agent)}
+            onCopyId={() => {
+              copyToClipboard(agent.id)
+              toast.success('Agent ID copied')
+            }}
+            className={`bg-gradient-to-br ${gradientClass} to-transparent`}
+          />
+        </TooltipProvider>
+
         {/* Header */}
-        <div className={`bg-gradient-to-br px-6 pb-4 pt-6 ${gradientClass} to-transparent`}>
+        <div className={`bg-gradient-to-br px-6 pb-4 ${gradientClass} to-transparent`}>
           <div className="mb-3 flex items-center gap-3">
             <div
               className={`flex h-12 w-12 items-center justify-center rounded-xl ${AGENT_TYPE_COLORS[agent.type]}`}

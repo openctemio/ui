@@ -213,7 +213,8 @@ export default function SecurityPage() {
               </div>
               <Button
                 variant={twoFactorStatus?.enabled ? 'outline' : 'default'}
-                onClick={() => toast.info('2FA setup coming soon')}
+                disabled
+                title="Coming soon"
               >
                 {twoFactorStatus?.enabled ? 'Manage 2FA' : 'Enable 2FA'}
               </Button>

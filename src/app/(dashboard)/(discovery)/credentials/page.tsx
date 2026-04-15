@@ -1240,7 +1240,9 @@ export default function CredentialsPage() {
             <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleUpdateCredential}>Save Changes</Button>
+            <Button disabled title="Coming soon">
+              Save Changes
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1258,8 +1260,9 @@ export default function CredentialsPage() {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={handleDeleteCredential}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 pointer-events-none opacity-50"
+              disabled
+              title="Coming soon"
             >
               Delete
             </AlertDialogAction>

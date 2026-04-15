@@ -23,51 +23,47 @@ import {
   ComponentDetailSheet,
   transformVulnerableComponents,
 } from '@/features/components'
-import { useVulnerableComponentsApi } from '@/features/components/api/use-components-api'
+import {
+  useVulnerableComponentsApi,
+  useComponentStatsApi,
+} from '@/features/components/api/use-components-api'
 import type { Component } from '@/features/components'
 import { toast } from 'sonner'
 
 type SeverityFilter = 'all' | 'critical' | 'high' | 'medium' | 'kev'
 
 export default function VulnerableComponentsPage() {
-  // Fetch vulnerable components from API (no limit to get all)
-  // limit=100 is the API cap — this endpoint returns the TOP N most-vulnerable
-  // components, not a paginated list. All counts derived from this array are
-  // bounded by 100; the UI labels reflect that ("Top 100 most vulnerable").
-  const VULNERABLE_LIMIT = 100
-  const { data: apiVulnerableComponents, isLoading } = useVulnerableComponentsApi(VULNERABLE_LIMIT)
+  const [page, _setPage] = useState(1)
+  const pageSize = 20
+  const { data: apiData, isLoading } = useVulnerableComponentsApi(page, pageSize)
+  const { data: apiStats } = useComponentStatsApi()
 
-  // Transform API data to UI Component type
   const vulnerableComponents = useMemo(() => {
-    if (!apiVulnerableComponents) return []
-    return transformVulnerableComponents(apiVulnerableComponents)
-  }, [apiVulnerableComponents])
+    if (!apiData?.data) return []
+    return transformVulnerableComponents(apiData.data)
+  }, [apiData])
+
+  const total = apiData?.total ?? 0
+  const totalPages = apiData?.total_pages ?? 0
 
   const [searchQuery, setSearchQuery] = useState('')
   const [severityFilter, setSeverityFilter] = useState<SeverityFilter>('all')
   const [selectedComponent, setSelectedComponent] = useState<Component | null>(null)
 
-  // Calculate stats
+  // Stats from dedicated stats API — accurate counts regardless of list limit
   const stats = useMemo(() => {
-    let criticalCount = 0
-    let highCount = 0
-    let kevCount = 0
-
-    vulnerableComponents.forEach((c) => {
-      if (c.vulnerabilityCount.critical > 0) criticalCount++
-      if (c.vulnerabilityCount.high > 0) highCount++
-      if (c.vulnerabilities.some((v) => v.inCisaKev)) kevCount++
-    })
+    const criticalCount = apiStats?.vuln_by_severity?.critical ?? 0
+    const highCount = apiStats?.vuln_by_severity?.high ?? 0
+    const kevCount = apiStats?.cisa_kev_components ?? 0
 
     return {
-      total: vulnerableComponents.length,
+      total: apiStats?.vulnerable_components ?? vulnerableComponents.length,
       critical: criticalCount,
       high: highCount,
-      // Note: exploitable count requires additional API data we don't have yet
       exploitable: 0,
       kev: kevCount,
     }
-  }, [vulnerableComponents])
+  }, [apiStats, vulnerableComponents.length])
 
   // Filter components
   const filteredComponents = useMemo(() => {
@@ -230,10 +226,7 @@ export default function VulnerableComponentsPage() {
             </CardContent>
           </Card>
 
-          <Card
-            className="cursor-pointer hover:border-orange-500 transition-colors"
-            onClick={() => toast.info('Filter by exploitable coming soon')}
-          >
+          <Card className="transition-colors opacity-60 cursor-not-allowed" title="Coming soon">
             <CardHeader className="pb-2">
               <CardDescription className="flex items-center gap-2">
                 <Zap className="h-4 w-4 text-orange-500" />
@@ -307,9 +300,7 @@ export default function VulnerableComponentsPage() {
                 <CardDescription>
                   {isLoading
                     ? 'Loading...'
-                    : vulnerableComponents.length >= VULNERABLE_LIMIT
-                      ? `${filteredComponents.length} of top ${VULNERABLE_LIMIT} most vulnerable components`
-                      : `${filteredComponents.length} components requiring remediation`}
+                    : `${total} vulnerable components (page ${page} of ${totalPages || 1})`}
                 </CardDescription>
               </div>
             </div>
