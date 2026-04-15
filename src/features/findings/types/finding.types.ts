@@ -319,6 +319,57 @@ export const SEVERITY_CONFIG: Record<
 }
 
 // ============================================
+// PRIORITY CLASS (RFC-004)
+// ============================================
+
+export type PriorityClass = 'P0' | 'P1' | 'P2' | 'P3'
+
+export const PRIORITY_CLASS_CONFIG: Record<
+  PriorityClass,
+  {
+    label: string
+    description: string
+    color: string
+    bgColor: string
+    textColor: string
+    sla: string
+  }
+> = {
+  P0: {
+    label: 'P0',
+    description: 'Immediate — actively exploited, reachable',
+    color: 'border-red-600/70',
+    bgColor: 'bg-red-600/20',
+    textColor: 'text-red-500',
+    sla: '7 days',
+  },
+  P1: {
+    label: 'P1',
+    description: 'Urgent — high exploit probability, reachable',
+    color: 'border-orange-500/70',
+    bgColor: 'bg-orange-500/20',
+    textColor: 'text-orange-500',
+    sla: '30 days',
+  },
+  P2: {
+    label: 'P2',
+    description: 'Scheduled — moderate risk or compensating controls',
+    color: 'border-yellow-500/70',
+    bgColor: 'bg-yellow-500/20',
+    textColor: 'text-yellow-500',
+    sla: '60 days',
+  },
+  P3: {
+    label: 'P3',
+    description: 'Track — low risk, fix opportunistically',
+    color: 'border-slate-500/70',
+    bgColor: 'bg-slate-500/20',
+    textColor: 'text-slate-400',
+    sla: 'Opportunistic',
+  },
+}
+
+// ============================================
 // USER
 // ============================================
 
@@ -686,6 +737,19 @@ export interface Finding {
   likelihood?: string // high/medium/low
   rank?: number // priority score
   slaStatus?: string // on_track/at_risk/breached/not_applicable
+
+  // Threat Intel Enrichment (RFC-004)
+  epssScore?: number
+  epssPercentile?: number
+  isInKev?: boolean
+  kevDueDate?: string
+
+  // Priority Classification (RFC-004)
+  priorityClass?: PriorityClass
+  priorityClassReason?: string
+  priorityClassOverride?: boolean
+  isReachable?: boolean
+  reachableFromCount?: number
 
   // Extended: Security Context
   exposureVector?: string // network/local/adjacent/physical
