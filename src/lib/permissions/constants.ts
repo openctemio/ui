@@ -316,6 +316,22 @@ export const Permission = {
   AITriageTrigger: 'ai_triage:trigger',
 
   // ===========================================
+  // CTEM MODULE (RFC-004 + RFC-005)
+  // ===========================================
+  CTEMCyclesRead: 'ctem:cycles:read',
+  CTEMCyclesWrite: 'ctem:cycles:write',
+  AttackerProfilesRead: 'ctem:attacker_profiles:read',
+  AttackerProfilesWrite: 'ctem:attacker_profiles:write',
+  BusinessServicesRead: 'ctem:business_services:read',
+  BusinessServicesWrite: 'ctem:business_services:write',
+  CompensatingControlsRead: 'ctem:compensating_controls:read',
+  CompensatingControlsWrite: 'ctem:compensating_controls:write',
+  PriorityRulesRead: 'ctem:priority_rules:read',
+  PriorityRulesWrite: 'ctem:priority_rules:write',
+  VerificationChecklistsRead: 'ctem:verification_checklists:read',
+  VerificationChecklistsWrite: 'ctem:verification_checklists:write',
+
+  // ===========================================
   // LEGACY ALIASES (for backward compatibility)
   // ===========================================
   MembersManage: 'team:members:write', // Alias for MembersWrite
