@@ -146,6 +146,20 @@ export const sidebarData: SidebarData = {
           module: 'assets',
         },
         {
+          title: 'CTEM Cycles',
+          url: '/cycles',
+          icon: RotateCcw,
+          permission: Permission.ScopeRead,
+          module: 'assets',
+        },
+        {
+          title: 'Attacker Profiles',
+          url: '/attacker-profiles',
+          icon: Swords,
+          permission: Permission.ScopeRead,
+          module: 'assets',
+        },
+        {
           title: 'Relationships',
           url: '/relationships/suggestions',
           icon: Link2,
@@ -456,6 +470,13 @@ export const sidebarData: SidebarData = {
           permission: Permission.PentestRead,
           module: 'control_testing', // Separate module — not yet implemented
         },
+        {
+          title: 'Compensating Controls',
+          url: '/controls',
+          icon: Shield,
+          permission: Permission.VulnerabilitiesRead,
+          module: 'findings',
+        },
       ],
     },
 
@@ -497,6 +518,12 @@ export const sidebarData: SidebarData = {
     {
       title: 'Insights',
       items: [
+        {
+          title: 'Executive Summary',
+          url: '/insights/executive',
+          icon: TrendingUp,
+          permission: Permission.DashboardRead,
+        },
         {
           title: 'Findings',
           url: '/findings',
