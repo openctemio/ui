@@ -59,7 +59,12 @@ interface AttackerProfile {
     | 'insider'
     | 'script_kiddie'
     | 'custom'
-  capabilities: string[]
+  capabilities: {
+    network_access?: string
+    credential_level?: string
+    persistence?: boolean
+    tools?: string[]
+  }
   is_default: boolean
   created_at: string
   updated_at: string
@@ -210,16 +215,34 @@ export default function AttackerProfilesPage() {
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-wrap gap-1">
-                          {(profile.capabilities ?? []).slice(0, 3).map((cap) => (
-                            <Badge key={cap} variant="secondary" className="text-xs">
-                              {cap}
-                            </Badge>
-                          ))}
-                          {(profile.capabilities ?? []).length > 3 && (
-                            <Badge variant="secondary" className="text-xs">
-                              +{profile.capabilities.length - 3}
-                            </Badge>
-                          )}
+                          {(() => {
+                            const caps = profile.capabilities ?? {}
+                            const items: string[] = []
+                            if (caps.network_access) items.push(`net: ${caps.network_access}`)
+                            if (caps.credential_level) items.push(`cred: ${caps.credential_level}`)
+                            if (caps.persistence) items.push('persistent')
+                            if (Array.isArray(caps.tools)) {
+                              items.push(...caps.tools.slice(0, 2))
+                            }
+                            return (
+                              <>
+                                {items.slice(0, 3).map((cap, i) => (
+                                  <Badge
+                                    key={`${cap}-${i}`}
+                                    variant="secondary"
+                                    className="text-xs"
+                                  >
+                                    {cap}
+                                  </Badge>
+                                ))}
+                                {items.length > 3 && (
+                                  <Badge variant="secondary" className="text-xs">
+                                    +{items.length - 3}
+                                  </Badge>
+                                )}
+                              </>
+                            )
+                          })()}
                         </div>
                       </TableCell>
                       <TableCell>
