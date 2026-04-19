@@ -414,6 +414,12 @@ export const sidebarData: SidebarData = {
           permission: Permission.VulnerabilitiesRead,
           module: 'threat_intel',
         },
+        {
+          title: 'Priority Rules',
+          url: '/settings/priority-rules',
+          icon: Settings2,
+          permission: Permission.PriorityRulesRead,
+        },
       ],
     },
 
