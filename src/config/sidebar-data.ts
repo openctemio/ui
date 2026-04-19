@@ -146,6 +146,13 @@ export const sidebarData: SidebarData = {
           module: 'assets',
         },
         {
+          title: 'Business Services',
+          url: '/business-services',
+          icon: Building,
+          permission: Permission.BusinessServicesRead,
+          module: 'assets',
+        },
+        {
           title: 'CTEM Cycles',
           url: '/cycles',
           icon: RotateCcw,
