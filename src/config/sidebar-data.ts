@@ -538,6 +538,12 @@ export const sidebarData: SidebarData = {
           permission: Permission.DashboardRead,
         },
         {
+          title: 'CTEM Maturity',
+          url: '/insights/ctem-maturity',
+          icon: ShieldCheck,
+          permission: Permission.DashboardRead,
+        },
+        {
           title: 'Findings',
           url: '/findings',
           icon: FileWarning,
