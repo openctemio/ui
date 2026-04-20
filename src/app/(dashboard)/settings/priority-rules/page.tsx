@@ -52,11 +52,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Plus, MoreHorizontal, Pencil, Trash2, Info, X } from 'lucide-react'
+import { Plus, MoreHorizontal, Pencil, Trash2, Info, X, FlaskConical } from 'lucide-react'
 import { toast } from 'sonner'
 import { get, post, put, del } from '@/lib/api/client'
 import { PriorityClassBadge } from '@/features/findings/components/priority-class-badge'
 import type { PriorityClass } from '@/features/findings/types/finding.types'
+import { DryRunDialog, type DryRunRule } from './dry-run-dialog'
 
 type FieldKey =
   | 'is_in_kev'
@@ -181,6 +182,7 @@ export default function PriorityRulesPage() {
   const [deletingRule, setDeletingRule] = useState<PriorityRule | null>(null)
   const [form, setForm] = useState<FormState>(emptyForm)
   const [isSaving, setIsSaving] = useState(false)
+  const [dryRunRule, setDryRunRule] = useState<DryRunRule | null>(null)
 
   function openCreate() {
     setEditingRule(null)
@@ -521,6 +523,18 @@ export default function PriorityRulesPage() {
                             <Pencil className="mr-2 h-4 w-4" />
                             Edit
                           </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() =>
+                              setDryRunRule({
+                                name: rule.name,
+                                priority_class: rule.priority_class,
+                                conditions: rule.conditions,
+                              })
+                            }
+                          >
+                            <FlaskConical className="mr-2 h-4 w-4" />
+                            Dry run
+                          </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
                             className="text-red-500"
@@ -690,12 +704,32 @@ export default function PriorityRulesPage() {
             <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
               Cancel
             </Button>
+            <Button
+              variant="outline"
+              disabled={form.conditions.length === 0}
+              onClick={() =>
+                setDryRunRule({
+                  name: form.name,
+                  priority_class: form.priority_class,
+                  conditions: form.conditions,
+                })
+              }
+            >
+              <FlaskConical className="mr-1 h-4 w-4" />
+              Dry run
+            </Button>
             <Button onClick={handleSave} disabled={isSaving}>
               {isSaving ? 'Saving...' : editingRule ? 'Update' : 'Create'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <DryRunDialog
+        open={!!dryRunRule}
+        onOpenChange={(open) => !open && setDryRunRule(null)}
+        rule={dryRunRule}
+      />
 
       <AlertDialog open={!!deletingRule} onOpenChange={(open) => !open && setDeletingRule(null)}>
         <AlertDialogContent>
