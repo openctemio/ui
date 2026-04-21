@@ -18,6 +18,16 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import {
   Table,
   TableBody,
   TableCell,
@@ -26,7 +36,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Plus, Play, Eye, CheckCircle, RefreshCw } from 'lucide-react'
+import { Plus, Play, Eye, CheckCircle } from 'lucide-react'
 import { get, post, patch } from '@/lib/api/client'
 import { toast } from 'sonner'
 
@@ -78,6 +88,12 @@ export default function CtemCyclesPage() {
     start_date: '',
     end_date: '',
   })
+  // F-10: confirm state for destructive / irreversible cycle transitions.
+  const [pendingAction, setPendingAction] = useState<{
+    id: string
+    action: 'activate' | 'review' | 'close'
+    cycleName: string
+  } | null>(null)
 
   const resetForm = () => {
     setFormData({ name: '', description: '', start_date: '', end_date: '' })
@@ -110,6 +126,35 @@ export default function CtemCyclesPage() {
     } catch {
       toast.error('Failed to update cycle status')
     }
+  }
+
+  // F-10: copy shown in the confirmation dialog for each transition.
+  const confirmCopy: Record<
+    'activate' | 'review' | 'close',
+    { title: string; body: string; actionLabel: string }
+  > = {
+    activate: {
+      title: 'Activate this cycle?',
+      body: 'Activating freezes the current asset scope into an immutable snapshot. This is an expensive operation and the scope cannot be changed afterwards.',
+      actionLabel: 'Activate',
+    },
+    review: {
+      title: 'Move to review?',
+      body: 'The cycle will stop accepting new findings into scope and enter the review phase. You can still close it afterwards.',
+      actionLabel: 'Start Review',
+    },
+    close: {
+      title: 'Close this cycle?',
+      body: 'Closing is irreversible. The cycle and its scope snapshot become read-only archive data.',
+      actionLabel: 'Close Cycle',
+    },
+  }
+
+  const confirmStatusChange = async () => {
+    if (!pendingAction) return
+    const { id, action } = pendingAction
+    setPendingAction(null)
+    await handleStatusChange(id, action)
   }
 
   return (
@@ -168,7 +213,13 @@ export default function CtemCyclesPage() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => handleStatusChange(cycle.id, 'activate')}
+                              onClick={() =>
+                                setPendingAction({
+                                  id: cycle.id,
+                                  action: 'activate',
+                                  cycleName: cycle.name,
+                                })
+                              }
                             >
                               <Play className="mr-1 h-3 w-3" />
                               Activate
@@ -178,7 +229,13 @@ export default function CtemCyclesPage() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => handleStatusChange(cycle.id, 'review')}
+                              onClick={() =>
+                                setPendingAction({
+                                  id: cycle.id,
+                                  action: 'review',
+                                  cycleName: cycle.name,
+                                })
+                              }
                             >
                               <Eye className="mr-1 h-3 w-3" />
                               Start Review
@@ -188,7 +245,13 @@ export default function CtemCyclesPage() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => handleStatusChange(cycle.id, 'close')}
+                              onClick={() =>
+                                setPendingAction({
+                                  id: cycle.id,
+                                  action: 'close',
+                                  cycleName: cycle.name,
+                                })
+                              }
                             >
                               <CheckCircle className="mr-1 h-3 w-3" />
                               Close
@@ -266,6 +329,36 @@ export default function CtemCyclesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* F-10: AlertDialog for irreversible cycle transitions. */}
+      <AlertDialog
+        open={pendingAction !== null}
+        onOpenChange={(open) => !open && setPendingAction(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {pendingAction ? confirmCopy[pendingAction.action].title : ''}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingAction && (
+                <>
+                  <span className="block font-medium text-foreground">
+                    Cycle: {pendingAction.cycleName}
+                  </span>
+                  <span className="block mt-2">{confirmCopy[pendingAction.action].body}</span>
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmStatusChange}>
+              {pendingAction ? confirmCopy[pendingAction.action].actionLabel : ''}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   )
 }
