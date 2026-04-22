@@ -52,6 +52,32 @@ export const Module = {
   ThreatIntel: 'threat_intel',
   Integrations: 'integrations',
   Compliance: 'compliance',
+  // Migration 000161 additions — these need their own constants so
+  // the route guard checks the same module the sidebar binds to.
+  // Mismatched module names → "Feature Not Available" while sidebar
+  // shows the entry (the bug this list was extended for).
+  AttackSurface: 'attack_surface',
+  ScopeConfig: 'scope_config',
+  BusinessServices: 'business_services',
+  CTEMCycles: 'ctem_cycles',
+  AttackerProfiles: 'attacker_profiles',
+  Relationships: 'relationships',
+  PriorityRules: 'priority_rules',
+  RiskAnalysis: 'risk_analysis',
+  RiskScoring: 'risk_scoring',
+  BusinessImpact: 'business_impact',
+  CompensatingControls: 'compensating_controls',
+  Workflows: 'workflows',
+  RemediationTasks: 'remediation_tasks',
+  ExecutiveSummary: 'executive_summary',
+  CTEMMaturity: 'ctem_maturity',
+  MITRECoverage: 'mitre_coverage',
+  SBOMExport: 'sbom_export',
+  ScannerTemplates: 'scanner_templates',
+  TemplateSources: 'template_sources',
+  ScanPipelines: 'scan_pipelines',
+  AttackSimulation: 'attack_simulation',
+  ControlTesting: 'control_testing',
 } as const
 
 /**
@@ -74,11 +100,11 @@ export const routePermissions: Record<string, RoutePermissionConfig> = {
   },
 
   // ========================================
-  // Scoping Phase (Module: assets)
+  // Scoping Phase — each scoping feature is its own module post-000161
   // ========================================
   '/attack-surface': {
     permission: Permission.AssetsRead,
-    module: Module.Assets,
+    module: Module.AttackSurface,
   },
   '/asset-groups': {
     permission: Permission.AssetGroupsRead,
@@ -86,7 +112,35 @@ export const routePermissions: Record<string, RoutePermissionConfig> = {
   },
   '/scope-config': {
     permission: Permission.ScopeRead,
-    module: Module.Assets,
+    module: Module.ScopeConfig,
+  },
+  '/business-services': {
+    permission: Permission.BusinessServicesRead,
+    module: Module.BusinessServices,
+  },
+  '/business-services/**': {
+    permission: Permission.BusinessServicesRead,
+    module: Module.BusinessServices,
+  },
+  '/cycles': {
+    permission: Permission.CTEMCyclesRead,
+    module: Module.CTEMCycles,
+  },
+  '/cycles/**': {
+    permission: Permission.CTEMCyclesRead,
+    module: Module.CTEMCycles,
+  },
+  '/attacker-profiles': {
+    permission: Permission.AttackerProfilesRead,
+    module: Module.AttackerProfiles,
+  },
+  '/attacker-profiles/**': {
+    permission: Permission.AttackerProfilesRead,
+    module: Module.AttackerProfiles,
+  },
+  '/relationships/**': {
+    permission: Permission.AssetsRead,
+    module: Module.Relationships,
   },
 
   // ========================================
@@ -159,11 +213,19 @@ export const routePermissions: Record<string, RoutePermissionConfig> = {
   },
   '/risk-analysis': {
     permission: Permission.VulnerabilitiesRead,
-    module: Module.ThreatIntel,
+    module: Module.RiskAnalysis,
   },
   '/business-impact': {
     permission: Permission.VulnerabilitiesRead,
-    module: Module.ThreatIntel,
+    module: Module.BusinessImpact,
+  },
+  '/settings/priority-rules': {
+    permission: Permission.PriorityRulesRead,
+    module: Module.PriorityRules,
+  },
+  '/settings/priority-rules/**': {
+    permission: Permission.PriorityRulesRead,
+    module: Module.PriorityRules,
   },
 
   // ========================================
@@ -175,11 +237,19 @@ export const routePermissions: Record<string, RoutePermissionConfig> = {
   },
   '/attack-simulation': {
     permission: Permission.PentestRead,
-    module: Module.Pentest,
+    module: Module.AttackSimulation,
   },
   '/control-testing': {
     permission: Permission.PentestRead,
-    module: Module.Pentest,
+    module: Module.ControlTesting,
+  },
+  '/controls': {
+    permission: Permission.CompensatingControlsRead,
+    module: Module.CompensatingControls,
+  },
+  '/controls/**': {
+    permission: Permission.CompensatingControlsRead,
+    module: Module.CompensatingControls,
   },
 
   // ========================================
@@ -187,19 +257,27 @@ export const routePermissions: Record<string, RoutePermissionConfig> = {
   // ========================================
   '/remediation': {
     permission: Permission.RemediationRead,
-    module: Module.Remediation,
+    module: Module.RemediationTasks,
   },
   '/remediation/**': {
     permission: Permission.RemediationRead,
-    module: Module.Remediation,
+    module: Module.RemediationTasks,
+  },
+  '/pipelines': {
+    permission: Permission.PipelinesRead,
+    module: Module.ScanPipelines,
+  },
+  '/pipelines/**': {
+    permission: Permission.PipelinesRead,
+    module: Module.ScanPipelines,
   },
   '/workflows': {
     permission: Permission.WorkflowsRead,
-    module: Module.Remediation,
+    module: Module.Workflows,
   },
   '/workflows/**': {
     permission: Permission.WorkflowsRead,
-    module: Module.Remediation,
+    module: Module.Workflows,
   },
 
   // ========================================
@@ -242,6 +320,26 @@ export const routePermissions: Record<string, RoutePermissionConfig> = {
   '/insights/reports/compliance': {
     permission: Permission.ComplianceReportsRead,
     module: Module.Compliance,
+  },
+
+  // ========================================
+  // Insights — extended dashboards (each its own module post-000161)
+  // ========================================
+  '/insights/executive': {
+    permission: Permission.DashboardRead,
+    module: Module.ExecutiveSummary,
+  },
+  '/insights/ctem-maturity': {
+    permission: Permission.DashboardRead,
+    module: Module.CTEMMaturity,
+  },
+  '/pentest/mitre-coverage': {
+    permission: Permission.PentestRead,
+    module: Module.MITRECoverage,
+  },
+  '/components/sbom-export': {
+    permission: Permission.ComponentsRead,
+    module: Module.SBOMExport,
   },
 
   // ========================================
@@ -342,6 +440,36 @@ export const routePermissions: Record<string, RoutePermissionConfig> = {
     permission: Permission.IntegrationsRead,
     module: Module.Integrations,
   },
+
+  // ========================================
+  // Settings — scanner orchestration (each its own module post-000161)
+  // ========================================
+  '/scanner-templates': {
+    permission: Permission.ScannerTemplatesRead,
+    module: Module.ScannerTemplates,
+  },
+  '/scanner-templates/**': {
+    permission: Permission.ScannerTemplatesRead,
+    module: Module.ScannerTemplates,
+  },
+  '/template-sources': {
+    permission: Permission.TemplateSourcesRead,
+    module: Module.TemplateSources,
+  },
+  '/template-sources/**': {
+    permission: Permission.TemplateSourcesRead,
+    module: Module.TemplateSources,
+  },
+
+  // Risk scoring config — its own module
+  '/settings/scoring': {
+    permission: Permission.TeamUpdate,
+    module: Module.RiskScoring,
+  },
+  '/settings/scoring/**': {
+    permission: Permission.TeamUpdate,
+    module: Module.RiskScoring,
+  },
 }
 
 /**
@@ -408,12 +536,4 @@ export function getRoutesForPermission(permission: string): string[] {
   return Object.entries(routePermissions)
     .filter(([, config]) => config.permission === permission)
     .map(([route]) => route)
-}
-
-/**
- * Check if a route requires any permission
- * Returns false for public dashboard routes
- */
-export function isProtectedRoute(pathname: string): boolean {
-  return matchRoutePermission(pathname) !== undefined
 }
