@@ -219,9 +219,27 @@ async function proxyRequest(
     headers.set('Authorization', `Bearer ${accessToken}`)
   }
 
-  // Forward refresh token cookie for endpoints that need it
+  // Forward refresh token + CSRF token cookies to the backend.
+  //
+  // The CSRF middleware on the backend (api/internal/infra/http/
+  // middleware/csrf.go) uses the double-submit-cookie pattern:
+  // the csrf_token cookie must match the X-CSRF-Token header. The
+  // browser stores csrf_token as HttpOnly=false (JS-readable) so
+  // client code can read it and set the header on mutations. If we
+  // DON'T forward the cookie to the backend here, the backend sees
+  // an empty cookie and CSRFOptional passes through unconditionally
+  // — which would defeat the whole check. Forward both so the
+  // backend's double-submit compare actually runs.
+  const csrfCookie = cookieStore.get('csrf_token')?.value
+  const cookieParts: string[] = []
   if (refreshToken) {
-    headers.set('Cookie', `${REFRESH_TOKEN_COOKIE}=${refreshToken}`)
+    cookieParts.push(`${REFRESH_TOKEN_COOKIE}=${refreshToken}`)
+  }
+  if (csrfCookie) {
+    cookieParts.push(`csrf_token=${csrfCookie}`)
+  }
+  if (cookieParts.length > 0) {
+    headers.set('Cookie', cookieParts.join('; '))
   }
 
   // Forward other relevant headers from client

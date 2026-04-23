@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import type { Asset } from '@/features/assets'
 import type { AssetPageConfig } from '@/features/assets/types/page-config.types'
+import { toStringArray } from '@/features/assets/lib/property-utils'
 
 const platformLabels: Record<string, string> = {
   ios: 'iOS',
@@ -284,14 +285,7 @@ export const mobileConfig: AssetPageConfig = {
           fullWidth: true,
           getValue: (asset) => {
             const raw = asset.metadata.permissions
-            const permissions: string[] = Array.isArray(raw)
-              ? raw
-              : raw
-                ? String(raw)
-                    .split(',')
-                    .map((s) => s.trim())
-                    .filter(Boolean)
-                : []
+            const permissions = toStringArray(raw)
             if (permissions.length === 0) return '-'
             return (
               <div className="flex flex-wrap gap-1">
@@ -314,14 +308,7 @@ export const mobileConfig: AssetPageConfig = {
           fullWidth: true,
           getValue: (asset) => {
             const raw = asset.metadata.sdks
-            const sdks: string[] = Array.isArray(raw)
-              ? raw
-              : raw
-                ? String(raw)
-                    .split(',')
-                    .map((s) => s.trim())
-                    .filter(Boolean)
-                : []
+            const sdks = toStringArray(raw)
             if (sdks.length === 0) return '-'
             return (
               <div className="flex flex-wrap gap-1">

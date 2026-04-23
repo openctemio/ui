@@ -38,6 +38,7 @@ import {
   TrendingUp,
   Target,
   Plus,
+  MoreHorizontal,
   type LucideIcon,
 } from 'lucide-react'
 import { useMemo } from 'react'
@@ -214,6 +215,17 @@ export default function AssetsOverviewPage() {
   const getCategoryTotal = (category: AssetTypeCategory): number => {
     const config = ASSET_TYPE_CATEGORIES[category]
     return config.types.reduce((sum, type) => sum + (stats.byType[type] ?? 0), 0)
+  }
+
+  // Calculate unclassified count (category total - sum of visible items)
+  const getUnclassifiedCount = (category: AssetTypeCategory): number => {
+    const config = ASSET_TYPE_CATEGORIES[category]
+    const total = getCategoryTotal(category)
+    const classifiedSum = (config.items || []).reduce(
+      (sum, item) => sum + getItemCount(item.countKey),
+      0
+    )
+    return total - classifiedSum
   }
 
   return (
@@ -420,6 +432,33 @@ export default function AssetsOverviewPage() {
                             </Link>
                           )
                         })}
+                      {/* Show "Other" row for assets without sub_type */}
+                      {!statsLoading &&
+                        (() => {
+                          const unclassified = getUnclassifiedCount(categoryKey)
+                          if (unclassified <= 0) return null
+                          const baseUrl =
+                            category.types.length === 1
+                              ? ASSET_TYPE_URLS[category.types[0]] || '#'
+                              : '#'
+                          return (
+                            <Link
+                              href={baseUrl}
+                              className="flex items-center justify-between p-2 rounded-lg hover:bg-accent/50 transition-colors group"
+                            >
+                              <div className="flex items-center gap-2">
+                                <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
+                                <span className="text-sm text-muted-foreground">Other</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm text-muted-foreground">
+                                  {unclassified.toLocaleString()}
+                                </span>
+                                <ArrowRight className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                              </div>
+                            </Link>
+                          )
+                        })()}
                     </div>
                   </CardContent>
                 </Card>
