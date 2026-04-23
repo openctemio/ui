@@ -82,10 +82,9 @@ export function BootstrapProvider({ children }: BootstrapProviderProps) {
   // Track previous tenant to detect switches
   const previousTenantIdRef = React.useRef<string | null>(null)
 
-  // Track retry attempts
-  const retryCountRef = React.useRef(0)
-
-  // Fetch bootstrap data
+  // Fetch bootstrap data — retries once on first failure (typically a token-refresh
+  // race right after login/select-tenant). Uses a non-recursive for-loop so the
+  // callback never references itself by name (React Compiler TDZ rule).
   const fetchBootstrap = React.useCallback(async () => {
     if (!tenantId) {
       setData(null)
@@ -97,59 +96,63 @@ export function BootstrapProvider({ children }: BootstrapProviderProps) {
     setIsLoading(true)
     setError(null)
 
-    try {
-      const result = await get<BootstrapData>('/api/v1/me/bootstrap')
+    const maxAttempts = 2
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        const result = await get<BootstrapData>('/api/v1/me/bootstrap')
 
-      // Prevent race conditions: ignore response if tenant changed while fetching
-      if (previousTenantIdRef.current !== tenantId) return
+        // Prevent race conditions: ignore response if tenant changed while fetching
+        if (previousTenantIdRef.current !== tenantId) return
 
-      setData(result)
-      setFetchedTenantId(tenantId)
-      setIsBootstrapped(true)
-      retryCountRef.current = 0
+        setData(result)
+        setFetchedTenantId(tenantId)
+        setIsBootstrapped(true)
 
-      devLog.log('[BootstrapProvider] Fetched bootstrap data', {
-        permissions: result.permissions?.list?.length,
-        hasModules: !!result.modules,
-      })
-    } catch (err) {
-      // Prevent race conditions: ignore response if tenant changed while fetching
-      if (previousTenantIdRef.current !== tenantId) return
-
-      devLog.error('[BootstrapProvider] Failed to fetch bootstrap:', err)
-
-      // Retry once before giving up — the first failure is often a token refresh
-      // race condition right after login/select-tenant
-      if (retryCountRef.current < 1) {
-        retryCountRef.current++
-        devLog.log('[BootstrapProvider] Retrying bootstrap fetch...')
-        // Wait briefly for token refresh to settle
-        await new Promise((resolve) => setTimeout(resolve, 1500))
+        devLog.log('[BootstrapProvider] Fetched bootstrap data', {
+          permissions: result.permissions?.list?.length,
+          hasModules: !!result.modules,
+        })
         if (previousTenantIdRef.current === tenantId) {
-          fetchBootstrap()
+          setIsLoading(false)
         }
         return
-      }
+      } catch (err) {
+        if (previousTenantIdRef.current !== tenantId) return
 
-      retryCountRef.current = 0
-      setError(err instanceof Error ? err : new Error('Failed to fetch bootstrap'))
-      // Set minimal data on error so the app can still function
-      setData({ permissions: { list: [], version: 0 } })
-      setFetchedTenantId(tenantId)
-      setIsBootstrapped(true) // Mark as bootstrapped even on error to prevent infinite retry
-    } finally {
-      if (previousTenantIdRef.current === tenantId) {
-        setIsLoading(false)
+        devLog.error('[BootstrapProvider] Failed to fetch bootstrap:', err)
+
+        if (attempt < maxAttempts) {
+          devLog.log('[BootstrapProvider] Retrying bootstrap fetch...')
+          // Wait briefly for token refresh to settle
+          await new Promise((resolve) => setTimeout(resolve, 1500))
+          if (previousTenantIdRef.current !== tenantId) return
+          continue
+        }
+
+        setError(err instanceof Error ? err : new Error('Failed to fetch bootstrap'))
+        // Minimal data on final failure so the app can still function
+        setData({ permissions: { list: [], version: 0 } })
+        setFetchedTenantId(tenantId)
+        setIsBootstrapped(true) // mark bootstrapped even on error to stop infinite retry
+        if (previousTenantIdRef.current === tenantId) {
+          setIsLoading(false)
+        }
       }
     }
   }, [tenantId])
 
-  // Track fetched tenant for stale-data guard (ref avoids dep cycle)
+  // Refs sync with state for the stale-data guard below — kept off the main effect's
+  // dep array so it doesn't re-fire when fetchedTenantId/isBootstrapped change. Refs
+  // assigned inside dedicated effects (React Compiler refs rule).
   const fetchedTenantIdRef = React.useRef<string | null>(fetchedTenantId)
-  fetchedTenantIdRef.current = fetchedTenantId
+  React.useEffect(() => {
+    fetchedTenantIdRef.current = fetchedTenantId
+  }, [fetchedTenantId])
 
   const isBootstrappedRef = React.useRef(isBootstrapped)
-  isBootstrappedRef.current = isBootstrapped
+  React.useEffect(() => {
+    isBootstrappedRef.current = isBootstrapped
+  }, [isBootstrapped])
 
   // Fetch on tenant change
   React.useEffect(() => {

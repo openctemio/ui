@@ -296,10 +296,12 @@ export default function PipelineBuilderPage({ params }: PageProps) {
 
   const isReadOnly = pipeline?.is_system_template || false
 
-  // Validation: count steps without tool or capabilities
-  const invalidSteps = useMemo(() => {
-    return localSteps.filter((s) => !s.tool && (!s.capabilities || s.capabilities.length === 0))
-  }, [localSteps])
+  // Validation: count steps without tool or capabilities. React Compiler
+  // memoises this automatically; an explicit useMemo here trips the
+  // preserve-manual-memoization rule.
+  const invalidSteps = localSteps.filter(
+    (s) => !s.tool && (!s.capabilities || s.capabilities.length === 0)
+  )
 
   const hasValidationErrors = invalidSteps.length > 0
 
