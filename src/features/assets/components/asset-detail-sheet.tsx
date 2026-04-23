@@ -288,19 +288,20 @@ export function AssetDetailSheet<T extends Asset>({
                 />
               </div>
 
-              {/* Quick Actions (secondary buttons below header). Lifecycle
-                  snooze is surfaced alongside caller-provided actions so
-                  operators rescuing a false-stale asset can do it from the
-                  same strip as other asset operations. */}
-              {(quickActions || asset.status === 'stale' || asset.status === 'inactive') && (
-                <div className="flex flex-wrap gap-2 mt-4">
-                  {quickActions}
-                  <LifecycleSnoozeMenu
-                    assetID={asset.id}
-                    isStaleOrInactive={asset.status === 'stale' || asset.status === 'inactive'}
-                  />
-                </div>
-              )}
+              {/* Quick Actions (secondary buttons below header).
+                  Lifecycle snooze shows on every asset so operators
+                  can proactively pause the worker during known
+                  offline windows (rack migrations, planned
+                  maintenance) — not only after the asset has been
+                  flagged stale. The reactivate-on-snooze auto-flag
+                  inside the menu only fires when status warrants it. */}
+              <div className="flex flex-wrap gap-2 mt-4">
+                {quickActions}
+                <LifecycleSnoozeMenu
+                  assetID={asset.id}
+                  isStaleOrInactive={asset.status === 'stale' || asset.status === 'inactive'}
+                />
+              </div>
             </div>
           </div>
         </TooltipProvider>
