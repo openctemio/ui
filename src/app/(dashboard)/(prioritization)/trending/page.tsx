@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo } from 'react'
+import useSWR from 'swr'
 import { Main } from '@/components/layout'
 import { PageHeader, StatsCard } from '@/features/shared'
 import { useDashboardStats } from '@/features/dashboard/hooks/use-dashboard-stats'
@@ -18,6 +19,14 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import { cn } from '@/lib/utils'
 import {
   TrendingUp,
@@ -27,7 +36,29 @@ import {
   AlertTriangle,
   BarChart3,
   Clock,
+  Database,
+  Users,
+  FileSearch,
+  CalendarClock,
 } from 'lucide-react'
+import { get } from '@/lib/api/client'
+
+interface RiskTrendPoint {
+  date: string
+  risk_score: number
+  findings_open: number
+  p0_count: number
+  p1_count: number
+  p2_count: number
+  p3_count: number
+}
+
+interface DataQuality {
+  ownership_pct: number
+  evidence_pct: number
+  avg_last_seen_days: number
+  total_assets: number
+}
 
 const SEVERITY_COLORS: Record<string, string> = {
   critical: '#ef4444',
@@ -138,6 +169,21 @@ function RiskFactorsSkeleton() {
 export default function TrendingExposuresPage() {
   const { currentTenant } = useTenant()
   const { stats, isLoading } = useDashboardStats(currentTenant?.id || null)
+
+  // RFC-005: Risk trend data
+  const { data: riskTrendData } = useSWR<RiskTrendPoint[]>(
+    currentTenant?.id ? '/api/v1/dashboard/risk-trend?days=90' : null,
+    get,
+    { revalidateOnFocus: false }
+  )
+  const riskTrend = riskTrendData ?? []
+
+  // RFC-005: Data quality metrics
+  const { data: dataQuality } = useSWR<DataQuality>(
+    currentTenant?.id ? '/api/v1/dashboard/data-quality' : null,
+    get,
+    { revalidateOnFocus: false }
+  )
 
   const trendData = stats.findingTrend
   const hasData = trendData.length > 0
@@ -471,6 +517,112 @@ export default function TrendingExposuresPage() {
               )}
             </CardContent>
           </Card>
+
+          {/* RFC-005: Data Quality Stats */}
+          {dataQuality && (
+            <section className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-sm font-medium">Ownership</CardTitle>
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{dataQuality.ownership_pct.toFixed(1)}%</div>
+                  <p className="text-xs text-muted-foreground">Assets with assigned owners</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-sm font-medium">Evidence</CardTitle>
+                  <FileSearch className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{dataQuality.evidence_pct.toFixed(1)}%</div>
+                  <p className="text-xs text-muted-foreground">Findings with evidence attached</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-sm font-medium">Freshness</CardTitle>
+                  <CalendarClock className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    {dataQuality.avg_last_seen_days.toFixed(0)}d
+                  </div>
+                  <p className="text-xs text-muted-foreground">Avg days since last seen</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-sm font-medium">Total Assets</CardTitle>
+                  <Database className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    {dataQuality.total_assets.toLocaleString()}
+                  </div>
+                  <p className="text-xs text-muted-foreground">In current inventory</p>
+                </CardContent>
+              </Card>
+            </section>
+          )}
+
+          {/* RFC-005: Risk Trend Table */}
+          {riskTrend.length > 0 && (
+            <Card className="mt-6">
+              <CardHeader>
+                <CardTitle>Risk Trend (90 days)</CardTitle>
+                <CardDescription>
+                  Daily risk score and finding counts by priority class
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="max-h-[400px] overflow-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Date</TableHead>
+                        <TableHead className="text-right">Risk Score</TableHead>
+                        <TableHead className="text-right">Open Findings</TableHead>
+                        <TableHead className="text-right">P0</TableHead>
+                        <TableHead className="text-right">P1</TableHead>
+                        <TableHead className="text-right">P2</TableHead>
+                        <TableHead className="text-right">P3</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {riskTrend.map((point) => (
+                        <TableRow key={point.date}>
+                          <TableCell className="text-sm">
+                            {new Date(point.date).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell className="text-right font-mono">
+                            {point.risk_score.toFixed(1)}
+                          </TableCell>
+                          <TableCell className="text-right">{point.findings_open}</TableCell>
+                          <TableCell className="text-right">
+                            <span className={cn(point.p0_count > 0 && 'text-red-500 font-medium')}>
+                              {point.p0_count}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <span
+                              className={cn(point.p1_count > 0 && 'text-orange-500 font-medium')}
+                            >
+                              {point.p1_count}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-right">{point.p2_count}</TableCell>
+                          <TableCell className="text-right">{point.p3_count}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </>
       )}
     </Main>

@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import type { AssetPageConfig } from '@/features/assets/types/page-config.types'
 import type { Asset } from '@/features/assets'
+import { toStringArray } from '@/features/assets/lib/property-utils'
 
 export const hostsConfig: AssetPageConfig = {
   type: 'host',
@@ -124,14 +125,7 @@ export const hostsConfig: AssetPageConfig = {
       cell: ({ row }) => {
         const meta = row.original.metadata as Record<string, unknown>
         const raw = meta.open_ports
-        const ports: string[] = Array.isArray(raw)
-          ? raw.map(String)
-          : raw
-            ? String(raw)
-                .split(',')
-                .map((s) => s.trim())
-                .filter(Boolean)
-            : []
+        const ports = toStringArray(raw)
         if (ports.length === 0) return <span className="text-muted-foreground">-</span>
         return (
           <div className="flex flex-wrap gap-1">
@@ -410,14 +404,7 @@ export const hostsConfig: AssetPageConfig = {
           getValue: (asset: Asset) => {
             const meta = asset.metadata as Record<string, unknown>
             const raw = meta.open_ports
-            const ports: string[] = Array.isArray(raw)
-              ? raw.map(String)
-              : raw
-                ? String(raw)
-                    .split(',')
-                    .map((s) => s.trim())
-                    .filter(Boolean)
-                : []
+            const ports = toStringArray(raw)
             if (ports.length === 0) return <span className="text-muted-foreground">None</span>
             return (
               <div className="flex flex-wrap gap-1">

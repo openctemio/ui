@@ -47,6 +47,7 @@ import {
   FINDING_STATUS_CONFIG,
   SEVERITY_CONFIG,
 } from '@/features/findings'
+import { PriorityClassBadge } from '@/features/findings/components/priority-class-badge'
 import { FindingGroupsTab } from '@/features/findings/components/finding-groups-tab'
 import { MarkFixedDialog } from '@/features/findings/components/mark-fixed-dialog'
 import { PendingReviewTab } from '@/features/findings/components/pending-review-tab'
@@ -169,6 +170,17 @@ function transformApiToUiFinding(api: ApiFinding): Finding {
     verifiedAt: undefined,
     createdAt: api.created_at,
     updatedAt: api.updated_at,
+    // Threat Intel Enrichment (RFC-004)
+    epssScore: api.epss_score,
+    epssPercentile: api.epss_percentile,
+    isInKev: api.is_in_kev,
+    kevDueDate: api.kev_due_date,
+    // Priority Classification (RFC-004)
+    priorityClass: api.priority_class,
+    priorityClassReason: api.priority_class_reason,
+    priorityClassOverride: api.priority_class_override,
+    isReachable: api.is_reachable,
+    reachableFromCount: api.reachable_from_count,
     // Data Flow (Attack Path / Taint Tracking)
     // Use has_data_flow flag for list view (no full data loaded)
     // When api.data_flow is present (detail view), use full data
@@ -668,6 +680,18 @@ function FindingsContent() {
         accessorKey: 'severity',
         header: ({ column }) => <DataTableColumnHeader column={column} title="Severity" />,
         cell: ({ row }) => <SeverityBadge severity={row.getValue('severity')} />,
+        filterFn: (row, id, value) => {
+          return value.includes(row.getValue(id))
+        },
+      },
+      {
+        accessorKey: 'priorityClass',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Priority" />,
+        cell: ({ row }) => {
+          const pc = row.original.priorityClass
+          if (!pc) return <span className="text-muted-foreground text-xs">-</span>
+          return <PriorityClassBadge priorityClass={pc} />
+        },
         filterFn: (row, id, value) => {
           return value.includes(row.getValue(id))
         },
