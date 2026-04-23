@@ -19,7 +19,6 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
 } from '@/components/charts'
 import { useDashboardStats } from '@/features/dashboard/hooks/use-dashboard-stats'
@@ -1134,26 +1133,51 @@ export default function ScopeConfigPage() {
                         No asset types configured
                       </div>
                     ) : (
-                      <ResponsiveContainer width="100%" height={280}>
-                        <PieChart>
-                          <Pie
-                            data={assetTypeData}
-                            cx="50%"
-                            cy="50%"
-                            innerRadius={60}
-                            outerRadius={100}
-                            dataKey="value"
-                            nameKey="name"
-                            paddingAngle={2}
-                          >
-                            {assetTypeData.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={entry.color} />
-                            ))}
-                          </Pie>
-                          <Tooltip />
-                          <Legend />
-                        </PieChart>
-                      </ResponsiveContainer>
+                      <div className="flex flex-col items-center gap-4">
+                        {/* Chart area is its own flex item with a fixed
+                            square box. Built-in Recharts Legend was
+                            eating into the Pie's vertical space and
+                            squashing it into an oval when there were
+                            many asset-type entries; hoisting the
+                            legend out fixes that. */}
+                        <div className="h-[240px] w-[240px]">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                              <Pie
+                                data={assetTypeData}
+                                cx="50%"
+                                cy="50%"
+                                innerRadius="60%"
+                                outerRadius="100%"
+                                dataKey="value"
+                                nameKey="name"
+                                paddingAngle={2}
+                              >
+                                {assetTypeData.map((entry, index) => (
+                                  <Cell key={`cell-${index}`} fill={entry.color} />
+                                ))}
+                              </Pie>
+                              <Tooltip />
+                            </PieChart>
+                          </ResponsiveContainer>
+                        </div>
+                        <ul className="flex w-full flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm">
+                          {assetTypeData.map((entry) => (
+                            <li
+                              key={entry.name}
+                              className="flex items-center gap-2 text-muted-foreground"
+                            >
+                              <span
+                                aria-hidden
+                                className="inline-block h-2.5 w-2.5 rounded-sm"
+                                style={{ backgroundColor: entry.color }}
+                              />
+                              <span className="text-foreground">{entry.name}</span>
+                              <span className="tabular-nums">{entry.value}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
                     )}
                   </CardContent>
                 </Card>
