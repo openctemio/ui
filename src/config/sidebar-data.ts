@@ -50,6 +50,7 @@ import {
   RotateCcw,
   BookTemplate,
   History,
+  Clock,
   Bot,
   FileSliders,
   Wrench,
@@ -692,6 +693,14 @@ export const sidebarData: SidebarData = {
               // Requires team:update permission (admin-level configuration)
               permission: Permission.TeamUpdate,
               module: 'risk_scoring',
+            },
+            {
+              title: 'Asset Lifecycle',
+              url: '/settings/asset-lifecycle',
+              icon: Clock,
+              // Admin-level config: worker transitions asset status without
+              // a human in the loop, so keep this gated to team:update.
+              permission: Permission.TeamUpdate,
             },
             {
               title: 'Modules',
