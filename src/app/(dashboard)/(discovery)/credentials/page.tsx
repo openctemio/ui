@@ -183,6 +183,11 @@ export default function CredentialsPage() {
     const statusToState: Record<StatusFilter, string[]> = {
       all: [],
       active: ['active'],
+      // Stale is an asset-only state; credentials do not use it but
+      // the shared Status union carries it so credential filters
+      // must still map. Treat it as "active" for API purposes since
+      // that's the closest equivalent.
+      stale: ['active'],
       pending: ['active'], // Pending maps to active in API
       completed: ['resolved'],
       inactive: ['accepted', 'false_positive'],

@@ -14,6 +14,7 @@ const STATUS_CONFIG: Record<
   { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }
 > = {
   active: { label: 'Active', variant: 'default' },
+  stale: { label: 'Stale', variant: 'outline' },
   inactive: { label: 'Inactive', variant: 'secondary' },
   archived: { label: 'Archived', variant: 'secondary' },
   pending: { label: 'Pending', variant: 'outline' },
