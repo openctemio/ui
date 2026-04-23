@@ -17,7 +17,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
 import { cn } from '@/lib/utils'
-import { StatusBadge, SheetDetailToolbar } from '@/features/shared'
+import { SheetDetailToolbar } from '@/features/shared'
+import { AssetStatusBadge, LifecycleSnoozeMenu } from '@/features/asset-lifecycle'
 import { AssetFindings } from './asset-findings'
 import {
   TimelineSection,
@@ -123,6 +124,23 @@ interface AssetDetailSheetProps<T extends Asset> {
 
   /** Available tag suggestions for autocomplete */
   tagSuggestions?: string[]
+}
+
+// ============================================
+// Helpers
+// ============================================
+
+// daysSinceLastSeen returns the whole-days difference between now and the
+// asset's last-seen timestamp. Returns undefined when the timestamp is
+// missing or unparseable so the badge renders its plain form rather than
+// an inaccurate "stale 0d" label.
+function daysSinceLastSeen(iso?: string | null): number | undefined {
+  if (!iso) return undefined
+  const t = Date.parse(iso)
+  if (Number.isNaN(t)) return undefined
+  const diffMs = Date.now() - t
+  if (diffMs < 0) return undefined
+  return Math.floor(diffMs / (1000 * 60 * 60 * 24))
 }
 
 // ============================================
@@ -253,7 +271,10 @@ export function AssetDetailSheet<T extends Asset>({
                     {subtitle || asset.groupName}
                   </p>
                 </div>
-                <StatusBadge status={asset.status} />
+                <AssetStatusBadge
+                  status={asset.status}
+                  daysSinceLastSeen={daysSinceLastSeen(asset.lastSeen)}
+                />
               </div>
 
               {/* Classification Badges */}
@@ -267,8 +288,19 @@ export function AssetDetailSheet<T extends Asset>({
                 />
               </div>
 
-              {/* Quick Actions (secondary buttons below header) */}
-              {quickActions && <div className="flex flex-wrap gap-2 mt-4">{quickActions}</div>}
+              {/* Quick Actions (secondary buttons below header). Lifecycle
+                  snooze is surfaced alongside caller-provided actions so
+                  operators rescuing a false-stale asset can do it from the
+                  same strip as other asset operations. */}
+              {(quickActions || asset.status === 'stale' || asset.status === 'inactive') && (
+                <div className="flex flex-wrap gap-2 mt-4">
+                  {quickActions}
+                  <LifecycleSnoozeMenu
+                    assetID={asset.id}
+                    isStaleOrInactive={asset.status === 'stale' || asset.status === 'inactive'}
+                  />
+                </div>
+              )}
             </div>
           </div>
         </TooltipProvider>
