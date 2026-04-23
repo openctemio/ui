@@ -416,6 +416,40 @@ export const tenantEndpoints = {
    */
   modulesReset: (tenantIdOrSlug: string) =>
     `${API_BASE.TENANTS}/${tenantIdOrSlug}/settings/modules/reset`,
+
+  /**
+   * Platform-wide module dependency graph (static spec).
+   * Returns flat edge list the UI uses to render dependency badges
+   * and cascading-confirm dialogs on the Settings → Modules page.
+   */
+  modulesGraph: (tenantIdOrSlug: string) =>
+    `${API_BASE.TENANTS}/${tenantIdOrSlug}/settings/modules/graph`,
+
+  /**
+   * Dry-run of a module toggle. POST with the same body as the PATCH
+   * endpoint; returns blockers + warnings + required without writing.
+   * UI calls this before each toggle commit to drive the confirm modal.
+   */
+  modulesValidate: (tenantIdOrSlug: string) =>
+    `${API_BASE.TENANTS}/${tenantIdOrSlug}/settings/modules/validate`,
+
+  /**
+   * Curated module presets (VM Essentials, ASM, Bug Bounty, CTEM Full…).
+   * GET returns the static catalogue; preview returns a dry-run diff;
+   * apply writes the diff into tenant_modules.
+   */
+  modulesPresets: (tenantIdOrSlug: string) =>
+    `${API_BASE.TENANTS}/${tenantIdOrSlug}/settings/modules/presets`,
+  /**
+   * Tenantless preset catalogue — same payload, used by the team
+   * creation form BEFORE the tenant exists. No auth variation: the
+   * list is product-spec, not tenant-specific.
+   */
+  modulesPresetsPublic: () => `/api/v1/module-presets/`,
+  modulesPresetPreview: (tenantIdOrSlug: string, presetId: string) =>
+    `${API_BASE.TENANTS}/${tenantIdOrSlug}/settings/modules/presets/${presetId}/preview`,
+  modulesPresetApply: (tenantIdOrSlug: string, presetId: string) =>
+    `${API_BASE.TENANTS}/${tenantIdOrSlug}/settings/modules/presets/${presetId}/apply`,
 } as const
 
 // ============================================

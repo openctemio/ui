@@ -42,6 +42,14 @@ export interface WebSocketClientConfig {
   url: string
   /** Authentication token (sent via query param or header) */
   token?: string
+  /**
+   * Async ticket provider for single-use WS auth (F-8 ticket flow).
+   * When set, takes precedence over `token`: the client calls it
+   * before every connect/reconnect to mint a fresh 64-hex ticket and
+   * passes it as `?ticket=<value>`. One ticket is consumed per
+   * connection because the server DELs it on redemption.
+   */
+  fetchTicket?: () => Promise<string>
   /** Reconnection settings */
   initialReconnectDelay?: number
   maxReconnectDelay?: number
@@ -62,8 +70,11 @@ export interface WebSocketClientConfig {
 // CLIENT CLASS
 // ============================================
 
-/** Internal config type with optional token */
-type InternalConfig = Omit<Required<WebSocketClientConfig>, 'token'> & { token?: string }
+/** Internal config type with optional token / ticket provider */
+type InternalConfig = Omit<Required<WebSocketClientConfig>, 'token' | 'fetchTicket'> & {
+  token?: string
+  fetchTicket?: () => Promise<string>
+}
 
 export class WebSocketClient {
   private ws: WebSocket | null = null
@@ -253,20 +264,47 @@ export class WebSocketClient {
   // ============================================
 
   private createConnection(): void {
-    const url = new URL(this.config.url)
-    if (this.config.token) {
-      url.searchParams.set('token', this.config.token)
+    // Resolve auth (ticket > token) asynchronously so we can mint a
+    // fresh single-use ticket per connection. The WS open itself stays
+    // synchronous inside the promise callback so setupEventHandlers can
+    // attach before any event fires.
+    const buildAndOpen = (auth: { ticket?: string; token?: string }) => {
+      const url = new URL(this.config.url)
+      if (auth.ticket) {
+        url.searchParams.set('ticket', auth.ticket)
+      } else if (auth.token) {
+        url.searchParams.set('token', auth.token)
+      }
+
+      devLog.log(
+        '[WebSocket] Connecting to:',
+        url
+          .toString()
+          .replace(/ticket=[^&]+/, 'ticket=***')
+          .replace(/token=[^&]+/, 'token=***')
+      )
+
+      try {
+        this.ws = new WebSocket(url.toString())
+        this.setupEventHandlers()
+      } catch (error) {
+        devLog.error('[WebSocket] Failed to create connection:', error)
+        this.handleError(error instanceof Error ? error : new Error(String(error)))
+      }
     }
 
-    devLog.log('[WebSocket] Connecting to:', url.toString().replace(/token=[^&]+/, 'token=***'))
-
-    try {
-      this.ws = new WebSocket(url.toString())
-      this.setupEventHandlers()
-    } catch (error) {
-      devLog.error('[WebSocket] Failed to create connection:', error)
-      this.handleError(error instanceof Error ? error : new Error(String(error)))
+    if (this.config.fetchTicket) {
+      this.config
+        .fetchTicket()
+        .then((ticket) => buildAndOpen({ ticket }))
+        .catch((error) => {
+          devLog.error('[WebSocket] Failed to fetch ticket:', error)
+          this.handleError(error instanceof Error ? error : new Error(String(error)))
+        })
+      return
     }
+
+    buildAndOpen({ token: this.config.token })
   }
 
   private setupEventHandlers(): void {

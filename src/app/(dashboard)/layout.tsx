@@ -46,7 +46,23 @@ export default async function SiteLayout({ children }: SiteLayoutProps) {
                 <RouteGuard>
                   {/* Global header that handles per-route visibility */}
                   <DashboardHeader />
-                  <main id="content">{children}</main>
+                  {/*
+                    `flex flex-1 flex-col` propagates the flex context
+                    from SidebarInset (which is `flex flex-col flex-1`)
+                    down into the page. Without this, any page that uses
+                    <Main fixed> (full-viewport builders: pipeline builder,
+                    workflow builder, dashboards with side panels) has no
+                    flex parent to grow into → `flex-grow` collapses →
+                    canvas renders at content height and scrolls mid-page.
+                    The overflow-hidden scope is gated by data-layout=fixed
+                    so "normal" pages still scroll naturally at the body.
+                  */}
+                  <main
+                    id="content"
+                    className="flex flex-1 flex-col has-[[data-layout=fixed]]:overflow-hidden"
+                  >
+                    {children}
+                  </main>
                 </RouteGuard>
               </SidebarInset>
             </SidebarProvider>
