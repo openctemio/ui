@@ -102,6 +102,8 @@ interface BackendAsset {
   primary_owner?: { id: string; type: string; name: string; email?: string }
   first_seen: string
   last_seen: string
+  lifecycle_paused_until?: string | null
+  manual_status_override?: boolean
   created_at: string
   updated_at: string
   repository?: BackendRepositoryExtension
@@ -117,7 +119,7 @@ function transformAsset(backend: BackendAsset): Asset {
     category: (backend.category as AssetCategory) || undefined,
     provider: backend.provider,
     criticality: backend.criticality as Criticality,
-    status: backend.status as 'active' | 'inactive' | 'archived',
+    status: backend.status as Asset['status'],
     description: backend.description,
     ownerRef: backend.owner_ref,
     scope: backend.scope as AssetScope,
@@ -138,6 +140,8 @@ function transformAsset(backend: BackendAsset): Asset {
     lastSeen: backend.last_seen,
     createdAt: backend.created_at,
     updatedAt: backend.updated_at,
+    lifecyclePausedUntil: backend.lifecycle_paused_until ?? null,
+    manualStatusOverride: backend.manual_status_override ?? false,
     repository: backend.repository ? transformRepositoryExtension(backend.repository) : undefined,
   }
 }
