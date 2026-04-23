@@ -322,7 +322,12 @@ export const sidebarData: SidebarData = {
           url: '/exposures',
           icon: AlertTriangle,
           permission: Permission.FindingsRead,
-          module: 'exposures',
+          // Aligns with route guard at `/exposures/**` which checks the
+          // `findings` module. Backend keeps a separate `exposures`
+          // module record (migration 000004) but no route enforces it,
+          // so binding sidebar to it caused a divergence: sidebar would
+          // hide while the route stayed reachable, or vice-versa.
+          module: 'findings',
         },
         // ----------------------------------------
         // CREDENTIAL LEAKS
@@ -375,6 +380,8 @@ export const sidebarData: SidebarData = {
               title: 'SBOM Export',
               url: '/components/sbom-export',
               icon: Download,
+              // Same pattern as MITRE Coverage — own module post-000161.
+              module: 'sbom_export',
             },
           ],
         },
@@ -467,6 +474,11 @@ export const sidebarData: SidebarData = {
               title: 'MITRE Coverage',
               url: '/pentest/mitre-coverage',
               icon: LayoutGrid,
+              // Bound to its own module (post-000161) — without this, the
+              // entry inherits parent's `pentest` module and stays visible
+              // even when `mitre_coverage` is disabled, only to dump the
+              // user on a "Feature Not Available" screen after click.
+              module: 'mitre_coverage',
             },
           ],
         },
