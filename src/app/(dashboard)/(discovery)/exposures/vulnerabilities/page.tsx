@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import React from 'react'
 import { Main } from '@/components/layout'
 import { PageHeader, StatsCard } from '@/features/shared'
 import { useDashboardStats } from '@/features/dashboard/hooks/use-dashboard-stats'
@@ -22,7 +22,10 @@ import {
 } from '@/components/charts'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Bug, AlertTriangle, Clock, Shield } from 'lucide-react'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Bug, AlertTriangle, Clock, Shield, LayoutGrid, Database } from 'lucide-react'
+import { VulnerabilityCatalogTab } from '@/features/vulnerabilities'
+import { usePermissions, Permission } from '@/lib/permissions'
 
 const SEVERITY_COLORS: Record<string, string> = {
   critical: '#ef4444',
@@ -100,245 +103,259 @@ function EmptyState() {
   )
 }
 
-export default function VulnerabilitiesPage() {
+function OverviewTab() {
   const { currentTenant } = useTenant()
   const { stats, isLoading } = useDashboardStats(currentTenant?.id || null)
 
-  const criticalCount = stats.findings.bySeverity.critical || 0
-
-  const severityPieData = useMemo(() => {
-    return SEVERITY_ORDER.map((severity) => ({
-      name: SEVERITY_LABELS[severity],
-      value: stats.findings.bySeverity[severity] || 0,
-      color: SEVERITY_COLORS[severity],
-    })).filter((d) => d.value > 0)
-  }, [stats.findings.bySeverity])
-
-  const statusBarData = useMemo(() => {
-    const byStatus = stats.findings.byStatus || {}
-    return Object.entries(byStatus)
-      .map(([status, count]) => ({
-        name: status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, ' '),
-        count,
-      }))
-      .sort((a, b) => b.count - a.count)
-  }, [stats.findings.byStatus])
+  if (isLoading) return <LoadingSkeleton />
 
   const hasData = stats.findings.total > 0
+  if (!hasData) return <EmptyState />
+
+  const criticalCount = stats.findings.bySeverity.critical || 0
+
+  const severityPieData = SEVERITY_ORDER.map((severity) => ({
+    name: SEVERITY_LABELS[severity],
+    value: stats.findings.bySeverity[severity] || 0,
+    color: SEVERITY_COLORS[severity],
+  })).filter((d) => d.value > 0)
+
+  const byStatus = stats.findings.byStatus || {}
+  const statusBarData = Object.entries(byStatus)
+    .map(([status, count]) => ({
+      name: status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, ' '),
+      count,
+    }))
+    .sort((a, b) => b.count - a.count)
+
   const hasTrendData = stats.findingTrend.length > 0
+
+  return (
+    <>
+      <section className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <StatsCard title="Total Vulnerabilities" value={stats.findings.total} icon={Bug} />
+        <StatsCard
+          title="Critical"
+          value={criticalCount}
+          changeType={criticalCount > 0 ? 'negative' : 'positive'}
+          change={criticalCount > 0 ? 'Immediate action required' : 'No critical issues'}
+          icon={AlertTriangle}
+        />
+        <StatsCard
+          title="Average CVSS"
+          value={stats.findings.averageCvss.toFixed(1)}
+          changeType={
+            stats.findings.averageCvss > 7
+              ? 'negative'
+              : stats.findings.averageCvss > 4
+                ? 'neutral'
+                : 'positive'
+          }
+          change={
+            stats.findings.averageCvss >= 9
+              ? 'Critical'
+              : stats.findings.averageCvss >= 7
+                ? 'High'
+                : stats.findings.averageCvss >= 4
+                  ? 'Medium'
+                  : 'Low'
+          }
+          icon={Shield}
+        />
+        <StatsCard
+          title="Overdue"
+          value={stats.findings.overdue}
+          changeType={stats.findings.overdue > 0 ? 'negative' : 'positive'}
+          change={stats.findings.overdue > 0 ? 'Past SLA deadline' : 'All within SLA'}
+          icon={Clock}
+        />
+      </section>
+
+      <section className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Severity Distribution</CardTitle>
+            <CardDescription>
+              Breakdown of {stats.findings.total} vulnerabilities by severity
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {severityPieData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={severityPieData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={100}
+                    paddingAngle={2}
+                    dataKey="value"
+                    label={({ name, value }) => `${name}: ${value}`}
+                  >
+                    {severityPieData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex h-[300px] items-center justify-center">
+                <p className="text-muted-foreground">No severity data available</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Status Breakdown</CardTitle>
+            <CardDescription>Current remediation status of all vulnerabilities</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {statusBarData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={Math.max(300, statusBarData.length * 40)}>
+                <BarChart data={statusBarData} layout="vertical" barCategoryGap="20%">
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                  <XAxis type="number" hide />
+                  <YAxis
+                    dataKey="name"
+                    type="category"
+                    tick={{ fontSize: 12 }}
+                    tickLine={false}
+                    axisLine={false}
+                    width={100}
+                  />
+                  <Tooltip />
+                  <Bar dataKey="count" fill="#8b5cf6" radius={[0, 4, 4, 0]} barSize={20} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex h-[300px] items-center justify-center">
+                <p className="text-muted-foreground">No status data available</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </section>
+
+      <section>
+        <Card>
+          <CardHeader>
+            <CardTitle>Vulnerability Trend</CardTitle>
+            <CardDescription>
+              Severity distribution over time across your attack surface
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {hasTrendData ? (
+              <ResponsiveContainer width="100%" height={350}>
+                <AreaChart data={stats.findingTrend}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                  <XAxis dataKey="date" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
+                  <YAxis tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
+                  <Tooltip />
+                  <Legend />
+                  <Area
+                    type="monotone"
+                    dataKey="critical"
+                    stackId="1"
+                    stroke={SEVERITY_COLORS.critical}
+                    fill={SEVERITY_COLORS.critical}
+                    fillOpacity={0.8}
+                    name="Critical"
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="high"
+                    stackId="1"
+                    stroke={SEVERITY_COLORS.high}
+                    fill={SEVERITY_COLORS.high}
+                    fillOpacity={0.8}
+                    name="High"
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="medium"
+                    stackId="1"
+                    stroke={SEVERITY_COLORS.medium}
+                    fill={SEVERITY_COLORS.medium}
+                    fillOpacity={0.8}
+                    name="Medium"
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="low"
+                    stackId="1"
+                    stroke={SEVERITY_COLORS.low}
+                    fill={SEVERITY_COLORS.low}
+                    fillOpacity={0.8}
+                    name="Low"
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="info"
+                    stackId="1"
+                    stroke={SEVERITY_COLORS.info}
+                    fill={SEVERITY_COLORS.info}
+                    fillOpacity={0.8}
+                    name="Info"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex h-[350px] items-center justify-center">
+                <p className="text-muted-foreground">
+                  No trend data available yet. Run scans to start tracking vulnerability trends.
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </section>
+    </>
+  )
+}
+
+export default function VulnerabilitiesPage() {
+  const { can } = usePermissions()
+  const canReadCatalog = can(Permission.VulnerabilitiesRead)
+  const [tab, setTab] = React.useState<string>('overview')
 
   return (
     <Main>
       <PageHeader
         title="Vulnerability Exposures"
-        description="Track discovered vulnerabilities across your attack surface"
+        description="Track discovered vulnerabilities and browse the global CVE catalog"
         className="mb-6"
       />
 
-      {isLoading ? (
-        <LoadingSkeleton />
-      ) : !hasData ? (
-        <EmptyState />
-      ) : (
-        <>
-          {/* Stats Row */}
-          <section className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-            <StatsCard title="Total Vulnerabilities" value={stats.findings.total} icon={Bug} />
-            <StatsCard
-              title="Critical"
-              value={criticalCount}
-              changeType={criticalCount > 0 ? 'negative' : 'positive'}
-              change={criticalCount > 0 ? 'Immediate action required' : 'No critical issues'}
-              icon={AlertTriangle}
-            />
-            <StatsCard
-              title="Average CVSS"
-              value={stats.findings.averageCvss.toFixed(1)}
-              changeType={
-                stats.findings.averageCvss > 7
-                  ? 'negative'
-                  : stats.findings.averageCvss > 4
-                    ? 'neutral'
-                    : 'positive'
-              }
-              change={
-                stats.findings.averageCvss >= 9
-                  ? 'Critical'
-                  : stats.findings.averageCvss >= 7
-                    ? 'High'
-                    : stats.findings.averageCvss >= 4
-                      ? 'Medium'
-                      : 'Low'
-              }
-              icon={Shield}
-            />
-            <StatsCard
-              title="Overdue"
-              value={stats.findings.overdue}
-              changeType={stats.findings.overdue > 0 ? 'negative' : 'positive'}
-              change={stats.findings.overdue > 0 ? 'Past SLA deadline' : 'All within SLA'}
-              icon={Clock}
-            />
-          </section>
+      <Tabs value={tab} onValueChange={setTab} className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="overview" className="gap-2">
+            <LayoutGrid className="h-4 w-4" />
+            Overview
+          </TabsTrigger>
+          {canReadCatalog && (
+            <TabsTrigger value="catalog" className="gap-2">
+              <Database className="h-4 w-4" />
+              CVE Catalog
+            </TabsTrigger>
+          )}
+        </TabsList>
 
-          {/* Charts Row */}
-          <section className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
-            {/* Severity Distribution Pie */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Severity Distribution</CardTitle>
-                <CardDescription>
-                  Breakdown of {stats.findings.total} vulnerabilities by severity
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {severityPieData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={300}>
-                    <PieChart>
-                      <Pie
-                        data={severityPieData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={100}
-                        paddingAngle={2}
-                        dataKey="value"
-                        label={({ name, value }) => `${name}: ${value}`}
-                      >
-                        {severityPieData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                      <Legend />
-                    </PieChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="flex h-[300px] items-center justify-center">
-                    <p className="text-muted-foreground">No severity data available</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+        <TabsContent value="overview" className="mt-0">
+          <OverviewTab />
+        </TabsContent>
 
-            {/* Status Breakdown Bar */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Status Breakdown</CardTitle>
-                <CardDescription>Current remediation status of all vulnerabilities</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {statusBarData.length > 0 ? (
-                  <ResponsiveContainer
-                    width="100%"
-                    height={Math.max(300, statusBarData.length * 40)}
-                  >
-                    <BarChart data={statusBarData} layout="vertical" barCategoryGap="20%">
-                      <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                      <XAxis type="number" hide />
-                      <YAxis
-                        dataKey="name"
-                        type="category"
-                        tick={{ fontSize: 12 }}
-                        tickLine={false}
-                        axisLine={false}
-                        width={100}
-                      />
-                      <Tooltip />
-                      <Bar dataKey="count" fill="#8b5cf6" radius={[0, 4, 4, 0]} barSize={20} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="flex h-[300px] items-center justify-center">
-                    <p className="text-muted-foreground">No status data available</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </section>
-
-          {/* Vulnerability Trend */}
-          <section>
-            <Card>
-              <CardHeader>
-                <CardTitle>Vulnerability Trend</CardTitle>
-                <CardDescription>
-                  Severity distribution over time across your attack surface
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {hasTrendData ? (
-                  <ResponsiveContainer width="100%" height={350}>
-                    <AreaChart data={stats.findingTrend}>
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                      <XAxis
-                        dataKey="date"
-                        tick={{ fontSize: 12 }}
-                        tickLine={false}
-                        axisLine={false}
-                      />
-                      <YAxis tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
-                      <Tooltip />
-                      <Legend />
-                      <Area
-                        type="monotone"
-                        dataKey="critical"
-                        stackId="1"
-                        stroke={SEVERITY_COLORS.critical}
-                        fill={SEVERITY_COLORS.critical}
-                        fillOpacity={0.8}
-                        name="Critical"
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="high"
-                        stackId="1"
-                        stroke={SEVERITY_COLORS.high}
-                        fill={SEVERITY_COLORS.high}
-                        fillOpacity={0.8}
-                        name="High"
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="medium"
-                        stackId="1"
-                        stroke={SEVERITY_COLORS.medium}
-                        fill={SEVERITY_COLORS.medium}
-                        fillOpacity={0.8}
-                        name="Medium"
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="low"
-                        stackId="1"
-                        stroke={SEVERITY_COLORS.low}
-                        fill={SEVERITY_COLORS.low}
-                        fillOpacity={0.8}
-                        name="Low"
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="info"
-                        stackId="1"
-                        stroke={SEVERITY_COLORS.info}
-                        fill={SEVERITY_COLORS.info}
-                        fillOpacity={0.8}
-                        name="Info"
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="flex h-[350px] items-center justify-center">
-                    <p className="text-muted-foreground">
-                      No trend data available yet. Run scans to start tracking vulnerability trends.
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </section>
-        </>
-      )}
+        {canReadCatalog && (
+          <TabsContent value="catalog" className="mt-0">
+            <VulnerabilityCatalogTab />
+          </TabsContent>
+        )}
+      </Tabs>
     </Main>
   )
 }
