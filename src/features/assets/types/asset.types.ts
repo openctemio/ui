@@ -995,6 +995,20 @@ export interface Asset {
   lastSeen: string
   createdAt: string
   updatedAt: string
+
+  /**
+   * ISO timestamp the lifecycle worker is paused on this asset
+   * until. Set by operator snooze. Null/undefined means no active
+   * snooze. Drives the "snoozed" suffix on AssetStatusBadge.
+   */
+  lifecyclePausedUntil?: string | null
+
+  /**
+   * When true, the background lifecycle worker will never change
+   * this asset's status. Operator has taken explicit control.
+   */
+  manualStatusOverride?: boolean
+
   /** Repository extension (populated for type=repository) */
   repository?: RepositoryExtension
 }

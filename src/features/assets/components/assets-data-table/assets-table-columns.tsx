@@ -11,8 +11,23 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { StatusBadge, RiskScoreBadge } from '@/features/shared'
+import { RiskScoreBadge } from '@/features/shared'
+import { AssetStatusBadge } from '@/features/asset-lifecycle'
 import { ClassificationBadges } from '../classification-badges'
+
+// daysSinceISO returns whole days elapsed between now and an ISO
+// timestamp. Used by the asset list status column to render
+// "Stale 12d" style labels. Returns undefined on missing/future
+// timestamps so the badge falls back to its plain form rather than
+// inaccurate "stale 0d" noise.
+function daysSinceISO(iso?: string | null): number | undefined {
+  if (!iso) return undefined
+  const t = Date.parse(iso)
+  if (Number.isNaN(t)) return undefined
+  const diffMs = Date.now() - t
+  if (diffMs < 0) return undefined
+  return Math.floor(diffMs / (1000 * 60 * 60 * 24))
+}
 import {
   ArrowUpDown,
   Eye,
@@ -134,12 +149,21 @@ export function createAssetColumns(
     })
   }
 
-  // Status column
+  // Status column. Uses AssetStatusBadge so "Stale" / "Inactive"
+  // show a days-since-last-seen suffix ("Stale 12d") and snoozed
+  // assets flag themselves, instead of the generic StatusBadge
+  // which only shows the flat label.
   if (mergedConfig.showStatus) {
     columns.push({
       accessorKey: 'status',
       header: 'Status',
-      cell: ({ row }) => <StatusBadge status={row.original.status} />,
+      cell: ({ row }) => (
+        <AssetStatusBadge
+          status={row.original.status}
+          daysSinceLastSeen={daysSinceISO(row.original.lastSeen)}
+          snoozedUntil={row.original.lifecyclePausedUntil}
+        />
+      ),
     })
   }
 

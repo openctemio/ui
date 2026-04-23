@@ -2,7 +2,7 @@
 
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Activity, AlertTriangle, CheckCircle, Package, type LucideIcon } from 'lucide-react'
+import { Activity, AlertTriangle, CheckCircle, Clock, Package, type LucideIcon } from 'lucide-react'
 import type { Asset } from '../../types'
 
 export interface AssetsStatsCardsProps {
@@ -64,11 +64,12 @@ export function AssetsStatsCards({
   // Calculate stats
   const total = assets.length
   const active = assets.filter((a) => a.status === 'active').length
+  const stale = assets.filter((a) => a.status === 'stale').length
   const inactive = assets.filter((a) => a.status === 'inactive').length
   const withFindings = assets.filter((a) => a.findingCount > 0).length
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
       <StatCard
         title={`Total ${assetTypeName}s`}
         value={total}
@@ -84,6 +85,15 @@ export function AssetsStatsCards({
         iconColor="text-green-500"
         isActive={currentStatusFilter === 'active'}
         onClick={() => onFilterByStatus?.('active')}
+        isLoading={isLoading}
+      />
+      <StatCard
+        title="Stale"
+        value={stale}
+        icon={Clock}
+        iconColor="text-amber-500"
+        isActive={currentStatusFilter === 'stale'}
+        onClick={() => onFilterByStatus?.('stale')}
         isLoading={isLoading}
       />
       <StatCard
