@@ -94,20 +94,31 @@ function getPermissionType(permissionId: string): string {
   return 'read'
 }
 
-// Get icon for role based on slug
-function getRoleIcon(slug: string, isSystem: boolean) {
-  if (!isSystem) return Key
+// Stable component (declared at module scope so React Compiler can track it across
+// renders — the previous `const Icon = getRoleIcon(...)` + `<Icon />` pattern
+// created a fresh component reference per render and tripped the static-components
+// rule).
+function RoleIcon({
+  slug,
+  isSystem,
+  className,
+}: {
+  slug: string
+  isSystem: boolean
+  className?: string
+}) {
+  if (!isSystem) return <Key className={className} />
   switch (slug) {
     case 'owner':
-      return Crown
+      return <Crown className={className} />
     case 'admin':
-      return ShieldCheck
+      return <ShieldCheck className={className} />
     case 'member':
-      return User
+      return <User className={className} />
     case 'viewer':
-      return Eye
+      return <Eye className={className} />
     default:
-      return Shield
+      return <Shield className={className} />
   }
 }
 
@@ -300,7 +311,6 @@ export function RoleDetailSheet({
   if (!role) return null
 
   const config = getRoleConfig(role.slug, role.is_system)
-  const Icon = getRoleIcon(role.slug, role.is_system)
 
   return (
     <Sheet open={open} onOpenChange={handleOpenChange}>
@@ -323,7 +333,11 @@ export function RoleDetailSheet({
         <SheetHeader className="px-6 py-4 border-b shrink-0">
           <div className="flex items-center gap-4">
             <div className={cn('p-3 rounded-xl shrink-0', config.bgColor)}>
-              <Icon className={cn('h-6 w-6', config.color)} />
+              <RoleIcon
+                slug={role.slug}
+                isSystem={role.is_system}
+                className={cn('h-6 w-6', config.color)}
+              />
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
