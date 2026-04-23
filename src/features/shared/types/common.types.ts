@@ -6,7 +6,14 @@
 
 export type Severity = 'critical' | 'high' | 'medium' | 'low' | 'info' | 'none'
 
-export type Status = 'active' | 'inactive' | 'archived' | 'pending' | 'completed' | 'failed'
+export type Status =
+  | 'active'
+  | 'stale'
+  | 'inactive'
+  | 'archived'
+  | 'pending'
+  | 'completed'
+  | 'failed'
 
 export type Environment = 'production' | 'staging' | 'development' | 'testing'
 
