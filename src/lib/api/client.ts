@@ -24,6 +24,23 @@ function isServer(): boolean {
 }
 
 /**
+ * Read the csrf_token cookie from the browser. The backend sets this
+ * at login with HttpOnly=false expressly so client JS can read it;
+ * the value is re-sent in the X-CSRF-Token header on mutations under
+ * the double-submit-cookie pattern. See api/internal/infra/http/
+ * middleware/csrf.go for the validator.
+ *
+ * Returns empty string on the server (cookies access goes through
+ * next/headers there, not document.cookie) or when the cookie is
+ * absent (pre-login, anonymous routes).
+ */
+function readCSRFToken(): string {
+  if (isServer()) return ''
+  const match = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]+)/)
+  return match ? decodeURIComponent(match[1]) : ''
+}
+
+/**
  * Get API base URL
  *
  * - Client-side: Empty string (requests go to /api/v1/* which is proxied by Next.js)
@@ -209,7 +226,25 @@ export async function apiClient<T = unknown>(
     }
   }
   // For client-side requests via proxy, don't add Authorization header
-  // The proxy reads the httpOnly cookie and adds the header
+  // The proxy reads the httpOnly cookie and adds the header.
+
+  // CSRF: on state-changing methods, read the JS-readable csrf_token
+  // cookie (set by the backend at login, HttpOnly=false so this is the
+  // only surface that can fetch it) and forward it in the X-CSRF-Token
+  // header. The Next.js proxy (/api/v1/[...path]/route.ts) also
+  // forwards the cookie, so the backend CSRF middleware can compare
+  // the two under the double-submit-cookie pattern. GET/HEAD/OPTIONS
+  // are exempt on the backend side, so skip them to avoid paying the
+  // cookie read on every list request.
+  if (!isServer() && !headers.has('X-CSRF-Token')) {
+    const method = (fetchOptions.method || 'GET').toUpperCase()
+    if (method === 'POST' || method === 'PUT' || method === 'PATCH' || method === 'DELETE') {
+      const csrfToken = readCSRFToken()
+      if (csrfToken) {
+        headers.set('X-CSRF-Token', csrfToken)
+      }
+    }
+  }
 
   // Create abort controller for timeout
   const controller = new AbortController()

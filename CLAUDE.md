@@ -132,6 +132,14 @@ Unauthenticated → /login → No Tenant → /onboarding/create-team → Dashboa
 After auth changes, use `window.location.href` (not `router.push`) to pick up cookies.
 See [auth.md](.claude/auth.md) for details.
 
+### CSRF (double-submit cookie)
+
+All state-changing requests from the browser must carry an `X-CSRF-Token` header matching the `csrf_token` cookie. `src/lib/api/client.ts` does this automatically (reads cookie, attaches header on POST/PUT/PATCH/DELETE). The Next.js proxy route `src/app/api/v1/[...path]/route.ts` forwards both `refresh_token` and `csrf_token` cookies to the backend. If you bypass the shared client (raw `fetch`) on a mutating endpoint, you MUST add the header yourself — otherwise the backend returns `403 csrf_token_missing_header`.
+
+### Markdown sanitisation
+
+Rendered markdown (notes, finding descriptions, etc.) goes through `src/lib/sanitize-markdown.ts` wired as a `rehypeRewrite` plugin on the markdown editor. It strips `<script>/<iframe>/<object>/<embed>/<style>/<link>/<meta>/<base>/<form>`, `on*` handlers, inline `style`, and `javascript:`/`data:`/`vbscript:` URLs. Do not disable it. If you need to render a new dangerous-looking tag, extend the allowlist in that file and add a test case in `sanitize-markdown.test.ts`.
+
 ## Access Control (RBAC)
 
 ```

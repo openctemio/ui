@@ -1,6 +1,5 @@
 'use client'
 
-import { useMemo } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { Main } from '@/components/layout'
 import { Button } from '@/components/ui/button'
@@ -476,22 +475,16 @@ export default function FindingDetailPage() {
   const orderedTabs = getOrderedTabs(layout)
   const SourcePanel = layout.sourcePanel
 
-  // Merge real-time + API + synthetic activities (deduplicate by ID)
-  const allActivities = useMemo(() => {
-    // Start with API activities (real data from backend)
-    const base = apiActivities.length > 0 ? apiActivities : []
-
-    // Add real-time activities (WebSocket), dedup against base
-    const baseIds = new Set(base.map((a) => a.id))
-    const uniqueRealtime = realtimeActivities.filter((a) => !baseIds.has(a.id))
-
-    // Always include synthetic "Discovered by" from finding transform
-    // This is the creation event — not stored in activities table
-    const syntheticActivities =
-      finding?.activities?.filter((a) => a.type === 'created' && !baseIds.has(a.id)) ?? []
-
-    return [...uniqueRealtime, ...base, ...syntheticActivities]
-  }, [apiActivities, finding, realtimeActivities])
+  // Merge real-time + API + synthetic activities (deduplicate by ID).
+  // React Compiler memoises this automatically; the previous explicit
+  // useMemo with `finding` in deps tripped the preserve-manual-memoization
+  // rule (Compiler couldn't prove `finding` would not be reassigned later).
+  const baseActivities = apiActivities.length > 0 ? apiActivities : []
+  const baseActivityIds = new Set(baseActivities.map((a) => a.id))
+  const uniqueRealtimeActivities = realtimeActivities.filter((a) => !baseActivityIds.has(a.id))
+  const syntheticActivities =
+    finding?.activities?.filter((a) => a.type === 'created' && !baseActivityIds.has(a.id)) ?? []
+  const allActivities = [...uniqueRealtimeActivities, ...baseActivities, ...syntheticActivities]
 
   // Handler for adding new comments
   const handleAddComment = async (content: string, _isInternal: boolean) => {

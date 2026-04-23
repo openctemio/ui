@@ -7,12 +7,14 @@
 
 export { sidebarData } from './sidebar-data'
 
-// Route permissions configuration
+// Route permissions configuration.
+// isProtectedRoute was moved to features/auth/constants/routes.ts
+// during the module-catalog refactor; import it from '@/features/auth'
+// if you need the auth-gating predicate.
 export {
   routePermissions,
   matchRoutePermission,
   getRoutesForPermission,
-  isProtectedRoute,
   type RoutePermissionConfig,
 } from './route-permissions'
 

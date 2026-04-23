@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge'
 import { Network, Shield, AlertTriangle, CheckCircle } from 'lucide-react'
 import type { AssetPageConfig } from '@/features/assets/types/page-config.types'
 import type { Asset } from '@/features/assets'
+import { toStringArray } from '@/features/assets/lib/property-utils'
 
 // Helper to determine if IP is public or private
 function isPublicIp(address: string): boolean {
@@ -71,14 +72,7 @@ export const ipAddressesConfig: AssetPageConfig = {
       header: 'Open Ports',
       cell: ({ row }) => {
         const raw = row.original.metadata?.open_ports
-        const ports: (string | number)[] = Array.isArray(raw)
-          ? raw
-          : raw
-            ? String(raw)
-                .split(',')
-                .map((s) => s.trim())
-                .filter(Boolean)
-            : []
+        const ports = toStringArray(raw)
         if (ports.length === 0) {
           return <span className="text-muted-foreground">-</span>
         }
@@ -200,14 +194,7 @@ export const ipAddressesConfig: AssetPageConfig = {
           fullWidth: true,
           getValue: (asset: Asset) => {
             const raw = asset.metadata?.open_ports
-            const ports: (string | number)[] = Array.isArray(raw)
-              ? raw
-              : raw
-                ? String(raw)
-                    .split(',')
-                    .map((s) => s.trim())
-                    .filter(Boolean)
-                : []
+            const ports = toStringArray(raw)
             if (ports.length === 0) {
               return <span className="text-muted-foreground">None</span>
             }

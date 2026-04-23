@@ -68,13 +68,23 @@ const nextConfig: NextConfig = {
             value: 'camera=(), microphone=(), geolocation=()',
           },
           // Content Security Policy - Prevents XSS attacks
-          // Note: This is a strict policy. Adjust based on your needs.
-          // API calls go through /api/proxy (same-origin) so connect-src 'self' is sufficient
+          // API calls go through /api/proxy (same-origin) so connect-src 'self' is sufficient.
+          //
+          // Script-src narrowing: 'unsafe-eval' is required only by the
+          // dev HMR runtime (Turbopack evaluates modules at runtime);
+          // production bundles do not need it. 'unsafe-inline' is kept
+          // because Next.js 16 still emits inline bootstrapping scripts
+          // for hydration — dropping it requires the nonce-per-request
+          // flow in proxy.ts (tracked as a follow-up). Removing just
+          // 'unsafe-eval' in prod already closes the most abused eval()
+          // gadgets without breaking hydration.
           {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-eval' 'unsafe-inline'", // Next.js requires unsafe-eval and unsafe-inline
+              process.env.NODE_ENV === 'development'
+                ? "script-src 'self' 'unsafe-eval' 'unsafe-inline'"
+                : "script-src 'self' 'unsafe-inline'",
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com", // Tailwind + Google Fonts
               "style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com", // Google Fonts stylesheets
               "img-src 'self' data: https:",

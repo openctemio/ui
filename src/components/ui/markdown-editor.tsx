@@ -3,6 +3,7 @@
 import * as React from 'react'
 import dynamic from 'next/dynamic'
 import { cn } from '@/lib/utils'
+import { sanitiseNode } from '@/lib/sanitize-markdown'
 import { useTheme } from 'next-themes'
 
 const MDEditor = dynamic(() => import('@uiw/react-md-editor'), { ssr: false })
@@ -65,7 +66,9 @@ export function MarkdownPreview({ content, className }: MarkdownPreviewProps) {
       className={cn('prose prose-sm dark:prose-invert max-w-none', className)}
       data-color-mode={resolvedTheme}
     >
-      <MDPreview source={content} />
+      {/* rehypeRewrite sanitises every element before render. See
+          @/lib/sanitize-markdown for the blocklist rationale. */}
+      <MDPreview source={content} rehypeRewrite={sanitiseNode} />
     </div>
   )
 }

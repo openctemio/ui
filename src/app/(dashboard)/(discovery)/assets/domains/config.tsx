@@ -4,6 +4,7 @@ import type { AssetPageConfig } from '@/features/assets/types/page-config.types'
 import type { Asset } from '@/features/assets'
 import { Badge } from '@/components/ui/badge'
 import { Globe, AlertTriangle, Shield } from 'lucide-react'
+import { toStringArray } from '@/features/assets/lib/property-utils'
 
 export const domainsConfig: AssetPageConfig = {
   type: 'domain',
@@ -41,8 +42,8 @@ export const domainsConfig: AssetPageConfig = {
       header: 'DNS Info',
       cell: ({ row }) => {
         const meta = row.original.metadata as Record<string, unknown>
-        const recordType = (meta.record_type as string) || (meta.dns_record_types as string) || ''
-        const resolvedIp = (meta.resolved_ip as string) || (meta.resolved_ips as string) || ''
+        const recordTypes = toStringArray(meta.dns_record_types ?? meta.record_type)
+        const resolvedIps = toStringArray(meta.resolved_ips ?? meta.resolved_ip)
         const cnameTarget = (meta.cname_target as string) || ''
         const registrar = (meta.registrar as string) || ''
 
@@ -51,23 +52,23 @@ export const domainsConfig: AssetPageConfig = {
           return <span className="text-sm">{registrar}</span>
         }
 
-        if (!recordType && !resolvedIp && !cnameTarget) {
+        if (recordTypes.length === 0 && resolvedIps.length === 0 && !cnameTarget) {
           return <span className="text-muted-foreground">-</span>
         }
 
         return (
           <div className="flex items-center gap-1.5 max-w-[200px]">
-            {recordType && (
+            {recordTypes[0] && (
               <Badge variant="outline" className="text-xs font-mono px-1 py-0">
-                {recordType.split(',')[0].trim()}
+                {recordTypes[0]}
               </Badge>
             )}
-            {resolvedIp && (
+            {resolvedIps[0] && (
               <span className="text-xs font-mono text-muted-foreground truncate">
-                {resolvedIp.split(',')[0].trim()}
+                {resolvedIps[0]}
               </span>
             )}
-            {cnameTarget && !resolvedIp && (
+            {cnameTarget && resolvedIps.length === 0 && (
               <span className="text-xs font-mono text-muted-foreground truncate">
                 {cnameTarget}
               </span>
@@ -202,13 +203,13 @@ export const domainsConfig: AssetPageConfig = {
           label: 'Record Types',
           getValue: (asset) => {
             const meta = asset.metadata as Record<string, unknown>
-            const types = (meta.dns_record_types as string) || (meta.record_type as string) || ''
-            if (!types) return '-'
+            const types = toStringArray(meta.dns_record_types ?? meta.record_type)
+            if (types.length === 0) return '-'
             return (
               <div className="flex flex-wrap gap-1">
-                {types.split(',').map((t) => (
-                  <Badge key={t.trim()} variant="outline" className="text-xs font-mono">
-                    {t.trim()}
+                {types.map((t) => (
+                  <Badge key={t} variant="outline" className="text-xs font-mono">
+                    {t}
                   </Badge>
                 ))}
               </div>
@@ -219,17 +220,7 @@ export const domainsConfig: AssetPageConfig = {
           label: 'Resolved IPs',
           getValue: (asset) => {
             const meta = asset.metadata as Record<string, unknown>
-            // resolved_ips can be array or comma-separated string
-            let ipList: string[] = []
-            const raw = meta.resolved_ips ?? meta.resolved_ip
-            if (Array.isArray(raw)) {
-              ipList = raw.filter(Boolean) as string[]
-            } else if (typeof raw === 'string' && raw) {
-              ipList = raw
-                .split(',')
-                .map((s) => s.trim())
-                .filter(Boolean)
-            }
+            const ipList = toStringArray(meta.resolved_ips ?? meta.resolved_ip)
             if (ipList.length === 0) return '-'
             return (
               <div className="flex flex-wrap gap-1">

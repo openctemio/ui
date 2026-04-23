@@ -3,6 +3,7 @@
 import { Badge } from '@/components/ui/badge'
 import { Server, Network, CheckCircle, AlertTriangle, Shield } from 'lucide-react'
 import type { AssetPageConfig } from '@/features/assets/types/page-config.types'
+import { toStringArray } from '@/features/assets/lib/property-utils'
 
 export const servicesConfig: AssetPageConfig = {
   type: 'service',
@@ -57,14 +58,7 @@ export const servicesConfig: AssetPageConfig = {
       header: 'Technology',
       cell: ({ row }) => {
         const raw = row.original.metadata.technology
-        const tech: string[] = Array.isArray(raw)
-          ? raw
-          : raw
-            ? String(raw)
-                .split(',')
-                .map((s) => s.trim())
-                .filter(Boolean)
-            : []
+        const tech = toStringArray(raw)
         if (tech.length === 0) return <span className="text-muted-foreground">-</span>
         return (
           <div className="flex flex-wrap gap-1 max-w-[150px]">
@@ -236,14 +230,7 @@ export const servicesConfig: AssetPageConfig = {
           fullWidth: true,
           getValue: (asset) => {
             const raw = asset.metadata.technology
-            const tech: string[] = Array.isArray(raw)
-              ? raw
-              : raw
-                ? String(raw)
-                    .split(',')
-                    .map((s) => s.trim())
-                    .filter(Boolean)
-                : []
+            const tech = toStringArray(raw)
             if (tech.length === 0) return '-'
             return (
               <div className="flex flex-wrap gap-2">
@@ -269,14 +256,7 @@ export const servicesConfig: AssetPageConfig = {
       header: 'Technologies',
       accessor: (a) => {
         const raw = a.metadata.technology
-        const tech: string[] = Array.isArray(raw)
-          ? raw
-          : raw
-            ? String(raw)
-                .split(',')
-                .map((s) => s.trim())
-                .filter(Boolean)
-            : []
+        const tech = toStringArray(raw)
         return tech.join(';')
       },
     },
