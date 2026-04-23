@@ -470,6 +470,15 @@ export const routePermissions: Record<string, RoutePermissionConfig> = {
     permission: Permission.TeamUpdate,
     module: Module.RiskScoring,
   },
+
+  // Asset lifecycle settings — no dedicated module, gated purely on
+  // team:update because the worker can transition asset status.
+  '/settings/asset-lifecycle': {
+    permission: Permission.TeamUpdate,
+  },
+  '/settings/asset-lifecycle/**': {
+    permission: Permission.TeamUpdate,
+  },
 }
 
 /**
