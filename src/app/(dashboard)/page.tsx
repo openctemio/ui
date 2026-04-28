@@ -38,8 +38,8 @@ import { SEVERITY_CHART_COLORS as SEVERITY_COLORS } from '@/lib/severity-colors'
 // Inline skeleton for stats cards section
 function StatsCardsSkeleton() {
   return (
-    <section className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-5">
-      {[1, 2, 3, 4, 5].map((i) => (
+    <section className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+      {[1, 2, 3, 4].map((i) => (
         <Card key={i}>
           <CardHeader className="pb-2">
             <Skeleton className="h-4 w-24" />
@@ -275,7 +275,7 @@ export default function Dashboard() {
           <StatsCardsSkeleton />
         ) : (
           !error && (
-            <section className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-5">
+            <section className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
               <StatsCard
                 title="Total Assets"
                 value={stats.assets.total}
@@ -316,17 +316,19 @@ export default function Dashboard() {
                 changeType={stats.repositories.withFindings > 0 ? 'negative' : 'neutral'}
                 icon={ListChecks}
               />
-              {/* Platform Agents - shows cloud scan capacity */}
-              <PlatformStatsCard />
             </section>
           )
         )}
 
-        {/* MTTR & Risk Velocity */}
+        {/* Operations Row — rich-content cards grouped together so heights balance.
+            Platform Agents lived in the stats row before, but its 4-row body
+            (Active Jobs / Queued / Available / Agents-by-Tier) forced the four
+            scalar stat cards to match its height, leaving them visually empty. */}
         {!isLoading && !error && (
-          <section className="mb-6 grid gap-4 md:grid-cols-2">
+          <section className="mb-6 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             <MTTRCard />
             <RiskVelocityCard />
+            <PlatformStatsCard />
           </section>
         )}
 
