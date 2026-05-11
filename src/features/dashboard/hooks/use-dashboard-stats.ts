@@ -183,10 +183,13 @@ export function useMTTRMetrics(tenantId: string | null) {
   const { can } = usePermissions()
   const hasPerm = can(Permission.DashboardRead)
 
-  return useSWR<MTTRMetrics>(tenantId && hasPerm ? '/api/v1/dashboard/mttr' : null, get, {
-    revalidateOnFocus: false,
-    dedupingInterval: 30000,
-  })
+  // Tenant-aware SWR key prevents cross-tenant cache leak when user
+  // switches tenants (URL alone is the same; tenant scope comes from JWT).
+  return useSWR<MTTRMetrics>(
+    tenantId && hasPerm ? (['/api/v1/dashboard/mttr', tenantId] as const) : null,
+    ([url]) => get<MTTRMetrics>(url),
+    { revalidateOnFocus: false, dedupingInterval: 30000 }
+  )
 }
 
 // ─── Risk Velocity ───
@@ -202,9 +205,10 @@ export function useRiskVelocity(tenantId: string | null, weeks = 12) {
   const { can } = usePermissions()
   const hasPerm = can(Permission.DashboardRead)
 
+  // Tenant-aware SWR key — see useMTTRMetrics rationale.
   return useSWR<RiskVelocityPoint[]>(
-    tenantId && hasPerm ? `/api/v1/dashboard/velocity?weeks=${weeks}` : null,
-    get,
+    tenantId && hasPerm ? ([`/api/v1/dashboard/velocity?weeks=${weeks}`, tenantId] as const) : null,
+    ([url]) => get<RiskVelocityPoint[]>(url),
     { revalidateOnFocus: false, dedupingInterval: 30000 }
   )
 }

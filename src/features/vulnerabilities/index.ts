@@ -1,5 +1,6 @@
 export * from './types'
 export * from './api'
+export { ActiveCVEsTab } from './components/active-cves-tab'
 export { VulnerabilityCatalogTab } from './components/vulnerability-catalog-tab'
 export { VulnerabilityCatalogTable } from './components/vulnerability-catalog-table'
 export { VulnerabilityDetailSheet } from './components/vulnerability-detail-sheet'
