@@ -316,19 +316,52 @@ export const sidebarData: SidebarData = {
           ],
         },
         // ----------------------------------------
-        // EXPOSURES (Non-CVE security issues)
+        // EXPOSURES (CVEs + non-CVE security issues)
         // ----------------------------------------
+        // Note: route guard at `/exposures/**` checks the `findings` module.
+        // Backend keeps a separate `exposures` module record (migration 000004)
+        // but no route enforces it, so binding sidebar to it caused a divergence.
         {
           title: 'Exposures',
-          url: '/exposures',
           icon: AlertTriangle,
-          permission: Permission.FindingsRead,
-          // Aligns with route guard at `/exposures/**` which checks the
-          // `findings` module. Backend keeps a separate `exposures`
-          // module record (migration 000004) but no route enforces it,
-          // so binding sidebar to it caused a divergence: sidebar would
-          // hide while the route stayed reachable, or vice-versa.
+          // Group is visible if user has EITHER findings:read OR vulnerabilities:read.
+          // Sub-items self-gate by their own permission.
+          permission: [Permission.FindingsRead, Permission.VulnerabilitiesRead],
           module: 'findings',
+          items: [
+            {
+              title: 'Overview',
+              url: '/exposures',
+              icon: AlertTriangle,
+            },
+            {
+              // The CTEM "Active CVEs" view lives at /exposures/vulnerabilities.
+              // It is the default tab — distinct from /exposures (event-style
+              // exposures) and from the global CVE catalog browser.
+              title: 'Vulnerabilities',
+              url: '/exposures/vulnerabilities',
+              icon: ShieldAlert,
+              permission: Permission.VulnerabilitiesRead,
+            },
+            {
+              title: 'Misconfigurations',
+              url: '/exposures/misconfigurations',
+              icon: Settings2,
+              permission: Permission.FindingsRead,
+            },
+            {
+              title: 'Secrets',
+              url: '/exposures/secrets',
+              icon: KeyRound,
+              permission: Permission.FindingsRead,
+            },
+            {
+              title: 'Code',
+              url: '/exposures/code',
+              icon: FileCode2,
+              permission: Permission.FindingsRead,
+            },
+          ],
         },
         // ----------------------------------------
         // CREDENTIAL LEAKS

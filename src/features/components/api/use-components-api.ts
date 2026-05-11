@@ -16,8 +16,10 @@ import { useTenant } from '@/context/tenant-provider'
 import { usePermissions, Permission } from '@/lib/permissions'
 import type {
   ApiComponent,
+  ApiComponentAssetUsageListResponse,
   ApiComponentListResponse,
   ApiComponentStats,
+  ApiComponentVulnerabilityListResponse,
   ApiEcosystemStats,
   ApiVulnerableComponent,
   ApiLicenseStats,
@@ -184,6 +186,78 @@ export function useAssetComponentsApi(
   const key = shouldFetch ? buildAssetComponentsEndpoint(assetId, page, perPage) : null
 
   return useSWR<ApiComponentListResponse>(key, fetchComponents, { ...defaultConfig, ...config })
+}
+
+/**
+ * Fetch the assets in the tenant that use a given global component
+ * (blast-radius reverse lookup). Backed by GET /api/v1/components/{id}/assets.
+ * Only fetches if user has components:read permission.
+ *
+ * SWR cache key includes tenant.id to prevent cross-tenant cache leaks
+ * when the user switches tenants (component IDs are global so the URL
+ * alone would collide).
+ */
+export function useComponentAssetsApi(
+  componentId: string | null,
+  page?: number,
+  perPage?: number,
+  options?: { atRiskOnly?: boolean },
+  config?: SWRConfiguration
+) {
+  const { currentTenant } = useTenant()
+  const { can } = usePermissions()
+  const canReadComponents = can(Permission.ComponentsRead)
+
+  const shouldFetch = currentTenant && componentId && canReadComponents
+
+  const params = new URLSearchParams()
+  if (options?.atRiskOnly) params.set('at_risk_only', 'true')
+  if (page) params.set('page', String(page))
+  if (perPage) params.set('per_page', String(perPage))
+  const qs = params.toString()
+  const url = shouldFetch ? `/api/v1/components/${componentId}/assets${qs ? `?${qs}` : ''}` : null
+  const key = url && currentTenant ? ([url, currentTenant.id] as const) : null
+
+  return useSWR<ApiComponentAssetUsageListResponse>(
+    key,
+    ([url]) => get<ApiComponentAssetUsageListResponse>(url),
+    { ...defaultConfig, ...config }
+  )
+}
+
+/**
+ * Fetch the CVEs that affect a given global component within the current tenant
+ * (forward lookup). Backed by GET /api/v1/components/{id}/vulnerabilities.
+ * One row per CVE — affected_assets_count is rolled up.
+ *
+ * SWR cache key includes tenant.id to prevent cross-tenant cache leaks.
+ */
+export function useComponentVulnsApi(
+  componentId: string | null,
+  options?: { includeResolved?: boolean; page?: number; perPage?: number },
+  config?: SWRConfiguration
+) {
+  const { currentTenant } = useTenant()
+  const { can } = usePermissions()
+  const canReadComponents = can(Permission.ComponentsRead)
+
+  const shouldFetch = currentTenant && componentId && canReadComponents
+
+  const params = new URLSearchParams()
+  if (options?.includeResolved) params.set('include_resolved', 'true')
+  if (options?.page) params.set('page', String(options.page))
+  if (options?.perPage) params.set('per_page', String(options.perPage))
+  const qs = params.toString()
+  const url = shouldFetch
+    ? `/api/v1/components/${componentId}/vulnerabilities${qs ? `?${qs}` : ''}`
+    : null
+  const key = url && currentTenant ? ([url, currentTenant.id] as const) : null
+
+  return useSWR<ApiComponentVulnerabilityListResponse>(
+    key,
+    ([url]) => get<ApiComponentVulnerabilityListResponse>(url),
+    { ...defaultConfig, ...config }
+  )
 }
 
 /**

@@ -23,8 +23,8 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Bug, AlertTriangle, Clock, Shield, LayoutGrid, Database } from 'lucide-react'
-import { VulnerabilityCatalogTab } from '@/features/vulnerabilities'
+import { Bug, AlertTriangle, Clock, Shield, LayoutGrid, Database, ShieldAlert } from 'lucide-react'
+import { ActiveCVEsTab, VulnerabilityCatalogTab } from '@/features/vulnerabilities'
 import { usePermissions, Permission } from '@/lib/permissions'
 
 const SEVERITY_COLORS: Record<string, string> = {
@@ -322,13 +322,16 @@ function OverviewTab() {
 export default function VulnerabilitiesPage() {
   const { can } = usePermissions()
   const canReadCatalog = can(Permission.VulnerabilitiesRead)
+  // Overview is the dashboard landing — visible to everyone with findings:read,
+  // serves as the page's "home" view. Active CVEs and CVE Catalog are deeper
+  // exploration tabs to its right.
   const [tab, setTab] = React.useState<string>('overview')
 
   return (
     <Main>
       <PageHeader
         title="Vulnerability Exposures"
-        description="Track discovered vulnerabilities and browse the global CVE catalog"
+        description="Dashboard overview, CVEs currently impacting your assets, and the global CVE catalog"
         className="mb-6"
       />
 
@@ -338,6 +341,12 @@ export default function VulnerabilitiesPage() {
             <LayoutGrid className="h-4 w-4" />
             Overview
           </TabsTrigger>
+          {canReadCatalog && (
+            <TabsTrigger value="active" className="gap-2">
+              <ShieldAlert className="h-4 w-4" />
+              Active CVEs
+            </TabsTrigger>
+          )}
           {canReadCatalog && (
             <TabsTrigger value="catalog" className="gap-2">
               <Database className="h-4 w-4" />
@@ -349,6 +358,12 @@ export default function VulnerabilitiesPage() {
         <TabsContent value="overview" className="mt-0">
           <OverviewTab />
         </TabsContent>
+
+        {canReadCatalog && (
+          <TabsContent value="active" className="mt-0">
+            <ActiveCVEsTab />
+          </TabsContent>
+        )}
 
         {canReadCatalog && (
           <TabsContent value="catalog" className="mt-0">
