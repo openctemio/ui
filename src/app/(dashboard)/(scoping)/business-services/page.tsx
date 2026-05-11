@@ -129,7 +129,7 @@ const emptyForm: FormState = {
 }
 
 export default function BusinessServicesPage() {
-  const { data, mutate, isLoading } = useSWR<ListResponse>(
+  const { data, mutate, isLoading, error } = useSWR<ListResponse>(
     '/api/v1/business-services',
     (url: string) => get<ListResponse>(url)
   )
@@ -327,6 +327,28 @@ export default function BusinessServicesPage() {
                 <TableRow>
                   <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                     Loading...
+                  </TableCell>
+                </TableRow>
+              ) : error ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="py-8">
+                    <div className="mx-auto flex max-w-md flex-col items-center gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-4 text-center">
+                      <p className="text-sm font-medium text-destructive">
+                        Failed to load business services
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {error instanceof Error ? error.message : 'Unknown error'}
+                      </p>
+                      <button
+                        type="button"
+                        className="mt-1 text-xs text-primary hover:underline"
+                        onClick={() => {
+                          void mutate()
+                        }}
+                      >
+                        Retry
+                      </button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ) : services.length === 0 ? (

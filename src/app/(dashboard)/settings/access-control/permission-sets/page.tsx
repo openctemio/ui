@@ -450,7 +450,7 @@ export default function PermissionSetsPage() {
                   onValueChange={(v) => setTypeFilter(v as FilterType)}
                   className="mb-4"
                 >
-                  <TabsList>
+                  <TabsList className="w-max max-w-full overflow-x-auto">
                     {typeFilters.map((filter) => (
                       <TabsTrigger key={filter.value} value={filter.value} className="gap-1.5">
                         {filter.icon}
