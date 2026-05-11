@@ -14,8 +14,8 @@ export * from './hooks'
 // Schemas
 export * from './schemas'
 
-// Components
-export * from './components'
+// Components — folder removed (DX-8): all repository UI now consumed via
+// the unified asset feature.
 
 // Lib (mock data, utilities)
 export * from './lib'
