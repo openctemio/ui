@@ -80,8 +80,12 @@ function buildAssetGroupsEndpoint(filters?: AssetGroupApiFilters): string {
     params.set('max_risk_score', String(filters.max_risk_score))
   if (filters.page) params.set('page', String(filters.page))
   if (filters.per_page) params.set('per_page', String(filters.per_page))
-  if (filters.sort_by) params.set('sort_by', filters.sort_by)
-  if (filters.sort_order) params.set('sort_order', filters.sort_order)
+  // Backend expects a single `sort` param: `field` for ascending, `-field`
+  // for descending (see pagination.SortOption.Parse). It ignores sort_by /
+  // sort_order, so those were silently dropped before.
+  if (filters.sort_by) {
+    params.set('sort', `${filters.sort_order === 'desc' ? '-' : ''}${filters.sort_by}`)
+  }
 
   if (filters.environments?.length) params.set('environments', filters.environments.join(','))
   if (filters.criticalities?.length) params.set('criticalities', filters.criticalities.join(','))
@@ -364,9 +368,11 @@ export function useBulkDeleteAssetGroupsApi() {
   const { currentTenant } = useTenant()
 
   return useSWRMutation(
-    currentTenant ? `${BASE_URL}/bulk/delete` : null,
+    // Backend route is DELETE /asset-groups/bulk (with body), not POST
+    // /asset-groups/bulk/delete (that pattern is only for scope endpoints).
+    currentTenant ? `${BASE_URL}/bulk` : null,
     async (url: string, { arg }: { arg: BulkDeleteGroupsApiInput }) => {
-      return post<BulkOperationResponse>(url, arg)
+      return del<BulkOperationResponse>(url, arg)
     }
   )
 }

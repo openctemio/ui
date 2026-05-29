@@ -447,6 +447,10 @@ export async function createAsset(input: CreateAssetInput): Promise<Asset> {
     exposure: input.exposure || 'unknown',
     owner_ref: input.ownerRef,
     tags: input.tags,
+    // Per-type fields collected by the form live in `metadata`; the backend
+    // stores them under `properties`. Without this they were silently dropped.
+    properties:
+      input.metadata && Object.keys(input.metadata).length > 0 ? input.metadata : undefined,
   })
   return transformAsset(response)
 }
