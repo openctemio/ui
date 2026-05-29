@@ -213,6 +213,17 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
     return pf
   })
 
+  // Server-side sort. The URL is the source of truth (kept in sync with the
+  // table's sorting state below); fall back to the configured default. The
+  // backend expects `field` (asc) / `-field` (desc) and ignores unknown
+  // fields, so this degrades gracefully. Without it, clicking a column header
+  // only reordered the current page instead of the whole dataset.
+  const sortFieldParam = searchParams.get('sort') || config.defaultSort?.field
+  const sortDesc = searchParams.get('sort')
+    ? searchParams.get('dir') === 'desc'
+    : config.defaultSort?.direction === 'desc'
+  const sortParam = sortFieldParam ? `${sortDesc ? '-' : ''}${sortFieldParam}` : undefined
+
   // Data fetching with server-side pagination, search, tag, and properties filter.
   const { assets, total, totalPages, isLoading, mutate } = useAssets({
     types: typeFilter,
@@ -222,6 +233,7 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
     pageSize,
     search: debouncedSearch || undefined,
     tags: tagFilters.length > 0 ? tagFilters : undefined,
+    sort: sortParam,
   })
 
   // Type-wide stats (NOT filter-aware). These power the top stat cards and

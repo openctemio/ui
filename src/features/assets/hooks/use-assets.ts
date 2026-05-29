@@ -447,6 +447,10 @@ export async function createAsset(input: CreateAssetInput): Promise<Asset> {
     exposure: input.exposure || 'unknown',
     owner_ref: input.ownerRef,
     tags: input.tags,
+    // Per-type fields collected by the form live in `metadata`; the backend
+    // stores them under `properties`. Without this they were silently dropped.
+    properties:
+      input.metadata && Object.keys(input.metadata).length > 0 ? input.metadata : undefined,
   })
   return transformAsset(response)
 }
@@ -463,6 +467,10 @@ export async function updateAsset(assetId: string, input: UpdateAssetInput): Pro
     exposure: input.exposure,
     owner_ref: input.ownerRef,
     tags: input.tags,
+    // Per-type form fields live in `metadata`; backend merges them into
+    // `properties` (preserving keys like is_crown_jewel). Previously dropped.
+    properties:
+      input.metadata && Object.keys(input.metadata).length > 0 ? input.metadata : undefined,
   })
   return transformAsset(response)
 }

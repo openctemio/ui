@@ -66,9 +66,11 @@ export interface TokenResponse {
   user: LocalUser
 }
 
-// Login response from backend (no access_token, only refresh_token + tenants)
+// Login response from backend (no access_token, only tenants).
+// S-3: refresh_token is delivered via Set-Cookie, not the JSON body — it is
+// kept here as optional only for backward compatibility with older backends.
 export interface LoginBackendResponse {
-  refresh_token: string
+  refresh_token?: string
   token_type: string
   expires_in: number
   user: {
@@ -133,7 +135,56 @@ export interface LoginResult {
 // NOTE: Permissions are NOT stored in cookies anymore (too large, > 4KB limit)
 // Frontend fetches permissions via /api/v1/me/permissions API instead
 
+/**
+ * Extract the refresh-token value from a backend response's `Set-Cookie`
+ * header.
+ *
+ * The S-3 hardening returns refresh tokens via `Set-Cookie` ONLY (never in the
+ * JSON body). Because the UI talks to the backend server-to-server, that
+ * Set-Cookie never reaches the browser on its own — the server action must
+ * read it here, then (a) re-set it as a browser-scoped cookie and (b) forward
+ * the value into the follow-up token-exchange / refresh calls.
+ */
+function extractRefreshFromSetCookie(response: Response): string | undefined {
+  const cookieName = env.auth.refreshCookieName
+  const headers = response.headers as Headers & { getSetCookie?: () => string[] }
+  const setCookies =
+    typeof headers.getSetCookie === 'function'
+      ? headers.getSetCookie()
+      : // Fallback: a single comma-joined header. Splitting on every comma is
+        // unsafe (Expires dates contain commas), so only use it when there is
+        // no comma-separated date — good enough for the single refresh cookie.
+        (headers.get('set-cookie')?.split(/,(?=[^;]+?=)/) ?? [])
+
+  for (const raw of setCookies) {
+    const firstPair = raw.split(';', 1)[0] ?? ''
+    const eq = firstPair.indexOf('=')
+    if (eq === -1) continue
+    if (firstPair.slice(0, eq).trim() !== cookieName) continue
+    const value = firstPair.slice(eq + 1).trim()
+    if (!value) return undefined // cleared cookie (logout/expiry)
+    try {
+      return decodeURIComponent(value)
+    } catch {
+      return value
+    }
+  }
+  return undefined
+}
+
 async function backendFetch<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+  const { data } = await backendFetchWithMeta<T>(endpoint, options)
+  return data
+}
+
+/**
+ * Like {@link backendFetch} but also returns the rotated refresh token read
+ * from the response `Set-Cookie` header (S-3: refresh tokens are cookie-only).
+ */
+async function backendFetchWithMeta<T>(
+  endpoint: string,
+  options: RequestInit = {}
+): Promise<{ data: T; refreshToken?: string }> {
   const url = `${env.api.url}${endpoint}`
 
   const response = await fetch(url, {
@@ -149,7 +200,9 @@ async function backendFetch<T>(endpoint: string, options: RequestInit = {}): Pro
     throw new Error(errorData.message || errorData.error || `HTTP ${response.status}`)
   }
 
-  return response.json()
+  const refreshToken = extractRefreshFromSetCookie(response)
+  const data = (await response.json()) as T
+  return { data, refreshToken }
 }
 
 // ============================================
@@ -223,17 +276,27 @@ export async function registerAction(
  */
 export async function loginAction(input: LoginInput): Promise<LoginResult> {
   try {
-    // Step 1: Login - get refresh token and tenant list
-    const loginData = await backendFetch<LoginBackendResponse>(authEndpoints.login(), {
-      method: 'POST',
-      body: JSON.stringify({
-        email: input.email,
-        password: input.password,
-      }),
-    })
+    // Step 1: Login - get refresh token and tenant list.
+    //
+    // S-3: the backend returns the refresh token via Set-Cookie only (not in
+    // the JSON body), so read it from the response header. Fall back to the
+    // body for backward compatibility with older backends.
+    const { data: loginData, refreshToken: loginRefreshFromCookie } =
+      await backendFetchWithMeta<LoginBackendResponse>(authEndpoints.login(), {
+        method: 'POST',
+        body: JSON.stringify({
+          email: input.email,
+          password: input.password,
+        }),
+      })
+
+    const refreshToken = loginRefreshFromCookie || loginData.refresh_token
+    if (!refreshToken) {
+      throw new Error('Login response did not include a refresh token')
+    }
 
     // Store refresh token in httpOnly cookie
-    await setServerCookie(env.auth.refreshCookieName, loginData.refresh_token, {
+    await setServerCookie(env.auth.refreshCookieName, refreshToken, {
       httpOnly: true,
       secure: process.env.SECURE_COOKIES === 'true',
       sameSite: 'lax',
@@ -340,13 +403,14 @@ export async function loginAction(input: LoginInput): Promise<LoginResult> {
     devLog.log('[Login] Single tenant found, auto-selecting:', firstTenant.id, firstTenant.slug)
 
     try {
-      const tokenData = await backendFetch<TokenExchangeResponse>(authEndpoints.token(), {
-        method: 'POST',
-        body: JSON.stringify({
-          refresh_token: loginData.refresh_token,
-          tenant_id: firstTenant.id,
-        }),
-      })
+      const { data: tokenData, refreshToken: rotatedRefresh } =
+        await backendFetchWithMeta<TokenExchangeResponse>(authEndpoints.token(), {
+          method: 'POST',
+          body: JSON.stringify({
+            refresh_token: refreshToken,
+            tenant_id: firstTenant.id,
+          }),
+        })
       devLog.log('[Login] Token exchange successful, got access_token:', !!tokenData.access_token)
 
       // Store access token in httpOnly cookie
@@ -365,9 +429,12 @@ export async function loginAction(input: LoginInput): Promise<LoginResult> {
       })
       devLog.log('[Login] Access token cookie SET successfully:', env.auth.cookieName)
 
-      // Update refresh token if rotated
-      if (tokenData.refresh_token) {
-        await setServerCookie(env.auth.refreshCookieName, tokenData.refresh_token, {
+      // Update refresh token if rotated. ExchangeToken rotates the refresh
+      // token and returns the new one via Set-Cookie (S-3); fall back to the
+      // body for older backends.
+      const newRefresh = rotatedRefresh || tokenData.refresh_token
+      if (newRefresh) {
+        await setServerCookie(env.auth.refreshCookieName, newRefresh, {
           httpOnly: true,
           secure: process.env.SECURE_COOKIES === 'true',
           sameSite: 'lax',
@@ -449,13 +516,14 @@ export async function selectTenantAction(tenantId: string): Promise<LoginResult>
 
     devLog.log('[SelectTenant] Exchanging token for tenant:', tenantId)
 
-    const tokenData = await backendFetch<TokenExchangeResponse>(authEndpoints.token(), {
-      method: 'POST',
-      body: JSON.stringify({
-        refresh_token: refreshToken,
-        tenant_id: tenantId,
-      }),
-    })
+    const { data: tokenData, refreshToken: rotatedRefresh } =
+      await backendFetchWithMeta<TokenExchangeResponse>(authEndpoints.token(), {
+        method: 'POST',
+        body: JSON.stringify({
+          refresh_token: refreshToken,
+          tenant_id: tenantId,
+        }),
+      })
     devLog.log('[SelectTenant] Token exchange successful')
     devLog.log('[SelectTenant] access_token length:', tokenData.access_token?.length)
     devLog.log('[SelectTenant] expires_in:', tokenData.expires_in)
@@ -469,9 +537,10 @@ export async function selectTenantAction(tenantId: string): Promise<LoginResult>
       path: '/',
     })
 
-    // Update refresh token if rotated
-    if (tokenData.refresh_token) {
-      await setServerCookie(env.auth.refreshCookieName, tokenData.refresh_token, {
+    // Update refresh token if rotated (S-3: via Set-Cookie; body is fallback).
+    const newRefresh = rotatedRefresh || tokenData.refresh_token
+    if (newRefresh) {
+      await setServerCookie(env.auth.refreshCookieName, newRefresh, {
         httpOnly: true,
         secure: process.env.SECURE_COOKIES === 'true',
         sameSite: 'lax',
@@ -534,12 +603,15 @@ export async function refreshLocalTokenAction(): Promise<RefreshTokenResult> {
       }
     }
 
-    const data = await backendFetch<TokenResponse>(authEndpoints.refresh(), {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${refreshToken}`,
-      },
-    })
+    const { data, refreshToken: rotatedRefresh } = await backendFetchWithMeta<TokenResponse>(
+      authEndpoints.refresh(),
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${refreshToken}`,
+        },
+      }
+    )
 
     // Update cookies with new tokens
     await setServerCookie(env.auth.cookieName, data.access_token, {
@@ -550,8 +622,10 @@ export async function refreshLocalTokenAction(): Promise<RefreshTokenResult> {
       path: '/',
     })
 
-    if (data.refresh_token) {
-      await setServerCookie(env.auth.refreshCookieName, data.refresh_token, {
+    // Persist the rotated refresh token (S-3: via Set-Cookie; body is fallback).
+    const newRefresh = rotatedRefresh || data.refresh_token
+    if (newRefresh) {
+      await setServerCookie(env.auth.refreshCookieName, newRefresh, {
         httpOnly: true,
         secure: process.env.SECURE_COOKIES === 'true',
         sameSite: 'lax',
