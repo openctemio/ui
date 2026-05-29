@@ -467,6 +467,10 @@ export async function updateAsset(assetId: string, input: UpdateAssetInput): Pro
     exposure: input.exposure,
     owner_ref: input.ownerRef,
     tags: input.tags,
+    // Per-type form fields live in `metadata`; backend merges them into
+    // `properties` (preserving keys like is_crown_jewel). Previously dropped.
+    properties:
+      input.metadata && Object.keys(input.metadata).length > 0 ? input.metadata : undefined,
   })
   return transformAsset(response)
 }
