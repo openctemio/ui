@@ -118,7 +118,9 @@ export function AssetFormDialogShared({
       ...new Set(
         raw
           .split(',')
-          .map((s) => s.trim().slice(0, 100))
+          // Backend caps each tag at 50 chars (CreateAssetRequest dive,max=50);
+          // truncate to match so valid-looking input isn't rejected with a 400.
+          .map((s) => s.trim().slice(0, 50))
           .filter(Boolean)
       ),
     ]
