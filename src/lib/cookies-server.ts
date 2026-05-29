@@ -60,32 +60,23 @@ export async function setServerCookie(
   value: string,
   options: ServerCookieOptions = {}
 ): Promise<void> {
-  const cookieStore = await cookies()
-
-  const finalOptions = {
-    ...SECURE_DEFAULTS,
-    ...options,
+  // Defensive guard: a missing value usually means an upstream API response
+  // omitted a field the caller expected (e.g. refresh tokens are now returned
+  // via Set-Cookie only, never in the JSON body). Passing undefined here used
+  // to crash the whole server action with an opaque `Cannot read properties of
+  // undefined (reading 'length')`. Fail loudly with an actionable message so
+  // the real contract bug surfaces instead.
+  if (typeof value !== 'string' || value.length === 0) {
+    throw new Error(
+      `setServerCookie: refusing to set cookie "${name}" with an empty/undefined value`
+    )
   }
 
-  // Debug: Log cookie setting
-  console.log(
-    '[setServerCookie] Setting cookie:',
-    name,
-    'value length:',
-    value.length,
-    'options:',
-    JSON.stringify(finalOptions)
-  )
-
-  cookieStore.set(name, value, finalOptions)
-
-  // Verify the cookie was set
-  const verifyValue = cookieStore.get(name)?.value
-  console.log(
-    '[setServerCookie] Verify cookie after set:',
-    name,
-    verifyValue ? `set (length: ${verifyValue.length})` : 'NOT SET'
-  )
+  const cookieStore = await cookies()
+  cookieStore.set(name, value, {
+    ...SECURE_DEFAULTS,
+    ...options,
+  })
 }
 
 /**
