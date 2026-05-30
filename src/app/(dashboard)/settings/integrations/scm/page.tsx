@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo, useCallback } from 'react'
+import { csrfFetch } from '@/lib/api/client'
 import { useRouter } from 'next/navigation'
 import { Main } from '@/components/layout'
 import { PageHeader } from '@/features/shared'
@@ -142,7 +143,7 @@ export default function SCMConnectionsPage() {
     async (connection: SCMConnection) => {
       setActionInProgress(connection.id)
       try {
-        const response = await fetch(`/api/v1/integrations/${connection.id}/test`, {
+        const response = await csrfFetch(`/api/v1/integrations/${connection.id}/test`, {
           method: 'POST',
         })
         if (!response.ok) throw new Error('Test failed')
@@ -166,7 +167,7 @@ export default function SCMConnectionsPage() {
     if (!selectedConnection) return
     setActionInProgress(selectedConnection.id)
     try {
-      const response = await fetch(`/api/v1/integrations/${selectedConnection.id}`, {
+      const response = await csrfFetch(`/api/v1/integrations/${selectedConnection.id}`, {
         method: 'DELETE',
       })
       if (!response.ok) throw new Error('Delete failed')

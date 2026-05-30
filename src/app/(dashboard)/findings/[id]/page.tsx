@@ -1,6 +1,7 @@
 'use client'
 
 import { useParams, useRouter } from 'next/navigation'
+import { csrfFetch } from '@/lib/api/client'
 import { Main } from '@/components/layout'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -504,7 +505,7 @@ export default function FindingDetailPage() {
 
   const handleEditComment = async (commentId: string, content: string) => {
     try {
-      const response = await fetch(`/api/v1/findings/${id}/comments/${commentId}`, {
+      const response = await csrfFetch(`/api/v1/findings/${id}/comments/${commentId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -521,7 +522,7 @@ export default function FindingDetailPage() {
 
   const handleDeleteComment = async (commentId: string) => {
     try {
-      const response = await fetch(`/api/v1/findings/${id}/comments/${commentId}`, {
+      const response = await csrfFetch(`/api/v1/findings/${id}/comments/${commentId}`, {
         method: 'DELETE',
         credentials: 'include',
       })

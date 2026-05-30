@@ -73,7 +73,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { toast } from 'sonner'
 import { Can, Permission } from '@/lib/permissions'
-import { put } from '@/lib/api/client'
+import { put, csrfFetch } from '@/lib/api/client'
 import { getErrorMessage } from '@/lib/api/error-handler'
 import { workflowEndpoints } from '@/lib/api/endpoints'
 import {
@@ -618,7 +618,7 @@ export default function WorkflowsPage() {
 
   const handleToggleWorkflow = useCallback(async (workflow: Workflow, enabled: boolean) => {
     try {
-      const response = await fetch(`/api/v1/workflows/${workflow.id}`, {
+      const response = await csrfFetch(`/api/v1/workflows/${workflow.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ is_active: enabled }),
