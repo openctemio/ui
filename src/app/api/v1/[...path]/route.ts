@@ -127,13 +127,18 @@ async function tryRefreshAccessToken(
  * Set token cookies on a response
  */
 function setTokenCookies(response: NextResponse, tokenData: RefreshResult): void {
-  const isProd = process.env.NODE_ENV === 'production'
+  // Use the same SECURE_COOKIES knob as every other cookie writer (auth
+  // refresh/switch-team/SSO routes, cookies-server.ts). Previously this
+  // proxy keyed Secure off NODE_ENV instead, so the SAME cookie names got a
+  // different Secure attribute depending on which path last wrote them —
+  // a consistency bug that could intermittently drop cookies over HTTP.
+  const secure = process.env.SECURE_COOKIES === 'true'
   devLog.log('[Proxy] Setting token cookies, expires_in:', tokenData.expiresIn)
 
   // Set new access token cookie
   response.cookies.set(ACCESS_TOKEN_COOKIE, tokenData.accessToken, {
     httpOnly: true,
-    secure: isProd,
+    secure,
     sameSite: 'lax',
     maxAge: tokenData.expiresIn,
     path: '/',
@@ -143,7 +148,7 @@ function setTokenCookies(response: NextResponse, tokenData: RefreshResult): void
   if (tokenData.refreshToken) {
     response.cookies.set(REFRESH_TOKEN_COOKIE, tokenData.refreshToken, {
       httpOnly: true,
-      secure: isProd,
+      secure,
       sameSite: 'lax',
       maxAge: 7 * 24 * 60 * 60, // 7 days
       path: '/',

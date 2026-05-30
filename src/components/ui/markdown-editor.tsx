@@ -39,6 +39,10 @@ export function MarkdownEditor({
         textareaProps={{
           placeholder,
         }}
+        // Sanitise the editor's own live/preview pane too — without this,
+        // rehypeRewrite only runs in the standalone MarkdownPreview and the
+        // editor preview ('live'/'preview' modes) would render raw HTML.
+        previewOptions={{ rehypeRewrite: sanitiseNode }}
         hideToolbar={hideToolbar}
         visibleDragbar={false}
       />
