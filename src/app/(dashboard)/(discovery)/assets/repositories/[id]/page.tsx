@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo, useCallback } from 'react'
+import { csrfFetch } from '@/lib/api/client'
 import { useFindingsApi } from '@/features/findings/api/use-findings-api'
 import type { ApiFinding } from '@/features/findings/api/finding-api.types'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
@@ -2341,7 +2342,7 @@ export default function RepositoryDetailPage() {
     if (!repository) return
     setIsSyncing(true)
     try {
-      const response = await fetch(`/api/v1/assets/${repository.id}/sync`, {
+      const response = await csrfFetch(`/api/v1/assets/${repository.id}/sync`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       })
@@ -2361,7 +2362,7 @@ export default function RepositoryDetailPage() {
     if (!repository) return
     setIsScanning(true)
     try {
-      const response = await fetch(`/api/v1/assets/${repository.id}/scan`, {
+      const response = await csrfFetch(`/api/v1/assets/${repository.id}/scan`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ scanMode: 'full' }),
@@ -2389,7 +2390,7 @@ export default function RepositoryDetailPage() {
     }
     setIsDeleting(true)
     try {
-      const response = await fetch(`/api/v1/assets/${repository.id}`, {
+      const response = await csrfFetch(`/api/v1/assets/${repository.id}`, {
         method: 'DELETE',
       })
       if (!response.ok) {

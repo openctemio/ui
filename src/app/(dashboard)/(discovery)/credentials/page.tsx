@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import { csrfFetch } from '@/lib/api/client'
 import {
   ColumnDef,
   flexRender,
@@ -537,7 +538,7 @@ export default function CredentialsPage() {
 
   const handleMarkResolved = async (credential: Asset) => {
     try {
-      const response = await fetch(`/api/v1/credentials/${credential.id}/resolve`, {
+      const response = await csrfFetch(`/api/v1/credentials/${credential.id}/resolve`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

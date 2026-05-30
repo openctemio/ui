@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { csrfFetch } from '@/lib/api/client'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -336,7 +337,7 @@ export function EditNotificationDialog({
         }
       }
 
-      const response = await fetch(`/api/v1/integrations/${integration.id}/notification`, {
+      const response = await csrfFetch(`/api/v1/integrations/${integration.id}/notification`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
