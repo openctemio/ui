@@ -1,6 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
+import { csrfFetch } from '@/lib/api/client'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -236,7 +237,7 @@ export function SCMConnectionsBanner() {
 
 async function triggerScan(assetId: string, name: string) {
   try {
-    const response = await fetch(`/api/v1/assets/${assetId}/scan`, {
+    const response = await csrfFetch(`/api/v1/assets/${assetId}/scan`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
     })
@@ -253,7 +254,7 @@ async function triggerScan(assetId: string, name: string) {
 
 async function syncRepository(assetId: string, name: string) {
   try {
-    const response = await fetch(`/api/v1/assets/${assetId}/sync`, {
+    const response = await csrfFetch(`/api/v1/assets/${assetId}/sync`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
     })
@@ -484,7 +485,7 @@ export const repositoriesConfig: AssetPageConfig = {
       onClick: async (assets) => {
         const results = await Promise.allSettled(
           assets.map((a) =>
-            fetch(`/api/v1/assets/${a.id}/scan`, {
+            csrfFetch(`/api/v1/assets/${a.id}/scan`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
             })
@@ -520,7 +521,7 @@ export const repositoriesConfig: AssetPageConfig = {
         }
         const results = await Promise.allSettled(
           syncable.map((a) =>
-            fetch(`/api/v1/assets/${a.id}/sync`, {
+            csrfFetch(`/api/v1/assets/${a.id}/sync`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
             })

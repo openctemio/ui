@@ -80,7 +80,7 @@ import type { Severity } from '@/features/shared/types'
 import { toast } from 'sonner'
 import { copyToClipboard } from '@/lib/clipboard'
 import { getErrorMessage } from '@/lib/api/error-handler'
-import { patch, post, del } from '@/lib/api/client'
+import { patch, post, del, csrfFetch } from '@/lib/api/client'
 import { usePermissions } from '@/context/permission-provider'
 
 // ============================================
@@ -463,7 +463,7 @@ function FindingsContent() {
     if (!userId?.trim()) return
 
     try {
-      const response = await fetch('/api/v1/findings/bulk/assign', {
+      const response = await csrfFetch('/api/v1/findings/bulk/assign', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -484,7 +484,7 @@ function FindingsContent() {
     if (findingIds.length === 0) return
 
     try {
-      const response = await fetch('/api/v1/findings/bulk/status', {
+      const response = await csrfFetch('/api/v1/findings/bulk/status', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -563,7 +563,7 @@ function FindingsContent() {
 
     setIsDeleting(true)
     try {
-      const response = await fetch(`/api/v1/findings/${findingToDelete.id}`, {
+      const response = await csrfFetch(`/api/v1/findings/${findingToDelete.id}`, {
         method: 'DELETE',
         credentials: 'include',
       })

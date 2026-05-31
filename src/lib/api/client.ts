@@ -41,6 +41,38 @@ function readCSRFToken(): string {
 }
 
 /**
+ * CSRF-aware drop-in replacement for `fetch`, for the handful of call sites
+ * that must keep raw-`Response` semantics (FormData uploads, `res.blob()`,
+ * `res.status === 429` handling, fire-and-forget) and so cannot use the
+ * higher-level {@link post}/{@link put}/{@link del} helpers (which throw on
+ * non-2xx).
+ *
+ * It mirrors the double-submit-cookie logic in {@link apiClient}: on a
+ * state-changing method it reads the JS-readable `csrf_token` cookie and
+ * attaches it as `X-CSRF-Token`, and always sends credentials so the proxy
+ * receives the auth + csrf cookies. Without the header the backend rejects
+ * the mutation with `403 csrf_token_missing_header`. GET/HEAD are passed
+ * through untouched. See api/internal/infra/http/middleware/csrf.go.
+ */
+export function csrfFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  const opts: RequestInit = { credentials: 'include', ...init }
+  const headers = new Headers(opts.headers)
+
+  if (!isServer() && !headers.has('X-CSRF-Token')) {
+    const method = (opts.method || 'GET').toUpperCase()
+    if (method === 'POST' || method === 'PUT' || method === 'PATCH' || method === 'DELETE') {
+      const csrfToken = readCSRFToken()
+      if (csrfToken) {
+        headers.set('X-CSRF-Token', csrfToken)
+      }
+    }
+  }
+
+  opts.headers = headers
+  return fetch(input, opts)
+}
+
+/**
  * Get API base URL
  *
  * - Client-side: Empty string (requests go to /api/v1/* which is proxied by Next.js)

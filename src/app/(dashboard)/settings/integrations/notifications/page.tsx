@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo, useCallback } from 'react'
+import { csrfFetch } from '@/lib/api/client'
 import { useRouter } from 'next/navigation'
 import { Main } from '@/components/layout'
 import { PageHeader } from '@/features/shared'
@@ -167,7 +168,7 @@ export default function NotificationIntegrationsPage() {
   const handleTestNotification = useCallback(async (integration: Integration) => {
     setActionInProgress(integration.id)
     try {
-      const response = await fetch(`/api/v1/integrations/${integration.id}/test-notification`, {
+      const response = await csrfFetch(`/api/v1/integrations/${integration.id}/test-notification`, {
         method: 'POST',
       })
 
@@ -197,7 +198,7 @@ export default function NotificationIntegrationsPage() {
     if (!selectedIntegration) return
     setActionInProgress(selectedIntegration.id)
     try {
-      const response = await fetch(`/api/v1/integrations/${selectedIntegration.id}`, {
+      const response = await csrfFetch(`/api/v1/integrations/${selectedIntegration.id}`, {
         method: 'DELETE',
       })
       if (!response.ok) throw new Error('Delete failed')

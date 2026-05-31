@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { csrfFetch } from '@/lib/api/client'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Loader2, Link2, CheckCircle, XCircle, Eye, EyeOff } from 'lucide-react'
@@ -114,7 +115,7 @@ export function AddConnectionDialog({ open, onOpenChange, onSuccess }: AddConnec
     setTestResult(null)
 
     try {
-      const response = await fetch('/api/v1/integrations/test-credentials', {
+      const response = await csrfFetch('/api/v1/integrations/test-credentials', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
