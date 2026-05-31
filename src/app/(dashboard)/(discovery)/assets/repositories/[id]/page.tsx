@@ -28,6 +28,16 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -637,7 +647,7 @@ function transformToRepositoryView(asset: ApiAssetResponse): RepositoryView {
   }
 }
 
-import { cn } from '@/lib/utils'
+import { cn, sanitizeExternalUrl } from '@/lib/utils'
 import { copyToClipboard } from '@/lib/clipboard'
 import { Can, Permission } from '@/lib/permissions'
 import { getErrorMessage } from '@/lib/api/error-handler'
@@ -2296,6 +2306,7 @@ export default function RepositoryDetailPage() {
   const [isSyncing, setIsSyncing] = useState(false)
   const [isScanning, setIsScanning] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
 
   // Fetch repository data from API
   const {
@@ -2381,13 +2392,7 @@ export default function RepositoryDetailPage() {
 
   const handleDelete = useCallback(async () => {
     if (!repository) return
-    if (
-      !confirm(
-        `Are you sure you want to delete "${repository.name}"? This action cannot be undone.`
-      )
-    ) {
-      return
-    }
+    setShowDeleteDialog(false)
     setIsDeleting(true)
     try {
       const response = await csrfFetch(`/api/v1/assets/${repository.id}`, {
@@ -2513,7 +2518,13 @@ export default function RepositoryDetailPage() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => window.open(repository.repository?.webUrl, '_blank')}
+                onClick={() =>
+                  window.open(
+                    sanitizeExternalUrl(repository.repository?.webUrl ?? ''),
+                    '_blank',
+                    'noopener,noreferrer'
+                  )
+                }
               >
                 <ExternalLink className="mr-2 h-4 w-4" />
                 Open in {SCM_PROVIDER_LABELS[repository.scm_provider]}
@@ -2558,13 +2569,37 @@ export default function RepositoryDetailPage() {
                   </DropdownMenuItem>
                   <Can permission={Permission.AssetsDelete}>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem className="text-red-500" onClick={handleDelete}>
+                    <DropdownMenuItem
+                      className="text-red-500"
+                      onClick={() => setShowDeleteDialog(true)}
+                    >
                       <Trash2 className="mr-2 h-4 w-4" />
                       Delete Repository
                     </DropdownMenuItem>
                   </Can>
                 </DropdownMenuContent>
               </DropdownMenu>
+
+              <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete repository?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will permanently delete &quot;{repository.name}&quot;. This action cannot
+                      be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleDelete}
+                      className="bg-red-500 text-white hover:bg-red-600"
+                    >
+                      Delete
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
           </div>
         </div>
