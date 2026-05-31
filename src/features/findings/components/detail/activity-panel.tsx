@@ -8,6 +8,16 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import {
   PlusCircle,
   MessageSquare,
   ArrowRightLeft,
@@ -87,6 +97,7 @@ export function ActivityPanel({
   const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set())
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null)
   const [editingContent, setEditingContent] = useState('')
+  const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null)
 
   // Character limit for comment truncation (display)
   const COMMENT_TRUNCATE_LENGTH = 200
@@ -449,11 +460,9 @@ export function ActivityPanel({
                       size="sm"
                       className="h-5 w-5 p-0 text-destructive hover:text-destructive"
                       onClick={() => {
-                        if (window.confirm('Delete this comment?')) {
-                          // Use comment_id from activity metadata (activity.id is the activity record, not the comment)
-                          const commentId = (activity.metadata?.comment_id as string) || activity.id
-                          onDeleteComment(commentId)
-                        }
+                        // Use comment_id from activity metadata (activity.id is the activity record, not the comment)
+                        const commentId = (activity.metadata?.comment_id as string) || activity.id
+                        setDeletingCommentId(commentId)
                       }}
                     >
                       <Trash2 className="h-3 w-3" />
@@ -658,6 +667,34 @@ export function ActivityPanel({
           </Button>
         </div>
       </div>
+
+      <AlertDialog
+        open={!!deletingCommentId}
+        onOpenChange={(open) => !open && setDeletingCommentId(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this comment?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the comment. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (deletingCommentId) {
+                  onDeleteComment?.(deletingCommentId)
+                }
+                setDeletingCommentId(null)
+              }}
+              className="bg-red-500 text-white hover:bg-red-600"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

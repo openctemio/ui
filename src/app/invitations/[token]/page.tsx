@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
+import { csrfFetch } from '@/lib/api/client'
 
 interface InvitationData {
   invitation: {
@@ -76,7 +77,7 @@ export default function InvitationPage() {
     startTransition(async () => {
       try {
         // First try with access token (for users with tenant)
-        const response = await fetch(`/api/v1/invitations/${token}/accept`, {
+        const response = await csrfFetch(`/api/v1/invitations/${token}/accept`, {
           method: 'POST',
           credentials: 'include',
         })
@@ -89,10 +90,13 @@ export default function InvitationPage() {
 
         // If 401, try with refresh token (for users without tenant)
         if (response.status === 401) {
-          const refreshResponse = await fetch(`/api/v1/invitations/${token}/accept-with-refresh`, {
-            method: 'POST',
-            credentials: 'include',
-          })
+          const refreshResponse = await csrfFetch(
+            `/api/v1/invitations/${token}/accept-with-refresh`,
+            {
+              method: 'POST',
+              credentials: 'include',
+            }
+          )
 
           if (refreshResponse.ok) {
             toast.success('You have joined the team!')
@@ -131,7 +135,7 @@ export default function InvitationPage() {
   function handleDecline() {
     startTransition(async () => {
       try {
-        const response = await fetch(`/api/v1/invitations/${token}/decline`, {
+        const response = await csrfFetch(`/api/v1/invitations/${token}/decline`, {
           method: 'POST',
         })
 

@@ -106,9 +106,41 @@ export const routePermissions: Record<string, RoutePermissionConfig> = {
     permission: Permission.AssetsRead,
     module: Module.AttackSurface,
   },
+  '/attack-surface/cloud': {
+    permission: Permission.AssetsRead,
+    module: Module.AttackSurface,
+  },
+  '/attack-surface/external': {
+    permission: Permission.AssetsRead,
+    module: Module.AttackSurface,
+  },
+  '/attack-surface/internal': {
+    permission: Permission.AssetsRead,
+    module: Module.AttackSurface,
+  },
   '/asset-groups': {
     permission: Permission.AssetGroupsRead,
     module: Module.Assets,
+  },
+  '/asset-groups/**': {
+    permission: Permission.AssetGroupsRead,
+    module: Module.Assets,
+  },
+  '/business-units': {
+    permission: Permission.ScopeRead,
+    module: Module.ScopeConfig,
+  },
+  '/business-units/**': {
+    permission: Permission.ScopeRead,
+    module: Module.ScopeConfig,
+  },
+  '/crown-jewels': {
+    permission: Permission.ScopeRead,
+    module: Module.ScopeConfig,
+  },
+  '/crown-jewels/**': {
+    permission: Permission.ScopeRead,
+    module: Module.ScopeConfig,
   },
   '/scope-config': {
     permission: Permission.ScopeRead,
@@ -146,9 +178,16 @@ export const routePermissions: Record<string, RoutePermissionConfig> = {
   // ========================================
   // Discovery Phase - Assets (Module: assets)
   // ========================================
+  '/assets': {
+    permission: Permission.AssetsRead,
+    module: Module.Assets,
+  },
   '/assets/**': {
     permission: Permission.AssetsRead,
     module: Module.Assets,
+  },
+  '/secret-store': {
+    permission: Permission.CredentialsRead,
   },
 
   // ========================================
@@ -404,6 +443,18 @@ export const routePermissions: Record<string, RoutePermissionConfig> = {
   '/settings/tenant': {
     permission: Permission.TeamUpdate,
     message: 'You need admin privileges to access tenant settings.',
+  },
+  '/settings/general': {
+    permission: Permission.TeamUpdate,
+  },
+  '/settings/modules': {
+    permission: Permission.TeamUpdate,
+  },
+  '/settings/notifications': {
+    permission: Permission.TeamUpdate,
+  },
+  '/settings/sla-policies': {
+    permission: Permission.SLARead,
   },
   '/settings/pentest': {
     permission: Permission.PentestWrite,
