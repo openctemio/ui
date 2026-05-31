@@ -55,8 +55,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 import { getErrorMessage } from '@/lib/api/error-handler'
-import { PermissionGate } from '@/components/permission-gate'
-import { Permission } from '@/lib/permissions'
+import { Can, Permission } from '@/lib/permissions'
 
 import {
   usePendingApprovals,
@@ -372,7 +371,7 @@ export default function ApprovalsPage() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <PermissionGate permission={Permission.FindingsApprove}>
+                <Can permission={Permission.FindingsApprove}>
                   <DropdownMenuItem onClick={() => handleApproveClick(approval)}>
                     <Check className="mr-2 h-4 w-4 text-emerald-500" />
                     Approve
@@ -381,7 +380,7 @@ export default function ApprovalsPage() {
                     <X className="mr-2 h-4 w-4 text-red-500" />
                     Reject
                   </DropdownMenuItem>
-                </PermissionGate>
+                </Can>
                 <DropdownMenuItem onClick={() => handleCancelClick(approval)}>
                   <Ban className="mr-2 h-4 w-4" />
                   Cancel

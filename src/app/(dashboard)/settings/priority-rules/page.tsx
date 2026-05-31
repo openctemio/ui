@@ -55,6 +55,7 @@ import {
 import { Plus, MoreHorizontal, Pencil, Trash2, Info, X, FlaskConical } from 'lucide-react'
 import { toast } from 'sonner'
 import { get, post, put, del } from '@/lib/api/client'
+import { Can, Permission } from '@/lib/permissions'
 import { PriorityClassBadge } from '@/features/findings/components/priority-class-badge'
 import type { PriorityClass } from '@/features/findings/types/finding.types'
 import { DryRunDialog, type DryRunRule } from './dry-run-dialog'
@@ -430,10 +431,12 @@ export default function PriorityRulesPage() {
         title="Priority Override Rules"
         description="Define rules that override the calculated finding priority based on conditions."
       >
-        <Button onClick={openCreate}>
-          <Plus className="mr-2 h-4 w-4" />
-          Create Rule
-        </Button>
+        <Can permission={Permission.PriorityRulesWrite}>
+          <Button onClick={openCreate}>
+            <Plus className="mr-2 h-4 w-4" />
+            Create Rule
+          </Button>
+        </Can>
       </PageHeader>
 
       <Alert className="mt-6">
@@ -512,39 +515,41 @@ export default function PriorityRulesPage() {
                       />
                     </TableCell>
                     <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => openEdit(rule)}>
-                            <Pencil className="mr-2 h-4 w-4" />
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() =>
-                              setDryRunRule({
-                                name: rule.name,
-                                priority_class: rule.priority_class,
-                                conditions: rule.conditions,
-                              })
-                            }
-                          >
-                            <FlaskConical className="mr-2 h-4 w-4" />
-                            Dry run
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            className="text-red-500"
-                            onClick={() => setDeletingRule(rule)}
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      <Can permission={Permission.PriorityRulesWrite}>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => openEdit(rule)}>
+                              <Pencil className="mr-2 h-4 w-4" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() =>
+                                setDryRunRule({
+                                  name: rule.name,
+                                  priority_class: rule.priority_class,
+                                  conditions: rule.conditions,
+                                })
+                              }
+                            >
+                              <FlaskConical className="mr-2 h-4 w-4" />
+                              Dry run
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-red-500"
+                              onClick={() => setDeletingRule(rule)}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </Can>
                     </TableCell>
                   </TableRow>
                 ))
