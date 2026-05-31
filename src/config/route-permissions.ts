@@ -235,6 +235,24 @@ export const routePermissions: Record<string, RoutePermissionConfig> = {
     permission: Permission.PentestRead,
     module: Module.Pentest,
   },
+  // Create/edit forms require write permission (route-level defense-in-depth;
+  // these longer patterns take precedence over '/pentest/**').
+  '/pentest/findings/new': {
+    permission: Permission.PentestFindingsWrite,
+    module: Module.Pentest,
+  },
+  '/pentest/findings/*/edit': {
+    permission: Permission.PentestFindingsWrite,
+    module: Module.Pentest,
+  },
+  '/pentest/templates/new': {
+    permission: Permission.PentestTemplatesWrite,
+    module: Module.Pentest,
+  },
+  '/pentest/templates/*/edit': {
+    permission: Permission.PentestTemplatesWrite,
+    module: Module.Pentest,
+  },
   '/attack-simulation': {
     permission: Permission.PentestRead,
     module: Module.AttackSimulation,
@@ -386,6 +404,11 @@ export const routePermissions: Record<string, RoutePermissionConfig> = {
   '/settings/tenant': {
     permission: Permission.TeamUpdate,
     message: 'You need admin privileges to access tenant settings.',
+  },
+  '/settings/pentest': {
+    permission: Permission.PentestWrite,
+    module: Module.Pentest,
+    message: 'You need pentest write access to manage pentest settings.',
   },
   '/settings/users': {
     permission: Permission.MembersRead,
