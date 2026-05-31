@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo, useCallback } from 'react'
+import { csrfFetch } from '@/lib/api/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -209,7 +210,7 @@ export function RoleDetailSheet({
 
       setRemovingMemberId(member.id)
       try {
-        const response = await fetch(`/api/v1/users/${member.user_id}/roles/${role.id}`, {
+        const response = await csrfFetch(`/api/v1/users/${member.user_id}/roles/${role.id}`, {
           method: 'DELETE',
         })
 
