@@ -1441,6 +1441,11 @@ function FindingsTab({
   const [branchFilter, setBranchFilter] = useState<string>(
     branchFromUrl || searchParams.get('branch') || 'all'
   )
+  // Per-branch occurrence state: all | open | fixed (only applies when a specific
+  // branch is selected). 'open' = present on the branch, 'fixed' = resolved there.
+  const [branchStatusFilter, setBranchStatusFilter] = useState<string>(
+    searchParams.get('branch_status') || 'all'
+  )
   const [page, setPage] = useState(Number(searchParams.get('page')) || 1)
   const pageSize = 20
 
@@ -1477,7 +1482,12 @@ function FindingsTab({
     // results AND the total/pagination reflect the selected branch.
     if (branchFilter !== 'all') {
       const selected = branches.find((b) => b.name === branchFilter)
-      if (selected) f.branch_id = selected.id
+      if (selected) {
+        f.branch_id = selected.id
+        if (branchStatusFilter === 'open' || branchStatusFilter === 'fixed') {
+          f.branch_status = branchStatusFilter
+        }
+      }
     }
     if (severityFilter !== 'all')
       f.severities = [severityFilter as 'critical' | 'high' | 'medium' | 'low' | 'info']
@@ -1500,6 +1510,7 @@ function FindingsTab({
     page,
     pageSize,
     branchFilter,
+    branchStatusFilter,
     branches,
     severityFilter,
     statusFilter,
@@ -1610,6 +1621,23 @@ function FindingsTab({
                         </span>
                       </SelectItem>
                     ))}
+                  </SelectContent>
+                </Select>
+              )}
+              {branchFilter !== 'all' && (
+                <Select
+                  value={branchStatusFilter}
+                  onValueChange={(v) =>
+                    handleFilterChange(setBranchStatusFilter, 'branch_status', v)
+                  }
+                >
+                  <SelectTrigger className="w-[130px] h-8 text-xs">
+                    <SelectValue placeholder="On branch" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All on branch</SelectItem>
+                    <SelectItem value="open">Open on branch</SelectItem>
+                    <SelectItem value="fixed">Fixed on branch</SelectItem>
                   </SelectContent>
                 </Select>
               )}
