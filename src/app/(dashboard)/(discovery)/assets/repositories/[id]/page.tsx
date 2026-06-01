@@ -1395,18 +1395,14 @@ function BranchesTab({
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => toast.info('Triggering scan...')}>
-                          <Play className="mr-2 h-4 w-4" />
-                          Scan Branch
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onViewBranchFindings?.(branch.name)
+                          }}
+                        >
                           <Eye className="mr-2 h-4 w-4" />
                           View Findings
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem>
-                          <Settings className="mr-2 h-4 w-4" />
-                          Branch Settings
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -1476,6 +1472,13 @@ function FindingsTab({
       page,
       per_page: pageSize,
     }
+    // Branch filter is applied server-side by branch_id. The selector value is a
+    // branch name (shareable URL); map it to the branch's id for the API so the
+    // results AND the total/pagination reflect the selected branch.
+    if (branchFilter !== 'all') {
+      const selected = branches.find((b) => b.name === branchFilter)
+      if (selected) f.branch_id = selected.id
+    }
     if (severityFilter !== 'all')
       f.severities = [severityFilter as 'critical' | 'high' | 'medium' | 'low' | 'info']
     if (statusFilter !== 'all')
@@ -1492,7 +1495,17 @@ function FindingsTab({
       f.sources = [scannerFilter as 'sast' | 'sca' | 'secret' | 'dast' | 'iac' | 'container']
     if (debouncedSearch) f.search = debouncedSearch
     return f
-  }, [repositoryId, page, pageSize, severityFilter, statusFilter, scannerFilter, debouncedSearch])
+  }, [
+    repositoryId,
+    page,
+    pageSize,
+    branchFilter,
+    branches,
+    severityFilter,
+    statusFilter,
+    scannerFilter,
+    debouncedSearch,
+  ])
 
   const { data: findingsData, isLoading: findingsLoading } = useFindingsApi(apiFilters)
 
@@ -1504,11 +1517,10 @@ function FindingsTab({
   const total = findingsData?.total ?? 0
   const totalPages = findingsData?.total_pages ?? 0
 
-  // Branch filter is client-side (findings have branch name in first_detected_branch)
-  const filteredFindings = useMemo(() => {
-    if (branchFilter === 'all') return findings
-    return findings.filter((f) => f.branches.includes(branchFilter))
-  }, [findings, branchFilter])
+  // Findings are already filtered server-side (including by branch_id), so the
+  // table renders them directly — no client-side branch filter that would only
+  // see the current page and desync from `total`.
+  const filteredFindings = findings
 
   return (
     <div className="space-y-6">
@@ -1923,7 +1935,7 @@ function ActivityTab({ activities }: { activities: ActivityLog[] }) {
 }
 
 // Settings Tab
-function SettingsTab({ repository }: { repository: Repository }) {
+function SettingsTab({ repository, onDelete }: { repository: Repository; onDelete?: () => void }) {
   const [autoScan, setAutoScan] = useState(repository.scan_settings?.auto_scan ?? false)
   const [scanOnPush, setScanOnPush] = useState(repository.scan_settings?.scan_on_push ?? false)
   const [scanOnPR, setScanOnPR] = useState(repository.scan_settings?.scan_on_pr ?? false)
@@ -1937,18 +1949,19 @@ function SettingsTab({ repository }: { repository: Repository }) {
     if (pattern && !branchPatterns.includes(pattern)) {
       setBranchPatterns([...branchPatterns, pattern])
       setBranchPatternInput('')
-      toast.success(`Pattern "${pattern}" added`)
     }
   }
 
   const handleRemovePattern = (pattern: string) => {
     setBranchPatterns(branchPatterns.filter((p) => p !== pattern))
-    toast.success(`Pattern "${pattern}" removed`)
   }
 
-  const handleToggle = (name: string, value: boolean, setter: (v: boolean) => void) => {
+  // NOTE: scan-automation settings are not yet persisted to the backend, so we
+  // only update local state here. We deliberately do NOT toast "enabled/saved"
+  // — that would falsely imply the setting took effect. A persistence endpoint
+  // is tracked as a follow-up; until then the section is preview-only.
+  const handleToggle = (_name: string, value: boolean, setter: (v: boolean) => void) => {
     setter(value)
-    toast.success(`${name} ${value ? 'enabled' : 'disabled'}`)
   }
 
   // Security features from repo data or defaults
@@ -2018,6 +2031,9 @@ function SettingsTab({ repository }: { repository: Repository }) {
           <Separator />
 
           <div className="space-y-4">
+            <p className="text-xs text-muted-foreground rounded-md border border-dashed px-3 py-2">
+              Preview only — scan automation settings below are not yet persisted to the backend.
+            </p>
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-medium text-sm">Auto Scan</p>
@@ -2181,6 +2197,8 @@ function SettingsTab({ repository }: { repository: Repository }) {
               <Button
                 variant="outline"
                 className="text-red-500 border-red-500/50 hover:bg-red-500/10"
+                disabled
+                title="Archiving is not yet available"
               >
                 Archive
               </Button>
@@ -2194,7 +2212,9 @@ function SettingsTab({ repository }: { repository: Repository }) {
                   Permanently delete this repository and all associated data.
                 </p>
               </div>
-              <Button variant="destructive">Delete</Button>
+              <Button variant="destructive" onClick={onDelete} disabled={!onDelete}>
+                Delete
+              </Button>
             </div>
           </Can>
         </CardContent>
@@ -2678,7 +2698,7 @@ export default function RepositoryDetailPage() {
           </TabsContent>
 
           <TabsContent value="settings">
-            <SettingsTab repository={repository} />
+            <SettingsTab repository={repository} onDelete={() => setShowDeleteDialog(true)} />
           </TabsContent>
         </Tabs>
       </Main>

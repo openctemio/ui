@@ -472,6 +472,7 @@ export interface UpdateCommentInput {
 
 export interface FindingApiFilters {
   asset_id?: string
+  branch_id?: string
   component_id?: string
   vulnerability_id?: string
   severities?: Severity[]
