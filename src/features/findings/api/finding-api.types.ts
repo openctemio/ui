@@ -473,6 +473,8 @@ export interface UpdateCommentInput {
 export interface FindingApiFilters {
   asset_id?: string
   branch_id?: string
+  /** Per-branch occurrence state (only meaningful with branch_id): open | fixed | all */
+  branch_status?: 'open' | 'fixed' | 'all'
   component_id?: string
   vulnerability_id?: string
   severities?: Severity[]
