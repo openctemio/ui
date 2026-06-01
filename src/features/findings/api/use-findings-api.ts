@@ -73,6 +73,7 @@ function buildFindingsEndpoint(filters?: FindingApiFilters): string {
   const params = new URLSearchParams()
 
   if (filters.asset_id) params.set('asset_id', filters.asset_id)
+  if (filters.branch_id) params.set('branch_id', filters.branch_id)
   if (filters.component_id) params.set('component_id', filters.component_id)
   if (filters.vulnerability_id) params.set('vulnerability_id', filters.vulnerability_id)
   if (filters.source_id) params.set('source_id', filters.source_id)
