@@ -46,37 +46,67 @@ import type {
 import { getErrorMessage } from '@/lib/api/error-handler'
 
 // Form schema - matches backend credential types
-const formSchema = z.object({
-  name: z.string().min(1, 'Name is required').max(255),
-  description: z.string().max(1000).optional(),
-  credential_type: z.enum(CREDENTIAL_TYPES, { message: 'Credential type is required' }),
-  expires_at: z.string().optional(),
-  // API Key
-  api_key_value: z.string().optional(),
-  // Basic Auth
-  basic_username: z.string().optional(),
-  basic_password: z.string().optional(),
-  // Bearer Token (for Git tokens, etc.)
-  bearer_token: z.string().optional(),
-  // SSH Key
-  ssh_private_key: z.string().optional(),
-  ssh_passphrase: z.string().optional(),
-  // AWS Role
-  aws_role_arn: z.string().optional(),
-  aws_external_id: z.string().optional(),
-  // GCP Service Account
-  gcp_json_key: z.string().optional(),
-  // Azure Service Principal
-  azure_tenant_id: z.string().optional(),
-  azure_client_id: z.string().optional(),
-  azure_client_secret: z.string().optional(),
-  // GitHub App
-  github_app_id: z.string().optional(),
-  github_installation_id: z.string().optional(),
-  github_private_key: z.string().optional(),
-  // GitLab Token
-  gitlab_token: z.string().optional(),
-})
+const formSchema = z
+  .object({
+    name: z.string().min(1, 'Name is required').max(255),
+    description: z.string().max(1000).optional(),
+    credential_type: z.enum(CREDENTIAL_TYPES, { message: 'Credential type is required' }),
+    expires_at: z.string().optional(),
+    // API Key
+    api_key_value: z.string().optional(),
+    // Basic Auth
+    basic_username: z.string().optional(),
+    basic_password: z.string().optional(),
+    // Bearer Token (for Git tokens, etc.)
+    bearer_token: z.string().optional(),
+    // SSH Key
+    ssh_private_key: z.string().optional(),
+    ssh_passphrase: z.string().optional(),
+    // AWS Role
+    aws_role_arn: z.string().optional(),
+    aws_external_id: z.string().optional(),
+    // GCP Service Account
+    gcp_json_key: z.string().optional(),
+    // Azure Service Principal
+    azure_tenant_id: z.string().optional(),
+    azure_client_id: z.string().optional(),
+    azure_client_secret: z.string().optional(),
+    // GitHub App
+    github_app_id: z.string().optional(),
+    github_installation_id: z.string().optional(),
+    github_private_key: z.string().optional(),
+    // GitLab Token
+    gitlab_token: z.string().optional(),
+  })
+  .superRefine((data, ctx) => {
+    // The secret fields above are all optional at the type level (only the
+    // selected credential_type's fields apply), but the backend marks the
+    // active type's data required. Without this, submitting e.g. a Bearer
+    // Token with an empty token passed client validation and only failed at
+    // the server with a generic 400. Require the active type's field(s) so the
+    // error shows inline on the right input.
+    const requiredByType: Record<string, string[]> = {
+      api_key: ['api_key_value'],
+      basic_auth: ['basic_username', 'basic_password'],
+      bearer_token: ['bearer_token'],
+      ssh_key: ['ssh_private_key'],
+      aws_role: ['aws_role_arn'],
+      gcp_service_account: ['gcp_json_key'],
+      azure_service_principal: ['azure_tenant_id', 'azure_client_id', 'azure_client_secret'],
+      github_app: ['github_app_id', 'github_installation_id', 'github_private_key'],
+      gitlab_token: ['gitlab_token'],
+    }
+    for (const field of requiredByType[data.credential_type] ?? []) {
+      const value = (data as Record<string, unknown>)[field]
+      if (typeof value !== 'string' || value.trim() === '') {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [field],
+          message: 'This field is required',
+        })
+      }
+    }
+  })
 
 type FormData = z.infer<typeof formSchema>
 
