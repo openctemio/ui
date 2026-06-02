@@ -92,135 +92,6 @@ interface ExternalAsset {
   notes?: string
 }
 
-const daysAgo = (days: number) => {
-  const date = new Date()
-  date.setDate(date.getDate() - days)
-  return date.toISOString()
-}
-
-const daysFromNow = (days: number) => {
-  const date = new Date()
-  date.setDate(date.getDate() + days)
-  return date.toISOString()
-}
-
-const mockExternalAssets: ExternalAsset[] = [
-  {
-    id: 'ext-001',
-    name: 'techcombank.com.vn',
-    type: 'domain',
-    ipAddress: '203.162.4.100',
-    status: 'active',
-    riskLevel: 'low',
-    sslExpiry: daysFromNow(120),
-    lastSeen: daysAgo(0),
-    discoveredAt: daysAgo(365),
-    findingsCount: 2,
-    technologies: ['Nginx', 'React', 'Node.js'],
-  },
-  {
-    id: 'ext-002',
-    name: 'api.techcombank.com.vn',
-    type: 'subdomain',
-    parentDomain: 'techcombank.com.vn',
-    ipAddress: '203.162.4.101',
-    port: 443,
-    status: 'active',
-    riskLevel: 'medium',
-    sslExpiry: daysFromNow(90),
-    lastSeen: daysAgo(0),
-    discoveredAt: daysAgo(300),
-    findingsCount: 5,
-    technologies: ['Kong Gateway', 'Express.js'],
-  },
-  {
-    id: 'ext-003',
-    name: 'mail.techcombank.com.vn',
-    type: 'service',
-    parentDomain: 'techcombank.com.vn',
-    ipAddress: '203.162.4.102',
-    port: 25,
-    status: 'active',
-    riskLevel: 'critical',
-    lastSeen: daysAgo(0),
-    discoveredAt: daysAgo(365),
-    findingsCount: 8,
-    technologies: ['Postfix', 'Dovecot'],
-    notes: 'Open relay detected - requires immediate attention',
-  },
-  {
-    id: 'ext-004',
-    name: 'vpn.techcombank.com.vn',
-    type: 'service',
-    parentDomain: 'techcombank.com.vn',
-    ipAddress: '203.162.4.103',
-    port: 443,
-    status: 'active',
-    riskLevel: 'high',
-    sslExpiry: daysFromNow(30),
-    lastSeen: daysAgo(0),
-    discoveredAt: daysAgo(200),
-    findingsCount: 3,
-    technologies: ['OpenVPN', 'FortiGate'],
-    notes: 'SSL certificate expiring soon',
-  },
-  {
-    id: 'ext-005',
-    name: 'cdn.techcombank.com.vn',
-    type: 'subdomain',
-    parentDomain: 'techcombank.com.vn',
-    ipAddress: '104.16.88.20',
-    status: 'active',
-    riskLevel: 'low',
-    sslExpiry: daysFromNow(200),
-    lastSeen: daysAgo(0),
-    discoveredAt: daysAgo(180),
-    findingsCount: 0,
-    technologies: ['Cloudflare'],
-  },
-  {
-    id: 'ext-006',
-    name: 'staging.techcombank.com.vn',
-    type: 'subdomain',
-    parentDomain: 'techcombank.com.vn',
-    ipAddress: '10.0.5.50',
-    status: 'monitoring',
-    riskLevel: 'high',
-    lastSeen: daysAgo(1),
-    discoveredAt: daysAgo(30),
-    findingsCount: 12,
-    technologies: ['Docker', 'Kubernetes'],
-    notes: 'Staging environment exposed to internet',
-  },
-  {
-    id: 'ext-007',
-    name: 'dev.techcombank.com.vn',
-    type: 'subdomain',
-    parentDomain: 'techcombank.com.vn',
-    ipAddress: '10.0.5.51',
-    status: 'inactive',
-    riskLevel: 'medium',
-    lastSeen: daysAgo(7),
-    discoveredAt: daysAgo(60),
-    findingsCount: 4,
-  },
-  {
-    id: 'ext-008',
-    name: 'ftp.techcombank.com.vn',
-    type: 'service',
-    parentDomain: 'techcombank.com.vn',
-    ipAddress: '203.162.4.110',
-    port: 21,
-    status: 'active',
-    riskLevel: 'critical',
-    lastSeen: daysAgo(0),
-    discoveredAt: daysAgo(365),
-    findingsCount: 15,
-    technologies: ['vsftpd'],
-    notes: 'FTP should be replaced with SFTP',
-  },
-]
-
 const statusColors: Record<AssetStatus, string> = {
   active: 'bg-green-500/10 text-green-500 border-green-500/20',
   inactive: 'bg-gray-500/10 text-gray-500 border-gray-500/20',
@@ -274,9 +145,10 @@ export default function ExternalSurfacePage() {
     )
   }, [apiAssets])
 
-  const [assets, setAssets] = useState<ExternalAsset[]>(mockExternalAssets)
+  // Real external assets from the assets API; empty until data loads.
+  const [assets, setAssets] = useState<ExternalAsset[]>([])
   useEffect(() => {
-    if (apiMapped.length > 0) setAssets(apiMapped)
+    setAssets(apiMapped)
   }, [apiMapped])
   const [searchQuery, setSearchQuery] = useState('')
   const [filterType, setFilterType] = useState<AssetType | 'all'>('all')
