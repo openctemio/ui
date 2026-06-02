@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react'
 import { Main } from '@/components/layout'
-import { PageHeader, StatsCard } from '@/features/shared'
+import { PageHeader, StatsCard, EmptyState } from '@/features/shared'
 import { useDashboardStats } from '@/features/dashboard/hooks/use-dashboard-stats'
 import { useTenant } from '@/context/tenant-provider'
 import {
@@ -89,20 +89,6 @@ function LoadingSkeleton() {
   )
 }
 
-function EmptyState() {
-  return (
-    <Card>
-      <CardContent className="flex flex-col items-center justify-center py-16">
-        <FileCode className="mb-4 h-12 w-12 text-muted-foreground" />
-        <p className="text-lg font-medium">No code vulnerability data available</p>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Configure static analysis scanners to detect code-level security vulnerabilities.
-        </p>
-      </CardContent>
-    </Card>
-  )
-}
-
 export default function CodeVulnerabilitiesPage() {
   const { currentTenant } = useTenant()
   const { stats, isLoading } = useDashboardStats(currentTenant?.id || null)
@@ -143,7 +129,11 @@ export default function CodeVulnerabilitiesPage() {
       {isLoading ? (
         <LoadingSkeleton />
       ) : !hasData ? (
-        <EmptyState />
+        <EmptyState
+          icon={FileCode}
+          title="No code vulnerability data available"
+          description="Configure static analysis scanners to detect code-level security vulnerabilities."
+        />
       ) : (
         <>
           {/* Stats Row */}
