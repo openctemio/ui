@@ -137,7 +137,7 @@ function EmptyState() {
       <p className="text-muted-foreground text-sm mb-4">
         Create your first attack simulation to validate security controls.
       </p>
-      <Button size="sm">
+      <Button size="sm" onClick={() => toast.info('Attack simulation creation is coming soon')}>
         <Plus className="mr-2 h-4 w-4" />
         Create Simulation
       </Button>
@@ -196,7 +196,7 @@ export default function AttackSimulationPage() {
         title="Breach & Attack Simulation"
         description="Validate security controls against real-world attack techniques"
       >
-        <Button size="sm">
+        <Button size="sm" onClick={() => toast.info('Attack simulation creation is coming soon')}>
           <Plus className="mr-2 h-4 w-4" />
           New Simulation
         </Button>
