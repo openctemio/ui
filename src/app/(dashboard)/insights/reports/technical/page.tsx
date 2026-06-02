@@ -155,15 +155,15 @@ export default function TechnicalReportsPage() {
         description="Detailed technical vulnerability assessment reports"
       >
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" disabled>
+          <Button variant="outline" size="sm" disabled title="Filtering is coming soon">
             <Filter className="mr-2 h-4 w-4" />
             Filter
           </Button>
-          <Button size="sm" disabled>
+          <Button size="sm" disabled title="Report generation is coming soon">
             <FileText className="mr-2 h-4 w-4" />
             Generate Report
           </Button>
-          <Button variant="outline" size="sm" disabled>
+          <Button variant="outline" size="sm" disabled title="CSV export is coming soon">
             <Download className="mr-2 h-4 w-4" />
             Export CSV
           </Button>
