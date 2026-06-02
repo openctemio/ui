@@ -74,7 +74,7 @@ const actionConfig: Record<
     description:
       'Mark this exposure as a false positive. Use this when the detection was incorrect.',
     icon: ShieldX,
-    iconColor: 'text-gray-500',
+    iconColor: 'text-muted-foreground',
     buttonText: 'Mark False Positive',
     buttonVariant: 'outline',
     successMessage: 'Marked as false positive',
@@ -247,7 +247,7 @@ export function ExposureQuickActions({
               size="sm"
               variant="outline"
               onClick={() => setActionType('false_positive')}
-              className="text-gray-600 hover:text-gray-700 hover:bg-gray-50"
+              className="text-muted-foreground hover:text-foreground hover:bg-muted"
             >
               <X className="mr-1 h-4 w-4" />
               False Positive
@@ -388,7 +388,7 @@ export function ExposureBulkActions({
             variant="outline"
             onClick={() => setBulkAction('false_positive')}
             disabled={isProcessing}
-            className="text-gray-600"
+            className="text-muted-foreground"
           >
             <X className="mr-1 h-4 w-4" />
             False Positive All

@@ -146,7 +146,7 @@ export function ExposureSeverityBreakdown({
     {
       key: 'info',
       label: 'Info',
-      color: 'text-gray-600',
+      color: 'text-muted-foreground',
       bgColor: 'bg-gray-100 dark:bg-gray-900/30',
       icon: Activity,
     },
@@ -235,7 +235,7 @@ export function ExposureStateBreakdown({ byState, className }: ExposureStateBrea
     {
       key: 'false_positive',
       label: 'False Positive',
-      color: 'text-gray-600',
+      color: 'text-muted-foreground',
       bgColor: 'bg-gray-500',
       icon: ShieldX,
     },
