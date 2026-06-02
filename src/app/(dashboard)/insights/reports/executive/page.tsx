@@ -38,14 +38,7 @@ import {
   Activity,
   Clock,
 } from 'lucide-react'
-
-const SEVERITY_COLORS: Record<string, string> = {
-  critical: '#dc2626',
-  high: '#ea580c',
-  medium: '#ca8a04',
-  low: '#2563eb',
-  info: '#6b7280',
-}
+import { SEVERITY_CHART_COLORS as SEVERITY_COLORS } from '@/lib/severity-colors'
 
 const STATUS_COLORS: Record<string, string> = {
   open: '#ef4444',
@@ -110,7 +103,7 @@ export default function ExecutiveReportsPage() {
       Object.entries(stats.findings.bySeverity).map(([name, value]) => ({
         name: name.charAt(0).toUpperCase() + name.slice(1),
         value,
-        fill: SEVERITY_COLORS[name] || '#6b7280',
+        fill: (SEVERITY_COLORS as Record<string, string>)[name] || '#6b7280',
       })),
     [stats.findings.bySeverity]
   )
