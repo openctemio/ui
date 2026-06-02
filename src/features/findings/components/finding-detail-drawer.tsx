@@ -44,7 +44,9 @@ import {
   ArrowRight,
   ShieldCheck,
   ChevronDown,
+  AlertOctagon,
 } from 'lucide-react'
+import { PriorityClassBadge } from './priority-class-badge'
 import {
   DATA_FLOW_LOCATION_CONFIG,
   SEVERITY_CONFIG,
@@ -494,11 +496,48 @@ export function FindingDetailDrawer({
               {/* Title */}
               <SheetTitle className="text-lg leading-snug">{finding.title}</SheetTitle>
 
-              {/* CVE/CWE badges */}
-              {(finding.cve || finding.cwe) && (
-                <div className="flex flex-wrap gap-2">
+              {/* Risk signals — KEV / EPSS / CVSS / priority surfaced up top so the
+                  severity story reads at a glance, instead of CVSS being buried in
+                  the meta grid at the bottom with no exploit context. */}
+              {(finding.isInKev ||
+                (finding.epssScore !== undefined && finding.epssScore > 0) ||
+                finding.cvss !== undefined ||
+                finding.priorityClass ||
+                finding.cve ||
+                finding.cwe) && (
+                <div className="flex flex-wrap items-center gap-2">
+                  {finding.isInKev && (
+                    <Badge
+                      className="gap-1 bg-red-600 text-xs font-semibold text-white hover:bg-red-600"
+                      title={
+                        finding.kevDueDate
+                          ? `CISA KEV — remediate by ${formatDate(finding.kevDueDate)}`
+                          : 'CISA Known Exploited Vulnerability'
+                      }
+                    >
+                      <AlertOctagon className="h-3 w-3" />
+                      KEV
+                    </Badge>
+                  )}
+                  {finding.priorityClass && (
+                    <PriorityClassBadge priorityClass={finding.priorityClass} showTooltip={false} />
+                  )}
+                  {finding.cvss !== undefined && (
+                    <Badge variant="outline" className="font-mono text-xs">
+                      CVSS {finding.cvss}
+                    </Badge>
+                  )}
+                  {finding.epssScore !== undefined && finding.epssScore > 0 && (
+                    <Badge
+                      variant="outline"
+                      className="border-amber-500/40 font-mono text-xs text-amber-700 dark:text-amber-400"
+                      title="EPSS — probability of exploitation in the next 30 days"
+                    >
+                      EPSS {(finding.epssScore * 100).toFixed(1)}%
+                    </Badge>
+                  )}
                   {finding.cve && (
-                    <Badge variant="outline" className="text-xs">
+                    <Badge variant="outline" className="font-mono text-xs">
                       {finding.cve}
                     </Badge>
                   )}
