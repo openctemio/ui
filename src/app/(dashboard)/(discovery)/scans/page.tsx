@@ -124,7 +124,6 @@ import type {
   ScheduleType,
 } from '@/lib/api/scan-types'
 import {
-  PlatformUsageCard,
   NewScanDialog,
   CloneScanDialog,
   EditScanDialog,
@@ -2265,7 +2264,6 @@ function RunsTab() {
                 <CardTitle className="text-3xl">{stats?.findings_total ?? 0}</CardTitle>
               </CardHeader>
             </Card>
-            <PlatformUsageCard variant="compact" />
           </>
         )}
       </div>
