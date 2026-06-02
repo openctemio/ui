@@ -12,6 +12,7 @@ import {
   User,
   Server,
   ShieldAlert,
+  AlertTriangle,
   Scan,
   FileCode,
   Layers,
@@ -45,7 +46,7 @@ export function FindingGroupsTab({ onViewFindings, onMarkFixed }: FindingGroupsT
   const [showOnlyMine, setShowOnlyMine] = useState(false)
   const [autoAssignOpen, setAutoAssignOpen] = useState(false)
 
-  const { data, isLoading, mutate } = useFindingGroups({
+  const { data, error, isLoading, mutate } = useFindingGroups({
     group_by: dimension,
     statuses: 'new,confirmed,in_progress,fix_applied,resolved',
   })
@@ -98,6 +99,19 @@ export function FindingGroupsTab({ onViewFindings, onMarkFixed }: FindingGroupsT
             </Card>
           ))}
         </div>
+      ) : error ? (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <AlertTriangle className="h-12 w-12 text-destructive mx-auto mb-4" />
+            <h3 className="text-lg font-medium mb-1">Couldn&apos;t load finding groups</h3>
+            <p className="text-muted-foreground text-sm mb-4">
+              Something went wrong fetching grouped findings. Please try again.
+            </p>
+            <Button variant="outline" size="sm" onClick={() => mutate()}>
+              Retry
+            </Button>
+          </CardContent>
+        </Card>
       ) : groups.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
