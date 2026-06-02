@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react'
 import { Main } from '@/components/layout'
-import { PageHeader } from '@/features/shared'
+import { PageHeader, EmptyState } from '@/features/shared'
 import { StatsCard } from '@/features/shared/components/stats-card'
 import { useDashboardStats } from '@/features/dashboard/hooks/use-dashboard-stats'
 import { useTenant } from '@/context/tenant-provider'
@@ -154,24 +154,6 @@ function LoadingSkeleton() {
   )
 }
 
-function EmptyState() {
-  return (
-    <Card>
-      <CardContent className="flex flex-col items-center justify-center py-12">
-        <GitBranch className="text-muted-foreground mb-4 h-12 w-12" />
-        <h3 className="mb-1 text-lg font-semibold">No CI/CD Pipelines Configured</h3>
-        <p className="text-muted-foreground mb-4 text-sm">
-          Integrate security scanning into your development pipelines.
-        </p>
-        <Button size="sm" disabled>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Pipeline
-        </Button>
-      </CardContent>
-    </Card>
-  )
-}
-
 export default function CICDIntegrationPage() {
   const { currentTenant } = useTenant()
   const { isLoading } = useDashboardStats(currentTenant?.id || null)
@@ -243,7 +225,17 @@ export default function CICDIntegrationPage() {
         </CardHeader>
         <CardContent className="p-0">
           {PLACEHOLDER_PIPELINES.length === 0 ? (
-            <EmptyState />
+            <EmptyState
+              icon={GitBranch}
+              title="No CI/CD Pipelines Configured"
+              description="Integrate security scanning into your development pipelines."
+              action={
+                <Button size="sm" disabled>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Pipeline
+                </Button>
+              }
+            />
           ) : (
             <div>
               {PLACEHOLDER_PIPELINES.map((pipeline) => (

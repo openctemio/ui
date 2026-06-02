@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react'
 import { Main } from '@/components/layout'
-import { PageHeader } from '@/features/shared'
+import { PageHeader, EmptyState } from '@/features/shared'
 import { StatsCard } from '@/features/shared/components/stats-card'
 import { useDashboardStats } from '@/features/dashboard/hooks/use-dashboard-stats'
 import { useTenant } from '@/context/tenant-provider'
@@ -101,20 +101,6 @@ function LoadingSkeleton() {
   )
 }
 
-function EmptyState() {
-  return (
-    <Card>
-      <CardContent className="flex flex-col items-center justify-center py-12">
-        <Crown className="text-muted-foreground mb-4 h-12 w-12" />
-        <h3 className="mb-1 text-lg font-semibold">No Data Available</h3>
-        <p className="text-muted-foreground mb-4 text-sm">
-          Executive reports will appear once assets and findings data is available.
-        </p>
-      </CardContent>
-    </Card>
-  )
-}
-
 export default function ExecutiveReportsPage() {
   const { currentTenant } = useTenant()
   const { stats, isLoading } = useDashboardStats(currentTenant?.id || null)
@@ -163,7 +149,11 @@ export default function ExecutiveReportsPage() {
           description="High-level security posture reports for leadership"
         />
         <div className="mt-6">
-          <EmptyState />
+          <EmptyState
+            icon={Crown}
+            title="No Data Available"
+            description="Executive reports will appear once assets and findings data is available."
+          />
         </div>
       </Main>
     )

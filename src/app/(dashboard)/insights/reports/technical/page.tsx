@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react'
 import { Main } from '@/components/layout'
-import { PageHeader } from '@/features/shared'
+import { PageHeader, EmptyState } from '@/features/shared'
 import { StatsCard } from '@/features/shared/components/stats-card'
 import { useDashboardStats } from '@/features/dashboard/hooks/use-dashboard-stats'
 import { useTenant } from '@/context/tenant-provider'
@@ -89,20 +89,6 @@ function LoadingSkeleton() {
   )
 }
 
-function EmptyState() {
-  return (
-    <Card>
-      <CardContent className="flex flex-col items-center justify-center py-12">
-        <Cpu className="text-muted-foreground mb-4 h-12 w-12" />
-        <h3 className="mb-1 text-lg font-semibold">No Technical Data Available</h3>
-        <p className="text-muted-foreground mb-4 text-sm">
-          Technical reports will be available once findings and scan data is collected.
-        </p>
-      </CardContent>
-    </Card>
-  )
-}
-
 export default function TechnicalReportsPage() {
   const { currentTenant } = useTenant()
   const { stats, isLoading } = useDashboardStats(currentTenant?.id || null)
@@ -152,7 +138,11 @@ export default function TechnicalReportsPage() {
           description="Detailed technical vulnerability assessment reports"
         />
         <div className="mt-6">
-          <EmptyState />
+          <EmptyState
+            icon={Cpu}
+            title="No Technical Data Available"
+            description="Technical reports will be available once findings and scan data is collected."
+          />
         </div>
       </Main>
     )

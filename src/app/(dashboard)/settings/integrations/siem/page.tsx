@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react'
 import { Main } from '@/components/layout'
-import { PageHeader } from '@/features/shared'
+import { PageHeader, EmptyState } from '@/features/shared'
 import { StatsCard } from '@/features/shared/components/stats-card'
 import { useDashboardStats } from '@/features/dashboard/hooks/use-dashboard-stats'
 import { useTenant } from '@/context/tenant-provider'
@@ -139,24 +139,6 @@ function LoadingSkeleton() {
   )
 }
 
-function EmptyState() {
-  return (
-    <Card>
-      <CardContent className="flex flex-col items-center justify-center py-12">
-        <Shield className="text-muted-foreground mb-4 h-12 w-12" />
-        <h3 className="mb-1 text-lg font-semibold">No SIEM Connections</h3>
-        <p className="text-muted-foreground mb-4 text-sm">
-          Connect your SIEM/SOAR platform to forward security events and enable automated response.
-        </p>
-        <Button size="sm" disabled>
-          <Plus className="mr-2 h-4 w-4" />
-          Add SIEM Connection
-        </Button>
-      </CardContent>
-    </Card>
-  )
-}
-
 export default function SIEMIntegrationPage() {
   const { currentTenant } = useTenant()
   const { stats, isLoading } = useDashboardStats(currentTenant?.id || null)
@@ -218,7 +200,17 @@ export default function SIEMIntegrationPage() {
         </CardHeader>
         <CardContent>
           {PLACEHOLDER_CONNECTIONS.length === 0 ? (
-            <EmptyState />
+            <EmptyState
+              icon={Shield}
+              title="No SIEM Connections"
+              description="Connect your SIEM/SOAR platform to forward security events and enable automated response."
+              action={
+                <Button size="sm" disabled>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add SIEM Connection
+                </Button>
+              }
+            />
           ) : (
             <div className="space-y-4">
               {PLACEHOLDER_CONNECTIONS.map((conn) => (
