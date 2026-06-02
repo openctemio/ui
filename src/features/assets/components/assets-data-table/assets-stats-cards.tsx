@@ -100,7 +100,7 @@ export function AssetsStatsCards({
         title="Inactive"
         value={inactive}
         icon={Activity}
-        iconColor="text-gray-500"
+        iconColor="text-muted-foreground"
         isActive={currentStatusFilter === 'inactive'}
         onClick={() => onFilterByStatus?.('inactive')}
         isLoading={isLoading}
