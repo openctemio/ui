@@ -160,6 +160,24 @@ function transformApiToUiFinding(api: ApiFinding): Finding {
         }
       : undefined,
     team: undefined,
+    // Location / repo / tool — needed so the detail drawer's "Affected Code"
+    // panel and code highlighter render when opened from the list. The drawer
+    // reads these typed fields directly; without them they were always blank
+    // even though the API returns file_path/start_line/etc. (mirrors the
+    // [id] detail-page transform).
+    filePath: api.file_path,
+    startLine: api.start_line,
+    endLine: api.end_line,
+    startColumn: api.start_column,
+    endColumn: api.end_column,
+    repositoryUrl: api.asset?.web_url,
+    branch: api.last_seen_branch || api.first_detected_branch,
+    commitSha: api.last_seen_commit || api.first_detected_commit,
+    ruleId: api.rule_id,
+    ruleName: api.rule_name,
+    toolName: api.tool_name,
+    toolVersion: api.tool_version,
+    contextSnippet: api.context_snippet,
     source: api.source as Finding['source'],
     scanner: api.tool_name,
     scanId: api.scan_id,
