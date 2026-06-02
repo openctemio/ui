@@ -5,7 +5,7 @@ import Link from 'next/link'
 import '@xyflow/react/dist/style.css'
 
 import { Main } from '@/components/layout'
-import { PageHeader } from '@/features/shared'
+import { PageHeader, RunStatusBadge } from '@/features/shared'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -35,7 +35,6 @@ import {
   Play,
   Plus,
   CheckCircle,
-  XCircle,
   RefreshCw,
   Eye,
   MoreHorizontal,
@@ -75,7 +74,6 @@ import {
   type UIPosition,
   type CreatePipelineRequest,
   type UpdatePipelineRequest,
-  PIPELINE_RUN_STATUS_LABELS,
   PIPELINE_TRIGGER_LABELS,
   PIPELINE_AGENT_PREFERENCE_LABELS,
 } from '@/lib/api'
@@ -84,15 +82,6 @@ const statusConfig: Record<string, { color: string; bgColor: string }> = {
   active: { color: 'text-green-400', bgColor: 'bg-green-500/20' },
   inactive: { color: 'text-yellow-400', bgColor: 'bg-yellow-500/20' },
   error: { color: 'text-red-400', bgColor: 'bg-red-500/20' },
-}
-
-const runStatusConfig: Record<string, string> = {
-  completed: 'bg-green-500/20 text-green-400',
-  failed: 'bg-red-500/20 text-red-400',
-  running: 'bg-blue-500/20 text-blue-400',
-  pending: 'bg-yellow-500/20 text-yellow-400',
-  cancelled: 'bg-gray-500/20 text-gray-400',
-  timeout: 'bg-orange-500/20 text-orange-400',
 }
 
 export default function PipelinesPage() {
@@ -681,14 +670,7 @@ export default function PipelinesPage() {
                             </span>
                           </div>
                         </div>
-                        <Badge className={`${runStatusConfig[run.status] || ''} border-0`}>
-                          {run.status === 'completed' ? (
-                            <CheckCircle className="mr-1 h-3 w-3" />
-                          ) : run.status === 'failed' ? (
-                            <XCircle className="mr-1 h-3 w-3" />
-                          ) : null}
-                          {PIPELINE_RUN_STATUS_LABELS[run.status] || run.status}
-                        </Badge>
+                        <RunStatusBadge status={run.status} />
                       </div>
                     ))}
                   </div>
