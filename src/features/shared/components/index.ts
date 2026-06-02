@@ -5,6 +5,7 @@
 export * from './severity-badge'
 export * from './risk-score-badge'
 export * from './status-badge'
+export * from './run-status-badge'
 export * from './stats-card'
 export * from './process-stepper'
 export * from './page-header'

@@ -14,7 +14,7 @@ import {
   useReactTable,
 } from '@tanstack/react-table'
 import { Main } from '@/components/layout'
-import { PageHeader, StatusBadge } from '@/features/shared'
+import { PageHeader, StatusBadge, RunStatusBadge } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -179,26 +179,6 @@ const runStatusFilters: { value: RunStatusFilter; label: string }[] = [
 ]
 
 // Map API status to UI-friendly status for StatusBadge
-function mapSessionStatusToUI(
-  status: ScanRunStatus
-): 'active' | 'completed' | 'pending' | 'failed' | 'inactive' {
-  switch (status) {
-    case 'running':
-      return 'active'
-    case 'completed':
-      return 'completed'
-    case 'queued':
-    case 'pending':
-      return 'pending'
-    case 'failed':
-    case 'timeout':
-    case 'canceled':
-      return 'failed'
-    default:
-      return 'inactive'
-  }
-}
-
 // ============================================
 // UTILS
 // ============================================
@@ -2089,7 +2069,7 @@ function RunsTab() {
       {
         accessorKey: 'status',
         header: 'Status',
-        cell: ({ row }) => <StatusBadge status={mapSessionStatusToUI(row.original.status)} />,
+        cell: ({ row }) => <RunStatusBadge status={row.original.status} />,
       },
       {
         accessorKey: 'findings_total',
@@ -2552,7 +2532,7 @@ function SessionDetailSheet({ session, onStop, onRetry, isActioning }: SessionDe
             {session.scanner_name}
             {session.scanner_version && ` v${session.scanner_version}`}
           </Badge>
-          <StatusBadge status={mapSessionStatusToUI(session.status)} />
+          <RunStatusBadge status={session.status} />
         </div>
 
         {/* Title */}
