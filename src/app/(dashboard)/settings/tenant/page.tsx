@@ -13,8 +13,6 @@ import {
   Globe,
   Shield,
   Key,
-  Copy,
-  RefreshCw,
   Upload,
   Loader2,
   AlertCircle,
@@ -1531,22 +1529,10 @@ export default function TenantPage() {
                     <Separator />
                     <div className="space-y-2">
                       <Label>API Key</Label>
-                      <div className="flex gap-2">
-                        <Input
-                          value="rsec_live_xxxxxxxxxxxxxxxxxxxxxxxx"
-                          readOnly
-                          className="font-mono"
-                        />
-                        <Button variant="outline" size="icon" disabled title="Coming soon">
-                          <Copy className="h-4 w-4" />
-                        </Button>
-                        <Button variant="outline" size="icon" disabled title="Coming soon">
-                          <RefreshCw className="h-4 w-4" />
-                        </Button>
+                      <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+                        API key generation and rotation are coming soon. Once available, you&apos;ll
+                        be able to create and manage keys here.
                       </div>
-                      <p className="text-sm text-muted-foreground">
-                        Keep your API key secure. Do not share it publicly.
-                      </p>
                     </div>
                   </>
                 )}
