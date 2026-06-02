@@ -14,6 +14,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { Main } from '@/components/layout'
+import { PageHeader } from '@/features/shared'
 import { copyToClipboard } from '@/lib/clipboard'
 import { cn } from '@/lib/utils'
 import {
@@ -201,11 +202,10 @@ export default function ExposuresPage() {
       <Main>
         <div className="space-y-6">
           {/* Page Header */}
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight">Exposure Events</h1>
-              <p className="text-muted-foreground">Monitor and manage attack surface exposures</p>
-            </div>
+          <PageHeader
+            title="Exposure Events"
+            description="Monitor and manage attack surface exposures"
+          >
             <div className="flex items-center gap-2">
               <Button variant="outline" onClick={handleRefresh} disabled={isLoading}>
                 {isLoading ? (
@@ -215,12 +215,12 @@ export default function ExposuresPage() {
                 )}
                 Refresh
               </Button>
-              <Button variant="outline">
+              <Button variant="outline" onClick={() => toast.info('Export is coming soon')}>
                 <Download className="mr-2 h-4 w-4" />
                 Export
               </Button>
             </div>
-          </div>
+          </PageHeader>
 
           {/* Stats Overview */}
           <ExposureStatsCards stats={stats} isLoading={statsLoading} />
