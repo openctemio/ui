@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { Main } from '@/components/layout'
-import { PageHeader, StatsCard } from '@/features/shared'
+import { PageHeader, StatsCard, EmptyState } from '@/features/shared'
 import { useDashboardStats } from '@/features/dashboard/hooks/use-dashboard-stats'
 import { useTenant } from '@/context/tenant-provider'
 import {
@@ -89,20 +89,6 @@ function LoadingSkeleton() {
   )
 }
 
-function EmptyState() {
-  return (
-    <Card>
-      <CardContent className="flex flex-col items-center justify-center py-16">
-        <Bug className="mb-4 h-12 w-12 text-muted-foreground" />
-        <p className="text-lg font-medium">No vulnerability data available</p>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Run vulnerability scans to discover exposures across your attack surface.
-        </p>
-      </CardContent>
-    </Card>
-  )
-}
-
 function OverviewTab() {
   const { currentTenant } = useTenant()
   const { stats, isLoading } = useDashboardStats(currentTenant?.id || null)
@@ -110,7 +96,14 @@ function OverviewTab() {
   if (isLoading) return <LoadingSkeleton />
 
   const hasData = stats.findings.total > 0
-  if (!hasData) return <EmptyState />
+  if (!hasData)
+    return (
+      <EmptyState
+        icon={Bug}
+        title="No vulnerability data available"
+        description="Run vulnerability scans to discover exposures across your attack surface."
+      />
+    )
 
   const criticalCount = stats.findings.bySeverity.critical || 0
 
