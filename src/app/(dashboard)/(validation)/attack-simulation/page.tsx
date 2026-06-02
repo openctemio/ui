@@ -71,7 +71,7 @@ function SimulationRow({ sim, onRun }: { sim: Simulation; onRun: (id: string) =>
   const result = resultConfig[sim.last_result] ?? ''
 
   return (
-    <TableRow className="cursor-pointer hover:bg-muted/50">
+    <TableRow className="hover:bg-muted/50">
       <TableCell>
         <div>
           <p className="font-medium">{sim.name}</p>
@@ -291,7 +291,11 @@ export default function AttackSimulationPage() {
               { name: 'Network Scan', icon: Shield, desc: 'Port discovery' },
               { name: 'Data Leak Test', icon: Swords, desc: 'Exfiltration attempt' },
             ].map((action) => (
-              <Card key={action.name} className="cursor-pointer hover:bg-muted/50">
+              <Card
+                key={action.name}
+                className="cursor-pointer hover:bg-muted/50"
+                onClick={() => toast.info('Attack simulation creation is coming soon')}
+              >
                 <CardContent className="flex items-center gap-3 p-4">
                   <div className="bg-primary/10 flex h-10 w-10 items-center justify-center rounded-lg">
                     <action.icon className="text-primary h-5 w-5" />
