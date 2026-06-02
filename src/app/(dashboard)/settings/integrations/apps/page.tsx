@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react'
 import { Main } from '@/components/layout'
-import { PageHeader } from '@/features/shared'
+import { PageHeader, EmptyState } from '@/features/shared'
 import { StatsCard } from '@/features/shared/components/stats-card'
 import { useDashboardStats } from '@/features/dashboard/hooks/use-dashboard-stats'
 import { useTenant } from '@/context/tenant-provider'
@@ -171,24 +171,6 @@ function LoadingSkeleton() {
   )
 }
 
-function EmptyState() {
-  return (
-    <Card>
-      <CardContent className="flex flex-col items-center justify-center py-12">
-        <Puzzle className="text-muted-foreground mb-4 h-12 w-12" />
-        <h3 className="mb-1 text-lg font-semibold">No Connected Apps</h3>
-        <p className="text-muted-foreground mb-4 text-sm">
-          Connect your first third-party application to start importing data.
-        </p>
-        <Button size="sm" disabled>
-          <Plus className="mr-2 h-4 w-4" />
-          Browse Integrations
-        </Button>
-      </CardContent>
-    </Card>
-  )
-}
-
 export default function ConnectedAppsPage() {
   const { currentTenant } = useTenant()
   const { isLoading } = useDashboardStats(currentTenant?.id || null)
@@ -239,7 +221,17 @@ export default function ConnectedAppsPage() {
       <div className="mt-6">
         <h2 className="mb-4 text-lg font-semibold">Installed Integrations</h2>
         {PLACEHOLDER_APPS.length === 0 ? (
-          <EmptyState />
+          <EmptyState
+            icon={Puzzle}
+            title="No Connected Apps"
+            description="Connect your first third-party application to start importing data."
+            action={
+              <Button size="sm" disabled>
+                <Plus className="mr-2 h-4 w-4" />
+                Browse Integrations
+              </Button>
+            }
+          />
         ) : (
           <div className="grid gap-4 md:grid-cols-2">
             {PLACEHOLDER_APPS.map((app) => (
