@@ -223,8 +223,6 @@ export default function PipelinesPage() {
     if (!editingPipeline) return
     setUpdatingPipeline(true)
     try {
-      console.log('Updating pipeline:', editingPipeline.id)
-      console.log('Update data:', JSON.stringify(data, null, 2))
       await put<PipelineTemplate>(
         pipelineEndpoints.update(editingPipeline.id),
         data as UpdatePipelineRequest
@@ -251,8 +249,6 @@ export default function PipelinesPage() {
     setLoadingEdit(true)
     try {
       const fullPipeline = await get<PipelineTemplate>(pipelineEndpoints.get(pipeline.id))
-      console.log('Fetched pipeline for edit:', fullPipeline)
-      console.log('Steps:', fullPipeline.steps)
       setEditingPipeline(fullPipeline)
       setIsFormOpen(true)
     } catch (error) {
