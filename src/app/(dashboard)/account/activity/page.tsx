@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -14,126 +14,83 @@ import {
 } from '@/components/ui/select'
 import {
   History,
-  LogIn,
-  LogOut,
   Key,
   User,
   Shield,
-  Smartphone,
+  Users,
+  Building,
+  Mail,
+  Settings,
   ChevronLeft,
   ChevronRight,
+  type LucideIcon,
 } from 'lucide-react'
 import { formatDistanceToNow, format } from 'date-fns'
-import type { ActivityEventType, ActivityLog } from '@/features/account'
-import { ACTIVITY_EVENT_LABELS } from '@/features/account'
+import { useUser } from '@/stores/auth-store'
+import { useAccountActivity } from '@/features/account'
+import {
+  getActionCategory,
+  formatAction,
+  RESULT_DISPLAY,
+} from '@/features/organization/types/audit.types'
 
-// Mock data for demo - in production this would come from API
-const mockActivityLogs: ActivityLog[] = [
-  {
-    id: '1',
-    event_type: 'login',
-    description: 'Signed in from Chrome on macOS',
-    ip_address: '192.168.1.1',
-    user_agent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)',
-    location: 'Ho Chi Minh, Vietnam',
-    created_at: new Date(Date.now() - 1000 * 60 * 5).toISOString(), // 5 mins ago
-  },
-  {
-    id: '2',
-    event_type: 'profile_update',
-    description: 'Updated profile information',
-    ip_address: '192.168.1.1',
-    user_agent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)',
-    location: 'Ho Chi Minh, Vietnam',
-    created_at: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(), // 2 hours ago
-  },
-  {
-    id: '3',
-    event_type: 'password_change',
-    description: 'Password changed successfully',
-    ip_address: '192.168.1.1',
-    user_agent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)',
-    location: 'Ho Chi Minh, Vietnam',
-    created_at: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(), // 1 day ago
-  },
-  {
-    id: '4',
-    event_type: '2fa_enabled',
-    description: 'Two-factor authentication enabled',
-    ip_address: '192.168.1.1',
-    user_agent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)',
-    location: 'Ho Chi Minh, Vietnam',
-    created_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString(), // 2 days ago
-  },
-  {
-    id: '5',
-    event_type: 'session_revoked',
-    description: 'Revoked session from iPhone',
-    ip_address: '192.168.1.1',
-    user_agent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)',
-    location: 'Ho Chi Minh, Vietnam',
-    created_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3).toISOString(), // 3 days ago
-  },
-  {
-    id: '6',
-    event_type: 'login',
-    description: 'Signed in from Safari on iPhone',
-    ip_address: '10.0.0.1',
-    user_agent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)',
-    location: 'Da Nang, Vietnam',
-    created_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5).toISOString(), // 5 days ago
-  },
-  {
-    id: '7',
-    event_type: 'logout',
-    description: 'Signed out',
-    ip_address: '192.168.1.1',
-    user_agent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)',
-    location: 'Ho Chi Minh, Vietnam',
-    created_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 7).toISOString(), // 7 days ago
-  },
+// Icon per action category (action looks like "auth.login", "user.updated", …)
+const CATEGORY_ICONS: Record<string, LucideIcon> = {
+  auth: Key,
+  user: User,
+  member: Users,
+  invitation: Mail,
+  tenant: Building,
+  settings: Settings,
+  permission: Shield,
+  other: History,
+}
+
+const CATEGORY_COLORS: Record<string, string> = {
+  auth: 'bg-green-500/10 text-green-500',
+  user: 'bg-blue-500/10 text-blue-500',
+  member: 'bg-purple-500/10 text-purple-500',
+  invitation: 'bg-cyan-500/10 text-cyan-500',
+  tenant: 'bg-indigo-500/10 text-indigo-500',
+  settings: 'bg-yellow-500/10 text-yellow-500',
+  permission: 'bg-orange-500/10 text-orange-500',
+  other: 'bg-muted text-muted-foreground',
+}
+
+// Filter options map to action categories (the prefix before the first dot).
+const FILTER_OPTIONS: { value: string; label: string }[] = [
+  { value: 'all', label: 'All Activity' },
+  { value: 'auth', label: 'Authentication' },
+  { value: 'user', label: 'Account' },
+  { value: 'settings', label: 'Settings' },
+  { value: 'permission', label: 'Permissions' },
 ]
 
-const eventTypeIcons: Record<ActivityEventType, typeof LogIn> = {
-  login: LogIn,
-  logout: LogOut,
-  password_change: Key,
-  profile_update: User,
-  '2fa_enabled': Shield,
-  '2fa_disabled': Shield,
-  session_revoked: Smartphone,
-  api_key_created: Key,
-  api_key_revoked: Key,
-}
-
-const eventTypeColors: Record<ActivityEventType, string> = {
-  login: 'bg-green-500/10 text-green-500',
-  logout: 'bg-gray-500/10 text-gray-500',
-  password_change: 'bg-yellow-500/10 text-yellow-500',
-  profile_update: 'bg-blue-500/10 text-blue-500',
-  '2fa_enabled': 'bg-green-500/10 text-green-500',
-  '2fa_disabled': 'bg-red-500/10 text-red-500',
-  session_revoked: 'bg-orange-500/10 text-orange-500',
-  api_key_created: 'bg-purple-500/10 text-purple-500',
-  api_key_revoked: 'bg-red-500/10 text-red-500',
-}
+const PER_PAGE = 10
 
 export default function ActivityPage() {
+  const user = useUser()
   const [filter, setFilter] = useState<string>('all')
   const [page, setPage] = useState(1)
-  const perPage = 10
 
-  // In production, this would be a useSWR hook
-  const isLoading = false
-  const activities = mockActivityLogs
+  const { activities, isLoading } = useAccountActivity(user?.id)
 
-  // Filter activities
-  const filteredActivities =
-    filter === 'all' ? activities : activities.filter((a) => a.event_type === filter)
+  // Filter by action category, then paginate client-side.
+  const filteredActivities = useMemo(
+    () =>
+      filter === 'all'
+        ? activities
+        : activities.filter((a) => getActionCategory(a.action) === filter),
+    [activities, filter]
+  )
 
-  // Paginate
-  const totalPages = Math.ceil(filteredActivities.length / perPage)
-  const paginatedActivities = filteredActivities.slice((page - 1) * perPage, page * perPage)
+  const totalPages = Math.ceil(filteredActivities.length / PER_PAGE)
+  const paginatedActivities = filteredActivities.slice((page - 1) * PER_PAGE, page * PER_PAGE)
+
+  const handleFilterChange = (value: string) => {
+    setFilter(value)
+    setPage(1)
+  }
 
   return (
     <div className="grid gap-6">
@@ -150,19 +107,16 @@ export default function ActivityPage() {
                 View your recent account activity and security events
               </CardDescription>
             </div>
-            <Select value={filter} onValueChange={setFilter}>
+            <Select value={filter} onValueChange={handleFilterChange}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Filter by type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Activity</SelectItem>
-                <SelectItem value="login">Sign In</SelectItem>
-                <SelectItem value="logout">Sign Out</SelectItem>
-                <SelectItem value="password_change">Password Change</SelectItem>
-                <SelectItem value="profile_update">Profile Update</SelectItem>
-                <SelectItem value="2fa_enabled">2FA Enabled</SelectItem>
-                <SelectItem value="2fa_disabled">2FA Disabled</SelectItem>
-                <SelectItem value="session_revoked">Session Revoked</SelectItem>
+                {FILTER_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -182,8 +136,10 @@ export default function ActivityPage() {
           ) : (
             <div className="space-y-4">
               {paginatedActivities.map((activity) => {
-                const Icon = eventTypeIcons[activity.event_type]
-                const colorClass = eventTypeColors[activity.event_type]
+                const category = getActionCategory(activity.action)
+                const Icon = CATEGORY_ICONS[category] ?? History
+                const colorClass = CATEGORY_COLORS[category] ?? CATEGORY_COLORS.other
+                const result = RESULT_DISPLAY[activity.result]
 
                 return (
                   <div
@@ -197,23 +153,21 @@ export default function ActivityPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <p className="font-medium">{ACTIVITY_EVENT_LABELS[activity.event_type]}</p>
-                        <Badge variant="outline" className="text-xs">
-                          {activity.event_type.replace('_', ' ')}
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-muted-foreground mt-0.5">{activity.description}</p>
-                      <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
-                        <span>{activity.ip_address}</span>
-                        {activity.location && (
-                          <>
-                            <span>•</span>
-                            <span>{activity.location}</span>
-                          </>
+                        <p className="font-medium">{formatAction(activity.action)}</p>
+                        {result && (
+                          <Badge className={`${result.bgColor} ${result.color} border-0 text-xs`}>
+                            {result.label}
+                          </Badge>
                         )}
-                        <span>•</span>
-                        <span title={format(new Date(activity.created_at), 'PPpp')}>
-                          {formatDistanceToNow(new Date(activity.created_at), {
+                      </div>
+                      {activity.message && (
+                        <p className="text-sm text-muted-foreground mt-0.5">{activity.message}</p>
+                      )}
+                      <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
+                        {activity.actor_ip && <span>{activity.actor_ip}</span>}
+                        {activity.actor_ip && <span>•</span>}
+                        <span title={format(new Date(activity.timestamp), 'PPpp')}>
+                          {formatDistanceToNow(new Date(activity.timestamp), {
                             addSuffix: true,
                           })}
                         </span>
@@ -229,9 +183,9 @@ export default function ActivityPage() {
           {totalPages > 1 && (
             <div className="flex items-center justify-between mt-6">
               <p className="text-sm text-muted-foreground">
-                Showing {(page - 1) * perPage + 1} to{' '}
-                {Math.min(page * perPage, filteredActivities.length)} of {filteredActivities.length}{' '}
-                activities
+                Showing {(page - 1) * PER_PAGE + 1} to{' '}
+                {Math.min(page * PER_PAGE, filteredActivities.length)} of{' '}
+                {filteredActivities.length} activities
               </p>
               <div className="flex items-center gap-2">
                 <Button
