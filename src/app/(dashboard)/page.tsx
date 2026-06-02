@@ -361,8 +361,8 @@ export default function Dashboard() {
                           type="monotone"
                           dataKey="critical"
                           stackId="1"
-                          stroke="#ef4444"
-                          fill="#ef4444"
+                          stroke={SEVERITY_COLORS.critical}
+                          fill={SEVERITY_COLORS.critical}
                           fillOpacity={0.8}
                           name="Critical"
                         />
@@ -370,8 +370,8 @@ export default function Dashboard() {
                           type="monotone"
                           dataKey="high"
                           stackId="1"
-                          stroke="#f97316"
-                          fill="#f97316"
+                          stroke={SEVERITY_COLORS.high}
+                          fill={SEVERITY_COLORS.high}
                           fillOpacity={0.8}
                           name="High"
                         />
@@ -379,8 +379,8 @@ export default function Dashboard() {
                           type="monotone"
                           dataKey="medium"
                           stackId="1"
-                          stroke="#eab308"
-                          fill="#eab308"
+                          stroke={SEVERITY_COLORS.medium}
+                          fill={SEVERITY_COLORS.medium}
                           fillOpacity={0.8}
                           name="Medium"
                         />
@@ -388,8 +388,8 @@ export default function Dashboard() {
                           type="monotone"
                           dataKey="low"
                           stackId="1"
-                          stroke="#3b82f6"
-                          fill="#3b82f6"
+                          stroke={SEVERITY_COLORS.low}
+                          fill={SEVERITY_COLORS.low}
                           fillOpacity={0.8}
                           name="Low"
                         />
