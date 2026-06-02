@@ -652,7 +652,16 @@ function FindingsContent() {
           return (
             <div
               className="cursor-pointer max-w-[200px] sm:max-w-md"
+              role="button"
+              tabIndex={0}
+              aria-label="View finding details"
               onClick={() => handleRowClick(row.original)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  handleRowClick(row.original)
+                }
+              }}
             >
               <div className="flex items-center gap-1.5">
                 <p className="font-medium truncate">{row.getValue('title')}</p>
