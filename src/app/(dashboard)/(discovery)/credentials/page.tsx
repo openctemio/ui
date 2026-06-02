@@ -890,7 +890,16 @@ export default function CredentialsPage() {
                             key={row.id}
                             data-state={row.getIsSelected() && 'selected'}
                             className="cursor-pointer"
+                            role="button"
+                            tabIndex={0}
+                            aria-label="View credential details"
                             onClick={() => setSelectedCredential(row.original)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault()
+                                setSelectedCredential(row.original)
+                              }
+                            }}
                           >
                             {row.getVisibleCells().map((cell) => (
                               <TableCell
