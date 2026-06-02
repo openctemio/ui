@@ -38,6 +38,7 @@ import {
   Loader2,
   Route,
   ClipboardList,
+  AlertOctagon,
 } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import {
@@ -670,6 +671,36 @@ function FindingsContent() {
             >
               <div className="flex items-center gap-1.5">
                 <p className="font-medium truncate">{row.getValue('title')}</p>
+                {/* KEV — actively exploited; the single most urgent triage signal */}
+                {row.original.isInKev && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                        <AlertOctagon className="h-2.5 w-2.5" />
+                        KEV
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-xs text-xs">
+                      <p className="font-semibold">CISA Known Exploited Vulnerability</p>
+                      {row.original.kevDueDate && (
+                        <p>Remediate by {new Date(row.original.kevDueDate).toLocaleDateString()}</p>
+                      )}
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+                {typeof row.original.epssScore === 'number' && row.original.epssScore > 0 && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="inline-flex shrink-0 items-center rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-400">
+                        EPSS {(row.original.epssScore * 100).toFixed(1)}%
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-xs text-xs">
+                      Exploit Prediction Scoring System — estimated probability of exploitation in
+                      the next 30 days
+                    </TooltipContent>
+                  </Tooltip>
+                )}
                 {hasDataFlow && (
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -683,8 +714,12 @@ function FindingsContent() {
                   </Tooltip>
                 )}
               </div>
-              {row.original.scanner && (
-                <p className="text-muted-foreground text-xs truncate">{row.original.scanner}</p>
+              {(row.original.cve || row.original.scanner) && (
+                <p className="text-muted-foreground truncate text-xs">
+                  {row.original.cve && <span className="font-mono">{row.original.cve}</span>}
+                  {row.original.cve && row.original.scanner && ' · '}
+                  {row.original.scanner}
+                </p>
               )}
             </div>
           )
