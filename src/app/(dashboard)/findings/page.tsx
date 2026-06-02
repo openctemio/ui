@@ -48,6 +48,7 @@ import {
   SEVERITY_CONFIG,
 } from '@/features/findings'
 import { PriorityClassBadge } from '@/features/findings/components/priority-class-badge'
+import { AssigneeSelect } from '@/features/findings/components/assignee-select'
 import { FindingGroupsTab } from '@/features/findings/components/finding-groups-tab'
 import { MarkFixedDialog } from '@/features/findings/components/mark-fixed-dialog'
 import { PendingReviewTab } from '@/features/findings/components/pending-review-tab'
@@ -453,14 +454,10 @@ function FindingsContent() {
     }
   }
 
-  const handleBulkAssign = async () => {
+  const handleBulkAssign = async (userId: string) => {
     const selectedIds = Object.keys(rowSelection).filter((k) => rowSelection[k])
     const findingIds = selectedIds.map((idx) => findings[parseInt(idx)]?.id).filter(Boolean)
-    if (findingIds.length === 0) return
-
-    // For now, use prompt for user ID - a proper dialog would be Phase 2
-    const userId = window.prompt('Enter user ID to assign findings to:')
-    if (!userId?.trim()) return
+    if (findingIds.length === 0 || !userId.trim()) return
 
     try {
       const response = await csrfFetch('/api/v1/findings/bulk/assign', {
@@ -602,6 +599,14 @@ function FindingsContent() {
           break
         case 'delete':
           handleDeleteClick(finding)
+          break
+        case 'assign':
+        case 'status':
+        case 'false_positive':
+          // These actions live in the detail drawer (assignee picker, status
+          // select with approval flow). Open it focused on this finding rather
+          // than firing a no-op.
+          handleRowClick(finding)
           break
         default:
           toast.info(`Action: ${action}`, { description: finding.title })
@@ -1063,10 +1068,12 @@ function FindingsContent() {
                 <CardContent className="flex items-center justify-between py-3">
                   <span className="text-sm font-medium">{selectedCount} finding(s) selected</span>
                   <div className="flex flex-wrap items-center gap-2">
-                    <Button variant="outline" size="sm" onClick={handleBulkAssign}>
-                      <UserPlus className="mr-2 h-4 w-4" />
-                      Assign
-                    </Button>
+                    <AssigneeSelect
+                      placeholder="Assign to…"
+                      onChange={(user) => {
+                        if (user) void handleBulkAssign(user.id)
+                      }}
+                    />
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="outline" size="sm">
@@ -1075,8 +1082,8 @@ function FindingsContent() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent>
-                        <DropdownMenuItem onClick={() => handleBulkStatusChange('open')}>
-                          Open
+                        <DropdownMenuItem onClick={() => handleBulkStatusChange('confirmed')}>
+                          Confirmed
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleBulkStatusChange('in_progress')}>
                           In Progress
@@ -1084,9 +1091,8 @@ function FindingsContent() {
                         <DropdownMenuItem onClick={() => handleBulkStatusChange('resolved')}>
                           Resolved
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleBulkStatusChange('false_positive')}>
-                          False Positive
-                        </DropdownMenuItem>
+                        {/* false_positive requires the per-finding approval flow, so it is
+                            intentionally not offered as a bulk action. */}
                       </DropdownMenuContent>
                     </DropdownMenu>
                     <Button variant="outline" size="sm" onClick={() => setRowSelection({})}>
