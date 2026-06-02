@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react'
 import { Main } from '@/components/layout'
-import { PageHeader, StatsCard } from '@/features/shared'
+import { PageHeader, StatsCard, EmptyState } from '@/features/shared'
 import { useDashboardStats } from '@/features/dashboard/hooks/use-dashboard-stats'
 import { useTenant } from '@/context/tenant-provider'
 import {
@@ -98,20 +98,6 @@ function LoadingSkeleton() {
   )
 }
 
-function EmptyState() {
-  return (
-    <Card>
-      <CardContent className="flex flex-col items-center justify-center py-16">
-        <KeyRound className="mb-4 h-12 w-12 text-muted-foreground" />
-        <p className="text-lg font-medium">No credential exposure data available</p>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Configure credential scanning to monitor exposed access keys across your systems.
-        </p>
-      </CardContent>
-    </Card>
-  )
-}
-
 export default function CredentialExposuresPage() {
   const { currentTenant } = useTenant()
   const { stats, isLoading } = useDashboardStats(currentTenant?.id || null)
@@ -161,7 +147,11 @@ export default function CredentialExposuresPage() {
       {isLoading ? (
         <LoadingSkeleton />
       ) : !hasData ? (
-        <EmptyState />
+        <EmptyState
+          icon={KeyRound}
+          title="No credential exposure data available"
+          description="Configure credential scanning to monitor exposed access keys across your systems."
+        />
       ) : (
         <>
           {/* Stats Row */}
