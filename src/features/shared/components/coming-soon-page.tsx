@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Construction, ArrowLeft, Bell } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import type { LucideIcon } from 'lucide-react'
 
 interface ComingSoonPageProps {
@@ -74,7 +75,7 @@ export function ComingSoonPage({
                 <Button
                   variant="outline"
                   className="w-full"
-                  onClick={() => alert('You will be notified when this feature is available')}
+                  onClick={() => toast.info('You will be notified when this feature is available')}
                 >
                   <Bell className="mr-2 h-4 w-4" />
                   Notify Me When Available

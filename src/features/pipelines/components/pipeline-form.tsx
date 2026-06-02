@@ -321,8 +321,6 @@ export function PipelineForm({ pipeline, onSubmit, onCancel, isSubmitting }: Pip
 
   // Sync form state when pipeline prop changes (e.g., after fetching full pipeline with steps)
   useEffect(() => {
-    console.log('PipelineForm useEffect triggered, pipeline:', pipeline)
-    console.log('Pipeline steps:', pipeline?.steps)
     if (pipeline) {
       setName(pipeline.name || '')
       setDescription(pipeline.description || '')
@@ -355,7 +353,6 @@ export function PipelineForm({ pipeline, onSubmit, onCancel, isSubmitting }: Pip
               depends_on: [],
             },
           ]
-      console.log('Setting steps to:', newSteps)
       setSteps(newSteps)
       setTimeoutSeconds(pipeline.settings?.timeout_seconds || 3600)
       setMaxParallelSteps(pipeline.settings?.max_parallel_steps || 3)
