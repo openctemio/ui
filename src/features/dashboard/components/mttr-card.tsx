@@ -2,6 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Clock, TrendingDown, TrendingUp } from 'lucide-react'
+import { SEVERITY_CHART_COLORS } from '@/lib/severity-colors'
 import { useMTTRMetrics, useRiskVelocity } from '../hooks/use-dashboard-stats'
 import { useTenant } from '@/context/tenant-provider'
 import {
@@ -36,10 +37,10 @@ export function MTTRCard() {
       : 0
 
   const chartData = [
-    { severity: 'Critical', hours: Math.round(criticalMTTR), fill: '#ef4444' },
-    { severity: 'High', hours: Math.round(highMTTR), fill: '#f97316' },
-    { severity: 'Medium', hours: Math.round(mediumMTTR), fill: '#eab308' },
-    { severity: 'Low', hours: Math.round(lowMTTR), fill: '#22c55e' },
+    { severity: 'Critical', hours: Math.round(criticalMTTR), fill: SEVERITY_CHART_COLORS.critical },
+    { severity: 'High', hours: Math.round(highMTTR), fill: SEVERITY_CHART_COLORS.high },
+    { severity: 'Medium', hours: Math.round(mediumMTTR), fill: SEVERITY_CHART_COLORS.medium },
+    { severity: 'Low', hours: Math.round(lowMTTR), fill: SEVERITY_CHART_COLORS.low },
   ].filter((d) => d.hours > 0)
 
   return (
