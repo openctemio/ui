@@ -341,7 +341,7 @@ export function ExposureTable({
                             Accept Risk
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => onMarkFalsePositive?.(exposure)}>
-                            <X className="mr-2 h-4 w-4 text-gray-500" />
+                            <X className="mr-2 h-4 w-4 text-muted-foreground" />
                             False Positive
                           </DropdownMenuItem>
                         </>
