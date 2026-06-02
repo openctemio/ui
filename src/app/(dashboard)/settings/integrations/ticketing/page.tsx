@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Main } from '@/components/layout'
-import { PageHeader } from '@/features/shared'
+import { PageHeader, EmptyState } from '@/features/shared'
 import { StatsCard } from '@/features/shared/components/stats-card'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -397,24 +397,6 @@ function LoadingSkeleton() {
   )
 }
 
-function EmptyState({ onConnect }: { onConnect: () => void }) {
-  return (
-    <Card>
-      <CardContent className="flex flex-col items-center justify-center py-12">
-        <Ticket className="text-muted-foreground mb-4 h-12 w-12" />
-        <h3 className="mb-1 text-lg font-semibold">No Ticketing Systems Connected</h3>
-        <p className="text-muted-foreground mb-4 text-sm">
-          Connect a ticketing system to automatically create and track remediation tickets.
-        </p>
-        <Button size="sm" onClick={onConnect}>
-          <Plus className="mr-2 h-4 w-4" />
-          Connect Ticketing System
-        </Button>
-      </CardContent>
-    </Card>
-  )
-}
-
 // ─────────────────────────────────────────────────────────
 // Auto-ticketing rules (static config UI — actual rules TBD)
 // ─────────────────────────────────────────────────────────
@@ -517,7 +499,17 @@ export default function TicketingIntegrationPage() {
       <div className="mt-6">
         <h2 className="mb-4 text-lg font-semibold">Ticketing Connections</h2>
         {connections.length === 0 ? (
-          <EmptyState onConnect={() => setDialogOpen(true)} />
+          <EmptyState
+            icon={Ticket}
+            title="No Ticketing Systems Connected"
+            description="Connect a ticketing system to automatically create and track remediation tickets."
+            action={
+              <Button size="sm" onClick={() => setDialogOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Connect Ticketing System
+              </Button>
+            }
+          />
         ) : (
           <div className="space-y-4">
             {connections.map((conn) => (
