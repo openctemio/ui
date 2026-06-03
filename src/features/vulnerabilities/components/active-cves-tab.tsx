@@ -350,7 +350,7 @@ export function ActiveCVEsTab() {
               {error instanceof Error ? error.message : 'Unknown error'}
             </p>
             <Button variant="outline" onClick={() => mutate()}>
-              <RefreshCw className="mr-2 h-4 w-4" />
+              <RefreshCw className="me-2 h-4 w-4" />
               Retry
             </Button>
           </div>
@@ -363,10 +363,10 @@ export function ActiveCVEsTab() {
                     <TableHead className="w-[170px]">CVE ID</TableHead>
                     <TableHead>Title</TableHead>
                     <TableHead className="w-[110px]">Severity</TableHead>
-                    <TableHead className="w-[80px] text-right">CVSS</TableHead>
-                    <TableHead className="w-[80px] text-right">EPSS</TableHead>
-                    <TableHead className="w-[110px] text-right">Affected</TableHead>
-                    <TableHead className="w-[110px] text-right">Findings</TableHead>
+                    <TableHead className="w-[80px] text-end">CVSS</TableHead>
+                    <TableHead className="w-[80px] text-end">EPSS</TableHead>
+                    <TableHead className="w-[110px] text-end">Affected</TableHead>
+                    <TableHead className="w-[110px] text-end">Findings</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -424,19 +424,19 @@ export function ActiveCVEsTab() {
                         <TableCell>
                           <SeverityBadge severity={c.severity as Severity} />
                         </TableCell>
-                        <TableCell className="text-right font-mono text-sm">
+                        <TableCell className="text-end font-mono text-sm">
                           {c.cvss_score != null ? c.cvss_score.toFixed(1) : '—'}
                         </TableCell>
-                        <TableCell className="text-right font-mono text-sm">
+                        <TableCell className="text-end font-mono text-sm">
                           {c.epss_score != null ? `${(c.epss_score * 100).toFixed(1)}%` : '—'}
                         </TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="text-end">
                           <span className="inline-flex items-center gap-1 text-sm">
                             <Server className="h-3.5 w-3.5 text-muted-foreground" />
                             <span className="font-medium">{c.affected_assets_count}</span>
                           </span>
                         </TableCell>
-                        <TableCell className="text-right text-sm">
+                        <TableCell className="text-end text-sm">
                           {c.open_finding_count > 0 ? (
                             <span className="font-medium text-red-600">
                               {c.open_finding_count} open
@@ -501,7 +501,7 @@ export function ActiveCVEsTab() {
                     onClick={() => setFilters((prev) => ({ ...prev, page: page + 1 }))}
                   >
                     Next
-                    <ExternalLink className="ml-1 h-3 w-3 rotate-[-90deg]" />
+                    <ExternalLink className="ms-1 h-3 w-3 rotate-[-90deg]" />
                   </Button>
                 </div>
               </div>

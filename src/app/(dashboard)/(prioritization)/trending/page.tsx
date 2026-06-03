@@ -583,12 +583,12 @@ export default function TrendingExposuresPage() {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Date</TableHead>
-                        <TableHead className="text-right">Risk Score</TableHead>
-                        <TableHead className="text-right">Open Findings</TableHead>
-                        <TableHead className="text-right">P0</TableHead>
-                        <TableHead className="text-right">P1</TableHead>
-                        <TableHead className="text-right">P2</TableHead>
-                        <TableHead className="text-right">P3</TableHead>
+                        <TableHead className="text-end">Risk Score</TableHead>
+                        <TableHead className="text-end">Open Findings</TableHead>
+                        <TableHead className="text-end">P0</TableHead>
+                        <TableHead className="text-end">P1</TableHead>
+                        <TableHead className="text-end">P2</TableHead>
+                        <TableHead className="text-end">P3</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -597,24 +597,24 @@ export default function TrendingExposuresPage() {
                           <TableCell className="text-sm">
                             {new Date(point.date).toLocaleDateString()}
                           </TableCell>
-                          <TableCell className="text-right font-mono">
+                          <TableCell className="text-end font-mono">
                             {point.risk_score.toFixed(1)}
                           </TableCell>
-                          <TableCell className="text-right">{point.findings_open}</TableCell>
-                          <TableCell className="text-right">
+                          <TableCell className="text-end">{point.findings_open}</TableCell>
+                          <TableCell className="text-end">
                             <span className={cn(point.p0_count > 0 && 'text-red-500 font-medium')}>
                               {point.p0_count}
                             </span>
                           </TableCell>
-                          <TableCell className="text-right">
+                          <TableCell className="text-end">
                             <span
                               className={cn(point.p1_count > 0 && 'text-orange-500 font-medium')}
                             >
                               {point.p1_count}
                             </span>
                           </TableCell>
-                          <TableCell className="text-right">{point.p2_count}</TableCell>
-                          <TableCell className="text-right">{point.p3_count}</TableCell>
+                          <TableCell className="text-end">{point.p2_count}</TableCell>
+                          <TableCell className="text-end">{point.p3_count}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>

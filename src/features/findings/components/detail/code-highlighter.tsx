@@ -799,7 +799,7 @@ export function CodeHighlighter({
 
             return (
               <div key={i} className={cn('flex', isHighlighted && 'bg-yellow-500/20 -mx-3 px-3')}>
-                <span className="select-none w-8 text-right pr-3 text-slate-600 flex-shrink-0">
+                <span className="select-none w-8 text-end pe-3 text-slate-600 flex-shrink-0">
                   {lineNumber}
                 </span>
                 <span className="flex-1">

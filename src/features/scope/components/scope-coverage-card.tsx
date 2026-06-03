@@ -115,7 +115,7 @@ export function ScopeCoverageCard({
                         />
                       </div>
                     </div>
-                    <span className="w-12 text-right text-muted-foreground">
+                    <span className="w-12 text-end text-muted-foreground">
                       {stats.inScope}/{stats.total}
                     </span>
                   </div>

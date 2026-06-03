@@ -165,7 +165,7 @@ export default function AttackerProfilesPage() {
         >
           <Can permission={Permission.AttackerProfilesWrite}>
             <Button size="sm" onClick={() => setIsCreateOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
+              <Plus className="me-2 h-4 w-4" />
               New Profile
             </Button>
           </Can>
@@ -194,7 +194,7 @@ export default function AttackerProfilesPage() {
                     <TableHead>Type</TableHead>
                     <TableHead>Capabilities</TableHead>
                     <TableHead>Default</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead className="text-end">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -255,7 +255,7 @@ export default function AttackerProfilesPage() {
                           <span className="text-muted-foreground text-sm">Custom</span>
                         )}
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-end">
                         {!profile.is_default && (
                           <Can permission={Permission.AttackerProfilesWrite}>
                             <Button

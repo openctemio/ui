@@ -138,12 +138,12 @@ function AppCard({ app }: { app: ConnectedApp }) {
           <div className="flex items-center gap-1">
             {app.status === 'connected' && (
               <Button variant="outline" size="sm" disabled title="Sync now">
-                <RefreshCw className="mr-2 h-4 w-4" />
+                <RefreshCw className="me-2 h-4 w-4" />
                 Sync
               </Button>
             )}
             <Button variant="outline" size="sm" disabled title="Settings">
-              <Settings className="mr-2 h-4 w-4" />
+              <Settings className="me-2 h-4 w-4" />
               Settings
             </Button>
           </div>
@@ -190,7 +190,7 @@ export default function ConnectedAppsPage() {
     <Main>
       <PageHeader title="Connected Apps" description="Manage third-party application integrations">
         <Button size="sm" disabled>
-          <Plus className="mr-2 h-4 w-4" />
+          <Plus className="me-2 h-4 w-4" />
           Add Integration
         </Button>
       </PageHeader>
@@ -227,7 +227,7 @@ export default function ConnectedAppsPage() {
             description="Connect your first third-party application to start importing data."
             action={
               <Button size="sm" disabled>
-                <Plus className="mr-2 h-4 w-4" />
+                <Plus className="me-2 h-4 w-4" />
                 Browse Integrations
               </Button>
             }

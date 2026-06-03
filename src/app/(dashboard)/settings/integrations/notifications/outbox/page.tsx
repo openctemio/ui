@@ -289,9 +289,9 @@ export default function NotificationOutboxPage() {
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="sm" asChild className="-ml-2">
+            <Button variant="ghost" size="sm" asChild className="-ms-2">
               <Link href="/settings/integrations/notifications">
-                <ArrowLeft className="mr-2 h-4 w-4" />
+                <ArrowLeft className="me-2 h-4 w-4" />
                 Back to Channels
               </Link>
             </Button>
@@ -301,7 +301,7 @@ export default function NotificationOutboxPage() {
             </div>
           </div>
           <Button variant="outline" size="sm" onClick={handleRefresh}>
-            <RefreshCw className="mr-2 h-4 w-4" />
+            <RefreshCw className="me-2 h-4 w-4" />
             Refresh
           </Button>
         </div>
@@ -488,7 +488,7 @@ export default function NotificationOutboxPage() {
                                             target="_blank"
                                             rel="noopener noreferrer"
                                           >
-                                            <ExternalLink className="mr-2 h-4 w-4" />
+                                            <ExternalLink className="me-2 h-4 w-4" />
                                             View Source
                                           </a>
                                         </DropdownMenuItem>
@@ -499,7 +499,7 @@ export default function NotificationOutboxPage() {
                                             onClick={() => handleRetry(entry)}
                                             disabled={isRetrying}
                                           >
-                                            <RotateCcw className="mr-2 h-4 w-4" />
+                                            <RotateCcw className="me-2 h-4 w-4" />
                                             Retry
                                           </DropdownMenuItem>
                                         )}
@@ -511,7 +511,7 @@ export default function NotificationOutboxPage() {
                                           onClick={() => handleDeleteClick(entry)}
                                           disabled={isDeleting}
                                         >
-                                          <Trash2 className="mr-2 h-4 w-4" />
+                                          <Trash2 className="me-2 h-4 w-4" />
                                           Delete
                                         </DropdownMenuItem>
                                       </Can>
@@ -580,7 +580,7 @@ export default function NotificationOutboxPage() {
               >
                 {isDeleting ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <Loader2 className="me-2 h-4 w-4 animate-spin" />
                     Deleting...
                   </>
                 ) : (

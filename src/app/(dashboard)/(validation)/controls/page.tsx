@@ -174,7 +174,7 @@ export default function CompensatingControlsPage() {
         >
           <Can permission={Permission.CompensatingControlsWrite}>
             <Button size="sm" onClick={() => setIsCreateOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
+              <Plus className="me-2 h-4 w-4" />
               New Control
             </Button>
           </Can>
@@ -205,7 +205,7 @@ export default function CompensatingControlsPage() {
                     <TableHead>Reduction</TableHead>
                     <TableHead>Last Tested</TableHead>
                     <TableHead>Test Result</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead className="text-end">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -243,7 +243,7 @@ export default function CompensatingControlsPage() {
                           <span className="text-muted-foreground text-sm">-</span>
                         )}
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-end">
                         <Can permission={Permission.CompensatingControlsWrite}>
                           <div className="flex items-center justify-end gap-1">
                             <Button
@@ -254,7 +254,7 @@ export default function CompensatingControlsPage() {
                                 setTestResult('pass')
                               }}
                             >
-                              <FlaskConical className="mr-1 h-3 w-3" />
+                              <FlaskConical className="me-1 h-3 w-3" />
                               Test
                             </Button>
                             <Button

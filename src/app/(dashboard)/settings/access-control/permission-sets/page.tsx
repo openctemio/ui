@@ -165,10 +165,10 @@ export default function PermissionSetsPage() {
         <Button
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-          className="-ml-4"
+          className="-ms-4"
         >
           Permission Set
-          <ArrowUpDown className="ml-2 h-4 w-4" />
+          <ArrowUpDown className="ms-2 h-4 w-4" />
         </Button>
       ),
       cell: ({ row }) => {
@@ -240,14 +240,14 @@ export default function PermissionSetsPage() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => setSelectedPermissionSetId(permissionSet.id)}>
-                <Eye className="mr-2 h-4 w-4" />
+                <Eye className="me-2 h-4 w-4" />
                 View Details
               </DropdownMenuItem>
               {!isSystem && (
                 <>
                   <Can permission={Permission.PermissionSetsWrite}>
                     <DropdownMenuItem onClick={() => setSelectedPermissionSetId(permissionSet.id)}>
-                      <Pencil className="mr-2 h-4 w-4" />
+                      <Pencil className="me-2 h-4 w-4" />
                       Edit
                     </DropdownMenuItem>
                   </Can>
@@ -260,7 +260,7 @@ export default function PermissionSetsPage() {
                         setDeleteDialogOpen(true)
                       }}
                     >
-                      <Trash2 className="mr-2 h-4 w-4" />
+                      <Trash2 className="me-2 h-4 w-4" />
                       Delete
                     </DropdownMenuItem>
                   </Can>
@@ -360,7 +360,7 @@ export default function PermissionSetsPage() {
         >
           <Can permission={Permission.PermissionSetsWrite} mode="disable">
             <Button onClick={() => setCreateDialogOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
+              <Plus className="me-2 h-4 w-4" />
               Create Permission Set
             </Button>
           </Can>
@@ -467,7 +467,7 @@ export default function PermissionSetsPage() {
                       placeholder="Search permission sets..."
                       value={globalFilter}
                       onChange={(e) => setGlobalFilter(e.target.value)}
-                      className="pl-9"
+                      className="ps-9"
                     />
                   </div>
 
@@ -490,7 +490,7 @@ export default function PermissionSetsPage() {
                             className="text-red-400"
                             onClick={() => toast.info('Bulk delete not implemented yet')}
                           >
-                            <Trash2 className="mr-2 h-4 w-4" />
+                            <Trash2 className="me-2 h-4 w-4" />
                             Delete Selected
                           </DropdownMenuItem>
                         </DropdownMenuContent>
@@ -551,7 +551,7 @@ export default function PermissionSetsPage() {
                                   size="sm"
                                   onClick={() => setCreateDialogOpen(true)}
                                 >
-                                  <Plus className="mr-2 h-4 w-4" />
+                                  <Plus className="me-2 h-4 w-4" />
                                   Create your first permission set
                                 </Button>
                               </div>
@@ -627,7 +627,7 @@ export default function PermissionSetsPage() {
                 Selected: {createForm.permissions.length} permissions
               </p>
 
-              <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+              <div className="space-y-4 max-h-[400px] overflow-y-auto pe-2">
                 {PermissionCategories.map((category) => (
                   <div key={category.name} className="space-y-2">
                     <h4 className="text-sm font-medium text-muted-foreground">{category.name}</h4>
@@ -677,9 +677,9 @@ export default function PermissionSetsPage() {
               disabled={isCreating || !createForm.name || createForm.permissions.length === 0}
             >
               {isCreating ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="me-2 h-4 w-4 animate-spin" />
               ) : (
-                <Plus className="mr-2 h-4 w-4" />
+                <Plus className="me-2 h-4 w-4" />
               )}
               Create Permission Set
             </Button>
@@ -714,9 +714,9 @@ export default function PermissionSetsPage() {
             </Button>
             <Button variant="destructive" onClick={handleDeletePermissionSet} disabled={isDeleting}>
               {isDeleting ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="me-2 h-4 w-4 animate-spin" />
               ) : (
-                <Trash2 className="mr-2 h-4 w-4" />
+                <Trash2 className="me-2 h-4 w-4" />
               )}
               Delete
             </Button>

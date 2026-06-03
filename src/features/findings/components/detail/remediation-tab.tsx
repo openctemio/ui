@@ -133,7 +133,7 @@ export function RemediationTab({ remediation, finding }: RemediationTabProps) {
               {completedSteps} of {totalSteps} steps completed
             </p>
           </div>
-          <div className="text-right">
+          <div className="text-end">
             <p className="text-2xl font-bold">{remediation.progress}%</p>
             {remediation.deadline && (
               <div
@@ -313,8 +313,8 @@ export function RemediationTab({ remediation, finding }: RemediationTabProps) {
             <Code2 className="h-4 w-4" />
             Auto-Fix Code
             {isAutoFixable && (
-              <Badge variant="outline" className="ml-2 border-green-500/50 text-green-400">
-                <Zap className="h-3 w-3 mr-1" />
+              <Badge variant="outline" className="ms-2 border-green-500/50 text-green-400">
+                <Zap className="h-3 w-3 me-1" />
                 Auto-fixable
               </Badge>
             )}

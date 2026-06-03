@@ -218,10 +218,10 @@ export default function RolesPage() {
         <Button
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-          className="-ml-4"
+          className="-ms-4"
         >
           Role
-          <ArrowUpDown className="ml-2 h-4 w-4" />
+          <ArrowUpDown className="ms-2 h-4 w-4" />
         </Button>
       ),
       cell: ({ row }) => {
@@ -271,7 +271,7 @@ export default function RolesPage() {
         >
           {row.original.has_full_data_access ? (
             <>
-              <Database className="mr-1 h-3 w-3" />
+              <Database className="me-1 h-3 w-3" />
               Full Access
             </>
           ) : (
@@ -313,7 +313,7 @@ export default function RolesPage() {
                   setSelectedRole(role)
                 }}
               >
-                <Eye className="mr-2 h-4 w-4" />
+                <Eye className="me-2 h-4 w-4" />
                 View Details
               </DropdownMenuItem>
               {!role.is_system && (
@@ -325,7 +325,7 @@ export default function RolesPage() {
                         setEditRole(role)
                       }}
                     >
-                      <Pencil className="mr-2 h-4 w-4" />
+                      <Pencil className="me-2 h-4 w-4" />
                       Edit Role
                     </DropdownMenuItem>
                   </Can>
@@ -339,7 +339,7 @@ export default function RolesPage() {
                         setDeleteDialogOpen(true)
                       }}
                     >
-                      <Trash2 className="mr-2 h-4 w-4" />
+                      <Trash2 className="me-2 h-4 w-4" />
                       Delete Role
                     </DropdownMenuItem>
                   </Can>
@@ -407,7 +407,7 @@ export default function RolesPage() {
         >
           <Can permission={Permission.RolesWrite}>
             <Button onClick={() => setCreateSheetOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
+              <Plus className="me-2 h-4 w-4" />
               Create Role
             </Button>
           </Can>
@@ -512,7 +512,7 @@ export default function RolesPage() {
                       placeholder="Search roles..."
                       value={globalFilter}
                       onChange={(e) => setGlobalFilter(e.target.value)}
-                      className="pl-9"
+                      className="ps-9"
                     />
                   </div>
 
@@ -535,7 +535,7 @@ export default function RolesPage() {
                             className="text-red-400"
                             onClick={() => toast.info('Bulk delete not implemented yet')}
                           >
-                            <Trash2 className="mr-2 h-4 w-4" />
+                            <Trash2 className="me-2 h-4 w-4" />
                             Delete Selected
                           </DropdownMenuItem>
                         </DropdownMenuContent>
@@ -597,7 +597,7 @@ export default function RolesPage() {
                                     size="sm"
                                     onClick={() => setCreateSheetOpen(true)}
                                   >
-                                    <Plus className="mr-2 h-4 w-4" />
+                                    <Plus className="me-2 h-4 w-4" />
                                     Create your first role
                                   </Button>
                                 </Can>
@@ -681,9 +681,9 @@ export default function RolesPage() {
             </Button>
             <Button variant="destructive" onClick={handleDeleteRole} disabled={isDeleting}>
               {isDeleting ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="me-2 h-4 w-4 animate-spin" />
               ) : (
-                <Trash2 className="mr-2 h-4 w-4" />
+                <Trash2 className="me-2 h-4 w-4" />
               )}
               Delete Role
             </Button>

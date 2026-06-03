@@ -359,12 +359,12 @@ ${components
               <Button onClick={handleExport} disabled={isExporting} className="w-full" size="lg">
                 {isExporting ? (
                   <>
-                    <Clock className="mr-2 h-4 w-4 animate-spin" />
+                    <Clock className="me-2 h-4 w-4 animate-spin" />
                     Generating SBOM...
                   </>
                 ) : (
                   <>
-                    <Download className="mr-2 h-4 w-4" />
+                    <Download className="me-2 h-4 w-4" />
                     Export SBOM
                   </>
                 )}

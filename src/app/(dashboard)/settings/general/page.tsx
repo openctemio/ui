@@ -136,11 +136,11 @@ export default function GeneralSettingsPage() {
         >
           <div className="flex gap-2">
             <Button variant="outline" onClick={handleReset} disabled={isUpdating}>
-              <RotateCcw className="mr-2 h-4 w-4" />
+              <RotateCcw className="me-2 h-4 w-4" />
               Reset
             </Button>
             <Button onClick={handleSave} disabled={isUpdating}>
-              <Save className="mr-2 h-4 w-4" />
+              <Save className="me-2 h-4 w-4" />
               {isUpdating ? 'Saving...' : 'Save Changes'}
             </Button>
           </div>

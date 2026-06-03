@@ -440,7 +440,7 @@ function StartNodeComponent({ selected }: NodeProps<StartNode>) {
         selected ? 'shadow-md ring-2 ring-primary ring-offset-1' : 'hover:shadow-md'
       )}
     >
-      <Play className="h-5 w-5 text-emerald-600 dark:text-emerald-400 ml-0.5" />
+      <Play className="h-5 w-5 text-emerald-600 dark:text-emerald-400 ms-0.5" />
 
       {/* Source Handle only - Start nodes connect forward */}
       <Handle

@@ -447,9 +447,9 @@ export function GroupDetailSheet({ groupId, open, onOpenChange, onUpdate }: Grou
             </Button>
             <Button variant="destructive" onClick={handleRemoveMember} disabled={isRemovingMember}>
               {isRemovingMember ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="me-2 h-4 w-4 animate-spin" />
               ) : (
-                <Trash2 className="mr-2 h-4 w-4" />
+                <Trash2 className="me-2 h-4 w-4" />
               )}
               Remove
             </Button>
@@ -477,9 +477,9 @@ export function GroupDetailSheet({ groupId, open, onOpenChange, onUpdate }: Grou
               disabled={isUnassigningAsset}
             >
               {isUnassigningAsset ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="me-2 h-4 w-4 animate-spin" />
               ) : (
-                <Trash2 className="mr-2 h-4 w-4" />
+                <Trash2 className="me-2 h-4 w-4" />
               )}
               Remove
             </Button>

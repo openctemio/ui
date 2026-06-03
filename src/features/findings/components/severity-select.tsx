@@ -67,13 +67,13 @@ export function SeveritySelect({
           disabled={disabled || loading}
         >
           {loading ? (
-            <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+            <Loader2 className="me-1 h-3 w-3 animate-spin" />
           ) : showIcon ? (
-            <Shield className="mr-1 h-3 w-3" />
+            <Shield className="me-1 h-3 w-3" />
           ) : null}
           {currentConfig.label}
-          {cvss !== undefined && <span className="ml-1 font-mono text-[10px]">({cvss})</span>}
-          {!disabled && <ChevronDown className="ml-1 h-3 w-3" />}
+          {cvss !== undefined && <span className="ms-1 font-mono text-[10px]">({cvss})</span>}
+          {!disabled && <ChevronDown className="ms-1 h-3 w-3" />}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-52">
@@ -88,8 +88,8 @@ export function SeveritySelect({
             >
               <div className={`h-2 w-2 rounded-full ${config.bgColor.replace('/20', '')}`} />
               {config.label}
-              <span className="text-muted-foreground ml-auto text-xs">{config.cvssRange}</span>
-              {showCheck && severity === value && <Check className="ml-1 h-3 w-3" />}
+              <span className="text-muted-foreground ms-auto text-xs">{config.cvssRange}</span>
+              {showCheck && severity === value && <Check className="ms-1 h-3 w-3" />}
             </DropdownMenuItem>
           )
         })}

@@ -211,12 +211,12 @@ export function PropertyFilterChips({
     <div className="flex items-center gap-1.5 flex-wrap">
       {activeFilters.flatMap(([key, vals]) =>
         vals.map((val) => (
-          <Badge key={`${key}:${val}`} variant="secondary" className="gap-1 text-xs h-7 pl-2 pr-1">
+          <Badge key={`${key}:${val}`} variant="secondary" className="gap-1 text-xs h-7 ps-2 pe-1">
             <span className="text-muted-foreground">{facetLabels?.[key] || key}:</span>
             <span className="font-medium truncate max-w-[150px]">{val}</span>
             <button
               type="button"
-              className="ml-0.5 rounded-sm hover:bg-destructive/20 p-0.5"
+              className="ms-0.5 rounded-sm hover:bg-destructive/20 p-0.5"
               onClick={(e) => {
                 e.preventDefault()
                 e.stopPropagation()

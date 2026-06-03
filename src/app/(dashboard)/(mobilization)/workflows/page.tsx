@@ -415,7 +415,7 @@ function WorkflowTriggerButton({
 
   return (
     <DropdownMenuItem onClick={handleRun} disabled={isMutating}>
-      <Play className="mr-2 h-4 w-4" />
+      <Play className="me-2 h-4 w-4" />
       {isMutating ? 'Running...' : 'Run Now'}
     </DropdownMenuItem>
   )
@@ -726,7 +726,7 @@ export default function WorkflowsPage() {
         >
           <Can permission={Permission.WorkflowsWrite} mode="disable">
             <Button onClick={() => setIsCreateDialogOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
+              <Plus className="me-2 h-4 w-4" />
               New Workflow
             </Button>
           </Can>
@@ -828,7 +828,7 @@ export default function WorkflowsPage() {
                       Create your first automation workflow
                     </p>
                     <Button onClick={() => setIsCreateDialogOpen(true)}>
-                      <Plus className="mr-2 h-4 w-4" />
+                      <Plus className="me-2 h-4 w-4" />
                       Create Workflow
                     </Button>
                   </div>
@@ -900,11 +900,11 @@ export default function WorkflowsPage() {
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
                                 <DropdownMenuItem onClick={() => handleViewWorkflow(workflow)}>
-                                  <Eye className="mr-2 h-4 w-4" />
+                                  <Eye className="me-2 h-4 w-4" />
                                   View Details
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => handleEditInBuilder(workflow)}>
-                                  <Pencil className="mr-2 h-4 w-4" />
+                                  <Pencil className="me-2 h-4 w-4" />
                                   Edit in Builder
                                 </DropdownMenuItem>
                                 <WorkflowTriggerButton
@@ -913,7 +913,7 @@ export default function WorkflowsPage() {
                                 />
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem>
-                                  <Copy className="mr-2 h-4 w-4" />
+                                  <Copy className="me-2 h-4 w-4" />
                                   Duplicate
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
@@ -922,7 +922,7 @@ export default function WorkflowsPage() {
                                   onClick={() => handleDeleteWorkflow(workflow)}
                                   disabled={isDeleting && deleteWorkflowId === workflow.id}
                                 >
-                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  <Trash2 className="me-2 h-4 w-4" />
                                   {isDeleting && deleteWorkflowId === workflow.id
                                     ? 'Deleting...'
                                     : 'Delete'}
@@ -987,7 +987,7 @@ export default function WorkflowsPage() {
                             <div className="text-muted-foreground text-xs">
                               {run.completed_nodes}/{run.total_nodes} nodes completed
                               {run.failed_nodes > 0 && (
-                                <span className="text-red-400 ml-2">
+                                <span className="text-red-400 ms-2">
                                   ({run.failed_nodes} failed)
                                 </span>
                               )}
@@ -995,9 +995,9 @@ export default function WorkflowsPage() {
                           </div>
                           <Badge className={`${runStatus.bgColor} ${runStatus.color} border-0`}>
                             {run.status === 'completed' ? (
-                              <CheckCircle className="mr-1 h-3 w-3" />
+                              <CheckCircle className="me-1 h-3 w-3" />
                             ) : run.status === 'failed' ? (
-                              <XCircle className="mr-1 h-3 w-3" />
+                              <XCircle className="me-1 h-3 w-3" />
                             ) : null}
                             {run.status}
                           </Badge>
@@ -1040,7 +1040,7 @@ export default function WorkflowsPage() {
                           setEdges(initialEdges)
                         }}
                       >
-                        <XCircle className="mr-2 h-4 w-4" />
+                        <XCircle className="me-2 h-4 w-4" />
                         Clear
                       </Button>
                     )}
@@ -1052,11 +1052,11 @@ export default function WorkflowsPage() {
                         setEdges(initialEdges)
                       }}
                     >
-                      <RefreshCw className="mr-2 h-4 w-4" />
+                      <RefreshCw className="me-2 h-4 w-4" />
                       Reset
                     </Button>
                     <Button size="sm" onClick={handleSaveWorkflow} disabled={isSaving}>
-                      <Save className="mr-2 h-4 w-4" />
+                      <Save className="me-2 h-4 w-4" />
                       {isSaving ? 'Saving...' : editingWorkflow ? 'Save Changes' : 'Save Workflow'}
                     </Button>
                   </div>
@@ -1240,7 +1240,7 @@ export default function WorkflowsPage() {
               <div className="flex gap-2">
                 <WorkflowRunButton workflow={selectedWorkflow} className="flex-1" />
                 <Button variant="outline" onClick={() => setSelectedWorkflow(null)}>
-                  <Pencil className="mr-2 h-4 w-4" />
+                  <Pencil className="me-2 h-4 w-4" />
                   Edit
                 </Button>
               </div>
@@ -1361,7 +1361,7 @@ function WorkflowRunButton({ workflow, className }: { workflow: Workflow; classN
 
   return (
     <Button className={className} onClick={handleRun} disabled={isMutating}>
-      <Play className="mr-2 h-4 w-4" />
+      <Play className="me-2 h-4 w-4" />
       {isMutating ? 'Running...' : 'Run Now'}
     </Button>
   )

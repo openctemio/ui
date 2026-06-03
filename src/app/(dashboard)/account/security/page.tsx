@@ -236,7 +236,7 @@ export default function SecurityPage() {
             </div>
             {otherSessions.length > 0 && (
               <Button variant="outline" size="sm" onClick={() => setShowRevokeAllDialog(true)}>
-                <LogOut className="h-4 w-4 mr-2" />
+                <LogOut className="h-4 w-4 me-2" />
                 Sign Out All Others
               </Button>
             )}
@@ -379,7 +379,7 @@ export default function SecurityPage() {
               Cancel
             </Button>
             <Button onClick={handleChangePassword} disabled={isChanging}>
-              {isChanging && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isChanging && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
               Change Password
             </Button>
           </DialogFooter>
@@ -405,7 +405,7 @@ export default function SecurityPage() {
               disabled={isRevoking}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {isRevoking && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isRevoking && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
               Revoke
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -428,7 +428,7 @@ export default function SecurityPage() {
               disabled={isRevokingAll}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {isRevokingAll && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isRevokingAll && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
               Sign Out All
             </AlertDialogAction>
           </AlertDialogFooter>

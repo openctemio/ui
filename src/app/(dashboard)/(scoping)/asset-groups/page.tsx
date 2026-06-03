@@ -169,7 +169,7 @@ function AddAssetsDialog({
               placeholder="Search assets..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-9"
+              className="ps-9"
             />
           </div>
 
@@ -484,42 +484,42 @@ export default function AssetGroupsPage() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => setViewGroup(group)}>
-                <Eye className="mr-2 h-4 w-4" />
+                <Eye className="me-2 h-4 w-4" />
                 Quick View
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => router.push(`/asset-groups/${group.id}`)}>
-                <ExternalLink className="mr-2 h-4 w-4" />
+                <ExternalLink className="me-2 h-4 w-4" />
                 Open Full Page
               </DropdownMenuItem>
               <Can permission={Permission.AssetGroupsWrite}>
                 <DropdownMenuItem onClick={() => setEditGroup(group)}>
-                  <Pencil className="mr-2 h-4 w-4" />
+                  <Pencil className="me-2 h-4 w-4" />
                   Edit
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setAddAssetsGroup(group)}>
-                  <Plus className="mr-2 h-4 w-4" />
+                  <Plus className="me-2 h-4 w-4" />
                   Add Assets
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => router.push(`/asset-groups/${group.id}?tab=assets`)}
                 >
-                  <Package className="mr-2 h-4 w-4" />
+                  <Package className="me-2 h-4 w-4" />
                   Manage Assets
                 </DropdownMenuItem>
               </Can>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => handleCopyId(group.id)}>
-                <Copy className="mr-2 h-4 w-4" />
+                <Copy className="me-2 h-4 w-4" />
                 Copy ID
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleCopyLink(group.id)}>
-                <Link className="mr-2 h-4 w-4" />
+                <Link className="me-2 h-4 w-4" />
                 Copy Link
               </DropdownMenuItem>
               <Can permission={Permission.AssetGroupsDelete}>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem className="text-red-400" onClick={() => setDeleteGroup(group)}>
-                  <Trash2 className="mr-2 h-4 w-4" />
+                  <Trash2 className="me-2 h-4 w-4" />
                   Delete
                 </DropdownMenuItem>
               </Can>
@@ -539,13 +539,13 @@ export default function AssetGroupsPage() {
         >
           <div className="flex flex-wrap items-center gap-2">
             <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isLoading}>
-              <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`me-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
               Refresh
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm">
-                  <Download className="mr-2 h-4 w-4" />
+                  <Download className="me-2 h-4 w-4" />
                   Export
                 </Button>
               </DropdownMenuTrigger>
@@ -575,10 +575,10 @@ export default function AssetGroupsPage() {
             <Popover open={isFilterOpen} onOpenChange={setIsFilterOpen}>
               <PopoverTrigger asChild>
                 <Button variant="outline" size="sm" className="relative">
-                  <Filter className="mr-2 h-4 w-4" />
+                  <Filter className="me-2 h-4 w-4" />
                   Filters
                   {activeFilterCount > 0 && (
-                    <Badge className="ml-2 h-5 w-5 rounded-full p-0 text-xs">
+                    <Badge className="ms-2 h-5 w-5 rounded-full p-0 text-xs">
                       {activeFilterCount}
                     </Badge>
                   )}
@@ -707,7 +707,7 @@ export default function AssetGroupsPage() {
 
             <Can permission={Permission.AssetGroupsWrite} mode="disable">
               <Button size="sm" onClick={() => setIsCreateOpen(true)}>
-                <Plus className="mr-2 h-4 w-4" />
+                <Plus className="me-2 h-4 w-4" />
                 New Group
               </Button>
             </Can>
@@ -769,7 +769,7 @@ export default function AssetGroupsPage() {
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" size="sm">
-                      <Tags className="mr-2 h-4 w-4" />
+                      <Tags className="me-2 h-4 w-4" />
                       Criticality
                     </Button>
                   </DropdownMenuTrigger>
@@ -779,7 +779,7 @@ export default function AssetGroupsPage() {
                         key={crit}
                         onClick={() => handleBulkAction('change-criticality', crit)}
                       >
-                        <Badge className={`mr-2 ${CRITICALITY_BADGE[crit]}`}>{crit}</Badge>
+                        <Badge className={`me-2 ${CRITICALITY_BADGE[crit]}`}>{crit}</Badge>
                       </DropdownMenuItem>
                     ))}
                   </DropdownMenuContent>
@@ -788,7 +788,7 @@ export default function AssetGroupsPage() {
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" size="sm">
-                      <SlidersHorizontal className="mr-2 h-4 w-4" />
+                      <SlidersHorizontal className="me-2 h-4 w-4" />
                       Environment
                     </Button>
                   </DropdownMenuTrigger>
@@ -812,7 +812,7 @@ export default function AssetGroupsPage() {
                   className="text-red-500 hover:text-red-600"
                   onClick={() => setBulkDeleteConfirm(true)}
                 >
-                  <Trash2 className="mr-2 h-4 w-4" />
+                  <Trash2 className="me-2 h-4 w-4" />
                   Delete
                 </Button>
                 <Button variant="outline" size="sm" onClick={() => setSelectedIds([])}>

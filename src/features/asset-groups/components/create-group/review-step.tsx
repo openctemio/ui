@@ -102,12 +102,12 @@ export function ReviewStep({ data, ungroupedAssets }: ReviewStepProps) {
         </div>
         {warnings.length === 0 ? (
           <Badge variant="default" className="bg-green-500">
-            <CheckCircle2 className="h-3 w-3 mr-1" />
+            <CheckCircle2 className="h-3 w-3 me-1" />
             Ready to create
           </Badge>
         ) : (
           <Badge variant="destructive">
-            <AlertCircle className="h-3 w-3 mr-1" />
+            <AlertCircle className="h-3 w-3 me-1" />
             {warnings.length} issue(s)
           </Badge>
         )}
@@ -120,7 +120,7 @@ export function ReviewStep({ data, ungroupedAssets }: ReviewStepProps) {
             <AlertCircle className="h-4 w-4" />
             <span className="text-sm font-medium">Please fix these issues:</span>
           </div>
-          <ul className="text-sm text-destructive/80 space-y-1 ml-6 list-disc">
+          <ul className="text-sm text-destructive/80 space-y-1 ms-6 list-disc">
             {warnings.map((warning, i) => (
               <li key={i}>{warning}</li>
             ))}
@@ -197,7 +197,7 @@ export function ReviewStep({ data, ungroupedAssets }: ReviewStepProps) {
             <div className="flex items-center justify-between">
               <h4 className="text-sm font-medium">Assets Summary</h4>
               <Badge variant="secondary">
-                <Server className="h-3 w-3 mr-1" />
+                <Server className="h-3 w-3 me-1" />
                 {totalAssets} total
               </Badge>
             </div>
@@ -298,7 +298,7 @@ export function ReviewStep({ data, ungroupedAssets }: ReviewStepProps) {
                             <span className="text-muted-foreground">
                               {total}
                               {counts.new > 0 && (
-                                <span className="text-xs ml-1 text-green-500">(+{counts.new})</span>
+                                <span className="text-xs ms-1 text-green-500">(+{counts.new})</span>
                               )}
                             </span>
                           </div>

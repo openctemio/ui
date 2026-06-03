@@ -160,11 +160,11 @@ export default function ExecutiveReportsPage() {
       >
         <div className="flex items-center gap-2">
           <Button size="sm" disabled title="PDF export is coming soon">
-            <FileText className="mr-2 h-4 w-4" />
+            <FileText className="me-2 h-4 w-4" />
             Generate PDF
           </Button>
           <Button variant="outline" size="sm" disabled title="Data export is coming soon">
-            <Download className="mr-2 h-4 w-4" />
+            <Download className="me-2 h-4 w-4" />
             Export Data
           </Button>
         </div>

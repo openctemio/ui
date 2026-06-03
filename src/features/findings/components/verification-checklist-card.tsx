@@ -187,7 +187,7 @@ export function VerificationChecklistCard({ findingId }: VerificationChecklistCa
           </div>
           {data.is_complete && (
             <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">
-              <CheckCircle2 className="mr-1 h-3 w-3" />
+              <CheckCircle2 className="me-1 h-3 w-3" />
               Complete
             </Badge>
           )}
@@ -306,7 +306,7 @@ export function VerificationChecklistCard({ findingId }: VerificationChecklistCa
           >
             {saving ? (
               <>
-                <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                <Loader2 className="me-1 h-4 w-4 animate-spin" />
                 Saving
               </>
             ) : (

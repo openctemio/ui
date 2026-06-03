@@ -32,7 +32,7 @@ export function MisconfigPanel({ finding }: MisconfigPanelProps) {
             <div className="text-xs text-muted-foreground">Policy</div>
             <div className="text-sm font-medium">
               {details.policyId && (
-                <Badge variant="outline" className="text-xs font-mono mr-2">
+                <Badge variant="outline" className="text-xs font-mono me-2">
                   {details.policyId}
                 </Badge>
               )}

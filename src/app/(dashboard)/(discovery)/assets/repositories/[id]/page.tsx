@@ -1202,7 +1202,7 @@ function BranchesTab({
               onClick={handleCompare}
               disabled={isComparing || !compareBranch}
             >
-              {isComparing ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
+              {isComparing ? <Loader2 className="h-4 w-4 animate-spin me-1" /> : null}
               Compare
             </Button>
           </div>
@@ -1325,7 +1325,7 @@ function BranchesTab({
                           {branch.findings_summary.by_severity.high}H
                         </Badge>
                       )}
-                      <span className="text-sm text-muted-foreground ml-1">
+                      <span className="text-sm text-muted-foreground ms-1">
                         ({branch.findings_summary.total} total)
                       </span>
                     </div>
@@ -1401,7 +1401,7 @@ function BranchesTab({
                             onViewBranchFindings?.(branch.name)
                           }}
                         >
-                          <Eye className="mr-2 h-4 w-4" />
+                          <Eye className="me-2 h-4 w-4" />
                           View Findings
                         </DropdownMenuItem>
                       </DropdownMenuContent>
@@ -1541,7 +1541,7 @@ function FindingsTab({
             <CardTitle className="flex items-center gap-2 text-base shrink-0">
               <Shield className="h-4 w-4" />
               Findings
-              <Badge variant="secondary" className="ml-1">
+              <Badge variant="secondary" className="ms-1">
                 {total}
               </Badge>
             </CardTitle>
@@ -1552,7 +1552,7 @@ function FindingsTab({
                   placeholder="Search..."
                   value={searchInput}
                   onChange={(e) => setSearchInput(e.target.value)}
-                  className="pl-7 h-7 text-xs w-[140px]"
+                  className="ps-7 h-7 text-xs w-[140px]"
                 />
               </div>
               <Select
@@ -1908,12 +1908,12 @@ function ActivityTab({ activities }: { activities: ActivityLog[] }) {
                           </span>
                           {activity.scan_summary.quality_gate_passed ? (
                             <Badge variant="outline" className="text-green-500 border-green-500/20">
-                              <CheckCircle className="h-3 w-3 mr-1" />
+                              <CheckCircle className="h-3 w-3 me-1" />
                               Passed
                             </Badge>
                           ) : (
                             <Badge variant="outline" className="text-red-500 border-red-500/20">
-                              <XCircle className="h-3 w-3 mr-1" />
+                              <XCircle className="h-3 w-3 me-1" />
                               Failed
                             </Badge>
                           )}
@@ -2126,7 +2126,7 @@ function SettingsTab({ repository, onDelete }: { repository: Repository; onDelet
                   <GitBranch className="h-3 w-3" />
                   {pattern}
                   <button
-                    className="ml-1 hover:text-destructive"
+                    className="ms-1 hover:text-destructive"
                     onClick={() => handleRemovePattern(pattern)}
                   >
                     <XCircle className="h-3 w-3" />
@@ -2474,11 +2474,11 @@ export default function RepositoryDetailPage() {
           </p>
           <div className="flex gap-2 justify-center">
             <Button variant="outline" onClick={() => mutateRepo()}>
-              <RefreshCw className="mr-2 h-4 w-4" />
+              <RefreshCw className="me-2 h-4 w-4" />
               Retry
             </Button>
             <Button onClick={() => router.push('/assets/repositories')}>
-              <ArrowLeft className="mr-2 h-4 w-4" />
+              <ArrowLeft className="me-2 h-4 w-4" />
               Back to Repositories
             </Button>
           </div>
@@ -2497,7 +2497,7 @@ export default function RepositoryDetailPage() {
             The repository you&apos;re looking for doesn&apos;t exist.
           </p>
           <Button onClick={() => router.push('/assets/repositories')}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
+            <ArrowLeft className="me-2 h-4 w-4" />
             Back to Repositories
           </Button>
         </div>
@@ -2574,22 +2574,22 @@ export default function RepositoryDetailPage() {
                   )
                 }
               >
-                <ExternalLink className="mr-2 h-4 w-4" />
+                <ExternalLink className="me-2 h-4 w-4" />
                 Open in {SCM_PROVIDER_LABELS[repository.scm_provider]}
               </Button>
               <Button variant="outline" size="sm" onClick={handleSync} disabled={isSyncing}>
                 {isSyncing ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="me-2 h-4 w-4 animate-spin" />
                 ) : (
-                  <RefreshCw className="mr-2 h-4 w-4" />
+                  <RefreshCw className="me-2 h-4 w-4" />
                 )}
                 {isSyncing ? 'Syncing...' : 'Sync'}
               </Button>
               <Button size="sm" onClick={handleScan} disabled={isScanning}>
                 {isScanning ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="me-2 h-4 w-4 animate-spin" />
                 ) : (
-                  <Play className="mr-2 h-4 w-4" />
+                  <Play className="me-2 h-4 w-4" />
                 )}
                 {isScanning ? 'Scanning...' : 'Scan Now'}
               </Button>
@@ -2612,7 +2612,7 @@ export default function RepositoryDetailPage() {
                       else toast.error('Failed to copy')
                     }}
                   >
-                    <Copy className="mr-2 h-4 w-4" />
+                    <Copy className="me-2 h-4 w-4" />
                     Copy URL
                   </DropdownMenuItem>
                   <Can permission={Permission.AssetsDelete}>
@@ -2621,7 +2621,7 @@ export default function RepositoryDetailPage() {
                       className="text-red-500"
                       onClick={() => setShowDeleteDialog(true)}
                     >
-                      <Trash2 className="mr-2 h-4 w-4" />
+                      <Trash2 className="me-2 h-4 w-4" />
                       Delete Repository
                     </DropdownMenuItem>
                   </Can>
@@ -2667,14 +2667,14 @@ export default function RepositoryDetailPage() {
             <TabsTrigger value="branches" className="gap-2">
               <GitBranch className="h-4 w-4" />
               Branches
-              <Badge variant="secondary" className="ml-1 h-5 px-1.5">
+              <Badge variant="secondary" className="ms-1 h-5 px-1.5">
                 {branches.length}
               </Badge>
             </TabsTrigger>
             <TabsTrigger value="findings" className="gap-2">
               <Shield className="h-4 w-4" />
               Findings
-              <Badge variant="secondary" className="ml-1 h-5 px-1.5">
+              <Badge variant="secondary" className="ms-1 h-5 px-1.5">
                 {findings.length}
               </Badge>
             </TabsTrigger>

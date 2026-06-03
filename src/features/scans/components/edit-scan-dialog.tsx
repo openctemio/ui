@@ -311,7 +311,7 @@ export function EditScanDialog({ scanConfig, open, onOpenChange, onSuccess }: Ed
                 disabled={isLoading}
                 className="w-full sm:w-auto"
               >
-                <ChevronLeft className="mr-1 h-4 w-4" />
+                <ChevronLeft className="me-1 h-4 w-4" />
                 Back
               </Button>
             )}
@@ -337,12 +337,12 @@ export function EditScanDialog({ scanConfig, open, onOpenChange, onSuccess }: Ed
               >
                 {isLoading ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <Loader2 className="me-2 h-4 w-4 animate-spin" />
                     Saving...
                   </>
                 ) : (
                   <>
-                    <Save className="mr-2 h-4 w-4" />
+                    <Save className="me-2 h-4 w-4" />
                     Save Changes
                   </>
                 )}
@@ -354,7 +354,7 @@ export function EditScanDialog({ scanConfig, open, onOpenChange, onSuccess }: Ed
                 className="w-full sm:w-auto order-1 sm:order-2"
               >
                 Next
-                <ChevronRight className="ml-1 h-4 w-4" />
+                <ChevronRight className="ms-1 h-4 w-4" />
               </Button>
             )}
           </div>

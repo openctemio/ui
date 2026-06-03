@@ -397,7 +397,7 @@ export default function IntegrationsPage() {
                         <div className="flex items-center gap-3">
                           <Badge className={`${status.bgColor} ${status.color} border-0`}>
                             {status.icon}
-                            <span className="ml-1">{status.label}</span>
+                            <span className="ms-1">{status.label}</span>
                           </Badge>
                           <Can permission={Permission.IntegrationsRead} mode="hide">
                             <Button
@@ -406,7 +406,7 @@ export default function IntegrationsPage() {
                               onClick={() => router.push(meta?.href ?? '/settings/integrations')}
                             >
                               Manage
-                              <ArrowRight className="ml-1 h-4 w-4" />
+                              <ArrowRight className="ms-1 h-4 w-4" />
                             </Button>
                           </Can>
                         </div>
@@ -447,7 +447,7 @@ export default function IntegrationsPage() {
                     </div>
                     <Can permission={Permission.IntegrationsManage} mode="disable">
                       <Button variant="outline" size="sm" className="mt-3 w-full">
-                        <Plus className="mr-2 h-4 w-4" />
+                        <Plus className="me-2 h-4 w-4" />
                         Configure
                       </Button>
                     </Can>

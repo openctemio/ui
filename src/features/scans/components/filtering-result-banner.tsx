@@ -130,7 +130,7 @@ export function FilteringResultBanner({
             <Tooltip>
               <TooltipTrigger asChild>
                 <Badge variant="outline" className="border-green-500/30 bg-green-500/10">
-                  <CheckCircle className="mr-1 h-3 w-3 text-green-600" />
+                  <CheckCircle className="me-1 h-3 w-3 text-green-600" />
                   <span className="text-green-600">{result.scannedAssets} scanned</span>
                 </Badge>
               </TooltipTrigger>
@@ -144,7 +144,7 @@ export function FilteringResultBanner({
             <Tooltip>
               <TooltipTrigger asChild>
                 <Badge variant="outline" className="border-red-500/30 bg-red-500/10">
-                  <XCircle className="mr-1 h-3 w-3 text-red-600" />
+                  <XCircle className="me-1 h-3 w-3 text-red-600" />
                   <span className="text-red-600">{result.skippedAssets} skipped</span>
                 </Badge>
               </TooltipTrigger>
@@ -159,7 +159,7 @@ export function FilteringResultBanner({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Badge variant="outline" className="border-slate-500/30 bg-slate-500/10">
-                    <Info className="mr-1 h-3 w-3 text-slate-500" />
+                    <Info className="me-1 h-3 w-3 text-slate-500" />
                     <span className="text-slate-500">{result.unclassifiedAssets} unclassified</span>
                   </Badge>
                 </TooltipTrigger>
@@ -177,7 +177,7 @@ export function FilteringResultBanner({
             <CollapsibleTrigger asChild>
               <Button variant="ghost" size="sm" className="h-7 px-2 text-xs">
                 <ChevronDown
-                  className={cn('mr-1 h-3 w-3 transition-transform', isOpen && 'rotate-180')}
+                  className={cn('me-1 h-3 w-3 transition-transform', isOpen && 'rotate-180')}
                 />
                 {isOpen ? 'Hide' : 'Show'} skip reasons
               </Button>
@@ -187,9 +187,9 @@ export function FilteringResultBanner({
                 <table className="w-full text-xs">
                   <thead>
                     <tr className="border-b text-muted-foreground">
-                      <th className="pb-1 text-left font-medium">Asset Type</th>
-                      <th className="pb-1 text-right font-medium">Count</th>
-                      <th className="pb-1 text-left font-medium">Reason</th>
+                      <th className="pb-1 text-start font-medium">Asset Type</th>
+                      <th className="pb-1 text-end font-medium">Count</th>
+                      <th className="pb-1 text-start font-medium">Reason</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
@@ -199,7 +199,7 @@ export function FilteringResultBanner({
                           {ASSET_TYPE_LABELS[item.assetType as keyof typeof ASSET_TYPE_LABELS] ||
                             item.assetType}
                         </td>
-                        <td className="py-1 text-right">{item.count}</td>
+                        <td className="py-1 text-end">{item.count}</td>
                         <td className="py-1 text-muted-foreground">{item.reason}</td>
                       </tr>
                     ))}
@@ -259,7 +259,7 @@ export function FilteringResultBadge({ result }: { result: FilteringResult }) {
               status === 'none' && 'border-red-500/30 bg-red-500/10 text-red-600'
             )}
           >
-            <Filter className="mr-1 h-3 w-3" />
+            <Filter className="me-1 h-3 w-3" />
             {result.skippedAssets} skipped
           </Badge>
         </TooltipTrigger>

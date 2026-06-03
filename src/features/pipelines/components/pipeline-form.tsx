@@ -563,7 +563,7 @@ export function PipelineForm({ pipeline, onSubmit, onCancel, isSubmitting }: Pip
                     <button
                       type="button"
                       onClick={() => removeTag(tag)}
-                      className="ml-1 hover:text-destructive"
+                      className="ms-1 hover:text-destructive"
                     >
                       <X className="h-3 w-3" />
                     </button>
@@ -598,7 +598,7 @@ export function PipelineForm({ pipeline, onSubmit, onCancel, isSubmitting }: Pip
               <p className="text-xs text-muted-foreground">Define how this pipeline starts</p>
             </div>
             <Button type="button" variant="outline" size="sm" onClick={addTrigger}>
-              <Plus className="mr-2 h-3 w-3" />
+              <Plus className="me-2 h-3 w-3" />
               Add
             </Button>
           </div>
@@ -664,7 +664,7 @@ export function PipelineForm({ pipeline, onSubmit, onCancel, isSubmitting }: Pip
               </p>
             </div>
             <Button type="button" variant="outline" size="sm" onClick={addStep}>
-              <Plus className="mr-2 h-3 w-3" />
+              <Plus className="me-2 h-3 w-3" />
               Add Step
             </Button>
           </div>
@@ -764,7 +764,7 @@ export function PipelineForm({ pipeline, onSubmit, onCancel, isSubmitting }: Pip
         <div>
           {!isFirstStep && (
             <Button type="button" variant="ghost" onClick={handleBack} disabled={isSubmitting}>
-              <ChevronLeft className="mr-1 h-4 w-4" />
+              <ChevronLeft className="me-1 h-4 w-4" />
               Back
             </Button>
           )}
@@ -779,7 +779,7 @@ export function PipelineForm({ pipeline, onSubmit, onCancel, isSubmitting }: Pip
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="me-2 h-4 w-4 animate-spin" />
                   Saving...
                 </>
               ) : isEditing ? (
@@ -791,7 +791,7 @@ export function PipelineForm({ pipeline, onSubmit, onCancel, isSubmitting }: Pip
           ) : (
             <Button type="button" onClick={handleNext}>
               Next
-              <ChevronRight className="ml-1 h-4 w-4" />
+              <ChevronRight className="ms-1 h-4 w-4" />
             </Button>
           )}
         </div>

@@ -152,7 +152,7 @@ export default function ReportsPage() {
                   <CardDescription>Pre-configured report formats</CardDescription>
                 </div>
                 <Button size="sm">
-                  <Plus className="mr-2 h-4 w-4" />
+                  <Plus className="me-2 h-4 w-4" />
                   New Template
                 </Button>
               </div>
@@ -201,7 +201,7 @@ export default function ReportsPage() {
                 </div>
               ))}
               <Button variant="outline" className="w-full" size="sm">
-                <Calendar className="mr-2 h-4 w-4" />
+                <Calendar className="me-2 h-4 w-4" />
                 Schedule New
               </Button>
             </CardContent>
@@ -217,7 +217,7 @@ export default function ReportsPage() {
                 <CardDescription>Generated reports history</CardDescription>
               </div>
               <Button size="sm">
-                <Plus className="mr-2 h-4 w-4" />
+                <Plus className="me-2 h-4 w-4" />
                 Generate Report
               </Button>
             </div>

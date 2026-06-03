@@ -171,7 +171,7 @@ export function StepEditPanel({
               <Link2 className="h-3 w-3 text-muted-foreground" />
               Dependencies
               {formData.depends_on.length > 0 && (
-                <Badge variant="secondary" className="text-[9px] px-1 py-0 h-4 ml-auto">
+                <Badge variant="secondary" className="text-[9px] px-1 py-0 h-4 ms-auto">
                   {formData.depends_on.length}
                 </Badge>
               )}
@@ -219,7 +219,7 @@ export function StepEditPanel({
                       <button
                         type="button"
                         onClick={() => handleDependsOnToggle(dep)}
-                        className="hover:text-destructive ml-0.5"
+                        className="hover:text-destructive ms-0.5"
                       >
                         <X className="h-2.5 w-2.5" />
                       </button>
@@ -241,7 +241,7 @@ export function StepEditPanel({
           className="w-full text-destructive hover:text-destructive hover:bg-destructive/10 h-8 text-xs"
           onClick={onDelete}
         >
-          <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+          <Trash2 className="me-1.5 h-3.5 w-3.5" />
           Delete Step
         </Button>
       </div>

@@ -71,7 +71,7 @@ export class ScopeErrorBoundary extends Component<
               </p>
             </div>
             <Button variant="outline" size="sm" onClick={this.handleReset} className="h-7">
-              <RefreshCw className="mr-1 h-3 w-3" />
+              <RefreshCw className="me-1 h-3 w-3" />
               Retry
             </Button>
           </CardContent>
