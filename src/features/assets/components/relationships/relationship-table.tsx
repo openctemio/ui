@@ -150,7 +150,7 @@ function AssetCell({
   const typeLabel = EXTENDED_ASSET_TYPE_LABELS[type] || type
 
   return (
-    <button onClick={onClick} className="flex items-center gap-2 hover:underline text-left">
+    <button onClick={onClick} className="flex items-center gap-2 hover:underline text-start">
       <div className={cn('h-7 w-7 rounded flex items-center justify-center shrink-0', colors.bg)}>
         <Link2 className={cn('h-3.5 w-3.5', colors.text)} />
       </div>
@@ -179,11 +179,11 @@ function SortButton({
     <Button
       variant="ghost"
       size="sm"
-      className={`-ml-3 h-8 data-[state=open]:bg-accent ${isActive ? 'text-primary' : ''}`}
+      className={`-ms-3 h-8 data-[state=open]:bg-accent ${isActive ? 'text-primary' : ''}`}
       onClick={() => onSort(field)}
     >
       {children}
-      <ArrowUpDown className={`ml-2 h-4 w-4 ${isActive ? 'text-primary' : ''}`} />
+      <ArrowUpDown className={`ms-2 h-4 w-4 ${isActive ? 'text-primary' : ''}`} />
     </Button>
   )
 }
@@ -306,7 +306,7 @@ export function RelationshipTable({
             placeholder="Search relationships..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
+            className="ps-9"
           />
         </div>
         <div className="flex gap-2">
@@ -315,7 +315,7 @@ export function RelationshipTable({
             onValueChange={(v) => setTypeFilter(v as RelationshipType | 'all')}
           >
             <SelectTrigger className="w-[160px]">
-              <Filter className="mr-2 h-4 w-4" />
+              <Filter className="me-2 h-4 w-4" />
               <SelectValue placeholder="Type" />
             </SelectTrigger>
             <SelectContent>
@@ -346,7 +346,7 @@ export function RelationshipTable({
 
           {onAddNew && (
             <Button onClick={onAddNew}>
-              <Plus className="mr-2 h-4 w-4" />
+              <Plus className="me-2 h-4 w-4" />
               Add
             </Button>
           )}
@@ -456,19 +456,19 @@ export function RelationshipTable({
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => onEdit?.(relationship)}>
-                            <Pencil className="mr-2 h-4 w-4" />
+                            <Pencil className="me-2 h-4 w-4" />
                             Edit
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() => onViewAsset?.(relationship.sourceAssetId)}
                           >
-                            <ExternalLink className="mr-2 h-4 w-4" />
+                            <ExternalLink className="me-2 h-4 w-4" />
                             View Source
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() => onViewAsset?.(relationship.targetAssetId)}
                           >
-                            <ExternalLink className="mr-2 h-4 w-4" />
+                            <ExternalLink className="me-2 h-4 w-4" />
                             View Target
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
@@ -476,7 +476,7 @@ export function RelationshipTable({
                             onClick={() => onDelete?.(relationship)}
                             className="text-red-600"
                           >
-                            <Trash2 className="mr-2 h-4 w-4" />
+                            <Trash2 className="me-2 h-4 w-4" />
                             Delete
                           </DropdownMenuItem>
                         </DropdownMenuContent>

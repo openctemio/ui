@@ -70,8 +70,8 @@ export function KEVIndicatorBadge({
           >
             <AlertOctagon className={iconSizes[size]} />
             KEV
-            {hasRansomware && <Skull className={cn(iconSizes[size], 'ml-0.5')} />}
-            {isPastDue && showDueDate && <span className="ml-1 text-red-200">OVERDUE</span>}
+            {hasRansomware && <Skull className={cn(iconSizes[size], 'ms-0.5')} />}
+            {isPastDue && showDueDate && <span className="ms-1 text-red-200">OVERDUE</span>}
           </Badge>
         </TooltipTrigger>
         <TooltipContent side="top" className="max-w-sm">
@@ -187,7 +187,7 @@ export function KEVStatus({ inKEV, kevData, className }: KEVStatusProps) {
             <span>
               {new Date(kevData.due_date).toLocaleDateString()}
               {daysUntilDue !== null && (
-                <span className="ml-1">
+                <span className="ms-1">
                   (
                   {isPastDue
                     ? `${Math.abs(daysUntilDue)} days overdue`

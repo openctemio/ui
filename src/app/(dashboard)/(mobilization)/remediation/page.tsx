@@ -709,33 +709,33 @@ export default function RemediationPage() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => handleTaskAction('view', task)}>
-                  <ChevronRight className="mr-2 h-4 w-4" />
+                  <ChevronRight className="me-2 h-4 w-4" />
                   View Details
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => handleTaskAction('open_campaign', task)}>
-                  <ExternalLink className="mr-2 h-4 w-4" />
+                  <ExternalLink className="me-2 h-4 w-4" />
                   Open Campaign
                 </DropdownMenuItem>
                 <Can permission={Permission.RemediationWrite}>
                   <DropdownMenuItem onClick={() => handleTaskAction('edit', task)}>
-                    <Pencil className="mr-2 h-4 w-4" />
+                    <Pencil className="me-2 h-4 w-4" />
                     Edit
                   </DropdownMenuItem>
                 </Can>
                 <DropdownMenuItem onClick={() => handleTaskAction('reassign', task)}>
-                  <UserPlus className="mr-2 h-4 w-4" />
+                  <UserPlus className="me-2 h-4 w-4" />
                   Reassign
                 </DropdownMenuItem>
                 {actions.length > 0 && <DropdownMenuSeparator />}
                 {actions.map(({ action, label, icon: Icon }) => (
                   <DropdownMenuItem key={action} onClick={() => handleTaskAction(action, task)}>
-                    <Icon className="mr-2 h-4 w-4" />
+                    <Icon className="me-2 h-4 w-4" />
                     {label}
                   </DropdownMenuItem>
                 ))}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => handleCopyId(task.id)}>
-                  <Copy className="mr-2 h-4 w-4" />
+                  <Copy className="me-2 h-4 w-4" />
                   Copy ID
                 </DropdownMenuItem>
                 <Can permission={Permission.RemediationWrite}>
@@ -744,7 +744,7 @@ export default function RemediationPage() {
                     className="text-red-400"
                     onClick={() => handleTaskAction('delete', task)}
                   >
-                    <Trash2 className="mr-2 h-4 w-4" />
+                    <Trash2 className="me-2 h-4 w-4" />
                     Delete
                   </DropdownMenuItem>
                 </Can>
@@ -786,7 +786,7 @@ export default function RemediationPage() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm">
-                  <Download className="mr-2 h-4 w-4" />
+                  <Download className="me-2 h-4 w-4" />
                   Export
                 </Button>
               </DropdownMenuTrigger>
@@ -808,10 +808,10 @@ export default function RemediationPage() {
             <Popover open={isFilterOpen} onOpenChange={setIsFilterOpen}>
               <PopoverTrigger asChild>
                 <Button variant="outline" size="sm" className="relative">
-                  <Filter className="mr-2 h-4 w-4" />
+                  <Filter className="me-2 h-4 w-4" />
                   Filters
                   {activeFilterCount > 0 && (
-                    <Badge className="ml-2 h-5 min-w-5 rounded-full px-1 text-xs">
+                    <Badge className="ms-2 h-5 min-w-5 rounded-full px-1 text-xs">
                       {activeFilterCount}
                     </Badge>
                   )}
@@ -909,7 +909,7 @@ export default function RemediationPage() {
                 setIsCreateOpen(true)
               }}
             >
-              <Plus className="mr-2 h-4 w-4" />
+              <Plus className="me-2 h-4 w-4" />
               New Task
             </Button>
           </div>
@@ -939,7 +939,7 @@ export default function RemediationPage() {
                 <span className="text-sm">Failed to load tasks. Please try again.</span>
               </div>
               <Button variant="outline" size="sm" onClick={handleRefresh}>
-                <RefreshCw className="mr-2 h-3.5 w-3.5" />
+                <RefreshCw className="me-2 h-3.5 w-3.5" />
                 Retry
               </Button>
             </CardContent>
@@ -961,13 +961,13 @@ export default function RemediationPage() {
                       className="h-7"
                       onClick={() => handleBulkAction('Reassigned')}
                     >
-                      <UserPlus className="mr-1.5 h-3.5 w-3.5" />
+                      <UserPlus className="me-1.5 h-3.5 w-3.5" />
                       Reassign
                     </Button>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="outline" size="sm" className="h-7">
-                          <ArrowRight className="mr-1.5 h-3.5 w-3.5" />
+                          <ArrowRight className="me-1.5 h-3.5 w-3.5" />
                           Move to
                         </Button>
                       </DropdownMenuTrigger>
@@ -1386,7 +1386,7 @@ function TaskDetailSheet({
             <SeverityBadge severity={task.severity} />
             {overdue && (
               <Badge variant="outline" className="border-red-500/50 text-red-500 text-xs h-5">
-                <AlertCircle className="mr-1 h-3 w-3" />
+                <AlertCircle className="me-1 h-3 w-3" />
                 Overdue
               </Badge>
             )}
@@ -1469,7 +1469,7 @@ function TaskDetailSheet({
                   className="h-8"
                   onClick={() => onAction(action, task)}
                 >
-                  <Icon className="mr-1.5 h-3.5 w-3.5" />
+                  <Icon className="me-1.5 h-3.5 w-3.5" />
                   {label}
                 </Button>
               ))}
@@ -1479,7 +1479,7 @@ function TaskDetailSheet({
                 className="h-8"
                 onClick={() => onAction('reassign', task)}
               >
-                <UserPlus className="mr-1.5 h-3.5 w-3.5" />
+                <UserPlus className="me-1.5 h-3.5 w-3.5" />
                 Reassign
               </Button>
             </div>
@@ -1519,7 +1519,7 @@ function TaskDetailSheet({
                 className="h-7 border-red-500/30 text-red-500 hover:bg-red-500/10"
                 onClick={() => onDelete(task)}
               >
-                <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+                <Trash2 className="me-1.5 h-3.5 w-3.5" />
                 Delete
               </Button>
             </div>
@@ -1680,9 +1680,9 @@ function TaskFormDialog({
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
-                    className="w-full justify-start text-left font-normal h-9"
+                    className="w-full justify-start text-start font-normal h-9"
                   >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    <CalendarIcon className="me-2 h-4 w-4" />
                     {formData.dueDate ? format(formData.dueDate, 'PPP') : 'Select date'}
                   </Button>
                 </PopoverTrigger>
@@ -1738,12 +1738,12 @@ function TaskFormDialog({
           <Button onClick={onSubmit}>
             {isEdit ? (
               <>
-                <Save className="mr-2 h-4 w-4" />
+                <Save className="me-2 h-4 w-4" />
                 Save Changes
               </>
             ) : (
               <>
-                <Plus className="mr-2 h-4 w-4" />
+                <Plus className="me-2 h-4 w-4" />
                 Create Task
               </>
             )}

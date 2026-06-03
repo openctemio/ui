@@ -344,7 +344,7 @@ export default function BusinessImpactPage() {
                         <TableCell>
                           {unit.critical_finding_count > 0 ? (
                             <Badge className="bg-red-500/20 text-red-400 border-0">
-                              <AlertTriangle className="mr-1 h-3 w-3" />
+                              <AlertTriangle className="me-1 h-3 w-3" />
                               {unit.critical_finding_count}
                             </Badge>
                           ) : (

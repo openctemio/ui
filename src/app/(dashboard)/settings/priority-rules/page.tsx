@@ -438,7 +438,7 @@ export default function PriorityRulesPage() {
       >
         <Can permission={Permission.PriorityRulesWrite}>
           <Button onClick={openCreate}>
-            <Plus className="mr-2 h-4 w-4" />
+            <Plus className="me-2 h-4 w-4" />
             Create Rule
           </Button>
         </Can>
@@ -529,7 +529,7 @@ export default function PriorityRulesPage() {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem onClick={() => openEdit(rule)}>
-                              <Pencil className="mr-2 h-4 w-4" />
+                              <Pencil className="me-2 h-4 w-4" />
                               Edit
                             </DropdownMenuItem>
                             <DropdownMenuItem
@@ -541,7 +541,7 @@ export default function PriorityRulesPage() {
                                 })
                               }
                             >
-                              <FlaskConical className="mr-2 h-4 w-4" />
+                              <FlaskConical className="me-2 h-4 w-4" />
                               Dry run
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
@@ -549,7 +549,7 @@ export default function PriorityRulesPage() {
                               className="text-red-500"
                               onClick={() => setDeletingRule(rule)}
                             >
-                              <Trash2 className="mr-2 h-4 w-4" />
+                              <Trash2 className="me-2 h-4 w-4" />
                               Delete
                             </DropdownMenuItem>
                           </DropdownMenuContent>
@@ -644,7 +644,7 @@ export default function PriorityRulesPage() {
               <div className="flex items-center justify-between">
                 <Label className="text-sm font-semibold">Conditions</Label>
                 <Button type="button" variant="outline" size="sm" onClick={addCondition}>
-                  <Plus className="mr-1 h-3 w-3" />
+                  <Plus className="me-1 h-3 w-3" />
                   Add Condition
                 </Button>
               </div>
@@ -753,7 +753,7 @@ export default function PriorityRulesPage() {
                 })
               }
             >
-              <FlaskConical className="mr-1 h-4 w-4" />
+              <FlaskConical className="me-1 h-4 w-4" />
               Dry run
             </Button>
             <Button onClick={handleSave} disabled={isSaving}>

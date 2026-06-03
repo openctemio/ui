@@ -110,7 +110,7 @@ export default function NotificationsSettingsPage() {
           description="Configure how and when you receive notifications"
         >
           <Button onClick={handleSave} disabled={isSaving}>
-            <Save className="mr-2 h-4 w-4" />
+            <Save className="me-2 h-4 w-4" />
             {isSaving ? 'Saving...' : 'Save Changes'}
           </Button>
         </PageHeader>

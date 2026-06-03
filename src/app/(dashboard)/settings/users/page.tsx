@@ -259,7 +259,7 @@ function UserRolesDetailCard({
         {onManageRoles && (
           <Can permission={Permission.RolesWrite}>
             <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={onManageRoles}>
-              <Pencil className="mr-1 h-3 w-3" />
+              <Pencil className="me-1 h-3 w-3" />
               Manage
             </Button>
           </Can>
@@ -408,7 +408,7 @@ function EditUserRolesDialog({
               ))}
             </div>
           ) : (
-            <div className="space-y-4 max-h-[400px] overflow-y-auto pr-1">
+            <div className="space-y-4 max-h-[400px] overflow-y-auto pe-1">
               {/* System Roles */}
               {systemRoles.length > 0 && (
                 <div>
@@ -545,7 +545,7 @@ function EditUserRolesDialog({
         </div>
 
         <DialogFooter className="border-t pt-4 gap-2">
-          <div className="flex-1 text-left">
+          <div className="flex-1 text-start">
             {selectedRoleIds.length > 0 && (
               <span className="text-xs text-muted-foreground">
                 {selectedRoleIds.length} role{selectedRoleIds.length > 1 ? 's' : ''} selected
@@ -557,9 +557,9 @@ function EditUserRolesDialog({
           </Button>
           <Button onClick={handleSave} disabled={isSetting || isLoading}>
             {isSetting ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <Loader2 className="me-2 h-4 w-4 animate-spin" />
             ) : (
-              <CheckCircle className="mr-2 h-4 w-4" />
+              <CheckCircle className="me-2 h-4 w-4" />
             )}
             Save Changes
           </Button>
@@ -722,10 +722,10 @@ export default function UsersPage() {
         <Button
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-          className="-ml-4"
+          className="-ms-4"
         >
           User
-          <ArrowUpDown className="ml-2 h-4 w-4" />
+          <ArrowUpDown className="ms-2 h-4 w-4" />
         </Button>
       ),
       cell: ({ row }) => (
@@ -792,7 +792,7 @@ export default function UsersPage() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
               <DropdownMenuItem onClick={() => setSelectedMember(member)}>
-                <Eye className="mr-2 h-4 w-4" />
+                <Eye className="me-2 h-4 w-4" />
                 View Details
               </DropdownMenuItem>
               {!isOwner && (
@@ -804,7 +804,7 @@ export default function UsersPage() {
                         setEditRolesDialogOpen(true)
                       }}
                     >
-                      <Pencil className="mr-2 h-4 w-4" />
+                      <Pencil className="me-2 h-4 w-4" />
                       Change Role
                     </DropdownMenuItem>
                   </Can>
@@ -827,7 +827,7 @@ export default function UsersPage() {
                           }
                         }}
                       >
-                        <CheckCircle className="mr-2 h-4 w-4" />
+                        <CheckCircle className="me-2 h-4 w-4" />
                         Reactivate
                       </DropdownMenuItem>
                     ) : (
@@ -841,7 +841,7 @@ export default function UsersPage() {
                           setSuspendConfirmMember(member)
                         }}
                       >
-                        <Ban className="mr-2 h-4 w-4" />
+                        <Ban className="me-2 h-4 w-4" />
                         Suspend
                       </DropdownMenuItem>
                     )}
@@ -854,7 +854,7 @@ export default function UsersPage() {
                         setRemoveConfirmMember(member)
                       }}
                     >
-                      <Trash2 className="mr-2 h-4 w-4" />
+                      <Trash2 className="me-2 h-4 w-4" />
                       Remove Member
                     </DropdownMenuItem>
                   </Can>
@@ -972,7 +972,7 @@ export default function UsersPage() {
         >
           <Can permission={Permission.MembersInvite} mode="disable">
             <Button onClick={() => setInviteDialogOpen(true)}>
-              <UserPlus className="mr-2 h-4 w-4" />
+              <UserPlus className="me-2 h-4 w-4" />
               Invite User
             </Button>
           </Can>
@@ -1128,7 +1128,7 @@ export default function UsersPage() {
                       placeholder="Search users..."
                       value={globalFilter}
                       onChange={(e) => setGlobalFilter(e.target.value)}
-                      className="pl-9"
+                      className="ps-9"
                     />
                   </div>
 
@@ -1202,7 +1202,7 @@ export default function UsersPage() {
                         Role: {roleFilter}
                         <button
                           onClick={() => setRoleFilter('all')}
-                          className="ml-1 hover:text-foreground"
+                          className="ms-1 hover:text-foreground"
                         >
                           x
                         </button>
@@ -1277,7 +1277,7 @@ export default function UsersPage() {
                   </div>
                   <Can permission={Permission.MembersInvite} mode="disable">
                     <Button size="sm" variant="outline" onClick={() => setInviteDialogOpen(true)}>
-                      <UserPlus className="mr-2 h-4 w-4" />
+                      <UserPlus className="me-2 h-4 w-4" />
                       Invite
                     </Button>
                   </Can>
@@ -1566,7 +1566,7 @@ export default function UsersPage() {
                         setSelectedMember(null)
                       }}
                     >
-                      <Trash2 className="mr-2 h-4 w-4" />
+                      <Trash2 className="me-2 h-4 w-4" />
                       Remove from Team
                     </Button>
                   </div>
@@ -1606,7 +1606,7 @@ export default function UsersPage() {
                   placeholder="colleague@company.com"
                   value={inviteForm.email}
                   onChange={(e) => setInviteForm({ ...inviteForm, email: e.target.value })}
-                  className="pl-10 h-11"
+                  className="ps-10 h-11"
                 />
               </div>
             </div>
@@ -1634,7 +1634,7 @@ export default function UsersPage() {
                   ))}
                 </div>
               ) : (
-                <div className="space-y-4 max-h-[320px] overflow-y-auto pr-1">
+                <div className="space-y-4 max-h-[320px] overflow-y-auto pe-1">
                   {/* System Roles */}
                   {systemRolesForInvite.length > 0 && (
                     <div>
@@ -1780,9 +1780,9 @@ export default function UsersPage() {
               className="flex-1 sm:flex-none"
             >
               {isCreating ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="me-2 h-4 w-4 animate-spin" />
               ) : (
-                <Send className="mr-2 h-4 w-4" />
+                <Send className="me-2 h-4 w-4" />
               )}
               Send Invitation
             </Button>
@@ -1844,12 +1844,12 @@ export default function UsersPage() {
             >
               {isSuspending ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="me-2 h-4 w-4 animate-spin" />
                   Suspending...
                 </>
               ) : (
                 <>
-                  <Ban className="mr-2 h-4 w-4" />
+                  <Ban className="me-2 h-4 w-4" />
                   Suspend
                 </>
               )}
@@ -1898,12 +1898,12 @@ export default function UsersPage() {
             >
               {isRemoving ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="me-2 h-4 w-4 animate-spin" />
                   Removing...
                 </>
               ) : (
                 <>
-                  <Trash2 className="mr-2 h-4 w-4" />
+                  <Trash2 className="me-2 h-4 w-4" />
                   Remove
                 </>
               )}

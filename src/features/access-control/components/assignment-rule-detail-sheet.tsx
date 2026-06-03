@@ -278,9 +278,9 @@ export function AssignmentRuleDetailSheet({
                         </Button>
                         <Button size="sm" onClick={handleSave} disabled={isUpdating}>
                           {isUpdating ? (
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            <Loader2 className="me-2 h-4 w-4 animate-spin" />
                           ) : (
-                            <Save className="mr-2 h-4 w-4" />
+                            <Save className="me-2 h-4 w-4" />
                           )}
                           Save
                         </Button>
@@ -419,9 +419,9 @@ export function AssignmentRuleDetailSheet({
                   <div className="flex items-center gap-2 border-t pt-4">
                     <Button variant="outline" size="sm" onClick={handleTest} disabled={isTesting}>
                       {isTesting ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        <Loader2 className="me-2 h-4 w-4 animate-spin" />
                       ) : (
-                        <Play className="mr-2 h-4 w-4" />
+                        <Play className="me-2 h-4 w-4" />
                       )}
                       Test Rule
                     </Button>
@@ -441,7 +441,7 @@ export function AssignmentRuleDetailSheet({
                         size="sm"
                         onClick={() => setDeleteDialogOpen(true)}
                       >
-                        <Trash2 className="mr-2 h-4 w-4" />
+                        <Trash2 className="me-2 h-4 w-4" />
                         Delete
                       </Button>
                     </Can>
@@ -472,9 +472,9 @@ export function AssignmentRuleDetailSheet({
             </Button>
             <Button variant="destructive" onClick={handleDelete} disabled={isDeleting}>
               {isDeleting ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="me-2 h-4 w-4 animate-spin" />
               ) : (
-                <Trash2 className="mr-2 h-4 w-4" />
+                <Trash2 className="me-2 h-4 w-4" />
               )}
               Delete
             </Button>

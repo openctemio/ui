@@ -223,7 +223,7 @@ export function SCMConnectionsBanner() {
             className="shrink-0"
           >
             {hasConnections ? 'Manage Connections' : 'Add Connection'}
-            <ArrowRight className="ml-2 h-4 w-4" />
+            <ArrowRight className="ms-2 h-4 w-4" />
           </Button>
         </div>
       </CardContent>
@@ -319,7 +319,7 @@ export const repositoriesConfig: AssetPageConfig = {
               <TooltipTrigger asChild>
                 <div className="flex items-center gap-1.5">
                   <Badge variant="outline" className={cn('text-xs', SCM_PROVIDER_COLORS[provider])}>
-                    <ProviderIcon provider={provider} className="h-3 w-3 mr-1" />
+                    <ProviderIcon provider={provider} className="h-3 w-3 me-1" />
                     {SCM_PROVIDER_LABELS[provider as keyof typeof SCM_PROVIDER_LABELS] || provider}
                   </Badge>
                 </div>
@@ -575,7 +575,7 @@ export const repositoriesConfig: AssetPageConfig = {
             const provider = getProviderFromAsset(asset)
             return (
               <Badge variant="outline" className={cn('text-xs', SCM_PROVIDER_COLORS[provider])}>
-                <ProviderIcon provider={provider} className="h-3 w-3 mr-1" />
+                <ProviderIcon provider={provider} className="h-3 w-3 me-1" />
                 {SCM_PROVIDER_LABELS[provider as keyof typeof SCM_PROVIDER_LABELS] || provider}
               </Badge>
             )
@@ -658,7 +658,7 @@ export const repositoriesConfig: AssetPageConfig = {
                   <p className="font-medium">
                     {repo.componentCount ?? 0}
                     {(repo.vulnerableComponentCount ?? 0) > 0 && (
-                      <span className="text-red-500 ml-1">
+                      <span className="text-red-500 ms-1">
                         ({repo.vulnerableComponentCount} vulnerable)
                       </span>
                     )}

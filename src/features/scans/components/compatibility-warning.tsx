@@ -241,7 +241,7 @@ export function CompatibilityWarning({
         {/* Count badges */}
         <div className="flex flex-wrap gap-2 text-sm">
           <Badge variant="outline" className="border-green-500/30 bg-green-500/10 text-green-600">
-            <Check className="mr-1 h-3 w-3" />
+            <Check className="me-1 h-3 w-3" />
             {compatibleAssets} compatible
           </Badge>
           <Badge
@@ -252,7 +252,7 @@ export function CompatibilityWarning({
                 : 'border-red-500/30 bg-red-500/10 text-red-600'
             )}
           >
-            <AlertTriangle className="mr-1 h-3 w-3" />
+            <AlertTriangle className="me-1 h-3 w-3" />
             {skippedAssets} skipped
           </Badge>
         </div>
@@ -280,9 +280,9 @@ export function CompatibilityWarning({
                 aria-label={isOpen ? 'Hide asset type details' : 'Show asset type details'}
               >
                 {isOpen ? (
-                  <ChevronUp className="mr-1 h-3 w-3" />
+                  <ChevronUp className="me-1 h-3 w-3" />
                 ) : (
-                  <ChevronDown className="mr-1 h-3 w-3" />
+                  <ChevronDown className="me-1 h-3 w-3" />
                 )}
                 {isOpen ? 'Hide' : 'Show'} details by asset type
               </Button>
@@ -293,16 +293,16 @@ export function CompatibilityWarning({
                 <table className="w-full text-xs" role="table">
                   <thead>
                     <tr className="border-b text-muted-foreground">
-                      <th scope="col" className="pb-1 text-left font-medium">
+                      <th scope="col" className="pb-1 text-start font-medium">
                         Asset Type
                       </th>
-                      <th scope="col" className="pb-1 text-right font-medium hidden md:table-cell">
+                      <th scope="col" className="pb-1 text-end font-medium hidden md:table-cell">
                         Count
                       </th>
-                      <th scope="col" className="pb-1 text-right font-medium">
+                      <th scope="col" className="pb-1 text-end font-medium">
                         Status
                       </th>
-                      <th scope="col" className="pb-1 text-left font-medium hidden md:table-cell">
+                      <th scope="col" className="pb-1 text-start font-medium hidden md:table-cell">
                         Reason
                       </th>
                     </tr>
@@ -312,8 +312,8 @@ export function CompatibilityWarning({
                     {compatibleDetails.map((item) => (
                       <tr key={item.asset_type}>
                         <td className="py-1">{getAssetTypeLabel(item.asset_type)}</td>
-                        <td className="py-1 text-right hidden md:table-cell">{item.count}</td>
-                        <td className="py-1 text-right">
+                        <td className="py-1 text-end hidden md:table-cell">{item.count}</td>
+                        <td className="py-1 text-end">
                           <Badge
                             variant="outline"
                             className="border-green-500/30 bg-green-500/10 text-green-600"
@@ -329,8 +329,8 @@ export function CompatibilityWarning({
                     {skippedDetails.map((item) => (
                       <tr key={item.asset_type}>
                         <td className="py-1">{getAssetTypeLabel(item.asset_type)}</td>
-                        <td className="py-1 text-right hidden md:table-cell">{item.count}</td>
-                        <td className="py-1 text-right">
+                        <td className="py-1 text-end hidden md:table-cell">{item.count}</td>
+                        <td className="py-1 text-end">
                           <Badge
                             variant="outline"
                             className={cn(

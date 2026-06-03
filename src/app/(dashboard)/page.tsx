@@ -199,7 +199,7 @@ export default function Dashboard() {
               >
                 <Button asChild className="w-full justify-start" size="sm">
                   <Link href="/scans">
-                    <Plus className="mr-2 h-4 w-4" />
+                    <Plus className="me-2 h-4 w-4" />
                     New Scan
                   </Link>
                 </Button>
@@ -211,7 +211,7 @@ export default function Dashboard() {
               >
                 <Button asChild variant="outline" className="w-full justify-start" size="sm">
                   <Link href="/findings">
-                    <FileWarning className="mr-2 h-4 w-4" />
+                    <FileWarning className="me-2 h-4 w-4" />
                     View Findings
                   </Link>
                 </Button>
@@ -223,7 +223,7 @@ export default function Dashboard() {
               >
                 <Button asChild variant="outline" className="w-full justify-start" size="sm">
                   <Link href="/remediation">
-                    <ListChecks className="mr-2 h-4 w-4" />
+                    <ListChecks className="me-2 h-4 w-4" />
                     Remediation Tasks
                   </Link>
                 </Button>
@@ -235,7 +235,7 @@ export default function Dashboard() {
               >
                 <Button asChild variant="outline" className="w-full justify-start" size="sm">
                   <Link href="/reports">
-                    <ArrowRight className="mr-2 h-4 w-4" />
+                    <ArrowRight className="me-2 h-4 w-4" />
                     Generate Report
                   </Link>
                 </Button>

@@ -407,7 +407,7 @@ export default function ModuleManagementPage() {
             onClick={() => setShowResetDialog(true)}
             disabled={isResetting}
           >
-            <RotateCcw className="mr-2 h-4 w-4" />
+            <RotateCcw className="me-2 h-4 w-4" />
             Reset to Defaults
           </Button>
         </Can>
@@ -459,7 +459,7 @@ export default function ModuleManagementPage() {
                       key={p.id}
                       type="button"
                       onClick={() => handlePresetPreview(p)}
-                      className="text-left rounded-lg border bg-card hover:bg-accent/50 hover:border-primary/50 transition-colors p-3 flex flex-col gap-1.5 focus:outline-none focus:ring-2 focus:ring-primary"
+                      className="text-start rounded-lg border bg-card hover:bg-accent/50 hover:border-primary/50 transition-colors p-3 flex flex-col gap-1.5 focus:outline-none focus:ring-2 focus:ring-primary"
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex items-center gap-2 min-w-0">
@@ -577,7 +577,7 @@ export default function ModuleManagementPage() {
             <div className="mx-auto flex max-w-5xl items-center justify-between">
               <div className="text-sm text-muted-foreground">
                 {pendingEnabled > 0 && (
-                  <span className="text-green-600 mr-3">+{pendingEnabled} enabling</span>
+                  <span className="text-green-600 me-3">+{pendingEnabled} enabling</span>
                 )}
                 {pendingDisabled > 0 && (
                   <span className="text-red-600">-{pendingDisabled} disabling</span>
@@ -750,7 +750,7 @@ export default function ModuleManagementPage() {
                         <summary className="cursor-pointer text-red-700 hover:underline">
                           {toDisable.length} module(s) will be disabled
                         </summary>
-                        <ul className="mt-1.5 pl-3 space-y-0.5 max-h-32 overflow-y-auto">
+                        <ul className="mt-1.5 ps-3 space-y-0.5 max-h-32 overflow-y-auto">
                           {toDisable.map((m) => (
                             <li key={m.module_id} className="text-muted-foreground">
                               {m.name}{' '}
@@ -767,7 +767,7 @@ export default function ModuleManagementPage() {
                         <summary className="cursor-pointer text-green-700 hover:underline">
                           {toEnable.length} module(s) will be enabled
                         </summary>
-                        <ul className="mt-1.5 pl-3 space-y-0.5 max-h-32 overflow-y-auto">
+                        <ul className="mt-1.5 ps-3 space-y-0.5 max-h-32 overflow-y-auto">
                           {toEnable.map((m) => (
                             <li key={m.module_id} className="text-muted-foreground">
                               {m.name}{' '}
@@ -924,7 +924,7 @@ function ModuleRow({
             <p className="text-xs text-muted-foreground mt-0.5 truncate">{mod.description}</p>
           )}
         </div>
-        <div className="ml-4">
+        <div className="ms-4">
           <Switch
             checked={isEnabled}
             onCheckedChange={() => onToggle(mod.id, isEnabled)}
@@ -935,7 +935,7 @@ function ModuleRow({
       </div>
       {visibleSubModules.length > 0 && (
         <div
-          className={`pb-2 pl-6 space-y-0.5 ${!isEnabled ? 'opacity-40 pointer-events-none' : ''}`}
+          className={`pb-2 ps-6 space-y-0.5 ${!isEnabled ? 'opacity-40 pointer-events-none' : ''}`}
         >
           {visibleSubModules.map((sub) => (
             <SubModuleRow

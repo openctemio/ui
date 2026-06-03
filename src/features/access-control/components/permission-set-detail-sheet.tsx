@@ -407,7 +407,7 @@ export function PermissionSetDetailSheet({
                       </h4>
                       {!isSystem && (
                         <Button size="sm" onClick={() => setAddPermissionDialogOpen(true)}>
-                          <Plus className="mr-2 h-4 w-4" />
+                          <Plus className="me-2 h-4 w-4" />
                           Add Permission
                         </Button>
                       )}
@@ -488,7 +488,7 @@ export function PermissionSetDetailSheet({
                 <p>All permissions are already in this set</p>
               </div>
             ) : (
-              <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+              <div className="space-y-4 max-h-[400px] overflow-y-auto pe-2">
                 {availablePermissions.map((category) => (
                   <div key={category.name} className="space-y-2">
                     <h4 className="text-sm font-medium text-muted-foreground">{category.name}</h4>
@@ -538,9 +538,9 @@ export function PermissionSetDetailSheet({
               disabled={isAdding || selectedPermissions.length === 0}
             >
               {isAdding ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="me-2 h-4 w-4 animate-spin" />
               ) : (
-                <Plus className="mr-2 h-4 w-4" />
+                <Plus className="me-2 h-4 w-4" />
               )}
               Add {selectedPermissions.length} Permission
               {selectedPermissions.length !== 1 ? 's' : ''}
@@ -569,9 +569,9 @@ export function PermissionSetDetailSheet({
             </Button>
             <Button variant="destructive" onClick={handleRemovePermission} disabled={isRemoving}>
               {isRemoving ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="me-2 h-4 w-4 animate-spin" />
               ) : (
-                <Trash2 className="mr-2 h-4 w-4" />
+                <Trash2 className="me-2 h-4 w-4" />
               )}
               Remove
             </Button>

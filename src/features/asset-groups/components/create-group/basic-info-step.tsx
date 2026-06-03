@@ -277,7 +277,7 @@ export function BasicInfoStep({ data, onChange }: BasicInfoStepProps) {
                   type="button"
                   onClick={() => onChange({ criticality: crit.value })}
                   className={cn(
-                    'flex items-start gap-3 rounded-lg border-2 p-3 text-left transition-all',
+                    'flex items-start gap-3 rounded-lg border-2 p-3 text-start transition-all',
                     isSelected
                       ? cn(crit.bgColor, 'ring-1 ring-current/20')
                       : 'border-muted hover:border-muted-foreground/30'
@@ -333,7 +333,7 @@ export function BasicInfoStep({ data, onChange }: BasicInfoStepProps) {
                     <Building2 className="h-4 w-4 text-blue-500" />
                   </div>
                   Business Context
-                  <Badge variant="outline" className="ml-2 text-xs font-normal">
+                  <Badge variant="outline" className="ms-2 text-xs font-normal">
                     Optional
                   </Badge>
                 </div>
@@ -418,12 +418,12 @@ export function BasicInfoStep({ data, onChange }: BasicInfoStepProps) {
                 {data.tags.length > 0 && (
                   <div className="flex flex-wrap gap-1.5 p-2 bg-muted/30 rounded-lg">
                     {data.tags.map((tag) => (
-                      <Badge key={tag} variant="secondary" className="gap-1 pl-2 pr-1">
+                      <Badge key={tag} variant="secondary" className="gap-1 ps-2 pe-1">
                         {tag}
                         <button
                           type="button"
                           onClick={() => handleRemoveTag(tag)}
-                          className="ml-0.5 rounded-full p-0.5 hover:bg-destructive/20 hover:text-destructive transition-colors"
+                          className="ms-0.5 rounded-full p-0.5 hover:bg-destructive/20 hover:text-destructive transition-colors"
                         >
                           <X className="h-3 w-3" />
                         </button>
@@ -438,7 +438,7 @@ export function BasicInfoStep({ data, onChange }: BasicInfoStepProps) {
                   onKeyDown={handleTagKeyDown}
                 />
                 <div className="flex flex-wrap gap-1">
-                  <span className="text-xs text-muted-foreground mr-1 py-0.5">Quick add:</span>
+                  <span className="text-xs text-muted-foreground me-1 py-0.5">Quick add:</span>
                   {SUGGESTED_TAGS.filter((t) => !data.tags.includes(t))
                     .slice(0, 6)
                     .map((tag) => (

@@ -183,12 +183,12 @@ export function AgentDetailSheet({
           <div className="mb-4 flex items-center gap-2">
             {isDaemon ? (
               <Badge variant="secondary" className="bg-blue-500/10 text-blue-500">
-                <Server className="mr-1 h-3 w-3" />
+                <Server className="me-1 h-3 w-3" />
                 Daemon Mode
               </Badge>
             ) : (
               <Badge variant="secondary" className="bg-purple-500/10 text-purple-500">
-                <Play className="mr-1 h-3 w-3" />
+                <Play className="me-1 h-3 w-3" />
                 Standalone Mode
               </Badge>
             )}
@@ -199,17 +199,17 @@ export function AgentDetailSheet({
           <div className="flex flex-wrap gap-2">
             <Can permission={Permission.AgentsWrite}>
               <Button size="sm" variant="secondary" onClick={() => onEdit(agent)}>
-                <Settings className="mr-2 h-4 w-4" />
+                <Settings className="me-2 h-4 w-4" />
                 Edit
               </Button>
             </Can>
             <Button size="sm" variant="outline" onClick={() => onViewConfig(agent)}>
-              <FileCode className="mr-2 h-4 w-4" />
+              <FileCode className="me-2 h-4 w-4" />
               View Config
             </Button>
             <Can permission={Permission.AgentsWrite}>
               <Button size="sm" variant="outline" onClick={() => onRegenerateKey(agent)}>
-                <KeyRound className="mr-2 h-4 w-4" />
+                <KeyRound className="me-2 h-4 w-4" />
                 Regenerate Key
               </Button>
               {(agent.status === 'disabled' || agent.status === 'revoked') && onActivate && (
@@ -219,7 +219,7 @@ export function AgentDetailSheet({
                   className="border-green-500/30 text-green-500 hover:bg-green-500/10"
                   onClick={() => onActivate(agent)}
                 >
-                  <Power className="mr-2 h-4 w-4" />
+                  <Power className="me-2 h-4 w-4" />
                   Activate
                 </Button>
               )}
@@ -230,7 +230,7 @@ export function AgentDetailSheet({
                   className="border-amber-500/30 text-amber-500 hover:bg-amber-500/10"
                   onClick={() => onDeactivate(agent)}
                 >
-                  <PowerOff className="mr-2 h-4 w-4" />
+                  <PowerOff className="me-2 h-4 w-4" />
                   Deactivate
                 </Button>
               )}
@@ -243,12 +243,12 @@ export function AgentDetailSheet({
           <TabsList className="mb-4 grid w-full grid-cols-5">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="analytics">
-              <BarChart3 className="mr-1 h-3 w-3" />
+              <BarChart3 className="me-1 h-3 w-3" />
               Analytics
             </TabsTrigger>
             <TabsTrigger value="capabilities">Capabilities</TabsTrigger>
             <TabsTrigger value="activity">
-              <History className="mr-1 h-3 w-3" />
+              <History className="me-1 h-3 w-3" />
               Activity
             </TabsTrigger>
             <TabsTrigger value="details">Details</TabsTrigger>
@@ -356,7 +356,7 @@ export function AgentDetailSheet({
                 </code>
                 <Can permission={Permission.AgentsWrite}>
                   <Button size="sm" variant="outline" onClick={() => onRegenerateKey(agent)}>
-                    <KeyRound className="mr-2 h-3 w-3" />
+                    <KeyRound className="me-2 h-3 w-3" />
                     Regenerate
                   </Button>
                 </Can>
@@ -434,7 +434,7 @@ export function AgentDetailSheet({
                         className="w-full border-red-500/50 text-red-500 hover:bg-red-500/10"
                         onClick={() => onRevoke(agent)}
                       >
-                        <AlertCircle className="mr-2 h-4 w-4" />
+                        <AlertCircle className="me-2 h-4 w-4" />
                         Revoke Access
                       </Button>
                     </div>
@@ -454,7 +454,7 @@ export function AgentDetailSheet({
                         onOpenChange(false)
                       }}
                     >
-                      <Trash2 className="mr-2 h-4 w-4" />
+                      <Trash2 className="me-2 h-4 w-4" />
                       Delete Agent
                     </Button>
                   </div>

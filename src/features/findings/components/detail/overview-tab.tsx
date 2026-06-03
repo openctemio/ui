@@ -480,7 +480,7 @@ export function OverviewTab({ finding, activities = [] }: OverviewTabProps) {
                   <p className="font-medium">
                     {finding.toolName}
                     {finding.toolVersion && (
-                      <span className="text-muted-foreground ml-1 text-xs">
+                      <span className="text-muted-foreground ms-1 text-xs">
                         v{finding.toolVersion}
                       </span>
                     )}

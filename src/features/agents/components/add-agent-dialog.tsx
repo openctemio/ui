@@ -199,7 +199,7 @@ export function AddAgentDialog({ open, onOpenChange, onSuccess }: AddAgentDialog
                     readOnly
                     type={showApiKey ? 'text' : 'password'}
                     value={apiKey}
-                    className="pr-10 font-mono text-sm"
+                    className="pe-10 font-mono text-sm"
                   />
                   <Button
                     type="button"
@@ -394,7 +394,7 @@ export function AddAgentDialog({ open, onOpenChange, onSuccess }: AddAgentDialog
               </Button>
               <Button type="button" onClick={handleNextStep} disabled={!canProceedToStep2}>
                 Next
-                <ChevronRight className="ml-1 h-4 w-4" />
+                <ChevronRight className="ms-1 h-4 w-4" />
               </Button>
             </>
           ) : (
@@ -405,11 +405,11 @@ export function AddAgentDialog({ open, onOpenChange, onSuccess }: AddAgentDialog
                 onClick={() => setStep(1)}
                 disabled={isMutating}
               >
-                <ChevronLeft className="mr-1 h-4 w-4" />
+                <ChevronLeft className="me-1 h-4 w-4" />
                 Back
               </Button>
               <Button onClick={form.handleSubmit(onSubmit)} disabled={isMutating}>
-                {isMutating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {isMutating && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
                 Create Agent
               </Button>
             </>

@@ -141,7 +141,7 @@ export function EditAgentDialog({ open, onOpenChange, agent, onSuccess }: EditAg
             <TabsTrigger value="tools">
               Tools
               {selectedTools.length > 0 && (
-                <span className="ml-1.5 rounded-full bg-primary/20 px-1.5 py-0.5 text-xs">
+                <span className="ms-1.5 rounded-full bg-primary/20 px-1.5 py-0.5 text-xs">
                   {selectedTools.length}
                 </span>
               )}
@@ -269,7 +269,7 @@ export function EditAgentDialog({ open, onOpenChange, agent, onSuccess }: EditAg
             Cancel
           </Button>
           <Button onClick={form.handleSubmit(onSubmit)} disabled={isMutating}>
-            {isMutating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {isMutating && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
             Save Changes
           </Button>
         </DialogFooter>

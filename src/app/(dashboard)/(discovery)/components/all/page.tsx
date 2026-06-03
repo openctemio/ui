@@ -136,7 +136,7 @@ export default function AllComponentsPage() {
           description={`${stats.totalComponents} software components in your organization`}
         >
           <Button variant="outline" onClick={handleExport}>
-            <Download className="mr-2 h-4 w-4" />
+            <Download className="me-2 h-4 w-4" />
             Export CSV
           </Button>
         </PageHeader>
@@ -309,7 +309,7 @@ export default function AllComponentsPage() {
                   placeholder="Search components..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9"
+                  className="ps-9"
                 />
               </div>
               <div className="flex flex-wrap items-center gap-2">

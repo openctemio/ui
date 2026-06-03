@@ -223,7 +223,7 @@ export function CreateFindingDialog({ open, onOpenChange, onSuccess }: CreateFin
                   ) : (
                     <span className="text-muted-foreground">Select an asset...</span>
                   )}
-                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  <ChevronsUpDown className="ms-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
@@ -255,7 +255,7 @@ export function CreateFindingDialog({ open, onOpenChange, onSuccess }: CreateFin
                           >
                             <Check
                               className={cn(
-                                'mr-2 h-4 w-4',
+                                'me-2 h-4 w-4',
                                 assetId === asset.id ? 'opacity-100' : 'opacity-0'
                               )}
                             />
@@ -516,7 +516,7 @@ export function CreateFindingDialog({ open, onOpenChange, onSuccess }: CreateFin
               Cancel
             </Button>
             <Button type="submit" disabled={isCreating || !assetId || !title.trim()}>
-              {isCreating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isCreating && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
               Create Finding
             </Button>
           </DialogFooter>

@@ -1093,7 +1093,7 @@ export default function ScopeConfigPage() {
           <div className="overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
             <TabsList>
               <TabsTrigger value="overview">
-                <BarChart3 className="mr-1.5 h-3.5 w-3.5" />
+                <BarChart3 className="me-1.5 h-3.5 w-3.5" />
                 Overview
               </TabsTrigger>
               <TabsTrigger value="targets">
@@ -1293,7 +1293,7 @@ export default function ScopeConfigPage() {
                   </div>
                   <Can permission={Permission.ScopeWrite}>
                     <Button size="sm" onClick={() => setIsAddTargetOpen(true)}>
-                      <Plus className="mr-2 h-4 w-4" />
+                      <Plus className="me-2 h-4 w-4" />
                       Add Target
                     </Button>
                   </Can>
@@ -1309,7 +1309,7 @@ export default function ScopeConfigPage() {
                         setTargetSearch(e.target.value)
                         setTargetPage(1)
                       }}
-                      className="pl-9"
+                      className="ps-9"
                     />
                   </div>
                   <Select
@@ -1413,7 +1413,7 @@ export default function ScopeConfigPage() {
                                 <DropdownMenuContent align="end">
                                   <Can permission={Permission.ScopeWrite}>
                                     <DropdownMenuItem onClick={() => openEditTarget(target)}>
-                                      <Pencil className="mr-2 h-4 w-4" />
+                                      <Pencil className="me-2 h-4 w-4" />
                                       Edit
                                     </DropdownMenuItem>
                                   </Can>
@@ -1422,7 +1422,7 @@ export default function ScopeConfigPage() {
                                       className="text-red-400"
                                       onClick={() => setDeleteTarget(target)}
                                     >
-                                      <Trash2 className="mr-2 h-4 w-4" />
+                                      <Trash2 className="me-2 h-4 w-4" />
                                       Remove
                                     </DropdownMenuItem>
                                   </Can>
@@ -1466,7 +1466,7 @@ export default function ScopeConfigPage() {
                   </div>
                   <Can permission={Permission.ScopeWrite}>
                     <Button size="sm" onClick={() => setIsAddExclusionOpen(true)}>
-                      <Plus className="mr-2 h-4 w-4" />
+                      <Plus className="me-2 h-4 w-4" />
                       Add Exclusion
                     </Button>
                   </Can>
@@ -1482,7 +1482,7 @@ export default function ScopeConfigPage() {
                         setExclusionSearch(e.target.value)
                         setExclusionPage(1)
                       }}
-                      className="pl-9"
+                      className="ps-9"
                     />
                   </div>
                   <Select
@@ -1588,7 +1588,7 @@ export default function ScopeConfigPage() {
                                 <DropdownMenuContent align="end">
                                   <Can permission={Permission.ScopeWrite}>
                                     <DropdownMenuItem onClick={() => openEditExclusion(exclusion)}>
-                                      <Pencil className="mr-2 h-4 w-4" />
+                                      <Pencil className="me-2 h-4 w-4" />
                                       Edit
                                     </DropdownMenuItem>
                                   </Can>
@@ -1597,7 +1597,7 @@ export default function ScopeConfigPage() {
                                       className="text-red-400"
                                       onClick={() => setDeleteExclusion(exclusion)}
                                     >
-                                      <Trash2 className="mr-2 h-4 w-4" />
+                                      <Trash2 className="me-2 h-4 w-4" />
                                       Remove
                                     </DropdownMenuItem>
                                   </Can>
@@ -1639,7 +1639,7 @@ export default function ScopeConfigPage() {
                   </div>
                   <Can permission={Permission.ScopeWrite}>
                     <Button size="sm" onClick={() => setIsAddScheduleOpen(true)}>
-                      <Plus className="mr-2 h-4 w-4" />
+                      <Plus className="me-2 h-4 w-4" />
                       Create Schedule
                     </Button>
                   </Can>
@@ -1655,7 +1655,7 @@ export default function ScopeConfigPage() {
                         setScheduleSearch(e.target.value)
                         setSchedulePage(1)
                       }}
-                      className="pl-9"
+                      className="ps-9"
                     />
                   </div>
                   <Select
@@ -1772,13 +1772,13 @@ export default function ScopeConfigPage() {
                                   <DropdownMenuContent align="end">
                                     <Can permission={Permission.ScansExecute}>
                                       <DropdownMenuItem onClick={() => handleRunNow(schedule)}>
-                                        <Play className="mr-2 h-4 w-4" />
+                                        <Play className="me-2 h-4 w-4" />
                                         Run Now
                                       </DropdownMenuItem>
                                     </Can>
                                     <Can permission={Permission.ScopeWrite}>
                                       <DropdownMenuItem onClick={() => openEditSchedule(schedule)}>
-                                        <Pencil className="mr-2 h-4 w-4" />
+                                        <Pencil className="me-2 h-4 w-4" />
                                         Edit
                                       </DropdownMenuItem>
                                     </Can>
@@ -1787,7 +1787,7 @@ export default function ScopeConfigPage() {
                                         className="text-red-400"
                                         onClick={() => setDeleteSchedule(schedule)}
                                       >
-                                        <Trash2 className="mr-2 h-4 w-4" />
+                                        <Trash2 className="me-2 h-4 w-4" />
                                         Delete
                                       </DropdownMenuItem>
                                     </Can>
@@ -1842,7 +1842,7 @@ export default function ScopeConfigPage() {
               Cancel
             </Button>
             <Button onClick={handleAddTarget} disabled={isCreatingTarget}>
-              {isCreatingTarget && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isCreatingTarget && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
               Add Target
             </Button>
           </DialogFooter>
@@ -1870,7 +1870,7 @@ export default function ScopeConfigPage() {
               Cancel
             </Button>
             <Button onClick={handleEditTarget} disabled={isUpdatingTarget}>
-              {isUpdatingTarget && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isUpdatingTarget && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
               Save Changes
             </Button>
           </DialogFooter>
@@ -1891,7 +1891,7 @@ export default function ScopeConfigPage() {
               Cancel
             </Button>
             <Button variant="destructive" onClick={handleDeleteTarget} disabled={isRemovingTarget}>
-              {isRemovingTarget && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isRemovingTarget && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
               Remove
             </Button>
           </DialogFooter>
@@ -1919,7 +1919,7 @@ export default function ScopeConfigPage() {
               Cancel
             </Button>
             <Button onClick={handleAddExclusion} disabled={isCreatingExclusion}>
-              {isCreatingExclusion && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isCreatingExclusion && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
               Add Exclusion
             </Button>
           </DialogFooter>
@@ -1947,7 +1947,7 @@ export default function ScopeConfigPage() {
               Cancel
             </Button>
             <Button onClick={handleEditExclusion} disabled={isUpdatingExclusion}>
-              {isUpdatingExclusion && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isUpdatingExclusion && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
               Save Changes
             </Button>
           </DialogFooter>
@@ -1973,7 +1973,7 @@ export default function ScopeConfigPage() {
               onClick={handleDeleteExclusion}
               disabled={isRemovingExclusion}
             >
-              {isRemovingExclusion && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isRemovingExclusion && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
               Remove
             </Button>
           </DialogFooter>
@@ -1993,7 +1993,7 @@ export default function ScopeConfigPage() {
               Cancel
             </Button>
             <Button onClick={handleAddSchedule} disabled={isCreatingSchedule}>
-              {isCreatingSchedule && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isCreatingSchedule && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
               Create Schedule
             </Button>
           </DialogFooter>
@@ -2013,7 +2013,7 @@ export default function ScopeConfigPage() {
               Cancel
             </Button>
             <Button onClick={handleEditSchedule} disabled={isUpdatingSchedule}>
-              {isUpdatingSchedule && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isUpdatingSchedule && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
               Save Changes
             </Button>
           </DialogFooter>
@@ -2038,7 +2038,7 @@ export default function ScopeConfigPage() {
               onClick={handleDeleteSchedule}
               disabled={isRemovingSchedule}
             >
-              {isRemovingSchedule && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isRemovingSchedule && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
               Delete
             </Button>
           </DialogFooter>

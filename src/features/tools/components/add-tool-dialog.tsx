@@ -228,7 +228,7 @@ export function AddToolDialog({ open, onOpenChange, onSuccess, tool }: AddToolDi
             onSubmit={form.handleSubmit(handleSubmit)}
             className="flex flex-col flex-1 overflow-hidden"
           >
-            <div className="flex-1 overflow-y-auto pr-2 space-y-5">
+            <div className="flex-1 overflow-y-auto pe-2 space-y-5">
               {/* Required Fields Section */}
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-3">
@@ -688,7 +688,7 @@ export function AddToolDialog({ open, onOpenChange, onSuccess, tool }: AddToolDi
                 Cancel
               </Button>
               <Button type="submit" disabled={isMutating}>
-                {isMutating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {isMutating && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
                 {isEditMode ? 'Update Tool' : 'Create Tool'}
               </Button>
             </DialogFooter>

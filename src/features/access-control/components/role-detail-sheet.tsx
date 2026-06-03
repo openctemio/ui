@@ -345,7 +345,7 @@ export function RoleDetailSheet({
                 <SheetTitle className="text-xl truncate">{role.name}</SheetTitle>
                 {role.is_system && (
                   <Badge variant="outline" className="font-normal shrink-0">
-                    <Lock className="mr-1 h-3 w-3" />
+                    <Lock className="me-1 h-3 w-3" />
                     System
                   </Badge>
                 )}
@@ -361,7 +361,7 @@ export function RoleDetailSheet({
           {!role.is_system && onEdit && onDelete && (
             <div className="flex items-center gap-2 mt-3 pt-3 border-t">
               <Button variant="outline" size="sm" onClick={() => onEdit(role)}>
-                <Pencil className="mr-1.5 h-3.5 w-3.5" />
+                <Pencil className="me-1.5 h-3.5 w-3.5" />
                 Edit Role
               </Button>
               <Button
@@ -370,7 +370,7 @@ export function RoleDetailSheet({
                 className="text-red-600 hover:text-red-700 hover:bg-red-50"
                 onClick={() => onDelete(role)}
               >
-                <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+                <Trash2 className="me-1.5 h-3.5 w-3.5" />
                 Delete
               </Button>
             </div>
@@ -419,7 +419,7 @@ export function RoleDetailSheet({
               <TabsTrigger value="permissions" className="gap-2">
                 <Shield className="h-4 w-4" />
                 Permissions
-                <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
+                <Badge variant="secondary" className="ms-1 h-5 px-1.5 text-xs">
                   {filteredPermissionCount}
                 </Badge>
               </TabsTrigger>
@@ -427,7 +427,7 @@ export function RoleDetailSheet({
                 <Users className="h-4 w-4" />
                 Members
                 {!isLoadingMembers && (
-                  <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
+                  <Badge variant="secondary" className="ms-1 h-5 px-1.5 text-xs">
                     {roleMembers.length}
                   </Badge>
                 )}
@@ -452,7 +452,7 @@ export function RoleDetailSheet({
                       permissionTypeConfig.read.color
                     )}
                   >
-                    <Eye className="inline h-3 w-3 mr-1" />
+                    <Eye className="inline h-3 w-3 me-1" />
                     Read ({permissionStats.read})
                   </div>
                 </div>
@@ -464,7 +464,7 @@ export function RoleDetailSheet({
                       permissionTypeConfig.write.color
                     )}
                   >
-                    <Pencil className="inline h-3 w-3 mr-1" />
+                    <Pencil className="inline h-3 w-3 me-1" />
                     Write ({permissionStats.write})
                   </div>
                 </div>
@@ -476,7 +476,7 @@ export function RoleDetailSheet({
                       permissionTypeConfig.delete.color
                     )}
                   >
-                    <Trash2 className="inline h-3 w-3 mr-1" />
+                    <Trash2 className="inline h-3 w-3 me-1" />
                     Delete ({permissionStats.delete})
                   </div>
                 </div>
@@ -492,7 +492,7 @@ export function RoleDetailSheet({
                     placeholder="Search permissions..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-9"
+                    className="ps-9"
                   />
                 </div>
                 <Button variant="outline" size="sm" onClick={expandAll}>
@@ -541,7 +541,7 @@ export function RoleDetailSheet({
                           <div className="rounded-lg border bg-card">
                             {/* Module Header */}
                             <CollapsibleTrigger asChild>
-                              <button className="w-full flex items-center gap-2 p-3 text-left hover:bg-muted/50 rounded-lg transition-colors">
+                              <button className="w-full flex items-center gap-2 p-3 text-start hover:bg-muted/50 rounded-lg transition-colors">
                                 <ChevronRight
                                   className={cn(
                                     'h-4 w-4 text-muted-foreground transition-transform',
@@ -559,11 +559,11 @@ export function RoleDetailSheet({
                             <CollapsibleContent>
                               <div className="px-3 pb-3">
                                 {module.description && (
-                                  <p className="text-xs text-muted-foreground mb-3 ml-6">
+                                  <p className="text-xs text-muted-foreground mb-3 ms-6">
                                     {module.description}
                                   </p>
                                 )}
-                                <div className="flex flex-wrap gap-1.5 ml-6">
+                                <div className="flex flex-wrap gap-1.5 ms-6">
                                   {module.permissions.map((permission) => {
                                     const type = getPermissionType(permission.id)
                                     const typeConfig = permissionTypeConfig[type]
@@ -622,11 +622,11 @@ export function RoleDetailSheet({
                     placeholder="Search members..."
                     value={memberSearchQuery}
                     onChange={(e) => setMemberSearchQuery(e.target.value)}
-                    className="pl-9"
+                    className="ps-9"
                   />
                 </div>
                 <Button size="sm" onClick={() => setAddMemberDialogOpen(true)}>
-                  <UserPlus className="mr-1.5 h-4 w-4" />
+                  <UserPlus className="me-1.5 h-4 w-4" />
                   Add Member
                 </Button>
               </div>
@@ -653,7 +653,7 @@ export function RoleDetailSheet({
                         className="mt-4"
                         onClick={() => setAddMemberDialogOpen(true)}
                       >
-                        <UserPlus className="mr-1.5 h-4 w-4" />
+                        <UserPlus className="me-1.5 h-4 w-4" />
                         Add First Member
                       </Button>
                     )}
@@ -706,7 +706,7 @@ export function RoleDetailSheet({
                               onClick={() => handleRemoveMember(member)}
                               disabled={removingMemberId === member.id}
                             >
-                              <UserMinus className="mr-2 h-4 w-4" />
+                              <UserMinus className="me-2 h-4 w-4" />
                               Remove from Role
                             </DropdownMenuItem>
                           </DropdownMenuContent>

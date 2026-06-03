@@ -125,7 +125,7 @@ export function CloneScanDialog({ scan, open, onOpenChange, onSuccess }: CloneSc
                 <span className="text-muted-foreground">Targets:</span>
                 <span>
                   {assetGroupCount > 0 && (
-                    <Badge variant="secondary" className="mr-1">
+                    <Badge variant="secondary" className="me-1">
                       {assetGroupCount} asset group{assetGroupCount > 1 ? 's' : ''}
                     </Badge>
                   )}
@@ -186,12 +186,12 @@ export function CloneScanDialog({ scan, open, onOpenChange, onSuccess }: CloneSc
           <Button onClick={handleClone} disabled={!newName.trim() || isMutating}>
             {isMutating ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="me-2 h-4 w-4 animate-spin" />
                 Cloning...
               </>
             ) : (
               <>
-                <Copy className="mr-2 h-4 w-4" />
+                <Copy className="me-2 h-4 w-4" />
                 Clone Scan
               </>
             )}

@@ -310,7 +310,7 @@ export function AddCredentialDialog({ open, onOpenChange, onSuccess }: AddCreden
                     const Icon = CREDENTIAL_TYPE_ICONS[type]
                     return (
                       <TabsTrigger key={type} value={type} className="text-xs">
-                        <Icon className="mr-1 h-3 w-3" />
+                        <Icon className="me-1 h-3 w-3" />
                         {CREDENTIAL_TYPE_DISPLAY_NAMES[type].split(' ')[0]}
                       </TabsTrigger>
                     )
@@ -540,7 +540,7 @@ export function AddCredentialDialog({ open, onOpenChange, onSuccess }: AddCreden
                 Cancel
               </Button>
               <Button type="submit" disabled={isMutating}>
-                {isMutating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {isMutating && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
                 Create Credential
               </Button>
             </DialogFooter>

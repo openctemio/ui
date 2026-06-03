@@ -162,7 +162,7 @@ function AssetSelectorItem({
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        'flex items-center gap-3 w-full p-3 rounded-lg border text-left transition-colors',
+        'flex items-center gap-3 w-full p-3 rounded-lg border text-start transition-colors',
         selected ? 'border-primary bg-primary/5' : 'border-transparent hover:bg-accent/50',
         disabled && 'opacity-50 cursor-not-allowed'
       )}
@@ -618,7 +618,7 @@ export function AddRelationshipDialog({
                           relationship type instead of leaving them
                           stuck with an empty picker. */}
                       {relationshipType === 'resolves_to' && (
-                        <div className="mt-3 rounded-md border border-primary/30 bg-primary/5 p-2.5 text-left">
+                        <div className="mt-3 rounded-md border border-primary/30 bg-primary/5 p-2.5 text-start">
                           <p className="text-xs text-foreground">
                             <strong>Tip:</strong> Resolves To is for the literal DNS endpoint (an IP
                             address or load balancer). To link this domain to a website / API /
@@ -691,7 +691,7 @@ export function AddRelationshipDialog({
                 <Label>
                   Description (Optional)
                   {selectedTargets.length > 1 && (
-                    <span className="ml-1 text-xs font-normal text-muted-foreground">
+                    <span className="ms-1 text-xs font-normal text-muted-foreground">
                       — applied to all {selectedTargets.length} relationships
                     </span>
                   )}

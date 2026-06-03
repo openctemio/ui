@@ -92,13 +92,13 @@ export function TagInput({
       {value.length > 0 && (
         <div className="flex flex-wrap gap-1.5 p-2 bg-muted/30 rounded-lg">
           {value.map((tag) => (
-            <Badge key={tag} variant="secondary" className="gap-1 pl-2 pr-1">
+            <Badge key={tag} variant="secondary" className="gap-1 ps-2 pe-1">
               {tag}
               {!disabled && (
                 <button
                   type="button"
                   onClick={() => handleRemove(tag)}
-                  className="ml-0.5 rounded-full p-0.5 hover:bg-destructive/20 hover:text-destructive transition-colors"
+                  className="ms-0.5 rounded-full p-0.5 hover:bg-destructive/20 hover:text-destructive transition-colors"
                   aria-label={`Remove tag ${tag}`}
                 >
                   <X className="h-3 w-3" />
@@ -124,7 +124,7 @@ export function TagInput({
               />
               {showSuggestions && (
                 <div className="flex flex-wrap gap-1" role="listbox" aria-label="Tag suggestions">
-                  <span className="text-xs text-muted-foreground mr-1 py-0.5">Suggestions:</span>
+                  <span className="text-xs text-muted-foreground me-1 py-0.5">Suggestions:</span>
                   {filteredSuggestions.length > 0 ? (
                     filteredSuggestions.map((tag) => (
                       <Badge

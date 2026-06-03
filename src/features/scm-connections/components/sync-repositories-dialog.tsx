@@ -411,7 +411,7 @@ export function SyncRepositoriesDialog({
                 setSearchQuery(e.target.value)
                 setPage(1)
               }}
-              className="pl-9"
+              className="ps-9"
               disabled={isImporting}
             />
           </div>
@@ -449,7 +449,7 @@ export function SyncRepositoriesDialog({
                 {allSelected ? 'Deselect All' : 'Select All'}
               </span>
             </button>
-            <span className="text-sm text-muted-foreground ml-auto">
+            <span className="text-sm text-muted-foreground ms-auto">
               {repoData?.total ?? 0} repositories
               {availableToImport < (repoData?.total ?? 0) && (
                 <span className="text-muted-foreground"> ({availableToImport} available)</span>
@@ -465,7 +465,7 @@ export function SyncRepositoriesDialog({
             {isLoading ? (
               <div className="flex items-center justify-center h-full py-12">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                <span className="ml-2 text-muted-foreground">Loading repositories...</span>
+                <span className="ms-2 text-muted-foreground">Loading repositories...</span>
               </div>
             ) : error ? (
               <div className="flex flex-col items-center justify-center h-full py-12 text-center">
@@ -473,7 +473,7 @@ export function SyncRepositoriesDialog({
                   {error instanceof Error ? error.message : 'Failed to load repositories'}
                 </p>
                 <Button variant="outline" size="sm" onClick={() => refetch()} className="mt-4">
-                  <RefreshCw className="h-4 w-4 mr-2" />
+                  <RefreshCw className="h-4 w-4 me-2" />
                   Retry
                 </Button>
               </div>
@@ -531,7 +531,7 @@ export function SyncRepositoriesDialog({
             Cancel
           </Button>
           <Button onClick={handleImport} disabled={isImporting || selectedRepos.size === 0}>
-            {isImporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            {isImporting ? <Loader2 className="me-2 h-4 w-4 animate-spin" /> : null}
             Import {selectedRepos.size > 0 ? `${selectedRepos.size} ` : ''}
             {selectedRepos.size === 1 ? 'Repository' : 'Repositories'}
           </Button>
@@ -584,7 +584,7 @@ function RepositoryItem({ repo, selected, onSelect, disabled, isImported }: Repo
           )}
           {repo.is_archived && (
             <Badge variant="secondary" className="text-xs">
-              <Archive className="h-3 w-3 mr-1" />
+              <Archive className="h-3 w-3 me-1" />
               Archived
             </Badge>
           )}

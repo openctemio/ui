@@ -328,7 +328,7 @@ export function AddScannerTemplateDialog({
                           disabled={!selectedType}
                           onClick={() => document.getElementById('template-file')?.click()}
                         >
-                          <Upload className="mr-2 h-4 w-4" />
+                          <Upload className="me-2 h-4 w-4" />
                           Choose File
                         </Button>
                         {fileName && (
@@ -423,7 +423,7 @@ export function AddScannerTemplateDialog({
                 Cancel
               </Button>
               <Button type="submit" disabled={isCreating || !validationResult?.valid}>
-                {isCreating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {isCreating && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
                 Upload Template
               </Button>
             </DialogFooter>

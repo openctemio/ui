@@ -111,7 +111,7 @@ export function ScheduleStep({ data, onChange }: ScheduleStepProps) {
             </div>
 
             {!data.schedule.runImmediately && (
-              <div className="ml-6 grid gap-4 sm:grid-cols-3">
+              <div className="ms-6 grid gap-4 sm:grid-cols-3">
                 {/* Frequency */}
                 <div className="space-y-2">
                   <Label htmlFor="frequency" className="text-sm">

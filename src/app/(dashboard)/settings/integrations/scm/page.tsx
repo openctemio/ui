@@ -209,7 +209,7 @@ export default function SCMConnectionsPage() {
             {error?.message || 'An unexpected error occurred'}
           </p>
           <Button onClick={() => mutate()}>
-            <RefreshCw className="mr-2 h-4 w-4" />
+            <RefreshCw className="me-2 h-4 w-4" />
             Retry
           </Button>
         </div>
@@ -225,7 +225,7 @@ export default function SCMConnectionsPage() {
           <Button
             variant="ghost"
             size="sm"
-            className="gap-2 -ml-2 text-muted-foreground hover:text-foreground"
+            className="gap-2 -ms-2 text-muted-foreground hover:text-foreground"
             onClick={() => router.push('/settings/integrations')}
           >
             <ArrowLeft className="h-4 w-4" />
@@ -244,15 +244,15 @@ export default function SCMConnectionsPage() {
               disabled={actionInProgress === 'refresh'}
             >
               {actionInProgress === 'refresh' ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="me-2 h-4 w-4 animate-spin" />
               ) : (
-                <RefreshCw className="mr-2 h-4 w-4" />
+                <RefreshCw className="me-2 h-4 w-4" />
               )}
               Refresh
             </Button>
             <Can permission={Permission.ScmConnectionsWrite}>
               <Button onClick={() => setAddDialogOpen(true)}>
-                <Plus className="mr-2 h-4 w-4" />
+                <Plus className="me-2 h-4 w-4" />
                 Add Connection
               </Button>
             </Can>
@@ -342,7 +342,7 @@ export default function SCMConnectionsPage() {
                 </p>
                 <Can permission={Permission.ScmConnectionsWrite}>
                   <Button onClick={() => setAddDialogOpen(true)}>
-                    <Plus className="mr-2 h-4 w-4" />
+                    <Plus className="me-2 h-4 w-4" />
                     Add Your First Connection
                   </Button>
                 </Can>
@@ -411,7 +411,7 @@ export default function SCMConnectionsPage() {
                               onClick={() => handleSyncClick(connection)}
                             >
                               {connection.repositoryCount || 0} repos
-                              <ExternalLink className="ml-1 h-3 w-3" />
+                              <ExternalLink className="ms-1 h-3 w-3" />
                             </Button>
                           </TableCell>
                           <TableCell>
@@ -439,16 +439,16 @@ export default function SCMConnectionsPage() {
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
                                 <DropdownMenuItem onClick={() => handleSyncClick(connection)}>
-                                  <GitBranch className="mr-2 h-4 w-4" />
+                                  <GitBranch className="me-2 h-4 w-4" />
                                   Sync Repositories
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => handleTestConnection(connection)}>
-                                  <Eye className="mr-2 h-4 w-4" />
+                                  <Eye className="me-2 h-4 w-4" />
                                   Test Connection
                                 </DropdownMenuItem>
                                 <Can permission={Permission.ScmConnectionsWrite}>
                                   <DropdownMenuItem onClick={() => handleEditClick(connection)}>
-                                    <Pencil className="mr-2 h-4 w-4" />
+                                    <Pencil className="me-2 h-4 w-4" />
                                     Edit
                                   </DropdownMenuItem>
                                 </Can>
@@ -458,7 +458,7 @@ export default function SCMConnectionsPage() {
                                     className="text-red-500"
                                     onClick={() => handleDeleteClick(connection)}
                                   >
-                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    <Trash2 className="me-2 h-4 w-4" />
                                     Delete
                                   </DropdownMenuItem>
                                 </Can>

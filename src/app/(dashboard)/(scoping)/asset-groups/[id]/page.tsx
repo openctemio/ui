@@ -353,7 +353,7 @@ function AssetGroupDetailContent({ params }: PageProps) {
               The asset group you&apos;re looking for doesn&apos;t exist.
             </p>
             <Button onClick={() => router.push('/asset-groups')}>
-              <ArrowLeft className="mr-2 h-4 w-4" />
+              <ArrowLeft className="me-2 h-4 w-4" />
               Back to Groups
             </Button>
           </div>
@@ -498,12 +498,12 @@ function AssetGroupDetailContent({ params }: PageProps) {
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={handleCopyId}>
-              <Copy className="mr-2 h-4 w-4" />
+              <Copy className="me-2 h-4 w-4" />
               Copy ID
             </Button>
             <Can permission={Permission.AssetGroupsWrite}>
               <Button variant="outline" size="sm" onClick={handleEdit}>
-                <Pencil className="mr-2 h-4 w-4" />
+                <Pencil className="me-2 h-4 w-4" />
                 Edit
               </Button>
             </Can>
@@ -515,16 +515,16 @@ function AssetGroupDetailContent({ params }: PageProps) {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={handleCopyLink}>
-                  <Link className="mr-2 h-4 w-4" />
+                  <Link className="me-2 h-4 w-4" />
                   Copy Link
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => handleExport('JSON')}>
-                  <Download className="mr-2 h-4 w-4" />
+                  <Download className="me-2 h-4 w-4" />
                   Export as JSON
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => handleExport('CSV')}>
-                  <Download className="mr-2 h-4 w-4" />
+                  <Download className="me-2 h-4 w-4" />
                   Export as CSV
                 </DropdownMenuItem>
                 <Can permission={Permission.AssetGroupsDelete}>
@@ -533,7 +533,7 @@ function AssetGroupDetailContent({ params }: PageProps) {
                     className="text-red-500"
                     onClick={() => setDeleteDialogOpen(true)}
                   >
-                    <Trash2 className="mr-2 h-4 w-4" />
+                    <Trash2 className="me-2 h-4 w-4" />
                     Delete Group
                   </DropdownMenuItem>
                 </Can>
@@ -796,13 +796,13 @@ function AssetGroupDetailContent({ params }: PageProps) {
                           size="sm"
                           onClick={() => setRemoveAssetsDialogOpen(true)}
                         >
-                          <X className="mr-2 h-4 w-4" />
+                          <X className="me-2 h-4 w-4" />
                           Remove from Group
                         </Button>
                       </>
                     )}
                     <Button size="sm" onClick={() => setAddAssetsDialogOpen(true)}>
-                      <Plus className="mr-2 h-4 w-4" />
+                      <Plus className="me-2 h-4 w-4" />
                       Add Assets
                     </Button>
                   </div>
@@ -816,7 +816,7 @@ function AssetGroupDetailContent({ params }: PageProps) {
                     placeholder="Search assets..."
                     value={assetSearch}
                     onChange={(e) => handleAssetSearchChange(e.target.value)}
-                    className="pl-9"
+                    className="ps-9"
                   />
                 </div>
 
@@ -836,12 +836,12 @@ function AssetGroupDetailContent({ params }: PageProps) {
                     </p>
                     {assetSearch ? (
                       <Button variant="outline" onClick={() => setAssetSearch('')}>
-                        <X className="mr-2 h-4 w-4" />
+                        <X className="me-2 h-4 w-4" />
                         Clear Search
                       </Button>
                     ) : (
                       <Button size="sm" onClick={() => setAddAssetsDialogOpen(true)}>
-                        <Plus className="mr-2 h-4 w-4" />
+                        <Plus className="me-2 h-4 w-4" />
                         Add Assets
                       </Button>
                     )}
@@ -995,7 +995,7 @@ function AssetGroupDetailContent({ params }: PageProps) {
                           size="sm"
                           onClick={() => window.location.reload()}
                         >
-                          <RefreshCw className="mr-2 h-4 w-4" />
+                          <RefreshCw className="me-2 h-4 w-4" />
                           Refresh Page
                         </Button>
                       </>
@@ -1010,7 +1010,7 @@ function AssetGroupDetailContent({ params }: PageProps) {
                           group.
                         </p>
                         <Button variant="outline" size="sm">
-                          <RefreshCw className="mr-2 h-4 w-4" />
+                          <RefreshCw className="me-2 h-4 w-4" />
                           Run Security Scan
                         </Button>
                       </>

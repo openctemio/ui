@@ -346,7 +346,7 @@ export function EditGroupDialog({
                         }
                         disabled={isSubmitting}
                         className={cn(
-                          'flex items-start gap-2.5 rounded-lg border-2 p-2.5 text-left transition-all',
+                          'flex items-start gap-2.5 rounded-lg border-2 p-2.5 text-start transition-all',
                           isSelected
                             ? cn(crit.bgColor, 'ring-1 ring-current/20')
                             : 'border-muted hover:border-muted-foreground/30',
@@ -403,7 +403,7 @@ export function EditGroupDialog({
                           <Building2 className="h-3.5 w-3.5 text-blue-500" />
                         </div>
                         Business Context
-                        <Badge variant="outline" className="ml-2 text-xs font-normal">
+                        <Badge variant="outline" className="ms-2 text-xs font-normal">
                           Optional
                         </Badge>
                       </div>
@@ -511,14 +511,14 @@ export function EditGroupDialog({
                             <Badge
                               key={tag}
                               variant="secondary"
-                              className="gap-1 pl-2 pr-1 text-xs"
+                              className="gap-1 ps-2 pe-1 text-xs"
                             >
                               {tag}
                               <button
                                 type="button"
                                 onClick={() => handleRemoveTag(tag)}
                                 disabled={isSubmitting}
-                                className="ml-0.5 rounded-full p-0.5 hover:bg-destructive/20 hover:text-destructive transition-colors"
+                                className="ms-0.5 rounded-full p-0.5 hover:bg-destructive/20 hover:text-destructive transition-colors"
                               >
                                 <X className="h-3 w-3" />
                               </button>
@@ -534,7 +534,7 @@ export function EditGroupDialog({
                         disabled={isSubmitting}
                       />
                       <div className="flex flex-wrap gap-1">
-                        <span className="text-xs text-muted-foreground mr-1 py-0.5">
+                        <span className="text-xs text-muted-foreground me-1 py-0.5">
                           Quick add:
                         </span>
                         {SUGGESTED_TAGS.filter((t) => !formData.tags.includes(t))
@@ -569,7 +569,7 @@ export function EditGroupDialog({
           <Button onClick={handleSubmit} disabled={!formData.name.trim() || isSubmitting}>
             {isSubmitting ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="me-2 h-4 w-4 animate-spin" />
                 Saving...
               </>
             ) : (

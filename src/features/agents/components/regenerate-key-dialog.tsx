@@ -143,7 +143,7 @@ export function RegenerateKeyDialog({
                       readOnly
                       type={showApiKey ? 'text' : 'password'}
                       value={apiKey}
-                      className="pr-10 font-mono text-sm"
+                      className="pe-10 font-mono text-sm"
                     />
                     <Button
                       type="button"
@@ -176,7 +176,7 @@ export function RegenerateKeyDialog({
                 onClick={() => setConfigDialogOpen(true)}
                 className="w-full sm:w-auto"
               >
-                <FileCode className="mr-2 h-4 w-4" />
+                <FileCode className="me-2 h-4 w-4" />
                 View Config
               </Button>
               <Button onClick={handleClose} className="w-full sm:w-auto">
@@ -238,7 +238,7 @@ export function RegenerateKeyDialog({
             Cancel
           </Button>
           <Button variant="destructive" onClick={handleRegenerate} disabled={isMutating}>
-            {isMutating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {isMutating && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
             Regenerate Key
           </Button>
         </DialogFooter>

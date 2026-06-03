@@ -338,7 +338,7 @@ export function AssetDetailSheet<T extends Asset>({
                   <Link2 className="h-3.5 w-3.5" />
                   Relations
                   {relationships.length > 0 && (
-                    <span className="ml-1 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-semibold leading-none">
+                    <span className="ms-1 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-semibold leading-none">
                       {relationships.length}
                     </span>
                   )}
@@ -348,7 +348,7 @@ export function AssetDetailSheet<T extends Asset>({
                 <TabsTrigger value="findings" className="gap-1 whitespace-nowrap">
                   Findings
                   {asset.findingCount > 0 && (
-                    <span className="ml-1 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-semibold leading-none">
+                    <span className="ms-1 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-semibold leading-none">
                       {asset.findingCount}
                     </span>
                   )}
@@ -368,7 +368,7 @@ export function AssetDetailSheet<T extends Asset>({
               pattern. */}
           <TabsContent
             value="overview"
-            className="space-y-4 mt-0 flex-1 min-h-0 overflow-y-auto pr-1"
+            className="space-y-4 mt-0 flex-1 min-h-0 overflow-y-auto pe-1"
           >
             {statsContent}
 
@@ -414,7 +414,7 @@ export function AssetDetailSheet<T extends Asset>({
             <TabsContent
               key={tab.value}
               value={tab.value}
-              className="mt-0 flex-1 min-h-0 overflow-y-auto pr-1"
+              className="mt-0 flex-1 min-h-0 overflow-y-auto pe-1"
             >
               {tab.content}
             </TabsContent>
@@ -425,7 +425,7 @@ export function AssetDetailSheet<T extends Asset>({
               forward is onNavigateToAsset because the sheet itself
               cannot swap its own selectedAsset. */}
           {shouldShowRelationshipTab && (
-            <TabsContent value="relationships" className="mt-0 flex-1 min-h-0 overflow-y-auto pr-1">
+            <TabsContent value="relationships" className="mt-0 flex-1 min-h-0 overflow-y-auto pe-1">
               <AssetRelationshipsTab
                 assetId={asset.id}
                 sourceAsset={{ id: asset.id, name: asset.name, type: asset.type }}
@@ -436,7 +436,7 @@ export function AssetDetailSheet<T extends Asset>({
 
           {/* Findings Tab */}
           {showFindingsTab && (
-            <TabsContent value="findings" className="mt-0 flex-1 min-h-0 overflow-y-auto pr-1">
+            <TabsContent value="findings" className="mt-0 flex-1 min-h-0 overflow-y-auto pe-1">
               <AssetFindings assetId={asset.id} assetName={asset.name} />
             </TabsContent>
           )}
@@ -445,7 +445,7 @@ export function AssetDetailSheet<T extends Asset>({
           {showDetailsTab && (
             <TabsContent
               value="details"
-              className="space-y-4 mt-0 flex-1 min-h-0 overflow-y-auto pr-1"
+              className="space-y-4 mt-0 flex-1 min-h-0 overflow-y-auto pe-1"
             >
               <TimelineSection
                 firstSeen={asset.firstSeen}

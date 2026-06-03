@@ -344,7 +344,7 @@ export default function PipelineBuilderPage({ params }: PageProps) {
           <p className="text-lg font-medium">{error || 'Pipeline not found'}</p>
           <Button variant="outline" asChild>
             <Link href="/pipelines">
-              <ArrowLeft className="mr-2 h-4 w-4" />
+              <ArrowLeft className="me-2 h-4 w-4" />
               Back to Pipelines
             </Link>
           </Button>
@@ -401,9 +401,9 @@ export default function PipelineBuilderPage({ params }: PageProps) {
                   disabled={!hasChanges || isSaving || hasValidationErrors}
                 >
                   {isSaving ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <Loader2 className="me-2 h-4 w-4 animate-spin" />
                   ) : (
-                    <Save className="mr-2 h-4 w-4" />
+                    <Save className="me-2 h-4 w-4" />
                   )}
                   Save
                 </Button>
