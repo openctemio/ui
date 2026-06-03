@@ -847,7 +847,13 @@ function CopyButton({ value }: { value: string }) {
   }
 
   return (
-    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onCopy}>
+    <Button
+      variant="ghost"
+      size="icon"
+      className="h-6 w-6"
+      onClick={onCopy}
+      aria-label={copied ? 'Copied' : 'Copy value'}
+    >
       {copied ? (
         <CheckCircle className="h-3 w-3 text-green-500" />
       ) : (
