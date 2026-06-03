@@ -43,32 +43,24 @@ const reportTemplates = [
     name: 'Executive Summary',
     description: 'High-level security posture overview for leadership',
     icon: FileBarChart,
-    lastUsed: '2 days ago',
-    usageCount: 12,
   },
   {
     id: 'tpl-002',
     name: 'PCI-DSS Compliance',
     description: 'Detailed compliance status for PCI-DSS requirements',
     icon: FileCheck,
-    lastUsed: '1 week ago',
-    usageCount: 6,
   },
   {
     id: 'tpl-003',
     name: 'Technical Assessment',
     description: 'Detailed technical findings with remediation guidance',
     icon: FileText,
-    lastUsed: '3 days ago',
-    usageCount: 15,
   },
   {
     id: 'tpl-004',
     name: 'Vulnerability Report',
     description: 'Comprehensive vulnerability inventory and trends',
     icon: FileSpreadsheet,
-    lastUsed: '1 day ago',
-    usageCount: 24,
   },
 ]
 
@@ -176,11 +168,6 @@ export default function ReportsPage() {
                       <div className="flex-1 space-y-1">
                         <h4 className="text-sm font-medium">{template.name}</h4>
                         <p className="text-muted-foreground text-xs">{template.description}</p>
-                        <div className="text-muted-foreground flex items-center gap-3 text-xs">
-                          <span>Last used: {template.lastUsed}</span>
-                          <span>-</span>
-                          <span>{template.usageCount} generated</span>
-                        </div>
                       </div>
                     </CardContent>
                   </Card>
