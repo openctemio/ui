@@ -43,7 +43,14 @@ import { toast } from 'sonner'
 import { formatRelative } from '@/lib/format-date'
 import { useTenant } from '@/context/tenant-provider'
 
-import { useExposures, useExposureStats, useExposureHistory } from '@/features/exposures/hooks'
+import {
+  useExposures,
+  useExposureStats,
+  useExposureHistory,
+  resolveExposure,
+  acceptExposure,
+  markExposureFalsePositive,
+} from '@/features/exposures/hooks'
 import {
   ExposureStatsCards,
   ExposureSeverityBreakdown,
@@ -162,26 +169,29 @@ export default function ExposuresPage() {
     setDetailExposure(null)
   }, [handleRefresh])
 
+  // Bulk handlers apply the per-exposure state-change API to every selected id.
+  // ExposureBulkActions surfaces the success/error toast and clears selection;
+  // we only refresh on completion. Throwing propagates to its catch so a
+  // partial/total failure shows the error toast instead of a false success.
   const handleBulkResolve = useCallback(
     async (ids: string[]) => {
-      // In real implementation, call bulk API
-      toast.success(`${ids.length} exposures resolved`)
+      await Promise.all(ids.map((id) => resolveExposure(id)))
       handleRefresh()
     },
     [handleRefresh]
   )
 
   const handleBulkAccept = useCallback(
-    async (ids: string[], _reason: string) => {
-      toast.success(`${ids.length} exposures accepted`)
+    async (ids: string[], reason: string) => {
+      await Promise.all(ids.map((id) => acceptExposure(id, { reason })))
       handleRefresh()
     },
     [handleRefresh]
   )
 
   const handleBulkFalsePositive = useCallback(
-    async (ids: string[], _reason: string) => {
-      toast.success(`${ids.length} exposures marked as false positive`)
+    async (ids: string[], reason: string) => {
+      await Promise.all(ids.map((id) => markExposureFalsePositive(id, { reason })))
       handleRefresh()
     },
     [handleRefresh]
