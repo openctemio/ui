@@ -48,7 +48,7 @@ export function AssetDeleteDialog({
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30">
               <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400" />
             </div>
-            <AlertDialogTitle className="text-left">
+            <AlertDialogTitle className="text-start">
               {isBulkDelete ? `Delete ${bulkCount} ${assetTypeName}s?` : `Delete ${assetTypeName}?`}
             </AlertDialogTitle>
           </div>
@@ -118,7 +118,7 @@ export function AssetDeleteDialog({
           >
             {isDeleting ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="me-2 h-4 w-4 animate-spin" />
                 Deleting...
               </>
             ) : (

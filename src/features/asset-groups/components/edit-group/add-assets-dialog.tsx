@@ -412,7 +412,7 @@ export function AddAssetsDialog({
           }
         }}
         className={cn(
-          'flex items-center gap-3 w-full p-3 rounded-lg text-left transition-all cursor-pointer select-none',
+          'flex items-center gap-3 w-full p-3 rounded-lg text-start transition-all cursor-pointer select-none',
           isSelected ? 'bg-primary/10 ring-1 ring-primary/30' : 'hover:bg-muted/50',
           isBusy && 'opacity-50 cursor-not-allowed'
         )}
@@ -463,7 +463,7 @@ export function AddAssetsDialog({
                   <ListChecks className="h-4 w-4" />
                   Select Existing
                   {selectedAssetIds.length > 0 && (
-                    <Badge variant="secondary" className="ml-1 h-5 px-1.5">
+                    <Badge variant="secondary" className="ms-1 h-5 px-1.5">
                       +{selectedAssetIds.length}
                     </Badge>
                   )}
@@ -472,7 +472,7 @@ export function AddAssetsDialog({
                   <PlusCircle className="h-4 w-4" />
                   Create New
                   {newAssets.length > 0 && (
-                    <Badge variant="secondary" className="ml-1 h-5 px-1.5">
+                    <Badge variant="secondary" className="ms-1 h-5 px-1.5">
                       {newAssets.length}
                     </Badge>
                   )}
@@ -492,7 +492,7 @@ export function AddAssetsDialog({
                   placeholder="Search assets..."
                   value={searchInput}
                   onChange={(e) => setSearchInput(e.target.value)}
-                  className="pl-9"
+                  className="ps-9"
                   disabled={isBusy}
                 />
               </div>
@@ -503,7 +503,7 @@ export function AddAssetsDialog({
                   {showLoading ? (
                     <div className="flex items-center justify-center py-12">
                       <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                      <span className="ml-2 text-sm text-muted-foreground">Loading assets...</span>
+                      <span className="ms-2 text-sm text-muted-foreground">Loading assets...</span>
                     </div>
                   ) : (
                     <>
@@ -553,7 +553,7 @@ export function AddAssetsDialog({
                         {isLoading && (
                           <div className="flex items-center justify-center py-4">
                             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                            <span className="ml-2 text-sm text-muted-foreground">
+                            <span className="ms-2 text-sm text-muted-foreground">
                               Loading more...
                             </span>
                           </div>
@@ -622,7 +622,7 @@ export function AddAssetsDialog({
                   <p className="text-xs text-destructive mt-2">
                     {validationResult.error}
                     {currentAssetTypeInfo?.pattern_example && (
-                      <span className="text-muted-foreground ml-1">
+                      <span className="text-muted-foreground ms-1">
                         (e.g., {currentAssetTypeInfo.pattern_example})
                       </span>
                     )}
@@ -735,7 +735,7 @@ export function AddAssetsDialog({
                 <Button onClick={handleSubmit} disabled={isBusy}>
                   {isSubmitting ? (
                     <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      <Loader2 className="me-2 h-4 w-4 animate-spin" />
                       Adding...
                     </>
                   ) : (

@@ -355,7 +355,7 @@ export function ActivityPanel({
                       className="h-6 text-xs"
                       onClick={() => setEditingCommentId(null)}
                     >
-                      <X className="mr-1 h-3 w-3" />
+                      <X className="me-1 h-3 w-3" />
                       Cancel
                     </Button>
                     <Button
@@ -369,7 +369,7 @@ export function ActivityPanel({
                         setEditingCommentId(null)
                       }}
                     >
-                      <Check className="mr-1 h-3 w-3" />
+                      <Check className="me-1 h-3 w-3" />
                       Save
                     </Button>
                   </div>
@@ -388,12 +388,12 @@ export function ActivityPanel({
                 >
                   {isCommentExpanded ? (
                     <>
-                      <ChevronUp className="mr-1 h-3 w-3" />
+                      <ChevronUp className="me-1 h-3 w-3" />
                       Show less
                     </>
                   ) : (
                     <>
-                      <ChevronDown className="mr-1 h-3 w-3" />
+                      <ChevronDown className="me-1 h-3 w-3" />
                       Show more
                     </>
                   )}
@@ -474,7 +474,7 @@ export function ActivityPanel({
 
             {/* Replies */}
             {hasReplies && (
-              <div className="pl-4">
+              <div className="ps-4">
                 <Button
                   variant="ghost"
                   size="sm"
@@ -482,16 +482,16 @@ export function ActivityPanel({
                   onClick={() => toggleReplies(activity.id)}
                 >
                   {showReplies ? (
-                    <ChevronUp className="mr-1 h-3 w-3" />
+                    <ChevronUp className="me-1 h-3 w-3" />
                   ) : (
-                    <ChevronDown className="mr-1 h-3 w-3" />
+                    <ChevronDown className="me-1 h-3 w-3" />
                   )}
                   {activity.replies!.length} repl
                   {activity.replies!.length === 1 ? 'y' : 'ies'}
                 </Button>
 
                 {showReplies && (
-                  <div className="mt-2 space-y-2 border-l-2 border-muted pl-3">
+                  <div className="mt-2 space-y-2 border-l-2 border-muted ps-3">
                     {activity.replies!.map((reply) => (
                       <div key={reply.id} className="bg-muted/30 rounded p-2">
                         <div className="mb-1 flex items-center gap-2">
@@ -531,7 +531,7 @@ export function ActivityPanel({
           <div className="text-sm">
             <span>{activity.content}</span>
             {evidenceType && (
-              <Badge variant="outline" className="ml-2 text-xs">
+              <Badge variant="outline" className="ms-2 text-xs">
                 {evidenceType}
               </Badge>
             )}
@@ -605,12 +605,12 @@ export function ActivityPanel({
             >
               {isLoadingMore ? (
                 <>
-                  <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                  <Loader2 className="me-1 h-3 w-3 animate-spin" />
                   Loading...
                 </>
               ) : (
                 <>
-                  <ChevronDown className="mr-1 h-3 w-3" />
+                  <ChevronDown className="me-1 h-3 w-3" />
                   Load More
                 </>
               )}
@@ -662,7 +662,7 @@ export function ActivityPanel({
             onClick={handleSubmitComment}
             disabled={!comment.trim() || comment.length > MAX_COMMENT_LENGTH}
           >
-            <Send className="mr-1 h-3 w-3" />
+            <Send className="me-1 h-3 w-3" />
             Send
           </Button>
         </div>

@@ -297,7 +297,7 @@ export function AddConnectionDialog({ open, onOpenChange, onSuccess }: AddConnec
                       <Input
                         type={showToken ? 'text' : 'password'}
                         placeholder="Enter your access token"
-                        className="pr-10"
+                        className="pe-10"
                         {...field}
                         onChange={(e) => {
                           field.onChange(e)
@@ -354,7 +354,7 @@ export function AddConnectionDialog({ open, onOpenChange, onSuccess }: AddConnec
                         <span className="text-sm text-green-500">Connection successful!</span>
                       </div>
                       {testResult && (
-                        <div className="text-xs text-muted-foreground ml-6">
+                        <div className="text-xs text-muted-foreground ms-6">
                           {testResult.username && <span>User: {testResult.username}</span>}
                           {testResult.organization && (
                             <span> | Org: {testResult.organization}</span>
@@ -384,12 +384,12 @@ export function AddConnectionDialog({ open, onOpenChange, onSuccess }: AddConnec
                 disabled={testStatus === 'testing' || isMutating}
               >
                 {testStatus === 'testing' ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="me-2 h-4 w-4 animate-spin" />
                 ) : null}
                 Test Connection
               </Button>
               <Button type="submit" disabled={isMutating || testStatus === 'testing'}>
-                {isMutating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                {isMutating ? <Loader2 className="me-2 h-4 w-4 animate-spin" /> : null}
                 Add Connection
               </Button>
             </DialogFooter>

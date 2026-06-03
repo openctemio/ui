@@ -143,7 +143,7 @@ export default function LicensesPage() {
             onClick={handleExport}
             disabled={isLoading || uniqueLicenseCount === 0}
           >
-            <Download className="mr-2 h-4 w-4" />
+            <Download className="me-2 h-4 w-4" />
             Export Report
           </Button>
         </PageHeader>
@@ -247,7 +247,7 @@ export default function LicensesPage() {
               <Link href="/components/all?licenseRisk=high">
                 <Button variant="outline" size="sm">
                   Review Components
-                  <ArrowRight className="ml-2 h-4 w-4" />
+                  <ArrowRight className="ms-2 h-4 w-4" />
                 </Button>
               </Link>
             </CardContent>
@@ -397,7 +397,7 @@ export default function LicensesPage() {
                       <TableHead>License</TableHead>
                       <TableHead>Category</TableHead>
                       <TableHead>Risk</TableHead>
-                      <TableHead className="text-right">Components</TableHead>
+                      <TableHead className="text-end">Components</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -432,7 +432,7 @@ export default function LicensesPage() {
                             showTooltip={false}
                           />
                         </TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="text-end">
                           <Badge variant="secondary">{license.count}</Badge>
                         </TableCell>
                       </TableRow>

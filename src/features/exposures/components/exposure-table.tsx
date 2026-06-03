@@ -326,29 +326,29 @@ export function ExposureTable({
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem onClick={() => onViewDetails?.(exposure)}>
-                        <Eye className="mr-2 h-4 w-4" />
+                        <Eye className="me-2 h-4 w-4" />
                         View Details
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       {exposure.state === 'active' && (
                         <>
                           <DropdownMenuItem onClick={() => onResolve?.(exposure)}>
-                            <Check className="mr-2 h-4 w-4 text-green-500" />
+                            <Check className="me-2 h-4 w-4 text-green-500" />
                             Mark Resolved
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => onAccept?.(exposure)}>
-                            <AlertTriangle className="mr-2 h-4 w-4 text-yellow-500" />
+                            <AlertTriangle className="me-2 h-4 w-4 text-yellow-500" />
                             Accept Risk
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => onMarkFalsePositive?.(exposure)}>
-                            <X className="mr-2 h-4 w-4 text-muted-foreground" />
+                            <X className="me-2 h-4 w-4 text-muted-foreground" />
                             False Positive
                           </DropdownMenuItem>
                         </>
                       )}
                       {exposure.state !== 'active' && (
                         <DropdownMenuItem onClick={() => onReactivate?.(exposure)}>
-                          <RefreshCw className="mr-2 h-4 w-4 text-blue-500" />
+                          <RefreshCw className="me-2 h-4 w-4 text-blue-500" />
                           Reactivate
                         </DropdownMenuItem>
                       )}

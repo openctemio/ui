@@ -202,16 +202,16 @@ export function ScopeRulesTab({ groupId }: ScopeRulesTabProps) {
               disabled={isReconciling || scopeRules.length === 0}
             >
               {isReconciling ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="me-2 h-4 w-4 animate-spin" />
               ) : (
-                <RefreshCw className="mr-2 h-4 w-4" />
+                <RefreshCw className="me-2 h-4 w-4" />
               )}
               Reconcile
             </Button>
           </Can>
           <Can permission={Permission.GroupsWrite} mode="disable">
             <Button size="sm" onClick={() => setDialogOpen(true)} disabled={isCreating || !groupId}>
-              <Plus className="mr-2 h-4 w-4" />
+              <Plus className="me-2 h-4 w-4" />
               Add Rule
             </Button>
           </Can>
@@ -223,7 +223,7 @@ export function ScopeRulesTab({ groupId }: ScopeRulesTabProps) {
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search rules..."
-            className="pl-9"
+            className="ps-9"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -311,12 +311,12 @@ export function ScopeRulesTab({ groupId }: ScopeRulesTabProps) {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem onClick={() => handlePreview(rule)}>
-                      <Eye className="mr-2 h-4 w-4" />
+                      <Eye className="me-2 h-4 w-4" />
                       Preview
                     </DropdownMenuItem>
                     <Can permission={Permission.GroupsWrite}>
                       <DropdownMenuItem onClick={() => setEditingRule(rule)}>
-                        <Pencil className="mr-2 h-4 w-4" />
+                        <Pencil className="me-2 h-4 w-4" />
                         Edit
                       </DropdownMenuItem>
                     </Can>
@@ -325,7 +325,7 @@ export function ScopeRulesTab({ groupId }: ScopeRulesTabProps) {
                         className="text-red-400"
                         onClick={() => setDeleteConfirm(rule)}
                       >
-                        <Trash2 className="mr-2 h-4 w-4" />
+                        <Trash2 className="me-2 h-4 w-4" />
                         Delete
                       </DropdownMenuItem>
                     </Can>
@@ -370,9 +370,9 @@ export function ScopeRulesTab({ groupId }: ScopeRulesTabProps) {
             </Button>
             <Button variant="destructive" onClick={handleDelete} disabled={isDeleting}>
               {isDeleting ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="me-2 h-4 w-4 animate-spin" />
               ) : (
-                <Trash2 className="mr-2 h-4 w-4" />
+                <Trash2 className="me-2 h-4 w-4" />
               )}
               Delete
             </Button>

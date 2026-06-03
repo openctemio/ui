@@ -397,7 +397,7 @@ export function NewScanDialog({ open, onOpenChange, onSubmit }: NewScanDialogPro
                 disabled={isLoading}
                 className="w-full sm:w-auto"
               >
-                <ChevronLeft className="mr-1 h-4 w-4" />
+                <ChevronLeft className="me-1 h-4 w-4" />
                 Back
               </Button>
             )}
@@ -423,12 +423,12 @@ export function NewScanDialog({ open, onOpenChange, onSubmit }: NewScanDialogPro
               >
                 {isLoading ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <Loader2 className="me-2 h-4 w-4 animate-spin" />
                     {formData.schedule.runImmediately ? 'Starting...' : 'Scheduling...'}
                   </>
                 ) : (
                   <>
-                    <Play className="mr-2 h-4 w-4" />
+                    <Play className="me-2 h-4 w-4" />
                     {formData.schedule.runImmediately ? 'Start Scan' : 'Schedule Scan'}
                   </>
                 )}
@@ -440,7 +440,7 @@ export function NewScanDialog({ open, onOpenChange, onSubmit }: NewScanDialogPro
                 className="w-full sm:w-auto order-1 sm:order-2"
               >
                 Next
-                <ChevronRight className="ml-1 h-4 w-4" />
+                <ChevronRight className="ms-1 h-4 w-4" />
               </Button>
             )}
           </div>

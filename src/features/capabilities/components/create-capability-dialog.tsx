@@ -172,7 +172,7 @@ export function CreateCapabilityDialog({
             Add a new capability to categorize what your tools can do.
           </DialogDescription>
         </DialogHeader>
-        <ScrollArea className="max-h-[60vh] pr-4">
+        <ScrollArea className="max-h-[60vh] pe-4">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
               <FormField
@@ -324,7 +324,7 @@ export function CreateCapabilityDialog({
             onClick={form.handleSubmit(handleSubmit)}
             className="w-full sm:w-auto"
           >
-            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {isSubmitting && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
             Create Capability
           </Button>
         </DialogFooter>

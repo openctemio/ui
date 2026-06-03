@@ -203,7 +203,7 @@ export function AddPresetDialog({ open, onOpenChange }: AddPresetDialogProps) {
 
         <DialogFooter className="flex-col sm:flex-row gap-2">
           {isDuplicateName && (
-            <p className="text-amber-500 text-xs flex items-center gap-1 mr-auto">
+            <p className="text-amber-500 text-xs flex items-center gap-1 me-auto">
               <AlertTriangle className="h-3 w-3" />A profile with this name already exists
             </p>
           )}
@@ -215,7 +215,7 @@ export function AddPresetDialog({ open, onOpenChange }: AddPresetDialogProps) {
               onClick={handleCreate}
               disabled={!selectedPreset || isMutating || isDuplicateName}
             >
-              {isMutating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isMutating && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
               Create Profile
             </Button>
           </div>

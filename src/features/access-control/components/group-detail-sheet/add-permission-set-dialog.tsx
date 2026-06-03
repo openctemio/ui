@@ -67,7 +67,7 @@ export function AddPermissionSetDialog({
                   {newPermissionSetId
                     ? availablePermissionSets.find((ps) => ps.id === newPermissionSetId)?.name
                     : 'Select a permission set...'}
-                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  <ChevronsUpDown className="ms-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-[400px] p-0" align="start">
@@ -86,7 +86,7 @@ export function AddPermissionSetDialog({
                         >
                           <Check
                             className={cn(
-                              'mr-2 h-4 w-4',
+                              'me-2 h-4 w-4',
                               newPermissionSetId === ps.id ? 'opacity-100' : 'opacity-0'
                             )}
                           />
@@ -121,9 +121,9 @@ export function AddPermissionSetDialog({
           </Button>
           <Button onClick={onAssign} disabled={isAssigning || !newPermissionSetId}>
             {isAssigning ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <Loader2 className="me-2 h-4 w-4 animate-spin" />
             ) : (
-              <Plus className="mr-2 h-4 w-4" />
+              <Plus className="me-2 h-4 w-4" />
             )}
             Assign
           </Button>

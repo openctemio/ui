@@ -445,7 +445,7 @@ export function AgentsSection({ typeFilter }: AgentsSectionProps) {
           {error instanceof Error ? error.message : 'An unexpected error occurred'}
         </p>
         <Button variant="outline" size="sm" className="mt-2" onClick={handleRefresh}>
-          <RefreshCw className="mr-2 h-4 w-4" />
+          <RefreshCw className="me-2 h-4 w-4" />
           Retry
         </Button>
       </div>
@@ -548,12 +548,12 @@ export function AgentsSection({ typeFilter }: AgentsSectionProps) {
                   )}
                 </Button>
                 <Button variant="outline" size="sm" onClick={handleExport}>
-                  <Download className="mr-2 h-4 w-4" />
+                  <Download className="me-2 h-4 w-4" />
                   Export
                 </Button>
                 <Can permission={Permission.AgentsWrite}>
                   <Button onClick={() => setAddDialogOpen(true)}>
-                    <Plus className="mr-2 h-4 w-4" />
+                    <Plus className="me-2 h-4 w-4" />
                     Add Agent
                   </Button>
                 </Can>
@@ -571,7 +571,7 @@ export function AgentsSection({ typeFilter }: AgentsSectionProps) {
               <TabsList>
                 <TabsTrigger value="all">
                   All Agents
-                  <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs">
+                  <Badge variant="secondary" className="ms-2 h-5 px-1.5 text-xs">
                     {stats.total}
                   </Badge>
                 </TabsTrigger>
@@ -581,7 +581,7 @@ export function AgentsSection({ typeFilter }: AgentsSectionProps) {
                   {stats.byMode.daemon > 0 && (
                     <Badge
                       variant="secondary"
-                      className="ml-1 h-5 px-1.5 text-xs bg-blue-500/10 text-blue-500"
+                      className="ms-1 h-5 px-1.5 text-xs bg-blue-500/10 text-blue-500"
                     >
                       {stats.byMode.daemon}
                     </Badge>
@@ -593,7 +593,7 @@ export function AgentsSection({ typeFilter }: AgentsSectionProps) {
                   {stats.byMode.standalone > 0 && (
                     <Badge
                       variant="secondary"
-                      className="ml-1 h-5 px-1.5 text-xs bg-purple-500/10 text-purple-500"
+                      className="ms-1 h-5 px-1.5 text-xs bg-purple-500/10 text-purple-500"
                     >
                       {stats.byMode.standalone}
                     </Badge>
@@ -605,7 +605,7 @@ export function AgentsSection({ typeFilter }: AgentsSectionProps) {
                   {stats.byType.collector > 0 && (
                     <Badge
                       variant="secondary"
-                      className="ml-1 h-5 px-1.5 text-xs bg-orange-500/10 text-orange-500"
+                      className="ms-1 h-5 px-1.5 text-xs bg-orange-500/10 text-orange-500"
                     >
                       {stats.byType.collector}
                     </Badge>
@@ -623,14 +623,14 @@ export function AgentsSection({ typeFilter }: AgentsSectionProps) {
                     placeholder="Search agents..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-9"
+                    className="ps-9"
                   />
                 </div>
 
                 {/* Status Filter */}
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
                   <SelectTrigger className="w-[160px]">
-                    <Filter className="mr-2 h-4 w-4 text-muted-foreground" />
+                    <Filter className="me-2 h-4 w-4 text-muted-foreground" />
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -683,7 +683,7 @@ export function AgentsSection({ typeFilter }: AgentsSectionProps) {
                         className="text-red-500"
                         onClick={() => setBulkDeleteDialogOpen(true)}
                       >
-                        <Trash2 className="mr-2 h-4 w-4" />
+                        <Trash2 className="me-2 h-4 w-4" />
                         Delete Selected
                       </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -734,7 +734,7 @@ export function AgentsSection({ typeFilter }: AgentsSectionProps) {
                 {!searchQuery && (
                   <Can permission={Permission.AgentsWrite}>
                     <Button onClick={() => setAddDialogOpen(true)}>
-                      <Plus className="mr-2 h-4 w-4" />
+                      <Plus className="me-2 h-4 w-4" />
                       Add Your First Agent
                     </Button>
                   </Can>
@@ -802,7 +802,7 @@ export function AgentsSection({ typeFilter }: AgentsSectionProps) {
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
             <Button variant="destructive" onClick={handleDeleteConfirm} disabled={isDeleting}>
-              {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isDeleting && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
               Delete
             </Button>
           </AlertDialogFooter>
@@ -827,7 +827,7 @@ export function AgentsSection({ typeFilter }: AgentsSectionProps) {
               onClick={handleBulkDeleteConfirm}
               disabled={isBulkDeleting}
             >
-              {isBulkDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isBulkDeleting && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
               Delete All
             </Button>
           </AlertDialogFooter>
@@ -884,7 +884,7 @@ export function AgentsSection({ typeFilter }: AgentsSectionProps) {
               onClick={handleRevokeConfirm}
               disabled={isRevoking}
             >
-              {isRevoking && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isRevoking && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
               Revoke
             </Button>
           </AlertDialogFooter>

@@ -276,7 +276,7 @@ export const mobileConfig: AssetPageConfig = {
                   window.open(sanitizeExternalUrl(storeUrl), '_blank', 'noopener,noreferrer')
                 }
               >
-                <ExternalLink className="mr-2 h-4 w-4" />
+                <ExternalLink className="me-2 h-4 w-4" />
                 Open in Store
               </Button>
             )

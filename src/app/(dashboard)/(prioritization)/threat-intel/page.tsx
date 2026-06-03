@@ -63,9 +63,9 @@ export default function ThreatIntelPage() {
               <CompactSyncStatus statuses={syncStatuses} />
               <Button variant="outline" onClick={handleRefreshAll} disabled={isLoading}>
                 {isLoading ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="me-2 h-4 w-4 animate-spin" />
                 ) : (
-                  <RefreshCw className="mr-2 h-4 w-4" />
+                  <RefreshCw className="me-2 h-4 w-4" />
                 )}
                 Refresh
               </Button>
@@ -220,14 +220,14 @@ function CVELookup() {
                 value={cveId}
                 onChange={(e) => setCveId(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleLookup()}
-                className="pl-9"
+                className="ps-9"
               />
             </div>
             <Button onClick={handleLookup} disabled={isLookingUp}>
               {isLookingUp ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="me-2 h-4 w-4 animate-spin" />
               ) : (
-                <Search className="mr-2 h-4 w-4" />
+                <Search className="me-2 h-4 w-4" />
               )}
               Lookup
             </Button>

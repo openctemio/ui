@@ -97,10 +97,10 @@ export function EPSSScoreBadge({
       <Tooltip delayDuration={200}>
         <TooltipTrigger asChild>
           <Badge className={cn(color, textColor, sizeClasses[size], className)}>
-            <TrendingUp className="mr-1 h-3 w-3" />
+            <TrendingUp className="me-1 h-3 w-3" />
             {displayScore}%
             {showPercentile && percentile !== null && percentile !== undefined && (
-              <span className="ml-1 opacity-80">({percentile.toFixed(0)}th)</span>
+              <span className="ms-1 opacity-80">({percentile.toFixed(0)}th)</span>
             )}
           </Badge>
         </TooltipTrigger>

@@ -208,7 +208,7 @@ function HistoryItem({ entry }: { entry: NotificationEventEntry }) {
               variant="outline"
               className={cn('text-xs', severityConfig.color, severityConfig.bgColor)}
             >
-              <SeverityIcon className="h-3 w-3 mr-1" />
+              <SeverityIcon className="h-3 w-3 me-1" />
               {entry.severity}
             </Badge>
             <Badge variant="outline" className={cn('text-xs', statusConfig.color)}>
@@ -364,7 +364,7 @@ function HistoryList({
         <XCircle className="mx-auto h-12 w-12 text-red-500 mb-4" />
         <p className="text-red-500">Failed to load notifications</p>
         <Button variant="outline" size="sm" className="mt-4" onClick={handleRefresh}>
-          <RefreshCw className="h-4 w-4 mr-2" />
+          <RefreshCw className="h-4 w-4 me-2" />
           Retry
         </Button>
       </div>
@@ -394,13 +394,13 @@ function HistoryList({
           </span>
         </div>
         <Button variant="outline" size="sm" onClick={handleRefresh}>
-          <RefreshCw className="h-4 w-4 mr-2" />
+          <RefreshCw className="h-4 w-4 me-2" />
           Refresh
         </Button>
       </div>
 
       {/* History list */}
-      <ScrollArea className="h-[450px] pr-4">
+      <ScrollArea className="h-[450px] pe-4">
         <div className="space-y-3">
           {allEntries.map((entry) => (
             <HistoryItem key={entry.id} entry={entry} />
@@ -417,7 +417,7 @@ function HistoryList({
               >
                 {isLoadingMore || isLoading ? (
                   <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    <Loader2 className="h-4 w-4 me-2 animate-spin" />
                     Loading...
                   </>
                 ) : (
@@ -468,7 +468,7 @@ function HistoryContent() {
           <Button
             variant="ghost"
             size="sm"
-            className="gap-2 -ml-2"
+            className="gap-2 -ms-2"
             onClick={() => router.push('/settings/integrations/notifications')}
           >
             <ArrowLeft className="h-4 w-4" />
@@ -534,7 +534,7 @@ function HistoryContent() {
             <History className="h-4 w-4" />
             Events Log
             {selectedIntegration && (
-              <Badge variant="secondary" className="ml-2 font-normal">
+              <Badge variant="secondary" className="ms-2 font-normal">
                 {selectedIntegration.name}
               </Badge>
             )}

@@ -410,7 +410,7 @@ export function CvssCalculator({
           {/* Footer */}
           <div className="flex items-center justify-between pt-2 border-t">
             <Button type="button" variant="ghost" size="sm" onClick={handleReset}>
-              <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
+              <RotateCcw className="h-3.5 w-3.5 me-1.5" />
               Reset
             </Button>
             {!allSelected && (

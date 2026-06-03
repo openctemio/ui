@@ -332,7 +332,7 @@ export default function EcosystemsPage() {
           <Link href="/components/all">
             <Button variant="outline">
               View All Components
-              <ArrowRight className="ml-2 h-4 w-4" />
+              <ArrowRight className="ms-2 h-4 w-4" />
             </Button>
           </Link>
         </PageHeader>
@@ -422,7 +422,7 @@ export default function EcosystemsPage() {
                   placeholder="Search ecosystems..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9"
+                  className="ps-9"
                 />
               </div>
             </div>
@@ -430,7 +430,7 @@ export default function EcosystemsPage() {
             <div className="flex items-center gap-2">
               <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
                 <SelectTrigger className="w-[160px]">
-                  <ArrowUpDown className="h-4 w-4 mr-2" />
+                  <ArrowUpDown className="h-4 w-4 me-2" />
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -586,7 +586,7 @@ export default function EcosystemsPage() {
                       </span>{' '}
                       total components
                       {remainingEcosystems.reduce((acc, e) => acc + e.vulnerabilities, 0) > 0 && (
-                        <span className="text-red-500 ml-1">
+                        <span className="text-red-500 ms-1">
                           ({remainingEcosystems.reduce((acc, e) => acc + e.vulnerabilities, 0)}{' '}
                           vulnerable)
                         </span>
@@ -594,7 +594,7 @@ export default function EcosystemsPage() {
                     </div>
                     <Button variant="ghost" size="sm" onClick={() => setShowAllEcosystems(true)}>
                       View All
-                      <ChevronDown className="ml-2 h-4 w-4" />
+                      <ChevronDown className="ms-2 h-4 w-4" />
                     </Button>
                   </div>
                 </CardContent>
@@ -634,7 +634,7 @@ export default function EcosystemsPage() {
                 <div className="mt-4 grid grid-cols-3 gap-4">
                   <button
                     onClick={() => setSecurityFilter('all')}
-                    className={`rounded-lg border p-3 text-left transition-colors ${
+                    className={`rounded-lg border p-3 text-start transition-colors ${
                       securityFilter === 'all'
                         ? 'border-primary bg-primary/5'
                         : 'bg-card hover:bg-muted/50'
@@ -651,7 +651,7 @@ export default function EcosystemsPage() {
                   </button>
                   <button
                     onClick={() => setSecurityFilter('vulnerable')}
-                    className={`rounded-lg border p-3 text-left transition-colors ${
+                    className={`rounded-lg border p-3 text-start transition-colors ${
                       securityFilter === 'vulnerable'
                         ? 'border-red-500 bg-red-500/5'
                         : 'bg-card hover:bg-muted/50'
@@ -668,7 +668,7 @@ export default function EcosystemsPage() {
                   </button>
                   <button
                     onClick={() => setSecurityFilter('secure')}
-                    className={`rounded-lg border p-3 text-left transition-colors ${
+                    className={`rounded-lg border p-3 text-start transition-colors ${
                       securityFilter === 'secure'
                         ? 'border-green-500 bg-green-500/5'
                         : 'bg-card hover:bg-muted/50'
@@ -692,7 +692,7 @@ export default function EcosystemsPage() {
                     placeholder="Search packages by name or version..."
                     value={sheetSearchQuery}
                     onChange={(e) => setSheetSearchQuery(e.target.value)}
-                    className="pl-9"
+                    className="ps-9"
                   />
                 </div>
               </div>
@@ -712,7 +712,7 @@ export default function EcosystemsPage() {
                           <TableHead className="w-[40%]">Package</TableHead>
                           <TableHead>Version</TableHead>
                           <TableHead>License</TableHead>
-                          <TableHead className="text-right">Security</TableHead>
+                          <TableHead className="text-end">Security</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -758,7 +758,7 @@ export default function EcosystemsPage() {
                                 <span className="text-xs text-muted-foreground">-</span>
                               )}
                             </TableCell>
-                            <TableCell className="text-right">
+                            <TableCell className="text-end">
                               {comp.vulnerability_count > 0 ? (
                                 <TooltipProvider>
                                   <Tooltip>
@@ -836,7 +836,7 @@ export default function EcosystemsPage() {
                       {Math.min(currentPage * ITEMS_PER_PAGE, filteredComponents.length)} of{' '}
                       {filteredComponents.length}
                       {(sheetSearchQuery || securityFilter !== 'all') && (
-                        <span className="ml-1">
+                        <span className="ms-1">
                           (filtered from {ecosystemComponentsData?.data?.length ?? 0})
                         </span>
                       )}

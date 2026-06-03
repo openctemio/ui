@@ -48,7 +48,7 @@ export function SCMConnectionsSection({
           {error.message || 'An unexpected error occurred'}
         </p>
         <Button variant="outline" size="sm" className="mt-2" onClick={handleRefresh}>
-          <RefreshCw className="mr-2 h-4 w-4" />
+          <RefreshCw className="me-2 h-4 w-4" />
           Retry
         </Button>
       </div>
@@ -60,7 +60,7 @@ export function SCMConnectionsSection({
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
         <div className="flex items-center justify-between mb-3">
           <CollapsibleTrigger asChild>
-            <Button variant="ghost" className="gap-2 -ml-2 h-8">
+            <Button variant="ghost" className="gap-2 -ms-2 h-8">
               <ChevronRight
                 className={`h-4 w-4 transition-transform duration-200 ${isOpen ? 'rotate-90' : ''}`}
               />
@@ -100,7 +100,7 @@ export function SCMConnectionsSection({
               )}
             </Button>
             <Button size="sm" onClick={() => setAddDialogOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
+              <Plus className="me-2 h-4 w-4" />
               Add Connection
             </Button>
           </div>
@@ -149,7 +149,7 @@ export function SCMConnectionsSection({
                 Connect your GitHub, GitLab, or Bitbucket account to import repositories
               </p>
               <Button onClick={() => setAddDialogOpen(true)}>
-                <Plus className="mr-2 h-4 w-4" />
+                <Plus className="me-2 h-4 w-4" />
                 Add Your First Connection
               </Button>
             </div>

@@ -121,12 +121,12 @@ export function LifecycleSnoozeMenu({
           <Button variant="outline" size="sm" className={className} disabled={submitting}>
             {isSnoozed ? (
               <>
-                <ClockArrowDown className="mr-1.5 h-4 w-4" />
+                <ClockArrowDown className="me-1.5 h-4 w-4" />
                 Snoozed
               </>
             ) : (
               <>
-                <Clock className="mr-1.5 h-4 w-4" />
+                <Clock className="me-1.5 h-4 w-4" />
                 Snooze lifecycle
               </>
             )}

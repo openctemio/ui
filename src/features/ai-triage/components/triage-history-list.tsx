@@ -39,7 +39,7 @@ export function TriageHistoryList({ findingId, limit = 10, className }: TriageHi
               <div key={i} className="flex items-center gap-4 p-3 border rounded-lg">
                 <Skeleton className="h-8 w-20" />
                 <Skeleton className="h-4 w-32" />
-                <Skeleton className="h-4 w-24 ml-auto" />
+                <Skeleton className="h-4 w-24 ms-auto" />
               </div>
             ))}
           </div>
@@ -106,7 +106,7 @@ export function TriageHistoryList({ findingId, limit = 10, className }: TriageHi
             {data.data.map((result: AITriageResult) => (
               <div key={result.id} className="border rounded-lg overflow-hidden">
                 <button
-                  className="w-full p-3 flex items-center gap-4 hover:bg-muted/50 transition-colors text-left"
+                  className="w-full p-3 flex items-center gap-4 hover:bg-muted/50 transition-colors text-start"
                   onClick={() => toggleExpand(result.id)}
                 >
                   <TriageStatusBadge status={result.status} />
@@ -122,7 +122,7 @@ export function TriageHistoryList({ findingId, limit = 10, className }: TriageHi
                   {result.riskScore !== undefined && (
                     <span className="text-sm text-muted-foreground">Risk: {result.riskScore}</span>
                   )}
-                  <div className="ml-auto">
+                  <div className="ms-auto">
                     {expandedId === result.id ? (
                       <ChevronUp className="h-4 w-4 text-muted-foreground" />
                     ) : (

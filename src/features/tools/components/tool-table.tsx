@@ -127,10 +127,10 @@ export function ToolTable({
           <Button
             variant="ghost"
             onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-            className="-ml-4"
+            className="-ms-4"
           >
             Tool
-            <ArrowUpDown className="ml-2 h-4 w-4" />
+            <ArrowUpDown className="ms-2 h-4 w-4" />
           </Button>
         ),
         cell: ({ row }) => {
@@ -165,7 +165,7 @@ export function ToolTable({
           const categoryDisplayName = getCategoryDisplayName(row.original)
           return (
             <Badge variant="outline" className={cn('text-xs', getCategoryBadgeColor(categoryName))}>
-              <ToolCategoryIcon category={categoryName} className="mr-1 h-3 w-3" />
+              <ToolCategoryIcon category={categoryName} className="me-1 h-3 w-3" />
               {categoryDisplayName}
             </Badge>
           )
@@ -195,7 +195,7 @@ export function ToolTable({
                       variant="outline"
                       className="border-amber-500/30 bg-amber-500/10 text-amber-500 text-xs"
                     >
-                      <ArrowUpCircle className="mr-1 h-3 w-3" />
+                      <ArrowUpCircle className="me-1 h-3 w-3" />
                       {tool.latest_version}
                     </Badge>
                   </TooltipTrigger>
@@ -234,7 +234,7 @@ export function ToolTable({
               >
                 <span
                   className={cn(
-                    'mr-1.5 h-1.5 w-1.5 rounded-full',
+                    'me-1.5 h-1.5 w-1.5 rounded-full',
                     tool.is_active ? 'bg-green-500' : 'bg-zinc-400'
                   )}
                 />
@@ -270,25 +270,25 @@ export function ToolTable({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => onViewTool(tool)}>
-                  <Eye className="mr-2 h-4 w-4" />
+                  <Eye className="me-2 h-4 w-4" />
                   View Details
                 </DropdownMenuItem>
                 {!readOnly && !tool.is_builtin && onEditTool && (
                   <DropdownMenuItem onClick={() => onEditTool(tool)}>
-                    <Settings className="mr-2 h-4 w-4" />
+                    <Settings className="me-2 h-4 w-4" />
                     Edit
                   </DropdownMenuItem>
                 )}
                 {tool.has_update && onCheckUpdate && (
                   <DropdownMenuItem onClick={() => onCheckUpdate(tool)}>
-                    <ArrowUpCircle className="mr-2 h-4 w-4" />
+                    <ArrowUpCircle className="me-2 h-4 w-4" />
                     Check Update
                   </DropdownMenuItem>
                 )}
                 {tool.github_url && (
                   <DropdownMenuItem asChild>
                     <a href={tool.github_url} target="_blank" rel="noopener noreferrer">
-                      <Github className="mr-2 h-4 w-4" />
+                      <Github className="me-2 h-4 w-4" />
                       GitHub
                     </a>
                   </DropdownMenuItem>
@@ -296,7 +296,7 @@ export function ToolTable({
                 {tool.docs_url && (
                   <DropdownMenuItem asChild>
                     <a href={tool.docs_url} target="_blank" rel="noopener noreferrer">
-                      <ExternalLink className="mr-2 h-4 w-4" />
+                      <ExternalLink className="me-2 h-4 w-4" />
                       Documentation
                     </a>
                   </DropdownMenuItem>
@@ -311,7 +311,7 @@ export function ToolTable({
                             onClick={() => onDeactivateTool(tool)}
                             className="text-amber-500"
                           >
-                            <PowerOff className="mr-2 h-4 w-4" />
+                            <PowerOff className="me-2 h-4 w-4" />
                             Deactivate
                           </DropdownMenuItem>
                         )
@@ -320,7 +320,7 @@ export function ToolTable({
                             onClick={() => onActivateTool(tool)}
                             className="text-green-500"
                           >
-                            <Power className="mr-2 h-4 w-4" />
+                            <Power className="me-2 h-4 w-4" />
                             Activate
                           </DropdownMenuItem>
                         )}
@@ -328,7 +328,7 @@ export function ToolTable({
                 )}
                 {!readOnly && !tool.is_builtin && onDeleteTool && (
                   <DropdownMenuItem className="text-red-500" onClick={() => onDeleteTool(tool)}>
-                    <Trash2 className="mr-2 h-4 w-4" />
+                    <Trash2 className="me-2 h-4 w-4" />
                     Delete
                   </DropdownMenuItem>
                 )}

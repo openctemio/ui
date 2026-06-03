@@ -107,7 +107,7 @@ export function PendingReviewTab() {
               <div className="flex items-center gap-4">
                 <Skeleton className="h-5 w-48" />
                 <Skeleton className="h-4 w-24" />
-                <div className="ml-auto flex gap-2">
+                <div className="ms-auto flex gap-2">
                   <Skeleton className="h-8 w-20" />
                   <Skeleton className="h-8 w-20" />
                 </div>
@@ -183,9 +183,9 @@ export function PendingReviewTab() {
                       disabled={isProcessing === group.group_key}
                     >
                       {isProcessing === group.group_key ? (
-                        <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                        <Loader2 className="me-1.5 h-3.5 w-3.5 animate-spin" />
                       ) : (
-                        <CheckCircle className="mr-1.5 h-3.5 w-3.5 text-green-500" />
+                        <CheckCircle className="me-1.5 h-3.5 w-3.5 text-green-500" />
                       )}
                       Approve
                     </Button>
@@ -195,7 +195,7 @@ export function PendingReviewTab() {
                       onClick={() => handleRejectClick(group)}
                       disabled={isProcessing === group.group_key}
                     >
-                      <XCircle className="mr-1.5 h-3.5 w-3.5 text-red-500" />
+                      <XCircle className="me-1.5 h-3.5 w-3.5 text-red-500" />
                       Reject
                     </Button>
                   </div>

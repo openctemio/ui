@@ -92,9 +92,9 @@ export function StatusSelect({
                 className={`${size === 'sm' ? 'h-7 px-2 text-xs' : 'h-9 sm:h-8'} min-h-[32px] ${currentConfig.bgColor} ${currentConfig.textColor} border-0 hover:opacity-80`}
                 disabled={disabled || loading}
               >
-                {loading && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
+                {loading && <Loader2 className="me-1 h-3 w-3 animate-spin" />}
                 {currentConfig.label}
-                {!disabled && <ChevronDown className="ml-1 h-3 w-3" />}
+                {!disabled && <ChevronDown className="ms-1 h-3 w-3" />}
               </Button>
             </DropdownMenuTrigger>
           </TooltipTrigger>
@@ -115,7 +115,7 @@ export function StatusSelect({
                   >
                     <div className={`h-2 w-2 rounded-full ${config.bgColor.replace('/20', '')}`} />
                     {config.label}
-                    {showCheck && status === value && <Check className="ml-auto h-3 w-3" />}
+                    {showCheck && status === value && <Check className="ms-auto h-3 w-3" />}
                   </DropdownMenuItem>
                 </TooltipTrigger>
                 <TooltipContent side="right" className="max-w-[200px]">

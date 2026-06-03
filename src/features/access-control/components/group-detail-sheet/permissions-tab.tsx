@@ -42,7 +42,7 @@ export function PermissionsTab({
       <div className="flex items-center justify-between mb-4">
         <h4 className="text-sm font-medium">Permission Sets ({permissionSets.length})</h4>
         <Button size="sm" onClick={onAddPermissionSet}>
-          <Plus className="mr-2 h-4 w-4" />
+          <Plus className="me-2 h-4 w-4" />
           Assign Permission Set
         </Button>
       </div>
@@ -51,7 +51,7 @@ export function PermissionsTab({
         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
         <Input
           placeholder="Search permission sets..."
-          className="pl-9"
+          className="ps-9"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
         />
@@ -137,7 +137,7 @@ export function PermissionsTab({
                             className="text-red-400"
                             onClick={() => onRemovePermissionSet(ps.id, name)}
                           >
-                            <Trash2 className="mr-2 h-4 w-4" />
+                            <Trash2 className="me-2 h-4 w-4" />
                             Remove
                           </DropdownMenuItem>
                         </DropdownMenuContent>
@@ -145,7 +145,7 @@ export function PermissionsTab({
                     </div>
                   </div>
                   <CollapsibleContent>
-                    <div className="px-4 pb-3 pl-[3.25rem]">
+                    <div className="px-4 pb-3 ps-[3.25rem]">
                       <div className="text-xs text-muted-foreground mb-2 font-medium">
                         Included Permissions:
                       </div>

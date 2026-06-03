@@ -46,7 +46,7 @@ function RelatedFindingsTable({
           <TableHead>Severity</TableHead>
           <TableHead>Status</TableHead>
           <TableHead>Asset</TableHead>
-          {showSimilarity && <TableHead className="text-right">Match</TableHead>}
+          {showSimilarity && <TableHead className="text-end">Match</TableHead>}
           <TableHead className="w-[40px]" />
         </TableRow>
       </TableHeader>
@@ -76,7 +76,7 @@ function RelatedFindingsTable({
               </TableCell>
               <TableCell className="text-sm">{finding.assetName}</TableCell>
               {showSimilarity && (
-                <TableCell className="text-right">
+                <TableCell className="text-end">
                   {finding.similarity && (
                     <span
                       className={`text-sm font-medium ${finding.similarity >= 80 ? 'text-green-400' : finding.similarity >= 50 ? 'text-yellow-400' : 'text-muted-foreground'}`}
@@ -123,11 +123,11 @@ export function RelatedTab({ finding }: RelatedTabProps) {
         </p>
         <div className="flex gap-2">
           <Button size="sm" variant="outline">
-            <Eye className="mr-2 h-4 w-4" />
+            <Eye className="me-2 h-4 w-4" />
             Find Similar
           </Button>
           <Button size="sm">
-            <Plus className="mr-2 h-4 w-4" />
+            <Plus className="me-2 h-4 w-4" />
             Link Finding
           </Button>
         </div>
@@ -231,7 +231,7 @@ export function RelatedTab({ finding }: RelatedTabProps) {
               </p>
             </div>
             <Button size="sm" variant="outline">
-              <Plus className="mr-2 h-3 w-3" />
+              <Plus className="me-2 h-3 w-3" />
               Find Similar
             </Button>
           </div>
@@ -257,7 +257,7 @@ export function RelatedTab({ finding }: RelatedTabProps) {
                 <p className="text-muted-foreground text-sm">Manually linked related findings</p>
               </div>
               <Button size="sm" variant="outline">
-                <Plus className="mr-2 h-3 w-3" />
+                <Plus className="me-2 h-3 w-3" />
                 Link Finding
               </Button>
             </div>

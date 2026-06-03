@@ -142,12 +142,12 @@ export function QuickScanDialog({ open, onOpenChange, onSuccess }: QuickScanDial
           <Button onClick={handleSubmit} disabled={isSubmitting || targetList.length === 0}>
             {isSubmitting ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="me-2 h-4 w-4 animate-spin" />
                 Starting...
               </>
             ) : (
               <>
-                <Zap className="mr-2 h-4 w-4" />
+                <Zap className="me-2 h-4 w-4" />
                 Start Scan
               </>
             )}

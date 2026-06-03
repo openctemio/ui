@@ -297,11 +297,11 @@ export function LifecycleSettingsForm({ initial }: LifecycleSettingsFormProps) {
           onClick={() => setDryRunOpen(true)}
           disabled={submitting || !currentTenant}
         >
-          <PlayCircle className="mr-2 h-4 w-4" />
+          <PlayCircle className="me-2 h-4 w-4" />
           Run dry-run
         </Button>
         <Button type="submit" disabled={submitting || !currentTenant}>
-          <Save className="mr-2 h-4 w-4" />
+          <Save className="me-2 h-4 w-4" />
           Save settings
         </Button>
       </div>

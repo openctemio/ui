@@ -180,7 +180,7 @@ export function RelationshipSection({
           </p>
           {onAddClick && (
             <Button size="sm" onClick={onAddClick}>
-              <Plus className="mr-2 h-4 w-4" />
+              <Plus className="me-2 h-4 w-4" />
               Add Relationship
             </Button>
           )}
@@ -229,7 +229,7 @@ export function RelationshipSection({
           </div>
           {onAddClick && (
             <Button size="sm" variant="outline" onClick={onAddClick}>
-              <Plus className="mr-1 h-4 w-4" />
+              <Plus className="me-1 h-4 w-4" />
               Add
             </Button>
           )}
@@ -244,11 +244,11 @@ export function RelationshipSection({
               All ({relationships.length})
             </TabsTrigger>
             <TabsTrigger value="outgoing" className="text-xs">
-              <ArrowRight className="mr-1 h-3 w-3" />
+              <ArrowRight className="me-1 h-3 w-3" />
               Outgoing ({outgoing.length})
             </TabsTrigger>
             <TabsTrigger value="incoming" className="text-xs">
-              <ArrowLeft className="mr-1 h-3 w-3" />
+              <ArrowLeft className="me-1 h-3 w-3" />
               Incoming ({incoming.length})
             </TabsTrigger>
           </TabsList>
@@ -379,7 +379,7 @@ export function RelationshipPreview({
         {onViewAll && (
           <Button variant="ghost" size="sm" onClick={onViewAll} className="h-7 text-xs">
             View All
-            <ChevronRight className="ml-1 h-3 w-3" />
+            <ChevronRight className="ms-1 h-3 w-3" />
           </Button>
         )}
       </div>
@@ -400,7 +400,7 @@ export function RelationshipPreview({
             <button
               key={rel.id}
               onClick={() => onAssetClick?.(otherAsset.id)}
-              className="flex items-center gap-2 w-full p-2 rounded hover:bg-accent/50 transition-colors text-left"
+              className="flex items-center gap-2 w-full p-2 rounded hover:bg-accent/50 transition-colors text-start"
             >
               {isOutgoing ? (
                 <ArrowRight className="h-3.5 w-3.5 text-blue-500 shrink-0" />

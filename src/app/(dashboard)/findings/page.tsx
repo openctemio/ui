@@ -817,24 +817,24 @@ function FindingsContent() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => handleRowAction('view', finding)}>
-                  <ExternalLink className="mr-2 h-4 w-4" />
+                  <ExternalLink className="me-2 h-4 w-4" />
                   View Details
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => handleRowAction('assign', finding)}>
-                  <UserPlus className="mr-2 h-4 w-4" />
+                  <UserPlus className="me-2 h-4 w-4" />
                   Assign
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => handleRowAction('status', finding)}>
-                  <CheckCircle className="mr-2 h-4 w-4" />
+                  <CheckCircle className="me-2 h-4 w-4" />
                   Change Status
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => handleRowAction('copy_id', finding)}>
-                  <Copy className="mr-2 h-4 w-4" />
+                  <Copy className="me-2 h-4 w-4" />
                   Copy ID
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => handleRowAction('copy_link', finding)}>
-                  <Link2 className="mr-2 h-4 w-4" />
+                  <Link2 className="me-2 h-4 w-4" />
                   Copy Link
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
@@ -842,7 +842,7 @@ function FindingsContent() {
                   className="text-amber-500"
                   onClick={() => handleRowAction('false_positive', finding)}
                 >
-                  <Flag className="mr-2 h-4 w-4" />
+                  <Flag className="me-2 h-4 w-4" />
                   Mark as False Positive
                 </DropdownMenuItem>
                 {hasPermission('findings:delete') && (
@@ -850,7 +850,7 @@ function FindingsContent() {
                     className="text-red-500"
                     onClick={() => handleRowAction('delete', finding)}
                   >
-                    <Trash2 className="mr-2 h-4 w-4" />
+                    <Trash2 className="me-2 h-4 w-4" />
                     Delete
                   </DropdownMenuItem>
                 )}
@@ -875,7 +875,7 @@ function FindingsContent() {
               {error?.message || 'An unexpected error occurred'}
             </p>
             <Button onClick={() => mutateFindings()}>
-              <RefreshCw className="mr-2 h-4 w-4" />
+              <RefreshCw className="me-2 h-4 w-4" />
               Retry
             </Button>
           </div>
@@ -898,7 +898,7 @@ function FindingsContent() {
           <div className="flex flex-wrap items-center gap-2">
             <Link href="/findings/approvals">
               <Button variant="outline" size="sm">
-                <ClipboardList className="h-4 w-4 sm:mr-2" />
+                <ClipboardList className="h-4 w-4 sm:me-2" />
                 <span className="hidden sm:inline">Approvals</span>
               </Button>
             </Link>
@@ -909,16 +909,16 @@ function FindingsContent() {
               disabled={statsLoading || findingsLoading}
             >
               {statsLoading || findingsLoading ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="me-2 h-4 w-4 animate-spin" />
               ) : (
-                <RefreshCw className="mr-2 h-4 w-4" />
+                <RefreshCw className="me-2 h-4 w-4" />
               )}
               Refresh
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm">
-                  <Download className="mr-2 h-4 w-4" />
+                  <Download className="me-2 h-4 w-4" />
                   Export
                 </Button>
               </DropdownMenuTrigger>
@@ -934,7 +934,7 @@ function FindingsContent() {
             </DropdownMenu>
             {hasPermission('findings:write') && (
               <Button size="sm" onClick={() => setCreateDialogOpen(true)}>
-                <Plus className="h-4 w-4 sm:mr-2" />
+                <Plus className="h-4 w-4 sm:me-2" />
                 <span className="hidden sm:inline">Add Finding</span>
               </Button>
             )}
@@ -950,7 +950,7 @@ function FindingsContent() {
               <button
                 type="button"
                 onClick={() => router.push('/findings')}
-                className="ml-1 rounded-sm hover:bg-background/50"
+                className="ms-1 rounded-sm hover:bg-background/50"
                 aria-label="Clear scan filter"
               >
                 <X className="h-3 w-3" />
@@ -971,7 +971,7 @@ function FindingsContent() {
               <TabsTrigger value="pending" className="relative">
                 Pending Review
                 {pendingCount > 0 && (
-                  <Badge variant="destructive" className="ml-1.5 h-5 min-w-[20px] px-1 text-[10px]">
+                  <Badge variant="destructive" className="ms-1.5 h-5 min-w-[20px] px-1 text-[10px]">
                     {pendingCount}
                   </Badge>
                 )}
@@ -1004,7 +1004,7 @@ function FindingsContent() {
                     Asset: {assetIdFilter.slice(0, 8)}...
                     <button
                       onClick={clearFilters}
-                      className="ml-0.5 rounded-full hover:bg-muted-foreground/20"
+                      className="ms-0.5 rounded-full hover:bg-muted-foreground/20"
                     >
                       <X className="h-3 w-3" />
                     </button>
@@ -1015,7 +1015,7 @@ function FindingsContent() {
                     Source: {sourceIdFilter.slice(0, 8)}...
                     <button
                       onClick={clearFilters}
-                      className="ml-0.5 rounded-full hover:bg-muted-foreground/20"
+                      className="ms-0.5 rounded-full hover:bg-muted-foreground/20"
                     >
                       <X className="h-3 w-3" />
                     </button>
@@ -1038,7 +1038,7 @@ function FindingsContent() {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="sm">
-                    <Filter className="mr-2 h-4 w-4" />
+                    <Filter className="me-2 h-4 w-4" />
                     Status:{' '}
                     {statusFilter === 'all'
                       ? 'All'
@@ -1090,7 +1090,7 @@ function FindingsContent() {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="sm">
-                    <Filter className="mr-2 h-4 w-4" />
+                    <Filter className="me-2 h-4 w-4" />
                     Source: {sourceFilter === 'all' ? 'All' : sourceFilter.toUpperCase()}
                   </Button>
                 </DropdownMenuTrigger>
@@ -1133,7 +1133,7 @@ function FindingsContent() {
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="outline" size="sm">
-                          <Flag className="mr-2 h-4 w-4" />
+                          <Flag className="me-2 h-4 w-4" />
                           Change Status
                         </Button>
                       </DropdownMenuTrigger>
@@ -1224,7 +1224,7 @@ function FindingsContent() {
                         <TabsTrigger value="critical" className="text-xs sm:text-sm shrink-0">
                           <span className="hidden sm:inline">Critical</span>
                           <span className="sm:hidden">Crit</span>
-                          <span className="ml-1">({stats.bySeverity.critical})</span>
+                          <span className="ms-1">({stats.bySeverity.critical})</span>
                         </TabsTrigger>
                         <TabsTrigger value="high" className="text-xs sm:text-sm shrink-0">
                           High ({stats.bySeverity.high})
@@ -1232,7 +1232,7 @@ function FindingsContent() {
                         <TabsTrigger value="medium" className="text-xs sm:text-sm shrink-0">
                           <span className="hidden sm:inline">Medium</span>
                           <span className="sm:hidden">Med</span>
-                          <span className="ml-1">({stats.bySeverity.medium})</span>
+                          <span className="ms-1">({stats.bySeverity.medium})</span>
                         </TabsTrigger>
                         <TabsTrigger value="low" className="text-xs sm:text-sm shrink-0">
                           Low ({stats.bySeverity.low})
@@ -1352,7 +1352,7 @@ function FindingsContent() {
             >
               {isDeleting ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="me-2 h-4 w-4 animate-spin" />
                   Deleting...
                 </>
               ) : (

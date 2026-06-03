@@ -170,7 +170,7 @@ export function AddMemberToRoleDialog({
               placeholder="Search members..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
+              className="ps-9"
             />
           </div>
 
@@ -227,7 +227,7 @@ export function AddMemberToRoleDialog({
                       key={member.user_id}
                       onClick={() => toggleMember(member.user_id)}
                       className={cn(
-                        'w-full flex items-center gap-3 p-2 rounded-md transition-colors text-left',
+                        'w-full flex items-center gap-3 p-2 rounded-md transition-colors text-start',
                         isSelected
                           ? 'bg-primary/10 border border-primary/30'
                           : 'hover:bg-muted/50 border border-transparent'
@@ -271,9 +271,9 @@ export function AddMemberToRoleDialog({
           </Button>
           <Button onClick={handleAddMembers} disabled={isAssigning || selectedUserIds.size === 0}>
             {isAssigning ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <Loader2 className="me-2 h-4 w-4 animate-spin" />
             ) : (
-              <UserPlus className="mr-2 h-4 w-4" />
+              <UserPlus className="me-2 h-4 w-4" />
             )}
             Add {selectedUserIds.size > 0 ? `${selectedUserIds.size} ` : ''}Member
             {selectedUserIds.size !== 1 ? 's' : ''}

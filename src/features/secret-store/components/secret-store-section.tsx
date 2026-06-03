@@ -186,7 +186,7 @@ export function SecretStoreSection() {
           {error instanceof Error ? error.message : 'An unexpected error occurred'}
         </p>
         <Button variant="outline" size="sm" className="mt-2" onClick={handleRefresh}>
-          <RefreshCw className="mr-2 h-4 w-4" />
+          <RefreshCw className="me-2 h-4 w-4" />
           Retry
         </Button>
       </div>
@@ -210,7 +210,7 @@ export function SecretStoreSection() {
                   </CardDescription>
                 </div>
                 {!isLoading && credentials.length > 0 && (
-                  <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs">
+                  <Badge variant="secondary" className="ms-2 h-5 px-1.5 text-xs">
                     {credentials.length}
                   </Badge>
                 )}
@@ -225,7 +225,7 @@ export function SecretStoreSection() {
                 </Button>
                 <Can permission={Permission.CredentialsWrite}>
                   <Button onClick={() => setAddDialogOpen(true)}>
-                    <Plus className="mr-2 h-4 w-4" />
+                    <Plus className="me-2 h-4 w-4" />
                     Add Credential
                   </Button>
                 </Can>
@@ -242,7 +242,7 @@ export function SecretStoreSection() {
                   placeholder="Search credentials..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9"
+                  className="ps-9"
                 />
               </div>
             </div>
@@ -330,7 +330,7 @@ export function SecretStoreSection() {
                                   <DropdownMenuItem
                                     onClick={() => handleEditCredential(credential)}
                                   >
-                                    <Pencil className="mr-2 h-4 w-4" />
+                                    <Pencil className="me-2 h-4 w-4" />
                                     Edit
                                   </DropdownMenuItem>
                                 </Can>
@@ -340,7 +340,7 @@ export function SecretStoreSection() {
                                     className="text-red-500"
                                     onClick={() => handleDeleteClick(credential)}
                                   >
-                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    <Trash2 className="me-2 h-4 w-4" />
                                     Delete
                                   </DropdownMenuItem>
                                 </Can>
@@ -365,7 +365,7 @@ export function SecretStoreSection() {
                 {!searchQuery && (
                   <Can permission={Permission.CredentialsWrite}>
                     <Button onClick={() => setAddDialogOpen(true)}>
-                      <Plus className="mr-2 h-4 w-4" />
+                      <Plus className="me-2 h-4 w-4" />
                       Add Your First Credential
                     </Button>
                   </Can>
@@ -406,7 +406,7 @@ export function SecretStoreSection() {
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
             <Button variant="destructive" onClick={handleDeleteConfirm} disabled={isDeleting}>
-              {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isDeleting && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
               Delete
             </Button>
           </AlertDialogFooter>

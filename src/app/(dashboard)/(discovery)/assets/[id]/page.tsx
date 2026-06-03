@@ -103,7 +103,7 @@ export default function AssetDetailPage() {
               The asset may have been deleted or you may not have access.
             </p>
             <Button variant="outline" className="mt-4" onClick={() => router.push('/assets')}>
-              <ArrowLeft className="mr-2 h-4 w-4" />
+              <ArrowLeft className="me-2 h-4 w-4" />
               Back to assets
             </Button>
           </CardContent>
@@ -119,7 +119,7 @@ export default function AssetDetailPage() {
     <Main>
       <div className="mb-4">
         <Button variant="ghost" size="sm" onClick={() => router.back()}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
+          <ArrowLeft className="me-2 h-4 w-4" />
           Back
         </Button>
       </div>
@@ -243,7 +243,7 @@ function DetailRow({ label, value }: { label: string; value: React.ReactNode }) 
   return (
     <div className="flex items-start justify-between gap-4 py-2 border-b last:border-0">
       <span className="text-sm text-muted-foreground shrink-0">{label}</span>
-      <div className="text-sm text-right">{value}</div>
+      <div className="text-sm text-end">{value}</div>
     </div>
   )
 }

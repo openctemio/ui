@@ -197,7 +197,7 @@ export default function CompliancePage() {
                 <CardDescription>{fw.description}</CardDescription>
               </div>
             </div>
-            <div className="text-right">
+            <div className="text-end">
               <div className="text-2xl font-bold">{score}%</div>
               <p className="text-xs text-muted-foreground">Compliance</p>
             </div>
@@ -338,7 +338,7 @@ export default function CompliancePage() {
           description="Track compliance frameworks and regulatory requirements"
         >
           <Button variant="outline" size="sm">
-            <Download className="mr-2 h-4 w-4" />
+            <Download className="me-2 h-4 w-4" />
             Export Report
           </Button>
         </PageHeader>
@@ -467,7 +467,7 @@ export default function CompliancePage() {
                   </div>
                   {selectedStatus !== 'all' && (
                     <Button variant="ghost" size="sm" onClick={() => setSelectedStatus('all')}>
-                      <X className="mr-1 h-3 w-3" />
+                      <X className="me-1 h-3 w-3" />
                       Clear filters
                     </Button>
                   )}
@@ -516,7 +516,7 @@ export default function CompliancePage() {
                             </div>
                           </div>
                           <div className="flex items-center gap-4">
-                            <div className="text-right">
+                            <div className="text-end">
                               <Badge variant="outline" className={priorityColors[req.priority]}>
                                 {req.priority}
                               </Badge>
@@ -533,11 +533,11 @@ export default function CompliancePage() {
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
                                 <DropdownMenuItem onClick={() => setViewRequirement(req)}>
-                                  <Eye className="mr-2 h-4 w-4" />
+                                  <Eye className="me-2 h-4 w-4" />
                                   View Details
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => openEdit(req)}>
-                                  <Pencil className="mr-2 h-4 w-4" />
+                                  <Pencil className="me-2 h-4 w-4" />
                                   Update Status
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
@@ -672,7 +672,7 @@ export default function CompliancePage() {
 
               <div className="mt-6">
                 <Button className="w-full" onClick={() => openEdit(viewRequirement)}>
-                  <Pencil className="mr-2 h-4 w-4" />
+                  <Pencil className="me-2 h-4 w-4" />
                   Update Status
                 </Button>
               </div>

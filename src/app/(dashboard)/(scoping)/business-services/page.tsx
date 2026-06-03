@@ -263,7 +263,7 @@ export default function BusinessServicesPage() {
       >
         <Can permission={Permission.BusinessServicesWrite}>
           <Button onClick={openCreate}>
-            <Plus className="mr-2 h-4 w-4" />
+            <Plus className="me-2 h-4 w-4" />
             Create Service
           </Button>
         </Can>
@@ -435,7 +435,7 @@ export default function BusinessServicesPage() {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem onClick={() => openEdit(service)}>
-                              <Pencil className="mr-2 h-4 w-4" />
+                              <Pencil className="me-2 h-4 w-4" />
                               Edit
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
@@ -443,7 +443,7 @@ export default function BusinessServicesPage() {
                               className="text-red-500"
                               onClick={() => setDeletingService(service)}
                             >
-                              <Trash2 className="mr-2 h-4 w-4" />
+                              <Trash2 className="me-2 h-4 w-4" />
                               Delete
                             </DropdownMenuItem>
                           </DropdownMenuContent>

@@ -434,7 +434,7 @@ export function AddNotificationDialog({
         ) : (
           <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0">
             {/* Scrollable content area */}
-            <div className="space-y-4 py-4 overflow-y-auto flex-1 pr-1">
+            <div className="space-y-4 py-4 overflow-y-auto flex-1 pe-1">
               <div className="space-y-2">
                 <Label htmlFor="name">Name</Label>
                 <Input id="name" placeholder="e.g., Security Alerts" {...register('name')} />
@@ -815,7 +815,7 @@ export function AddNotificationDialog({
                 Back
               </Button>
               <Button type="submit" disabled={isMutating}>
-                {isMutating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {isMutating && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
                 Create Channel
               </Button>
             </div>

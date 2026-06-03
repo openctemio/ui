@@ -168,18 +168,18 @@ export function SCMConnectionCard({
               <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
                 <DropdownMenuItem onClick={handleValidate} disabled={isValidating}>
                   {isValidating ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <Loader2 className="me-2 h-4 w-4 animate-spin" />
                   ) : (
-                    <RefreshCw className="mr-2 h-4 w-4" />
+                    <RefreshCw className="me-2 h-4 w-4" />
                   )}
                   Test Connection
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setSyncDialogOpen(true)}>
-                  <Download className="mr-2 h-4 w-4" />
+                  <Download className="me-2 h-4 w-4" />
                   Sync Repositories
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setEditDialogOpen(true)}>
-                  <Settings className="mr-2 h-4 w-4" />
+                  <Settings className="me-2 h-4 w-4" />
                   Edit Connection
                 </DropdownMenuItem>
                 {connection.base_url && (
@@ -204,7 +204,7 @@ export function SCMConnectionCard({
                         window.open(sanitizeExternalUrl(url), '_blank', 'noopener,noreferrer')
                     }}
                   >
-                    <ExternalLink className="mr-2 h-4 w-4" />
+                    <ExternalLink className="me-2 h-4 w-4" />
                     Open in Browser
                   </DropdownMenuItem>
                 )}
@@ -213,7 +213,7 @@ export function SCMConnectionCard({
                   className="text-red-500"
                   onClick={() => setDeleteDialogOpen(true)}
                 >
-                  <Trash2 className="mr-2 h-4 w-4" />
+                  <Trash2 className="me-2 h-4 w-4" />
                   Delete
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -275,7 +275,7 @@ export function SCMConnectionCard({
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
             <Button variant="destructive" onClick={handleDelete} disabled={isDeleting}>
-              {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isDeleting && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
               Delete
             </Button>
           </AlertDialogFooter>

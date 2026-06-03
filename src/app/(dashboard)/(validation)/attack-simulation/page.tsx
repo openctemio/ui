@@ -105,7 +105,7 @@ function SimulationRow({ sim, onRun }: { sim: Simulation; onRun: (id: string) =>
       <TableCell>
         <Badge className={`${status.bgColor} ${status.color} border-0`}>
           {status.icon}
-          <span className="ml-1 capitalize">{sim.status}</span>
+          <span className="ms-1 capitalize">{sim.status}</span>
         </Badge>
       </TableCell>
       <TableCell>
@@ -138,7 +138,7 @@ function EmptyState() {
         Create your first attack simulation to validate security controls.
       </p>
       <Button size="sm" onClick={() => toast.info('Attack simulation creation is coming soon')}>
-        <Plus className="mr-2 h-4 w-4" />
+        <Plus className="me-2 h-4 w-4" />
         Create Simulation
       </Button>
     </div>
@@ -197,7 +197,7 @@ export default function AttackSimulationPage() {
         description="Validate security controls against real-world attack techniques"
       >
         <Button size="sm" onClick={() => toast.info('Attack simulation creation is coming soon')}>
-          <Plus className="mr-2 h-4 w-4" />
+          <Plus className="me-2 h-4 w-4" />
           New Simulation
         </Button>
       </PageHeader>

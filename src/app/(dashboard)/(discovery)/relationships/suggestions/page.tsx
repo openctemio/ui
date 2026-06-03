@@ -220,9 +220,9 @@ export default function RelationshipSuggestionsPage() {
         <div className="flex gap-2">
           <Button variant="outline" onClick={handleGenerate} disabled={isGenerating}>
             {isGenerating ? (
-              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+              <RefreshCw className="h-4 w-4 me-2 animate-spin" />
             ) : (
-              <Sparkles className="h-4 w-4 mr-2" />
+              <Sparkles className="h-4 w-4 me-2" />
             )}
             Scan
           </Button>
@@ -230,7 +230,7 @@ export default function RelationshipSuggestionsPage() {
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="outline" disabled={isApprovingAll}>
-                  <CheckCheck className="h-4 w-4 mr-2" />
+                  <CheckCheck className="h-4 w-4 me-2" />
                   Approve All ({total})
                 </Button>
               </AlertDialogTrigger>
@@ -278,14 +278,14 @@ export default function RelationshipSuggestionsPage() {
                   setSearchValue(e.target.value)
                   setPage(1)
                 }}
-                className="pl-8 h-9"
+                className="ps-8 h-9"
               />
             </div>
             {selected.size > 0 && (
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button size="sm" disabled={isBatchApproving}>
-                    <Check className="h-3.5 w-3.5 mr-1" />
+                    <Check className="h-3.5 w-3.5 me-1" />
                     Approve Selected ({selected.size})
                   </Button>
                 </AlertDialogTrigger>
@@ -449,7 +449,7 @@ export default function RelationshipSuggestionsPage() {
                               onClick={() => handleApprove(s.id)}
                               disabled={isMutating}
                             >
-                              <Check className="h-3.5 w-3.5 mr-1" />
+                              <Check className="h-3.5 w-3.5 me-1" />
                               <span className="hidden sm:inline">Approve</span>
                             </Button>
                             <Button

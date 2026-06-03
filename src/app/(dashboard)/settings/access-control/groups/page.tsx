@@ -139,10 +139,10 @@ export default function GroupsPage() {
         <Button
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-          className="-ml-4"
+          className="-ms-4"
         >
           Team
-          <ArrowUpDown className="ml-2 h-4 w-4" />
+          <ArrowUpDown className="ms-2 h-4 w-4" />
         </Button>
       ),
       cell: ({ row }) => {
@@ -204,12 +204,12 @@ export default function GroupsPage() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => setSelectedGroupId(group.id)}>
-                <Eye className="mr-2 h-4 w-4" />
+                <Eye className="me-2 h-4 w-4" />
                 View Details
               </DropdownMenuItem>
               <Can permission={Permission.GroupsWrite}>
                 <DropdownMenuItem onClick={() => setSelectedGroupId(group.id)}>
-                  <Pencil className="mr-2 h-4 w-4" />
+                  <Pencil className="me-2 h-4 w-4" />
                   Edit Team
                 </DropdownMenuItem>
               </Can>
@@ -222,7 +222,7 @@ export default function GroupsPage() {
                     setDeleteDialogOpen(true)
                   }}
                 >
-                  <Trash2 className="mr-2 h-4 w-4" />
+                  <Trash2 className="me-2 h-4 w-4" />
                   Delete Team
                 </DropdownMenuItem>
               </Can>
@@ -302,7 +302,7 @@ export default function GroupsPage() {
         >
           <Can permission={Permission.GroupsWrite} mode="disable">
             <Button onClick={() => setCreateDialogOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
+              <Plus className="me-2 h-4 w-4" />
               Create Team
             </Button>
           </Can>
@@ -379,7 +379,7 @@ export default function GroupsPage() {
                       placeholder="Search teams..."
                       value={globalFilter}
                       onChange={(e) => setGlobalFilter(e.target.value)}
-                      className="pl-9"
+                      className="ps-9"
                     />
                   </div>
 
@@ -396,7 +396,7 @@ export default function GroupsPage() {
                             className="text-red-400"
                             onClick={() => toast.info('Bulk delete not implemented yet')}
                           >
-                            <Trash2 className="mr-2 h-4 w-4" />
+                            <Trash2 className="me-2 h-4 w-4" />
                             Delete Selected
                           </DropdownMenuItem>
                         </DropdownMenuContent>
@@ -457,7 +457,7 @@ export default function GroupsPage() {
                                   size="sm"
                                   onClick={() => setCreateDialogOpen(true)}
                                 >
-                                  <Plus className="mr-2 h-4 w-4" />
+                                  <Plus className="me-2 h-4 w-4" />
                                   Create your first team
                                 </Button>
                               </div>
@@ -533,9 +533,9 @@ export default function GroupsPage() {
             </Button>
             <Button onClick={handleCreateGroup} disabled={isCreating || !createForm.name}>
               {isCreating ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="me-2 h-4 w-4 animate-spin" />
               ) : (
-                <Plus className="mr-2 h-4 w-4" />
+                <Plus className="me-2 h-4 w-4" />
               )}
               Create Team
             </Button>
@@ -569,9 +569,9 @@ export default function GroupsPage() {
             </Button>
             <Button variant="destructive" onClick={handleDeleteGroup} disabled={isDeleting}>
               {isDeleting ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="me-2 h-4 w-4 animate-spin" />
               ) : (
-                <Trash2 className="mr-2 h-4 w-4" />
+                <Trash2 className="me-2 h-4 w-4" />
               )}
               Delete Team
             </Button>
