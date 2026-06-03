@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useCallback } from 'react'
+import dynamic from 'next/dynamic'
 import Link from 'next/link'
-import '@xyflow/react/dist/style.css'
 
 import { Main } from '@/components/layout'
 import { PageHeader, RunStatusBadge } from '@/features/shared'
@@ -57,7 +57,15 @@ import {
 import { toast } from 'sonner'
 import { Can, Permission } from '@/lib/permissions'
 
-import { WorkflowBuilder, NodePalette, PipelineForm } from '@/features/pipelines'
+import { NodePalette } from '@/features/pipelines/components/node-palette'
+import { PipelineForm } from '@/features/pipelines/components/pipeline-form'
+// Lazy-load the visual builder: it pulls in @xyflow/react (~100KB+) and its
+// CSS. Loading it via dynamic() keeps the graph engine out of the pipelines
+// route's initial bundle until the builder is actually rendered.
+const WorkflowBuilder = dynamic(
+  () => import('@/features/pipelines/components/workflow-builder').then((m) => m.WorkflowBuilder),
+  { ssr: false }
+)
 import {
   usePipelines,
   usePipelineRuns,
