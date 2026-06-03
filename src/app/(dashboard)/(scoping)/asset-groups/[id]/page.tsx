@@ -449,7 +449,12 @@ function AssetGroupDetailContent({ params }: PageProps) {
       <Main>
         {/* Header with Back Button */}
         <div className="flex items-center gap-4 mb-6">
-          <Button variant="ghost" size="icon" onClick={() => router.push('/asset-groups')}>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => router.push('/asset-groups')}
+            aria-label="Back to asset groups"
+          >
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div className="flex-1">
@@ -504,7 +509,7 @@ function AssetGroupDetailContent({ params }: PageProps) {
             </Can>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon">
+                <Button variant="outline" size="icon" aria-label="More actions">
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
