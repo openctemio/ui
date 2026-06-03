@@ -42,6 +42,7 @@ import {
 import { toast } from 'sonner'
 import { formatRelative } from '@/lib/format-date'
 import { useTenant } from '@/context/tenant-provider'
+import { useCsvExport, type ExportFieldConfig } from '@/hooks/use-csv-export'
 
 import {
   useExposures,
@@ -70,6 +71,20 @@ type ActionType = 'resolve' | 'accept' | 'false_positive' | 'reactivate'
 
 // State tab type for cleaner organization
 type StateTab = 'needs_attention' | 'resolved' | 'all'
+
+// CSV columns for the Export action. Exports the currently loaded (filtered)
+// page of exposures — matches the Findings export behaviour.
+const EXPOSURE_EXPORT_FIELDS: ExportFieldConfig<ExposureEvent>[] = [
+  { header: 'ID', accessor: (e) => e.id },
+  { header: 'Title', accessor: (e) => e.title },
+  { header: 'Event Type', accessor: (e) => e.event_type.replace(/_/g, ' ') },
+  { header: 'Severity', accessor: (e) => e.severity },
+  { header: 'State', accessor: (e) => e.state },
+  { header: 'Source', accessor: (e) => e.source },
+  { header: 'First Seen', accessor: (e) => e.first_seen_at },
+  { header: 'Last Seen', accessor: (e) => e.last_seen_at },
+  { header: 'Resolved At', accessor: (e) => e.resolved_at ?? '' },
+]
 
 export default function ExposuresPage() {
   const { currentTenant } = useTenant()
@@ -129,6 +144,9 @@ export default function ExposuresPage() {
   const { stats, isLoading: statsLoading, mutate: refreshStats } = useExposureStats(tenantId)
 
   const isLoading = exposuresLoading || statsLoading
+
+  // CSV export of the currently loaded exposures
+  const { handleExport } = useCsvExport(exposures, EXPOSURE_EXPORT_FIELDS, 'exposures')
 
   // Handlers
   const handleRefresh = useCallback(() => {
@@ -225,7 +243,11 @@ export default function ExposuresPage() {
                 )}
                 Refresh
               </Button>
-              <Button variant="outline" onClick={() => toast.info('Export is coming soon')}>
+              <Button
+                variant="outline"
+                onClick={handleExport}
+                disabled={exposuresLoading || exposures.length === 0}
+              >
                 <Download className="me-2 h-4 w-4" />
                 Export
               </Button>
