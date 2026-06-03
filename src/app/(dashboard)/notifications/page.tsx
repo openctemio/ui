@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useMemo, useRef } from 'react'
 import Link from 'next/link'
-import { formatDistanceToNow } from 'date-fns'
+import { formatRelative } from '@/lib/format-date'
 import {
   AlertTriangle,
   Bell,
@@ -115,9 +115,7 @@ function NotificationRow({
           <p className="text-xs text-muted-foreground line-clamp-2">{notification.body}</p>
         )}
 
-        <p className="text-xs text-muted-foreground">
-          {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
-        </p>
+        <p className="text-xs text-muted-foreground">{formatRelative(notification.created_at)}</p>
       </div>
 
       {!notification.is_read && (
