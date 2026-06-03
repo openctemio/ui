@@ -133,7 +133,7 @@ function operatorsFor(type: FieldType): Operator[] {
 }
 
 function emptyConditionFor(field: FieldKey): Condition {
-  const type = FIELD_CONFIG[field].type
+  const type = FIELD_CONFIG[field]?.type ?? 'string'
   const ops = operatorsFor(type)
   let value: unknown = ''
   if (type === 'bool') value = true
@@ -281,7 +281,12 @@ export default function PriorityRulesPage() {
     // Normalize conditions
     const normalizedConditions: Condition[] = []
     for (const c of form.conditions) {
-      const type = FIELD_CONFIG[c.field].type
+      const cfg = FIELD_CONFIG[c.field]
+      if (!cfg) {
+        toast.error(`Unknown condition field "${c.field}" — remove it before saving.`)
+        return
+      }
+      const type = cfg.type
       let value: unknown = c.value
       if (type === 'bool') {
         value = Boolean(c.value)
@@ -650,7 +655,35 @@ export default function PriorityRulesPage() {
               ) : (
                 <div className="flex flex-col gap-2">
                   {form.conditions.map((c, idx) => {
-                    const type = FIELD_CONFIG[c.field].type
+                    const cfg = FIELD_CONFIG[c.field]
+                    // A rule persisted with a field this UI build doesn't know
+                    // (backend version drift / renamed field) would otherwise
+                    // crash the whole dialog on `.type`. Render a removable
+                    // placeholder so the rest of the rule stays editable.
+                    if (!cfg) {
+                      return (
+                        <div
+                          key={idx}
+                          className="flex items-center justify-between gap-2 rounded-md border border-dashed p-2"
+                        >
+                          <span className="text-muted-foreground text-xs">
+                            Unknown condition field <code className="font-mono">{c.field}</code> —
+                            remove to edit this rule.
+                          </span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-9 w-9"
+                            aria-label="Remove unknown condition"
+                            onClick={() => removeCondition(idx)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )
+                    }
+                    const type = cfg.type
                     const ops = operatorsFor(type)
                     return (
                       <div

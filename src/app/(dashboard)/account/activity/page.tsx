@@ -25,7 +25,7 @@ import {
   ChevronRight,
   type LucideIcon,
 } from 'lucide-react'
-import { formatDistanceToNow, format } from 'date-fns'
+import { formatRelative, formatDateSafe } from '@/lib/format-date'
 import { useUser } from '@/stores/auth-store'
 import { useAccountActivity } from '@/features/account'
 import {
@@ -166,10 +166,8 @@ export default function ActivityPage() {
                       <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
                         {activity.actor_ip && <span>{activity.actor_ip}</span>}
                         {activity.actor_ip && <span>•</span>}
-                        <span title={format(new Date(activity.timestamp), 'PPpp')}>
-                          {formatDistanceToNow(new Date(activity.timestamp), {
-                            addSuffix: true,
-                          })}
+                        <span title={formatDateSafe(activity.timestamp, 'PPpp')}>
+                          {formatRelative(activity.timestamp)}
                         </span>
                       </div>
                     </div>
