@@ -67,7 +67,11 @@ function decodeJWT<T = Record<string, unknown>>(token: string): T {
     throw new Error('Invalid JWT format')
   }
   const payload = parts[1]
-  const decoded = atob(payload.replace(/-/g, '+').replace(/_/g, '/'))
+  const binary = atob(payload.replace(/-/g, '+').replace(/_/g, '/'))
+  // Decode as UTF-8 — atob yields a Latin-1 binary string, so multibyte
+  // claims (names with accents / CJK / emoji) would be mojibake if passed
+  // straight to JSON.parse.
+  const decoded = new TextDecoder().decode(Uint8Array.from(binary, (c) => c.charCodeAt(0)))
   return JSON.parse(decoded) as T
 }
 

@@ -198,14 +198,22 @@ export function exportToJSON<T>(data: T, filename: string): void {
 }
 
 /**
- * Escape a CSV field value (handle commas, quotes, newlines)
+ * Escape a CSV field value (handle commas, quotes, newlines, and formula injection)
  */
 function escapeCSVField(value: string): string {
-  // If value contains comma, quote, or newline, wrap in quotes and escape internal quotes
-  if (/[",\n\r]/.test(value)) {
-    return `"${value.replace(/"/g, '""')}"`
+  let v = value
+  // Neutralize spreadsheet formula injection: a field beginning with =, +, -,
+  // @, tab, or CR is interpreted as a formula by Excel/Sheets and can execute
+  // (e.g. =cmd|'/C calc'!A1). Scanner- and user-controlled strings end up in
+  // exports, so prefix such values with a single quote to force a literal.
+  if (/^[=+\-@\t\r]/.test(v)) {
+    v = "'" + v
   }
-  return value
+  // If value contains comma, quote, or newline, wrap in quotes and escape internal quotes
+  if (/[",\n\r]/.test(v)) {
+    return `"${v.replace(/"/g, '""')}"`
+  }
+  return v
 }
 
 /**
