@@ -85,23 +85,27 @@ export interface DashboardStats {
 
 // Transform backend response to frontend format
 function transformStats(response: DashboardStatsResponse): DashboardStats {
+  // Guard every section/field: a partial response (e.g. a disabled module
+  // returning only some sections) must not crash consumers — notably
+  // `averageCvss.toFixed(1)`, called on the dashboard and across insights
+  // pages, which throws if averageCvss arrives null/undefined.
   return {
     assets: {
-      total: response.assets.total,
-      byType: response.assets.by_type || {},
-      byStatus: response.assets.by_status || {},
-      riskScore: response.assets.risk_score,
+      total: response.assets?.total ?? 0,
+      byType: response.assets?.by_type || {},
+      byStatus: response.assets?.by_status || {},
+      riskScore: response.assets?.risk_score ?? 0,
     },
     findings: {
-      total: response.findings.total,
-      bySeverity: response.findings.by_severity || {},
-      byStatus: response.findings.by_status || {},
-      overdue: response.findings.overdue,
-      averageCvss: response.findings.average_cvss,
+      total: response.findings?.total ?? 0,
+      bySeverity: response.findings?.by_severity || {},
+      byStatus: response.findings?.by_status || {},
+      overdue: response.findings?.overdue ?? 0,
+      averageCvss: response.findings?.average_cvss ?? 0,
     },
     repositories: {
-      total: response.repositories.total,
-      withFindings: response.repositories.with_findings,
+      total: response.repositories?.total ?? 0,
+      withFindings: response.repositories?.with_findings ?? 0,
     },
     recentActivity: response.recent_activity || [],
     findingTrend: response.finding_trend || [],

@@ -1,6 +1,7 @@
 'use client'
 
 import { use, useState, useCallback, useEffect, useMemo } from 'react'
+import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Main } from '@/components/layout'
@@ -20,12 +21,14 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Save, ArrowLeft, Cloud, Server, Loader2, AlertTriangle } from 'lucide-react'
 import { toast } from 'sonner'
 
-import {
-  WorkflowBuilder,
-  NodePalette,
-  type AddNodeData,
-  type AvailableTool,
-} from '@/features/pipelines'
+import { NodePalette } from '@/features/pipelines/components/node-palette'
+import type { AddNodeData, AvailableTool } from '@/features/pipelines'
+// Lazy-load the visual builder so @xyflow/react stays out of this route's
+// initial bundle until the builder renders.
+const WorkflowBuilder = dynamic(
+  () => import('@/features/pipelines/components/workflow-builder').then((m) => m.WorkflowBuilder),
+  { ssr: false }
+)
 import {
   get,
   put,

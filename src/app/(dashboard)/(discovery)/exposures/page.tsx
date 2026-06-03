@@ -40,7 +40,7 @@ import {
   Server,
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { formatDistanceToNow } from 'date-fns'
+import { formatRelative } from '@/lib/format-date'
 import { useTenant } from '@/context/tenant-provider'
 
 import { useExposures, useExposureStats, useExposureHistory } from '@/features/exposures/hooks'
@@ -959,17 +959,13 @@ function ExposureDetailSheet({ exposure, open, onOpenChange, onAction }: Exposur
                 <span className="text-xs text-muted-foreground uppercase tracking-wide">
                   First Seen
                 </span>
-                <p className="text-sm font-medium mt-1">
-                  {formatDistanceToNow(new Date(exposure.first_seen_at), { addSuffix: true })}
-                </p>
+                <p className="text-sm font-medium mt-1">{formatRelative(exposure.first_seen_at)}</p>
               </div>
               <div className="p-4">
                 <span className="text-xs text-muted-foreground uppercase tracking-wide">
                   Last Seen
                 </span>
-                <p className="text-sm font-medium mt-1">
-                  {formatDistanceToNow(new Date(exposure.last_seen_at), { addSuffix: true })}
-                </p>
+                <p className="text-sm font-medium mt-1">{formatRelative(exposure.last_seen_at)}</p>
               </div>
             </div>
             {exposure.resolved_at && (
@@ -978,7 +974,7 @@ function ExposureDetailSheet({ exposure, open, onOpenChange, onAction }: Exposur
                   Resolved
                 </span>
                 <p className="text-sm font-medium mt-1 text-green-700 dark:text-green-400">
-                  {formatDistanceToNow(new Date(exposure.resolved_at), { addSuffix: true })}
+                  {formatRelative(exposure.resolved_at)}
                 </p>
               </div>
             )}
@@ -1079,9 +1075,7 @@ function StateHistorySection({ history, isLoading }: StateHistorySectionProps) {
                         <span>•</span>
                       </div>
                     ) : null}
-                    <span>
-                      {formatDistanceToNow(new Date(entry.created_at), { addSuffix: true })}
-                    </span>
+                    <span>{formatRelative(entry.created_at)}</span>
                   </div>
                 </div>
               </div>

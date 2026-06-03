@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext } from 'react'
+import { createContext, useContext, useMemo } from 'react'
 import { DirectionProvider as RdxDirProvider } from '@radix-ui/react-direction'
 
 export type Direction = 'ltr' | 'rtl'
@@ -18,8 +18,10 @@ export function DirectionProvider({
   dir: Direction
   children: React.ReactNode
 }) {
+  const value = useMemo(() => ({ dir }), [dir])
+
   return (
-    <DirectionContext.Provider value={{ dir }}>
+    <DirectionContext.Provider value={value}>
       <RdxDirProvider dir={dir}>{children}</RdxDirProvider>
     </DirectionContext.Provider>
   )

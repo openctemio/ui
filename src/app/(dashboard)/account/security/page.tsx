@@ -49,7 +49,7 @@ import {
   getCurrentSession,
   getOtherSessions,
 } from '@/features/account'
-import { formatDistanceToNow } from 'date-fns'
+import { formatRelative } from '@/lib/format-date'
 
 export default function SecurityPage() {
   const { profile } = useProfile()
@@ -281,10 +281,7 @@ export default function SecurityPage() {
                           {currentSession.location && ` • ${currentSession.location}`}
                         </p>
                         <p className="text-xs text-muted-foreground mt-1">
-                          Last active:{' '}
-                          {formatDistanceToNow(new Date(currentSession.last_active_at), {
-                            addSuffix: true,
-                          })}
+                          Last active: {formatRelative(currentSession.last_active_at)}
                         </p>
                       </div>
                     </div>
@@ -315,10 +312,7 @@ export default function SecurityPage() {
                           {session.location && ` • ${session.location}`}
                         </p>
                         <p className="text-xs text-muted-foreground mt-1">
-                          Last active:{' '}
-                          {formatDistanceToNow(new Date(session.last_active_at), {
-                            addSuffix: true,
-                          })}
+                          Last active: {formatRelative(session.last_active_at)}
                         </p>
                       </div>
                     </div>
