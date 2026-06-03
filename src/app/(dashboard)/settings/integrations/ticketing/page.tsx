@@ -215,12 +215,12 @@ function TicketingIntegrationCard({ integration }: { integration: Integration })
                 disabled={isSyncing}
                 title="Sync now"
               >
-                <RefreshCw className={`mr-2 h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
+                <RefreshCw className={`me-2 h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
                 Sync
               </Button>
             )}
             <Button variant="outline" size="sm" disabled title="Configure">
-              <Settings className="mr-2 h-4 w-4" />
+              <Settings className="me-2 h-4 w-4" />
               Configure
             </Button>
           </div>
@@ -460,7 +460,7 @@ export default function TicketingIntegrationPage() {
         description="Connect with ticketing systems for automated remediation tracking"
       >
         <Button size="sm" onClick={() => setDialogOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
+          <Plus className="me-2 h-4 w-4" />
           Add Connection
         </Button>
       </PageHeader>
@@ -505,7 +505,7 @@ export default function TicketingIntegrationPage() {
             description="Connect a ticketing system to automatically create and track remediation tickets."
             action={
               <Button size="sm" onClick={() => setDialogOpen(true)}>
-                <Plus className="mr-2 h-4 w-4" />
+                <Plus className="me-2 h-4 w-4" />
                 Connect Ticketing System
               </Button>
             }
@@ -550,7 +550,7 @@ export default function TicketingIntegrationPage() {
                         {item.enabled ? 'Active' : 'Inactive'}
                       </Badge>
                     </div>
-                    <p className="text-muted-foreground mt-0.5 pl-6 text-xs">{item.desc}</p>
+                    <p className="text-muted-foreground mt-0.5 ps-6 text-xs">{item.desc}</p>
                   </div>
                 </div>
               ))}

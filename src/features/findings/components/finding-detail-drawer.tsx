@@ -492,7 +492,7 @@ export function FindingDetailDrawer({
             </TooltipProvider>
 
             {/* Header */}
-            <SheetHeader className="space-y-3 border-b px-4 sm:px-6 pb-4 text-left">
+            <SheetHeader className="space-y-3 border-b px-4 sm:px-6 pb-4 text-start">
               {/* Title */}
               <SheetTitle className="text-lg leading-snug">{finding.title}</SheetTitle>
 
@@ -554,7 +554,7 @@ export function FindingDetailDrawer({
               </SheetDescription>
             </SheetHeader>
 
-            {/* Quick Actions Bar - no longer needs ml-auto for "..." button */}
+            {/* Quick Actions Bar - no longer needs ms-auto for "..." button */}
             <div className="flex items-center gap-1.5 sm:gap-2 border-b px-3 sm:px-6 py-3 bg-muted/30">
               {/* Status Select */}
               <StatusSelect
@@ -861,7 +861,7 @@ export function FindingDetailDrawer({
                             />
                           ))}
                           {(finding.dataFlow.intermediates?.length ?? 0) > 2 && (
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground pl-6">
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground ps-6">
                               <ArrowRight className="h-3 w-3" />+
                               {(finding.dataFlow.intermediates?.length ?? 0) - 2} more steps
                             </div>
@@ -981,7 +981,7 @@ export function FindingDetailDrawer({
                       Cancel
                     </Button>
                     <Button size="sm" onClick={handleAddComment} disabled={!comment.trim()}>
-                      <Send className="mr-1.5 h-3 w-3" />
+                      <Send className="me-1.5 h-3 w-3" />
                       Send
                     </Button>
                   </div>
@@ -994,7 +994,7 @@ export function FindingDetailDrawer({
                     className="w-full justify-start text-muted-foreground hover:text-foreground"
                     onClick={() => setShowCommentInput(true)}
                   >
-                    <MessageSquare className="mr-2 h-4 w-4" />
+                    <MessageSquare className="me-2 h-4 w-4" />
                     Add a comment...
                   </Button>
                 </div>
@@ -1003,7 +1003,7 @@ export function FindingDetailDrawer({
               {/* View Details Button */}
               <div className="p-4">
                 <Button className="w-full" onClick={handleViewDetails}>
-                  <ExternalLink className="mr-2 h-4 w-4" />
+                  <ExternalLink className="me-2 h-4 w-4" />
                   View Full Details
                 </Button>
               </div>

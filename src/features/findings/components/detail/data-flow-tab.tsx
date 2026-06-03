@@ -118,7 +118,7 @@ function DataFlowLocationCard({
             {/* Header - clickable */}
             <button
               onClick={() => setIsExpanded(!isExpanded)}
-              className="w-full p-4 text-left hover:bg-muted/30 transition-colors rounded-t-lg"
+              className="w-full p-4 text-start hover:bg-muted/30 transition-colors rounded-t-lg"
             >
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
@@ -285,7 +285,7 @@ function DataFlowVisualization({ dataFlow }: { dataFlow: DataFlow }) {
   if (allLocations.length === 0) {
     return (
       <div className="flex items-center justify-center p-8 text-muted-foreground">
-        <Info className="mr-2 h-4 w-4" />
+        <Info className="me-2 h-4 w-4" />
         No data flow information available
       </div>
     )
@@ -350,7 +350,7 @@ export function DataFlowTab({ finding }: DataFlowTabProps) {
           shows how untrusted data travels from source to sink, helping you understand the attack
           path.
         </p>
-        <div className="mt-6 p-4 bg-muted/50 rounded-lg text-left text-sm max-w-md">
+        <div className="mt-6 p-4 bg-muted/50 rounded-lg text-start text-sm max-w-md">
           <p className="font-medium mb-2">To enable data flow tracking:</p>
           <ul className="list-disc list-inside text-muted-foreground space-y-1">
             <li>
@@ -409,7 +409,7 @@ export function DataFlowTab({ finding }: DataFlowTabProps) {
           <p>
             <strong className="text-foreground">Options:</strong>
           </p>
-          <ul className="list-disc list-inside ml-2 space-y-1">
+          <ul className="list-disc list-inside ms-2 space-y-1">
             <li>
               <strong>At source:</strong> Validate input immediately when received
             </li>

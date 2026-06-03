@@ -306,10 +306,10 @@ export default function CredentialsPage() {
         <Button
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-          className="-ml-4"
+          className="-ms-4"
         >
           Credential
-          <ArrowUpDown className="ml-2 h-4 w-4" />
+          <ArrowUpDown className="ms-2 h-4 w-4" />
         </Button>
       ),
       cell: ({ row }) => (
@@ -371,7 +371,7 @@ export default function CredentialsPage() {
               {leakDate.toLocaleDateString()}
             </span>
             {isRecent && (
-              <Badge variant="destructive" className="ml-1 text-xs">
+              <Badge variant="destructive" className="ms-1 text-xs">
                 Recent
               </Badge>
             )}
@@ -402,10 +402,10 @@ export default function CredentialsPage() {
         <Button
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-          className="-ml-4"
+          className="-ms-4"
         >
           Risk
-          <ArrowUpDown className="ml-2 h-4 w-4" />
+          <ArrowUpDown className="ms-2 h-4 w-4" />
         </Button>
       ),
       cell: ({ row }) => <RiskScoreBadge score={row.original.riskScore} size="sm" />,
@@ -423,17 +423,17 @@ export default function CredentialsPage() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => setSelectedCredential(credential)}>
-                <Eye className="mr-2 h-4 w-4" />
+                <Eye className="me-2 h-4 w-4" />
                 View Details
               </DropdownMenuItem>
               <Can permission={Permission.CredentialsWrite}>
                 <DropdownMenuItem onClick={() => handleOpenEdit(credential)}>
-                  <Pencil className="mr-2 h-4 w-4" />
+                  <Pencil className="me-2 h-4 w-4" />
                   Edit
                 </DropdownMenuItem>
               </Can>
               <DropdownMenuItem onClick={() => handleCopyCredential(credential)}>
-                <Copy className="mr-2 h-4 w-4" />
+                <Copy className="me-2 h-4 w-4" />
                 Copy Name
               </DropdownMenuItem>
               <DropdownMenuSeparator />
@@ -445,7 +445,7 @@ export default function CredentialsPage() {
                     setDeleteDialogOpen(true)
                   }}
                 >
-                  <Trash2 className="mr-2 h-4 w-4" />
+                  <Trash2 className="me-2 h-4 w-4" />
                   Delete
                 </DropdownMenuItem>
               </Can>
@@ -566,7 +566,7 @@ export default function CredentialsPage() {
             description={statsLoading ? 'Loading...' : `${stats.total} leaked credentials detected`}
           />
           <Button onClick={() => setAddDialogOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
+            <Plus className="me-2 h-4 w-4" />
             Add Credential
           </Button>
         </div>
@@ -598,7 +598,7 @@ export default function CredentialsPage() {
                 onClick={() => setStatusFilter('active')}
               >
                 Review Now
-                <ArrowRight className="ml-1 h-3 w-3" />
+                <ArrowRight className="ms-1 h-3 w-3" />
               </Button>
               <Button
                 size="sm"
@@ -733,7 +733,7 @@ export default function CredentialsPage() {
                   </TabsList>
                 </Tabs>
                 <Button variant="outline" size="sm">
-                  <Download className="mr-2 h-4 w-4" />
+                  <Download className="me-2 h-4 w-4" />
                   Export
                 </Button>
               </div>
@@ -748,7 +748,7 @@ export default function CredentialsPage() {
                   placeholder="Search credentials..."
                   value={globalFilter}
                   onChange={(e) => setGlobalFilter(e.target.value)}
-                  className="pl-9"
+                  className="ps-9"
                 />
               </div>
               <Select
@@ -976,7 +976,7 @@ export default function CredentialsPage() {
                 // Sheet will be closed by handleMarkResolved after success
               }}
             >
-              <CheckCircle className="mr-2 h-4 w-4" />
+              <CheckCircle className="me-2 h-4 w-4" />
               Mark Resolved
             </Button>
           ) : null
@@ -1302,7 +1302,7 @@ function RelatedExposuresSection({
         {relatedCredentials.map((cred) => (
           <button
             key={cred.id}
-            className="w-full text-left rounded-md border bg-muted/30 p-3 hover:bg-muted/50 transition-colors"
+            className="w-full text-start rounded-md border bg-muted/30 p-3 hover:bg-muted/50 transition-colors"
             onClick={() => onSelectCredential(cred)}
           >
             <div className="flex items-center justify-between">
@@ -1353,7 +1353,7 @@ function IdentityCard({ identity, isExpanded, onToggle, onSelectCredential }: Id
         className={`rounded-lg border ${activeCount > 0 ? 'border-red-200 dark:border-red-900/50' : ''}`}
       >
         <CollapsibleTrigger asChild>
-          <button className="w-full p-4 text-left hover:bg-muted/50 transition-colors">
+          <button className="w-full p-4 text-start hover:bg-muted/50 transition-colors">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
@@ -1419,7 +1419,7 @@ function IdentityCard({ identity, isExpanded, onToggle, onSelectCredential }: Id
                 exposuresResponse.items.map((exposure) => (
                   <button
                     key={exposure.id}
-                    className="w-full text-left rounded-md border bg-background p-3 hover:bg-muted/50 transition-colors"
+                    className="w-full text-start rounded-md border bg-background p-3 hover:bg-muted/50 transition-colors"
                     onClick={() => onSelectCredential(exposure)}
                   >
                     <div className="flex items-center justify-between">

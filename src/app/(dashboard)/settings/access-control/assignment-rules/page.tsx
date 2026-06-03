@@ -188,10 +188,10 @@ export default function AssignmentRulesPage() {
         <Button
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-          className="-ml-4"
+          className="-ms-4"
         >
           Rule
-          <ArrowUpDown className="ml-2 h-4 w-4" />
+          <ArrowUpDown className="ms-2 h-4 w-4" />
         </Button>
       ),
       cell: ({ row }) => {
@@ -239,10 +239,10 @@ export default function AssignmentRulesPage() {
         <Button
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-          className="-ml-4"
+          className="-ms-4"
         >
           Priority
-          <ArrowUpDown className="ml-2 h-4 w-4" />
+          <ArrowUpDown className="ms-2 h-4 w-4" />
         </Button>
       ),
       cell: ({ row }) => <Badge variant="outline">{row.original.priority}</Badge>,
@@ -291,12 +291,12 @@ export default function AssignmentRulesPage() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => setSelectedRuleId(rule.id)}>
-                <Eye className="mr-2 h-4 w-4" />
+                <Eye className="me-2 h-4 w-4" />
                 View Details
               </DropdownMenuItem>
               <Can permission={Permission.AssignmentRulesWrite}>
                 <DropdownMenuItem onClick={() => setSelectedRuleId(rule.id)}>
-                  <Pencil className="mr-2 h-4 w-4" />
+                  <Pencil className="me-2 h-4 w-4" />
                   Edit
                 </DropdownMenuItem>
                 <DropdownMenuItem
@@ -314,7 +314,7 @@ export default function AssignmentRulesPage() {
                     }
                   }}
                 >
-                  <Play className="mr-2 h-4 w-4" />
+                  <Play className="me-2 h-4 w-4" />
                   Test Rule
                 </DropdownMenuItem>
               </Can>
@@ -327,7 +327,7 @@ export default function AssignmentRulesPage() {
                     setDeleteDialogOpen(true)
                   }}
                 >
-                  <Trash2 className="mr-2 h-4 w-4" />
+                  <Trash2 className="me-2 h-4 w-4" />
                   Delete
                 </DropdownMenuItem>
               </Can>
@@ -410,7 +410,7 @@ export default function AssignmentRulesPage() {
         >
           <Can permission={Permission.AssignmentRulesWrite} mode="disable">
             <Button onClick={() => setCreateDialogOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
+              <Plus className="me-2 h-4 w-4" />
               Create Rule
             </Button>
           </Can>
@@ -519,7 +519,7 @@ export default function AssignmentRulesPage() {
                       placeholder="Search assignment rules..."
                       value={globalFilter}
                       onChange={(e) => setGlobalFilter(e.target.value)}
-                      className="pl-9"
+                      className="ps-9"
                     />
                   </div>
                 </div>
@@ -572,7 +572,7 @@ export default function AssignmentRulesPage() {
                                   size="sm"
                                   onClick={() => setCreateDialogOpen(true)}
                                 >
-                                  <Plus className="mr-2 h-4 w-4" />
+                                  <Plus className="me-2 h-4 w-4" />
                                   Create your first rule
                                 </Button>
                               </div>
@@ -770,9 +770,9 @@ export default function AssignmentRulesPage() {
               disabled={isCreating || !createForm.name || !createForm.target_group_id}
             >
               {isCreating ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="me-2 h-4 w-4 animate-spin" />
               ) : (
-                <Plus className="mr-2 h-4 w-4" />
+                <Plus className="me-2 h-4 w-4" />
               )}
               Create Rule
             </Button>
@@ -806,9 +806,9 @@ export default function AssignmentRulesPage() {
             </Button>
             <Button variant="destructive" onClick={handleDeleteRule} disabled={isDeleting}>
               {isDeleting ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="me-2 h-4 w-4 animate-spin" />
               ) : (
-                <Trash2 className="mr-2 h-4 w-4" />
+                <Trash2 className="me-2 h-4 w-4" />
               )}
               Delete
             </Button>

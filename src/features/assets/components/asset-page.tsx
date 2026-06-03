@@ -630,10 +630,10 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
           <Button
             variant="ghost"
             onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-            className="-ml-4"
+            className="-ms-4"
           >
             {config.label}
-            <ArrowUpDown className="ml-2 h-4 w-4" />
+            <ArrowUpDown className="ms-2 h-4 w-4" />
           </Button>
         ),
         cell: ({ row }) => (
@@ -759,10 +759,10 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
           <Button
             variant="ghost"
             onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-            className="-ml-4"
+            className="-ms-4"
           >
             Findings
-            <ArrowUpDown className="ml-2 h-4 w-4" />
+            <ArrowUpDown className="ms-2 h-4 w-4" />
           </Button>
         ),
         cell: ({ row }) => {
@@ -784,10 +784,10 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
           <Button
             variant="ghost"
             onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-            className="-ml-4"
+            className="-ms-4"
           >
             Risk
-            <ArrowUpDown className="ml-2 h-4 w-4" />
+            <ArrowUpDown className="ms-2 h-4 w-4" />
           </Button>
         ),
         cell: ({ row }) => <RiskScoreBadge score={row.original.riskScore} size="sm" />,
@@ -799,10 +799,10 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
           <Button
             variant="ghost"
             onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-            className="-ml-4"
+            className="-ms-4"
           >
             Last Update
-            <ArrowUpDown className="ml-2 h-4 w-4" />
+            <ArrowUpDown className="ms-2 h-4 w-4" />
           </Button>
         ),
         cell: ({ row }) => {
@@ -863,7 +863,7 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
                     }
                   }}
                 >
-                  <Eye className="mr-2 h-4 w-4" />
+                  <Eye className="me-2 h-4 w-4" />
                   View Details
                 </DropdownMenuItem>
                 <Can permission={Permission.AssetsWrite}>
@@ -873,7 +873,7 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
                       dialogs.openEdit(asset)
                     }}
                   >
-                    <Pencil className="mr-2 h-4 w-4" />
+                    <Pencil className="me-2 h-4 w-4" />
                     Edit
                   </DropdownMenuItem>
                 </Can>
@@ -884,7 +884,7 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
                       handleCopy(asset)
                     }}
                   >
-                    <Copy className="mr-2 h-4 w-4" />
+                    <Copy className="me-2 h-4 w-4" />
                     {config.copyAction.label}
                   </DropdownMenuItem>
                 )}
@@ -899,7 +899,7 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
                         action.onClick(asset)
                       }}
                     >
-                      <ActionIcon className="mr-2 h-4 w-4" />
+                      <ActionIcon className="me-2 h-4 w-4" />
                       {action.label}
                     </DropdownMenuItem>
                   )
@@ -913,7 +913,7 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
                       dialogs.openDelete(asset)
                     }}
                   >
-                    <Trash2 className="mr-2 h-4 w-4" />
+                    <Trash2 className="me-2 h-4 w-4" />
                     Delete
                   </DropdownMenuItem>
                 </Can>
@@ -958,7 +958,7 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
         >
           <div className="flex items-center gap-2">
             <Button variant="outline" onClick={handleExport}>
-              <Download className="mr-2 h-4 w-4" />
+              <Download className="me-2 h-4 w-4" />
               Export
             </Button>
             <Can permission={Permission.AssetsWrite}>
@@ -968,7 +968,7 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
                   dialogs.setAddDialogOpen(true)
                 }}
               >
-                <Plus className="mr-2 h-4 w-4" />
+                <Plus className="me-2 h-4 w-4" />
                 Add {config.label}
               </Button>
             </Can>
@@ -1110,7 +1110,7 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
                     placeholder={`Search ${config.labelPlural.toLowerCase()}...`}
                     value={searchValue}
                     onChange={(e) => setSearchValue(e.target.value)}
-                    className="pl-8 h-9"
+                    className="ps-8 h-9"
                     aria-label="Search assets"
                   />
                 </div>
@@ -1168,14 +1168,14 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
                               action.onClick(assets)
                             }}
                           >
-                            <BulkIcon className="mr-2 h-4 w-4" />
+                            <BulkIcon className="me-2 h-4 w-4" />
                             {action.label}
                           </DropdownMenuItem>
                         )
                       })}
                       <Can permission={Permission.AssetsDelete}>
                         <DropdownMenuItem className="text-red-400" onClick={handleBulkDelete}>
-                          <Trash2 className="mr-2 h-4 w-4" />
+                          <Trash2 className="me-2 h-4 w-4" />
                           Delete Selected
                         </DropdownMenuItem>
                       </Can>
@@ -1378,7 +1378,7 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
         quickActions={
           selectedAsset && config.copyAction ? (
             <Button size="sm" variant="outline" onClick={() => handleCopy(selectedAsset)}>
-              <Copy className="mr-2 h-4 w-4" />
+              <Copy className="me-2 h-4 w-4" />
               {config.copyAction.label}
             </Button>
           ) : undefined

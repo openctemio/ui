@@ -104,7 +104,7 @@ function AuditLogEntry({ log }: { log: AuditLog }) {
           <span className="font-medium text-sm">{getActionLabel(log.action)}</span>
           <Badge variant="outline" className={`text-xs ${getResultColor(log.result)}`}>
             {getResultIcon(log.result)}
-            <span className="ml-1 capitalize">{log.result}</span>
+            <span className="ms-1 capitalize">{log.result}</span>
           </Badge>
           {log.severity !== 'low' && (
             <Badge variant="outline" className={`text-xs ${getSeverityColor(log.severity)}`}>
@@ -237,7 +237,7 @@ export function AgentAuditLog({ agentId }: AgentAuditLogProps) {
   }
 
   return (
-    <ScrollArea className="h-[400px] pr-4">
+    <ScrollArea className="h-[400px] pe-4">
       <div className="space-y-1">
         {data.items.map((log) => (
           <AuditLogEntry key={log.id} log={log} />

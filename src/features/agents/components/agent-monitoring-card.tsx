@@ -125,26 +125,26 @@ export function AgentMonitoringCard({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
               <DropdownMenuItem onClick={() => onViewDetails(agent)}>
-                <Activity className="mr-2 h-4 w-4" />
+                <Activity className="me-2 h-4 w-4" />
                 View Details
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => onEdit(agent)}>
-                <Settings className="mr-2 h-4 w-4" />
+                <Settings className="me-2 h-4 w-4" />
                 Edit
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => onViewConfig(agent)}>
-                <Settings className="mr-2 h-4 w-4" />
+                <Settings className="me-2 h-4 w-4" />
                 View Config
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               {agent.status === 'disabled' || agent.status === 'revoked' ? (
                 <DropdownMenuItem onClick={() => onActivate(agent)} className="text-green-500">
-                  <Power className="mr-2 h-4 w-4" />
+                  <Power className="me-2 h-4 w-4" />
                   Activate
                 </DropdownMenuItem>
               ) : agent.status === 'active' ? (
                 <DropdownMenuItem onClick={() => onDeactivate(agent)} className="text-amber-500">
-                  <PowerOff className="mr-2 h-4 w-4" />
+                  <PowerOff className="me-2 h-4 w-4" />
                   Deactivate
                 </DropdownMenuItem>
               ) : null}
@@ -162,23 +162,23 @@ export function AgentMonitoringCard({
             )}
           >
             {isOnline ? (
-              <CheckCircle className="mr-1 h-3 w-3" />
+              <CheckCircle className="me-1 h-3 w-3" />
             ) : (
-              <XCircle className="mr-1 h-3 w-3" />
+              <XCircle className="me-1 h-3 w-3" />
             )}
             {isOnline ? 'Online' : 'Offline'}
           </Badge>
 
           {metrics.activeJobs > 0 && (
             <Badge variant="secondary" className="bg-blue-500/10 text-blue-500 text-xs">
-              <Activity className="mr-1 h-3 w-3" />
+              <Activity className="me-1 h-3 w-3" />
               {metrics.activeJobs} jobs
             </Badge>
           )}
 
           {agent.error_count > 0 && (
             <Badge variant="secondary" className="bg-red-500/10 text-red-500 text-xs">
-              <AlertTriangle className="mr-1 h-3 w-3" />
+              <AlertTriangle className="me-1 h-3 w-3" />
               {agent.error_count}
             </Badge>
           )}
@@ -199,7 +199,7 @@ export function AgentMonitoringCard({
                   )}
                 />
               </div>
-              <span className="text-xs text-muted-foreground w-10 text-right">{metrics.cpu}%</span>
+              <span className="text-xs text-muted-foreground w-10 text-end">{metrics.cpu}%</span>
             </div>
             <div className="flex items-center gap-2">
               <HardDrive className="h-3 w-3 text-muted-foreground" />
@@ -213,9 +213,7 @@ export function AgentMonitoringCard({
                   )}
                 />
               </div>
-              <span className="text-xs text-muted-foreground w-10 text-right">
-                {metrics.memory}%
-              </span>
+              <span className="text-xs text-muted-foreground w-10 text-end">{metrics.memory}%</span>
             </div>
           </div>
         )}

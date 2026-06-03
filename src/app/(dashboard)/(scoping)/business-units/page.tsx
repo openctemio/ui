@@ -376,12 +376,12 @@ export default function BusinessUnitsPage() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => setViewUnit(unit)}>
-                  <Eye className="mr-2 h-4 w-4" />
+                  <Eye className="me-2 h-4 w-4" />
                   View Details
                 </DropdownMenuItem>
                 <Can permission={Permission.ScopeWrite}>
                   <DropdownMenuItem onClick={() => openEdit(unit)}>
-                    <Pencil className="mr-2 h-4 w-4" />
+                    <Pencil className="me-2 h-4 w-4" />
                     Edit
                   </DropdownMenuItem>
                 </Can>
@@ -391,7 +391,7 @@ export default function BusinessUnitsPage() {
                     onClick={() => setDeleteUnit(unit)}
                     className="text-destructive"
                   >
-                    <Trash2 className="mr-2 h-4 w-4" />
+                    <Trash2 className="me-2 h-4 w-4" />
                     Delete
                   </DropdownMenuItem>
                 </Can>
@@ -531,12 +531,12 @@ export default function BusinessUnitsPage() {
           description="Manage organizational structure and align security with business objectives"
         >
           <Button variant="outline" size="sm">
-            <Download className="mr-2 h-4 w-4" />
+            <Download className="me-2 h-4 w-4" />
             Export
           </Button>
           <Can permission={Permission.ScopeWrite}>
             <Button size="sm" onClick={() => setIsCreateOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
+              <Plus className="me-2 h-4 w-4" />
               Add Business Unit
             </Button>
           </Can>
@@ -638,7 +638,7 @@ export default function BusinessUnitsPage() {
                     setFilterRiskTolerance('all')
                   }}
                 >
-                  <X className="mr-1 h-3 w-3" />
+                  <X className="me-1 h-3 w-3" />
                   Clear filters
                 </Button>
               )}
@@ -866,7 +866,7 @@ export default function BusinessUnitsPage() {
 
               <div className="mt-6 flex gap-2">
                 <Button variant="outline" className="flex-1" onClick={() => openEdit(viewUnit)}>
-                  <Pencil className="mr-2 h-4 w-4" />
+                  <Pencil className="me-2 h-4 w-4" />
                   Edit
                 </Button>
                 <Button
@@ -877,7 +877,7 @@ export default function BusinessUnitsPage() {
                     setDeleteUnit(viewUnit)
                   }}
                 >
-                  <Trash2 className="mr-2 h-4 w-4" />
+                  <Trash2 className="me-2 h-4 w-4" />
                   Delete
                 </Button>
               </div>

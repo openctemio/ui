@@ -73,7 +73,7 @@ export const CapabilityDetailPanel = memo(function CapabilityDetailPanel({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-md p-0 flex flex-col h-full">
         {/* Header with padding */}
-        <SheetHeader className="space-y-3 px-6 pt-6 pb-4 pr-14 flex-shrink-0 border-b">
+        <SheetHeader className="space-y-3 px-6 pt-6 pb-4 pe-14 flex-shrink-0 border-b">
           <div className="flex items-center gap-3">
             <div
               className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg ${colorClass}`}
@@ -146,7 +146,7 @@ export const CapabilityDetailPanel = memo(function CapabilityDetailPanel({
                   <Wrench className="h-4 w-4" />
                   Tools
                   {stats && stats.tool_count > 0 && (
-                    <Badge variant="secondary" className="ml-1 text-xs">
+                    <Badge variant="secondary" className="ms-1 text-xs">
                       {stats.tool_count}
                     </Badge>
                   )}
@@ -196,7 +196,7 @@ export const CapabilityDetailPanel = memo(function CapabilityDetailPanel({
                   <Bot className="h-4 w-4" />
                   Agents
                   {stats && stats.agent_count > 0 && (
-                    <Badge variant="secondary" className="ml-1 text-xs">
+                    <Badge variant="secondary" className="ms-1 text-xs">
                       {stats.agent_count}
                     </Badge>
                   )}
@@ -245,30 +245,30 @@ export const CapabilityDetailPanel = memo(function CapabilityDetailPanel({
               <dl className="space-y-2.5 text-sm">
                 <div className="flex justify-between gap-4">
                   <dt className="text-muted-foreground shrink-0">ID</dt>
-                  <dd className="font-mono text-xs truncate text-right">{capability.id}</dd>
+                  <dd className="font-mono text-xs truncate text-end">{capability.id}</dd>
                 </div>
                 <div className="flex justify-between gap-4">
                   <dt className="text-muted-foreground shrink-0">Code Name</dt>
-                  <dd className="font-mono text-xs truncate text-right">{capability.name}</dd>
+                  <dd className="font-mono text-xs truncate text-end">{capability.name}</dd>
                 </div>
                 <div className="flex justify-between gap-4">
                   <dt className="text-muted-foreground shrink-0">Category</dt>
-                  <dd className="capitalize text-right">{capability.category || '-'}</dd>
+                  <dd className="capitalize text-end">{capability.category || '-'}</dd>
                 </div>
                 <div className="flex justify-between gap-4">
                   <dt className="text-muted-foreground shrink-0">Type</dt>
-                  <dd className="text-right">{capability.is_builtin ? 'Platform' : 'Custom'}</dd>
+                  <dd className="text-end">{capability.is_builtin ? 'Platform' : 'Custom'}</dd>
                 </div>
                 <div className="flex justify-between gap-4">
                   <dt className="text-muted-foreground shrink-0">Color</dt>
-                  <dd className="capitalize text-right flex items-center gap-2 justify-end">
+                  <dd className="capitalize text-end flex items-center gap-2 justify-end">
                     <span className={`h-3 w-3 rounded-full ${colorClass.split(' ')[0]}`} />
                     {capability.color}
                   </dd>
                 </div>
                 <div className="flex justify-between gap-4">
                   <dt className="text-muted-foreground shrink-0">Icon</dt>
-                  <dd className="text-right flex items-center gap-2 justify-end">
+                  <dd className="text-end flex items-center gap-2 justify-end">
                     <DynamicIcon name={capability.icon} className="h-4 w-4" />
                     {capability.icon}
                   </dd>

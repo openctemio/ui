@@ -384,7 +384,7 @@ export function TargetsStep({ data, onChange }: TargetsStepProps) {
               <FolderOpen className="h-4 w-4 text-muted-foreground" />
               <span className="font-medium">Asset Groups</span>
               {hasAssetGroups && (
-                <Badge variant="secondary" className="ml-2">
+                <Badge variant="secondary" className="ms-2">
                   {data.targets.assetGroupIds.length} selected
                 </Badge>
               )}
@@ -458,7 +458,7 @@ export function TargetsStep({ data, onChange }: TargetsStepProps) {
               <Target className="h-4 w-4 text-muted-foreground" />
               <span className="font-medium">Individual Assets</span>
               {hasIndividualAssets && (
-                <Badge variant="secondary" className="ml-2">
+                <Badge variant="secondary" className="ms-2">
                   {data.targets.assetIds.length} selected
                 </Badge>
               )}
@@ -478,7 +478,7 @@ export function TargetsStep({ data, onChange }: TargetsStepProps) {
                   {data.targets.assetIds.map((assetId) => {
                     const assetMeta = selectedAssetsMeta.get(assetId)
                     return (
-                      <Badge key={assetId} variant="secondary" className="gap-1 pr-1">
+                      <Badge key={assetId} variant="secondary" className="gap-1 pe-1">
                         <span className="truncate max-w-[150px]">
                           {assetMeta?.name ?? assetId.slice(0, 8)}
                         </span>
@@ -506,7 +506,7 @@ export function TargetsStep({ data, onChange }: TargetsStepProps) {
                   placeholder="Search assets by name..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
+                  className="ps-10"
                 />
                 {isLoadingAssets && (
                   <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
@@ -637,7 +637,7 @@ export function TargetsStep({ data, onChange }: TargetsStepProps) {
               <FileText className="h-4 w-4 text-muted-foreground" />
               <span className="font-medium">Custom Targets</span>
               {hasCustomTargets && (
-                <div className="flex items-center gap-1 ml-2">
+                <div className="flex items-center gap-1 ms-2">
                   {validationStats.valid > 0 && (
                     <Badge
                       variant="secondary"

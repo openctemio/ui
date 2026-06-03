@@ -201,7 +201,7 @@ export function MarkFixedDialog({
                   </div>
 
                   {includeRelated && (
-                    <div className="space-y-1.5 ml-6">
+                    <div className="space-y-1.5 ms-6">
                       {relatedCVEs.map((rc) => (
                         <RelatedCVERow
                           key={rc.cve_id}
@@ -235,7 +235,7 @@ export function MarkFixedDialog({
           <Button onClick={handleSubmit} disabled={isSubmitting || !note.trim()}>
             {isSubmitting ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="me-2 h-4 w-4 animate-spin" />
                 Submitting...
               </>
             ) : (
@@ -266,7 +266,7 @@ function RelatedCVERow({
       <Checkbox checked={selected} onCheckedChange={onToggle} />
       <span className="font-mono text-xs">{cve.cve_id}</span>
       <SeverityBadge severity={cve.severity as 'critical' | 'high' | 'medium' | 'low' | 'info'} />
-      <span className="text-muted-foreground ml-auto">{cve.finding_count} findings</span>
+      <span className="text-muted-foreground ms-auto">{cve.finding_count} findings</span>
     </div>
   )
 }

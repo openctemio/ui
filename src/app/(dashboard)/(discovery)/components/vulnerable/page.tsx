@@ -175,7 +175,7 @@ export default function VulnerableComponentsPage() {
             onClick={handleExport}
             disabled={isLoading || filteredComponents.length === 0}
           >
-            <Download className="mr-2 h-4 w-4" />
+            <Download className="me-2 h-4 w-4" />
             Export
           </Button>
         </PageHeader>
@@ -354,7 +354,7 @@ export default function VulnerableComponentsPage() {
                   placeholder="Search by name, version, or PURL..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9"
+                  className="ps-9"
                 />
               </div>
             </div>

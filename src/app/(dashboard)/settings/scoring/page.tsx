@@ -163,7 +163,7 @@ function InfoTip({ text }: { text: string }) {
       <TooltipTrigger asChild>
         <button
           type="button"
-          className="text-muted-foreground hover:text-foreground ml-1 inline-flex cursor-help"
+          className="text-muted-foreground hover:text-foreground ms-1 inline-flex cursor-help"
         >
           <Info className="h-3.5 w-3.5" />
         </button>
@@ -428,7 +428,7 @@ export default function ScoringConfigurationPage() {
                   key={preset.name}
                   type="button"
                   onClick={() => handlePresetSelect(preset.name)}
-                  className={`rounded-lg border p-3 text-left transition-colors ${
+                  className={`rounded-lg border p-3 text-start transition-colors ${
                     config.preset === preset.name
                       ? 'border-primary bg-primary/5'
                       : 'hover:border-muted-foreground/30 border-transparent'
@@ -443,7 +443,7 @@ export default function ScoringConfigurationPage() {
                 </button>
               ))}
               <div
-                className={`rounded-lg border p-3 text-left transition-colors ${
+                className={`rounded-lg border p-3 text-start transition-colors ${
                   config.preset === 'custom'
                     ? 'border-primary bg-primary/5'
                     : 'hover:border-muted-foreground/30 border-transparent'
@@ -1060,11 +1060,11 @@ export default function ScoringConfigurationPage() {
               <table className="w-full text-sm">
                 <thead className="bg-muted/50 sticky top-0">
                   <tr>
-                    <th className="p-2 text-left font-medium">Asset</th>
-                    <th className="p-2 text-left font-medium">Type</th>
-                    <th className="p-2 text-right font-medium">Current</th>
-                    <th className="p-2 text-right font-medium">New</th>
-                    <th className="p-2 text-right font-medium">Delta</th>
+                    <th className="p-2 text-start font-medium">Asset</th>
+                    <th className="p-2 text-start font-medium">Type</th>
+                    <th className="p-2 text-end font-medium">Current</th>
+                    <th className="p-2 text-end font-medium">New</th>
+                    <th className="p-2 text-end font-medium">Delta</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1072,10 +1072,10 @@ export default function ScoringConfigurationPage() {
                     <tr key={item.asset_id} className="border-t">
                       <td className="max-w-[300px] truncate p-2">{item.asset_name}</td>
                       <td className="text-muted-foreground p-2 text-xs">{item.asset_type}</td>
-                      <td className="p-2 text-right">{item.current_score}</td>
-                      <td className="p-2 text-right">{item.new_score}</td>
+                      <td className="p-2 text-end">{item.current_score}</td>
+                      <td className="p-2 text-end">{item.new_score}</td>
                       <td
-                        className={`p-2 text-right font-medium ${item.delta > 0 ? 'text-red-500' : item.delta < 0 ? 'text-green-500' : ''}`}
+                        className={`p-2 text-end font-medium ${item.delta > 0 ? 'text-red-500' : item.delta < 0 ? 'text-green-500' : ''}`}
                       >
                         {item.delta > 0 ? '+' : ''}
                         {item.delta}

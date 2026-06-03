@@ -289,7 +289,7 @@ export default function AttackSurfacePage() {
                   </CardDescription>
                 </div>
                 <Button size="sm" variant="outline">
-                  <Eye className="mr-2 h-4 w-4" />
+                  <Eye className="me-2 h-4 w-4" />
                   View All
                 </Button>
               </div>

@@ -209,14 +209,14 @@ export default function ExposuresPage() {
             <div className="flex items-center gap-2">
               <Button variant="outline" onClick={handleRefresh} disabled={isLoading}>
                 {isLoading ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="me-2 h-4 w-4 animate-spin" />
                 ) : (
-                  <RefreshCw className="mr-2 h-4 w-4" />
+                  <RefreshCw className="me-2 h-4 w-4" />
                 )}
                 Refresh
               </Button>
               <Button variant="outline" onClick={() => toast.info('Export is coming soon')}>
-                <Download className="mr-2 h-4 w-4" />
+                <Download className="me-2 h-4 w-4" />
                 Export
               </Button>
             </div>
@@ -245,7 +245,7 @@ export default function ExposuresPage() {
                         placeholder="Search exposures..."
                         value={searchQuery}
                         onChange={(e) => handleSearch(e.target.value)}
-                        className="pl-9"
+                        className="ps-9"
                       />
                     </div>
 
@@ -284,7 +284,7 @@ export default function ExposuresPage() {
                         >
                           Needs Attention
                           {stats.by_state?.active > 0 && (
-                            <Badge variant="secondary" className="ml-1.5">
+                            <Badge variant="secondary" className="ms-1.5">
                               {stats.by_state.active}
                             </Badge>
                           )}
@@ -310,7 +310,7 @@ export default function ExposuresPage() {
                       {/* Clear Filters */}
                       {hasActiveFilters && (
                         <Button variant="ghost" size="sm" onClick={clearFilters}>
-                          <X className="mr-1 h-4 w-4" />
+                          <X className="me-1 h-4 w-4" />
                           Clear
                         </Button>
                       )}
@@ -464,7 +464,7 @@ function EventTypeDistribution({ byEventType }: EventTypeDistributionProps) {
                 style={{ width: `${percentage}%` }}
               />
             </div>
-            <div className="w-20 text-sm text-right text-muted-foreground">
+            <div className="w-20 text-sm text-end text-muted-foreground">
               {count} ({percentage}%)
             </div>
           </div>
@@ -633,12 +633,12 @@ function ExposureDetailsView({
           <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={onToggleSecrets}>
             {secretsRevealed ? (
               <>
-                <EyeOff className="mr-1 h-3 w-3" />
+                <EyeOff className="me-1 h-3 w-3" />
                 Hide Secrets
               </>
             ) : (
               <>
-                <Eye className="mr-1 h-3 w-3" />
+                <Eye className="me-1 h-3 w-3" />
                 Reveal Secrets
               </>
             )}
@@ -877,15 +877,15 @@ function ExposureDetailSheet({ exposure, open, onOpenChange, onAction }: Exposur
                   variant="outline"
                   className={cn(stateConfig[exposure.state].color, 'border-current')}
                 >
-                  <StateIcon className="mr-1 h-3 w-3" />
+                  <StateIcon className="me-1 h-3 w-3" />
                   {stateConfig[exposure.state].label}
                 </Badge>
               </div>
               <SheetHeader className="p-0 space-y-1">
-                <SheetTitle className="text-left text-lg leading-tight">
+                <SheetTitle className="text-start text-lg leading-tight">
                   {exposure.title}
                 </SheetTitle>
-                <SheetDescription className="text-left">
+                <SheetDescription className="text-start">
                   {exposure.event_type.replace(/_/g, ' ')} from {exposure.source}
                 </SheetDescription>
               </SheetHeader>
@@ -900,7 +900,7 @@ function ExposureDetailSheet({ exposure, open, onOpenChange, onAction }: Exposur
                 onClick={() => onAction('resolve')}
                 className="bg-green-600 hover:bg-green-700"
               >
-                <ShieldCheck className="mr-1.5 h-4 w-4" />
+                <ShieldCheck className="me-1.5 h-4 w-4" />
                 Resolve
               </Button>
               <Button
@@ -909,7 +909,7 @@ function ExposureDetailSheet({ exposure, open, onOpenChange, onAction }: Exposur
                 onClick={() => onAction('accept')}
                 className="bg-background"
               >
-                <Shield className="mr-1.5 h-4 w-4" />
+                <Shield className="me-1.5 h-4 w-4" />
                 Accept Risk
               </Button>
               <Button
@@ -918,7 +918,7 @@ function ExposureDetailSheet({ exposure, open, onOpenChange, onAction }: Exposur
                 onClick={() => onAction('false_positive')}
                 className="bg-background"
               >
-                <ShieldX className="mr-1.5 h-4 w-4" />
+                <ShieldX className="me-1.5 h-4 w-4" />
                 False Positive
               </Button>
             </div>
@@ -931,7 +931,7 @@ function ExposureDetailSheet({ exposure, open, onOpenChange, onAction }: Exposur
                 onClick={() => onAction('reactivate')}
                 className="bg-background"
               >
-                <Activity className="mr-1.5 h-4 w-4" />
+                <Activity className="me-1.5 h-4 w-4" />
                 Reactivate
               </Button>
             </div>
@@ -1059,7 +1059,7 @@ function StateHistorySection({ history, isLoading }: StateHistorySectionProps) {
                     </span>
                   </div>
                   {entry.reason && (
-                    <div className="mt-1.5 pl-3 border-l-2 border-muted-foreground/30">
+                    <div className="mt-1.5 ps-3 border-l-2 border-muted-foreground/30">
                       <p className="text-xs text-foreground/80 italic">
                         &ldquo;{entry.reason}&rdquo;
                       </p>

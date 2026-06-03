@@ -282,7 +282,7 @@ export function ComponentDetailSheet({ component, open, onOpenChange }: Componen
                   )
                 }
               >
-                <ExternalLink className="mr-2 h-4 w-4" />
+                <ExternalLink className="me-2 h-4 w-4" />
                 Homepage
               </Button>
             )}
@@ -298,7 +298,7 @@ export function ComponentDetailSheet({ component, open, onOpenChange }: Componen
                   )
                 }
               >
-                <GitBranch className="mr-2 h-4 w-4" />
+                <GitBranch className="me-2 h-4 w-4" />
                 Repository
               </Button>
             )}
@@ -312,7 +312,7 @@ export function ComponentDetailSheet({ component, open, onOpenChange }: Componen
             <TabsTrigger value="vulnerabilities" className="gap-1">
               CVEs
               {distinctCveCount > 0 && (
-                <Badge variant="destructive" className="h-5 px-1.5 text-xs ml-1">
+                <Badge variant="destructive" className="h-5 px-1.5 text-xs ms-1">
                   {distinctCveCount}
                 </Badge>
               )}
@@ -320,7 +320,7 @@ export function ComponentDetailSheet({ component, open, onOpenChange }: Componen
             <TabsTrigger value="assets" className="gap-1">
               Assets
               {usedByAssetsCount > 0 && (
-                <Badge variant="secondary" className="h-5 px-1.5 text-xs ml-1">
+                <Badge variant="secondary" className="h-5 px-1.5 text-xs ms-1">
                   {usedByAssetsCount}
                 </Badge>
               )}
@@ -623,7 +623,7 @@ export function ComponentDetailSheet({ component, open, onOpenChange }: Componen
                             <span>EPSS: {(v.epss_score * 100).toFixed(1)}%</span>
                           )}
                           {v.fixed_versions.length > 0 && (
-                            <span className="ml-auto inline-flex items-center gap-1 text-green-600">
+                            <span className="ms-auto inline-flex items-center gap-1 text-green-600">
                               <CheckCircle className="h-3 w-3" />
                               Fix: {v.fixed_versions[0]}
                               {v.fixed_versions.length > 1 && ` (+${v.fixed_versions.length - 1})`}
@@ -751,7 +751,7 @@ export function ComponentDetailSheet({ component, open, onOpenChange }: Componen
                               </code>
                             )}
                           </div>
-                          <div className="text-right shrink-0">
+                          <div className="text-end shrink-0">
                             <div className="text-xs text-muted-foreground">Risk</div>
                             <div className="text-lg font-bold">{u.risk_score}</div>
                           </div>

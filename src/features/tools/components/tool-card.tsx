@@ -103,7 +103,7 @@ export function ToolCard({
               <CardDescription className="text-xs">
                 {tool.name}
                 {tool.current_version && (
-                  <span className="ml-1 text-muted-foreground">v{tool.current_version}</span>
+                  <span className="ms-1 text-muted-foreground">v{tool.current_version}</span>
                 )}
               </CardDescription>
             </div>
@@ -121,27 +121,27 @@ export function ToolCard({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
               <DropdownMenuItem onClick={() => onView?.(tool)}>
-                <Eye className="mr-2 h-4 w-4" />
+                <Eye className="me-2 h-4 w-4" />
                 View Details
               </DropdownMenuItem>
               {!readOnly && !tool.is_builtin && onEdit && (
                 <Can permission={Permission.ToolsWrite}>
                   <DropdownMenuItem onClick={() => onEdit(tool)}>
-                    <Settings className="mr-2 h-4 w-4" />
+                    <Settings className="me-2 h-4 w-4" />
                     Edit
                   </DropdownMenuItem>
                 </Can>
               )}
               {tool.has_update && (
                 <DropdownMenuItem onClick={() => onCheckUpdate?.(tool)}>
-                  <ArrowUpCircle className="mr-2 h-4 w-4" />
+                  <ArrowUpCircle className="me-2 h-4 w-4" />
                   Check Update
                 </DropdownMenuItem>
               )}
               {tool.github_url && (
                 <DropdownMenuItem asChild>
                   <a href={tool.github_url} target="_blank" rel="noopener noreferrer">
-                    <Github className="mr-2 h-4 w-4" />
+                    <Github className="me-2 h-4 w-4" />
                     GitHub
                   </a>
                 </DropdownMenuItem>
@@ -149,7 +149,7 @@ export function ToolCard({
               {tool.docs_url && (
                 <DropdownMenuItem asChild>
                   <a href={tool.docs_url} target="_blank" rel="noopener noreferrer">
-                    <ExternalLink className="mr-2 h-4 w-4" />
+                    <ExternalLink className="me-2 h-4 w-4" />
                     Documentation
                   </a>
                 </DropdownMenuItem>
@@ -164,7 +164,7 @@ export function ToolCard({
                           onClick={() => onDeactivate(tool)}
                           className="text-amber-500"
                         >
-                          <PowerOff className="mr-2 h-4 w-4" />
+                          <PowerOff className="me-2 h-4 w-4" />
                           Deactivate
                         </DropdownMenuItem>
                       )
@@ -173,7 +173,7 @@ export function ToolCard({
                           onClick={() => onActivate(tool)}
                           className="text-green-500"
                         >
-                          <Power className="mr-2 h-4 w-4" />
+                          <Power className="me-2 h-4 w-4" />
                           Activate
                         </DropdownMenuItem>
                       )}
@@ -182,7 +182,7 @@ export function ToolCard({
               {!readOnly && !tool.is_builtin && onDelete && (
                 <Can permission={Permission.ToolsDelete}>
                   <DropdownMenuItem onClick={() => onDelete(tool)} className="text-red-500">
-                    <Trash2 className="mr-2 h-4 w-4" />
+                    <Trash2 className="me-2 h-4 w-4" />
                     Delete
                   </DropdownMenuItem>
                 </Can>
@@ -217,7 +217,7 @@ export function ToolCard({
                 variant="outline"
                 className="border-amber-500/30 bg-amber-500/10 text-amber-500 text-xs"
               >
-                <ArrowUpCircle className="mr-1 h-3 w-3" />
+                <ArrowUpCircle className="me-1 h-3 w-3" />
                 Update
               </Badge>
             )}

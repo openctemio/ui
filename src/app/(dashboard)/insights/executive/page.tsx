@@ -379,7 +379,7 @@ export default function ExecutiveSummaryPage() {
                     <TableHead>Severity</TableHead>
                     <TableHead>Priority</TableHead>
                     <TableHead>Asset</TableHead>
-                    <TableHead className="text-right">EPSS</TableHead>
+                    <TableHead className="text-end">EPSS</TableHead>
                     <TableHead>KEV</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -409,7 +409,7 @@ export default function ExecutiveSummaryPage() {
                       <TableCell className="text-sm text-muted-foreground">
                         {risk.asset_name}
                       </TableCell>
-                      <TableCell className="text-right font-mono text-sm">
+                      <TableCell className="text-end font-mono text-sm">
                         {formatEpss(risk.epss_score)}
                       </TableCell>
                       <TableCell>

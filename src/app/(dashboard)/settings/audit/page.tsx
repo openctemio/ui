@@ -209,7 +209,7 @@ export default function AuditLogPage() {
       <Main>
         <PageHeader title="Audit Log" description="View activity history and security events">
           <Button variant="outline" onClick={() => mutate()}>
-            <RefreshCw className="mr-2 h-4 w-4" />
+            <RefreshCw className="me-2 h-4 w-4" />
             Refresh
           </Button>
         </PageHeader>
@@ -293,7 +293,7 @@ export default function AuditLogPage() {
                   placeholder="Search by actor, action, resource..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9"
+                  className="ps-9"
                 />
               </div>
 
@@ -643,7 +643,7 @@ export default function AuditLogPage() {
           {selectedLog && (
             <div className="flex flex-col h-full">
               {/* Header - Clean Design */}
-              <div className="pl-6 pr-16 py-6 border-b bg-muted/10">
+              <div className="ps-6 pe-16 py-6 border-b bg-muted/10">
                 <div className="flex items-start justify-between gap-4">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2 mb-2">

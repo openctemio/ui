@@ -351,7 +351,7 @@ export function ScannerTemplatesSection() {
           {error instanceof Error ? error.message : 'An unexpected error occurred'}
         </p>
         <Button variant="outline" size="sm" className="mt-2" onClick={handleRefresh}>
-          <RefreshCw className="mr-2 h-4 w-4" />
+          <RefreshCw className="me-2 h-4 w-4" />
           Retry
         </Button>
       </div>
@@ -375,7 +375,7 @@ export function ScannerTemplatesSection() {
                   </CardDescription>
                 </div>
                 {!isLoading && templates.length > 0 && (
-                  <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs">
+                  <Badge variant="secondary" className="ms-2 h-5 px-1.5 text-xs">
                     {templates.length}
                   </Badge>
                 )}
@@ -390,7 +390,7 @@ export function ScannerTemplatesSection() {
                 </Button>
                 <Can permission={Permission.ScannerTemplatesWrite}>
                   <Button onClick={() => setAddDialogOpen(true)}>
-                    <Plus className="mr-2 h-4 w-4" />
+                    <Plus className="me-2 h-4 w-4" />
                     Upload Template
                   </Button>
                 </Can>
@@ -451,7 +451,7 @@ export function ScannerTemplatesSection() {
                   placeholder="Search templates..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9"
+                  className="ps-9"
                 />
               </div>
               <div className="flex items-center gap-2">
@@ -460,7 +460,7 @@ export function ScannerTemplatesSection() {
                   onValueChange={(v) => setTypeFilter(v as TemplateType | 'all')}
                 >
                   <SelectTrigger className="w-[150px]">
-                    <Filter className="mr-2 h-4 w-4" />
+                    <Filter className="me-2 h-4 w-4" />
                     <SelectValue placeholder="All Types" />
                   </SelectTrigger>
                   <SelectContent>
@@ -576,13 +576,13 @@ export function ScannerTemplatesSection() {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem onClick={() => handleDownload(template)}>
-                              <Download className="mr-2 h-4 w-4" />
+                              <Download className="me-2 h-4 w-4" />
                               Download
                             </DropdownMenuItem>
                             <Can permission={Permission.ScannerTemplatesWrite}>
                               {template.status === 'active' && (
                                 <DropdownMenuItem onClick={() => handleDeprecateClick(template)}>
-                                  <Archive className="mr-2 h-4 w-4" />
+                                  <Archive className="me-2 h-4 w-4" />
                                   Deprecate
                                 </DropdownMenuItem>
                               )}
@@ -593,7 +593,7 @@ export function ScannerTemplatesSection() {
                                 className="text-red-500"
                                 onClick={() => handleDeleteClick(template)}
                               >
-                                <Trash2 className="mr-2 h-4 w-4" />
+                                <Trash2 className="me-2 h-4 w-4" />
                                 Delete
                               </DropdownMenuItem>
                             </Can>
@@ -616,7 +616,7 @@ export function ScannerTemplatesSection() {
                 {!searchQuery && typeFilter === 'all' && statusFilter === 'all' && (
                   <Can permission={Permission.ScannerTemplatesWrite}>
                     <Button onClick={() => setAddDialogOpen(true)}>
-                      <Plus className="mr-2 h-4 w-4" />
+                      <Plus className="me-2 h-4 w-4" />
                       Upload Your First Template
                     </Button>
                   </Can>
@@ -647,7 +647,7 @@ export function ScannerTemplatesSection() {
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
             <Button variant="destructive" onClick={handleDeleteConfirm} disabled={isDeleting}>
-              {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isDeleting && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
               Delete
             </Button>
           </AlertDialogFooter>
@@ -667,7 +667,7 @@ export function ScannerTemplatesSection() {
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isDeprecating}>Cancel</AlertDialogCancel>
             <Button variant="secondary" onClick={handleDeprecateConfirm} disabled={isDeprecating}>
-              {isDeprecating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isDeprecating && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
               Deprecate
             </Button>
           </AlertDialogFooter>

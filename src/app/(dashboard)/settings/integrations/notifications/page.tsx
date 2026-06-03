@@ -236,7 +236,7 @@ export default function NotificationIntegrationsPage() {
               {error?.message || 'An unexpected error occurred'}
             </p>
             <Button onClick={() => mutate()}>
-              <RefreshCw className="mr-2 h-4 w-4" />
+              <RefreshCw className="me-2 h-4 w-4" />
               Retry
             </Button>
           </div>
@@ -253,7 +253,7 @@ export default function NotificationIntegrationsPage() {
           <Button
             variant="ghost"
             size="sm"
-            className="gap-2 -ml-2 text-muted-foreground hover:text-foreground"
+            className="gap-2 -ms-2 text-muted-foreground hover:text-foreground"
             onClick={() => router.push('/settings/integrations')}
           >
             <ArrowLeft className="h-4 w-4" />
@@ -270,14 +270,14 @@ export default function NotificationIntegrationsPage() {
               variant="outline"
               onClick={() => router.push('/settings/integrations/notifications/history')}
             >
-              <History className="mr-2 h-4 w-4" />
+              <History className="me-2 h-4 w-4" />
               View Events
             </Button>
             <Button
               variant="outline"
               onClick={() => router.push('/settings/integrations/notifications/outbox')}
             >
-              <Inbox className="mr-2 h-4 w-4" />
+              <Inbox className="me-2 h-4 w-4" />
               Queue
             </Button>
             <Button
@@ -286,15 +286,15 @@ export default function NotificationIntegrationsPage() {
               disabled={actionInProgress === 'refresh'}
             >
               {actionInProgress === 'refresh' ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="me-2 h-4 w-4 animate-spin" />
               ) : (
-                <RefreshCw className="mr-2 h-4 w-4" />
+                <RefreshCw className="me-2 h-4 w-4" />
               )}
               Refresh
             </Button>
             <Can permission={Permission.NotificationsWrite}>
               <Button onClick={() => setAddDialogOpen(true)}>
-                <Plus className="mr-2 h-4 w-4" />
+                <Plus className="me-2 h-4 w-4" />
                 Add Channel
               </Button>
             </Can>
@@ -373,7 +373,7 @@ export default function NotificationIntegrationsPage() {
                 </p>
                 <Can permission={Permission.NotificationsWrite}>
                   <Button onClick={() => setAddDialogOpen(true)}>
-                    <Plus className="mr-2 h-4 w-4" />
+                    <Plus className="me-2 h-4 w-4" />
                     Add Your First Channel
                   </Button>
                 </Can>
@@ -630,7 +630,7 @@ export default function NotificationIntegrationsPage() {
                                         <span className="text-xs font-medium">
                                           {EVENT_CATEGORY_LABELS[cat]}:
                                         </span>
-                                        <span className="text-xs text-muted-foreground ml-1">
+                                        <span className="text-xs text-muted-foreground ms-1">
                                           {items.join(', ')}
                                         </span>
                                       </div>
@@ -667,12 +667,12 @@ export default function NotificationIntegrationsPage() {
                                 <DropdownMenuItem
                                   onClick={() => handleTestNotification(integration)}
                                 >
-                                  <Send className="mr-2 h-4 w-4" />
+                                  <Send className="me-2 h-4 w-4" />
                                   Send Test
                                 </DropdownMenuItem>
                                 <Can permission={Permission.NotificationsWrite}>
                                   <DropdownMenuItem onClick={() => handleEditClick(integration)}>
-                                    <Pencil className="mr-2 h-4 w-4" />
+                                    <Pencil className="me-2 h-4 w-4" />
                                     Edit
                                   </DropdownMenuItem>
                                 </Can>
@@ -683,7 +683,7 @@ export default function NotificationIntegrationsPage() {
                                     )
                                   }
                                 >
-                                  <History className="mr-2 h-4 w-4" />
+                                  <History className="me-2 h-4 w-4" />
                                   View Events
                                 </DropdownMenuItem>
                                 <Can permission={Permission.NotificationsDelete}>
@@ -692,7 +692,7 @@ export default function NotificationIntegrationsPage() {
                                     className="text-red-500"
                                     onClick={() => handleDeleteClick(integration)}
                                   >
-                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    <Trash2 className="me-2 h-4 w-4" />
                                     Delete
                                   </DropdownMenuItem>
                                 </Can>

@@ -445,12 +445,12 @@ function MaturityHeroCard({
             ) : (
               <p className={cn('text-3xl font-bold tabular-nums', tone)}>
                 {score}
-                <span className="text-muted-foreground ml-1 text-base font-normal">/ 100</span>
+                <span className="text-muted-foreground ms-1 text-base font-normal">/ 100</span>
               </p>
             )}
           </div>
         </div>
-        <div className="text-muted-foreground text-xs md:max-w-sm md:text-right">
+        <div className="text-muted-foreground text-xs md:max-w-sm md:text-end">
           Aggregated across {denom} reporting invariants. Green = 1 point, amber = 0.5, red = 0.
           Invariants with no signal yet are excluded from the average.
         </div>

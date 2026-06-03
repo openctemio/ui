@@ -165,7 +165,7 @@ export function BulkAddAssetsDialog({
               placeholder="Search assets..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-9"
+              className="ps-9"
             />
           </div>
 
@@ -210,7 +210,7 @@ export function BulkAddAssetsDialog({
                       key={asset.id}
                       onClick={() => toggleAsset(asset.id)}
                       className={cn(
-                        'w-full flex items-center gap-3 p-2 rounded-md transition-colors text-left',
+                        'w-full flex items-center gap-3 p-2 rounded-md transition-colors text-start',
                         isSelected
                           ? 'bg-primary/10 border border-primary/30'
                           : 'hover:bg-muted/50 border border-transparent'
@@ -300,9 +300,9 @@ export function BulkAddAssetsDialog({
           </Button>
           <Button onClick={handleBulkAssign} disabled={isAssigning || selectedAssetIds.size === 0}>
             {isAssigning ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <Loader2 className="me-2 h-4 w-4 animate-spin" />
             ) : (
-              <Layers className="mr-2 h-4 w-4" />
+              <Layers className="me-2 h-4 w-4" />
             )}
             Assign {selectedAssetIds.size > 0 ? `${selectedAssetIds.size} ` : ''}Asset
             {selectedAssetIds.size !== 1 ? 's' : ''}

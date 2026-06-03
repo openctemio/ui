@@ -275,7 +275,7 @@ export function AssetFormDialogShared({
               {field.type !== 'boolean' && (
                 <Label htmlFor={field.name} className="text-sm font-medium">
                   {field.label}
-                  {field.required && <span className="text-red-500 ml-1">*</span>}
+                  {field.required && <span className="text-red-500 ms-1">*</span>}
                 </Label>
               )}
               <div className="mt-1.5">{renderField(field)}</div>

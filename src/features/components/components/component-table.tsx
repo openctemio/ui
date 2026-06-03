@@ -99,10 +99,10 @@ export function ComponentTable({ data, onViewDetails }: ComponentTableProps) {
           <Button
             variant="ghost"
             onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-            className="-ml-4"
+            className="-ms-4"
           >
             Component
-            <ArrowUpDown className="ml-2 h-4 w-4" />
+            <ArrowUpDown className="ms-2 h-4 w-4" />
           </Button>
         ),
         cell: ({ row }) => {
@@ -182,10 +182,10 @@ export function ComponentTable({ data, onViewDetails }: ComponentTableProps) {
           <Button
             variant="ghost"
             onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-            className="-ml-4"
+            className="-ms-4"
           >
             Vulnerabilities
-            <ArrowUpDown className="ml-2 h-4 w-4" />
+            <ArrowUpDown className="ms-2 h-4 w-4" />
           </Button>
         ),
         cell: ({ row }) => <VulnerabilityCountBadge counts={row.original.vulnerabilityCount} />,
@@ -244,10 +244,10 @@ export function ComponentTable({ data, onViewDetails }: ComponentTableProps) {
           <Button
             variant="ghost"
             onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-            className="-ml-4"
+            className="-ms-4"
           >
             Risk
-            <ArrowUpDown className="ml-2 h-4 w-4" />
+            <ArrowUpDown className="ms-2 h-4 w-4" />
           </Button>
         ),
         cell: ({ row }) => <RiskScoreBadge score={row.original.riskScore} size="sm" />,
@@ -265,12 +265,12 @@ export function ComponentTable({ data, onViewDetails }: ComponentTableProps) {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => handleViewDetails(component)}>
-                  <Eye className="mr-2 h-4 w-4" />
+                  <Eye className="me-2 h-4 w-4" />
                   View Details
                 </DropdownMenuItem>
                 {component.vulnerabilities.length > 0 && (
                   <DropdownMenuItem onClick={() => handleViewDetails(component)}>
-                    <ShieldAlert className="mr-2 h-4 w-4" />
+                    <ShieldAlert className="me-2 h-4 w-4" />
                     View Vulnerabilities
                   </DropdownMenuItem>
                 )}
@@ -286,7 +286,7 @@ export function ComponentTable({ data, onViewDetails }: ComponentTableProps) {
                         )
                       }
                     >
-                      <ExternalLink className="mr-2 h-4 w-4" />
+                      <ExternalLink className="me-2 h-4 w-4" />
                       Open Homepage
                     </DropdownMenuItem>
                   </>
@@ -301,7 +301,7 @@ export function ComponentTable({ data, onViewDetails }: ComponentTableProps) {
                       )
                     }
                   >
-                    <ExternalLink className="mr-2 h-4 w-4" />
+                    <ExternalLink className="me-2 h-4 w-4" />
                     Open Repository
                   </DropdownMenuItem>
                 )}

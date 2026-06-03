@@ -612,7 +612,7 @@ export default function FindingDetailPage() {
                           <span className="hidden sm:inline">Attack Path</span>
                           <span className="sm:hidden">Path</span>
                           {finding.dataFlow && (
-                            <span className="ml-1 sm:ml-1.5 rounded-full bg-blue-500/20 px-1 sm:px-1.5 py-0.5 text-[10px] text-blue-400">
+                            <span className="ms-1 sm:ms-1.5 rounded-full bg-blue-500/20 px-1 sm:px-1.5 py-0.5 text-[10px] text-blue-400">
                               {(finding.dataFlow.sources?.length || 0) +
                                 (finding.dataFlow.intermediates?.length || 0) +
                                 (finding.dataFlow.sinks?.length || 0)}

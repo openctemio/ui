@@ -251,7 +251,7 @@ export default function ScanDetailPage() {
           </p>
           <Button asChild>
             <Link href="/scans">
-              <ArrowLeft className="mr-2 h-4 w-4" />
+              <ArrowLeft className="me-2 h-4 w-4" />
               Back to Scans
             </Link>
           </Button>
@@ -266,7 +266,7 @@ export default function ScanDetailPage() {
       <div className="mb-6">
         <Button variant="ghost" size="sm" asChild className="mb-4">
           <Link href="/scans">
-            <ArrowLeft className="mr-2 h-4 w-4" />
+            <ArrowLeft className="me-2 h-4 w-4" />
             Back to Scans
           </Link>
         </Button>
@@ -319,9 +319,9 @@ export default function ScanDetailPage() {
               <>
                 <Button onClick={handleTriggerScan} disabled={isTriggering || isPausing}>
                   {isTriggering ? (
-                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                    <RefreshCw className="me-2 h-4 w-4 animate-spin" />
                   ) : (
-                    <Play className="mr-2 h-4 w-4" />
+                    <Play className="me-2 h-4 w-4" />
                   )}
                   Trigger
                 </Button>
@@ -331,9 +331,9 @@ export default function ScanDetailPage() {
                   disabled={isPausing || isTriggering}
                 >
                   {isPausing ? (
-                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                    <RefreshCw className="me-2 h-4 w-4 animate-spin" />
                   ) : (
-                    <Pause className="mr-2 h-4 w-4" />
+                    <Pause className="me-2 h-4 w-4" />
                   )}
                   Pause
                 </Button>
@@ -343,9 +343,9 @@ export default function ScanDetailPage() {
               <>
                 <Button onClick={handleActivateConfig} disabled={isActivating || isTriggering}>
                   {isActivating ? (
-                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                    <RefreshCw className="me-2 h-4 w-4 animate-spin" />
                   ) : (
-                    <Play className="mr-2 h-4 w-4" />
+                    <Play className="me-2 h-4 w-4" />
                   )}
                   Resume
                 </Button>
@@ -355,9 +355,9 @@ export default function ScanDetailPage() {
                   disabled={isTriggering || isActivating}
                 >
                   {isTriggering ? (
-                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                    <RefreshCw className="me-2 h-4 w-4 animate-spin" />
                   ) : (
-                    <RefreshCw className="mr-2 h-4 w-4" />
+                    <RefreshCw className="me-2 h-4 w-4" />
                   )}
                   Trigger Once
                 </Button>
@@ -366,9 +366,9 @@ export default function ScanDetailPage() {
             {config.status === 'disabled' && (
               <Button onClick={handleActivateConfig} disabled={isActivating}>
                 {isActivating ? (
-                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  <RefreshCw className="me-2 h-4 w-4 animate-spin" />
                 ) : (
-                  <Play className="mr-2 h-4 w-4" />
+                  <Play className="me-2 h-4 w-4" />
                 )}
                 Enable
               </Button>
@@ -484,7 +484,7 @@ export default function ScanDetailPage() {
                       <TableHead>Quality Gate</TableHead>
                       <TableHead>Duration</TableHead>
                       <TableHead>Started</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
+                      <TableHead className="text-end">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -504,7 +504,7 @@ export default function ScanDetailPage() {
                                   className="text-xs"
                                   title={`Retry attempt ${run.retry_attempt}`}
                                 >
-                                  <RefreshCw className="h-3 w-3 mr-0.5" />
+                                  <RefreshCw className="h-3 w-3 me-0.5" />
                                   {run.retry_attempt}
                                 </Badge>
                               )}
@@ -535,7 +535,7 @@ export default function ScanDetailPage() {
                             {run.quality_gate_result ? (
                               run.quality_gate_result.passed ? (
                                 <Badge className="bg-green-600 hover:bg-green-700">
-                                  <CheckCircle className="h-3 w-3 mr-1" />
+                                  <CheckCircle className="h-3 w-3 me-1" />
                                   Passed
                                 </Badge>
                               ) : (
@@ -550,7 +550,7 @@ export default function ScanDetailPage() {
                                       .join(', ') || 'Quality gate failed'
                                   }
                                 >
-                                  <AlertTriangle className="h-3 w-3 mr-1" />
+                                  <AlertTriangle className="h-3 w-3 me-1" />
                                   Failed
                                   {run.quality_gate_result.breaches &&
                                     run.quality_gate_result.breaches.length > 0 &&
@@ -563,7 +563,7 @@ export default function ScanDetailPage() {
                           </TableCell>
                           <TableCell>{formatDuration(run.duration_ms)}</TableCell>
                           <TableCell>{formatDate(run.started_at)}</TableCell>
-                          <TableCell className="text-right">
+                          <TableCell className="text-end">
                             {isActive && (
                               <Can permission={Permission.ScansWrite}>
                                 <Button
@@ -574,9 +574,9 @@ export default function ScanDetailPage() {
                                   aria-label={`Cancel run ${run.id}`}
                                 >
                                   {stoppingRunId === run.id ? (
-                                    <RefreshCw className="mr-1 h-4 w-4 animate-spin" />
+                                    <RefreshCw className="me-1 h-4 w-4 animate-spin" />
                                   ) : (
-                                    <XCircle className="mr-1 h-4 w-4" />
+                                    <XCircle className="me-1 h-4 w-4" />
                                   )}
                                   Cancel
                                 </Button>
@@ -833,7 +833,7 @@ export default function ScanDetailPage() {
                     onClick={() => setDeleteConfirmOpen(true)}
                     disabled={isDeleting}
                   >
-                    <Trash2 className="mr-2 h-4 w-4" />
+                    <Trash2 className="me-2 h-4 w-4" />
                     Delete Configuration
                   </Button>
                 </CardContent>

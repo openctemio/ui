@@ -173,7 +173,7 @@ function AssetRow({ asset, rank, maxPathScore }: AssetRowProps) {
         <div className="mb-2 text-xs text-muted-foreground">
           {capitalize(asset.assetType)}
           {asset.findingCount > 0 && (
-            <span className="ml-3 text-orange-500">
+            <span className="ms-3 text-orange-500">
               {asset.findingCount} open finding{asset.findingCount !== 1 ? 's' : ''}
             </span>
           )}
@@ -182,7 +182,7 @@ function AssetRow({ asset, rank, maxPathScore }: AssetRowProps) {
         {/* Path score bar */}
         <div className="flex items-center gap-3">
           <Progress value={progressPct} className="h-1.5 flex-1" />
-          <span className="w-20 shrink-0 text-right text-xs text-muted-foreground">
+          <span className="w-20 shrink-0 text-end text-xs text-muted-foreground">
             score {asset.pathScore.toFixed(0)}
           </span>
         </div>

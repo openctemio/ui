@@ -137,7 +137,7 @@ export function ProfileDropdown() {
           <DropdownMenuSeparator />
 
           <DropdownMenuItem variant="destructive" onClick={() => setOpen(true)}>
-            <LogOut className="mr-2 h-4 w-4" />
+            <LogOut className="me-2 h-4 w-4" />
             Sign out
             <DropdownMenuShortcut className="text-current">⇧⌘Q</DropdownMenuShortcut>
           </DropdownMenuItem>

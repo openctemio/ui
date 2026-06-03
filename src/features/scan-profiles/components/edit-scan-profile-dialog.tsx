@@ -318,7 +318,7 @@ export function EditScanProfileDialog({
                 Cancel
               </Button>
               <Button type="submit" disabled={isMutating || isSystemProfile}>
-                {isMutating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {isMutating && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
                 Save Changes
               </Button>
             </DialogFooter>

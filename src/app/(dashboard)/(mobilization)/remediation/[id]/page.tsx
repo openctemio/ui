@@ -75,29 +75,29 @@ const PRIORITY_CONFIG: Record<string, { label: string; className: string }> = {
 /** Which status transitions are allowed from a given status */
 const STATUS_ACTIONS: Record<string, { label: string; status: string; icon: React.ReactNode }[]> = {
   draft: [
-    { label: 'Activate', status: 'active', icon: <Play className="mr-2 h-4 w-4" /> },
-    { label: 'Cancel', status: 'canceled', icon: <XCircle className="mr-2 h-4 w-4" /> },
+    { label: 'Activate', status: 'active', icon: <Play className="me-2 h-4 w-4" /> },
+    { label: 'Cancel', status: 'canceled', icon: <XCircle className="me-2 h-4 w-4" /> },
   ],
   active: [
-    { label: 'Pause', status: 'paused', icon: <CirclePause className="mr-2 h-4 w-4" /> },
+    { label: 'Pause', status: 'paused', icon: <CirclePause className="me-2 h-4 w-4" /> },
     {
       label: 'Start Validation',
       status: 'validating',
-      icon: <CheckCircle className="mr-2 h-4 w-4" />,
+      icon: <CheckCircle className="me-2 h-4 w-4" />,
     },
-    { label: 'Cancel', status: 'canceled', icon: <XCircle className="mr-2 h-4 w-4" /> },
+    { label: 'Cancel', status: 'canceled', icon: <XCircle className="me-2 h-4 w-4" /> },
   ],
   paused: [
-    { label: 'Resume', status: 'active', icon: <Play className="mr-2 h-4 w-4" /> },
-    { label: 'Cancel', status: 'canceled', icon: <XCircle className="mr-2 h-4 w-4" /> },
+    { label: 'Resume', status: 'active', icon: <Play className="me-2 h-4 w-4" /> },
+    { label: 'Cancel', status: 'canceled', icon: <XCircle className="me-2 h-4 w-4" /> },
   ],
   validating: [
-    { label: 'Complete', status: 'completed', icon: <CheckCircle className="mr-2 h-4 w-4" /> },
-    { label: 'Back to Active', status: 'active', icon: <Play className="mr-2 h-4 w-4" /> },
+    { label: 'Complete', status: 'completed', icon: <CheckCircle className="me-2 h-4 w-4" /> },
+    { label: 'Back to Active', status: 'active', icon: <Play className="me-2 h-4 w-4" /> },
   ],
   completed: [],
   canceled: [
-    { label: 'Reopen as Draft', status: 'draft', icon: <Play className="mr-2 h-4 w-4" /> },
+    { label: 'Reopen as Draft', status: 'draft', icon: <Play className="me-2 h-4 w-4" /> },
   ],
 }
 
@@ -275,17 +275,17 @@ export default function CampaignDetailPage() {
             {isEditing ? (
               <>
                 <Button variant="outline" size="sm" onClick={cancelEditing} disabled={isUpdating}>
-                  <X className="mr-2 h-4 w-4" />
+                  <X className="me-2 h-4 w-4" />
                   Cancel
                 </Button>
                 <Button size="sm" onClick={saveEdits} disabled={isUpdating}>
-                  <Save className="mr-2 h-4 w-4" />
+                  <Save className="me-2 h-4 w-4" />
                   {isUpdating ? 'Saving...' : 'Save'}
                 </Button>
               </>
             ) : (
               <Button variant="outline" size="sm" onClick={startEditing}>
-                <Pencil className="mr-2 h-4 w-4" />
+                <Pencil className="me-2 h-4 w-4" />
                 Edit
               </Button>
             )}

@@ -199,7 +199,7 @@ export default function InvitationPage() {
             </Alert>
             <div className="flex flex-col gap-2">
               <Button variant="outline" className="w-full" onClick={() => router.push('/login')}>
-                <LogIn className="mr-2 h-4 w-4" />
+                <LogIn className="me-2 h-4 w-4" />
                 Go to Login
               </Button>
               <Button variant="ghost" className="w-full" onClick={() => router.push('/')}>
@@ -252,7 +252,7 @@ export default function InvitationPage() {
 
             <div className="flex flex-col gap-2">
               <Button className="w-full" onClick={() => router.push('/login')}>
-                <LogIn className="mr-2 h-4 w-4" />
+                <LogIn className="me-2 h-4 w-4" />
                 Go to Login
               </Button>
               <Button variant="ghost" className="w-full" onClick={() => router.push('/')}>
@@ -293,7 +293,7 @@ export default function InvitationPage() {
                   </Badge>
                   {daysUntilExpiry <= 3 && daysUntilExpiry > 0 && (
                     <Badge variant="outline" className="text-yellow-600 border-yellow-600/50">
-                      <Clock className="h-3 w-3 mr-1" />
+                      <Clock className="h-3 w-3 me-1" />
                       Expires in {daysUntilExpiry} day{daysUntilExpiry > 1 ? 's' : ''}
                     </Badge>
                   )}
@@ -329,9 +329,9 @@ export default function InvitationPage() {
           <div className="flex flex-col gap-2">
             <Button className="w-full" size="lg" onClick={handleAccept} disabled={isPending}>
               {isPending ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="me-2 h-4 w-4 animate-spin" />
               ) : (
-                <Check className="mr-2 h-4 w-4" />
+                <Check className="me-2 h-4 w-4" />
               )}
               Accept Invitation
             </Button>
@@ -342,7 +342,7 @@ export default function InvitationPage() {
               onClick={handleDecline}
               disabled={isPending}
             >
-              <X className="mr-2 h-4 w-4" />
+              <X className="me-2 h-4 w-4" />
               Decline
             </Button>
           </div>

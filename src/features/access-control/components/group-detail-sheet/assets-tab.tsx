@@ -89,11 +89,11 @@ export function AssetsTab({
         <h4 className="text-sm font-medium">Assigned Assets ({totalCount})</h4>
         <div className="flex items-center gap-2">
           <Button size="sm" variant="outline" onClick={onBulkAddAssets}>
-            <Layers className="mr-2 h-4 w-4" />
+            <Layers className="me-2 h-4 w-4" />
             Bulk Add
           </Button>
           <Button size="sm" onClick={onAddAsset}>
-            <Plus className="mr-2 h-4 w-4" />
+            <Plus className="me-2 h-4 w-4" />
             Assign Asset
           </Button>
         </div>
@@ -103,7 +103,7 @@ export function AssetsTab({
         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
         <Input
           placeholder="Search assets..."
-          className="pl-9"
+          className="ps-9"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
         />
@@ -161,7 +161,7 @@ export function AssetsTab({
                       className="text-red-400"
                       onClick={() => onRemoveAsset(item.asset_id, item.asset?.name || 'Asset')}
                     >
-                      <Trash2 className="mr-2 h-4 w-4" />
+                      <Trash2 className="me-2 h-4 w-4" />
                       Remove
                     </DropdownMenuItem>
                   </DropdownMenuContent>

@@ -83,7 +83,7 @@ function DynamicListInput({
           )}
         >
           {numbered && (
-            <span className="text-sm text-muted-foreground w-6 text-right">{index + 1}.</span>
+            <span className="text-sm text-muted-foreground w-6 text-end">{index + 1}.</span>
           )}
           <Input
             ref={(el) => {

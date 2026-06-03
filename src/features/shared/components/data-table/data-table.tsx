@@ -134,7 +134,7 @@ export function DataTable<TData, TValue>({
                   setGlobalFilter(event.target.value)
                 }
               }}
-              className="pl-9 pr-9"
+              className="ps-9 pe-9"
             />
             {Boolean(searchKey ? table.getColumn(searchKey)?.getFilterValue() : globalFilter) && (
               <Button
@@ -169,7 +169,7 @@ export function DataTable<TData, TValue>({
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" className="h-9">
-                  <SlidersHorizontal className="h-4 w-4 sm:mr-2" />
+                  <SlidersHorizontal className="h-4 w-4 sm:me-2" />
                   <span className="hidden sm:inline">Columns</span>
                 </Button>
               </DropdownMenuTrigger>
@@ -260,7 +260,7 @@ export function DataTable<TData, TValue>({
       {showPagination && (
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           {/* Row count info - centered on mobile */}
-          <div className="text-sm text-muted-foreground text-center sm:text-left">
+          <div className="text-sm text-muted-foreground text-center sm:text-start">
             Showing{' '}
             <span className="font-medium">
               {table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1}

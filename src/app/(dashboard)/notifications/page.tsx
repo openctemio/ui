@@ -224,13 +224,13 @@ export default function NotificationsPage() {
         <div className="flex items-center gap-2">
           {unreadCount > 0 && (
             <Button variant="outline" size="sm" onClick={handleMarkAllAsRead}>
-              <CheckCheck className="h-4 w-4 mr-1.5" />
+              <CheckCheck className="h-4 w-4 me-1.5" />
               Mark all as read
             </Button>
           )}
           <Button variant="outline" size="sm" asChild>
             <Link href="/settings/notifications">
-              <Settings className="h-4 w-4 mr-1.5" />
+              <Settings className="h-4 w-4 me-1.5" />
               Settings
             </Link>
           </Button>
@@ -360,7 +360,7 @@ export default function NotificationsPage() {
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page <= 1}
             >
-              <ChevronLeft className="h-4 w-4 mr-1" />
+              <ChevronLeft className="h-4 w-4 me-1" />
               Previous
             </Button>
             <Button
@@ -370,7 +370,7 @@ export default function NotificationsPage() {
               disabled={page >= totalPages}
             >
               Next
-              <ChevronRight className="h-4 w-4 ml-1" />
+              <ChevronRight className="h-4 w-4 ms-1" />
             </Button>
           </div>
         </div>
