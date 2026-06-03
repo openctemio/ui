@@ -4,6 +4,7 @@ import { useState, useMemo, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useUrlParams } from '@/hooks/use-url-param'
+import { useDebounce } from '@/hooks/use-debounce'
 import { ColumnDef } from '@tanstack/react-table'
 import { Main } from '@/components/layout'
 import { PageHeader, SeverityBadge, DataTable, DataTableColumnHeader } from '@/features/shared'
@@ -292,6 +293,8 @@ function FindingsContent() {
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [sourceFilter, setSourceFilter] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState('')
+  // Debounce so typing doesn't fire a backend list request per keystroke.
+  const debouncedSearch = useDebounce(searchQuery, 300)
   const [mainTab, setMainTab] = useState<'findings' | 'groups' | 'pending'>('findings')
   const [markFixedGroup, setMarkFixedGroup] = useState<FindingGroup | null>(null)
   const { hasPermission } = usePermissions()
@@ -324,8 +327,8 @@ function FindingsContent() {
         sourceFilter as FindingApiFilters['sources'] extends (infer U)[] ? U : never,
       ]
     }
-    if (searchQuery.trim()) {
-      filters.search = searchQuery.trim()
+    if (debouncedSearch.trim()) {
+      filters.search = debouncedSearch.trim()
     }
     return filters
   }, [
@@ -335,7 +338,7 @@ function FindingsContent() {
     severityTab,
     statusFilter,
     sourceFilter,
-    searchQuery,
+    debouncedSearch,
     HIDDEN_STATUSES,
   ])
 
