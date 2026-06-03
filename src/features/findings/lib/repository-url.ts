@@ -122,6 +122,9 @@ export function buildRepositoryCodeUrl(params: RepositoryLinkParams): string | n
   try {
     // Normalize clone URLs (SSH / trailing .git) to an https web URL first.
     const baseUrl = normalizeRepoWebUrl(repositoryUrl)
+    // Reject non-http(s) schemes (e.g. javascript:, data:). The result is
+    // rendered as an <a href>, so an unvalidated scheme would be an XSS sink.
+    if (!isValidRepositoryUrl(baseUrl)) return null
     const platform = detectPlatform(baseUrl)
     const ref = commitSha || branch || 'main'
 
