@@ -31,7 +31,7 @@ import { MetadataViewer } from './source-panels/metadata-viewer'
 import { Copy, Check } from 'lucide-react'
 import { useState, useCallback, useMemo } from 'react'
 import { copyToClipboard } from '@/lib/clipboard'
-import { cn } from '@/lib/utils'
+import { cn, sanitizeExternalUrl } from '@/lib/utils'
 
 interface OverviewTabProps {
   finding: FindingDetail
@@ -612,7 +612,7 @@ export function OverviewTab({ finding, activities = [] }: OverviewTabProps) {
                   <p className="font-medium">{asset.name}</p>
                   {asset.url && (
                     <a
-                      href={asset.url}
+                      href={sanitizeExternalUrl(asset.url)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-muted-foreground flex items-center gap-1 text-xs hover:underline"
