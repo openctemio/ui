@@ -505,27 +505,12 @@ export default function CredentialsPage() {
     setAddDialogOpen(false)
   }
 
-  const handleUpdateCredential = () => {
-    if (!selectedCredential || !formData.name || !formData.source) {
-      toast.error('Please fill in required fields')
-      return
-    }
-
-    // Phase 2: Wire to credentials API when backend endpoints are implemented.
-    toast.info('Update functionality coming soon')
-    setFormData(emptyCredentialForm)
-    setEditDialogOpen(false)
-    setSelectedCredential(null)
-  }
-
-  const handleDeleteCredential = () => {
-    if (!credentialToDelete) return
-
-    // Phase 2: Wire to credentials API when backend endpoints are implemented.
-    toast.info('Delete functionality coming soon')
-    setDeleteDialogOpen(false)
-    setCredentialToDelete(null)
-  }
+  // NOTE: edit + delete of discovered credentials are intentionally deferred —
+  // the Edit "Save Changes" and Delete confirm buttons are disabled ("Coming
+  // soon") until dedicated credentials endpoints exist. The credential
+  // lifecycle today is resolve / accept / mark-false-positive (see the
+  // credentials API), not free-form edit or hard delete. The dead update/delete
+  // handlers were removed to avoid a future dev wiring a button to a no-op.
 
   const handleCopyCredential = (credential: Asset) => {
     copyToClipboard(credential.name)
