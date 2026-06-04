@@ -80,6 +80,7 @@ import type { AssetGroup, CreateAssetGroupInput } from '@/features/asset-groups/
 import type { AssetGroupApiFilters } from '@/features/asset-groups/api'
 import { copyToClipboard } from '@/lib/clipboard'
 import { Can, Permission } from '@/lib/permissions'
+import { useCsvExport, type ExportFieldConfig } from '@/hooks/use-csv-export'
 
 // ============================================
 // CONSTANTS
@@ -115,6 +116,19 @@ const DEFAULT_FILTERS: Filters = {
   riskScoreRange: [0, 100],
   hasFindings: null,
 }
+
+const ASSET_GROUP_EXPORT_FIELDS: ExportFieldConfig<AssetGroup>[] = [
+  { header: 'Name', accessor: (g) => g.name },
+  { header: 'Description', accessor: (g) => g.description ?? '' },
+  { header: 'Environment', accessor: (g) => g.environment },
+  { header: 'Criticality', accessor: (g) => g.criticality },
+  { header: 'Business Unit', accessor: (g) => g.businessUnit ?? '' },
+  { header: 'Owner', accessor: (g) => g.owner ?? '' },
+  { header: 'Assets', accessor: (g) => g.assetCount },
+  { header: 'Findings', accessor: (g) => g.findingCount },
+  { header: 'Risk Score', accessor: (g) => g.riskScore },
+  { header: 'Tags', accessor: (g) => (g.tags ?? []).join('; ') },
+]
 
 // ============================================
 // ADD ASSETS DIALOG (Simplified for list page)
@@ -287,6 +301,27 @@ export default function AssetGroupsPage() {
 
   // Fetch data
   const { data: groups, isLoading, mutate: refreshData } = useAssetGroups({ filters: apiFilters })
+
+  // CSV export of the current (filtered) groups list.
+  const { handleExport: handleExportCsv } = useCsvExport(
+    groups,
+    ASSET_GROUP_EXPORT_FIELDS,
+    'asset-groups'
+  )
+  const handleExportJson = () => {
+    if (!groups.length) {
+      toast.error('No data to export')
+      return
+    }
+    const blob = new Blob([JSON.stringify(groups, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `asset-groups-${new Date().toISOString().slice(0, 10)}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+    toast.success('Exported successfully')
+  }
 
   // Get all assets for create dialog (lazy: only fetch when dialog is open)
   const { assets: allAssets } = useAssets({ pageSize: 100, skip: !isCreateOpen })
@@ -550,22 +585,10 @@ export default function AssetGroupsPage() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem
-                  onClick={() =>
-                    toast.success('Exporting as CSV...', {
-                      description: 'Your file will be downloaded shortly',
-                    })
-                  }
-                >
+                <DropdownMenuItem onClick={handleExportCsv} disabled={groups.length === 0}>
                   Export as CSV
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() =>
-                    toast.success('Exporting as JSON...', {
-                      description: 'Your file will be downloaded shortly',
-                    })
-                  }
-                >
+                <DropdownMenuItem onClick={handleExportJson} disabled={groups.length === 0}>
                   Export as JSON
                 </DropdownMenuItem>
               </DropdownMenuContent>
