@@ -3,7 +3,7 @@
 import { useMemo } from 'react'
 import { Main } from '@/components/layout'
 import { PageHeader, StatsCard, EmptyState } from '@/features/shared'
-import { useDashboardStats } from '@/features/dashboard/hooks/use-dashboard-stats'
+import { useDashboardStats, useMTTRMetrics } from '@/features/dashboard/hooks/use-dashboard-stats'
 import { useTenant } from '@/context/tenant-provider'
 import {
   LineChart,
@@ -97,6 +97,10 @@ function LoadingSkeleton() {
 export default function MTTRPage() {
   const { currentTenant } = useTenant()
   const { stats, isLoading } = useDashboardStats(currentTenant?.id || null)
+  // Real measured MTTR per severity (avg resolved_at - created_at, hours) from
+  // /api/v1/dashboard/mttr. Keyed by severity; a severity is absent when it has
+  // no resolved findings yet.
+  const { data: mttrBySeverity, isLoading: mttrLoading } = useMTTRMetrics(currentTenant?.id || null)
 
   const openFindings =
     stats.findings.total -
@@ -105,16 +109,14 @@ export default function MTTRPage() {
   const resolvedFindings =
     (stats.findings.byStatus.resolved || 0) + (stats.findings.byStatus.closed || 0)
   const overdueCount = stats.findings.overdue
-  const overdueRatio = stats.findings.total > 0 ? overdueCount / stats.findings.total : 0
-  const mttrEstimate = overdueRatio > 0.5 ? 'High' : 'Moderate'
 
   const severityMttrData = useMemo(() => {
     const severities = ['critical', 'high', 'medium', 'low'] as const
     return severities.map((severity) => {
       const target = SEVERITY_TARGETS[severity].hours
-      // Derive actual estimate from overdue ratio: higher overdue ratio means slower remediation
-      const actualMultiplier = 1 + overdueRatio * 1.5
-      const actual = Math.round(target * actualMultiplier)
+      // Real measured MTTR; null when no resolved findings of this severity yet.
+      const raw = mttrBySeverity?.[severity]
+      const actual = raw != null && raw > 0 ? Math.round(raw) : null
       const count = stats.findings.bySeverity[severity] || 0
       return {
         severity: severity.charAt(0).toUpperCase() + severity.slice(1),
@@ -125,7 +127,18 @@ export default function MTTRPage() {
         color: SEVERITY_COLORS[severity],
       }
     })
-  }, [stats.findings.bySeverity, overdueRatio])
+  }, [stats.findings.bySeverity, mttrBySeverity])
+
+  // Overall MTTR = mean of the measured per-severity values we actually have.
+  const measuredMttrValues = severityMttrData
+    .map((d) => d.actual)
+    .filter((v): v is number => v != null)
+  const overallMttr =
+    measuredMttrValues.length > 0
+      ? Math.round(measuredMttrValues.reduce((a, b) => a + b, 0) / measuredMttrValues.length)
+      : null
+  // Within target if every measured severity is at/under its SLA target.
+  const allWithinTarget = severityMttrData.every((d) => d.actual == null || d.actual <= d.target)
 
   const trendData = useMemo(() => {
     return stats.findingTrend.map((point) => ({
@@ -158,7 +171,7 @@ export default function MTTRPage() {
         className="mb-6"
       />
 
-      {isLoading ? (
+      {isLoading || mttrLoading ? (
         <LoadingSkeleton />
       ) : !hasData ? (
         <EmptyState
@@ -171,10 +184,18 @@ export default function MTTRPage() {
           {/* Stats Row */}
           <section className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
             <StatsCard
-              title="Estimated MTTR"
-              value={mttrEstimate}
-              change={overdueRatio > 0.5 ? 'Above target' : 'Within target'}
-              changeType={overdueRatio > 0.5 ? 'negative' : 'positive'}
+              title="Avg MTTR"
+              value={overallMttr != null ? `${overallMttr}h` : 'No data'}
+              change={
+                overallMttr == null
+                  ? 'No resolved findings'
+                  : allWithinTarget
+                    ? 'Within target'
+                    : 'Above target'
+              }
+              changeType={
+                overallMttr == null ? 'neutral' : allWithinTarget ? 'positive' : 'negative'
+              }
               icon={Timer}
             />
             <StatsCard
@@ -210,16 +231,18 @@ export default function MTTRPage() {
               <CardHeader>
                 <CardTitle>MTTR by Severity</CardTitle>
                 <CardDescription>
-                  Target vs estimated actual remediation time per severity level (hours)
+                  Target SLA vs measured remediation time per severity level (hours)
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-6">
                   {severityMttrData.map((item) => {
-                    const maxHours = Math.max(item.target, item.actual)
+                    const hasActual = item.actual != null
+                    const maxHours = Math.max(item.target, item.actual ?? 0)
                     const targetPercent = maxHours > 0 ? (item.target / maxHours) * 100 : 0
-                    const actualPercent = maxHours > 0 ? (item.actual / maxHours) * 100 : 0
-                    const isOverTarget = item.actual > item.target
+                    const actualPercent =
+                      hasActual && maxHours > 0 ? ((item.actual as number) / maxHours) * 100 : 0
+                    const isOverTarget = hasActual && (item.actual as number) > item.target
 
                     return (
                       <div key={item.severity} className="space-y-2">
@@ -241,10 +264,14 @@ export default function MTTRPage() {
                             <span
                               className={cn(
                                 'font-medium',
-                                isOverTarget ? 'text-red-500' : 'text-green-500'
+                                !hasActual
+                                  ? 'text-muted-foreground'
+                                  : isOverTarget
+                                    ? 'text-red-500'
+                                    : 'text-green-500'
                               )}
                             >
-                              Actual: {item.actual}h
+                              {hasActual ? `Actual: ${item.actual}h` : 'No data'}
                             </span>
                           </div>
                         </div>
