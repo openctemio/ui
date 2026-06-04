@@ -37,7 +37,26 @@ import {
 } from '@/features/components/api/use-components-api'
 import { mapApiComponentToUi } from '@/features/components/api/mapper' // Best to export this from features/components/index.ts
 import type { Component } from '@/features/components'
-import { toast } from 'sonner'
+import { useCsvExport, type ExportFieldConfig } from '@/hooks/use-csv-export'
+
+const totalVulns = (c: Component) =>
+  c.vulnerabilityCount.critical +
+  c.vulnerabilityCount.high +
+  c.vulnerabilityCount.medium +
+  c.vulnerabilityCount.low +
+  c.vulnerabilityCount.info
+
+const COMPONENT_EXPORT_FIELDS: ExportFieldConfig<Component>[] = [
+  { header: 'Name', accessor: (c) => c.name },
+  { header: 'Version', accessor: (c) => c.version },
+  { header: 'Ecosystem', accessor: (c) => c.ecosystem },
+  { header: 'License', accessor: (c) => c.licenseId || 'Unknown' },
+  { header: 'Risk Score', accessor: (c) => c.riskScore },
+  { header: 'Vulnerabilities', accessor: (c) => totalVulns(c) },
+  { header: 'Critical', accessor: (c) => c.vulnerabilityCount.critical },
+  { header: 'High', accessor: (c) => c.vulnerabilityCount.high },
+  { header: 'Direct', accessor: (c) => (c.isDirect ? 'Yes' : 'No') },
+]
 
 type FilterType = 'all' | 'direct' | 'transitive' | 'outdated' | 'vulnerable'
 
@@ -99,34 +118,7 @@ export default function AllComponentsPage() {
     vulnerable: stats.componentsWithVulnerabilities,
   }
 
-  const handleExport = () => {
-    // Exporting valid data only
-    const csv = [
-      ['Name', 'Version', 'Ecosystem', 'License', 'Risk Score', 'Vulnerabilities', 'Direct'].join(
-        ','
-      ),
-      ...filteredComponents.map((c) =>
-        [
-          c.name,
-          c.version,
-          c.ecosystem,
-          c.licenseId || 'Unknown',
-          c.riskScore,
-          c.vulnerabilityCount.low, // Using 'low' bucket as total for now
-          c.isDirect ? 'Yes' : 'No',
-        ].join(',')
-      ),
-    ].join('\n')
-
-    const blob = new Blob([csv], { type: 'text/csv' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'components.csv'
-    a.click()
-    URL.revokeObjectURL(url)
-    toast.success('Components exported')
-  }
+  const { handleExport } = useCsvExport(filteredComponents, COMPONENT_EXPORT_FIELDS, 'components')
 
   return (
     <>
