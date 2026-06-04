@@ -24,7 +24,6 @@ import {
   Clock,
   Shield,
   AlertTriangle,
-  RefreshCw,
   Plus,
   Target,
 } from 'lucide-react'
@@ -137,7 +136,7 @@ function EmptyState() {
       <p className="text-muted-foreground text-sm mb-4">
         Create your first attack simulation to validate security controls.
       </p>
-      <Button size="sm" onClick={() => toast.info('Attack simulation creation is coming soon')}>
+      <Button size="sm" disabled title="Simulation creation is coming soon">
         <Plus className="me-2 h-4 w-4" />
         Create Simulation
       </Button>
@@ -196,7 +195,7 @@ export default function AttackSimulationPage() {
         title="Breach & Attack Simulation"
         description="Validate security controls against real-world attack techniques"
       >
-        <Button size="sm" onClick={() => toast.info('Attack simulation creation is coming soon')}>
+        <Button size="sm" disabled title="Simulation creation is coming soon">
           <Plus className="me-2 h-4 w-4" />
           New Simulation
         </Button>
@@ -280,8 +279,13 @@ export default function AttackSimulationPage() {
       {/* Quick Actions */}
       <Card className="mt-6">
         <CardHeader>
-          <CardTitle className="text-base">Quick Simulations</CardTitle>
-          <CardDescription>Run common attack scenarios</CardDescription>
+          <div className="flex items-center gap-2">
+            <CardTitle className="text-base">Quick Simulations</CardTitle>
+            <Badge variant="secondary">Coming soon</Badge>
+          </div>
+          <CardDescription>
+            Common attack scenarios — one-click runs are coming soon
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -291,11 +295,7 @@ export default function AttackSimulationPage() {
               { name: 'Network Scan', icon: Shield, desc: 'Port discovery' },
               { name: 'Data Leak Test', icon: Swords, desc: 'Exfiltration attempt' },
             ].map((action) => (
-              <Card
-                key={action.name}
-                className="cursor-pointer hover:bg-muted/50"
-                onClick={() => toast.info('Attack simulation creation is coming soon')}
-              >
+              <Card key={action.name} className="opacity-60" aria-disabled="true">
                 <CardContent className="flex items-center gap-3 p-4">
                   <div className="bg-primary/10 flex h-10 w-10 items-center justify-center rounded-lg">
                     <action.icon className="text-primary h-5 w-5" />
