@@ -243,6 +243,7 @@ interface ConnectJiraDialogProps {
 function ConnectJiraDialog({ open, onOpenChange, onSuccess }: ConnectJiraDialogProps) {
   const [name, setName] = useState('Jira Cloud')
   const [baseUrl, setBaseUrl] = useState('')
+  const [email, setEmail] = useState('')
   const [apiToken, setApiToken] = useState('')
   const [projectKey, setProjectKey] = useState('')
   const [provider, setProvider] = useState<'jira' | 'linear' | 'asana'>('jira')
@@ -255,13 +256,30 @@ function ConnectJiraDialog({ open, onOpenChange, onSuccess }: ConnectJiraDialogP
       toast.error('Name and API token are required')
       return
     }
+    // Jira Cloud REST auth is basic-auth with the account email + API token.
+    // Without the email the backend cannot build a client and the integration
+    // is silently skipped, so require it and ship both fields together.
+    if (provider === 'jira') {
+      if (!baseUrl) {
+        toast.error('Jira base URL is required')
+        return
+      }
+      if (!email) {
+        toast.error('Atlassian account email is required')
+        return
+      }
+    }
     try {
+      // For Jira, pack email + token as JSON so both travel encrypted in the
+      // credentials field. Other providers use a bare token.
+      const credentials =
+        provider === 'jira' ? JSON.stringify({ email, api_token: apiToken }) : apiToken
       await createIntegration({
         name,
         category: 'ticketing',
         provider,
         auth_type: 'token',
-        credentials: apiToken,
+        credentials,
         base_url: baseUrl || undefined,
         description: projectKey ? `Project: ${projectKey}` : undefined,
       })
@@ -271,6 +289,7 @@ function ConnectJiraDialog({ open, onOpenChange, onSuccess }: ConnectJiraDialogP
       // Reset form
       setName('Jira Cloud')
       setBaseUrl('')
+      setEmail('')
       setApiToken('')
       setProjectKey('')
       setProvider('jira')
@@ -322,16 +341,35 @@ function ConnectJiraDialog({ open, onOpenChange, onSuccess }: ConnectJiraDialogP
           </div>
 
           {provider === 'jira' && (
-            <div className="space-y-2">
-              <Label htmlFor="base-url">Jira base URL</Label>
-              <Input
-                id="base-url"
-                value={baseUrl}
-                onChange={(e) => setBaseUrl(e.target.value)}
-                placeholder="https://yourorg.atlassian.net"
-                type="url"
-              />
-            </div>
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="base-url">Jira base URL</Label>
+                <Input
+                  id="base-url"
+                  value={baseUrl}
+                  onChange={(e) => setBaseUrl(e.target.value)}
+                  placeholder="https://yourorg.atlassian.net"
+                  type="url"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="jira-email">Atlassian account email</Label>
+                <Input
+                  id="jira-email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@yourorg.com"
+                  type="email"
+                  required
+                />
+                <p className="text-muted-foreground text-xs">
+                  The email of the Atlassian account that owns the API token. Jira Cloud pairs it
+                  with the token for authentication.
+                </p>
+              </div>
+            </>
           )}
 
           <div className="space-y-2">
