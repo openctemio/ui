@@ -65,11 +65,10 @@ export function FindingStatusBadge({
   className,
   variant = 'default',
 }: FindingStatusBadgeProps) {
-  const config =
-    (FINDING_STATUS_CONFIG as Record<string, StatusConfig | undefined>)[status] ?? {
-      ...UNKNOWN_STATUS_CONFIG,
-      label: String(status) || UNKNOWN_STATUS_CONFIG.label,
-    }
+  const config = (FINDING_STATUS_CONFIG as Record<string, StatusConfig | undefined>)[status] ?? {
+    ...UNKNOWN_STATUS_CONFIG,
+    label: String(status) || UNKNOWN_STATUS_CONFIG.label,
+  }
   const Icon = STATUS_ICONS[config.icon] ?? Circle
   // Only the in-progress spinner should animate.
   const spin = config.icon === 'loader'
