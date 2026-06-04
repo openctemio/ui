@@ -5,6 +5,7 @@ import { ColumnDef } from '@tanstack/react-table'
 import { Main } from '@/components/layout'
 import { PageHeader, DataTable, DataTableColumnHeader, RiskScoreBadge } from '@/features/shared'
 import { Can, Permission } from '@/lib/permissions'
+import { useCsvExport, type ExportFieldConfig } from '@/hooks/use-csv-export'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -106,6 +107,17 @@ function getChildUnits(allUnits: BusinessUnit[], parentId: string): BusinessUnit
   return allUnits.filter((bu) => bu.parentId === parentId)
 }
 
+const BUSINESS_UNIT_EXPORT_FIELDS: ExportFieldConfig<BusinessUnit>[] = [
+  { header: 'Name', accessor: (bu) => bu.name },
+  { header: 'Description', accessor: (bu) => bu.description ?? '' },
+  { header: 'Owner', accessor: (bu) => bu.owner },
+  { header: 'Owner Email', accessor: (bu) => bu.ownerEmail },
+  { header: 'Assets', accessor: (bu) => bu.assetCount },
+  { header: 'Risk Score', accessor: (bu) => bu.riskScore ?? '' },
+  { header: 'Criticality', accessor: (bu) => bu.criticality },
+  { header: 'Tags', accessor: (bu) => (bu.tags ?? []).join('; ') },
+]
+
 export default function BusinessUnitsPage() {
   // Fetch from API, fallback to mock data if API returns empty
   const { data: apiData, mutate: refreshList } = useBusinessUnits()
@@ -140,6 +152,11 @@ export default function BusinessUnitsPage() {
   useEffect(() => {
     setBusinessUnits(apiBUs)
   }, [apiBUs])
+  const { handleExport } = useCsvExport(
+    businessUnits,
+    BUSINESS_UNIT_EXPORT_FIELDS,
+    'business-units'
+  )
   const [viewUnit, setViewUnit] = useState<BusinessUnit | null>(null)
   const [editUnit, setEditUnit] = useState<BusinessUnit | null>(null)
   const [deleteUnit, setDeleteUnit] = useState<BusinessUnit | null>(null)
@@ -160,17 +177,21 @@ export default function BusinessUnitsPage() {
   })
 
   const stats = useMemo(() => {
+    const count = businessUnits.length
     return {
-      total: businessUnits.length,
+      total: count,
       active: businessUnits.filter((bu) => bu.status === 'active').length,
       inactive: businessUnits.filter((bu) => bu.status === 'inactive').length,
       totalAssets: businessUnits.reduce((acc, bu) => acc + bu.assetCount, 0),
-      averageRiskScore: Math.round(
-        businessUnits.reduce((acc, bu) => acc + bu.riskScore, 0) / businessUnits.length
-      ),
-      averageComplianceScore: Math.round(
-        businessUnits.reduce((acc, bu) => acc + bu.complianceScore, 0) / businessUnits.length
-      ),
+      // Guard against divide-by-zero on an empty tenant and missing per-unit
+      // fields (the API adapter doesn't always populate score fields) — both
+      // were rendering "NaN".
+      averageRiskScore: count
+        ? Math.round(businessUnits.reduce((acc, bu) => acc + (bu.riskScore ?? 0), 0) / count)
+        : 0,
+      averageComplianceScore: count
+        ? Math.round(businessUnits.reduce((acc, bu) => acc + (bu.complianceScore ?? 0), 0) / count)
+        : 0,
     }
   }, [businessUnits])
 
@@ -530,7 +551,12 @@ export default function BusinessUnitsPage() {
           title="Business Units"
           description="Manage organizational structure and align security with business objectives"
         >
-          <Button variant="outline" size="sm">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExport}
+            disabled={businessUnits.length === 0}
+          >
             <Download className="me-2 h-4 w-4" />
             Export
           </Button>
