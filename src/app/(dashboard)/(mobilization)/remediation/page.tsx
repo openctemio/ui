@@ -94,6 +94,19 @@ import { patch, del } from '@/lib/api/client'
 import { useFindingsApi } from '@/features/findings/api/use-findings-api'
 import type { TaskStatus, TaskPriority, RemediationTask } from '@/features/remediation/types'
 import type { Severity } from '@/features/shared/types'
+import { useCsvExport, type ExportFieldConfig } from '@/hooks/use-csv-export'
+
+const REMEDIATION_EXPORT_FIELDS: ExportFieldConfig<RemediationTask>[] = [
+  { header: 'Title', accessor: (t) => t.title },
+  { header: 'Status', accessor: (t) => t.status },
+  { header: 'Priority', accessor: (t) => t.priority },
+  { header: 'Severity', accessor: (t) => t.severity },
+  { header: 'Finding', accessor: (t) => t.findingTitle },
+  { header: 'Asset', accessor: (t) => t.assetName ?? '' },
+  { header: 'Assignee', accessor: (t) => t.assigneeName },
+  { header: 'Due Date', accessor: (t) => t.dueDate },
+  { header: 'Completed At', accessor: (t) => t.completedAt ?? '' },
+]
 
 // ─── Constants & Helpers ─────────────────────────────────────────────
 
@@ -376,6 +389,26 @@ export default function RemediationPage() {
 
   // ─── Handlers ────────────────────────────────────────────────────
 
+  const { handleExport: handleExportCsv } = useCsvExport(
+    filteredData,
+    REMEDIATION_EXPORT_FIELDS,
+    'remediation-tasks'
+  )
+  const handleExportJson = useCallback(() => {
+    if (!filteredData.length) {
+      toast.error('No data to export')
+      return
+    }
+    const blob = new Blob([JSON.stringify(filteredData, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `remediation-tasks-${new Date().toISOString().slice(0, 10)}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+    toast.success('Exported successfully')
+  }, [filteredData])
+
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true)
     await refreshCampaigns()
@@ -472,7 +505,17 @@ export default function RemediationPage() {
             toast.error(getErrorMessage(err, 'Failed to update tasks'))
           }
         }
+        setSelectedIds([])
+        return
       }
+
+      // Reassign isn't wired to a backend yet (same as the single-task action).
+      // Be honest and keep the selection rather than silently clearing it.
+      if (action === 'Reassigned') {
+        toast.info('Bulk reassign is coming soon')
+        return
+      }
+
       setSelectedIds([])
     },
     [selectedIds, refreshCampaigns]
@@ -791,14 +834,10 @@ export default function RemediationPage() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem
-                  onClick={() => toast.success(`Exporting ${filteredData.length} tasks as CSV...`)}
-                >
+                <DropdownMenuItem onClick={handleExportCsv} disabled={filteredData.length === 0}>
                   Export as CSV
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => toast.success(`Exporting ${filteredData.length} tasks as JSON...`)}
-                >
+                <DropdownMenuItem onClick={handleExportJson} disabled={filteredData.length === 0}>
                   Export as JSON
                 </DropdownMenuItem>
               </DropdownMenuContent>
