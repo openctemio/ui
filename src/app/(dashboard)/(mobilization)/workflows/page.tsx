@@ -73,7 +73,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { toast } from 'sonner'
 import { Can, Permission } from '@/lib/permissions'
-import { put, csrfFetch } from '@/lib/api/client'
+import { get, put, csrfFetch } from '@/lib/api/client'
 import { getErrorMessage } from '@/lib/api/error-handler'
 import { workflowEndpoints } from '@/lib/api/endpoints'
 import {
@@ -603,6 +603,38 @@ export default function WorkflowsPage() {
     }
   }
 
+  const handleDuplicateWorkflow = async (workflow: Workflow) => {
+    try {
+      // List items may omit nodes/edges; fetch the full definition to clone.
+      const full =
+        workflow.nodes && workflow.edges
+          ? workflow
+          : await get<Workflow>(`/api/v1/workflows/${workflow.id}`)
+      await createWorkflow({
+        name: `${full.name} (copy)`,
+        description: full.description,
+        nodes: (full.nodes ?? []).map((n) => ({
+          node_key: n.node_key,
+          node_type: n.node_type,
+          name: n.name,
+          description: n.description,
+          ui_position: n.ui_position,
+          config: n.config,
+        })),
+        edges: (full.edges ?? []).map((e) => ({
+          source_node_key: e.source_node_key,
+          target_node_key: e.target_node_key,
+          source_handle: e.source_handle,
+          label: e.label,
+        })),
+      })
+      toast.success(`Duplicated "${workflow.name}"`)
+      await invalidateWorkflowsCache()
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to duplicate workflow'))
+    }
+  }
+
   const handleDeleteWorkflow = async (workflow: Workflow) => {
     setDeleteWorkflowId(workflow.id)
     try {
@@ -912,7 +944,7 @@ export default function WorkflowsPage() {
                                   workflowName={workflow.name}
                                 />
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleDuplicateWorkflow(workflow)}>
                                   <Copy className="me-2 h-4 w-4" />
                                   Duplicate
                                 </DropdownMenuItem>
