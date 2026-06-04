@@ -5,6 +5,7 @@ import { ColumnDef } from '@tanstack/react-table'
 import { Main } from '@/components/layout'
 import { PageHeader, DataTable, DataTableColumnHeader, RiskScoreBadge } from '@/features/shared'
 import { Can, Permission } from '@/lib/permissions'
+import { useCsvExport, type ExportFieldConfig } from '@/hooks/use-csv-export'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -143,6 +144,18 @@ const categoryLabels: Record<AssetCategory, string> = {
 
 const CROWN_JEWELS_KEY = '/api/v1/assets?is_crown_jewel=true&per_page=100'
 
+const CROWN_JEWEL_EXPORT_FIELDS: ExportFieldConfig<CrownJewel>[] = [
+  { header: 'Name', accessor: (j) => j.name },
+  { header: 'Category', accessor: (j) => j.category },
+  { header: 'Description', accessor: (j) => j.description ?? '' },
+  { header: 'Status', accessor: (j) => j.status },
+  { header: 'Owner', accessor: (j) => j.owner },
+  { header: 'Business Unit', accessor: (j) => j.businessUnit },
+  { header: 'Risk Score', accessor: (j) => j.riskScore },
+  { header: 'Exposures', accessor: (j) => j.exposureCount ?? 0 },
+  { header: 'Tags', accessor: (j) => (j.tags ?? []).join('; ') },
+]
+
 export default function CrownJewelsPage() {
   // Fetch from API, fallback to mock if no API data
   const { data: apiCrownJewels } = useCrownJewels()
@@ -177,6 +190,7 @@ export default function CrownJewelsPage() {
     )
   }, [apiCrownJewels])
   const [crownJewels, setCrownJewels] = useState<CrownJewel[]>([])
+  const { handleExport } = useCsvExport(crownJewels, CROWN_JEWEL_EXPORT_FIELDS, 'crown-jewels')
   useEffect(() => {
     setCrownJewels(apiMapped)
   }, [apiMapped])
@@ -210,8 +224,11 @@ export default function CrownJewelsPage() {
         exposed: jewels.filter((j) => j.status === 'exposed').length,
         under_review: jewels.filter((j) => j.status === 'under_review').length,
       },
-      totalExposures: jewels.reduce((acc, j) => acc + j.exposureCount, 0),
-      averageRiskScore: Math.round(jewels.reduce((acc, j) => acc + j.riskScore, 0) / jewels.length),
+      totalExposures: jewels.reduce((acc, j) => acc + (j.exposureCount ?? 0), 0),
+      // Guard against divide-by-zero on an empty tenant (was rendering "NaN").
+      averageRiskScore: jewels.length
+        ? Math.round(jewels.reduce((acc, j) => acc + (j.riskScore ?? 0), 0) / jewels.length)
+        : 0,
     }
   }, [crownJewels])
 
@@ -587,7 +604,12 @@ export default function CrownJewelsPage() {
           title="Crown Jewels"
           description="Identify and protect your most critical assets"
         >
-          <Button variant="outline" size="sm">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExport}
+            disabled={crownJewels.length === 0}
+          >
             <Download className="me-2 h-4 w-4" />
             Export
           </Button>

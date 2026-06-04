@@ -83,7 +83,9 @@ import {
   type EditGroupFormData,
   AddAssetsDialog,
   type AddAssetsSubmitData,
+  type GroupAsset,
 } from '@/features/asset-groups'
+import { useCsvExport, type ExportFieldConfig } from '@/hooks/use-csv-export'
 
 const criticalityColors: Record<string, string> = {
   critical: 'bg-red-500 text-white',
@@ -121,6 +123,15 @@ const assetTypeIcons: Record<string, React.ReactNode> = {
 interface PageProps {
   params: Promise<{ id: string }>
 }
+
+const GROUP_ASSET_EXPORT_FIELDS: ExportFieldConfig<GroupAsset>[] = [
+  { header: 'Name', accessor: (a) => a.name },
+  { header: 'Type', accessor: (a) => a.type },
+  { header: 'Status', accessor: (a) => a.status },
+  { header: 'Risk Score', accessor: (a) => a.riskScore ?? '' },
+  { header: 'Findings', accessor: (a) => a.findingCount ?? 0 },
+  { header: 'Last Seen', accessor: (a) => a.lastSeen ?? '' },
+]
 
 export default function AssetGroupDetailPage({ params }: PageProps) {
   return <AssetGroupDetailContent params={params} />
@@ -179,6 +190,14 @@ function AssetGroupDetailContent({ params }: PageProps) {
   // Derived data from hooks - wrapped in useMemo to prevent unnecessary re-renders
   const safeAssets = useMemo(() => assets || [], [assets])
   const safeFindings = useMemo(() => findings || [], [findings])
+
+  // CSV export of the group's assets. Declared before any early return so the
+  // hook order stays stable (rules-of-hooks).
+  const { handleExport: exportAssetsCsv } = useCsvExport(
+    safeAssets,
+    GROUP_ASSET_EXPORT_FIELDS,
+    group ? `asset-group-${group.name}` : 'asset-group'
+  )
 
   // All useMemo hooks must be called before early return
   const filteredAssets = useMemo(() => {
@@ -434,8 +453,21 @@ function AssetGroupDetailContent({ params }: PageProps) {
     }
   }
 
-  const handleExport = (format: string) => {
-    toast.success(`Exporting group as ${format}...`)
+  const handleExport = (format: 'CSV' | 'JSON') => {
+    if (format === 'CSV') {
+      exportAssetsCsv()
+      return
+    }
+    // JSON: export the group plus its assets.
+    const payload = { group, assets: safeAssets }
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `asset-group-${group?.name ?? id}-${new Date().toISOString().slice(0, 10)}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+    toast.success('Exported successfully')
   }
 
   const toggleAssetSelection = (assetId: string) => {

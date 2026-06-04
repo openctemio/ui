@@ -206,12 +206,16 @@ export default function CloudSurfacePage() {
   })
 
   const stats = useMemo(() => {
+    const total = resources.length
+    const clean = resources.filter((r) => r.findingsCount === 0).length
     return {
-      total: resources.length,
+      total,
       running: resources.filter((r) => r.status === 'running').length,
       publicExposure: resources.filter((r) => r.exposure === 'public').length,
       critical: resources.filter((r) => r.riskLevel === 'critical').length,
       totalFindings: resources.reduce((acc, r) => acc + r.findingsCount, 0),
+      // Real "clean rate": share of resources with no findings (was hardcoded 78%).
+      cleanRate: total ? Math.round((clean / total) * 100) : 0,
       byProvider: {
         aws: resources.filter((r) => r.provider === 'aws').length,
         azure: resources.filter((r) => r.provider === 'azure').length,
@@ -565,12 +569,13 @@ export default function CloudSurfacePage() {
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Compliance</CardTitle>
+              <CardTitle className="text-sm font-medium">Clean Resources</CardTitle>
               <CheckCircle2 className="h-4 w-4 text-green-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-500">78%</div>
-              <Progress value={78} className="mt-2" />
+              <div className="text-2xl font-bold text-green-500">{stats.cleanRate}%</div>
+              <Progress value={stats.cleanRate} className="mt-2" />
+              <p className="text-muted-foreground mt-1 text-xs">No findings detected</p>
             </CardContent>
           </Card>
         </div>
