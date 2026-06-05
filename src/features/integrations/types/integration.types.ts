@@ -399,6 +399,8 @@ export interface CreateIntegrationRequest {
   base_url?: string
   credentials?: string
   scm_organization?: string
+  /** Non-sensitive provider settings (e.g. Tenable execution_mode/engine). */
+  config?: Record<string, unknown>
 }
 
 /**

@@ -18,6 +18,7 @@ import {
   MessageSquare,
   GitBranch,
   Shield,
+  ShieldCheck,
   Clock,
   ArrowRight,
   Workflow,
@@ -69,6 +70,14 @@ const integrationCategories = [
     color: 'bg-purple-500/10 text-purple-500',
   },
   {
+    id: 'security',
+    title: 'Vulnerability Scanners',
+    description: 'Connect Tenable (Nessus Pro / Tenable.sc)',
+    icon: ShieldCheck,
+    href: '/settings/integrations/security',
+    color: 'bg-red-500/10 text-red-500',
+  },
+  {
     id: 'siem',
     title: 'SIEM & Monitoring',
     description: 'Export to Splunk, Datadog, or Elastic',
@@ -91,9 +100,9 @@ const categoryMeta: Record<
   },
   security: {
     label: 'Security',
-    icon: Shield,
-    color: 'bg-orange-500/20 text-orange-400',
-    href: '/settings/integrations/siem',
+    icon: ShieldCheck,
+    color: 'bg-red-500/20 text-red-400',
+    href: '/settings/integrations/security',
   },
   ticketing: {
     label: 'Ticketing',
