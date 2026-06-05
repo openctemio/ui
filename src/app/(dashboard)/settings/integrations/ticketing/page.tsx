@@ -4,11 +4,10 @@ import { useState } from 'react'
 import { Main } from '@/components/layout'
 import { PageHeader, EmptyState } from '@/features/shared'
 import { StatsCard } from '@/features/shared/components/stats-card'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Progress } from '@/components/ui/progress'
 import {
   Dialog,
   DialogContent,
@@ -30,15 +29,11 @@ import {
   Ticket,
   Plus,
   Clock,
-  ArrowLeftRight,
   Settings,
   AlertTriangle,
-  FileText,
   RefreshCw,
   Link2,
   ExternalLink,
-  CheckCircle,
-  XCircle,
 } from 'lucide-react'
 import {
   useIntegrationsApi,
@@ -71,18 +66,6 @@ function getProjectKey(integration: Integration): string {
   const config = integration.config as Record<string, unknown> | undefined
   if (!config) return '-'
   return (config.project_key as string) ?? '-'
-}
-
-function getOpenTickets(integration: Integration): number {
-  const meta = integration.metadata as Record<string, unknown> | undefined
-  if (!meta) return 0
-  return (meta.open_tickets as number) ?? 0
-}
-
-function getTotalTickets(integration: Integration): number {
-  const meta = integration.metadata as Record<string, unknown> | undefined
-  if (!meta) return 0
-  return (meta.total_tickets_created as number) ?? 0
 }
 
 // ─────────────────────────────────────────────────────────
@@ -129,8 +112,6 @@ function StatusBadge({ status }: { status: IntegrationStatus }) {
 // ─────────────────────────────────────────────────────────
 
 function TicketingIntegrationCard({ integration }: { integration: Integration }) {
-  const totalTickets = getTotalTickets(integration)
-  const openTickets = getOpenTickets(integration)
   const projectKey = getProjectKey(integration)
 
   const { trigger: syncNow, isMutating: isSyncing } = useSyncIntegrationApi(integration.id)
@@ -179,23 +160,6 @@ function TicketingIntegrationCard({ integration }: { integration: Integration })
               <p className="text-muted-foreground text-xs line-clamp-1">
                 {integration.description}
               </p>
-            )}
-
-            {totalTickets > 0 && (
-              <div className="space-y-1">
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground text-xs">
-                    {openTickets} open / {totalTickets} total tickets
-                  </span>
-                  <span className="text-muted-foreground text-xs">
-                    {Math.round((openTickets / totalTickets) * 100)}% open
-                  </span>
-                </div>
-                <Progress
-                  value={Math.round((openTickets / totalTickets) * 100)}
-                  className="h-1.5"
-                />
-              </div>
             )}
 
             {integration.last_sync_at && (
@@ -436,38 +400,6 @@ function LoadingSkeleton() {
 }
 
 // ─────────────────────────────────────────────────────────
-// Auto-ticketing rules (static config UI — actual rules TBD)
-// ─────────────────────────────────────────────────────────
-
-const AUTO_RULES = [
-  {
-    rule: 'Critical findings',
-    desc: 'Automatically create tickets for all critical severity findings',
-    enabled: true,
-  },
-  {
-    rule: 'High findings (production)',
-    desc: 'Create tickets for high severity findings on production assets',
-    enabled: true,
-  },
-  {
-    rule: 'SLA breach warning',
-    desc: 'Create tickets when findings approach SLA deadline',
-    enabled: false,
-  },
-  {
-    rule: 'New exposure detected',
-    desc: 'Create tickets when new external exposures are discovered',
-    enabled: true,
-  },
-  {
-    rule: 'Compliance violations',
-    desc: 'Create tickets for compliance framework violations',
-    enabled: false,
-  },
-]
-
-// ─────────────────────────────────────────────────────────
 // Page
 // ─────────────────────────────────────────────────────────
 
@@ -483,10 +415,11 @@ export default function TicketingIntegrationPage() {
   const connections = integrationsData?.data ?? []
 
   const connected = connections.filter((c) => c.status === 'connected').length
-  const totalTickets = connections.reduce((s, c) => s + getTotalTickets(c), 0)
-  const openTickets = connections.reduce((s, c) => s + getOpenTickets(c), 0)
-  const biDirectional = connections.filter(
-    (c) => (c.config as Record<string, unknown> | undefined)?.sync_direction === 'bi-directional'
+  const needsAttention = connections.filter(
+    (c) => c.status === 'error' || c.status === 'expired'
+  ).length
+  const pending = connections.filter(
+    (c) => c.status === 'pending' || c.status === 'disconnected'
   ).length
 
   if (isLoading) return <LoadingSkeleton />
@@ -503,8 +436,8 @@ export default function TicketingIntegrationPage() {
         </Button>
       </PageHeader>
 
-      {/* Summary stats */}
-      <div className="mt-6 grid gap-4 md:grid-cols-4">
+      {/* Summary stats — derived from real connection status */}
+      <div className="mt-6 grid gap-4 md:grid-cols-3">
         <StatsCard
           title="Connected Systems"
           value={connected}
@@ -513,24 +446,13 @@ export default function TicketingIntegrationPage() {
           description={`of ${connections.length} configured`}
         />
         <StatsCard
-          title="Tickets Created"
-          value={totalTickets}
-          icon={FileText}
-          description="Auto-generated tickets"
-        />
-        <StatsCard
-          title="Open Tickets"
-          value={openTickets}
+          title="Needs Attention"
+          value={needsAttention}
           icon={AlertTriangle}
-          changeType={openTickets > 0 ? 'negative' : 'neutral'}
-          description="Awaiting resolution"
+          changeType={needsAttention > 0 ? 'negative' : 'neutral'}
+          description="Error or expired"
         />
-        <StatsCard
-          title="Bi-Directional Sync"
-          value={biDirectional}
-          icon={ArrowLeftRight}
-          description="Two-way connections"
-        />
+        <StatsCard title="Pending" value={pending} icon={Clock} description="Awaiting first sync" />
       </div>
 
       {/* Connections list */}
@@ -556,46 +478,6 @@ export default function TicketingIntegrationPage() {
           </div>
         )}
       </div>
-
-      {/* Auto-ticketing rules */}
-      {connections.length > 0 && (
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Settings className="h-5 w-5" />
-              Auto-Ticketing Rules
-            </CardTitle>
-            <CardDescription>
-              Configure rules for automatic ticket creation based on finding severity and type.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {AUTO_RULES.map((item) => (
-                <div
-                  key={item.rule}
-                  className="flex items-center justify-between rounded-lg border p-3"
-                >
-                  <div>
-                    <div className="flex items-center gap-2">
-                      {item.enabled ? (
-                        <CheckCircle className="h-4 w-4 text-green-500" />
-                      ) : (
-                        <XCircle className="h-4 w-4 text-muted-foreground" />
-                      )}
-                      <span className="text-sm font-medium">{item.rule}</span>
-                      <Badge variant={item.enabled ? 'default' : 'secondary'} className="text-xs">
-                        {item.enabled ? 'Active' : 'Inactive'}
-                      </Badge>
-                    </div>
-                    <p className="text-muted-foreground mt-0.5 ps-6 text-xs">{item.desc}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       <ConnectJiraDialog
         open={dialogOpen}
