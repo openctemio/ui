@@ -28,6 +28,13 @@ export interface ScanCoverageStats {
 const defaultConfig: SWRConfiguration = {
   revalidateOnFocus: false,
   revalidateOnReconnect: true,
+  // Coverage is non-critical observability. If the endpoint errors (e.g. a
+  // backend behind on migrations returning 500), do NOT retry-storm it: SWR's
+  // default unlimited error-retry keeps re-entering the loading state, which
+  // makes the page flicker (skeleton ↔ content) indefinitely. One attempt, then
+  // degrade quietly — the section just hides until the next reconnect/remount.
+  shouldRetryOnError: false,
+  keepPreviousData: true,
 }
 
 async function fetchCoverage(url: string): Promise<ScanCoverageStats> {
