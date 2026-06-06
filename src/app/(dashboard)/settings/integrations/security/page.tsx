@@ -55,6 +55,7 @@ import {
   useCreateIntegrationApi,
   useUpdateIntegrationApi,
   useDeleteIntegrationApi,
+  invalidateIntegrationsCache,
 } from '@/features/integrations/api/use-integrations-api'
 import type {
   Integration,
@@ -62,7 +63,6 @@ import type {
 } from '@/features/integrations/types/integration.types'
 import { csrfFetch } from '@/lib/api/client'
 import { toast } from 'sonner'
-import { mutate } from 'swr'
 
 // ─────────────────────────────────────────────────────────
 // Helpers
@@ -75,8 +75,6 @@ const ENGINE_LABELS: Record<Engine, string> = {
   nessus_pro: 'Nessus Professional (unlimited IPs)',
   tenable_sc: 'Tenable.sc / SecurityCenter (active-IP licensed)',
 }
-
-const SECURITY_KEY = '/api/v1/integrations?category=security'
 
 function getConfigString(integration: Integration, key: string): string {
   const config = integration.config as Record<string, unknown> | undefined
@@ -720,7 +718,10 @@ export default function SecurityScannersPage() {
 
   const refresh = () => {
     reload()
-    mutate(SECURITY_KEY)
+    // Invalidate every integrations list query (any category/pagination), not a
+    // single hard-coded key — the live hook key includes &per_page=50, which the
+    // old exact-key mutate missed.
+    void invalidateIntegrationsCache()
   }
 
   if (isLoading) return <LoadingSkeleton />
