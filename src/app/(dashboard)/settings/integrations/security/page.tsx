@@ -45,7 +45,11 @@ import {
   Pencil,
   Trash2,
   Upload,
+  Gauge,
+  Target,
+  AlertTriangle,
 } from 'lucide-react'
+import { useScanCoverage } from '@/lib/api/scan-coverage-hooks'
 import {
   useIntegrationsApi,
   useCreateIntegrationApi,
@@ -712,6 +716,8 @@ export default function SecurityScannersPage() {
     (s) => (getConfigString(s, 'execution_mode') || 'agent') === 'agent'
   ).length
 
+  const { data: coverage, isLoading: coverageLoading } = useScanCoverage(30)
+
   const refresh = () => {
     reload()
     mutate(SECURITY_KEY)
@@ -756,6 +762,61 @@ export default function SecurityScannersPage() {
           description="Backend reaches Tenable"
         />
       </div>
+
+      {scanners.length > 0 && (
+        <div className="mt-6">
+          <div className="mb-4 flex items-center gap-2">
+            <h2 className="text-lg font-semibold">Coverage</h2>
+            <span className="text-muted-foreground text-sm">
+              rolling scan freshness (last {coverage?.window_days ?? 30} days)
+            </span>
+          </div>
+          {coverageLoading ? (
+            <div className="grid gap-4 md:grid-cols-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} className="h-28 w-full" />
+              ))}
+            </div>
+          ) : coverage ? (
+            <div className="grid gap-4 md:grid-cols-4">
+              <StatsCard
+                title="Coverage"
+                value={`${coverage.coverage_percent.toFixed(1)}%`}
+                icon={Gauge}
+                changeType={
+                  coverage.coverage_percent >= 80
+                    ? 'positive'
+                    : coverage.coverage_percent >= 50
+                      ? 'neutral'
+                      : 'negative'
+                }
+                description={`${coverage.covered_in_window} of ${coverage.total_scannable} scanned in window`}
+              />
+              <StatsCard
+                title="Never scanned"
+                value={coverage.never_scanned}
+                icon={Target}
+                changeType={coverage.never_scanned > 0 ? 'negative' : 'positive'}
+                description={`of ${coverage.total_scannable} scannable assets`}
+              />
+              <StatsCard
+                title="Stale"
+                value={coverage.stale}
+                icon={Clock}
+                changeType={coverage.stale > 0 ? 'neutral' : 'positive'}
+                description="scanned, but older than the window"
+              />
+              <StatsCard
+                title="Critical never scanned"
+                value={coverage.critical_never_scanned}
+                icon={AlertTriangle}
+                changeType={coverage.critical_never_scanned > 0 ? 'negative' : 'positive'}
+                description="critical assets with no coverage"
+              />
+            </div>
+          ) : null}
+        </div>
+      )}
 
       <div className="mt-6">
         <h2 className="mb-4 text-lg font-semibold">Scanners</h2>
