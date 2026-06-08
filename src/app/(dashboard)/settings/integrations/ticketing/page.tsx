@@ -35,10 +35,12 @@ import {
   Link2,
   ExternalLink,
 } from 'lucide-react'
+import { Switch } from '@/components/ui/switch'
 import {
   useIntegrationsApi,
   useCreateIntegrationApi,
   useSyncIntegrationApi,
+  useUpdateIntegrationApi,
 } from '@/features/integrations/api/use-integrations-api'
 import type {
   Integration,
@@ -108,11 +110,89 @@ function StatusBadge({ status }: { status: IntegrationStatus }) {
 }
 
 // ─────────────────────────────────────────────────────────
+// Configure dialog (bidirectional sync toggle)
+// ─────────────────────────────────────────────────────────
+
+function getTicketingConfig(integration: Integration): Record<string, unknown> {
+  const cfg = integration.config as Record<string, unknown> | undefined
+  return (cfg?.ticketing as Record<string, unknown> | undefined) ?? {}
+}
+
+function ConfigureTicketingDialog({
+  integration,
+  open,
+  onOpenChange,
+}: {
+  integration: Integration
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}) {
+  const [syncEnabled, setSyncEnabled] = useState<boolean>(
+    Boolean(getTicketingConfig(integration).sync_enabled)
+  )
+  const { trigger: update, isMutating } = useUpdateIntegrationApi(integration.id)
+
+  async function handleSave() {
+    try {
+      // UpdateIntegration replaces config wholesale, so send the full object with
+      // only ticketing.sync_enabled changed (preserve project_key, maps, etc.).
+      const existingConfig = (integration.config as Record<string, unknown>) ?? {}
+      const existingTicketing = (existingConfig.ticketing as Record<string, unknown>) ?? {}
+      await update({
+        config: {
+          ...existingConfig,
+          ticketing: { ...existingTicketing, sync_enabled: syncEnabled },
+        },
+      })
+      toast.success('Ticketing settings saved')
+      await mutate('/api/v1/integrations?category=ticketing')
+      onOpenChange(false)
+    } catch {
+      toast.error('Failed to save settings')
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Configure {integration.name}</DialogTitle>
+          <DialogDescription>Control how OpenCTEM syncs with this tracker.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="flex items-start justify-between gap-4 rounded-lg border p-3">
+            <div className="space-y-1">
+              <Label htmlFor="sync-enabled" className="font-medium">
+                Bidirectional status sync
+              </Label>
+              <p className="text-muted-foreground text-xs">
+                When a finding&apos;s status changes in OpenCTEM, move the linked Jira issue to
+                match. Jira-side status changes already sync back automatically.
+              </p>
+            </div>
+            <Switch id="sync-enabled" checked={syncEnabled} onCheckedChange={setSyncEnabled} />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button type="button" onClick={handleSave} disabled={isMutating}>
+            {isMutating ? 'Saving...' : 'Save'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+// ─────────────────────────────────────────────────────────
 // Integration card
 // ─────────────────────────────────────────────────────────
 
 function TicketingIntegrationCard({ integration }: { integration: Integration }) {
   const projectKey = getProjectKey(integration)
+  const [configOpen, setConfigOpen] = useState(false)
 
   const { trigger: syncNow, isMutating: isSyncing } = useSyncIntegrationApi(integration.id)
 
@@ -183,13 +263,27 @@ function TicketingIntegrationCard({ integration }: { integration: Integration })
                 Sync
               </Button>
             )}
-            <Button variant="outline" size="sm" disabled title="Configure">
+            <Button
+              variant="outline"
+              size="sm"
+              title="Configure"
+              disabled={integration.provider !== 'jira' || integration.status !== 'connected'}
+              onClick={() => setConfigOpen(true)}
+            >
               <Settings className="me-2 h-4 w-4" />
               Configure
             </Button>
           </div>
         </div>
       </CardContent>
+
+      {integration.provider === 'jira' && (
+        <ConfigureTicketingDialog
+          integration={integration}
+          open={configOpen}
+          onOpenChange={setConfigOpen}
+        />
+      )}
     </Card>
   )
 }
