@@ -118,6 +118,18 @@ function getTicketingConfig(integration: Integration): Record<string, unknown> {
   return (cfg?.ticketing as Record<string, unknown> | undefined) ?? {}
 }
 
+// Finding statuses whose outbound (OpenCTEM → Jira) target a user can customize.
+// placeholder = the stock-Jira default; leaving a field blank uses that default
+// (or, for false_positive/accepted which have no stock status, no push → comment).
+const OUTBOUND_STATUSES: { key: string; label: string; placeholder: string }[] = [
+  { key: 'confirmed', label: 'Confirmed', placeholder: 'To Do' },
+  { key: 'in_progress', label: 'In Progress', placeholder: 'In Progress' },
+  { key: 'fix_applied', label: 'Fix applied', placeholder: 'Done' },
+  { key: 'resolved', label: 'Resolved', placeholder: 'Done' },
+  { key: 'false_positive', label: 'False positive', placeholder: "Won't Do" },
+  { key: 'accepted', label: 'Risk accepted', placeholder: 'Acknowledged' },
+]
+
 function ConfigureTicketingDialog({
   integration,
   open,
@@ -130,18 +142,37 @@ function ConfigureTicketingDialog({
   const [syncEnabled, setSyncEnabled] = useState<boolean>(
     Boolean(getTicketingConfig(integration).sync_enabled)
   )
+  const [outboundMap, setOutboundMap] = useState<Record<string, string>>(() => {
+    const existing =
+      (getTicketingConfig(integration).status_outbound as Record<string, unknown> | undefined) ?? {}
+    const m: Record<string, string> = {}
+    for (const s of OUTBOUND_STATUSES) {
+      m[s.key] = typeof existing[s.key] === 'string' ? (existing[s.key] as string) : ''
+    }
+    return m
+  })
   const { trigger: update, isMutating } = useUpdateIntegrationApi(integration.id)
 
   async function handleSave() {
     try {
       // UpdateIntegration replaces config wholesale, so send the full object with
-      // only ticketing.sync_enabled changed (preserve project_key, maps, etc.).
+      // only the ticketing fields changed (preserve project_key, status_inbound, etc.).
       const existingConfig = (integration.config as Record<string, unknown>) ?? {}
       const existingTicketing = (existingConfig.ticketing as Record<string, unknown>) ?? {}
+      // Persist only non-empty overrides; a blank field falls back to the default.
+      const statusOutbound: Record<string, string> = {}
+      for (const [k, v] of Object.entries(outboundMap)) {
+        const t = v.trim()
+        if (t) statusOutbound[k] = t
+      }
       await update({
         config: {
           ...existingConfig,
-          ticketing: { ...existingTicketing, sync_enabled: syncEnabled },
+          ticketing: {
+            ...existingTicketing,
+            sync_enabled: syncEnabled,
+            status_outbound: statusOutbound,
+          },
         },
       })
       toast.success('Ticketing settings saved')
@@ -172,6 +203,30 @@ function ConfigureTicketingDialog({
             </div>
             <Switch id="sync-enabled" checked={syncEnabled} onCheckedChange={setSyncEnabled} />
           </div>
+
+          {syncEnabled && (
+            <div className="space-y-2">
+              <Label className="font-medium">Status mapping (OpenCTEM → Jira)</Label>
+              <p className="text-muted-foreground text-xs">
+                The Jira status to move the issue to for each finding status. Leave blank to use the
+                default shown; a custom Jira workflow uses your own status names.
+              </p>
+              <div className="space-y-2">
+                {OUTBOUND_STATUSES.map((s) => (
+                  <div key={s.key} className="grid grid-cols-2 items-center gap-2">
+                    <span className="text-sm">{s.label}</span>
+                    <Input
+                      value={outboundMap[s.key] ?? ''}
+                      placeholder={s.placeholder}
+                      onChange={(e) =>
+                        setOutboundMap((prev) => ({ ...prev, [s.key]: e.target.value }))
+                      }
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
