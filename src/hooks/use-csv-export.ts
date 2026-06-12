@@ -44,7 +44,10 @@ export function useCsvExport<T>(data: T[], fields: ExportFieldConfig<T>[], filen
       return
     }
 
-    const headers = fields.map((f) => f.header).join(',')
+    // Sanitize headers too, not just cells: a header sourced from user-defined
+    // data (e.g. a custom field name) starting with =/+/-/@ would otherwise be
+    // a formula-injection vector when the CSV is opened in a spreadsheet.
+    const headers = fields.map((f) => sanitizeCsvCell(f.header)).join(',')
     const rows = data.map((item) =>
       fields
         .map((f) => {
