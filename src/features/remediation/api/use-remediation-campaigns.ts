@@ -80,3 +80,22 @@ export function useUpdateCampaignStatus(id: string) {
 export function useDeleteRemediationCampaign(id: string) {
   return useSWRMutation(`/api/v1/remediation/campaigns/${id}`, (url: string) => del(url))
 }
+
+export interface CampaignTicketInfo {
+  campaign_id: string
+  provider: string
+  issue_key: string
+  issue_url: string
+  already_existed: boolean
+}
+
+/**
+ * Creates (or returns the existing) Jira epic for a campaign. Idempotent on the
+ * backend — re-invoking returns the existing link with already_existed=true.
+ */
+export function useCreateCampaignTicket(id: string) {
+  return useSWRMutation<CampaignTicketInfo, Error, string, { project_key: string }>(
+    `/api/v1/remediation/campaigns/${id}/create-ticket`,
+    (url: string, { arg }: { arg: { project_key: string } }) => post(url, arg)
+  )
+}

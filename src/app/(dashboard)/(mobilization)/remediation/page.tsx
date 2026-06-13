@@ -89,6 +89,7 @@ import {
   useRemediationCampaigns,
   useCreateRemediationCampaign,
 } from '@/features/remediation/api/use-remediation-campaigns'
+import { CreateJiraEpicDialog } from '@/features/remediation/components/create-jira-epic-dialog'
 import { getErrorMessage } from '@/lib/api/error-handler'
 import { patch, del } from '@/lib/api/client'
 import { useFindingsApi } from '@/features/findings/api/use-findings-api'
@@ -352,6 +353,7 @@ export default function RemediationPage() {
   const [viewTask, setViewTask] = useState<RemediationTask | null>(null)
   const [editTask, setEditTask] = useState<RemediationTask | null>(null)
   const [deleteTask, setDeleteTask] = useState<RemediationTask | null>(null)
+  const [jiraTask, setJiraTask] = useState<RemediationTask | null>(null)
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [formData, setFormData] = useState<TaskFormData>(emptyFormData)
   const [dueDateOpen, setDueDateOpen] = useState(false)
@@ -769,6 +771,12 @@ export default function RemediationPage() {
                   <UserPlus className="me-2 h-4 w-4" />
                   Reassign
                 </DropdownMenuItem>
+                <Can permission={Permission.RemediationWrite}>
+                  <DropdownMenuItem onClick={() => setJiraTask(task)}>
+                    <ExternalLink className="me-2 h-4 w-4" />
+                    Create Jira Epic
+                  </DropdownMenuItem>
+                </Can>
                 {actions.length > 0 && <DropdownMenuSeparator />}
                 {actions.map(({ action, label, icon: Icon }) => (
                   <DropdownMenuItem key={action} onClick={() => handleTaskAction(action, task)}>
@@ -1270,6 +1278,13 @@ export default function RemediationPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <CreateJiraEpicDialog
+        campaign={jiraTask ? { id: jiraTask.id, name: jiraTask.title } : null}
+        onOpenChange={(open) => {
+          if (!open) setJiraTask(null)
+        }}
+      />
     </TooltipProvider>
   )
 }
