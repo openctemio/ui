@@ -48,6 +48,9 @@ export interface RemediationTask {
   actualHours?: number
   createdAt: string
   updatedAt: string
+  /** Linked external tracker epic (e.g. Jira), when the campaign is ticketed. */
+  ticketKey?: string
+  ticketUrl?: string
 }
 
 /**

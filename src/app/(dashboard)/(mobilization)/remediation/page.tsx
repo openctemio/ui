@@ -312,6 +312,8 @@ export default function RemediationPage() {
       progress: c.progress,
       is_overdue: c.is_overdue,
       tags: c.tags || [],
+      ticketKey: c.ticket?.issue_key,
+      ticketUrl: c.ticket?.issue_url,
     })) as RemediationTask[]
   }, [campaignData])
 
@@ -771,12 +773,21 @@ export default function RemediationPage() {
                   <UserPlus className="me-2 h-4 w-4" />
                   Reassign
                 </DropdownMenuItem>
-                <Can permission={Permission.RemediationWrite}>
-                  <DropdownMenuItem onClick={() => setJiraTask(task)}>
+                {task.ticketUrl ? (
+                  <DropdownMenuItem
+                    onClick={() => window.open(task.ticketUrl, '_blank', 'noopener,noreferrer')}
+                  >
                     <ExternalLink className="me-2 h-4 w-4" />
-                    Create Jira Epic
+                    View Jira Epic ({task.ticketKey})
                   </DropdownMenuItem>
-                </Can>
+                ) : (
+                  <Can permission={Permission.RemediationWrite}>
+                    <DropdownMenuItem onClick={() => setJiraTask(task)}>
+                      <ExternalLink className="me-2 h-4 w-4" />
+                      Create Jira Epic
+                    </DropdownMenuItem>
+                  </Can>
+                )}
                 {actions.length > 0 && <DropdownMenuSeparator />}
                 {actions.map(({ action, label, icon: Icon }) => (
                   <DropdownMenuItem key={action} onClick={() => handleTaskAction(action, task)}>
