@@ -794,6 +794,12 @@ export const sidebarData: SidebarData = {
               icon: Shield,
               subModuleKey: 'siem',
             },
+            {
+              title: 'SCIM Provisioning',
+              url: '/settings/integrations/scim-tokens',
+              icon: Users,
+              subModuleKey: 'scim',
+            },
           ],
         },
       ],
