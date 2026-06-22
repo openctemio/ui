@@ -114,9 +114,10 @@ export function SyncRepositoriesDialog({
         if (asset.repository?.fullName) {
           names.add(asset.repository.fullName.toLowerCase())
         }
-        // Also check snake_case field (API might return this directly)
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const repo = asset.repository as any
+        // Also check snake_case field (API might return this directly).
+        // Narrow to the snake_case shape instead of `any` so there's no
+        // no-explicit-any to suppress.
+        const repo = asset.repository as { full_name?: string } | undefined
         if (repo?.full_name) {
           names.add(repo.full_name.toLowerCase())
         }
