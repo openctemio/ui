@@ -45,6 +45,7 @@ import {
   ShieldCheck,
   ChevronDown,
   AlertOctagon,
+  Ticket,
 } from 'lucide-react'
 import { PriorityClassBadge } from './priority-class-badge'
 import {
@@ -75,6 +76,7 @@ import {
 import { AssigneeSelect } from './assignee-select'
 import { StatusSelect } from './status-select'
 import { SeveritySelect } from './severity-select'
+import { CreateTicketDialog } from './create-ticket-dialog'
 import { useTenant } from '@/context/tenant-provider'
 import { useMembers } from '@/features/organization/api/use-members'
 
@@ -201,6 +203,7 @@ export function FindingDetailDrawer({
   const [assignee, setAssignee] = useState<FindingUser | null | undefined>(undefined)
   const [comment, setComment] = useState('')
   const [showCommentInput, setShowCommentInput] = useState(false)
+  const [ticketOpen, setTicketOpen] = useState(false)
 
   // Check if we need to fetch assignee info (name is empty but id exists)
   const needsAssigneeFetch = open && finding?.assignee?.id && !finding?.assignee?.name
@@ -453,564 +456,597 @@ export function FindingDetailDrawer({
   }
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        className="flex w-full flex-col p-0 sm:max-w-xl [&>button]:hidden"
-        onOpenAutoFocus={(e) => {
-          e.preventDefault()
-        }}
-      >
-        {/* Loading State */}
-        {isLoading && <DrawerSkeleton />}
+    <>
+      <Sheet open={open} onOpenChange={onOpenChange}>
+        <SheetContent
+          className="flex w-full flex-col p-0 sm:max-w-xl [&>button]:hidden"
+          onOpenAutoFocus={(e) => {
+            e.preventDefault()
+          }}
+        >
+          {/* Loading State */}
+          {isLoading && <DrawerSkeleton />}
 
-        {/* Content - only show when not loading and finding exists */}
-        {!isLoading && finding && (
-          <>
-            {/* Toolbar */}
-            <TooltipProvider>
-              <SheetDetailToolbar
-                title="Finding Details"
-                onClose={() => onOpenChange(false)}
-                onCopyId={() => {
-                  copyToClipboard(finding.id)
-                  toast.success('Finding ID copied to clipboard')
-                }}
-                onOpenExternal={() => {
-                  router.push(`/findings/${finding.id}`)
-                }}
-                extraActions={[
-                  {
-                    label: 'Copy link',
-                    icon: Link2,
-                    onClick: () => {
-                      copyToClipboard(window.location.origin + `/findings/${finding.id}`)
-                      toast.success('Finding URL copied to clipboard')
+          {/* Content - only show when not loading and finding exists */}
+          {!isLoading && finding && (
+            <>
+              {/* Toolbar */}
+              <TooltipProvider>
+                <SheetDetailToolbar
+                  title="Finding Details"
+                  onClose={() => onOpenChange(false)}
+                  onCopyId={() => {
+                    copyToClipboard(finding.id)
+                    toast.success('Finding ID copied to clipboard')
+                  }}
+                  onOpenExternal={() => {
+                    router.push(`/findings/${finding.id}`)
+                  }}
+                  extraActions={[
+                    {
+                      label: 'Copy link',
+                      icon: Link2,
+                      onClick: () => {
+                        copyToClipboard(window.location.origin + `/findings/${finding.id}`)
+                        toast.success('Finding URL copied to clipboard')
+                      },
                     },
-                  },
-                ]}
-              />
-            </TooltipProvider>
+                  ]}
+                />
+              </TooltipProvider>
 
-            {/* Header */}
-            <SheetHeader className="space-y-3 border-b px-4 sm:px-6 pb-4 text-start">
-              {/* Title */}
-              <SheetTitle className="text-lg leading-snug">{finding.title}</SheetTitle>
+              {/* Header */}
+              <SheetHeader className="space-y-3 border-b px-4 sm:px-6 pb-4 text-start">
+                {/* Title */}
+                <SheetTitle className="text-lg leading-snug">{finding.title}</SheetTitle>
 
-              {/* Risk signals — KEV / EPSS / CVSS / priority surfaced up top so the
+                {/* Risk signals — KEV / EPSS / CVSS / priority surfaced up top so the
                   severity story reads at a glance, instead of CVSS being buried in
                   the meta grid at the bottom with no exploit context. */}
-              {(finding.isInKev ||
-                (finding.epssScore !== undefined && finding.epssScore > 0) ||
-                finding.cvss !== undefined ||
-                finding.priorityClass ||
-                finding.cve ||
-                finding.cwe) && (
-                <div className="flex flex-wrap items-center gap-2">
-                  {finding.isInKev && (
-                    <Badge
-                      className="gap-1 bg-red-600 text-xs font-semibold text-white hover:bg-red-600"
-                      title={
-                        finding.kevDueDate
-                          ? `CISA KEV — remediate by ${formatDate(finding.kevDueDate)}`
-                          : 'CISA Known Exploited Vulnerability'
-                      }
-                    >
-                      <AlertOctagon className="h-3 w-3" />
-                      KEV
-                    </Badge>
-                  )}
-                  {finding.priorityClass && (
-                    <PriorityClassBadge priorityClass={finding.priorityClass} showTooltip={false} />
-                  )}
-                  {finding.cvss !== undefined && (
-                    <Badge variant="outline" className="font-mono text-xs">
-                      CVSS {finding.cvss}
-                    </Badge>
-                  )}
-                  {finding.epssScore !== undefined && finding.epssScore > 0 && (
-                    <Badge
-                      variant="outline"
-                      className="border-amber-500/40 font-mono text-xs text-amber-700 dark:text-amber-400"
-                      title="EPSS — probability of exploitation in the next 30 days"
-                    >
-                      EPSS {(finding.epssScore * 100).toFixed(1)}%
-                    </Badge>
-                  )}
-                  {finding.cve && (
-                    <Badge variant="outline" className="font-mono text-xs">
-                      {finding.cve}
-                    </Badge>
-                  )}
-                  {finding.cwe && (
-                    <Badge variant="outline" className="text-xs">
-                      {finding.cwe}
-                    </Badge>
-                  )}
-                </div>
-              )}
-
-              <SheetDescription className="sr-only">
-                Quick view and actions for finding
-              </SheetDescription>
-            </SheetHeader>
-
-            {/* Quick Actions Bar - no longer needs ms-auto for "..." button */}
-            <div className="flex items-center gap-1.5 sm:gap-2 border-b px-3 sm:px-6 py-3 bg-muted/30">
-              {/* Status Select */}
-              <StatusSelect
-                value={currentStatus}
-                onChange={handleStatusChange}
-                loading={isUpdatingStatus}
-                showCheck
-                source={finding.source}
-              />
-
-              {/* Severity Select */}
-              <SeveritySelect
-                value={currentSeverity}
-                onChange={handleSeverityChange}
-                loading={isUpdatingSeverity}
-                showCheck
-              />
-
-              {/* Assignee Select with Search */}
-              <AssigneeSelect
-                value={
-                  currentAssignee
-                    ? {
-                        id: currentAssignee.id,
-                        name: currentAssignee.name,
-                        email: currentAssignee.email,
-                        role: currentAssignee.role,
-                      }
-                    : null
-                }
-                onChange={(user) => {
-                  if (user) {
-                    handleAssigneeChange({
-                      id: user.id,
-                      name: user.name,
-                      email: user.email || '',
-                      role: (user.role as FindingUser['role']) || 'analyst',
-                    })
-                  } else {
-                    handleAssigneeChange(null)
-                  }
-                }}
-                loading={isAssigning || isUnassigning}
-              />
-            </div>
-
-            {/* Scrollable Content */}
-            <div className="flex-1 overflow-y-auto">
-              <div className="space-y-5 p-6">
-                {/* Description */}
-                <div className="space-y-2">
-                  <h4 className="flex items-center gap-2 text-sm font-semibold">
-                    <FileText className="h-4 w-4" />
-                    Description
-                  </h4>
-                  <p className="text-muted-foreground text-sm leading-relaxed">
-                    {finding.description}
-                  </p>
-                </div>
-
-                {/* Approval History - show if there are approvals or status requires approval */}
-                {findingApprovals && findingApprovals.length > 0 && (
-                  <>
-                    <Separator />
-                    <Collapsible open={approvalHistoryOpen} onOpenChange={setApprovalHistoryOpen}>
-                      <CollapsibleTrigger className="flex w-full items-center justify-between">
-                        <h4 className="flex items-center gap-2 text-sm font-semibold">
-                          <ShieldCheck className="h-4 w-4" />
-                          Approval History
-                        </h4>
-                        <div className="flex items-center gap-2">
-                          <Badge variant="secondary" className="text-xs">
-                            {findingApprovals.length}
-                          </Badge>
-                          <ChevronDown
-                            className={`h-4 w-4 text-muted-foreground transition-transform ${
-                              approvalHistoryOpen ? 'rotate-180' : ''
-                            }`}
-                          />
-                        </div>
-                      </CollapsibleTrigger>
-                      <CollapsibleContent>
-                        <div className="mt-3 space-y-2">
-                          {findingApprovals.map((approval: ApiApproval) => {
-                            const statusConfig =
-                              APPROVAL_STATUS_CONFIG[approval.status as ApprovalStatus]
-                            return (
-                              <div
-                                key={approval.id}
-                                className="rounded-md border p-2.5 text-xs space-y-1"
-                              >
-                                <div className="flex items-center justify-between">
-                                  <Badge variant="outline" className="text-[10px]">
-                                    {statusConfig?.label ?? approval.status}
-                                  </Badge>
-                                  <span className="text-muted-foreground">
-                                    {new Date(approval.created_at).toLocaleDateString('en-US', {
-                                      month: 'short',
-                                      day: 'numeric',
-                                      year: 'numeric',
-                                    })}
-                                  </span>
-                                </div>
-                                <div className="text-muted-foreground">
-                                  Requested:{' '}
-                                  <span className="font-medium text-foreground">
-                                    {FINDING_STATUS_CONFIG[
-                                      approval.requested_status as FindingStatus
-                                    ]?.label ?? approval.requested_status}
-                                  </span>
-                                </div>
-                                {approval.justification && (
-                                  <p className="text-muted-foreground line-clamp-2">
-                                    {approval.justification}
-                                  </p>
-                                )}
-                                {approval.rejection_reason && (
-                                  <p className="text-red-500 line-clamp-2">
-                                    Reason: {approval.rejection_reason}
-                                  </p>
-                                )}
-                              </div>
-                            )
-                          })}
-                        </div>
-                      </CollapsibleContent>
-                    </Collapsible>
-                  </>
-                )}
-
-                {/* Code Evidence - show if evidence exists or filePath exists */}
-                {(finding.evidence.length > 0 || finding.filePath) && (
-                  <>
-                    <Separator />
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <h4 className="flex items-center gap-2 text-sm font-semibold">
-                          <Eye className="h-4 w-4" />
-                          Code Evidence
-                        </h4>
-                        {finding.evidence.length > 0 && (
-                          <Badge variant="secondary" className="text-xs">
-                            {finding.evidence.length}
-                          </Badge>
-                        )}
-                      </div>
-
-                      {/* File path and line info */}
-                      {finding.filePath && (
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/30 px-3 py-1.5 rounded-md font-mono">
-                          <span className="truncate">{finding.filePath}</span>
-                          {finding.startLine && (
-                            <span className="shrink-0 text-foreground/70">
-                              :{finding.startLine}
-                              {finding.endLine &&
-                                finding.endLine !== finding.startLine &&
-                                `-${finding.endLine}`}
-                            </span>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Code snippets with syntax highlighting */}
-                      <div className="space-y-2">
-                        {finding.evidence.slice(0, 2).map((ev) => (
-                          <div key={ev.id} className="rounded-md border overflow-hidden group">
-                            <div className="bg-muted/50 px-3 py-1.5 border-b flex items-center justify-between">
-                              <span className="text-xs font-medium truncate">{ev.title}</span>
-                              <div className="flex items-center gap-1">
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-8 w-8 p-0 min-h-[32px] min-w-[32px]"
-                                  onClick={async (e) => {
-                                    e.preventDefault()
-                                    e.stopPropagation()
-                                    const textToCopy = ev.content || ''
-                                    if (!textToCopy) {
-                                      toast.error('No code content to copy')
-                                      return
-                                    }
-                                    const ok = await copyToClipboard(textToCopy)
-                                    if (ok) {
-                                      toast.success('Code copied to clipboard')
-                                    } else {
-                                      toast.error('Failed to copy code')
-                                    }
-                                  }}
-                                >
-                                  <Copy className="h-4 w-4" />
-                                </Button>
-                                <span className="text-xs text-muted-foreground capitalize">
-                                  {ev.type}
-                                </span>
-                              </div>
-                            </div>
-                            <div className="p-3 bg-muted/20 max-h-40 overflow-y-auto">
-                              <CodeHighlighter
-                                code={ev.content}
-                                filePath={finding.filePath}
-                                showLineNumbers={!!finding.startLine}
-                                startLine={finding.startLine || 1}
-                                highlightLine={finding.startLine}
-                              />
-                            </div>
-                          </div>
-                        ))}
-                        {finding.evidence.length > 2 && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="w-full text-xs h-7"
-                            onClick={handleViewDetails}
-                          >
-                            +{finding.evidence.length - 2} more evidence
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  </>
-                )}
-
-                <Separator />
-
-                {/* Affected Assets */}
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h4 className="flex items-center gap-2 text-sm font-semibold">
-                      <Server className="h-4 w-4" />
-                      Affected Assets
-                    </h4>
-                    <Badge variant="secondary" className="text-xs">
-                      {finding.assets.length}
-                    </Badge>
-                  </div>
-                  <div className="space-y-2">
-                    {finding.assets.slice(0, 3).map((asset) => (
-                      <div
-                        key={asset.id}
-                        className="flex items-center justify-between rounded-lg border p-2.5"
+                {(finding.isInKev ||
+                  (finding.epssScore !== undefined && finding.epssScore > 0) ||
+                  finding.cvss !== undefined ||
+                  finding.priorityClass ||
+                  finding.cve ||
+                  finding.cwe) && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    {finding.isInKev && (
+                      <Badge
+                        className="gap-1 bg-red-600 text-xs font-semibold text-white hover:bg-red-600"
+                        title={
+                          finding.kevDueDate
+                            ? `CISA KEV — remediate by ${formatDate(finding.kevDueDate)}`
+                            : 'CISA Known Exploited Vulnerability'
+                        }
                       >
-                        <div className="flex items-center gap-2 min-w-0">
-                          <Badge variant="outline" className="text-xs capitalize shrink-0">
-                            {asset.type}
-                          </Badge>
-                          <span className="text-sm truncate">{asset.name}</span>
-                        </div>
-                        {asset.criticality && (
-                          <Badge
-                            className={`text-xs shrink-0 ${SEVERITY_CONFIG[asset.criticality].bgColor} ${SEVERITY_CONFIG[asset.criticality].textColor} border-0`}
-                          >
-                            {asset.criticality}
-                          </Badge>
-                        )}
-                      </div>
-                    ))}
-                    {finding.assets.length > 3 && (
-                      <Button variant="ghost" size="sm" className="w-full text-xs h-7">
-                        +{finding.assets.length - 3} more assets
-                      </Button>
+                        <AlertOctagon className="h-3 w-3" />
+                        KEV
+                      </Badge>
+                    )}
+                    {finding.priorityClass && (
+                      <PriorityClassBadge
+                        priorityClass={finding.priorityClass}
+                        showTooltip={false}
+                      />
+                    )}
+                    {finding.cvss !== undefined && (
+                      <Badge variant="outline" className="font-mono text-xs">
+                        CVSS {finding.cvss}
+                      </Badge>
+                    )}
+                    {finding.epssScore !== undefined && finding.epssScore > 0 && (
+                      <Badge
+                        variant="outline"
+                        className="border-amber-500/40 font-mono text-xs text-amber-700 dark:text-amber-400"
+                        title="EPSS — probability of exploitation in the next 30 days"
+                      >
+                        EPSS {(finding.epssScore * 100).toFixed(1)}%
+                      </Badge>
+                    )}
+                    {finding.cve && (
+                      <Badge variant="outline" className="font-mono text-xs">
+                        {finding.cve}
+                      </Badge>
+                    )}
+                    {finding.cwe && (
+                      <Badge variant="outline" className="text-xs">
+                        {finding.cwe}
+                      </Badge>
                     )}
                   </div>
-                </div>
+                )}
 
-                {/* Attack Path / Data Flow */}
-                {finding.dataFlow &&
-                  ((finding.dataFlow.sources?.length ?? 0) > 0 ||
-                    (finding.dataFlow.intermediates?.length ?? 0) > 0 ||
-                    (finding.dataFlow.sinks?.length ?? 0) > 0) && (
+                <SheetDescription className="sr-only">
+                  Quick view and actions for finding
+                </SheetDescription>
+              </SheetHeader>
+
+              {/* Quick Actions Bar - no longer needs ms-auto for "..." button */}
+              <div className="flex items-center gap-1.5 sm:gap-2 border-b px-3 sm:px-6 py-3 bg-muted/30">
+                {/* Status Select */}
+                <StatusSelect
+                  value={currentStatus}
+                  onChange={handleStatusChange}
+                  loading={isUpdatingStatus}
+                  showCheck
+                  source={finding.source}
+                />
+
+                {/* Severity Select */}
+                <SeveritySelect
+                  value={currentSeverity}
+                  onChange={handleSeverityChange}
+                  loading={isUpdatingSeverity}
+                  showCheck
+                />
+
+                {/* Assignee Select with Search */}
+                <AssigneeSelect
+                  value={
+                    currentAssignee
+                      ? {
+                          id: currentAssignee.id,
+                          name: currentAssignee.name,
+                          email: currentAssignee.email,
+                          role: currentAssignee.role,
+                        }
+                      : null
+                  }
+                  onChange={(user) => {
+                    if (user) {
+                      handleAssigneeChange({
+                        id: user.id,
+                        name: user.name,
+                        email: user.email || '',
+                        role: (user.role as FindingUser['role']) || 'analyst',
+                      })
+                    } else {
+                      handleAssigneeChange(null)
+                    }
+                  }}
+                  loading={isAssigning || isUnassigning}
+                />
+
+                {/* Overflow actions */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="ms-auto h-8 w-8"
+                      title="More actions"
+                    >
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => setTicketOpen(true)}>
+                      <Ticket className="me-2 h-4 w-4" />
+                      Create Jira Ticket
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+
+              {/* Scrollable Content */}
+              <div className="flex-1 overflow-y-auto">
+                <div className="space-y-5 p-6">
+                  {/* Description */}
+                  <div className="space-y-2">
+                    <h4 className="flex items-center gap-2 text-sm font-semibold">
+                      <FileText className="h-4 w-4" />
+                      Description
+                    </h4>
+                    <p className="text-muted-foreground text-sm leading-relaxed">
+                      {finding.description}
+                    </p>
+                  </div>
+
+                  {/* Approval History - show if there are approvals or status requires approval */}
+                  {findingApprovals && findingApprovals.length > 0 && (
+                    <>
+                      <Separator />
+                      <Collapsible open={approvalHistoryOpen} onOpenChange={setApprovalHistoryOpen}>
+                        <CollapsibleTrigger className="flex w-full items-center justify-between">
+                          <h4 className="flex items-center gap-2 text-sm font-semibold">
+                            <ShieldCheck className="h-4 w-4" />
+                            Approval History
+                          </h4>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="secondary" className="text-xs">
+                              {findingApprovals.length}
+                            </Badge>
+                            <ChevronDown
+                              className={`h-4 w-4 text-muted-foreground transition-transform ${
+                                approvalHistoryOpen ? 'rotate-180' : ''
+                              }`}
+                            />
+                          </div>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                          <div className="mt-3 space-y-2">
+                            {findingApprovals.map((approval: ApiApproval) => {
+                              const statusConfig =
+                                APPROVAL_STATUS_CONFIG[approval.status as ApprovalStatus]
+                              return (
+                                <div
+                                  key={approval.id}
+                                  className="rounded-md border p-2.5 text-xs space-y-1"
+                                >
+                                  <div className="flex items-center justify-between">
+                                    <Badge variant="outline" className="text-[10px]">
+                                      {statusConfig?.label ?? approval.status}
+                                    </Badge>
+                                    <span className="text-muted-foreground">
+                                      {new Date(approval.created_at).toLocaleDateString('en-US', {
+                                        month: 'short',
+                                        day: 'numeric',
+                                        year: 'numeric',
+                                      })}
+                                    </span>
+                                  </div>
+                                  <div className="text-muted-foreground">
+                                    Requested:{' '}
+                                    <span className="font-medium text-foreground">
+                                      {FINDING_STATUS_CONFIG[
+                                        approval.requested_status as FindingStatus
+                                      ]?.label ?? approval.requested_status}
+                                    </span>
+                                  </div>
+                                  {approval.justification && (
+                                    <p className="text-muted-foreground line-clamp-2">
+                                      {approval.justification}
+                                    </p>
+                                  )}
+                                  {approval.rejection_reason && (
+                                    <p className="text-red-500 line-clamp-2">
+                                      Reason: {approval.rejection_reason}
+                                    </p>
+                                  )}
+                                </div>
+                              )
+                            })}
+                          </div>
+                        </CollapsibleContent>
+                      </Collapsible>
+                    </>
+                  )}
+
+                  {/* Code Evidence - show if evidence exists or filePath exists */}
+                  {(finding.evidence.length > 0 || finding.filePath) && (
                     <>
                       <Separator />
                       <div className="space-y-3">
                         <div className="flex items-center justify-between">
                           <h4 className="flex items-center gap-2 text-sm font-semibold">
-                            <Route className="h-4 w-4" />
-                            Attack Path
+                            <Eye className="h-4 w-4" />
+                            Code Evidence
                           </h4>
-                          <Badge variant="secondary" className="text-xs">
-                            {(finding.dataFlow.sources?.length ?? 0) +
-                              (finding.dataFlow.intermediates?.length ?? 0) +
-                              (finding.dataFlow.sinks?.length ?? 0)}{' '}
-                            steps
-                          </Badge>
-                        </div>
-
-                        {/* Compact flow visualization */}
-                        <div className="space-y-2">
-                          {/* Sources */}
-                          {finding.dataFlow.sources?.map((loc, idx) => (
-                            <DataFlowLocationCompact
-                              key={`source-${idx}`}
-                              location={loc}
-                              type="source"
-                            />
-                          ))}
-
-                          {/* Intermediates - show max 2 */}
-                          {finding.dataFlow.intermediates?.slice(0, 2).map((loc, idx) => (
-                            <DataFlowLocationCompact
-                              key={`intermediate-${idx}`}
-                              location={loc}
-                              type="intermediate"
-                            />
-                          ))}
-                          {(finding.dataFlow.intermediates?.length ?? 0) > 2 && (
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground ps-6">
-                              <ArrowRight className="h-3 w-3" />+
-                              {(finding.dataFlow.intermediates?.length ?? 0) - 2} more steps
-                            </div>
+                          {finding.evidence.length > 0 && (
+                            <Badge variant="secondary" className="text-xs">
+                              {finding.evidence.length}
+                            </Badge>
                           )}
-
-                          {/* Sinks */}
-                          {finding.dataFlow.sinks?.map((loc, idx) => (
-                            <DataFlowLocationCompact
-                              key={`sink-${idx}`}
-                              location={loc}
-                              type="sink"
-                            />
-                          ))}
                         </div>
 
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="w-full text-xs h-7"
-                          onClick={handleViewDetails}
-                        >
-                          View Full Attack Path
-                        </Button>
+                        {/* File path and line info */}
+                        {finding.filePath && (
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/30 px-3 py-1.5 rounded-md font-mono">
+                            <span className="truncate">{finding.filePath}</span>
+                            {finding.startLine && (
+                              <span className="shrink-0 text-foreground/70">
+                                :{finding.startLine}
+                                {finding.endLine &&
+                                  finding.endLine !== finding.startLine &&
+                                  `-${finding.endLine}`}
+                              </span>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Code snippets with syntax highlighting */}
+                        <div className="space-y-2">
+                          {finding.evidence.slice(0, 2).map((ev) => (
+                            <div key={ev.id} className="rounded-md border overflow-hidden group">
+                              <div className="bg-muted/50 px-3 py-1.5 border-b flex items-center justify-between">
+                                <span className="text-xs font-medium truncate">{ev.title}</span>
+                                <div className="flex items-center gap-1">
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 w-8 p-0 min-h-[32px] min-w-[32px]"
+                                    onClick={async (e) => {
+                                      e.preventDefault()
+                                      e.stopPropagation()
+                                      const textToCopy = ev.content || ''
+                                      if (!textToCopy) {
+                                        toast.error('No code content to copy')
+                                        return
+                                      }
+                                      const ok = await copyToClipboard(textToCopy)
+                                      if (ok) {
+                                        toast.success('Code copied to clipboard')
+                                      } else {
+                                        toast.error('Failed to copy code')
+                                      }
+                                    }}
+                                  >
+                                    <Copy className="h-4 w-4" />
+                                  </Button>
+                                  <span className="text-xs text-muted-foreground capitalize">
+                                    {ev.type}
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="p-3 bg-muted/20 max-h-40 overflow-y-auto">
+                                <CodeHighlighter
+                                  code={ev.content}
+                                  filePath={finding.filePath}
+                                  showLineNumbers={!!finding.startLine}
+                                  startLine={finding.startLine || 1}
+                                  highlightLine={finding.startLine}
+                                />
+                              </div>
+                            </div>
+                          ))}
+                          {finding.evidence.length > 2 && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="w-full text-xs h-7"
+                              onClick={handleViewDetails}
+                            >
+                              +{finding.evidence.length - 2} more evidence
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     </>
                   )}
 
-                <Separator />
+                  <Separator />
 
-                {/* Remediation Progress */}
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h4 className="flex items-center gap-2 text-sm font-semibold">
-                      <Wrench className="h-4 w-4" />
-                      Remediation
-                    </h4>
-                    <span className="text-sm font-semibold">{finding.remediation.progress}%</span>
-                  </div>
-                  <Progress value={finding.remediation.progress} className="h-2" />
-                  <p className="text-muted-foreground text-xs line-clamp-2">
-                    {finding.remediation.description}
-                  </p>
-                  {finding.remediation.deadline && (
-                    <div className="flex items-center gap-2 text-xs">
-                      <AlertTriangle className="h-3.5 w-3.5 text-yellow-500" />
-                      <span className="text-muted-foreground">
-                        Due: {formatDate(finding.remediation.deadline)}
-                      </span>
+                  {/* Affected Assets */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="flex items-center gap-2 text-sm font-semibold">
+                        <Server className="h-4 w-4" />
+                        Affected Assets
+                      </h4>
+                      <Badge variant="secondary" className="text-xs">
+                        {finding.assets.length}
+                      </Badge>
                     </div>
-                  )}
-                </div>
-
-                {/* Tags */}
-                {finding.tags && finding.tags.length > 0 && (
-                  <>
-                    <Separator />
                     <div className="space-y-2">
-                      <h4 className="text-sm font-semibold">Tags</h4>
-                      <div className="flex flex-wrap gap-1.5">
-                        {finding.tags.map((tag) => (
-                          <Badge key={tag} variant="secondary" className="text-xs">
-                            {tag}
-                          </Badge>
-                        ))}
-                      </div>
+                      {finding.assets.slice(0, 3).map((asset) => (
+                        <div
+                          key={asset.id}
+                          className="flex items-center justify-between rounded-lg border p-2.5"
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <Badge variant="outline" className="text-xs capitalize shrink-0">
+                              {asset.type}
+                            </Badge>
+                            <span className="text-sm truncate">{asset.name}</span>
+                          </div>
+                          {asset.criticality && (
+                            <Badge
+                              className={`text-xs shrink-0 ${SEVERITY_CONFIG[asset.criticality].bgColor} ${SEVERITY_CONFIG[asset.criticality].textColor} border-0`}
+                            >
+                              {asset.criticality}
+                            </Badge>
+                          )}
+                        </div>
+                      ))}
+                      {finding.assets.length > 3 && (
+                        <Button variant="ghost" size="sm" className="w-full text-xs h-7">
+                          +{finding.assets.length - 3} more assets
+                        </Button>
+                      )}
                     </div>
-                  </>
-                )}
+                  </div>
 
-                <Separator />
+                  {/* Attack Path / Data Flow */}
+                  {finding.dataFlow &&
+                    ((finding.dataFlow.sources?.length ?? 0) > 0 ||
+                      (finding.dataFlow.intermediates?.length ?? 0) > 0 ||
+                      (finding.dataFlow.sinks?.length ?? 0) > 0) && (
+                      <>
+                        <Separator />
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <h4 className="flex items-center gap-2 text-sm font-semibold">
+                              <Route className="h-4 w-4" />
+                              Attack Path
+                            </h4>
+                            <Badge variant="secondary" className="text-xs">
+                              {(finding.dataFlow.sources?.length ?? 0) +
+                                (finding.dataFlow.intermediates?.length ?? 0) +
+                                (finding.dataFlow.sinks?.length ?? 0)}{' '}
+                              steps
+                            </Badge>
+                          </div>
 
-                {/* Meta Info - 2x2 grid */}
-                <div className="grid grid-cols-2 gap-x-6 gap-y-3">
-                  <div className="space-y-0.5">
-                    <p className="text-muted-foreground text-xs">CVSS Score</p>
-                    <p className="text-sm font-semibold font-mono">
-                      {finding.cvss !== undefined ? finding.cvss : '-'}
+                          {/* Compact flow visualization */}
+                          <div className="space-y-2">
+                            {/* Sources */}
+                            {finding.dataFlow.sources?.map((loc, idx) => (
+                              <DataFlowLocationCompact
+                                key={`source-${idx}`}
+                                location={loc}
+                                type="source"
+                              />
+                            ))}
+
+                            {/* Intermediates - show max 2 */}
+                            {finding.dataFlow.intermediates?.slice(0, 2).map((loc, idx) => (
+                              <DataFlowLocationCompact
+                                key={`intermediate-${idx}`}
+                                location={loc}
+                                type="intermediate"
+                              />
+                            ))}
+                            {(finding.dataFlow.intermediates?.length ?? 0) > 2 && (
+                              <div className="flex items-center gap-2 text-xs text-muted-foreground ps-6">
+                                <ArrowRight className="h-3 w-3" />+
+                                {(finding.dataFlow.intermediates?.length ?? 0) - 2} more steps
+                              </div>
+                            )}
+
+                            {/* Sinks */}
+                            {finding.dataFlow.sinks?.map((loc, idx) => (
+                              <DataFlowLocationCompact
+                                key={`sink-${idx}`}
+                                location={loc}
+                                type="sink"
+                              />
+                            ))}
+                          </div>
+
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full text-xs h-7"
+                            onClick={handleViewDetails}
+                          >
+                            View Full Attack Path
+                          </Button>
+                        </div>
+                      </>
+                    )}
+
+                  <Separator />
+
+                  {/* Remediation Progress */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="flex items-center gap-2 text-sm font-semibold">
+                        <Wrench className="h-4 w-4" />
+                        Remediation
+                      </h4>
+                      <span className="text-sm font-semibold">{finding.remediation.progress}%</span>
+                    </div>
+                    <Progress value={finding.remediation.progress} className="h-2" />
+                    <p className="text-muted-foreground text-xs line-clamp-2">
+                      {finding.remediation.description}
                     </p>
+                    {finding.remediation.deadline && (
+                      <div className="flex items-center gap-2 text-xs">
+                        <AlertTriangle className="h-3.5 w-3.5 text-yellow-500" />
+                        <span className="text-muted-foreground">
+                          Due: {formatDate(finding.remediation.deadline)}
+                        </span>
+                      </div>
+                    )}
                   </div>
-                  <div className="space-y-0.5">
-                    <p className="text-muted-foreground text-xs">Source</p>
-                    <p className="text-sm capitalize">{finding.source}</p>
-                  </div>
-                  <div className="space-y-0.5">
-                    <p className="text-muted-foreground text-xs">Discovered</p>
-                    <p className="text-sm">{formatDate(finding.discoveredAt)}</p>
-                  </div>
-                  <div className="space-y-0.5">
-                    <p className="text-muted-foreground text-xs">Last Updated</p>
-                    <p className="text-sm">{formatDate(finding.updatedAt)}</p>
+
+                  {/* Tags */}
+                  {finding.tags && finding.tags.length > 0 && (
+                    <>
+                      <Separator />
+                      <div className="space-y-2">
+                        <h4 className="text-sm font-semibold">Tags</h4>
+                        <div className="flex flex-wrap gap-1.5">
+                          {finding.tags.map((tag) => (
+                            <Badge key={tag} variant="secondary" className="text-xs">
+                              {tag}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  <Separator />
+
+                  {/* Meta Info - 2x2 grid */}
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-3">
+                    <div className="space-y-0.5">
+                      <p className="text-muted-foreground text-xs">CVSS Score</p>
+                      <p className="text-sm font-semibold font-mono">
+                        {finding.cvss !== undefined ? finding.cvss : '-'}
+                      </p>
+                    </div>
+                    <div className="space-y-0.5">
+                      <p className="text-muted-foreground text-xs">Source</p>
+                      <p className="text-sm capitalize">{finding.source}</p>
+                    </div>
+                    <div className="space-y-0.5">
+                      <p className="text-muted-foreground text-xs">Discovered</p>
+                      <p className="text-sm">{formatDate(finding.discoveredAt)}</p>
+                    </div>
+                    <div className="space-y-0.5">
+                      <p className="text-muted-foreground text-xs">Last Updated</p>
+                      <p className="text-sm">{formatDate(finding.updatedAt)}</p>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
 
-            {/* Footer with Quick Comment & View Details */}
-            <div className="flex-shrink-0 border-t">
-              {/* Quick Comment */}
-              {showCommentInput ? (
-                <div className="p-4 space-y-2 border-b">
-                  <Textarea
-                    placeholder="Add a quick comment..."
-                    value={comment}
-                    onChange={(e) => setComment(e.target.value)}
-                    className="min-h-[60px] resize-none text-sm"
-                    autoFocus
-                  />
-                  <div className="flex justify-end gap-2">
+              {/* Footer with Quick Comment & View Details */}
+              <div className="flex-shrink-0 border-t">
+                {/* Quick Comment */}
+                {showCommentInput ? (
+                  <div className="p-4 space-y-2 border-b">
+                    <Textarea
+                      placeholder="Add a quick comment..."
+                      value={comment}
+                      onChange={(e) => setComment(e.target.value)}
+                      className="min-h-[60px] resize-none text-sm"
+                      autoFocus
+                    />
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setShowCommentInput(false)
+                          setComment('')
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                      <Button size="sm" onClick={handleAddComment} disabled={!comment.trim()}>
+                        <Send className="me-1.5 h-3 w-3" />
+                        Send
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="px-4 py-2 border-b">
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => {
-                        setShowCommentInput(false)
-                        setComment('')
-                      }}
+                      className="w-full justify-start text-muted-foreground hover:text-foreground"
+                      onClick={() => setShowCommentInput(true)}
                     >
-                      Cancel
-                    </Button>
-                    <Button size="sm" onClick={handleAddComment} disabled={!comment.trim()}>
-                      <Send className="me-1.5 h-3 w-3" />
-                      Send
+                      <MessageSquare className="me-2 h-4 w-4" />
+                      Add a comment...
                     </Button>
                   </div>
-                </div>
-              ) : (
-                <div className="px-4 py-2 border-b">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="w-full justify-start text-muted-foreground hover:text-foreground"
-                    onClick={() => setShowCommentInput(true)}
-                  >
-                    <MessageSquare className="me-2 h-4 w-4" />
-                    Add a comment...
+                )}
+
+                {/* View Details Button */}
+                <div className="p-4">
+                  <Button className="w-full" onClick={handleViewDetails}>
+                    <ExternalLink className="me-2 h-4 w-4" />
+                    View Full Details
                   </Button>
                 </div>
-              )}
-
-              {/* View Details Button */}
-              <div className="p-4">
-                <Button className="w-full" onClick={handleViewDetails}>
-                  <ExternalLink className="me-2 h-4 w-4" />
-                  View Full Details
-                </Button>
               </div>
-            </div>
-          </>
-        )}
-      </SheetContent>
-    </Sheet>
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
+      {finding && (
+        <CreateTicketDialog
+          findingId={finding.id}
+          findingTitle={finding.title}
+          open={ticketOpen}
+          onOpenChange={setTicketOpen}
+        />
+      )}
+    </>
   )
 }
