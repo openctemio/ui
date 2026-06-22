@@ -322,6 +322,43 @@ export function useTestCredentialsApi() {
 }
 
 // ============================================
+// TICKETING HOOKS (Jira-specific)
+// ============================================
+
+/** A Jira project as surfaced by the destination-project picker. */
+export interface JiraProjectRef {
+  id: string
+  key: string
+  name: string
+}
+
+interface JiraProjectsResponse {
+  projects: JiraProjectRef[]
+}
+
+/**
+ * Fetch the Jira projects visible to the tenant's connected ticketing
+ * integration (for the default-project picker). Pass `enabled=false` to skip
+ * the call (e.g. no connected Jira integration yet). Does not retry on error —
+ * a 404 here just means "no connected Jira integration" and the UI falls back
+ * to a manual key input.
+ */
+export function useJiraProjectsApi(enabled = true, config?: SWRConfiguration) {
+  const { currentTenant } = useTenant()
+
+  const key = currentTenant && enabled ? `${BASE_URL}/jira/projects` : null
+
+  return useSWR<JiraProjectsResponse>(key, (u: string) => get<JiraProjectsResponse>(u), {
+    ...defaultConfig,
+    shouldRetryOnError: false,
+    onError: () => {
+      /* swallow — picker degrades to manual entry */
+    },
+    ...config,
+  })
+}
+
+// ============================================
 // REPOSITORY HOOKS (SCM-specific)
 // ============================================
 
