@@ -41,6 +41,7 @@ import {
   useCreateIntegrationApi,
   useSyncIntegrationApi,
   useUpdateIntegrationApi,
+  useJiraProjectsApi,
 } from '@/features/integrations/api/use-integrations-api'
 import type {
   Integration,
@@ -65,9 +66,9 @@ function getProviderLabel(provider: string): string {
 }
 
 function getProjectKey(integration: Integration): string {
-  const config = integration.config as Record<string, unknown> | undefined
-  if (!config) return '-'
-  return (config.project_key as string) ?? '-'
+  const ticketing = getTicketingConfig(integration)
+  const key = ticketing.project_key as string | undefined
+  return key && key !== '' ? key : '-'
 }
 
 // ─────────────────────────────────────────────────────────
@@ -130,18 +131,32 @@ function ConfigureTicketingDialog({
   const [syncEnabled, setSyncEnabled] = useState<boolean>(
     Boolean(getTicketingConfig(integration).sync_enabled)
   )
+  const [projectKey, setProjectKey] = useState<string>(
+    (getTicketingConfig(integration).project_key as string) ?? ''
+  )
   const { trigger: update, isMutating } = useUpdateIntegrationApi(integration.id)
+
+  // Fetch the projects visible to this Jira integration for the picker. Only
+  // meaningful while the dialog is open and the integration is connected;
+  // failure (e.g. non-Cloud, bad creds) degrades to manual key entry.
+  const canList = open && integration.status === 'connected'
+  const { data: projectsData, isLoading: projectsLoading } = useJiraProjectsApi(canList)
+  const projects = projectsData?.projects ?? []
 
   async function handleSave() {
     try {
       // UpdateIntegration replaces config wholesale, so send the full object with
-      // only ticketing.sync_enabled changed (preserve project_key, maps, etc.).
+      // only the ticketing keys we own changed (preserve maps, routing, etc.).
       const existingConfig = (integration.config as Record<string, unknown>) ?? {}
       const existingTicketing = (existingConfig.ticketing as Record<string, unknown>) ?? {}
       await update({
         config: {
           ...existingConfig,
-          ticketing: { ...existingTicketing, sync_enabled: syncEnabled },
+          ticketing: {
+            ...existingTicketing,
+            sync_enabled: syncEnabled,
+            project_key: projectKey.trim(),
+          },
         },
       })
       toast.success('Ticketing settings saved')
@@ -160,6 +175,43 @@ function ConfigureTicketingDialog({
           <DialogDescription>Control how OpenCTEM syncs with this tracker.</DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
+          {/* Default destination project */}
+          <div className="space-y-2 rounded-lg border p-3">
+            <Label htmlFor="default-project" className="font-medium">
+              Default project
+            </Label>
+            <p className="text-muted-foreground text-xs">
+              Where tickets land when a finding doesn&apos;t specify one and no routing rule
+              matches.
+            </p>
+            {projects.length > 0 && (
+              <Select value={projectKey || undefined} onValueChange={setProjectKey}>
+                <SelectTrigger id="default-project-picker">
+                  <SelectValue placeholder="Pick a Jira project" />
+                </SelectTrigger>
+                <SelectContent>
+                  {projects.map((p) => (
+                    <SelectItem key={p.id} value={p.key}>
+                      {p.key} — {p.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            <Input
+              id="default-project"
+              value={projectKey}
+              onChange={(e) => setProjectKey(e.target.value.toUpperCase())}
+              placeholder={projectsLoading ? 'Loading projects…' : 'e.g. SEC'}
+            />
+            {projects.length === 0 && !projectsLoading && (
+              <p className="text-muted-foreground text-xs">
+                Couldn&apos;t list projects from Jira — enter the project key manually.
+              </p>
+            )}
+          </div>
+
+          {/* Bidirectional sync */}
           <div className="flex items-start justify-between gap-4 rounded-lg border p-3">
             <div className="space-y-1">
               <Label htmlFor="sync-enabled" className="font-medium">
@@ -332,6 +384,10 @@ function ConnectJiraDialog({ open, onOpenChange, onSuccess }: ConnectJiraDialogP
       // credentials field. Other providers use a bare token.
       const credentials =
         provider === 'jira' ? JSON.stringify({ email, api_token: apiToken }) : apiToken
+      // Store the default project under config.ticketing.project_key — the shape
+      // the backend reads (ParseMappingConfig). It used to be stuffed into
+      // `description`, which the backend never looks at, so it had no effect.
+      const trimmedKey = projectKey.trim()
       await createIntegration({
         name,
         category: 'ticketing',
@@ -339,7 +395,7 @@ function ConnectJiraDialog({ open, onOpenChange, onSuccess }: ConnectJiraDialogP
         auth_type: 'token',
         credentials,
         base_url: baseUrl || undefined,
-        description: projectKey ? `Project: ${projectKey}` : undefined,
+        config: trimmedKey ? { ticketing: { project_key: trimmedKey } } : undefined,
       })
       toast.success(`${name} connected successfully`)
       onSuccess()
@@ -431,13 +487,17 @@ function ConnectJiraDialog({ open, onOpenChange, onSuccess }: ConnectJiraDialogP
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="project-key">Project key (optional)</Label>
+            <Label htmlFor="project-key">Default project key (optional)</Label>
             <Input
               id="project-key"
               value={projectKey}
               onChange={(e) => setProjectKey(e.target.value.toUpperCase())}
               placeholder="e.g. SEC"
             />
+            <p className="text-muted-foreground text-xs">
+              Where tickets land by default. After connecting you can pick it from your Jira
+              projects under Configure.
+            </p>
           </div>
 
           <div className="space-y-2">
