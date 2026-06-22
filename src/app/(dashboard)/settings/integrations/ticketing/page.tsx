@@ -34,7 +34,9 @@ import {
   RefreshCw,
   Link2,
   ExternalLink,
+  Route,
 } from 'lucide-react'
+import { RoutingRulesDialog } from '@/features/integrations/components/routing-rules-dialog'
 import { Switch } from '@/components/ui/switch'
 import {
   useIntegrationsApi,
@@ -245,6 +247,7 @@ function ConfigureTicketingDialog({
 function TicketingIntegrationCard({ integration }: { integration: Integration }) {
   const projectKey = getProjectKey(integration)
   const [configOpen, setConfigOpen] = useState(false)
+  const [routingOpen, setRoutingOpen] = useState(false)
 
   const { trigger: syncNow, isMutating: isSyncing } = useSyncIntegrationApi(integration.id)
 
@@ -318,6 +321,16 @@ function TicketingIntegrationCard({ integration }: { integration: Integration })
             <Button
               variant="outline"
               size="sm"
+              title="Routing rules"
+              disabled={integration.provider !== 'jira' || integration.status !== 'connected'}
+              onClick={() => setRoutingOpen(true)}
+            >
+              <Route className="me-2 h-4 w-4" />
+              Routing
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               title="Configure"
               disabled={integration.provider !== 'jira' || integration.status !== 'connected'}
               onClick={() => setConfigOpen(true)}
@@ -330,11 +343,18 @@ function TicketingIntegrationCard({ integration }: { integration: Integration })
       </CardContent>
 
       {integration.provider === 'jira' && (
-        <ConfigureTicketingDialog
-          integration={integration}
-          open={configOpen}
-          onOpenChange={setConfigOpen}
-        />
+        <>
+          <ConfigureTicketingDialog
+            integration={integration}
+            open={configOpen}
+            onOpenChange={setConfigOpen}
+          />
+          <RoutingRulesDialog
+            integration={integration}
+            open={routingOpen}
+            onOpenChange={setRoutingOpen}
+          />
+        </>
       )}
     </Card>
   )
