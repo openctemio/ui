@@ -1,6 +1,7 @@
 'use client'
 
 import { use, useState, useCallback, useEffect, useMemo } from 'react'
+import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Main } from '@/components/layout'
@@ -20,12 +21,14 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Save, ArrowLeft, Cloud, Server, Loader2, AlertTriangle } from 'lucide-react'
 import { toast } from 'sonner'
 
-import {
-  WorkflowBuilder,
-  NodePalette,
-  type AddNodeData,
-  type AvailableTool,
-} from '@/features/pipelines'
+import { NodePalette } from '@/features/pipelines/components/node-palette'
+import type { AddNodeData, AvailableTool } from '@/features/pipelines'
+// Lazy-load the visual builder so @xyflow/react stays out of this route's
+// initial bundle until the builder renders.
+const WorkflowBuilder = dynamic(
+  () => import('@/features/pipelines/components/workflow-builder').then((m) => m.WorkflowBuilder),
+  { ssr: false }
+)
 import {
   get,
   put,
@@ -341,7 +344,7 @@ export default function PipelineBuilderPage({ params }: PageProps) {
           <p className="text-lg font-medium">{error || 'Pipeline not found'}</p>
           <Button variant="outline" asChild>
             <Link href="/pipelines">
-              <ArrowLeft className="mr-2 h-4 w-4" />
+              <ArrowLeft className="me-2 h-4 w-4" />
               Back to Pipelines
             </Link>
           </Button>
@@ -398,9 +401,9 @@ export default function PipelineBuilderPage({ params }: PageProps) {
                   disabled={!hasChanges || isSaving || hasValidationErrors}
                 >
                   {isSaving ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <Loader2 className="me-2 h-4 w-4 animate-spin" />
                   ) : (
-                    <Save className="mr-2 h-4 w-4" />
+                    <Save className="me-2 h-4 w-4" />
                   )}
                   Save
                 </Button>

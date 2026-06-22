@@ -92,32 +92,62 @@ Timestamp: {timestamp}`,
   },
 ]
 
-const formSchema = z.object({
-  name: z.string().min(1, 'Name is required').max(100),
-  description: z.string().max(500).optional(),
-  provider: z.enum(['slack', 'teams', 'telegram', 'webhook', 'email']),
-  credentials: z.string().optional(), // For non-email providers
-  channel_id: z.string().optional(),
-  channel_name: z.string().optional(),
-  // Severity filters (dynamic JSONB array)
-  enabled_severities: z.array(z.enum(['critical', 'high', 'medium', 'low', 'info', 'none'])),
-  // Event type filters (dynamic JSONB array)
-  enabled_event_types: z.array(z.string()),
-  // Advanced settings
-  message_template: z.string().max(2000).optional(),
-  include_details: z.boolean(),
-  min_interval_minutes: z.number().min(0).max(60),
-  // Email-specific fields
-  smtp_host: z.string().optional(),
-  smtp_port: z.number().optional(),
-  smtp_username: z.string().optional(),
-  smtp_password: z.string().optional(),
-  from_email: z.string().email().optional().or(z.literal('')),
-  from_name: z.string().optional(),
-  to_emails: z.string().optional(), // Comma-separated list
-  use_tls: z.boolean().optional(),
-  use_starttls: z.boolean().optional(),
-})
+const formSchema = z
+  .object({
+    name: z.string().min(1, 'Name is required').max(100),
+    description: z.string().max(500).optional(),
+    provider: z.enum(['slack', 'teams', 'telegram', 'webhook', 'email']),
+    credentials: z.string().optional(), // For non-email providers
+    channel_id: z.string().optional(),
+    channel_name: z.string().optional(),
+    // Severity filters (dynamic JSONB array)
+    enabled_severities: z.array(z.enum(['critical', 'high', 'medium', 'low', 'info', 'none'])),
+    // Event type filters (dynamic JSONB array)
+    enabled_event_types: z.array(z.string()),
+    // Advanced settings
+    message_template: z.string().max(2000).optional(),
+    include_details: z.boolean(),
+    min_interval_minutes: z.number().min(0).max(60),
+    // Email-specific fields
+    smtp_host: z.string().optional(),
+    smtp_port: z.number().optional(),
+    smtp_username: z.string().optional(),
+    smtp_password: z.string().optional(),
+    from_email: z.string().email().optional().or(z.literal('')),
+    from_name: z.string().optional(),
+    to_emails: z.string().optional(), // Comma-separated list
+    use_tls: z.boolean().optional(),
+    use_starttls: z.boolean().optional(),
+  })
+  .superRefine((data, ctx) => {
+    // The backend requires `credentials` for the chat/webhook providers and SMTP
+    // host/from for email. These are optional at the type level (only one
+    // provider's fields apply), so require the active provider's fields here —
+    // otherwise an empty Slack webhook URL or missing SMTP host only failed at
+    // the server with a generic 400.
+    if (data.provider === 'email') {
+      if (!data.smtp_host?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['smtp_host'],
+          message: 'SMTP host is required',
+        })
+      }
+      if (!data.from_email?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['from_email'],
+          message: 'From email is required',
+        })
+      }
+    } else if (!data.credentials?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['credentials'],
+        message: 'A webhook URL / token is required for this provider',
+      })
+    }
+  })
 
 type FormValues = z.infer<typeof formSchema>
 
@@ -404,7 +434,7 @@ export function AddNotificationDialog({
         ) : (
           <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0">
             {/* Scrollable content area */}
-            <div className="space-y-4 py-4 overflow-y-auto flex-1 pr-1">
+            <div className="space-y-4 py-4 overflow-y-auto flex-1 pe-1">
               <div className="space-y-2">
                 <Label htmlFor="name">Name</Label>
                 <Input id="name" placeholder="e.g., Security Alerts" {...register('name')} />
@@ -785,7 +815,7 @@ export function AddNotificationDialog({
                 Back
               </Button>
               <Button type="submit" disabled={isMutating}>
-                {isMutating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {isMutating && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
                 Create Channel
               </Button>
             </div>

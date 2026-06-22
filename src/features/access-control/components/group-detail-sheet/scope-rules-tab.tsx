@@ -53,7 +53,7 @@ import type {
   UpdateScopeRuleInput,
 } from '@/features/access-control/types'
 import { getErrorMessage } from '@/lib/api/error-handler'
-import { PermissionGate } from '@/features/auth/components/permission-gate'
+import { Can } from '@/lib/permissions'
 import { Permission } from '@/lib/permissions/constants'
 import { useGroupChannel } from '@/hooks/use-websocket'
 import type { ScopeChangeEventData } from '@/lib/websocket/types'
@@ -194,7 +194,7 @@ export function ScopeRulesTab({ groupId }: ScopeRulesTabProps) {
       <div className="flex items-center justify-between mb-4">
         <h4 className="text-sm font-medium">Scope Rules ({scopeRules.length})</h4>
         <div className="flex items-center gap-2">
-          <PermissionGate permission={Permission.GroupsWrite} mode="disable">
+          <Can permission={Permission.GroupsWrite} mode="disable">
             <Button
               size="sm"
               variant="outline"
@@ -202,19 +202,19 @@ export function ScopeRulesTab({ groupId }: ScopeRulesTabProps) {
               disabled={isReconciling || scopeRules.length === 0}
             >
               {isReconciling ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="me-2 h-4 w-4 animate-spin" />
               ) : (
-                <RefreshCw className="mr-2 h-4 w-4" />
+                <RefreshCw className="me-2 h-4 w-4" />
               )}
               Reconcile
             </Button>
-          </PermissionGate>
-          <PermissionGate permission={Permission.GroupsWrite} mode="disable">
+          </Can>
+          <Can permission={Permission.GroupsWrite} mode="disable">
             <Button size="sm" onClick={() => setDialogOpen(true)} disabled={isCreating || !groupId}>
-              <Plus className="mr-2 h-4 w-4" />
+              <Plus className="me-2 h-4 w-4" />
               Add Rule
             </Button>
-          </PermissionGate>
+          </Can>
         </div>
       </div>
 
@@ -223,7 +223,7 @@ export function ScopeRulesTab({ groupId }: ScopeRulesTabProps) {
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search rules..."
-            className="pl-9"
+            className="ps-9"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -311,24 +311,24 @@ export function ScopeRulesTab({ groupId }: ScopeRulesTabProps) {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem onClick={() => handlePreview(rule)}>
-                      <Eye className="mr-2 h-4 w-4" />
+                      <Eye className="me-2 h-4 w-4" />
                       Preview
                     </DropdownMenuItem>
-                    <PermissionGate permission={Permission.GroupsWrite}>
+                    <Can permission={Permission.GroupsWrite}>
                       <DropdownMenuItem onClick={() => setEditingRule(rule)}>
-                        <Pencil className="mr-2 h-4 w-4" />
+                        <Pencil className="me-2 h-4 w-4" />
                         Edit
                       </DropdownMenuItem>
-                    </PermissionGate>
-                    <PermissionGate permission={Permission.GroupsDelete}>
+                    </Can>
+                    <Can permission={Permission.GroupsDelete}>
                       <DropdownMenuItem
                         className="text-red-400"
                         onClick={() => setDeleteConfirm(rule)}
                       >
-                        <Trash2 className="mr-2 h-4 w-4" />
+                        <Trash2 className="me-2 h-4 w-4" />
                         Delete
                       </DropdownMenuItem>
-                    </PermissionGate>
+                    </Can>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
@@ -370,9 +370,9 @@ export function ScopeRulesTab({ groupId }: ScopeRulesTabProps) {
             </Button>
             <Button variant="destructive" onClick={handleDelete} disabled={isDeleting}>
               {isDeleting ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="me-2 h-4 w-4 animate-spin" />
               ) : (
-                <Trash2 className="mr-2 h-4 w-4" />
+                <Trash2 className="me-2 h-4 w-4" />
               )}
               Delete
             </Button>

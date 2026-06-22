@@ -17,7 +17,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
 import { cn } from '@/lib/utils'
-import { StatusBadge, SheetDetailToolbar } from '@/features/shared'
+import { SheetDetailToolbar } from '@/features/shared'
+import { AssetStatusBadge, LifecycleSnoozeMenu } from '@/features/asset-lifecycle'
 import { AssetFindings } from './asset-findings'
 import {
   TimelineSection,
@@ -123,6 +124,23 @@ interface AssetDetailSheetProps<T extends Asset> {
 
   /** Available tag suggestions for autocomplete */
   tagSuggestions?: string[]
+}
+
+// ============================================
+// Helpers
+// ============================================
+
+// daysSinceLastSeen returns the whole-days difference between now and the
+// asset's last-seen timestamp. Returns undefined when the timestamp is
+// missing or unparseable so the badge renders its plain form rather than
+// an inaccurate "stale 0d" label.
+function daysSinceLastSeen(iso?: string | null): number | undefined {
+  if (!iso) return undefined
+  const t = Date.parse(iso)
+  if (Number.isNaN(t)) return undefined
+  const diffMs = Date.now() - t
+  if (diffMs < 0) return undefined
+  return Math.floor(diffMs / (1000 * 60 * 60 * 24))
 }
 
 // ============================================
@@ -253,7 +271,10 @@ export function AssetDetailSheet<T extends Asset>({
                     {subtitle || asset.groupName}
                   </p>
                 </div>
-                <StatusBadge status={asset.status} />
+                <AssetStatusBadge
+                  status={asset.status}
+                  daysSinceLastSeen={daysSinceLastSeen(asset.lastSeen)}
+                />
               </div>
 
               {/* Classification Badges */}
@@ -267,8 +288,20 @@ export function AssetDetailSheet<T extends Asset>({
                 />
               </div>
 
-              {/* Quick Actions (secondary buttons below header) */}
-              {quickActions && <div className="flex flex-wrap gap-2 mt-4">{quickActions}</div>}
+              {/* Quick Actions (secondary buttons below header).
+                  Lifecycle snooze shows on every asset so operators
+                  can proactively pause the worker during known
+                  offline windows (rack migrations, planned
+                  maintenance) — not only after the asset has been
+                  flagged stale. The reactivate-on-snooze auto-flag
+                  inside the menu only fires when status warrants it. */}
+              <div className="flex flex-wrap gap-2 mt-4">
+                {quickActions}
+                <LifecycleSnoozeMenu
+                  assetID={asset.id}
+                  isStaleOrInactive={asset.status === 'stale' || asset.status === 'inactive'}
+                />
+              </div>
             </div>
           </div>
         </TooltipProvider>
@@ -305,7 +338,7 @@ export function AssetDetailSheet<T extends Asset>({
                   <Link2 className="h-3.5 w-3.5" />
                   Relations
                   {relationships.length > 0 && (
-                    <span className="ml-1 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-semibold leading-none">
+                    <span className="ms-1 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-semibold leading-none">
                       {relationships.length}
                     </span>
                   )}
@@ -315,7 +348,7 @@ export function AssetDetailSheet<T extends Asset>({
                 <TabsTrigger value="findings" className="gap-1 whitespace-nowrap">
                   Findings
                   {asset.findingCount > 0 && (
-                    <span className="ml-1 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-semibold leading-none">
+                    <span className="ms-1 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-semibold leading-none">
                       {asset.findingCount}
                     </span>
                   )}
@@ -335,7 +368,7 @@ export function AssetDetailSheet<T extends Asset>({
               pattern. */}
           <TabsContent
             value="overview"
-            className="space-y-4 mt-0 flex-1 min-h-0 overflow-y-auto pr-1"
+            className="space-y-4 mt-0 flex-1 min-h-0 overflow-y-auto pe-1"
           >
             {statsContent}
 
@@ -381,7 +414,7 @@ export function AssetDetailSheet<T extends Asset>({
             <TabsContent
               key={tab.value}
               value={tab.value}
-              className="mt-0 flex-1 min-h-0 overflow-y-auto pr-1"
+              className="mt-0 flex-1 min-h-0 overflow-y-auto pe-1"
             >
               {tab.content}
             </TabsContent>
@@ -392,7 +425,7 @@ export function AssetDetailSheet<T extends Asset>({
               forward is onNavigateToAsset because the sheet itself
               cannot swap its own selectedAsset. */}
           {shouldShowRelationshipTab && (
-            <TabsContent value="relationships" className="mt-0 flex-1 min-h-0 overflow-y-auto pr-1">
+            <TabsContent value="relationships" className="mt-0 flex-1 min-h-0 overflow-y-auto pe-1">
               <AssetRelationshipsTab
                 assetId={asset.id}
                 sourceAsset={{ id: asset.id, name: asset.name, type: asset.type }}
@@ -403,7 +436,7 @@ export function AssetDetailSheet<T extends Asset>({
 
           {/* Findings Tab */}
           {showFindingsTab && (
-            <TabsContent value="findings" className="mt-0 flex-1 min-h-0 overflow-y-auto pr-1">
+            <TabsContent value="findings" className="mt-0 flex-1 min-h-0 overflow-y-auto pe-1">
               <AssetFindings assetId={asset.id} assetName={asset.name} />
             </TabsContent>
           )}
@@ -412,7 +445,7 @@ export function AssetDetailSheet<T extends Asset>({
           {showDetailsTab && (
             <TabsContent
               value="details"
-              className="space-y-4 mt-0 flex-1 min-h-0 overflow-y-auto pr-1"
+              className="space-y-4 mt-0 flex-1 min-h-0 overflow-y-auto pe-1"
             >
               <TimelineSection
                 firstSeen={asset.firstSeen}

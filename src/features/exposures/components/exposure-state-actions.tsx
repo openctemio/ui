@@ -74,7 +74,7 @@ const actionConfig: Record<
     description:
       'Mark this exposure as a false positive. Use this when the detection was incorrect.',
     icon: ShieldX,
-    iconColor: 'text-gray-500',
+    iconColor: 'text-muted-foreground',
     buttonText: 'Mark False Positive',
     buttonVariant: 'outline',
     successMessage: 'Marked as false positive',
@@ -193,7 +193,7 @@ export function ExposureActionDialog({
             onClick={handleSubmit}
             disabled={isSubmitting || (config.requireReason && !reason.trim())}
           >
-            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {isSubmitting && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
             {config.buttonText}
           </Button>
         </DialogFooter>
@@ -231,7 +231,7 @@ export function ExposureQuickActions({
               onClick={() => setActionType('resolve')}
               className="text-green-600 hover:text-green-700 hover:bg-green-50"
             >
-              <Check className="mr-1 h-4 w-4" />
+              <Check className="me-1 h-4 w-4" />
               Resolve
             </Button>
             <Button
@@ -240,16 +240,16 @@ export function ExposureQuickActions({
               onClick={() => setActionType('accept')}
               className="text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50"
             >
-              <AlertTriangle className="mr-1 h-4 w-4" />
+              <AlertTriangle className="me-1 h-4 w-4" />
               Accept
             </Button>
             <Button
               size="sm"
               variant="outline"
               onClick={() => setActionType('false_positive')}
-              className="text-gray-600 hover:text-gray-700 hover:bg-gray-50"
+              className="text-muted-foreground hover:text-foreground hover:bg-muted"
             >
-              <X className="mr-1 h-4 w-4" />
+              <X className="me-1 h-4 w-4" />
               False Positive
             </Button>
           </>
@@ -260,7 +260,7 @@ export function ExposureQuickActions({
             onClick={() => setActionType('reactivate')}
             className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
           >
-            <RefreshCw className="mr-1 h-4 w-4" />
+            <RefreshCw className="me-1 h-4 w-4" />
             Reactivate
           </Button>
         )}
@@ -367,9 +367,9 @@ export function ExposureBulkActions({
             className="text-green-600"
           >
             {isProcessing ? (
-              <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+              <Loader2 className="me-1 h-4 w-4 animate-spin" />
             ) : (
-              <Check className="mr-1 h-4 w-4" />
+              <Check className="me-1 h-4 w-4" />
             )}
             Resolve All
           </Button>
@@ -380,7 +380,7 @@ export function ExposureBulkActions({
             disabled={isProcessing}
             className="text-yellow-600"
           >
-            <AlertTriangle className="mr-1 h-4 w-4" />
+            <AlertTriangle className="me-1 h-4 w-4" />
             Accept All
           </Button>
           <Button
@@ -388,9 +388,9 @@ export function ExposureBulkActions({
             variant="outline"
             onClick={() => setBulkAction('false_positive')}
             disabled={isProcessing}
-            className="text-gray-600"
+            className="text-muted-foreground"
           >
-            <X className="mr-1 h-4 w-4" />
+            <X className="me-1 h-4 w-4" />
             False Positive All
           </Button>
         </div>
@@ -424,7 +424,7 @@ export function ExposureBulkActions({
               Cancel
             </Button>
             <Button onClick={handleBulkActionSubmit} disabled={!reason.trim() || isProcessing}>
-              {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isProcessing && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
               Confirm
             </Button>
           </DialogFooter>

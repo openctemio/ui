@@ -45,6 +45,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { Plus, Trash2, FlaskConical } from 'lucide-react'
 import { get, post, del, patch } from '@/lib/api/client'
+import { Can, Permission } from '@/lib/permissions'
 import { toast } from 'sonner'
 
 interface CompensatingControl {
@@ -171,10 +172,12 @@ export default function CompensatingControlsPage() {
           title="Compensating Controls"
           description="Manage compensating controls that reduce finding risk scores"
         >
-          <Button size="sm" onClick={() => setIsCreateOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            New Control
-          </Button>
+          <Can permission={Permission.CompensatingControlsWrite}>
+            <Button size="sm" onClick={() => setIsCreateOpen(true)}>
+              <Plus className="me-2 h-4 w-4" />
+              New Control
+            </Button>
+          </Can>
         </PageHeader>
 
         <Card>
@@ -202,7 +205,7 @@ export default function CompensatingControlsPage() {
                     <TableHead>Reduction</TableHead>
                     <TableHead>Last Tested</TableHead>
                     <TableHead>Test Result</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead className="text-end">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -240,28 +243,30 @@ export default function CompensatingControlsPage() {
                           <span className="text-muted-foreground text-sm">-</span>
                         )}
                       </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setTestControlId(control.id)
-                              setTestResult('pass')
-                            }}
-                          >
-                            <FlaskConical className="mr-1 h-3 w-3" />
-                            Test
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setDeleteControl(control)}
-                            className="text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
+                      <TableCell className="text-end">
+                        <Can permission={Permission.CompensatingControlsWrite}>
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setTestControlId(control.id)
+                                setTestResult('pass')
+                              }}
+                            >
+                              <FlaskConical className="me-1 h-3 w-3" />
+                              Test
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setDeleteControl(control)}
+                              className="text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </Can>
                       </TableCell>
                     </TableRow>
                   ))}

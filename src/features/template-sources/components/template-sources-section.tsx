@@ -233,7 +233,7 @@ export function TemplateSourcesSection() {
           {error instanceof Error ? error.message : 'An unexpected error occurred'}
         </p>
         <Button variant="outline" size="sm" className="mt-2" onClick={handleRefresh}>
-          <RefreshCw className="mr-2 h-4 w-4" />
+          <RefreshCw className="me-2 h-4 w-4" />
           Retry
         </Button>
       </div>
@@ -257,7 +257,7 @@ export function TemplateSourcesSection() {
                   </CardDescription>
                 </div>
                 {!isLoading && sources.length > 0 && (
-                  <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs">
+                  <Badge variant="secondary" className="ms-2 h-5 px-1.5 text-xs">
                     {sources.length}
                   </Badge>
                 )}
@@ -272,7 +272,7 @@ export function TemplateSourcesSection() {
                 </Button>
                 <Can permission={Permission.CredentialsWrite}>
                   <Button onClick={() => setAddDialogOpen(true)}>
-                    <Plus className="mr-2 h-4 w-4" />
+                    <Plus className="me-2 h-4 w-4" />
                     Add Source
                   </Button>
                 </Can>
@@ -289,7 +289,7 @@ export function TemplateSourcesSection() {
                   placeholder="Search sources..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9"
+                  className="ps-9"
                 />
               </div>
             </div>
@@ -367,7 +367,7 @@ export function TemplateSourcesSection() {
                             {formatSyncTime(source.last_sync_at)}
                           </span>
                           {source.templates_synced != null && source.templates_synced > 0 && (
-                            <span className="ml-1 text-xs text-muted-foreground">
+                            <span className="ms-1 text-xs text-muted-foreground">
                               ({source.templates_synced} templates)
                             </span>
                           )}
@@ -392,7 +392,7 @@ export function TemplateSourcesSection() {
                                     disabled={isSyncing || !source.is_enabled}
                                   >
                                     <RefreshCw
-                                      className={`mr-2 h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`}
+                                      className={`me-2 h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`}
                                     />
                                     Sync Now
                                   </DropdownMenuItem>
@@ -402,18 +402,18 @@ export function TemplateSourcesSection() {
                                   >
                                     {source.is_enabled ? (
                                       <>
-                                        <Pause className="mr-2 h-4 w-4" />
+                                        <Pause className="me-2 h-4 w-4" />
                                         Disable
                                       </>
                                     ) : (
                                       <>
-                                        <Play className="mr-2 h-4 w-4" />
+                                        <Play className="me-2 h-4 w-4" />
                                         Enable
                                       </>
                                     )}
                                   </DropdownMenuItem>
                                   <DropdownMenuItem onClick={() => handleEditSource(source)}>
-                                    <Pencil className="mr-2 h-4 w-4" />
+                                    <Pencil className="me-2 h-4 w-4" />
                                     Edit
                                   </DropdownMenuItem>
                                 </Can>
@@ -423,7 +423,7 @@ export function TemplateSourcesSection() {
                                     className="text-red-500"
                                     onClick={() => handleDeleteClick(source)}
                                   >
-                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    <Trash2 className="me-2 h-4 w-4" />
                                     Delete
                                   </DropdownMenuItem>
                                 </Can>
@@ -448,7 +448,7 @@ export function TemplateSourcesSection() {
                 {!searchQuery && (
                   <Can permission={Permission.CredentialsWrite}>
                     <Button onClick={() => setAddDialogOpen(true)}>
-                      <Plus className="mr-2 h-4 w-4" />
+                      <Plus className="me-2 h-4 w-4" />
                       Add Your First Source
                     </Button>
                   </Can>
@@ -488,7 +488,7 @@ export function TemplateSourcesSection() {
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
             <Button variant="destructive" onClick={handleDeleteConfirm} disabled={isDeleting}>
-              {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isDeleting && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
               Delete
             </Button>
           </AlertDialogFooter>

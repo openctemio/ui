@@ -91,14 +91,14 @@ export const CapabilityCard = memo(function CapabilityCard({
               <DropdownMenuContent align="end">
                 {onViewDetails && (
                   <DropdownMenuItem onClick={() => onViewDetails(capability)}>
-                    <Eye className="mr-2 h-4 w-4" />
+                    <Eye className="me-2 h-4 w-4" />
                     View Details
                   </DropdownMenuItem>
                 )}
                 {onViewDetails && (onEdit || onDelete) && <DropdownMenuSeparator />}
                 {onEdit && (
                   <DropdownMenuItem onClick={() => onEdit(capability)}>
-                    <Pencil className="mr-2 h-4 w-4" />
+                    <Pencil className="me-2 h-4 w-4" />
                     Edit
                   </DropdownMenuItem>
                 )}
@@ -107,7 +107,7 @@ export const CapabilityCard = memo(function CapabilityCard({
                     className="text-destructive focus:text-destructive"
                     onClick={() => onDelete(capability)}
                   >
-                    <Trash2 className="mr-2 h-4 w-4" />
+                    <Trash2 className="me-2 h-4 w-4" />
                     Delete
                   </DropdownMenuItem>
                 )}

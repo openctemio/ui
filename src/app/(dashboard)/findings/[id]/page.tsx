@@ -1,6 +1,7 @@
 'use client'
 
 import { useParams, useRouter } from 'next/navigation'
+import { csrfFetch } from '@/lib/api/client'
 import { Main } from '@/components/layout'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -504,7 +505,7 @@ export default function FindingDetailPage() {
 
   const handleEditComment = async (commentId: string, content: string) => {
     try {
-      const response = await fetch(`/api/v1/findings/${id}/comments/${commentId}`, {
+      const response = await csrfFetch(`/api/v1/findings/${id}/comments/${commentId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -521,7 +522,7 @@ export default function FindingDetailPage() {
 
   const handleDeleteComment = async (commentId: string) => {
     try {
-      const response = await fetch(`/api/v1/findings/${id}/comments/${commentId}`, {
+      const response = await csrfFetch(`/api/v1/findings/${id}/comments/${commentId}`, {
         method: 'DELETE',
         credentials: 'include',
       })
@@ -611,7 +612,7 @@ export default function FindingDetailPage() {
                           <span className="hidden sm:inline">Attack Path</span>
                           <span className="sm:hidden">Path</span>
                           {finding.dataFlow && (
-                            <span className="ml-1 sm:ml-1.5 rounded-full bg-blue-500/20 px-1 sm:px-1.5 py-0.5 text-[10px] text-blue-400">
+                            <span className="ms-1 sm:ms-1.5 rounded-full bg-blue-500/20 px-1 sm:px-1.5 py-0.5 text-[10px] text-blue-400">
                               {(finding.dataFlow.sources?.length || 0) +
                                 (finding.dataFlow.intermediates?.length || 0) +
                                 (finding.dataFlow.sinks?.length || 0)}

@@ -250,7 +250,7 @@ export function DangerZoneSection({ onDelete, assetTypeName }: DangerZoneSection
         Permanently delete this {assetTypeName.toLowerCase()} from your inventory.
       </p>
       <Button variant="destructive" size="sm" className="w-full" onClick={onDelete}>
-        <Trash2 className="mr-2 h-4 w-4" />
+        <Trash2 className="me-2 h-4 w-4" />
         Delete {assetTypeName}
       </Button>
     </div>
@@ -494,7 +494,7 @@ export function SecretValueField({
             type="text"
             value={displayValue}
             readOnly
-            className={cn('font-mono text-sm pr-20', !isRevealed && 'tracking-wider')}
+            className={cn('font-mono text-sm pe-20', !isRevealed && 'tracking-wider')}
           />
           <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-1">
             <TooltipProvider>

@@ -94,15 +94,13 @@ export function useTenantLogo(
   serverLogo?: string | null,
   fallbackUrl?: string
 ) {
-  // Compute initial logo from cache or server (no setState needed)
+  // SSR-deterministic initial value: do NOT read the localStorage cache here.
+  // getCachedLogo() returns null on the server but the cached data URL on the
+  // client, which made the server HTML and the client's first render disagree
+  // (hydration mismatch + logo flash). The cached value is reconciled in the
+  // mount/sync effect below, where localStorage is safe to read.
   const initialLogo = useMemo(() => {
     if (!tenantId) return null
-
-    // Try cache first
-    const cached = getCachedLogo(tenantId)
-    if (cached) return cached
-
-    // No cache, use server data or fallback
     if (serverLogo) return serverLogo
     if (fallbackUrl) return fallbackUrl
     return null

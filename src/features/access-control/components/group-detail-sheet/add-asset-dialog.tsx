@@ -95,7 +95,7 @@ export function AddAssetDialog({
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search for assets..."
-                className="pl-9 mb-2"
+                className="ps-9 mb-2"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
@@ -144,7 +144,7 @@ export function AddAssetDialog({
               )}
             </div>
             {selectedAssetId && (
-              <p className="text-xs text-muted-foreground text-right">1 asset selected</p>
+              <p className="text-xs text-muted-foreground text-end">1 asset selected</p>
             )}
           </div>
 
@@ -202,9 +202,9 @@ export function AddAssetDialog({
           </Button>
           <Button onClick={handleAssign} disabled={isAssigning || !selectedAssetId}>
             {isAssigning ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <Loader2 className="me-2 h-4 w-4 animate-spin" />
             ) : (
-              <Plus className="mr-2 h-4 w-4" />
+              <Plus className="me-2 h-4 w-4" />
             )}
             Assign
           </Button>

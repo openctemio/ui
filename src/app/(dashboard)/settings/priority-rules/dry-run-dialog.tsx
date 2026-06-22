@@ -223,7 +223,7 @@ export function DryRunDialog({ open, onOpenChange, rule }: DryRunDialogProps) {
                     key={f.id}
                     className="flex items-center justify-between rounded px-2 py-1 text-sm hover:bg-neutral-50"
                   >
-                    <span className="truncate pr-2">{f.title}</span>
+                    <span className="truncate pe-2">{f.title}</span>
                     <div className="flex shrink-0 items-center gap-1">
                       <Badge variant="outline" className="text-[10px]">
                         {f.severity}

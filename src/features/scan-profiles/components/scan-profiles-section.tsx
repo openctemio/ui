@@ -172,7 +172,7 @@ export function ScanProfilesSection() {
           {error instanceof Error ? error.message : 'An unexpected error occurred'}
         </p>
         <Button variant="outline" size="sm" className="mt-2" onClick={handleRefresh}>
-          <RefreshCw className="mr-2 h-4 w-4" />
+          <RefreshCw className="me-2 h-4 w-4" />
           Retry
         </Button>
       </div>
@@ -195,7 +195,7 @@ export function ScanProfilesSection() {
                   <CardDescription>Reusable scan configurations with tool settings</CardDescription>
                 </div>
                 {!isLoading && profiles.length > 0 && (
-                  <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs">
+                  <Badge variant="secondary" className="ms-2 h-5 px-1.5 text-xs">
                     {profiles.length}
                   </Badge>
                 )}
@@ -212,18 +212,18 @@ export function ScanProfilesSection() {
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button>
-                        <Plus className="mr-2 h-4 w-4" />
+                        <Plus className="me-2 h-4 w-4" />
                         Add Profile
-                        <ChevronDown className="ml-2 h-4 w-4" />
+                        <ChevronDown className="ms-2 h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem onClick={() => setAddDialogOpen(true)}>
-                        <Plus className="mr-2 h-4 w-4" />
+                        <Plus className="me-2 h-4 w-4" />
                         Create Custom Profile
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => setPresetDialogOpen(true)}>
-                        <Sparkles className="mr-2 h-4 w-4" />
+                        <Sparkles className="me-2 h-4 w-4" />
                         Add Preset Profile
                       </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -242,7 +242,7 @@ export function ScanProfilesSection() {
                   placeholder="Search profiles..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9"
+                  className="ps-9"
                 />
               </div>
             </div>
@@ -324,16 +324,16 @@ export function ScanProfilesSection() {
                                     onClick={() => handleSetDefault(profile)}
                                     disabled={isSettingDefault}
                                   >
-                                    <Star className="mr-2 h-4 w-4" />
+                                    <Star className="me-2 h-4 w-4" />
                                     Set as Default
                                   </DropdownMenuItem>
                                 )}
                                 <DropdownMenuItem onClick={() => handleEditProfile(profile)}>
-                                  <Pencil className="mr-2 h-4 w-4" />
+                                  <Pencil className="me-2 h-4 w-4" />
                                   Edit
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => handleCloneProfile(profile)}>
-                                  <Copy className="mr-2 h-4 w-4" />
+                                  <Copy className="me-2 h-4 w-4" />
                                   Clone
                                 </DropdownMenuItem>
                               </Can>
@@ -345,7 +345,7 @@ export function ScanProfilesSection() {
                                       className="text-red-500"
                                       onClick={() => handleDeleteClick(profile)}
                                     >
-                                      <Trash2 className="mr-2 h-4 w-4" />
+                                      <Trash2 className="me-2 h-4 w-4" />
                                       Delete
                                     </DropdownMenuItem>
                                   </>
@@ -371,7 +371,7 @@ export function ScanProfilesSection() {
                 {!searchQuery && (
                   <Can permission={Permission.ScanProfilesWrite}>
                     <Button onClick={() => setAddDialogOpen(true)}>
-                      <Plus className="mr-2 h-4 w-4" />
+                      <Plus className="me-2 h-4 w-4" />
                       Create Your First Profile
                     </Button>
                   </Can>
@@ -422,7 +422,7 @@ export function ScanProfilesSection() {
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
             <Button variant="destructive" onClick={handleDeleteConfirm} disabled={isDeleting}>
-              {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isDeleting && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
               Delete
             </Button>
           </AlertDialogFooter>

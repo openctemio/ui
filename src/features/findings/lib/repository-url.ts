@@ -22,6 +22,34 @@ export interface RepositoryLinkParams {
 type RepositoryPlatform = 'github' | 'gitlab' | 'bitbucket' | 'azure' | 'unknown'
 
 /**
+ * Normalize a repository URL to an https web URL.
+ *
+ * Stored repository URLs are sometimes clone URLs rather than web URLs:
+ *   - SSH scp-style: `git@github.com:owner/repo.git`
+ *   - SSH url-style: `ssh://git@github.com/owner/repo.git`
+ *   - https clone:   `https://github.com/owner/repo.git`
+ * All of these (and a trailing slash) would otherwise break link building
+ * (scp-style isn't even a valid URL). Returns an https web URL without the
+ * trailing `.git`, or the trimmed input if it can't be normalized.
+ */
+export function normalizeRepoWebUrl(raw: string): string {
+  let url = raw.trim()
+
+  // scp-style SSH: git@host:owner/repo(.git)
+  const scp = /^[^@/]+@([^:/]+):(.+)$/.exec(url)
+  if (scp && !url.includes('://')) {
+    url = `https://${scp[1]}/${scp[2]}`
+  } else {
+    // url-style ssh:// or git:// → https
+    url = url.replace(/^(ssh|git):\/\/(?:[^@/]+@)?/, 'https://')
+  }
+
+  // Strip trailing slash, then a trailing `.git`.
+  url = url.replace(/\/+$/, '').replace(/\.git$/i, '')
+  return url
+}
+
+/**
  * Detect repository platform from URL
  */
 function detectPlatform(url: string): RepositoryPlatform {
@@ -92,11 +120,13 @@ export function buildRepositoryCodeUrl(params: RepositoryLinkParams): string | n
   if (!repositoryUrl || !filePath) return null
 
   try {
-    const platform = detectPlatform(repositoryUrl)
+    // Normalize clone URLs (SSH / trailing .git) to an https web URL first.
+    const baseUrl = normalizeRepoWebUrl(repositoryUrl)
+    // Reject non-http(s) schemes (e.g. javascript:, data:). The result is
+    // rendered as an <a href>, so an unvalidated scheme would be an XSS sink.
+    if (!isValidRepositoryUrl(baseUrl)) return null
+    const platform = detectPlatform(baseUrl)
     const ref = commitSha || branch || 'main'
-
-    // Remove trailing slash from base URL
-    const baseUrl = repositoryUrl.replace(/\/$/, '')
 
     // Build the URL based on platform
     let codeUrl: string
@@ -148,7 +178,8 @@ export function isValidRepositoryUrl(url?: string): boolean {
   if (!url) return false
 
   try {
-    const parsed = new URL(url)
+    // Normalize first so SSH / scp-style clone URLs are accepted too.
+    const parsed = new URL(normalizeRepoWebUrl(url))
     return ['http:', 'https:'].includes(parsed.protocol)
   } catch {
     return false

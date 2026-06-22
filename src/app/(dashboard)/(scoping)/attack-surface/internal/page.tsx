@@ -97,188 +97,6 @@ interface InternalAsset {
   notes?: string
 }
 
-const daysAgo = (days: number) => {
-  const date = new Date()
-  date.setDate(date.getDate() - days)
-  return date.toISOString()
-}
-
-const mockInternalAssets: InternalAsset[] = [
-  {
-    id: 'int-001',
-    hostname: 'dc01.internal.tcb.vn',
-    type: 'host',
-    ipAddress: '10.0.1.10',
-    macAddress: '00:1A:2B:3C:4D:5E',
-    networkZone: 'internal',
-    vlan: 'VLAN 10',
-    operatingSystem: 'Windows Server 2022',
-    status: 'online',
-    riskLevel: 'high',
-    lastSeen: daysAgo(0),
-    discoveredAt: daysAgo(365),
-    findingsCount: 3,
-    openPorts: [53, 88, 135, 389, 445, 636],
-    services: ['Active Directory', 'DNS', 'LDAP'],
-    owner: 'IT Infrastructure',
-  },
-  {
-    id: 'int-002',
-    hostname: 'sql01.internal.tcb.vn',
-    type: 'database',
-    ipAddress: '10.0.2.20',
-    macAddress: '00:1A:2B:3C:4D:5F',
-    networkZone: 'restricted',
-    vlan: 'VLAN 20',
-    operatingSystem: 'Windows Server 2019',
-    status: 'online',
-    riskLevel: 'critical',
-    lastSeen: daysAgo(0),
-    discoveredAt: daysAgo(300),
-    findingsCount: 5,
-    openPorts: [1433, 1434, 3389],
-    services: ['SQL Server', 'RDP'],
-    owner: 'Database Team',
-    notes: 'Contains PII data - requires strict access control',
-  },
-  {
-    id: 'int-003',
-    hostname: 'web-internal.tcb.vn',
-    type: 'host',
-    ipAddress: '10.0.3.30',
-    networkZone: 'dmz',
-    vlan: 'VLAN 30',
-    operatingSystem: 'Ubuntu 22.04 LTS',
-    status: 'online',
-    riskLevel: 'medium',
-    lastSeen: daysAgo(0),
-    discoveredAt: daysAgo(200),
-    findingsCount: 2,
-    openPorts: [80, 443, 22],
-    services: ['Nginx', 'SSH'],
-    owner: 'Web Team',
-  },
-  {
-    id: 'int-004',
-    hostname: 'fw-core01',
-    type: 'network_device',
-    ipAddress: '10.0.0.1',
-    macAddress: '00:1A:2B:3C:4D:60',
-    networkZone: 'internal',
-    operatingSystem: 'Palo Alto PAN-OS 10.2',
-    status: 'online',
-    riskLevel: 'low',
-    lastSeen: daysAgo(0),
-    discoveredAt: daysAgo(365),
-    findingsCount: 0,
-    openPorts: [443, 22],
-    services: ['Management Interface'],
-    owner: 'Network Team',
-  },
-  {
-    id: 'int-005',
-    hostname: 'nas01.internal.tcb.vn',
-    type: 'storage',
-    ipAddress: '10.0.4.40',
-    macAddress: '00:1A:2B:3C:4D:61',
-    networkZone: 'internal',
-    vlan: 'VLAN 40',
-    operatingSystem: 'Synology DSM 7.2',
-    status: 'online',
-    riskLevel: 'high',
-    lastSeen: daysAgo(0),
-    discoveredAt: daysAgo(180),
-    findingsCount: 4,
-    openPorts: [445, 5000, 5001, 22],
-    services: ['SMB', 'HTTP/HTTPS', 'SSH'],
-    owner: 'IT Operations',
-    notes: 'Contains backup data and shared files',
-  },
-  {
-    id: 'int-006',
-    hostname: 'ws-dev-001',
-    type: 'workstation',
-    ipAddress: '10.0.100.50',
-    macAddress: '00:1A:2B:3C:4D:62',
-    networkZone: 'internal',
-    vlan: 'VLAN 100',
-    operatingSystem: 'Windows 11 Pro',
-    status: 'online',
-    riskLevel: 'medium',
-    lastSeen: daysAgo(0),
-    discoveredAt: daysAgo(90),
-    findingsCount: 2,
-    owner: 'Development Team',
-  },
-  {
-    id: 'int-007',
-    hostname: 'switch-floor2',
-    type: 'network_device',
-    ipAddress: '10.0.0.22',
-    macAddress: '00:1A:2B:3C:4D:63',
-    networkZone: 'internal',
-    operatingSystem: 'Cisco IOS 15.2',
-    status: 'online',
-    riskLevel: 'low',
-    lastSeen: daysAgo(0),
-    discoveredAt: daysAgo(365),
-    findingsCount: 1,
-    openPorts: [22, 23],
-    services: ['SSH', 'Telnet'],
-    owner: 'Network Team',
-    notes: 'Telnet should be disabled',
-  },
-  {
-    id: 'int-008',
-    hostname: 'guest-ap01',
-    type: 'network_device',
-    ipAddress: '10.255.0.10',
-    networkZone: 'guest',
-    operatingSystem: 'Ubiquiti UniFi',
-    status: 'online',
-    riskLevel: 'low',
-    lastSeen: daysAgo(0),
-    discoveredAt: daysAgo(120),
-    findingsCount: 0,
-    owner: 'Network Team',
-  },
-  {
-    id: 'int-009',
-    hostname: 'legacy-app01',
-    type: 'host',
-    ipAddress: '10.0.5.100',
-    networkZone: 'internal',
-    vlan: 'VLAN 50',
-    operatingSystem: 'Windows Server 2012 R2',
-    status: 'online',
-    riskLevel: 'critical',
-    lastSeen: daysAgo(0),
-    discoveredAt: daysAgo(365),
-    findingsCount: 12,
-    openPorts: [80, 443, 3389, 445],
-    services: ['IIS', 'RDP', 'SMB'],
-    owner: 'Legacy Systems',
-    notes: 'End of life OS - migration planned',
-  },
-  {
-    id: 'int-010',
-    hostname: 'backup-srv01',
-    type: 'host',
-    ipAddress: '10.0.6.60',
-    networkZone: 'restricted',
-    vlan: 'VLAN 60',
-    operatingSystem: 'Windows Server 2022',
-    status: 'offline',
-    riskLevel: 'medium',
-    lastSeen: daysAgo(2),
-    discoveredAt: daysAgo(200),
-    findingsCount: 1,
-    services: ['Veeam Backup'],
-    owner: 'IT Operations',
-    notes: 'Scheduled maintenance',
-  },
-]
-
 const statusColors: Record<AssetStatus, string> = {
   online: 'bg-green-500/10 text-green-500 border-green-500/20',
   offline: 'bg-gray-500/10 text-gray-500 border-gray-500/20',
@@ -340,9 +158,10 @@ export default function InternalSurfacePage() {
     )
   }, [apiAssets])
 
-  const [assets, setAssets] = useState<InternalAsset[]>(mockInternalAssets)
+  // Real internal assets from the assets API; empty until data loads.
+  const [assets, setAssets] = useState<InternalAsset[]>([])
   useEffect(() => {
-    if (apiMapped.length > 0) setAssets(apiMapped)
+    setAssets(apiMapped)
   }, [apiMapped])
   const [searchQuery, setSearchQuery] = useState('')
   const [filterType, setFilterType] = useState<AssetType | 'all'>('all')
@@ -642,16 +461,16 @@ export default function InternalSurfacePage() {
         >
           <div className="flex gap-2">
             <Button variant="outline" size="sm">
-              <RefreshCw className="mr-2 h-4 w-4" />
+              <RefreshCw className="me-2 h-4 w-4" />
               Scan Network
             </Button>
             <Button variant="outline" size="sm">
-              <Download className="mr-2 h-4 w-4" />
+              <Download className="me-2 h-4 w-4" />
               Export
             </Button>
             <Can permission={Permission.ScopeWrite}>
               <Button size="sm" onClick={() => setIsCreateOpen(true)}>
-                <Plus className="mr-2 h-4 w-4" />
+                <Plus className="me-2 h-4 w-4" />
                 Add Asset
               </Button>
             </Can>
@@ -756,7 +575,7 @@ export default function InternalSurfacePage() {
                   <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     placeholder="Search by hostname or IP..."
-                    className="pl-9"
+                    className="ps-9"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                   />
@@ -805,7 +624,7 @@ export default function InternalSurfacePage() {
                       setSearchQuery('')
                     }}
                   >
-                    <X className="mr-1 h-3 w-3" />
+                    <X className="me-1 h-3 w-3" />
                     Clear
                   </Button>
                 )}
@@ -900,12 +719,12 @@ export default function InternalSurfacePage() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem onClick={() => setViewAsset(asset)}>
-                                <Eye className="mr-2 h-4 w-4" />
+                                <Eye className="me-2 h-4 w-4" />
                                 View Details
                               </DropdownMenuItem>
                               <Can permission={Permission.ScopeWrite}>
                                 <DropdownMenuItem onClick={() => openEdit(asset)}>
-                                  <Pencil className="mr-2 h-4 w-4" />
+                                  <Pencil className="me-2 h-4 w-4" />
                                   Edit
                                 </DropdownMenuItem>
                               </Can>
@@ -914,7 +733,7 @@ export default function InternalSurfacePage() {
                                   className="text-red-500"
                                   onClick={() => setDeleteAsset(asset)}
                                 >
-                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  <Trash2 className="me-2 h-4 w-4" />
                                   Delete
                                 </DropdownMenuItem>
                               </Can>
@@ -1159,11 +978,11 @@ export default function InternalSurfacePage() {
 
               <div className="mt-6 flex gap-2">
                 <Button className="flex-1" variant="outline" onClick={() => openEdit(viewAsset)}>
-                  <Pencil className="mr-2 h-4 w-4" />
+                  <Pencil className="me-2 h-4 w-4" />
                   Edit
                 </Button>
                 <Button className="flex-1">
-                  <Wifi className="mr-2 h-4 w-4" />
+                  <Wifi className="me-2 h-4 w-4" />
                   Scan Asset
                 </Button>
               </div>

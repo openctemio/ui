@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback, useEffect, useMemo } from 'react'
-import { Dialog, DialogContent } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -253,14 +253,14 @@ export function VisualBuilderDialog({
                 <Server className="h-5 w-5 text-muted-foreground shrink-0" />
               )}
               <div className="min-w-0">
-                <h2 className="text-base font-semibold truncate">
+                <DialogTitle className="text-base font-semibold truncate">
                   {pipeline?.name || 'Visual Builder'}
-                </h2>
-                <p className="text-xs text-muted-foreground whitespace-nowrap">
+                </DialogTitle>
+                <DialogDescription className="text-xs text-muted-foreground whitespace-nowrap">
                   {isReadOnly
                     ? 'Read-only view - Clone to edit'
                     : 'Drag nodes from palette • Connect nodes • Click to edit'}
-                </p>
+                </DialogDescription>
               </div>
             </div>
             <div className="flex items-center gap-2 shrink-0">
@@ -277,9 +277,9 @@ export function VisualBuilderDialog({
               {!isReadOnly && (
                 <Button size="sm" onClick={handleSave} disabled={!hasChanges || isSaving}>
                   {isSaving ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <Loader2 className="me-2 h-4 w-4 animate-spin" />
                   ) : (
-                    <Save className="mr-2 h-4 w-4" />
+                    <Save className="me-2 h-4 w-4" />
                   )}
                   Save
                 </Button>

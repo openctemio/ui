@@ -178,7 +178,7 @@ export default function SelectTenantPage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               disabled={isPending || isLoggingOut}
-              className="pl-9"
+              className="ps-9"
               aria-label="Search teams"
               autoFocus
             />
@@ -229,7 +229,7 @@ export default function SelectTenantPage() {
                 </div>
 
                 {/* Info */}
-                <div className="flex-1 text-left min-w-0">
+                <div className="flex-1 text-start min-w-0">
                   <p className="font-medium truncate">{tenant.name}</p>
                   <p className="text-sm text-muted-foreground truncate">
                     {tenant.slug} · {tenant.role}
@@ -279,7 +279,7 @@ export default function SelectTenantPage() {
           <div className="flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-muted shrink-0">
             <Plus className="h-5 w-5" />
           </div>
-          <div className="flex-1 text-left min-w-0">
+          <div className="flex-1 text-start min-w-0">
             <p className="font-medium text-sm sm:text-base">Create a new team</p>
             <p className="text-xs sm:text-sm text-muted-foreground truncate">
               Start a fresh workspace for a different organisation
@@ -296,9 +296,9 @@ export default function SelectTenantPage() {
             disabled={isPending || isLoggingOut}
           >
             {isLoggingOut ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              <Loader2 className="h-4 w-4 me-2 animate-spin" />
             ) : (
-              <LogOut className="h-4 w-4 mr-2" />
+              <LogOut className="h-4 w-4 me-2" />
             )}
             <span className="truncate">
               {isLoggingOut ? 'Signing out...' : 'Sign out and use a different account'}

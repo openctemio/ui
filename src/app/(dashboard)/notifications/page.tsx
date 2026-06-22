@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useMemo, useRef } from 'react'
 import Link from 'next/link'
-import { formatDistanceToNow } from 'date-fns'
+import { formatRelative } from '@/lib/format-date'
 import {
   AlertTriangle,
   Bell,
@@ -115,9 +115,7 @@ function NotificationRow({
           <p className="text-xs text-muted-foreground line-clamp-2">{notification.body}</p>
         )}
 
-        <p className="text-xs text-muted-foreground">
-          {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
-        </p>
+        <p className="text-xs text-muted-foreground">{formatRelative(notification.created_at)}</p>
       </div>
 
       {!notification.is_read && (
@@ -226,13 +224,13 @@ export default function NotificationsPage() {
         <div className="flex items-center gap-2">
           {unreadCount > 0 && (
             <Button variant="outline" size="sm" onClick={handleMarkAllAsRead}>
-              <CheckCheck className="h-4 w-4 mr-1.5" />
+              <CheckCheck className="h-4 w-4 me-1.5" />
               Mark all as read
             </Button>
           )}
           <Button variant="outline" size="sm" asChild>
             <Link href="/settings/notifications">
-              <Settings className="h-4 w-4 mr-1.5" />
+              <Settings className="h-4 w-4 me-1.5" />
               Settings
             </Link>
           </Button>
@@ -362,7 +360,7 @@ export default function NotificationsPage() {
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page <= 1}
             >
-              <ChevronLeft className="h-4 w-4 mr-1" />
+              <ChevronLeft className="h-4 w-4 me-1" />
               Previous
             </Button>
             <Button
@@ -372,7 +370,7 @@ export default function NotificationsPage() {
               disabled={page >= totalPages}
             >
               Next
-              <ChevronRight className="h-4 w-4 ml-1" />
+              <ChevronRight className="h-4 w-4 ms-1" />
             </Button>
           </div>
         </div>

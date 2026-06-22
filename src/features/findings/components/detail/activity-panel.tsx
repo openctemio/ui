@@ -8,6 +8,16 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import {
   PlusCircle,
   MessageSquare,
   ArrowRightLeft,
@@ -87,6 +97,7 @@ export function ActivityPanel({
   const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set())
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null)
   const [editingContent, setEditingContent] = useState('')
+  const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null)
 
   // Character limit for comment truncation (display)
   const COMMENT_TRUNCATE_LENGTH = 200
@@ -344,7 +355,7 @@ export function ActivityPanel({
                       className="h-6 text-xs"
                       onClick={() => setEditingCommentId(null)}
                     >
-                      <X className="mr-1 h-3 w-3" />
+                      <X className="me-1 h-3 w-3" />
                       Cancel
                     </Button>
                     <Button
@@ -358,7 +369,7 @@ export function ActivityPanel({
                         setEditingCommentId(null)
                       }}
                     >
-                      <Check className="mr-1 h-3 w-3" />
+                      <Check className="me-1 h-3 w-3" />
                       Save
                     </Button>
                   </div>
@@ -377,12 +388,12 @@ export function ActivityPanel({
                 >
                   {isCommentExpanded ? (
                     <>
-                      <ChevronUp className="mr-1 h-3 w-3" />
+                      <ChevronUp className="me-1 h-3 w-3" />
                       Show less
                     </>
                   ) : (
                     <>
-                      <ChevronDown className="mr-1 h-3 w-3" />
+                      <ChevronDown className="me-1 h-3 w-3" />
                       Show more
                     </>
                   )}
@@ -449,11 +460,9 @@ export function ActivityPanel({
                       size="sm"
                       className="h-5 w-5 p-0 text-destructive hover:text-destructive"
                       onClick={() => {
-                        if (window.confirm('Delete this comment?')) {
-                          // Use comment_id from activity metadata (activity.id is the activity record, not the comment)
-                          const commentId = (activity.metadata?.comment_id as string) || activity.id
-                          onDeleteComment(commentId)
-                        }
+                        // Use comment_id from activity metadata (activity.id is the activity record, not the comment)
+                        const commentId = (activity.metadata?.comment_id as string) || activity.id
+                        setDeletingCommentId(commentId)
                       }}
                     >
                       <Trash2 className="h-3 w-3" />
@@ -465,7 +474,7 @@ export function ActivityPanel({
 
             {/* Replies */}
             {hasReplies && (
-              <div className="pl-4">
+              <div className="ps-4">
                 <Button
                   variant="ghost"
                   size="sm"
@@ -473,16 +482,16 @@ export function ActivityPanel({
                   onClick={() => toggleReplies(activity.id)}
                 >
                   {showReplies ? (
-                    <ChevronUp className="mr-1 h-3 w-3" />
+                    <ChevronUp className="me-1 h-3 w-3" />
                   ) : (
-                    <ChevronDown className="mr-1 h-3 w-3" />
+                    <ChevronDown className="me-1 h-3 w-3" />
                   )}
                   {activity.replies!.length} repl
                   {activity.replies!.length === 1 ? 'y' : 'ies'}
                 </Button>
 
                 {showReplies && (
-                  <div className="mt-2 space-y-2 border-l-2 border-muted pl-3">
+                  <div className="mt-2 space-y-2 border-l-2 border-muted ps-3">
                     {activity.replies!.map((reply) => (
                       <div key={reply.id} className="bg-muted/30 rounded p-2">
                         <div className="mb-1 flex items-center gap-2">
@@ -522,7 +531,7 @@ export function ActivityPanel({
           <div className="text-sm">
             <span>{activity.content}</span>
             {evidenceType && (
-              <Badge variant="outline" className="ml-2 text-xs">
+              <Badge variant="outline" className="ms-2 text-xs">
                 {evidenceType}
               </Badge>
             )}
@@ -596,12 +605,12 @@ export function ActivityPanel({
             >
               {isLoadingMore ? (
                 <>
-                  <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                  <Loader2 className="me-1 h-3 w-3 animate-spin" />
                   Loading...
                 </>
               ) : (
                 <>
-                  <ChevronDown className="mr-1 h-3 w-3" />
+                  <ChevronDown className="me-1 h-3 w-3" />
                   Load More
                 </>
               )}
@@ -653,11 +662,39 @@ export function ActivityPanel({
             onClick={handleSubmitComment}
             disabled={!comment.trim() || comment.length > MAX_COMMENT_LENGTH}
           >
-            <Send className="mr-1 h-3 w-3" />
+            <Send className="me-1 h-3 w-3" />
             Send
           </Button>
         </div>
       </div>
+
+      <AlertDialog
+        open={!!deletingCommentId}
+        onOpenChange={(open) => !open && setDeletingCommentId(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this comment?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the comment. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (deletingCommentId) {
+                  onDeleteComment?.(deletingCommentId)
+                }
+                setDeletingCommentId(null)
+              }}
+              className="bg-red-500 text-white hover:bg-red-600"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

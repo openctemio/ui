@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import { csrfFetch } from '@/lib/api/client'
 import {
   ColumnDef,
   flexRender,
@@ -12,7 +13,7 @@ import {
   useReactTable,
 } from '@tanstack/react-table'
 import { Main } from '@/components/layout'
-import { PageHeader, StatusBadge, RiskScoreBadge } from '@/features/shared'
+import { PageHeader, StatusBadge, RiskScoreBadge, DataTablePagination } from '@/features/shared'
 import {
   AssetDetailSheet,
   StatCard,
@@ -80,10 +81,6 @@ import {
   Pencil,
   Trash2,
   ArrowUpDown,
-  ChevronLeft,
-  ChevronRight,
-  ChevronsLeft,
-  ChevronsRight,
   Download,
   Shield,
   AlertTriangle,
@@ -183,6 +180,11 @@ export default function CredentialsPage() {
     const statusToState: Record<StatusFilter, string[]> = {
       all: [],
       active: ['active'],
+      // Stale is an asset-only state; credentials do not use it but
+      // the shared Status union carries it so credential filters
+      // must still map. Treat it as "active" for API purposes since
+      // that's the closest equivalent.
+      stale: ['active'],
       pending: ['active'], // Pending maps to active in API
       completed: ['resolved'],
       inactive: ['accepted', 'false_positive'],
@@ -304,10 +306,10 @@ export default function CredentialsPage() {
         <Button
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-          className="-ml-4"
+          className="-ms-4"
         >
           Credential
-          <ArrowUpDown className="ml-2 h-4 w-4" />
+          <ArrowUpDown className="ms-2 h-4 w-4" />
         </Button>
       ),
       cell: ({ row }) => (
@@ -369,7 +371,7 @@ export default function CredentialsPage() {
               {leakDate.toLocaleDateString()}
             </span>
             {isRecent && (
-              <Badge variant="destructive" className="ml-1 text-xs">
+              <Badge variant="destructive" className="ms-1 text-xs">
                 Recent
               </Badge>
             )}
@@ -400,10 +402,10 @@ export default function CredentialsPage() {
         <Button
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-          className="-ml-4"
+          className="-ms-4"
         >
           Risk
-          <ArrowUpDown className="ml-2 h-4 w-4" />
+          <ArrowUpDown className="ms-2 h-4 w-4" />
         </Button>
       ),
       cell: ({ row }) => <RiskScoreBadge score={row.original.riskScore} size="sm" />,
@@ -421,17 +423,17 @@ export default function CredentialsPage() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => setSelectedCredential(credential)}>
-                <Eye className="mr-2 h-4 w-4" />
+                <Eye className="me-2 h-4 w-4" />
                 View Details
               </DropdownMenuItem>
               <Can permission={Permission.CredentialsWrite}>
                 <DropdownMenuItem onClick={() => handleOpenEdit(credential)}>
-                  <Pencil className="mr-2 h-4 w-4" />
+                  <Pencil className="me-2 h-4 w-4" />
                   Edit
                 </DropdownMenuItem>
               </Can>
               <DropdownMenuItem onClick={() => handleCopyCredential(credential)}>
-                <Copy className="mr-2 h-4 w-4" />
+                <Copy className="me-2 h-4 w-4" />
                 Copy Name
               </DropdownMenuItem>
               <DropdownMenuSeparator />
@@ -443,7 +445,7 @@ export default function CredentialsPage() {
                     setDeleteDialogOpen(true)
                   }}
                 >
-                  <Trash2 className="mr-2 h-4 w-4" />
+                  <Trash2 className="me-2 h-4 w-4" />
                   Delete
                 </DropdownMenuItem>
               </Can>
@@ -503,27 +505,12 @@ export default function CredentialsPage() {
     setAddDialogOpen(false)
   }
 
-  const handleUpdateCredential = () => {
-    if (!selectedCredential || !formData.name || !formData.source) {
-      toast.error('Please fill in required fields')
-      return
-    }
-
-    // Phase 2: Wire to credentials API when backend endpoints are implemented.
-    toast.info('Update functionality coming soon')
-    setFormData(emptyCredentialForm)
-    setEditDialogOpen(false)
-    setSelectedCredential(null)
-  }
-
-  const handleDeleteCredential = () => {
-    if (!credentialToDelete) return
-
-    // Phase 2: Wire to credentials API when backend endpoints are implemented.
-    toast.info('Delete functionality coming soon')
-    setDeleteDialogOpen(false)
-    setCredentialToDelete(null)
-  }
+  // NOTE: edit + delete of discovered credentials are intentionally deferred —
+  // the Edit "Save Changes" and Delete confirm buttons are disabled ("Coming
+  // soon") until dedicated credentials endpoints exist. The credential
+  // lifecycle today is resolve / accept / mark-false-positive (see the
+  // credentials API), not free-form edit or hard delete. The dead update/delete
+  // handlers were removed to avoid a future dev wiring a button to a no-op.
 
   const handleCopyCredential = (credential: Asset) => {
     copyToClipboard(credential.name)
@@ -532,7 +519,7 @@ export default function CredentialsPage() {
 
   const handleMarkResolved = async (credential: Asset) => {
     try {
-      const response = await fetch(`/api/v1/credentials/${credential.id}/resolve`, {
+      const response = await csrfFetch(`/api/v1/credentials/${credential.id}/resolve`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -564,7 +551,7 @@ export default function CredentialsPage() {
             description={statsLoading ? 'Loading...' : `${stats.total} leaked credentials detected`}
           />
           <Button onClick={() => setAddDialogOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
+            <Plus className="me-2 h-4 w-4" />
             Add Credential
           </Button>
         </div>
@@ -596,7 +583,7 @@ export default function CredentialsPage() {
                 onClick={() => setStatusFilter('active')}
               >
                 Review Now
-                <ArrowRight className="ml-1 h-3 w-3" />
+                <ArrowRight className="ms-1 h-3 w-3" />
               </Button>
               <Button
                 size="sm"
@@ -731,7 +718,7 @@ export default function CredentialsPage() {
                   </TabsList>
                 </Tabs>
                 <Button variant="outline" size="sm">
-                  <Download className="mr-2 h-4 w-4" />
+                  <Download className="me-2 h-4 w-4" />
                   Export
                 </Button>
               </div>
@@ -746,7 +733,7 @@ export default function CredentialsPage() {
                   placeholder="Search credentials..."
                   value={globalFilter}
                   onChange={(e) => setGlobalFilter(e.target.value)}
-                  className="pl-9"
+                  className="ps-9"
                 />
               </div>
               <Select
@@ -884,7 +871,16 @@ export default function CredentialsPage() {
                             key={row.id}
                             data-state={row.getIsSelected() && 'selected'}
                             className="cursor-pointer"
+                            role="button"
+                            tabIndex={0}
+                            aria-label="View credential details"
                             onClick={() => setSelectedCredential(row.original)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault()
+                                setSelectedCredential(row.original)
+                              }
+                            }}
                           >
                             {row.getVisibleCells().map((cell) => (
                               <TableCell
@@ -912,49 +908,7 @@ export default function CredentialsPage() {
                 </div>
 
                 {/* Pagination - only for list view */}
-                <div className="flex items-center justify-between mt-4">
-                  <div className="text-sm text-muted-foreground">
-                    {table.getFilteredSelectedRowModel().rows.length} of{' '}
-                    {table.getFilteredRowModel().rows.length} row(s) selected.
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => table.setPageIndex(0)}
-                      disabled={!table.getCanPreviousPage()}
-                    >
-                      <ChevronsLeft className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => table.previousPage()}
-                      disabled={!table.getCanPreviousPage()}
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                    </Button>
-                    <span className="text-sm">
-                      Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
-                    </span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => table.nextPage()}
-                      disabled={!table.getCanNextPage()}
-                    >
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-                      disabled={!table.getCanNextPage()}
-                    >
-                      <ChevronsRight className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
+                <DataTablePagination table={table} />
               </>
             )}
           </CardContent>
@@ -1007,7 +961,7 @@ export default function CredentialsPage() {
                 // Sheet will be closed by handleMarkResolved after success
               }}
             >
-              <CheckCircle className="mr-2 h-4 w-4" />
+              <CheckCircle className="me-2 h-4 w-4" />
               Mark Resolved
             </Button>
           ) : null
@@ -1333,7 +1287,7 @@ function RelatedExposuresSection({
         {relatedCredentials.map((cred) => (
           <button
             key={cred.id}
-            className="w-full text-left rounded-md border bg-muted/30 p-3 hover:bg-muted/50 transition-colors"
+            className="w-full text-start rounded-md border bg-muted/30 p-3 hover:bg-muted/50 transition-colors"
             onClick={() => onSelectCredential(cred)}
           >
             <div className="flex items-center justify-between">
@@ -1384,7 +1338,7 @@ function IdentityCard({ identity, isExpanded, onToggle, onSelectCredential }: Id
         className={`rounded-lg border ${activeCount > 0 ? 'border-red-200 dark:border-red-900/50' : ''}`}
       >
         <CollapsibleTrigger asChild>
-          <button className="w-full p-4 text-left hover:bg-muted/50 transition-colors">
+          <button className="w-full p-4 text-start hover:bg-muted/50 transition-colors">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
@@ -1450,7 +1404,7 @@ function IdentityCard({ identity, isExpanded, onToggle, onSelectCredential }: Id
                 exposuresResponse.items.map((exposure) => (
                   <button
                     key={exposure.id}
-                    className="w-full text-left rounded-md border bg-background p-3 hover:bg-muted/50 transition-colors"
+                    className="w-full text-start rounded-md border bg-background p-3 hover:bg-muted/50 transition-colors"
                     onClick={() => onSelectCredential(exposure)}
                   >
                     <div className="flex items-center justify-between">

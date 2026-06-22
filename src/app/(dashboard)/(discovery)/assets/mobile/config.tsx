@@ -15,6 +15,7 @@ import {
 import type { Asset } from '@/features/assets'
 import type { AssetPageConfig } from '@/features/assets/types/page-config.types'
 import { toStringArray } from '@/features/assets/lib/property-utils'
+import { sanitizeExternalUrl } from '@/lib/utils'
 
 const platformLabels: Record<string, string> = {
   ios: 'iOS',
@@ -268,8 +269,14 @@ export const mobileConfig: AssetPageConfig = {
             const storeUrl = asset.metadata.store_url as string
             if (!storeUrl) return '-'
             return (
-              <Button variant="outline" size="sm" onClick={() => window.open(storeUrl, '_blank')}>
-                <ExternalLink className="mr-2 h-4 w-4" />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  window.open(sanitizeExternalUrl(storeUrl), '_blank', 'noopener,noreferrer')
+                }
+              >
+                <ExternalLink className="me-2 h-4 w-4" />
                 Open in Store
               </Button>
             )

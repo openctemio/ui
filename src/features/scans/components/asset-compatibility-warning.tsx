@@ -159,7 +159,7 @@ export function AssetCompatibilityWarning({
             <CollapsibleTrigger asChild>
               <Button variant="ghost" size="sm" className="h-7 px-2 text-xs">
                 <ChevronDown
-                  className={cn('mr-1 h-3 w-3 transition-transform', isOpen && 'rotate-180')}
+                  className={cn('me-1 h-3 w-3 transition-transform', isOpen && 'rotate-180')}
                 />
                 {isOpen ? 'Hide' : 'Show'} breakdown by asset type
               </Button>
@@ -169,9 +169,9 @@ export function AssetCompatibilityWarning({
                 <table className="w-full text-xs">
                   <thead>
                     <tr className="border-b text-muted-foreground">
-                      <th className="pb-1 text-left font-medium">Asset Type</th>
-                      <th className="pb-1 text-right font-medium">Count</th>
-                      <th className="pb-1 text-right font-medium">Status</th>
+                      <th className="pb-1 text-start font-medium">Asset Type</th>
+                      <th className="pb-1 text-end font-medium">Count</th>
+                      <th className="pb-1 text-end font-medium">Status</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
@@ -181,8 +181,8 @@ export function AssetCompatibilityWarning({
                           {ASSET_TYPE_LABELS[item.assetType as keyof typeof ASSET_TYPE_LABELS] ||
                             item.assetType}
                         </td>
-                        <td className="py-1 text-right">{item.count}</td>
-                        <td className="py-1 text-right">
+                        <td className="py-1 text-end">{item.count}</td>
+                        <td className="py-1 text-end">
                           {item.isCompatible ? (
                             <Badge
                               variant="outline"

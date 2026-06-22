@@ -223,7 +223,7 @@ function ControlTestRow({ ct }: { ct: ControlTest }) {
       <TableCell>
         <Badge className={`${config.bgColor} ${config.color} border-0`}>
           {config.icon}
-          <span className="ml-1 capitalize">{ct.status.replace(/_/g, ' ')}</span>
+          <span className="ms-1 capitalize">{ct.status.replace(/_/g, ' ')}</span>
         </Badge>
       </TableCell>
       <TableCell className="text-muted-foreground text-sm">
@@ -489,7 +489,7 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
         Create control tests to track security control effectiveness across frameworks.
       </p>
       <Button size="sm" onClick={onAdd}>
-        <Plus className="mr-2 h-4 w-4" />
+        <Plus className="me-2 h-4 w-4" />
         Add Control Test
       </Button>
     </div>
@@ -562,7 +562,7 @@ export default function ControlTestingPage() {
         description="Track and validate security control effectiveness across compliance frameworks"
       >
         <Button size="sm" onClick={() => setDialogOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
+          <Plus className="me-2 h-4 w-4" />
           Add Control Test
         </Button>
       </PageHeader>

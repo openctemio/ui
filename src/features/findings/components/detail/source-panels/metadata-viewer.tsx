@@ -56,11 +56,11 @@ export function MetadataViewer({ metadata, excludeKeys = [], className }: Metada
             >
               {expanded ? (
                 <>
-                  <ChevronUp className="h-3 w-3 mr-1" /> Collapse
+                  <ChevronUp className="h-3 w-3 me-1" /> Collapse
                 </>
               ) : (
                 <>
-                  <ChevronDown className="h-3 w-3 mr-1" /> Show all ({entries.length})
+                  <ChevronDown className="h-3 w-3 me-1" /> Show all ({entries.length})
                 </>
               )}
             </Button>

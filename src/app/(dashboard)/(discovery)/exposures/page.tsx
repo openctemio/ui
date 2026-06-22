@@ -14,6 +14,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { Main } from '@/components/layout'
+import { PageHeader } from '@/features/shared'
 import { copyToClipboard } from '@/lib/clipboard'
 import { cn } from '@/lib/utils'
 import {
@@ -39,10 +40,18 @@ import {
   Server,
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { formatDistanceToNow } from 'date-fns'
+import { formatRelative } from '@/lib/format-date'
 import { useTenant } from '@/context/tenant-provider'
+import { useCsvExport, type ExportFieldConfig } from '@/hooks/use-csv-export'
 
-import { useExposures, useExposureStats, useExposureHistory } from '@/features/exposures/hooks'
+import {
+  useExposures,
+  useExposureStats,
+  useExposureHistory,
+  resolveExposure,
+  acceptExposure,
+  markExposureFalsePositive,
+} from '@/features/exposures/hooks'
 import {
   ExposureStatsCards,
   ExposureSeverityBreakdown,
@@ -62,6 +71,20 @@ type ActionType = 'resolve' | 'accept' | 'false_positive' | 'reactivate'
 
 // State tab type for cleaner organization
 type StateTab = 'needs_attention' | 'resolved' | 'all'
+
+// CSV columns for the Export action. Exports the currently loaded (filtered)
+// page of exposures — matches the Findings export behaviour.
+const EXPOSURE_EXPORT_FIELDS: ExportFieldConfig<ExposureEvent>[] = [
+  { header: 'ID', accessor: (e) => e.id },
+  { header: 'Title', accessor: (e) => e.title },
+  { header: 'Event Type', accessor: (e) => e.event_type.replace(/_/g, ' ') },
+  { header: 'Severity', accessor: (e) => e.severity },
+  { header: 'State', accessor: (e) => e.state },
+  { header: 'Source', accessor: (e) => e.source },
+  { header: 'First Seen', accessor: (e) => e.first_seen_at },
+  { header: 'Last Seen', accessor: (e) => e.last_seen_at },
+  { header: 'Resolved At', accessor: (e) => e.resolved_at ?? '' },
+]
 
 export default function ExposuresPage() {
   const { currentTenant } = useTenant()
@@ -122,6 +145,9 @@ export default function ExposuresPage() {
 
   const isLoading = exposuresLoading || statsLoading
 
+  // CSV export of the currently loaded exposures
+  const { handleExport } = useCsvExport(exposures, EXPOSURE_EXPORT_FIELDS, 'exposures')
+
   // Handlers
   const handleRefresh = useCallback(() => {
     refreshExposures()
@@ -161,26 +187,29 @@ export default function ExposuresPage() {
     setDetailExposure(null)
   }, [handleRefresh])
 
+  // Bulk handlers apply the per-exposure state-change API to every selected id.
+  // ExposureBulkActions surfaces the success/error toast and clears selection;
+  // we only refresh on completion. Throwing propagates to its catch so a
+  // partial/total failure shows the error toast instead of a false success.
   const handleBulkResolve = useCallback(
     async (ids: string[]) => {
-      // In real implementation, call bulk API
-      toast.success(`${ids.length} exposures resolved`)
+      await Promise.all(ids.map((id) => resolveExposure(id)))
       handleRefresh()
     },
     [handleRefresh]
   )
 
   const handleBulkAccept = useCallback(
-    async (ids: string[], _reason: string) => {
-      toast.success(`${ids.length} exposures accepted`)
+    async (ids: string[], reason: string) => {
+      await Promise.all(ids.map((id) => acceptExposure(id, { reason })))
       handleRefresh()
     },
     [handleRefresh]
   )
 
   const handleBulkFalsePositive = useCallback(
-    async (ids: string[], _reason: string) => {
-      toast.success(`${ids.length} exposures marked as false positive`)
+    async (ids: string[], reason: string) => {
+      await Promise.all(ids.map((id) => markExposureFalsePositive(id, { reason })))
       handleRefresh()
     },
     [handleRefresh]
@@ -201,26 +230,29 @@ export default function ExposuresPage() {
       <Main>
         <div className="space-y-6">
           {/* Page Header */}
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight">Exposure Events</h1>
-              <p className="text-muted-foreground">Monitor and manage attack surface exposures</p>
-            </div>
+          <PageHeader
+            title="Exposure Events"
+            description="Monitor and manage attack surface exposures"
+          >
             <div className="flex items-center gap-2">
               <Button variant="outline" onClick={handleRefresh} disabled={isLoading}>
                 {isLoading ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="me-2 h-4 w-4 animate-spin" />
                 ) : (
-                  <RefreshCw className="mr-2 h-4 w-4" />
+                  <RefreshCw className="me-2 h-4 w-4" />
                 )}
                 Refresh
               </Button>
-              <Button variant="outline">
-                <Download className="mr-2 h-4 w-4" />
+              <Button
+                variant="outline"
+                onClick={handleExport}
+                disabled={exposuresLoading || exposures.length === 0}
+              >
+                <Download className="me-2 h-4 w-4" />
                 Export
               </Button>
             </div>
-          </div>
+          </PageHeader>
 
           {/* Stats Overview */}
           <ExposureStatsCards stats={stats} isLoading={statsLoading} />
@@ -245,7 +277,7 @@ export default function ExposuresPage() {
                         placeholder="Search exposures..."
                         value={searchQuery}
                         onChange={(e) => handleSearch(e.target.value)}
-                        className="pl-9"
+                        className="ps-9"
                       />
                     </div>
 
@@ -284,7 +316,7 @@ export default function ExposuresPage() {
                         >
                           Needs Attention
                           {stats.by_state?.active > 0 && (
-                            <Badge variant="secondary" className="ml-1.5">
+                            <Badge variant="secondary" className="ms-1.5">
                               {stats.by_state.active}
                             </Badge>
                           )}
@@ -310,7 +342,7 @@ export default function ExposuresPage() {
                       {/* Clear Filters */}
                       {hasActiveFilters && (
                         <Button variant="ghost" size="sm" onClick={clearFilters}>
-                          <X className="mr-1 h-4 w-4" />
+                          <X className="me-1 h-4 w-4" />
                           Clear
                         </Button>
                       )}
@@ -464,7 +496,7 @@ function EventTypeDistribution({ byEventType }: EventTypeDistributionProps) {
                 style={{ width: `${percentage}%` }}
               />
             </div>
-            <div className="w-20 text-sm text-right text-muted-foreground">
+            <div className="w-20 text-sm text-end text-muted-foreground">
               {count} ({percentage}%)
             </div>
           </div>
@@ -633,12 +665,12 @@ function ExposureDetailsView({
           <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={onToggleSecrets}>
             {secretsRevealed ? (
               <>
-                <EyeOff className="mr-1 h-3 w-3" />
+                <EyeOff className="me-1 h-3 w-3" />
                 Hide Secrets
               </>
             ) : (
               <>
-                <Eye className="mr-1 h-3 w-3" />
+                <Eye className="me-1 h-3 w-3" />
                 Reveal Secrets
               </>
             )}
@@ -877,15 +909,15 @@ function ExposureDetailSheet({ exposure, open, onOpenChange, onAction }: Exposur
                   variant="outline"
                   className={cn(stateConfig[exposure.state].color, 'border-current')}
                 >
-                  <StateIcon className="mr-1 h-3 w-3" />
+                  <StateIcon className="me-1 h-3 w-3" />
                   {stateConfig[exposure.state].label}
                 </Badge>
               </div>
               <SheetHeader className="p-0 space-y-1">
-                <SheetTitle className="text-left text-lg leading-tight">
+                <SheetTitle className="text-start text-lg leading-tight">
                   {exposure.title}
                 </SheetTitle>
-                <SheetDescription className="text-left">
+                <SheetDescription className="text-start">
                   {exposure.event_type.replace(/_/g, ' ')} from {exposure.source}
                 </SheetDescription>
               </SheetHeader>
@@ -900,7 +932,7 @@ function ExposureDetailSheet({ exposure, open, onOpenChange, onAction }: Exposur
                 onClick={() => onAction('resolve')}
                 className="bg-green-600 hover:bg-green-700"
               >
-                <ShieldCheck className="mr-1.5 h-4 w-4" />
+                <ShieldCheck className="me-1.5 h-4 w-4" />
                 Resolve
               </Button>
               <Button
@@ -909,7 +941,7 @@ function ExposureDetailSheet({ exposure, open, onOpenChange, onAction }: Exposur
                 onClick={() => onAction('accept')}
                 className="bg-background"
               >
-                <Shield className="mr-1.5 h-4 w-4" />
+                <Shield className="me-1.5 h-4 w-4" />
                 Accept Risk
               </Button>
               <Button
@@ -918,7 +950,7 @@ function ExposureDetailSheet({ exposure, open, onOpenChange, onAction }: Exposur
                 onClick={() => onAction('false_positive')}
                 className="bg-background"
               >
-                <ShieldX className="mr-1.5 h-4 w-4" />
+                <ShieldX className="me-1.5 h-4 w-4" />
                 False Positive
               </Button>
             </div>
@@ -931,7 +963,7 @@ function ExposureDetailSheet({ exposure, open, onOpenChange, onAction }: Exposur
                 onClick={() => onAction('reactivate')}
                 className="bg-background"
               >
-                <Activity className="mr-1.5 h-4 w-4" />
+                <Activity className="me-1.5 h-4 w-4" />
                 Reactivate
               </Button>
             </div>
@@ -959,17 +991,13 @@ function ExposureDetailSheet({ exposure, open, onOpenChange, onAction }: Exposur
                 <span className="text-xs text-muted-foreground uppercase tracking-wide">
                   First Seen
                 </span>
-                <p className="text-sm font-medium mt-1">
-                  {formatDistanceToNow(new Date(exposure.first_seen_at), { addSuffix: true })}
-                </p>
+                <p className="text-sm font-medium mt-1">{formatRelative(exposure.first_seen_at)}</p>
               </div>
               <div className="p-4">
                 <span className="text-xs text-muted-foreground uppercase tracking-wide">
                   Last Seen
                 </span>
-                <p className="text-sm font-medium mt-1">
-                  {formatDistanceToNow(new Date(exposure.last_seen_at), { addSuffix: true })}
-                </p>
+                <p className="text-sm font-medium mt-1">{formatRelative(exposure.last_seen_at)}</p>
               </div>
             </div>
             {exposure.resolved_at && (
@@ -978,7 +1006,7 @@ function ExposureDetailSheet({ exposure, open, onOpenChange, onAction }: Exposur
                   Resolved
                 </span>
                 <p className="text-sm font-medium mt-1 text-green-700 dark:text-green-400">
-                  {formatDistanceToNow(new Date(exposure.resolved_at), { addSuffix: true })}
+                  {formatRelative(exposure.resolved_at)}
                 </p>
               </div>
             )}
@@ -1063,7 +1091,7 @@ function StateHistorySection({ history, isLoading }: StateHistorySectionProps) {
                     </span>
                   </div>
                   {entry.reason && (
-                    <div className="mt-1.5 pl-3 border-l-2 border-muted-foreground/30">
+                    <div className="mt-1.5 ps-3 border-l-2 border-muted-foreground/30">
                       <p className="text-xs text-foreground/80 italic">
                         &ldquo;{entry.reason}&rdquo;
                       </p>
@@ -1079,9 +1107,7 @@ function StateHistorySection({ history, isLoading }: StateHistorySectionProps) {
                         <span>•</span>
                       </div>
                     ) : null}
-                    <span>
-                      {formatDistanceToNow(new Date(entry.created_at), { addSuffix: true })}
-                    </span>
+                    <span>{formatRelative(entry.created_at)}</span>
                   </div>
                 </div>
               </div>

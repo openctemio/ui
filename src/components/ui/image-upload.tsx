@@ -257,7 +257,7 @@ export function ImageUpload({
       {/* Change button when image exists */}
       {value && !disabled && (
         <Button variant="outline" size="sm" onClick={handleClick} disabled={isProcessing}>
-          <Upload className="mr-2 h-4 w-4" />
+          <Upload className="me-2 h-4 w-4" />
           Change Image
         </Button>
       )}

@@ -186,7 +186,7 @@ export function AddAssetsStep({ data, onChange, ungroupedAssets }: AddAssetsStep
             <ListChecks className="h-4 w-4" />
             Select Existing
             {data.selectedAssetIds.length > 0 && (
-              <Badge variant="secondary" className="ml-1 h-5 px-1.5">
+              <Badge variant="secondary" className="ms-1 h-5 px-1.5">
                 {data.selectedAssetIds.length}
               </Badge>
             )}
@@ -195,7 +195,7 @@ export function AddAssetsStep({ data, onChange, ungroupedAssets }: AddAssetsStep
             <PlusCircle className="h-4 w-4" />
             Create New
             {data.newAssets.length > 0 && (
-              <Badge variant="secondary" className="ml-1 h-5 px-1.5">
+              <Badge variant="secondary" className="ms-1 h-5 px-1.5">
                 {data.newAssets.length}
               </Badge>
             )}
@@ -212,7 +212,7 @@ export function AddAssetsStep({ data, onChange, ungroupedAssets }: AddAssetsStep
                 placeholder="Search assets..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 h-9"
+                className="ps-9 h-9"
               />
             </div>
             <Select
@@ -244,7 +244,7 @@ export function AddAssetsStep({ data, onChange, ungroupedAssets }: AddAssetsStep
                 onClick={selectAll}
                 className="h-7 text-xs"
               >
-                <Check className="h-3 w-3 mr-1" />
+                <Check className="h-3 w-3 me-1" />
                 Select All
               </Button>
               {data.selectedAssetIds.length > 0 && (
@@ -255,7 +255,7 @@ export function AddAssetsStep({ data, onChange, ungroupedAssets }: AddAssetsStep
                   onClick={deselectAll}
                   className="h-7 text-xs text-muted-foreground"
                 >
-                  <X className="h-3 w-3 mr-1" />
+                  <X className="h-3 w-3 me-1" />
                   Clear
                 </Button>
               )}
@@ -296,7 +296,7 @@ export function AddAssetsStep({ data, onChange, ungroupedAssets }: AddAssetsStep
                         }
                       }}
                       className={cn(
-                        'flex items-center gap-3 w-full p-2.5 rounded-md text-left transition-all cursor-pointer',
+                        'flex items-center gap-3 w-full p-2.5 rounded-md text-start transition-all cursor-pointer',
                         isSelected ? 'bg-primary/10 ring-1 ring-primary/30' : 'hover:bg-muted/50'
                       )}
                     >
@@ -370,7 +370,7 @@ export function AddAssetsStep({ data, onChange, ungroupedAssets }: AddAssetsStep
               <p className="text-xs text-destructive mt-2">
                 {validationResult.error}
                 {currentAssetTypeInfo?.pattern_example && (
-                  <span className="text-muted-foreground ml-1">
+                  <span className="text-muted-foreground ms-1">
                     (e.g., {currentAssetTypeInfo.pattern_example})
                   </span>
                 )}

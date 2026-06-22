@@ -12,6 +12,7 @@ import {
   User,
   Server,
   ShieldAlert,
+  AlertTriangle,
   Scan,
   FileCode,
   Layers,
@@ -45,7 +46,7 @@ export function FindingGroupsTab({ onViewFindings, onMarkFixed }: FindingGroupsT
   const [showOnlyMine, setShowOnlyMine] = useState(false)
   const [autoAssignOpen, setAutoAssignOpen] = useState(false)
 
-  const { data, isLoading, mutate } = useFindingGroups({
+  const { data, error, isLoading, mutate } = useFindingGroups({
     group_by: dimension,
     statuses: 'new,confirmed,in_progress,fix_applied,resolved',
   })
@@ -65,12 +66,12 @@ export function FindingGroupsTab({ onViewFindings, onMarkFixed }: FindingGroupsT
               onClick={() => setDimension(value)}
               className="shrink-0"
             >
-              <Icon className="mr-1.5 h-3.5 w-3.5" />
+              <Icon className="me-1.5 h-3.5 w-3.5" />
               {label}
             </Button>
           ))}
         </div>
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ms-auto flex items-center gap-2">
           <Checkbox
             id="show-mine"
             checked={showOnlyMine}
@@ -98,6 +99,19 @@ export function FindingGroupsTab({ onViewFindings, onMarkFixed }: FindingGroupsT
             </Card>
           ))}
         </div>
+      ) : error ? (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <AlertTriangle className="h-12 w-12 text-destructive mx-auto mb-4" />
+            <h3 className="text-lg font-medium mb-1">Couldn&apos;t load finding groups</h3>
+            <p className="text-muted-foreground text-sm mb-4">
+              Something went wrong fetching grouped findings. Please try again.
+            </p>
+            <Button variant="outline" size="sm" onClick={() => mutate()}>
+              Retry
+            </Button>
+          </CardContent>
+        </Card>
       ) : groups.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
@@ -125,7 +139,7 @@ export function FindingGroupsTab({ onViewFindings, onMarkFixed }: FindingGroupsT
       {dimension === 'owner_id' && groups.some((g) => g.group_key === 'unassigned') && (
         <div className="flex justify-center">
           <Button variant="outline" onClick={() => setAutoAssignOpen(true)}>
-            <UserPlus className="mr-2 h-4 w-4" />
+            <UserPlus className="me-2 h-4 w-4" />
             Auto-Assign to Asset Owners
           </Button>
         </div>
@@ -242,7 +256,7 @@ function FindingGroupCard({ group, onViewFindings, onMarkFixed }: FindingGroupCa
               <span className="h-2 w-2 rounded-full bg-green-500" />
               Resolved {stats.resolved}
             </span>
-            <span className="ml-auto font-medium">{stats.progress_pct.toFixed(0)}% verified</span>
+            <span className="ms-auto font-medium">{stats.progress_pct.toFixed(0)}% verified</span>
           </div>
           <Progress value={stats.progress_pct} className="h-2" />
         </div>

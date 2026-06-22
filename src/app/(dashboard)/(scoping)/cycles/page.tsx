@@ -165,7 +165,7 @@ export default function CtemCyclesPage() {
           description="Manage continuous threat exposure management cycles"
         >
           <Button size="sm" onClick={() => setIsCreateOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
+            <Plus className="me-2 h-4 w-4" />
             New Cycle
           </Button>
         </PageHeader>
@@ -193,7 +193,7 @@ export default function CtemCyclesPage() {
                     <TableHead>Status</TableHead>
                     <TableHead>Start Date</TableHead>
                     <TableHead>End Date</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead className="text-end">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -207,7 +207,7 @@ export default function CtemCyclesPage() {
                       </TableCell>
                       <TableCell>{formatDate(cycle.start_date)}</TableCell>
                       <TableCell>{formatDate(cycle.end_date)}</TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-end">
                         <div className="flex items-center justify-end gap-1">
                           {cycle.status === 'planning' && (
                             <Button
@@ -221,7 +221,7 @@ export default function CtemCyclesPage() {
                                 })
                               }
                             >
-                              <Play className="mr-1 h-3 w-3" />
+                              <Play className="me-1 h-3 w-3" />
                               Activate
                             </Button>
                           )}
@@ -237,7 +237,7 @@ export default function CtemCyclesPage() {
                                 })
                               }
                             >
-                              <Eye className="mr-1 h-3 w-3" />
+                              <Eye className="me-1 h-3 w-3" />
                               Start Review
                             </Button>
                           )}
@@ -253,7 +253,7 @@ export default function CtemCyclesPage() {
                                 })
                               }
                             >
-                              <CheckCircle className="mr-1 h-3 w-3" />
+                              <CheckCircle className="me-1 h-3 w-3" />
                               Close
                             </Button>
                           )}

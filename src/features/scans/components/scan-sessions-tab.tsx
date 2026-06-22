@@ -154,17 +154,17 @@ export function ScanSessionsTab() {
           <Button
             variant="ghost"
             onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-            className="-ml-4"
+            className="-ms-4"
           >
             Scanner
-            <ArrowUpDown className="ml-2 h-4 w-4" />
+            <ArrowUpDown className="ms-2 h-4 w-4" />
           </Button>
         ),
         cell: ({ row }) => (
           <div className="font-medium">
             {row.original.scanner_name}
             {row.original.scanner_version && (
-              <span className="text-xs text-muted-foreground ml-1">
+              <span className="text-xs text-muted-foreground ms-1">
                 v{row.original.scanner_version}
               </span>
             )}
@@ -200,10 +200,10 @@ export function ScanSessionsTab() {
           <Button
             variant="ghost"
             onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-            className="-ml-4"
+            className="-ms-4"
           >
             Findings
-            <ArrowUpDown className="ml-2 h-4 w-4" />
+            <ArrowUpDown className="ms-2 h-4 w-4" />
           </Button>
         ),
         cell: ({ row }) => {
@@ -244,10 +244,10 @@ export function ScanSessionsTab() {
           <Button
             variant="ghost"
             onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-            className="-ml-4"
+            className="-ms-4"
           >
             Started
-            <ArrowUpDown className="ml-2 h-4 w-4" />
+            <ArrowUpDown className="ms-2 h-4 w-4" />
           </Button>
         ),
         cell: ({ row }) => (
@@ -424,7 +424,7 @@ export function ScanSessionsTab() {
                 placeholder="Search sessions..."
                 value={globalFilter}
                 onChange={(e) => setGlobalFilter(e.target.value)}
-                className="pl-9"
+                className="ps-9"
               />
             </div>
           </div>

@@ -55,6 +55,7 @@ import {
 import { Plus, MoreHorizontal, Pencil, Trash2, Info, X, FlaskConical } from 'lucide-react'
 import { toast } from 'sonner'
 import { get, post, put, del } from '@/lib/api/client'
+import { Can, Permission } from '@/lib/permissions'
 import { PriorityClassBadge } from '@/features/findings/components/priority-class-badge'
 import type { PriorityClass } from '@/features/findings/types/finding.types'
 import { DryRunDialog, type DryRunRule } from './dry-run-dialog'
@@ -132,7 +133,7 @@ function operatorsFor(type: FieldType): Operator[] {
 }
 
 function emptyConditionFor(field: FieldKey): Condition {
-  const type = FIELD_CONFIG[field].type
+  const type = FIELD_CONFIG[field]?.type ?? 'string'
   const ops = operatorsFor(type)
   let value: unknown = ''
   if (type === 'bool') value = true
@@ -280,7 +281,12 @@ export default function PriorityRulesPage() {
     // Normalize conditions
     const normalizedConditions: Condition[] = []
     for (const c of form.conditions) {
-      const type = FIELD_CONFIG[c.field].type
+      const cfg = FIELD_CONFIG[c.field]
+      if (!cfg) {
+        toast.error(`Unknown condition field "${c.field}" — remove it before saving.`)
+        return
+      }
+      const type = cfg.type
       let value: unknown = c.value
       if (type === 'bool') {
         value = Boolean(c.value)
@@ -430,10 +436,12 @@ export default function PriorityRulesPage() {
         title="Priority Override Rules"
         description="Define rules that override the calculated finding priority based on conditions."
       >
-        <Button onClick={openCreate}>
-          <Plus className="mr-2 h-4 w-4" />
-          Create Rule
-        </Button>
+        <Can permission={Permission.PriorityRulesWrite}>
+          <Button onClick={openCreate}>
+            <Plus className="me-2 h-4 w-4" />
+            Create Rule
+          </Button>
+        </Can>
       </PageHeader>
 
       <Alert className="mt-6">
@@ -512,39 +520,41 @@ export default function PriorityRulesPage() {
                       />
                     </TableCell>
                     <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => openEdit(rule)}>
-                            <Pencil className="mr-2 h-4 w-4" />
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() =>
-                              setDryRunRule({
-                                name: rule.name,
-                                priority_class: rule.priority_class,
-                                conditions: rule.conditions,
-                              })
-                            }
-                          >
-                            <FlaskConical className="mr-2 h-4 w-4" />
-                            Dry run
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            className="text-red-500"
-                            onClick={() => setDeletingRule(rule)}
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      <Can permission={Permission.PriorityRulesWrite}>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => openEdit(rule)}>
+                              <Pencil className="me-2 h-4 w-4" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() =>
+                                setDryRunRule({
+                                  name: rule.name,
+                                  priority_class: rule.priority_class,
+                                  conditions: rule.conditions,
+                                })
+                              }
+                            >
+                              <FlaskConical className="me-2 h-4 w-4" />
+                              Dry run
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-red-500"
+                              onClick={() => setDeletingRule(rule)}
+                            >
+                              <Trash2 className="me-2 h-4 w-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </Can>
                     </TableCell>
                   </TableRow>
                 ))
@@ -634,7 +644,7 @@ export default function PriorityRulesPage() {
               <div className="flex items-center justify-between">
                 <Label className="text-sm font-semibold">Conditions</Label>
                 <Button type="button" variant="outline" size="sm" onClick={addCondition}>
-                  <Plus className="mr-1 h-3 w-3" />
+                  <Plus className="me-1 h-3 w-3" />
                   Add Condition
                 </Button>
               </div>
@@ -645,7 +655,35 @@ export default function PriorityRulesPage() {
               ) : (
                 <div className="flex flex-col gap-2">
                   {form.conditions.map((c, idx) => {
-                    const type = FIELD_CONFIG[c.field].type
+                    const cfg = FIELD_CONFIG[c.field]
+                    // A rule persisted with a field this UI build doesn't know
+                    // (backend version drift / renamed field) would otherwise
+                    // crash the whole dialog on `.type`. Render a removable
+                    // placeholder so the rest of the rule stays editable.
+                    if (!cfg) {
+                      return (
+                        <div
+                          key={idx}
+                          className="flex items-center justify-between gap-2 rounded-md border border-dashed p-2"
+                        >
+                          <span className="text-muted-foreground text-xs">
+                            Unknown condition field <code className="font-mono">{c.field}</code> —
+                            remove to edit this rule.
+                          </span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-9 w-9"
+                            aria-label="Remove unknown condition"
+                            onClick={() => removeCondition(idx)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )
+                    }
+                    const type = cfg.type
                     const ops = operatorsFor(type)
                     return (
                       <div
@@ -715,7 +753,7 @@ export default function PriorityRulesPage() {
                 })
               }
             >
-              <FlaskConical className="mr-1 h-4 w-4" />
+              <FlaskConical className="me-1 h-4 w-4" />
               Dry run
             </Button>
             <Button onClick={handleSave} disabled={isSaving}>

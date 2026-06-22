@@ -6,6 +6,10 @@ updates:
   # NPM packages
   - package-ecosystem: 'npm'
     directory: '/'
+    # Target the integration branch — the repo's workflow is "PRs target develop,
+    # never main". Without this, dependabot bases PRs on the default branch (main),
+    # which lags develop and produces lockfile conflicts / failing CI.
+    target-branch: 'develop'
     schedule:
       interval: 'weekly'
       day: 'monday'
@@ -91,6 +95,7 @@ updates:
   # GitHub Actions
   - package-ecosystem: 'github-actions'
     directory: '/'
+    target-branch: 'develop'
     schedule:
       interval: 'weekly'
       day: 'monday'
@@ -108,6 +113,7 @@ updates:
   # Docker
   - package-ecosystem: 'docker'
     directory: '/'
+    target-branch: 'develop'
     schedule:
       interval: 'weekly'
       day: 'monday'

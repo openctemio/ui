@@ -73,7 +73,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { toast } from 'sonner'
 import { Can, Permission } from '@/lib/permissions'
-import { put } from '@/lib/api/client'
+import { get, put, csrfFetch } from '@/lib/api/client'
 import { getErrorMessage } from '@/lib/api/error-handler'
 import { workflowEndpoints } from '@/lib/api/endpoints'
 import {
@@ -415,7 +415,7 @@ function WorkflowTriggerButton({
 
   return (
     <DropdownMenuItem onClick={handleRun} disabled={isMutating}>
-      <Play className="mr-2 h-4 w-4" />
+      <Play className="me-2 h-4 w-4" />
       {isMutating ? 'Running...' : 'Run Now'}
     </DropdownMenuItem>
   )
@@ -603,6 +603,38 @@ export default function WorkflowsPage() {
     }
   }
 
+  const handleDuplicateWorkflow = async (workflow: Workflow) => {
+    try {
+      // List items may omit nodes/edges; fetch the full definition to clone.
+      const full =
+        workflow.nodes && workflow.edges
+          ? workflow
+          : await get<Workflow>(`/api/v1/workflows/${workflow.id}`)
+      await createWorkflow({
+        name: `${full.name} (copy)`,
+        description: full.description,
+        nodes: (full.nodes ?? []).map((n) => ({
+          node_key: n.node_key,
+          node_type: n.node_type,
+          name: n.name,
+          description: n.description,
+          ui_position: n.ui_position,
+          config: n.config,
+        })),
+        edges: (full.edges ?? []).map((e) => ({
+          source_node_key: e.source_node_key,
+          target_node_key: e.target_node_key,
+          source_handle: e.source_handle,
+          label: e.label,
+        })),
+      })
+      toast.success(`Duplicated "${workflow.name}"`)
+      await invalidateWorkflowsCache()
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to duplicate workflow'))
+    }
+  }
+
   const handleDeleteWorkflow = async (workflow: Workflow) => {
     setDeleteWorkflowId(workflow.id)
     try {
@@ -618,7 +650,7 @@ export default function WorkflowsPage() {
 
   const handleToggleWorkflow = useCallback(async (workflow: Workflow, enabled: boolean) => {
     try {
-      const response = await fetch(`/api/v1/workflows/${workflow.id}`, {
+      const response = await csrfFetch(`/api/v1/workflows/${workflow.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ is_active: enabled }),
@@ -726,7 +758,7 @@ export default function WorkflowsPage() {
         >
           <Can permission={Permission.WorkflowsWrite} mode="disable">
             <Button onClick={() => setIsCreateDialogOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
+              <Plus className="me-2 h-4 w-4" />
               New Workflow
             </Button>
           </Can>
@@ -828,7 +860,7 @@ export default function WorkflowsPage() {
                       Create your first automation workflow
                     </p>
                     <Button onClick={() => setIsCreateDialogOpen(true)}>
-                      <Plus className="mr-2 h-4 w-4" />
+                      <Plus className="me-2 h-4 w-4" />
                       Create Workflow
                     </Button>
                   </div>
@@ -900,11 +932,11 @@ export default function WorkflowsPage() {
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
                                 <DropdownMenuItem onClick={() => handleViewWorkflow(workflow)}>
-                                  <Eye className="mr-2 h-4 w-4" />
+                                  <Eye className="me-2 h-4 w-4" />
                                   View Details
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => handleEditInBuilder(workflow)}>
-                                  <Pencil className="mr-2 h-4 w-4" />
+                                  <Pencil className="me-2 h-4 w-4" />
                                   Edit in Builder
                                 </DropdownMenuItem>
                                 <WorkflowTriggerButton
@@ -912,8 +944,8 @@ export default function WorkflowsPage() {
                                   workflowName={workflow.name}
                                 />
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem>
-                                  <Copy className="mr-2 h-4 w-4" />
+                                <DropdownMenuItem onClick={() => handleDuplicateWorkflow(workflow)}>
+                                  <Copy className="me-2 h-4 w-4" />
                                   Duplicate
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
@@ -922,7 +954,7 @@ export default function WorkflowsPage() {
                                   onClick={() => handleDeleteWorkflow(workflow)}
                                   disabled={isDeleting && deleteWorkflowId === workflow.id}
                                 >
-                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  <Trash2 className="me-2 h-4 w-4" />
                                   {isDeleting && deleteWorkflowId === workflow.id
                                     ? 'Deleting...'
                                     : 'Delete'}
@@ -987,7 +1019,7 @@ export default function WorkflowsPage() {
                             <div className="text-muted-foreground text-xs">
                               {run.completed_nodes}/{run.total_nodes} nodes completed
                               {run.failed_nodes > 0 && (
-                                <span className="text-red-400 ml-2">
+                                <span className="text-red-400 ms-2">
                                   ({run.failed_nodes} failed)
                                 </span>
                               )}
@@ -995,9 +1027,9 @@ export default function WorkflowsPage() {
                           </div>
                           <Badge className={`${runStatus.bgColor} ${runStatus.color} border-0`}>
                             {run.status === 'completed' ? (
-                              <CheckCircle className="mr-1 h-3 w-3" />
+                              <CheckCircle className="me-1 h-3 w-3" />
                             ) : run.status === 'failed' ? (
-                              <XCircle className="mr-1 h-3 w-3" />
+                              <XCircle className="me-1 h-3 w-3" />
                             ) : null}
                             {run.status}
                           </Badge>
@@ -1040,7 +1072,7 @@ export default function WorkflowsPage() {
                           setEdges(initialEdges)
                         }}
                       >
-                        <XCircle className="mr-2 h-4 w-4" />
+                        <XCircle className="me-2 h-4 w-4" />
                         Clear
                       </Button>
                     )}
@@ -1052,11 +1084,11 @@ export default function WorkflowsPage() {
                         setEdges(initialEdges)
                       }}
                     >
-                      <RefreshCw className="mr-2 h-4 w-4" />
+                      <RefreshCw className="me-2 h-4 w-4" />
                       Reset
                     </Button>
                     <Button size="sm" onClick={handleSaveWorkflow} disabled={isSaving}>
-                      <Save className="mr-2 h-4 w-4" />
+                      <Save className="me-2 h-4 w-4" />
                       {isSaving ? 'Saving...' : editingWorkflow ? 'Save Changes' : 'Save Workflow'}
                     </Button>
                   </div>
@@ -1240,7 +1272,7 @@ export default function WorkflowsPage() {
               <div className="flex gap-2">
                 <WorkflowRunButton workflow={selectedWorkflow} className="flex-1" />
                 <Button variant="outline" onClick={() => setSelectedWorkflow(null)}>
-                  <Pencil className="mr-2 h-4 w-4" />
+                  <Pencil className="me-2 h-4 w-4" />
                   Edit
                 </Button>
               </div>
@@ -1361,7 +1393,7 @@ function WorkflowRunButton({ workflow, className }: { workflow: Workflow; classN
 
   return (
     <Button className={className} onClick={handleRun} disabled={isMutating}>
-      <Play className="mr-2 h-4 w-4" />
+      <Play className="me-2 h-4 w-4" />
       {isMutating ? 'Running...' : 'Run Now'}
     </Button>
   )

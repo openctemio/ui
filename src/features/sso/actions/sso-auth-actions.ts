@@ -115,7 +115,9 @@ export async function getSSOAuthorizeUrl(
       },
     }
   } catch (error) {
-    console.error(`SSO authorization error (${provider}):`, error)
+    // provider is passed as a separate arg (not interpolated into the format
+    // string) so a tainted value can't act as a console format specifier.
+    console.error('SSO authorization error:', provider, error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to get SSO authorization URL',
@@ -202,7 +204,7 @@ export async function handleSSOCallback(
       message: `Successfully signed in with SSO`,
     }
   } catch (error) {
-    console.error('SSO callback error (' + String(provider) + '):', error)
+    console.error('SSO callback error:', provider, error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'SSO authentication failed',

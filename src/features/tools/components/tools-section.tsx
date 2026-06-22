@@ -327,7 +327,7 @@ export function ToolsSection({ onToolSelect, selectedToolId }: ToolsSectionProps
           {error instanceof Error ? error.message : 'An unexpected error occurred'}
         </p>
         <Button variant="outline" size="sm" className="mt-2" onClick={handleRefresh}>
-          <RefreshCw className="mr-2 h-4 w-4" />
+          <RefreshCw className="me-2 h-4 w-4" />
           Retry
         </Button>
       </div>
@@ -391,7 +391,7 @@ export function ToolsSection({ onToolSelect, selectedToolId }: ToolsSectionProps
                   )}
                 </Button>
                 <Button variant="outline" size="sm" onClick={handleExport}>
-                  <Download className="mr-2 h-4 w-4" />
+                  <Download className="me-2 h-4 w-4" />
                   Export
                 </Button>
                 {/* Add Tool button - always visible but disabled for platform tools */}
@@ -403,7 +403,7 @@ export function ToolsSection({ onToolSelect, selectedToolId }: ToolsSectionProps
                           onClick={() => setAddDialogOpen(true)}
                           disabled={!isCustomToolsMode}
                         >
-                          <Plus className="mr-2 h-4 w-4" />
+                          <Plus className="me-2 h-4 w-4" />
                           Add Tool
                         </Button>
                       </span>
@@ -473,7 +473,7 @@ export function ToolsSection({ onToolSelect, selectedToolId }: ToolsSectionProps
                     placeholder="Search tools..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-9"
+                    className="ps-9"
                   />
                 </div>
               </form>
@@ -490,7 +490,7 @@ export function ToolsSection({ onToolSelect, selectedToolId }: ToolsSectionProps
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start">
                     <DropdownMenuItem className="text-red-500" disabled>
-                      <Trash2 className="mr-2 h-4 w-4" />
+                      <Trash2 className="me-2 h-4 w-4" />
                       Delete Selected
                     </DropdownMenuItem>
                   </DropdownMenuContent>
@@ -569,7 +569,7 @@ export function ToolsSection({ onToolSelect, selectedToolId }: ToolsSectionProps
                 {!searchQuery && categoryFilter === 'all' && !statsFilter && isCustomToolsMode && (
                   <Can permission={Permission.ToolsWrite}>
                     <Button onClick={() => setAddDialogOpen(true)}>
-                      <Plus className="mr-2 h-4 w-4" />
+                      <Plus className="me-2 h-4 w-4" />
                       Add Your First Custom Tool
                     </Button>
                   </Can>
@@ -623,7 +623,7 @@ export function ToolsSection({ onToolSelect, selectedToolId }: ToolsSectionProps
             <AlertDialogFooter>
               <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
               <Button variant="destructive" onClick={handleDeleteConfirm} disabled={isDeleting}>
-                {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {isDeleting && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
                 Delete
               </Button>
             </AlertDialogFooter>

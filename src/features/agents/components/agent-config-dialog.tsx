@@ -129,7 +129,7 @@ export function AgentConfigDialog({ open, onOpenChange, agent, apiKey }: AgentCo
         {loading && (
           <div className="flex items-center justify-center py-8">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            <span className="ml-2 text-sm text-muted-foreground">Loading templates...</span>
+            <span className="ms-2 text-sm text-muted-foreground">Loading templates...</span>
           </div>
         )}
 
@@ -162,7 +162,7 @@ export function AgentConfigDialog({ open, onOpenChange, agent, apiKey }: AgentCo
                     )
                   }
                 >
-                  <Download className="mr-2 h-4 w-4" />
+                  <Download className="me-2 h-4 w-4" />
                   Download
                 </Button>
                 <Button
@@ -173,9 +173,9 @@ export function AgentConfigDialog({ open, onOpenChange, agent, apiKey }: AgentCo
                   onClick={() => handleCopy(yamlConfig, 'YAML config')}
                 >
                   {copied === 'YAML config' ? (
-                    <Check className="mr-2 h-4 w-4 text-green-500" />
+                    <Check className="me-2 h-4 w-4 text-green-500" />
                   ) : (
-                    <Copy className="mr-2 h-4 w-4" />
+                    <Copy className="me-2 h-4 w-4" />
                   )}
                   Copy
                 </Button>
@@ -195,9 +195,9 @@ export function AgentConfigDialog({ open, onOpenChange, agent, apiKey }: AgentCo
                   onClick={() => handleCopy(envConfig, 'Environment variables')}
                 >
                   {copied === 'Environment variables' ? (
-                    <Check className="mr-2 h-4 w-4 text-green-500" />
+                    <Check className="me-2 h-4 w-4 text-green-500" />
                   ) : (
-                    <Copy className="mr-2 h-4 w-4" />
+                    <Copy className="me-2 h-4 w-4" />
                   )}
                   Copy
                 </Button>
@@ -217,9 +217,9 @@ export function AgentConfigDialog({ open, onOpenChange, agent, apiKey }: AgentCo
                   onClick={() => handleCopy(dockerConfig, 'Docker command')}
                 >
                   {copied === 'Docker command' ? (
-                    <Check className="mr-2 h-4 w-4 text-green-500" />
+                    <Check className="me-2 h-4 w-4 text-green-500" />
                   ) : (
-                    <Copy className="mr-2 h-4 w-4" />
+                    <Copy className="me-2 h-4 w-4" />
                   )}
                   Copy
                 </Button>
@@ -239,9 +239,9 @@ export function AgentConfigDialog({ open, onOpenChange, agent, apiKey }: AgentCo
                   onClick={() => handleCopy(cliConfig, 'CLI commands')}
                 >
                   {copied === 'CLI commands' ? (
-                    <Check className="mr-2 h-4 w-4 text-green-500" />
+                    <Check className="me-2 h-4 w-4 text-green-500" />
                   ) : (
-                    <Copy className="mr-2 h-4 w-4" />
+                    <Copy className="me-2 h-4 w-4" />
                   )}
                   Copy
                 </Button>

@@ -4,6 +4,7 @@ import { useState, useMemo, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useUrlParams } from '@/hooks/use-url-param'
+import { useDebounce } from '@/hooks/use-debounce'
 import { ColumnDef } from '@tanstack/react-table'
 import { Main } from '@/components/layout'
 import { PageHeader, SeverityBadge, DataTable, DataTableColumnHeader } from '@/features/shared'
@@ -38,6 +39,8 @@ import {
   Loader2,
   Route,
   ClipboardList,
+  AlertOctagon,
+  Ticket,
 } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import {
@@ -48,8 +51,10 @@ import {
   SEVERITY_CONFIG,
 } from '@/features/findings'
 import { PriorityClassBadge } from '@/features/findings/components/priority-class-badge'
+import { AssigneeSelect } from '@/features/findings/components/assignee-select'
 import { FindingGroupsTab } from '@/features/findings/components/finding-groups-tab'
 import { MarkFixedDialog } from '@/features/findings/components/mark-fixed-dialog'
+import { CreateTicketDialog } from '@/features/findings/components/create-ticket-dialog'
 import { PendingReviewTab } from '@/features/findings/components/pending-review-tab'
 import {
   usePendingVerificationCount,
@@ -80,7 +85,7 @@ import type { Severity } from '@/features/shared/types'
 import { toast } from 'sonner'
 import { copyToClipboard } from '@/lib/clipboard'
 import { getErrorMessage } from '@/lib/api/error-handler'
-import { patch, post, del } from '@/lib/api/client'
+import { patch, post, del, csrfFetch } from '@/lib/api/client'
 import { usePermissions } from '@/context/permission-provider'
 
 // ============================================
@@ -159,6 +164,24 @@ function transformApiToUiFinding(api: ApiFinding): Finding {
         }
       : undefined,
     team: undefined,
+    // Location / repo / tool — needed so the detail drawer's "Affected Code"
+    // panel and code highlighter render when opened from the list. The drawer
+    // reads these typed fields directly; without them they were always blank
+    // even though the API returns file_path/start_line/etc. (mirrors the
+    // [id] detail-page transform).
+    filePath: api.file_path,
+    startLine: api.start_line,
+    endLine: api.end_line,
+    startColumn: api.start_column,
+    endColumn: api.end_column,
+    repositoryUrl: api.asset?.web_url,
+    branch: api.last_seen_branch || api.first_detected_branch,
+    commitSha: api.last_seen_commit || api.first_detected_commit,
+    ruleId: api.rule_id,
+    ruleName: api.rule_name,
+    toolName: api.tool_name,
+    toolVersion: api.tool_version,
+    contextSnippet: api.context_snippet,
     source: api.source as Finding['source'],
     scanner: api.tool_name,
     scanId: api.scan_id,
@@ -272,8 +295,11 @@ function FindingsContent() {
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [sourceFilter, setSourceFilter] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState('')
+  // Debounce so typing doesn't fire a backend list request per keystroke.
+  const debouncedSearch = useDebounce(searchQuery, 300)
   const [mainTab, setMainTab] = useState<'findings' | 'groups' | 'pending'>('findings')
   const [markFixedGroup, setMarkFixedGroup] = useState<FindingGroup | null>(null)
+  const [ticketFinding, setTicketFinding] = useState<Finding | null>(null)
   const { hasPermission } = usePermissions()
   const pendingCount = usePendingVerificationCount()
 
@@ -304,8 +330,8 @@ function FindingsContent() {
         sourceFilter as FindingApiFilters['sources'] extends (infer U)[] ? U : never,
       ]
     }
-    if (searchQuery.trim()) {
-      filters.search = searchQuery.trim()
+    if (debouncedSearch.trim()) {
+      filters.search = debouncedSearch.trim()
     }
     return filters
   }, [
@@ -315,7 +341,7 @@ function FindingsContent() {
     severityTab,
     statusFilter,
     sourceFilter,
-    searchQuery,
+    debouncedSearch,
     HIDDEN_STATUSES,
   ])
 
@@ -453,17 +479,13 @@ function FindingsContent() {
     }
   }
 
-  const handleBulkAssign = async () => {
+  const handleBulkAssign = async (userId: string) => {
     const selectedIds = Object.keys(rowSelection).filter((k) => rowSelection[k])
     const findingIds = selectedIds.map((idx) => findings[parseInt(idx)]?.id).filter(Boolean)
-    if (findingIds.length === 0) return
-
-    // For now, use prompt for user ID - a proper dialog would be Phase 2
-    const userId = window.prompt('Enter user ID to assign findings to:')
-    if (!userId?.trim()) return
+    if (findingIds.length === 0 || !userId.trim()) return
 
     try {
-      const response = await fetch('/api/v1/findings/bulk/assign', {
+      const response = await csrfFetch('/api/v1/findings/bulk/assign', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -484,7 +506,7 @@ function FindingsContent() {
     if (findingIds.length === 0) return
 
     try {
-      const response = await fetch('/api/v1/findings/bulk/status', {
+      const response = await csrfFetch('/api/v1/findings/bulk/status', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -563,7 +585,7 @@ function FindingsContent() {
 
     setIsDeleting(true)
     try {
-      const response = await fetch(`/api/v1/findings/${findingToDelete.id}`, {
+      const response = await csrfFetch(`/api/v1/findings/${findingToDelete.id}`, {
         method: 'DELETE',
         credentials: 'include',
       })
@@ -602,6 +624,17 @@ function FindingsContent() {
           break
         case 'delete':
           handleDeleteClick(finding)
+          break
+        case 'create_ticket':
+          setTicketFinding(finding)
+          break
+        case 'assign':
+        case 'status':
+        case 'false_positive':
+          // These actions live in the detail drawer (assignee picker, status
+          // select with approval flow). Open it focused on this finding rather
+          // than firing a no-op.
+          handleRowClick(finding)
           break
         default:
           toast.info(`Action: ${action}`, { description: finding.title })
@@ -652,10 +685,49 @@ function FindingsContent() {
           return (
             <div
               className="cursor-pointer max-w-[200px] sm:max-w-md"
+              role="button"
+              tabIndex={0}
+              aria-label="View finding details"
               onClick={() => handleRowClick(row.original)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  handleRowClick(row.original)
+                }
+              }}
             >
               <div className="flex items-center gap-1.5">
                 <p className="font-medium truncate">{row.getValue('title')}</p>
+                {/* KEV — actively exploited; the single most urgent triage signal */}
+                {row.original.isInKev && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                        <AlertOctagon className="h-2.5 w-2.5" />
+                        KEV
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-xs text-xs">
+                      <p className="font-semibold">CISA Known Exploited Vulnerability</p>
+                      {row.original.kevDueDate && (
+                        <p>Remediate by {new Date(row.original.kevDueDate).toLocaleDateString()}</p>
+                      )}
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+                {typeof row.original.epssScore === 'number' && row.original.epssScore > 0 && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="inline-flex shrink-0 items-center rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-400">
+                        EPSS {(row.original.epssScore * 100).toFixed(1)}%
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-xs text-xs">
+                      Exploit Prediction Scoring System — estimated probability of exploitation in
+                      the next 30 days
+                    </TooltipContent>
+                  </Tooltip>
+                )}
                 {hasDataFlow && (
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -669,8 +741,12 @@ function FindingsContent() {
                   </Tooltip>
                 )}
               </div>
-              {row.original.scanner && (
-                <p className="text-muted-foreground text-xs truncate">{row.original.scanner}</p>
+              {(row.original.cve || row.original.scanner) && (
+                <p className="text-muted-foreground truncate text-xs">
+                  {row.original.cve && <span className="font-mono">{row.original.cve}</span>}
+                  {row.original.cve && row.original.scanner && ' · '}
+                  {row.original.scanner}
+                </p>
               )}
             </div>
           )
@@ -747,24 +823,28 @@ function FindingsContent() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => handleRowAction('view', finding)}>
-                  <ExternalLink className="mr-2 h-4 w-4" />
+                  <ExternalLink className="me-2 h-4 w-4" />
                   View Details
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => handleRowAction('assign', finding)}>
-                  <UserPlus className="mr-2 h-4 w-4" />
+                  <UserPlus className="me-2 h-4 w-4" />
                   Assign
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => handleRowAction('status', finding)}>
-                  <CheckCircle className="mr-2 h-4 w-4" />
+                  <CheckCircle className="me-2 h-4 w-4" />
                   Change Status
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleRowAction('create_ticket', finding)}>
+                  <Ticket className="me-2 h-4 w-4" />
+                  Create Jira Ticket
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => handleRowAction('copy_id', finding)}>
-                  <Copy className="mr-2 h-4 w-4" />
+                  <Copy className="me-2 h-4 w-4" />
                   Copy ID
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => handleRowAction('copy_link', finding)}>
-                  <Link2 className="mr-2 h-4 w-4" />
+                  <Link2 className="me-2 h-4 w-4" />
                   Copy Link
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
@@ -772,7 +852,7 @@ function FindingsContent() {
                   className="text-amber-500"
                   onClick={() => handleRowAction('false_positive', finding)}
                 >
-                  <Flag className="mr-2 h-4 w-4" />
+                  <Flag className="me-2 h-4 w-4" />
                   Mark as False Positive
                 </DropdownMenuItem>
                 {hasPermission('findings:delete') && (
@@ -780,7 +860,7 @@ function FindingsContent() {
                     className="text-red-500"
                     onClick={() => handleRowAction('delete', finding)}
                   >
-                    <Trash2 className="mr-2 h-4 w-4" />
+                    <Trash2 className="me-2 h-4 w-4" />
                     Delete
                   </DropdownMenuItem>
                 )}
@@ -805,7 +885,7 @@ function FindingsContent() {
               {error?.message || 'An unexpected error occurred'}
             </p>
             <Button onClick={() => mutateFindings()}>
-              <RefreshCw className="mr-2 h-4 w-4" />
+              <RefreshCw className="me-2 h-4 w-4" />
               Retry
             </Button>
           </div>
@@ -828,7 +908,7 @@ function FindingsContent() {
           <div className="flex flex-wrap items-center gap-2">
             <Link href="/findings/approvals">
               <Button variant="outline" size="sm">
-                <ClipboardList className="h-4 w-4 sm:mr-2" />
+                <ClipboardList className="h-4 w-4 sm:me-2" />
                 <span className="hidden sm:inline">Approvals</span>
               </Button>
             </Link>
@@ -839,16 +919,16 @@ function FindingsContent() {
               disabled={statsLoading || findingsLoading}
             >
               {statsLoading || findingsLoading ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="me-2 h-4 w-4 animate-spin" />
               ) : (
-                <RefreshCw className="mr-2 h-4 w-4" />
+                <RefreshCw className="me-2 h-4 w-4" />
               )}
               Refresh
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm">
-                  <Download className="mr-2 h-4 w-4" />
+                  <Download className="me-2 h-4 w-4" />
                   Export
                 </Button>
               </DropdownMenuTrigger>
@@ -864,7 +944,7 @@ function FindingsContent() {
             </DropdownMenu>
             {hasPermission('findings:write') && (
               <Button size="sm" onClick={() => setCreateDialogOpen(true)}>
-                <Plus className="h-4 w-4 sm:mr-2" />
+                <Plus className="h-4 w-4 sm:me-2" />
                 <span className="hidden sm:inline">Add Finding</span>
               </Button>
             )}
@@ -880,7 +960,7 @@ function FindingsContent() {
               <button
                 type="button"
                 onClick={() => router.push('/findings')}
-                className="ml-1 rounded-sm hover:bg-background/50"
+                className="ms-1 rounded-sm hover:bg-background/50"
                 aria-label="Clear scan filter"
               >
                 <X className="h-3 w-3" />
@@ -901,7 +981,7 @@ function FindingsContent() {
               <TabsTrigger value="pending" className="relative">
                 Pending Review
                 {pendingCount > 0 && (
-                  <Badge variant="destructive" className="ml-1.5 h-5 min-w-[20px] px-1 text-[10px]">
+                  <Badge variant="destructive" className="ms-1.5 h-5 min-w-[20px] px-1 text-[10px]">
                     {pendingCount}
                   </Badge>
                 )}
@@ -934,7 +1014,7 @@ function FindingsContent() {
                     Asset: {assetIdFilter.slice(0, 8)}...
                     <button
                       onClick={clearFilters}
-                      className="ml-0.5 rounded-full hover:bg-muted-foreground/20"
+                      className="ms-0.5 rounded-full hover:bg-muted-foreground/20"
                     >
                       <X className="h-3 w-3" />
                     </button>
@@ -945,7 +1025,7 @@ function FindingsContent() {
                     Source: {sourceIdFilter.slice(0, 8)}...
                     <button
                       onClick={clearFilters}
-                      className="ml-0.5 rounded-full hover:bg-muted-foreground/20"
+                      className="ms-0.5 rounded-full hover:bg-muted-foreground/20"
                     >
                       <X className="h-3 w-3" />
                     </button>
@@ -968,7 +1048,7 @@ function FindingsContent() {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="sm">
-                    <Filter className="mr-2 h-4 w-4" />
+                    <Filter className="me-2 h-4 w-4" />
                     Status:{' '}
                     {statusFilter === 'all'
                       ? 'All'
@@ -1020,7 +1100,7 @@ function FindingsContent() {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="sm">
-                    <Filter className="mr-2 h-4 w-4" />
+                    <Filter className="me-2 h-4 w-4" />
                     Source: {sourceFilter === 'all' ? 'All' : sourceFilter.toUpperCase()}
                   </Button>
                 </DropdownMenuTrigger>
@@ -1054,20 +1134,22 @@ function FindingsContent() {
                 <CardContent className="flex items-center justify-between py-3">
                   <span className="text-sm font-medium">{selectedCount} finding(s) selected</span>
                   <div className="flex flex-wrap items-center gap-2">
-                    <Button variant="outline" size="sm" onClick={handleBulkAssign}>
-                      <UserPlus className="mr-2 h-4 w-4" />
-                      Assign
-                    </Button>
+                    <AssigneeSelect
+                      placeholder="Assign to…"
+                      onChange={(user) => {
+                        if (user) void handleBulkAssign(user.id)
+                      }}
+                    />
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="outline" size="sm">
-                          <Flag className="mr-2 h-4 w-4" />
+                          <Flag className="me-2 h-4 w-4" />
                           Change Status
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent>
-                        <DropdownMenuItem onClick={() => handleBulkStatusChange('open')}>
-                          Open
+                        <DropdownMenuItem onClick={() => handleBulkStatusChange('confirmed')}>
+                          Confirmed
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleBulkStatusChange('in_progress')}>
                           In Progress
@@ -1075,9 +1157,8 @@ function FindingsContent() {
                         <DropdownMenuItem onClick={() => handleBulkStatusChange('resolved')}>
                           Resolved
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleBulkStatusChange('false_positive')}>
-                          False Positive
-                        </DropdownMenuItem>
+                        {/* false_positive requires the per-finding approval flow, so it is
+                            intentionally not offered as a bulk action. */}
                       </DropdownMenuContent>
                     </DropdownMenu>
                     <Button variant="outline" size="sm" onClick={() => setRowSelection({})}>
@@ -1153,7 +1234,7 @@ function FindingsContent() {
                         <TabsTrigger value="critical" className="text-xs sm:text-sm shrink-0">
                           <span className="hidden sm:inline">Critical</span>
                           <span className="sm:hidden">Crit</span>
-                          <span className="ml-1">({stats.bySeverity.critical})</span>
+                          <span className="ms-1">({stats.bySeverity.critical})</span>
                         </TabsTrigger>
                         <TabsTrigger value="high" className="text-xs sm:text-sm shrink-0">
                           High ({stats.bySeverity.high})
@@ -1161,7 +1242,7 @@ function FindingsContent() {
                         <TabsTrigger value="medium" className="text-xs sm:text-sm shrink-0">
                           <span className="hidden sm:inline">Medium</span>
                           <span className="sm:hidden">Med</span>
-                          <span className="ml-1">({stats.bySeverity.medium})</span>
+                          <span className="ms-1">({stats.bySeverity.medium})</span>
                         </TabsTrigger>
                         <TabsTrigger value="low" className="text-xs sm:text-sm shrink-0">
                           Low ({stats.bySeverity.low})
@@ -1230,6 +1311,18 @@ function FindingsContent() {
         />
       )}
 
+      {/* Create Jira Ticket Dialog */}
+      {ticketFinding && (
+        <CreateTicketDialog
+          findingId={ticketFinding.id}
+          findingTitle={ticketFinding.title}
+          open={!!ticketFinding}
+          onOpenChange={(open) => {
+            if (!open) setTicketFinding(null)
+          }}
+        />
+      )}
+
       {/* Finding Quick View Drawer */}
       <FindingDetailDrawer
         finding={selectedFinding}
@@ -1281,7 +1374,7 @@ function FindingsContent() {
             >
               {isDeleting ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="me-2 h-4 w-4 animate-spin" />
                   Deleting...
                 </>
               ) : (

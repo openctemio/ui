@@ -83,7 +83,9 @@ import {
   type EditGroupFormData,
   AddAssetsDialog,
   type AddAssetsSubmitData,
+  type GroupAsset,
 } from '@/features/asset-groups'
+import { useCsvExport, type ExportFieldConfig } from '@/hooks/use-csv-export'
 
 const criticalityColors: Record<string, string> = {
   critical: 'bg-red-500 text-white',
@@ -121,6 +123,15 @@ const assetTypeIcons: Record<string, React.ReactNode> = {
 interface PageProps {
   params: Promise<{ id: string }>
 }
+
+const GROUP_ASSET_EXPORT_FIELDS: ExportFieldConfig<GroupAsset>[] = [
+  { header: 'Name', accessor: (a) => a.name },
+  { header: 'Type', accessor: (a) => a.type },
+  { header: 'Status', accessor: (a) => a.status },
+  { header: 'Risk Score', accessor: (a) => a.riskScore ?? '' },
+  { header: 'Findings', accessor: (a) => a.findingCount ?? 0 },
+  { header: 'Last Seen', accessor: (a) => a.lastSeen ?? '' },
+]
 
 export default function AssetGroupDetailPage({ params }: PageProps) {
   return <AssetGroupDetailContent params={params} />
@@ -179,6 +190,14 @@ function AssetGroupDetailContent({ params }: PageProps) {
   // Derived data from hooks - wrapped in useMemo to prevent unnecessary re-renders
   const safeAssets = useMemo(() => assets || [], [assets])
   const safeFindings = useMemo(() => findings || [], [findings])
+
+  // CSV export of the group's assets. Declared before any early return so the
+  // hook order stays stable (rules-of-hooks).
+  const { handleExport: exportAssetsCsv } = useCsvExport(
+    safeAssets,
+    GROUP_ASSET_EXPORT_FIELDS,
+    group ? `asset-group-${group.name}` : 'asset-group'
+  )
 
   // All useMemo hooks must be called before early return
   const filteredAssets = useMemo(() => {
@@ -353,7 +372,7 @@ function AssetGroupDetailContent({ params }: PageProps) {
               The asset group you&apos;re looking for doesn&apos;t exist.
             </p>
             <Button onClick={() => router.push('/asset-groups')}>
-              <ArrowLeft className="mr-2 h-4 w-4" />
+              <ArrowLeft className="me-2 h-4 w-4" />
               Back to Groups
             </Button>
           </div>
@@ -434,8 +453,21 @@ function AssetGroupDetailContent({ params }: PageProps) {
     }
   }
 
-  const handleExport = (format: string) => {
-    toast.success(`Exporting group as ${format}...`)
+  const handleExport = (format: 'CSV' | 'JSON') => {
+    if (format === 'CSV') {
+      exportAssetsCsv()
+      return
+    }
+    // JSON: export the group plus its assets.
+    const payload = { group, assets: safeAssets }
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `asset-group-${group?.name ?? id}-${new Date().toISOString().slice(0, 10)}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+    toast.success('Exported successfully')
   }
 
   const toggleAssetSelection = (assetId: string) => {
@@ -449,7 +481,12 @@ function AssetGroupDetailContent({ params }: PageProps) {
       <Main>
         {/* Header with Back Button */}
         <div className="flex items-center gap-4 mb-6">
-          <Button variant="ghost" size="icon" onClick={() => router.push('/asset-groups')}>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => router.push('/asset-groups')}
+            aria-label="Back to asset groups"
+          >
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div className="flex-1">
@@ -493,33 +530,33 @@ function AssetGroupDetailContent({ params }: PageProps) {
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={handleCopyId}>
-              <Copy className="mr-2 h-4 w-4" />
+              <Copy className="me-2 h-4 w-4" />
               Copy ID
             </Button>
             <Can permission={Permission.AssetGroupsWrite}>
               <Button variant="outline" size="sm" onClick={handleEdit}>
-                <Pencil className="mr-2 h-4 w-4" />
+                <Pencil className="me-2 h-4 w-4" />
                 Edit
               </Button>
             </Can>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon">
+                <Button variant="outline" size="icon" aria-label="More actions">
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={handleCopyLink}>
-                  <Link className="mr-2 h-4 w-4" />
+                  <Link className="me-2 h-4 w-4" />
                   Copy Link
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => handleExport('JSON')}>
-                  <Download className="mr-2 h-4 w-4" />
+                  <Download className="me-2 h-4 w-4" />
                   Export as JSON
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => handleExport('CSV')}>
-                  <Download className="mr-2 h-4 w-4" />
+                  <Download className="me-2 h-4 w-4" />
                   Export as CSV
                 </DropdownMenuItem>
                 <Can permission={Permission.AssetGroupsDelete}>
@@ -528,7 +565,7 @@ function AssetGroupDetailContent({ params }: PageProps) {
                     className="text-red-500"
                     onClick={() => setDeleteDialogOpen(true)}
                   >
-                    <Trash2 className="mr-2 h-4 w-4" />
+                    <Trash2 className="me-2 h-4 w-4" />
                     Delete Group
                   </DropdownMenuItem>
                 </Can>
@@ -791,13 +828,13 @@ function AssetGroupDetailContent({ params }: PageProps) {
                           size="sm"
                           onClick={() => setRemoveAssetsDialogOpen(true)}
                         >
-                          <X className="mr-2 h-4 w-4" />
+                          <X className="me-2 h-4 w-4" />
                           Remove from Group
                         </Button>
                       </>
                     )}
                     <Button size="sm" onClick={() => setAddAssetsDialogOpen(true)}>
-                      <Plus className="mr-2 h-4 w-4" />
+                      <Plus className="me-2 h-4 w-4" />
                       Add Assets
                     </Button>
                   </div>
@@ -811,7 +848,7 @@ function AssetGroupDetailContent({ params }: PageProps) {
                     placeholder="Search assets..."
                     value={assetSearch}
                     onChange={(e) => handleAssetSearchChange(e.target.value)}
-                    className="pl-9"
+                    className="ps-9"
                   />
                 </div>
 
@@ -831,12 +868,12 @@ function AssetGroupDetailContent({ params }: PageProps) {
                     </p>
                     {assetSearch ? (
                       <Button variant="outline" onClick={() => setAssetSearch('')}>
-                        <X className="mr-2 h-4 w-4" />
+                        <X className="me-2 h-4 w-4" />
                         Clear Search
                       </Button>
                     ) : (
                       <Button size="sm" onClick={() => setAddAssetsDialogOpen(true)}>
-                        <Plus className="mr-2 h-4 w-4" />
+                        <Plus className="me-2 h-4 w-4" />
                         Add Assets
                       </Button>
                     )}
@@ -990,7 +1027,7 @@ function AssetGroupDetailContent({ params }: PageProps) {
                           size="sm"
                           onClick={() => window.location.reload()}
                         >
-                          <RefreshCw className="mr-2 h-4 w-4" />
+                          <RefreshCw className="me-2 h-4 w-4" />
                           Refresh Page
                         </Button>
                       </>
@@ -1005,7 +1042,7 @@ function AssetGroupDetailContent({ params }: PageProps) {
                           group.
                         </p>
                         <Button variant="outline" size="sm">
-                          <RefreshCw className="mr-2 h-4 w-4" />
+                          <RefreshCw className="me-2 h-4 w-4" />
                           Run Security Scan
                         </Button>
                       </>

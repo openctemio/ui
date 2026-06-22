@@ -98,183 +98,6 @@ interface CloudResource {
   notes?: string
 }
 
-const daysAgo = (days: number) => {
-  const date = new Date()
-  date.setDate(date.getDate() - days)
-  return date.toISOString()
-}
-
-const mockCloudResources: CloudResource[] = [
-  {
-    id: 'cloud-001',
-    name: 'prod-api-server-01',
-    provider: 'aws',
-    resourceType: 'compute',
-    region: 'ap-southeast-1',
-    accountId: '123456789012',
-    accountName: 'TCB Production',
-    status: 'running',
-    exposure: 'public',
-    riskLevel: 'high',
-    lastSeen: daysAgo(0),
-    discoveredAt: daysAgo(180),
-    findingsCount: 4,
-    publicIp: '54.123.45.67',
-    privateIp: '10.0.1.50',
-    tags: { Environment: 'Production', Team: 'API' },
-  },
-  {
-    id: 'cloud-002',
-    name: 'prod-rds-mysql-01',
-    provider: 'aws',
-    resourceType: 'database',
-    region: 'ap-southeast-1',
-    accountId: '123456789012',
-    accountName: 'TCB Production',
-    status: 'running',
-    exposure: 'private',
-    riskLevel: 'medium',
-    lastSeen: daysAgo(0),
-    discoveredAt: daysAgo(200),
-    findingsCount: 2,
-    privateIp: '10.0.2.100',
-    tags: { Environment: 'Production', Team: 'Database' },
-    notes: 'Contains customer data',
-  },
-  {
-    id: 'cloud-003',
-    name: 'public-assets-bucket',
-    provider: 'aws',
-    resourceType: 'storage',
-    region: 'ap-southeast-1',
-    accountId: '123456789012',
-    accountName: 'TCB Production',
-    status: 'running',
-    exposure: 'public',
-    riskLevel: 'critical',
-    lastSeen: daysAgo(0),
-    discoveredAt: daysAgo(150),
-    findingsCount: 8,
-    tags: { Environment: 'Production', Team: 'Frontend' },
-    notes: 'S3 bucket with public access - needs review',
-  },
-  {
-    id: 'cloud-004',
-    name: 'tcb-webapp-vm',
-    provider: 'azure',
-    resourceType: 'compute',
-    region: 'Southeast Asia',
-    accountId: 'sub-abc123',
-    accountName: 'TCB Azure Subscription',
-    status: 'running',
-    exposure: 'public',
-    riskLevel: 'medium',
-    lastSeen: daysAgo(0),
-    discoveredAt: daysAgo(120),
-    findingsCount: 3,
-    publicIp: '20.195.67.89',
-    privateIp: '10.1.0.10',
-    tags: { Environment: 'Production', Application: 'WebApp' },
-  },
-  {
-    id: 'cloud-005',
-    name: 'tcb-cosmos-db',
-    provider: 'azure',
-    resourceType: 'database',
-    region: 'Southeast Asia',
-    accountId: 'sub-abc123',
-    accountName: 'TCB Azure Subscription',
-    status: 'running',
-    exposure: 'private',
-    riskLevel: 'low',
-    lastSeen: daysAgo(0),
-    discoveredAt: daysAgo(100),
-    findingsCount: 0,
-    tags: { Environment: 'Production', Team: 'Backend' },
-  },
-  {
-    id: 'cloud-006',
-    name: 'gke-cluster-prod',
-    provider: 'gcp',
-    resourceType: 'compute',
-    region: 'asia-southeast1',
-    accountId: 'tcb-project-prod',
-    accountName: 'TCB GCP Production',
-    status: 'running',
-    exposure: 'internal',
-    riskLevel: 'high',
-    lastSeen: daysAgo(0),
-    discoveredAt: daysAgo(90),
-    findingsCount: 6,
-    tags: { Environment: 'Production', Type: 'Kubernetes' },
-    notes: 'Main Kubernetes cluster',
-  },
-  {
-    id: 'cloud-007',
-    name: 'cloud-storage-backup',
-    provider: 'gcp',
-    resourceType: 'storage',
-    region: 'asia-southeast1',
-    accountId: 'tcb-project-prod',
-    accountName: 'TCB GCP Production',
-    status: 'running',
-    exposure: 'private',
-    riskLevel: 'low',
-    lastSeen: daysAgo(0),
-    discoveredAt: daysAgo(60),
-    findingsCount: 1,
-    tags: { Environment: 'Production', Purpose: 'Backup' },
-  },
-  {
-    id: 'cloud-008',
-    name: 'api-gateway-function',
-    provider: 'aws',
-    resourceType: 'serverless',
-    region: 'ap-southeast-1',
-    accountId: '123456789012',
-    accountName: 'TCB Production',
-    status: 'running',
-    exposure: 'public',
-    riskLevel: 'medium',
-    lastSeen: daysAgo(0),
-    discoveredAt: daysAgo(45),
-    findingsCount: 2,
-    tags: { Environment: 'Production', Type: 'Lambda' },
-  },
-  {
-    id: 'cloud-009',
-    name: 'staging-vpc',
-    provider: 'aws',
-    resourceType: 'network',
-    region: 'ap-southeast-1',
-    accountId: '987654321098',
-    accountName: 'TCB Staging',
-    status: 'running',
-    exposure: 'internal',
-    riskLevel: 'low',
-    lastSeen: daysAgo(0),
-    discoveredAt: daysAgo(200),
-    findingsCount: 1,
-    tags: { Environment: 'Staging' },
-  },
-  {
-    id: 'cloud-010',
-    name: 'admin-role',
-    provider: 'aws',
-    resourceType: 'iam',
-    region: 'global',
-    accountId: '123456789012',
-    accountName: 'TCB Production',
-    status: 'running',
-    exposure: 'internal',
-    riskLevel: 'critical',
-    lastSeen: daysAgo(0),
-    discoveredAt: daysAgo(365),
-    findingsCount: 5,
-    notes: 'Overly permissive IAM role',
-  },
-]
-
 const providerColors: Record<CloudProvider, string> = {
   aws: 'bg-orange-500/10 text-orange-500 border-orange-500/20',
   azure: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
@@ -354,10 +177,10 @@ export default function CloudSurfacePage() {
     )
   }, [apiAssets])
 
-  // Use API data if available, fallback to mock for demo
-  const [resources, setResources] = useState<CloudResource[]>(mockCloudResources)
+  // Real discovered resources from the assets API; empty until data loads.
+  const [resources, setResources] = useState<CloudResource[]>([])
   useEffect(() => {
-    if (apiResources.length > 0) setResources(apiResources)
+    setResources(apiResources)
   }, [apiResources])
   const [searchQuery, setSearchQuery] = useState('')
   const [filterProvider, setFilterProvider] = useState<CloudProvider | 'all'>('all')
@@ -383,12 +206,16 @@ export default function CloudSurfacePage() {
   })
 
   const stats = useMemo(() => {
+    const total = resources.length
+    const clean = resources.filter((r) => r.findingsCount === 0).length
     return {
-      total: resources.length,
+      total,
       running: resources.filter((r) => r.status === 'running').length,
       publicExposure: resources.filter((r) => r.exposure === 'public').length,
       critical: resources.filter((r) => r.riskLevel === 'critical').length,
       totalFindings: resources.reduce((acc, r) => acc + r.findingsCount, 0),
+      // Real "clean rate": share of resources with no findings (was hardcoded 78%).
+      cleanRate: total ? Math.round((clean / total) * 100) : 0,
       byProvider: {
         aws: resources.filter((r) => r.provider === 'aws').length,
         azure: resources.filter((r) => r.provider === 'azure').length,
@@ -682,16 +509,16 @@ export default function CloudSurfacePage() {
         >
           <div className="flex gap-2">
             <Button variant="outline" size="sm">
-              <RefreshCw className="mr-2 h-4 w-4" />
+              <RefreshCw className="me-2 h-4 w-4" />
               Sync Resources
             </Button>
             <Button variant="outline" size="sm">
-              <Download className="mr-2 h-4 w-4" />
+              <Download className="me-2 h-4 w-4" />
               Export
             </Button>
             <Can permission={Permission.ScopeWrite}>
               <Button size="sm" onClick={() => setIsCreateOpen(true)}>
-                <Plus className="mr-2 h-4 w-4" />
+                <Plus className="me-2 h-4 w-4" />
                 Add Resource
               </Button>
             </Can>
@@ -742,12 +569,13 @@ export default function CloudSurfacePage() {
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Compliance</CardTitle>
+              <CardTitle className="text-sm font-medium">Clean Resources</CardTitle>
               <CheckCircle2 className="h-4 w-4 text-green-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-500">78%</div>
-              <Progress value={78} className="mt-2" />
+              <div className="text-2xl font-bold text-green-500">{stats.cleanRate}%</div>
+              <Progress value={stats.cleanRate} className="mt-2" />
+              <p className="text-muted-foreground mt-1 text-xs">No findings detected</p>
             </CardContent>
           </Card>
         </div>
@@ -790,7 +618,7 @@ export default function CloudSurfacePage() {
                   <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     placeholder="Search by name or account..."
-                    className="pl-9"
+                    className="ps-9"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                   />
@@ -840,7 +668,7 @@ export default function CloudSurfacePage() {
                       setSearchQuery('')
                     }}
                   >
-                    <X className="mr-1 h-3 w-3" />
+                    <X className="me-1 h-3 w-3" />
                     Clear
                   </Button>
                 )}
@@ -935,12 +763,12 @@ export default function CloudSurfacePage() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem onClick={() => setViewResource(resource)}>
-                                <Eye className="mr-2 h-4 w-4" />
+                                <Eye className="me-2 h-4 w-4" />
                                 View Details
                               </DropdownMenuItem>
                               <Can permission={Permission.ScopeWrite}>
                                 <DropdownMenuItem onClick={() => openEdit(resource)}>
-                                  <Pencil className="mr-2 h-4 w-4" />
+                                  <Pencil className="me-2 h-4 w-4" />
                                   Edit
                                 </DropdownMenuItem>
                               </Can>
@@ -949,7 +777,7 @@ export default function CloudSurfacePage() {
                                   className="text-red-500"
                                   onClick={() => setDeleteResource(resource)}
                                 >
-                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  <Trash2 className="me-2 h-4 w-4" />
                                   Delete
                                 </DropdownMenuItem>
                               </Can>
@@ -1178,11 +1006,11 @@ export default function CloudSurfacePage() {
 
               <div className="mt-6 flex gap-2">
                 <Button className="flex-1" variant="outline" onClick={() => openEdit(viewResource)}>
-                  <Pencil className="mr-2 h-4 w-4" />
+                  <Pencil className="me-2 h-4 w-4" />
                   Edit
                 </Button>
                 <Button className="flex-1">
-                  <Lock className="mr-2 h-4 w-4" />
+                  <Lock className="me-2 h-4 w-4" />
                   View Findings
                 </Button>
               </div>

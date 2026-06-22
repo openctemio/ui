@@ -132,7 +132,7 @@ export async function getOAuthAuthorizationUrl(
       },
     }
   } catch (error) {
-    console.error(`OAuth authorization error (${provider}):`, error)
+    console.error('OAuth authorization error:', provider, error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to get authorization URL',
@@ -207,7 +207,7 @@ export async function handleOAuthCallback(
       message: `Successfully signed in with ${provider}`,
     }
   } catch (error) {
-    console.error(`OAuth callback error (${provider}):`, error)
+    console.error('OAuth callback error:', provider, error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'OAuth authentication failed',

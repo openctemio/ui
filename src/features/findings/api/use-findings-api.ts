@@ -73,6 +73,9 @@ function buildFindingsEndpoint(filters?: FindingApiFilters): string {
   const params = new URLSearchParams()
 
   if (filters.asset_id) params.set('asset_id', filters.asset_id)
+  if (filters.branch_id) params.set('branch_id', filters.branch_id)
+  if (filters.branch_id && filters.branch_status && filters.branch_status !== 'all')
+    params.set('branch_status', filters.branch_status)
   if (filters.component_id) params.set('component_id', filters.component_id)
   if (filters.vulnerability_id) params.set('vulnerability_id', filters.vulnerability_id)
   if (filters.source_id) params.set('source_id', filters.source_id)
@@ -434,6 +437,40 @@ export function useSetFindingTagsApi(findingId: string) {
     currentTenant && findingId ? `${buildFindingEndpoint(findingId)}/tags` : null,
     async (url: string, { arg }: { arg: SetFindingTagsInput }) => {
       return put<ApiFinding>(url, arg)
+    }
+  )
+}
+
+/**
+ * Input for creating an external ticket from a finding. `project_key` is
+ * optional — when omitted the backend routes to the tenant's configured default
+ * project / routing rules. `provider` defaults to "jira" server-side.
+ */
+export interface CreateFindingTicketInput {
+  provider?: string
+  project_key?: string
+  issue_type?: string
+}
+
+/** Response from creating a ticket from a finding. */
+export interface FindingTicketInfo {
+  finding_id: string
+  ticket_key: string
+  ticket_url: string
+  linked_at: string
+}
+
+/**
+ * Create (and link) an external ticket from a finding.
+ * POST /api/v1/findings/{id}/create-ticket
+ */
+export function useCreateFindingTicketApi(findingId: string) {
+  const { currentTenant } = useTenant()
+
+  return useSWRMutation(
+    currentTenant && findingId ? `${buildFindingEndpoint(findingId)}/create-ticket` : null,
+    async (url: string, { arg }: { arg: CreateFindingTicketInput }) => {
+      return post<FindingTicketInfo>(url, arg)
     }
   )
 }

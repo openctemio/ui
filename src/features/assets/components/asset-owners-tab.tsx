@@ -475,7 +475,7 @@ export function AssetOwnersTab({ assetId }: AssetOwnersTabProps) {
         </div>
         {canEdit && (
           <Button variant="outline" size="sm" onClick={() => setShowAddDialog(true)}>
-            <UserPlus className="mr-1.5 h-3.5 w-3.5" />
+            <UserPlus className="me-1.5 h-3.5 w-3.5" />
             Add Owner
           </Button>
         )}
@@ -496,7 +496,7 @@ export function AssetOwnersTab({ assetId }: AssetOwnersTabProps) {
               className="mt-3"
               onClick={() => setShowAddDialog(true)}
             >
-              <UserPlus className="mr-1.5 h-3.5 w-3.5" />
+              <UserPlus className="me-1.5 h-3.5 w-3.5" />
               Add First Owner
             </Button>
           )}
@@ -516,7 +516,7 @@ export function AssetOwnersTab({ assetId }: AssetOwnersTabProps) {
                   value={ownerSearch}
                   onChange={(e) => setOwnerSearch(e.target.value)}
                   placeholder="Search owners by name, email, or group…"
-                  className="pl-8 h-8 text-sm"
+                  className="ps-8 h-8 text-sm"
                 />
                 {ownerSearch && (
                   <button
@@ -544,7 +544,7 @@ export function AssetOwnersTab({ assetId }: AssetOwnersTabProps) {
             still scrolls outside this container, so the search bar
             stays visible while the operator scans the list.
           */}
-          <div className="max-h-[480px] overflow-y-auto pr-1 space-y-2">
+          <div className="max-h-[480px] overflow-y-auto pe-1 space-y-2">
             {visibleOwners.length === 0 ? (
               <p className="py-6 text-center text-sm text-muted-foreground">
                 No owners match &ldquo;{ownerSearch}&rdquo;.
@@ -621,7 +621,7 @@ export function AssetOwnersTab({ assetId }: AssetOwnersTabProps) {
                     className="w-full min-w-0 overflow-hidden justify-between font-normal"
                     title={selectedOption?.label}
                   >
-                    <span className="flex-1 min-w-0 flex items-center gap-2 text-left text-sm">
+                    <span className="flex-1 min-w-0 flex items-center gap-2 text-start text-sm">
                       {selectedOption ? (
                         <>
                           {selectedOption.kind === 'user' ? (
@@ -635,7 +635,7 @@ export function AssetOwnersTab({ assetId }: AssetOwnersTabProps) {
                         <span className="text-muted-foreground">Select a user or group…</span>
                       )}
                     </span>
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    <ChevronsUpDown className="ms-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent

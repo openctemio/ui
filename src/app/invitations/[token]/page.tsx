@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
+import { csrfFetch } from '@/lib/api/client'
 
 interface InvitationData {
   invitation: {
@@ -76,7 +77,7 @@ export default function InvitationPage() {
     startTransition(async () => {
       try {
         // First try with access token (for users with tenant)
-        const response = await fetch(`/api/v1/invitations/${token}/accept`, {
+        const response = await csrfFetch(`/api/v1/invitations/${token}/accept`, {
           method: 'POST',
           credentials: 'include',
         })
@@ -89,10 +90,13 @@ export default function InvitationPage() {
 
         // If 401, try with refresh token (for users without tenant)
         if (response.status === 401) {
-          const refreshResponse = await fetch(`/api/v1/invitations/${token}/accept-with-refresh`, {
-            method: 'POST',
-            credentials: 'include',
-          })
+          const refreshResponse = await csrfFetch(
+            `/api/v1/invitations/${token}/accept-with-refresh`,
+            {
+              method: 'POST',
+              credentials: 'include',
+            }
+          )
 
           if (refreshResponse.ok) {
             toast.success('You have joined the team!')
@@ -131,7 +135,7 @@ export default function InvitationPage() {
   function handleDecline() {
     startTransition(async () => {
       try {
-        const response = await fetch(`/api/v1/invitations/${token}/decline`, {
+        const response = await csrfFetch(`/api/v1/invitations/${token}/decline`, {
           method: 'POST',
         })
 
@@ -195,7 +199,7 @@ export default function InvitationPage() {
             </Alert>
             <div className="flex flex-col gap-2">
               <Button variant="outline" className="w-full" onClick={() => router.push('/login')}>
-                <LogIn className="mr-2 h-4 w-4" />
+                <LogIn className="me-2 h-4 w-4" />
                 Go to Login
               </Button>
               <Button variant="ghost" className="w-full" onClick={() => router.push('/')}>
@@ -248,7 +252,7 @@ export default function InvitationPage() {
 
             <div className="flex flex-col gap-2">
               <Button className="w-full" onClick={() => router.push('/login')}>
-                <LogIn className="mr-2 h-4 w-4" />
+                <LogIn className="me-2 h-4 w-4" />
                 Go to Login
               </Button>
               <Button variant="ghost" className="w-full" onClick={() => router.push('/')}>
@@ -289,7 +293,7 @@ export default function InvitationPage() {
                   </Badge>
                   {daysUntilExpiry <= 3 && daysUntilExpiry > 0 && (
                     <Badge variant="outline" className="text-yellow-600 border-yellow-600/50">
-                      <Clock className="h-3 w-3 mr-1" />
+                      <Clock className="h-3 w-3 me-1" />
                       Expires in {daysUntilExpiry} day{daysUntilExpiry > 1 ? 's' : ''}
                     </Badge>
                   )}
@@ -325,9 +329,9 @@ export default function InvitationPage() {
           <div className="flex flex-col gap-2">
             <Button className="w-full" size="lg" onClick={handleAccept} disabled={isPending}>
               {isPending ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="me-2 h-4 w-4 animate-spin" />
               ) : (
-                <Check className="mr-2 h-4 w-4" />
+                <Check className="me-2 h-4 w-4" />
               )}
               Accept Invitation
             </Button>
@@ -338,7 +342,7 @@ export default function InvitationPage() {
               onClick={handleDecline}
               disabled={isPending}
             >
-              <X className="mr-2 h-4 w-4" />
+              <X className="me-2 h-4 w-4" />
               Decline
             </Button>
           </div>

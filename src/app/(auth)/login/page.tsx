@@ -57,7 +57,7 @@ export default async function SignIn({ searchParams }: LoginPageProps) {
       redirect(redirectTo)
     }
 
-    // ⚠️ Dangling auth state: refresh_token exists but no tenant cookie and
+    // WARNING: Dangling auth state: refresh_token exists but no tenant cookie and
     // no pendingTenants cookie. This typically happens when the user logged
     // in with a multi-tenant account, walked away from /select-tenant, and
     // the pendingTenants cookie expired before they picked a team.

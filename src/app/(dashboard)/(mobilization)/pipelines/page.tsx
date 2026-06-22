@@ -1,11 +1,11 @@
 'use client'
 
 import { useState, useCallback } from 'react'
+import dynamic from 'next/dynamic'
 import Link from 'next/link'
-import '@xyflow/react/dist/style.css'
 
 import { Main } from '@/components/layout'
-import { PageHeader } from '@/features/shared'
+import { PageHeader, RunStatusBadge } from '@/features/shared'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -35,7 +35,6 @@ import {
   Play,
   Plus,
   CheckCircle,
-  XCircle,
   RefreshCw,
   Eye,
   MoreHorizontal,
@@ -58,7 +57,15 @@ import {
 import { toast } from 'sonner'
 import { Can, Permission } from '@/lib/permissions'
 
-import { WorkflowBuilder, NodePalette, PipelineForm } from '@/features/pipelines'
+import { NodePalette } from '@/features/pipelines/components/node-palette'
+import { PipelineForm } from '@/features/pipelines/components/pipeline-form'
+// Lazy-load the visual builder: it pulls in @xyflow/react (~100KB+) and its
+// CSS. Loading it via dynamic() keeps the graph engine out of the pipelines
+// route's initial bundle until the builder is actually rendered.
+const WorkflowBuilder = dynamic(
+  () => import('@/features/pipelines/components/workflow-builder').then((m) => m.WorkflowBuilder),
+  { ssr: false }
+)
 import {
   usePipelines,
   usePipelineRuns,
@@ -75,7 +82,6 @@ import {
   type UIPosition,
   type CreatePipelineRequest,
   type UpdatePipelineRequest,
-  PIPELINE_RUN_STATUS_LABELS,
   PIPELINE_TRIGGER_LABELS,
   PIPELINE_AGENT_PREFERENCE_LABELS,
 } from '@/lib/api'
@@ -84,15 +90,6 @@ const statusConfig: Record<string, { color: string; bgColor: string }> = {
   active: { color: 'text-green-400', bgColor: 'bg-green-500/20' },
   inactive: { color: 'text-yellow-400', bgColor: 'bg-yellow-500/20' },
   error: { color: 'text-red-400', bgColor: 'bg-red-500/20' },
-}
-
-const runStatusConfig: Record<string, string> = {
-  completed: 'bg-green-500/20 text-green-400',
-  failed: 'bg-red-500/20 text-red-400',
-  running: 'bg-blue-500/20 text-blue-400',
-  pending: 'bg-yellow-500/20 text-yellow-400',
-  cancelled: 'bg-gray-500/20 text-gray-400',
-  timeout: 'bg-orange-500/20 text-orange-400',
 }
 
 export default function PipelinesPage() {
@@ -223,8 +220,6 @@ export default function PipelinesPage() {
     if (!editingPipeline) return
     setUpdatingPipeline(true)
     try {
-      console.log('Updating pipeline:', editingPipeline.id)
-      console.log('Update data:', JSON.stringify(data, null, 2))
       await put<PipelineTemplate>(
         pipelineEndpoints.update(editingPipeline.id),
         data as UpdatePipelineRequest
@@ -251,8 +246,6 @@ export default function PipelinesPage() {
     setLoadingEdit(true)
     try {
       const fullPipeline = await get<PipelineTemplate>(pipelineEndpoints.get(pipeline.id))
-      console.log('Fetched pipeline for edit:', fullPipeline)
-      console.log('Steps:', fullPipeline.steps)
       setEditingPipeline(fullPipeline)
       setIsFormOpen(true)
     } catch (error) {
@@ -303,7 +296,7 @@ export default function PipelinesPage() {
         >
           <Can permission={Permission.WorkflowsWrite} mode="disable">
             <Button onClick={handleOpenCreateForm}>
-              <Plus className="mr-2 h-4 w-4" />
+              <Plus className="me-2 h-4 w-4" />
               New Pipeline
             </Button>
           </Can>
@@ -377,7 +370,7 @@ export default function PipelinesPage() {
               <Card className="mt-4">
                 <CardContent className="py-8">
                   <div className="flex items-center justify-center text-muted-foreground">
-                    <AlertCircle className="mr-2 h-4 w-4" />
+                    <AlertCircle className="me-2 h-4 w-4" />
                     Failed to load pipelines
                   </div>
                 </CardContent>
@@ -415,7 +408,7 @@ export default function PipelinesPage() {
                           className="mt-4"
                           onClick={handleOpenCreateForm}
                         >
-                          <Plus className="mr-2 h-4 w-4" />
+                          <Plus className="me-2 h-4 w-4" />
                           Create Pipeline
                         </Button>
                       </div>
@@ -482,7 +475,7 @@ export default function PipelinesPage() {
                                     <DropdownMenuItem
                                       onClick={() => handleOpenPipelineDetail(pipeline)}
                                     >
-                                      <Eye className="mr-2 h-4 w-4" />
+                                      <Eye className="me-2 h-4 w-4" />
                                       View Details
                                     </DropdownMenuItem>
                                     <DropdownMenuItem
@@ -490,15 +483,15 @@ export default function PipelinesPage() {
                                       disabled={loadingEdit}
                                     >
                                       {loadingEdit ? (
-                                        <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                                        <RefreshCw className="me-2 h-4 w-4 animate-spin" />
                                       ) : (
-                                        <Pencil className="mr-2 h-4 w-4" />
+                                        <Pencil className="me-2 h-4 w-4" />
                                       )}
                                       Edit Pipeline
                                     </DropdownMenuItem>
                                     <DropdownMenuItem asChild>
                                       <Link href={`/pipelines/${pipeline.id}/builder`}>
-                                        <Settings className="mr-2 h-4 w-4" />
+                                        <Settings className="me-2 h-4 w-4" />
                                         Visual Builder
                                       </Link>
                                     </DropdownMenuItem>
@@ -506,14 +499,14 @@ export default function PipelinesPage() {
                                       onClick={() => handleTriggerPipeline(pipeline)}
                                       disabled={triggeringRun}
                                     >
-                                      <Play className="mr-2 h-4 w-4" />
+                                      <Play className="me-2 h-4 w-4" />
                                       Run Now
                                     </DropdownMenuItem>
                                     <DropdownMenuSeparator />
                                     <DropdownMenuItem
                                       onClick={() => handleOpenCloneDialog(pipeline)}
                                     >
-                                      <Copy className="mr-2 h-4 w-4" />
+                                      <Copy className="me-2 h-4 w-4" />
                                       Clone
                                     </DropdownMenuItem>
                                   </DropdownMenuContent>
@@ -614,7 +607,7 @@ export default function PipelinesPage() {
                                   onClick={() => handleOpenCloneDialog(pipeline)}
                                   disabled={!pipeline.is_active}
                                 >
-                                  <Copy className="mr-2 h-3 w-3" />
+                                  <Copy className="me-2 h-3 w-3" />
                                   Use Template
                                 </Button>
                                 <Button
@@ -685,14 +678,7 @@ export default function PipelinesPage() {
                             </span>
                           </div>
                         </div>
-                        <Badge className={`${runStatusConfig[run.status] || ''} border-0`}>
-                          {run.status === 'completed' ? (
-                            <CheckCircle className="mr-1 h-3 w-3" />
-                          ) : run.status === 'failed' ? (
-                            <XCircle className="mr-1 h-3 w-3" />
-                          ) : null}
-                          {PIPELINE_RUN_STATUS_LABELS[run.status] || run.status}
-                        </Badge>
+                        <RunStatusBadge status={run.status} />
                       </div>
                     ))}
                   </div>
@@ -722,13 +708,13 @@ export default function PipelinesPage() {
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
                     <Button variant="outline" size="sm" onClick={() => setSelectedPipeline(null)}>
-                      <RefreshCw className="mr-2 h-4 w-4" />
+                      <RefreshCw className="me-2 h-4 w-4" />
                       Clear
                     </Button>
                     {selectedPipeline && !selectedPipeline.is_system_template && (
                       <Button size="sm" asChild>
                         <Link href={`/pipelines/${selectedPipeline.id}/builder`}>
-                          <Pencil className="mr-2 h-4 w-4" />
+                          <Pencil className="me-2 h-4 w-4" />
                           Edit in Builder
                         </Link>
                       </Button>
@@ -823,7 +809,7 @@ export default function PipelinesPage() {
                 <div className="flex flex-wrap items-center gap-1.5 mt-3">
                   {selectedPipeline.is_system_template ? (
                     <Badge className="bg-blue-500/15 text-blue-600 border-0 text-xs">
-                      <Cloud className="mr-1 h-3 w-3" />
+                      <Cloud className="me-1 h-3 w-3" />
                       System Template
                     </Badge>
                   ) : (
@@ -943,11 +929,11 @@ export default function PipelinesPage() {
                       }`}
                     >
                       {selectedPipeline.settings?.agent_preference === 'platform' ? (
-                        <Cloud className="mr-1 h-3 w-3" />
+                        <Cloud className="me-1 h-3 w-3" />
                       ) : selectedPipeline.settings?.agent_preference === 'tenant' ? (
-                        <Server className="mr-1 h-3 w-3" />
+                        <Server className="me-1 h-3 w-3" />
                       ) : (
-                        <Settings className="mr-1 h-3 w-3" />
+                        <Settings className="me-1 h-3 w-3" />
                       )}
                       {
                         PIPELINE_AGENT_PREFERENCE_LABELS[
@@ -982,7 +968,7 @@ export default function PipelinesPage() {
                         setSelectedPipeline(null)
                       }}
                     >
-                      <Plus className="mr-2 h-4 w-4" />
+                      <Plus className="me-2 h-4 w-4" />
                       Add to My Pipelines
                     </Button>
                     <Button
@@ -1001,7 +987,7 @@ export default function PipelinesPage() {
                       onClick={() => handleTriggerPipeline(selectedPipeline)}
                       disabled={triggeringRun || !selectedPipeline.is_active}
                     >
-                      <Play className="mr-2 h-4 w-4" />
+                      <Play className="me-2 h-4 w-4" />
                       Run Now
                     </Button>
                     <Button
@@ -1013,9 +999,9 @@ export default function PipelinesPage() {
                       disabled={loadingEdit}
                     >
                       {loadingEdit ? (
-                        <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                        <RefreshCw className="me-2 h-4 w-4 animate-spin" />
                       ) : (
-                        <Pencil className="mr-2 h-4 w-4" />
+                        <Pencil className="me-2 h-4 w-4" />
                       )}
                       Edit
                     </Button>
@@ -1090,17 +1076,17 @@ export default function PipelinesPage() {
             >
               {isCloning ? (
                 <>
-                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  <RefreshCw className="me-2 h-4 w-4 animate-spin" />
                   Creating...
                 </>
               ) : cloningPipeline?.is_system_template ? (
                 <>
-                  <Plus className="mr-2 h-4 w-4" />
+                  <Plus className="me-2 h-4 w-4" />
                   Add to My Pipelines
                 </>
               ) : (
                 <>
-                  <Copy className="mr-2 h-4 w-4" />
+                  <Copy className="me-2 h-4 w-4" />
                   Clone Pipeline
                 </>
               )}

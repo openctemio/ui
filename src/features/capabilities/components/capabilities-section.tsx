@@ -202,7 +202,7 @@ export function CapabilitiesSection() {
           {error instanceof Error ? error.message : 'An unexpected error occurred'}
         </p>
         <Button variant="outline" size="sm" className="mt-2" onClick={handleRefresh}>
-          <RefreshCw className="mr-2 h-4 w-4" />
+          <RefreshCw className="me-2 h-4 w-4" />
           Retry
         </Button>
       </div>
@@ -305,14 +305,14 @@ export function CapabilitiesSection() {
                   <TabsTrigger value="platform" className="gap-1.5">
                     <Globe className="h-4 w-4" />
                     Platform
-                    <Badge variant="secondary" className="ml-1">
+                    <Badge variant="secondary" className="ms-1">
                       {platformCount}
                     </Badge>
                   </TabsTrigger>
                   <TabsTrigger value="custom" className="gap-1.5">
                     <Sparkles className="h-4 w-4" />
                     Custom
-                    <Badge variant="secondary" className="ml-1">
+                    <Badge variant="secondary" className="ms-1">
                       {customCount}
                     </Badge>
                   </TabsTrigger>
@@ -334,7 +334,7 @@ export function CapabilitiesSection() {
                     <TooltipTrigger asChild>
                       <span>
                         <Button onClick={() => setCreateDialogOpen(true)} disabled={!isCustomMode}>
-                          <Plus className="mr-2 h-4 w-4" />
+                          <Plus className="me-2 h-4 w-4" />
                           Add Capability
                         </Button>
                       </span>
@@ -399,7 +399,7 @@ export function CapabilitiesSection() {
                     placeholder="Search capabilities..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-9"
+                    className="ps-9"
                   />
                 </div>
               </form>
@@ -460,7 +460,7 @@ export function CapabilitiesSection() {
                 {!searchQuery && categoryFilter === 'all' && isCustomMode && (
                   <Can permission={Permission.ToolsWrite}>
                     <Button onClick={() => setCreateDialogOpen(true)}>
-                      <Plus className="mr-2 h-4 w-4" />
+                      <Plus className="me-2 h-4 w-4" />
                       Add Your First Capability
                     </Button>
                   </Can>
@@ -604,7 +604,7 @@ export function CapabilitiesSection() {
               onClick={handleDeleteConfirm}
               disabled={isDeleting || isLoadingSelectedStats || (selectedHasUsage && !forceDelete)}
             >
-              {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isDeleting && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
               {selectedHasUsage ? 'Force Delete' : 'Delete'}
             </Button>
           </AlertDialogFooter>

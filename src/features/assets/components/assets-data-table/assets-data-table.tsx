@@ -342,7 +342,7 @@ export function AssetsDataTable({
         <p className="text-muted-foreground">Failed to load {assetTypeName.toLowerCase()}s</p>
         {error && <p className="text-sm text-red-400">{error.message}</p>}
         <Button variant="outline" onClick={onRefresh}>
-          <RefreshCw className="mr-2 h-4 w-4" />
+          <RefreshCw className="me-2 h-4 w-4" />
           Try Again
         </Button>
       </div>
@@ -373,7 +373,7 @@ export function AssetsDataTable({
                 placeholder={`Search ${assetTypeName.toLowerCase()}s...`}
                 value={globalFilter}
                 onChange={(e) => setGlobalFilter(e.target.value)}
-                className="pl-9"
+                className="ps-9"
               />
             </div>
           )}
@@ -405,12 +405,12 @@ export function AssetsDataTable({
             </Select>
           )}
           {tagFilters.map((tag) => (
-            <Badge key={tag} variant="secondary" className="gap-1 pl-2 pr-1">
+            <Badge key={tag} variant="secondary" className="gap-1 ps-2 pe-1">
               {tag}
               <button
                 type="button"
                 onClick={() => setTagFilters(tagFilters.filter((t) => t !== tag))}
-                className="ml-0.5 rounded-full p-0.5 hover:bg-destructive/20 hover:text-destructive transition-colors"
+                className="ms-0.5 rounded-full p-0.5 hover:bg-destructive/20 hover:text-destructive transition-colors"
                 aria-label={`Remove tag filter ${tag}`}
               >
                 <X className="h-3 w-3" />
@@ -432,7 +432,7 @@ export function AssetsDataTable({
           {/* Bulk actions */}
           {showBulkActions && selectedCount > 0 && (
             <Button variant="destructive" size="sm" onClick={() => setShowBulkDeleteDialog(true)}>
-              <Trash2 className="mr-2 h-4 w-4" />
+              <Trash2 className="me-2 h-4 w-4" />
               Delete ({selectedCount})
             </Button>
           )}
@@ -440,7 +440,7 @@ export function AssetsDataTable({
           {/* Refresh */}
           {onRefresh && (
             <Button variant="outline" size="sm" onClick={onRefresh} disabled={isLoading}>
-              <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`me-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
               Refresh
             </Button>
           )}
@@ -448,7 +448,7 @@ export function AssetsDataTable({
           {/* Export */}
           {showExportButton && filteredAssets.length > 0 && (
             <Button variant="outline" size="sm" onClick={handleExport}>
-              <Download className="mr-2 h-4 w-4" />
+              <Download className="me-2 h-4 w-4" />
               Export
             </Button>
           )}
@@ -456,7 +456,7 @@ export function AssetsDataTable({
           {/* Add button */}
           {showAddButton && onCreate && (
             <Button size="sm" onClick={() => setShowAddDialog(true)}>
-              <Plus className="mr-2 h-4 w-4" />
+              <Plus className="me-2 h-4 w-4" />
               Add {assetTypeName}
             </Button>
           )}
@@ -502,7 +502,7 @@ export function AssetsDataTable({
                     <p className="text-muted-foreground">No {assetTypeName.toLowerCase()}s found</p>
                     {showAddButton && onCreate && (
                       <Button variant="outline" size="sm" onClick={() => setShowAddDialog(true)}>
-                        <Plus className="mr-2 h-4 w-4" />
+                        <Plus className="me-2 h-4 w-4" />
                         Add your first {assetTypeName.toLowerCase()}
                       </Button>
                     )}

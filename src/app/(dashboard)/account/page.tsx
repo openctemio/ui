@@ -220,14 +220,14 @@ export default function ProfilePage() {
                       onClick={() => setPendingAvatar(null)}
                       disabled={isUpdatingAvatar}
                     >
-                      <X className="h-4 w-4 mr-1" />
+                      <X className="h-4 w-4 me-1" />
                       Cancel
                     </Button>
                     <Button size="sm" onClick={handleSaveAvatar} disabled={isUpdatingAvatar}>
                       {isUpdatingAvatar ? (
-                        <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                        <Loader2 className="h-4 w-4 animate-spin me-1" />
                       ) : (
-                        <Check className="h-4 w-4 mr-1" />
+                        <Check className="h-4 w-4 me-1" />
                       )}
                       Save
                     </Button>
@@ -278,7 +278,7 @@ export default function ProfilePage() {
                   <Input id="email" value={profile?.email || ''} disabled className="bg-muted" />
                   {profile?.email_verified ? (
                     <Badge variant="outline" className="text-green-500 border-green-500/50">
-                      <Check className="h-3 w-3 mr-1" />
+                      <Check className="h-3 w-3 me-1" />
                       Verified
                     </Badge>
                   ) : (
@@ -332,9 +332,9 @@ export default function ProfilePage() {
       <div className="flex justify-end">
         <Button onClick={handleSave} disabled={!hasChanges || isUpdating}>
           {isUpdating ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            <Loader2 className="me-2 h-4 w-4 animate-spin" />
           ) : (
-            <Save className="mr-2 h-4 w-4" />
+            <Save className="me-2 h-4 w-4" />
           )}
           {isUpdating ? 'Saving...' : 'Save Changes'}
         </Button>

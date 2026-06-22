@@ -281,7 +281,7 @@ export function EditRoleSheet({ role, open, onOpenChange, onSuccess }: EditRoleS
     <Sheet open={open} onOpenChange={handleOpenChange}>
       <SheetContent className="sm:max-w-4xl p-0 flex flex-col h-full max-h-screen">
         {/* Header */}
-        <SheetHeader className="px-6 py-4 border-b shrink-0 pr-12">
+        <SheetHeader className="px-6 py-4 border-b shrink-0 pe-12">
           <div className="flex items-center gap-3">
             <div className="rounded-full bg-blue-100 dark:bg-blue-900 p-2">
               <Pencil className="h-5 w-5 text-blue-600" />
@@ -363,7 +363,7 @@ export function EditRoleSheet({ role, open, onOpenChange, onSuccess }: EditRoleS
                       placeholder="Search permissions..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-9"
+                      className="ps-9"
                     />
                   </div>
 
@@ -373,7 +373,7 @@ export function EditRoleSheet({ role, open, onOpenChange, onSuccess }: EditRoleS
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Button variant="outline" size="sm" onClick={selectAllRead}>
-                            <Eye className="mr-1.5 h-3.5 w-3.5 text-emerald-600" />
+                            <Eye className="me-1.5 h-3.5 w-3.5 text-emerald-600" />
                             All Read
                           </Button>
                         </TooltipTrigger>
@@ -383,7 +383,7 @@ export function EditRoleSheet({ role, open, onOpenChange, onSuccess }: EditRoleS
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Button variant="outline" size="sm" onClick={selectAllWrite}>
-                            <Pencil className="mr-1.5 h-3.5 w-3.5 text-blue-600" />
+                            <Pencil className="me-1.5 h-3.5 w-3.5 text-blue-600" />
                             All Write
                           </Button>
                         </TooltipTrigger>
@@ -398,7 +398,7 @@ export function EditRoleSheet({ role, open, onOpenChange, onSuccess }: EditRoleS
                             onClick={clearAllPermissions}
                             disabled={form.permissions.length === 0}
                           >
-                            <Eraser className="mr-1.5 h-3.5 w-3.5" />
+                            <Eraser className="me-1.5 h-3.5 w-3.5" />
                             Clear
                           </Button>
                         </TooltipTrigger>
@@ -441,7 +441,7 @@ export function EditRoleSheet({ role, open, onOpenChange, onSuccess }: EditRoleS
                                   onClick={(e) => e.stopPropagation()}
                                 />
                                 <CollapsibleTrigger asChild>
-                                  <button className="flex-1 flex items-center gap-2 text-left hover:bg-muted/50 rounded -m-1 p-1">
+                                  <button className="flex-1 flex items-center gap-2 text-start hover:bg-muted/50 rounded -m-1 p-1">
                                     <ChevronRight
                                       className={cn(
                                         'h-4 w-4 text-muted-foreground transition-transform',
@@ -451,7 +451,7 @@ export function EditRoleSheet({ role, open, onOpenChange, onSuccess }: EditRoleS
                                     <span className="font-medium text-sm">{module.name}</span>
                                     <Badge
                                       variant={selectedCount > 0 ? 'default' : 'secondary'}
-                                      className="text-xs font-mono ml-auto"
+                                      className="text-xs font-mono ms-auto"
                                     >
                                       {selectedCount}/{total}
                                     </Badge>
@@ -463,11 +463,11 @@ export function EditRoleSheet({ role, open, onOpenChange, onSuccess }: EditRoleS
                               <CollapsibleContent>
                                 <div className="px-3 pb-3 pt-1">
                                   {module.description && (
-                                    <p className="text-xs text-muted-foreground mb-3 ml-6">
+                                    <p className="text-xs text-muted-foreground mb-3 ms-6">
                                       {module.description}
                                     </p>
                                   )}
-                                  <div className="flex flex-wrap gap-2 ml-6">
+                                  <div className="flex flex-wrap gap-2 ms-6">
                                     {module.permissions.map((permission) => {
                                       const type = getPermissionType(permission.id)
                                       const config = permissionTypeConfig[type]
@@ -550,7 +550,7 @@ export function EditRoleSheet({ role, open, onOpenChange, onSuccess }: EditRoleS
                   )}
                   {form.hasFullDataAccess && (
                     <Badge variant="secondary" className="text-xs">
-                      <Database className="mr-1 h-3 w-3" />
+                      <Database className="me-1 h-3 w-3" />
                       Full Data Access
                     </Badge>
                   )}
@@ -625,9 +625,9 @@ export function EditRoleSheet({ role, open, onOpenChange, onSuccess }: EditRoleS
           </Button>
           <Button onClick={handleUpdate} disabled={isUpdating || !form.name.trim() || !hasChanges}>
             {isUpdating ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <Loader2 className="me-2 h-4 w-4 animate-spin" />
             ) : (
-              <Save className="mr-2 h-4 w-4" />
+              <Save className="me-2 h-4 w-4" />
             )}
             Save Changes
           </Button>

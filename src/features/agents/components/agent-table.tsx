@@ -119,10 +119,10 @@ export function AgentTable({
           <Button
             variant="ghost"
             onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-            className="-ml-4"
+            className="-ms-4"
           >
             Agent
-            <ArrowUpDown className="ml-2 h-4 w-4" />
+            <ArrowUpDown className="ms-2 h-4 w-4" />
           </Button>
         ),
         cell: ({ row }) => {
@@ -215,10 +215,10 @@ export function AgentTable({
           <Button
             variant="ghost"
             onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-            className="-ml-4"
+            className="-ms-4"
           >
             Active Jobs
-            <ArrowUpDown className="ml-2 h-4 w-4" />
+            <ArrowUpDown className="ms-2 h-4 w-4" />
           </Button>
         ),
         cell: ({ row }) => {
@@ -302,16 +302,16 @@ export function AgentTable({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => onViewAgent(agent)}>
-                  <Eye className="mr-2 h-4 w-4" />
+                  <Eye className="me-2 h-4 w-4" />
                   View Details
                 </DropdownMenuItem>
                 <Can permission={Permission.AgentsWrite}>
                   <DropdownMenuItem onClick={() => onEditAgent(agent)}>
-                    <Settings className="mr-2 h-4 w-4" />
+                    <Settings className="me-2 h-4 w-4" />
                     Edit
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => onRegenerateKey(agent)}>
-                    <KeyRound className="mr-2 h-4 w-4" />
+                    <KeyRound className="me-2 h-4 w-4" />
                     Regenerate API Key
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
@@ -320,7 +320,7 @@ export function AgentTable({
                       onClick={() => onActivateAgent(agent)}
                       className="text-green-500"
                     >
-                      <Power className="mr-2 h-4 w-4" />
+                      <Power className="me-2 h-4 w-4" />
                       Activate
                     </DropdownMenuItem>
                   ) : agent.status === 'active' ? (
@@ -328,7 +328,7 @@ export function AgentTable({
                       onClick={() => onDeactivateAgent(agent)}
                       className="text-amber-500"
                     >
-                      <PowerOff className="mr-2 h-4 w-4" />
+                      <PowerOff className="me-2 h-4 w-4" />
                       Deactivate
                     </DropdownMenuItem>
                   ) : null}
@@ -336,7 +336,7 @@ export function AgentTable({
                 <Can permission={Permission.AgentsDelete}>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem className="text-red-500" onClick={() => onDeleteAgent(agent)}>
-                    <Trash2 className="mr-2 h-4 w-4" />
+                    <Trash2 className="me-2 h-4 w-4" />
                     Delete
                   </DropdownMenuItem>
                 </Can>

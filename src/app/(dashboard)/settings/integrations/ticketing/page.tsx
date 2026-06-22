@@ -2,13 +2,12 @@
 
 import { useState } from 'react'
 import { Main } from '@/components/layout'
-import { PageHeader } from '@/features/shared'
+import { PageHeader, EmptyState } from '@/features/shared'
 import { StatsCard } from '@/features/shared/components/stats-card'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Progress } from '@/components/ui/progress'
 import {
   Dialog,
   DialogContent,
@@ -30,20 +29,21 @@ import {
   Ticket,
   Plus,
   Clock,
-  ArrowLeftRight,
   Settings,
   AlertTriangle,
-  FileText,
   RefreshCw,
   Link2,
   ExternalLink,
-  CheckCircle,
-  XCircle,
+  Route,
 } from 'lucide-react'
+import { RoutingRulesDialog } from '@/features/integrations/components/routing-rules-dialog'
+import { Switch } from '@/components/ui/switch'
 import {
   useIntegrationsApi,
   useCreateIntegrationApi,
   useSyncIntegrationApi,
+  useUpdateIntegrationApi,
+  useJiraProjectsApi,
 } from '@/features/integrations/api/use-integrations-api'
 import type {
   Integration,
@@ -68,21 +68,9 @@ function getProviderLabel(provider: string): string {
 }
 
 function getProjectKey(integration: Integration): string {
-  const config = integration.config as Record<string, unknown> | undefined
-  if (!config) return '-'
-  return (config.project_key as string) ?? '-'
-}
-
-function getOpenTickets(integration: Integration): number {
-  const meta = integration.metadata as Record<string, unknown> | undefined
-  if (!meta) return 0
-  return (meta.open_tickets as number) ?? 0
-}
-
-function getTotalTickets(integration: Integration): number {
-  const meta = integration.metadata as Record<string, unknown> | undefined
-  if (!meta) return 0
-  return (meta.total_tickets_created as number) ?? 0
+  const ticketing = getTicketingConfig(integration)
+  const key = ticketing.project_key as string | undefined
+  return key && key !== '' ? key : '-'
 }
 
 // ─────────────────────────────────────────────────────────
@@ -125,13 +113,141 @@ function StatusBadge({ status }: { status: IntegrationStatus }) {
 }
 
 // ─────────────────────────────────────────────────────────
+// Configure dialog (bidirectional sync toggle)
+// ─────────────────────────────────────────────────────────
+
+function getTicketingConfig(integration: Integration): Record<string, unknown> {
+  const cfg = integration.config as Record<string, unknown> | undefined
+  return (cfg?.ticketing as Record<string, unknown> | undefined) ?? {}
+}
+
+function ConfigureTicketingDialog({
+  integration,
+  open,
+  onOpenChange,
+}: {
+  integration: Integration
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}) {
+  const [syncEnabled, setSyncEnabled] = useState<boolean>(
+    Boolean(getTicketingConfig(integration).sync_enabled)
+  )
+  const [projectKey, setProjectKey] = useState<string>(
+    (getTicketingConfig(integration).project_key as string) ?? ''
+  )
+  const { trigger: update, isMutating } = useUpdateIntegrationApi(integration.id)
+
+  // Fetch the projects visible to this Jira integration for the picker. Only
+  // meaningful while the dialog is open and the integration is connected;
+  // failure (e.g. non-Cloud, bad creds) degrades to manual key entry.
+  const canList = open && integration.status === 'connected'
+  const { data: projectsData, isLoading: projectsLoading } = useJiraProjectsApi(canList)
+  const projects = projectsData?.projects ?? []
+
+  async function handleSave() {
+    try {
+      // UpdateIntegration replaces config wholesale, so send the full object with
+      // only the ticketing keys we own changed (preserve maps, routing, etc.).
+      const existingConfig = (integration.config as Record<string, unknown>) ?? {}
+      const existingTicketing = (existingConfig.ticketing as Record<string, unknown>) ?? {}
+      await update({
+        config: {
+          ...existingConfig,
+          ticketing: {
+            ...existingTicketing,
+            sync_enabled: syncEnabled,
+            project_key: projectKey.trim(),
+          },
+        },
+      })
+      toast.success('Ticketing settings saved')
+      await mutate('/api/v1/integrations?category=ticketing')
+      onOpenChange(false)
+    } catch {
+      toast.error('Failed to save settings')
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Configure {integration.name}</DialogTitle>
+          <DialogDescription>Control how OpenCTEM syncs with this tracker.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          {/* Default destination project */}
+          <div className="space-y-2 rounded-lg border p-3">
+            <Label htmlFor="default-project" className="font-medium">
+              Default project
+            </Label>
+            <p className="text-muted-foreground text-xs">
+              Where tickets land when a finding doesn&apos;t specify one and no routing rule
+              matches.
+            </p>
+            {projects.length > 0 && (
+              <Select value={projectKey || undefined} onValueChange={setProjectKey}>
+                <SelectTrigger id="default-project-picker">
+                  <SelectValue placeholder="Pick a Jira project" />
+                </SelectTrigger>
+                <SelectContent>
+                  {projects.map((p) => (
+                    <SelectItem key={p.id} value={p.key}>
+                      {p.key} — {p.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            <Input
+              id="default-project"
+              value={projectKey}
+              onChange={(e) => setProjectKey(e.target.value.toUpperCase())}
+              placeholder={projectsLoading ? 'Loading projects…' : 'e.g. SEC'}
+            />
+            {projects.length === 0 && !projectsLoading && (
+              <p className="text-muted-foreground text-xs">
+                Couldn&apos;t list projects from Jira — enter the project key manually.
+              </p>
+            )}
+          </div>
+
+          {/* Bidirectional sync */}
+          <div className="flex items-start justify-between gap-4 rounded-lg border p-3">
+            <div className="space-y-1">
+              <Label htmlFor="sync-enabled" className="font-medium">
+                Bidirectional status sync
+              </Label>
+              <p className="text-muted-foreground text-xs">
+                When a finding&apos;s status changes in OpenCTEM, move the linked Jira issue to
+                match. Jira-side status changes already sync back automatically.
+              </p>
+            </div>
+            <Switch id="sync-enabled" checked={syncEnabled} onCheckedChange={setSyncEnabled} />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button type="button" onClick={handleSave} disabled={isMutating}>
+            {isMutating ? 'Saving...' : 'Save'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+// ─────────────────────────────────────────────────────────
 // Integration card
 // ─────────────────────────────────────────────────────────
 
 function TicketingIntegrationCard({ integration }: { integration: Integration }) {
-  const totalTickets = getTotalTickets(integration)
-  const openTickets = getOpenTickets(integration)
   const projectKey = getProjectKey(integration)
+  const [configOpen, setConfigOpen] = useState(false)
+  const [routingOpen, setRoutingOpen] = useState(false)
 
   const { trigger: syncNow, isMutating: isSyncing } = useSyncIntegrationApi(integration.id)
 
@@ -181,23 +297,6 @@ function TicketingIntegrationCard({ integration }: { integration: Integration })
               </p>
             )}
 
-            {totalTickets > 0 && (
-              <div className="space-y-1">
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground text-xs">
-                    {openTickets} open / {totalTickets} total tickets
-                  </span>
-                  <span className="text-muted-foreground text-xs">
-                    {Math.round((openTickets / totalTickets) * 100)}% open
-                  </span>
-                </div>
-                <Progress
-                  value={Math.round((openTickets / totalTickets) * 100)}
-                  className="h-1.5"
-                />
-              </div>
-            )}
-
             {integration.last_sync_at && (
               <span className="text-muted-foreground flex items-center gap-1 text-xs">
                 <Clock className="h-3 w-3" />
@@ -215,17 +314,48 @@ function TicketingIntegrationCard({ integration }: { integration: Integration })
                 disabled={isSyncing}
                 title="Sync now"
               >
-                <RefreshCw className={`mr-2 h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
+                <RefreshCw className={`me-2 h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
                 Sync
               </Button>
             )}
-            <Button variant="outline" size="sm" disabled title="Configure">
-              <Settings className="mr-2 h-4 w-4" />
+            <Button
+              variant="outline"
+              size="sm"
+              title="Routing rules"
+              disabled={integration.provider !== 'jira' || integration.status !== 'connected'}
+              onClick={() => setRoutingOpen(true)}
+            >
+              <Route className="me-2 h-4 w-4" />
+              Routing
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              title="Configure"
+              disabled={integration.provider !== 'jira' || integration.status !== 'connected'}
+              onClick={() => setConfigOpen(true)}
+            >
+              <Settings className="me-2 h-4 w-4" />
               Configure
             </Button>
           </div>
         </div>
       </CardContent>
+
+      {integration.provider === 'jira' && (
+        <>
+          <ConfigureTicketingDialog
+            integration={integration}
+            open={configOpen}
+            onOpenChange={setConfigOpen}
+          />
+          <RoutingRulesDialog
+            integration={integration}
+            open={routingOpen}
+            onOpenChange={setRoutingOpen}
+          />
+        </>
+      )}
     </Card>
   )
 }
@@ -243,6 +373,7 @@ interface ConnectJiraDialogProps {
 function ConnectJiraDialog({ open, onOpenChange, onSuccess }: ConnectJiraDialogProps) {
   const [name, setName] = useState('Jira Cloud')
   const [baseUrl, setBaseUrl] = useState('')
+  const [email, setEmail] = useState('')
   const [apiToken, setApiToken] = useState('')
   const [projectKey, setProjectKey] = useState('')
   const [provider, setProvider] = useState<'jira' | 'linear' | 'asana'>('jira')
@@ -255,15 +386,36 @@ function ConnectJiraDialog({ open, onOpenChange, onSuccess }: ConnectJiraDialogP
       toast.error('Name and API token are required')
       return
     }
+    // Jira Cloud REST auth is basic-auth with the account email + API token.
+    // Without the email the backend cannot build a client and the integration
+    // is silently skipped, so require it and ship both fields together.
+    if (provider === 'jira') {
+      if (!baseUrl) {
+        toast.error('Jira base URL is required')
+        return
+      }
+      if (!email) {
+        toast.error('Atlassian account email is required')
+        return
+      }
+    }
     try {
+      // For Jira, pack email + token as JSON so both travel encrypted in the
+      // credentials field. Other providers use a bare token.
+      const credentials =
+        provider === 'jira' ? JSON.stringify({ email, api_token: apiToken }) : apiToken
+      // Store the default project under config.ticketing.project_key — the shape
+      // the backend reads (ParseMappingConfig). It used to be stuffed into
+      // `description`, which the backend never looks at, so it had no effect.
+      const trimmedKey = projectKey.trim()
       await createIntegration({
         name,
         category: 'ticketing',
         provider,
         auth_type: 'token',
-        credentials: apiToken,
+        credentials,
         base_url: baseUrl || undefined,
-        description: projectKey ? `Project: ${projectKey}` : undefined,
+        config: trimmedKey ? { ticketing: { project_key: trimmedKey } } : undefined,
       })
       toast.success(`${name} connected successfully`)
       onSuccess()
@@ -271,6 +423,7 @@ function ConnectJiraDialog({ open, onOpenChange, onSuccess }: ConnectJiraDialogP
       // Reset form
       setName('Jira Cloud')
       setBaseUrl('')
+      setEmail('')
       setApiToken('')
       setProjectKey('')
       setProvider('jira')
@@ -322,26 +475,49 @@ function ConnectJiraDialog({ open, onOpenChange, onSuccess }: ConnectJiraDialogP
           </div>
 
           {provider === 'jira' && (
-            <div className="space-y-2">
-              <Label htmlFor="base-url">Jira base URL</Label>
-              <Input
-                id="base-url"
-                value={baseUrl}
-                onChange={(e) => setBaseUrl(e.target.value)}
-                placeholder="https://yourorg.atlassian.net"
-                type="url"
-              />
-            </div>
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="base-url">Jira base URL</Label>
+                <Input
+                  id="base-url"
+                  value={baseUrl}
+                  onChange={(e) => setBaseUrl(e.target.value)}
+                  placeholder="https://yourorg.atlassian.net"
+                  type="url"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="jira-email">Atlassian account email</Label>
+                <Input
+                  id="jira-email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@yourorg.com"
+                  type="email"
+                  required
+                />
+                <p className="text-muted-foreground text-xs">
+                  The email of the Atlassian account that owns the API token. Jira Cloud pairs it
+                  with the token for authentication.
+                </p>
+              </div>
+            </>
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="project-key">Project key (optional)</Label>
+            <Label htmlFor="project-key">Default project key (optional)</Label>
             <Input
               id="project-key"
               value={projectKey}
               onChange={(e) => setProjectKey(e.target.value.toUpperCase())}
               placeholder="e.g. SEC"
             />
+            <p className="text-muted-foreground text-xs">
+              Where tickets land by default. After connecting you can pick it from your Jira
+              projects under Configure.
+            </p>
           </div>
 
           <div className="space-y-2">
@@ -397,56 +573,6 @@ function LoadingSkeleton() {
   )
 }
 
-function EmptyState({ onConnect }: { onConnect: () => void }) {
-  return (
-    <Card>
-      <CardContent className="flex flex-col items-center justify-center py-12">
-        <Ticket className="text-muted-foreground mb-4 h-12 w-12" />
-        <h3 className="mb-1 text-lg font-semibold">No Ticketing Systems Connected</h3>
-        <p className="text-muted-foreground mb-4 text-sm">
-          Connect a ticketing system to automatically create and track remediation tickets.
-        </p>
-        <Button size="sm" onClick={onConnect}>
-          <Plus className="mr-2 h-4 w-4" />
-          Connect Ticketing System
-        </Button>
-      </CardContent>
-    </Card>
-  )
-}
-
-// ─────────────────────────────────────────────────────────
-// Auto-ticketing rules (static config UI — actual rules TBD)
-// ─────────────────────────────────────────────────────────
-
-const AUTO_RULES = [
-  {
-    rule: 'Critical findings',
-    desc: 'Automatically create tickets for all critical severity findings',
-    enabled: true,
-  },
-  {
-    rule: 'High findings (production)',
-    desc: 'Create tickets for high severity findings on production assets',
-    enabled: true,
-  },
-  {
-    rule: 'SLA breach warning',
-    desc: 'Create tickets when findings approach SLA deadline',
-    enabled: false,
-  },
-  {
-    rule: 'New exposure detected',
-    desc: 'Create tickets when new external exposures are discovered',
-    enabled: true,
-  },
-  {
-    rule: 'Compliance violations',
-    desc: 'Create tickets for compliance framework violations',
-    enabled: false,
-  },
-]
-
 // ─────────────────────────────────────────────────────────
 // Page
 // ─────────────────────────────────────────────────────────
@@ -463,10 +589,11 @@ export default function TicketingIntegrationPage() {
   const connections = integrationsData?.data ?? []
 
   const connected = connections.filter((c) => c.status === 'connected').length
-  const totalTickets = connections.reduce((s, c) => s + getTotalTickets(c), 0)
-  const openTickets = connections.reduce((s, c) => s + getOpenTickets(c), 0)
-  const biDirectional = connections.filter(
-    (c) => (c.config as Record<string, unknown> | undefined)?.sync_direction === 'bi-directional'
+  const needsAttention = connections.filter(
+    (c) => c.status === 'error' || c.status === 'expired'
+  ).length
+  const pending = connections.filter(
+    (c) => c.status === 'pending' || c.status === 'disconnected'
   ).length
 
   if (isLoading) return <LoadingSkeleton />
@@ -478,13 +605,13 @@ export default function TicketingIntegrationPage() {
         description="Connect with ticketing systems for automated remediation tracking"
       >
         <Button size="sm" onClick={() => setDialogOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
+          <Plus className="me-2 h-4 w-4" />
           Add Connection
         </Button>
       </PageHeader>
 
-      {/* Summary stats */}
-      <div className="mt-6 grid gap-4 md:grid-cols-4">
+      {/* Summary stats — derived from real connection status */}
+      <div className="mt-6 grid gap-4 md:grid-cols-3">
         <StatsCard
           title="Connected Systems"
           value={connected}
@@ -493,31 +620,30 @@ export default function TicketingIntegrationPage() {
           description={`of ${connections.length} configured`}
         />
         <StatsCard
-          title="Tickets Created"
-          value={totalTickets}
-          icon={FileText}
-          description="Auto-generated tickets"
-        />
-        <StatsCard
-          title="Open Tickets"
-          value={openTickets}
+          title="Needs Attention"
+          value={needsAttention}
           icon={AlertTriangle}
-          changeType={openTickets > 0 ? 'negative' : 'neutral'}
-          description="Awaiting resolution"
+          changeType={needsAttention > 0 ? 'negative' : 'neutral'}
+          description="Error or expired"
         />
-        <StatsCard
-          title="Bi-Directional Sync"
-          value={biDirectional}
-          icon={ArrowLeftRight}
-          description="Two-way connections"
-        />
+        <StatsCard title="Pending" value={pending} icon={Clock} description="Awaiting first sync" />
       </div>
 
       {/* Connections list */}
       <div className="mt-6">
         <h2 className="mb-4 text-lg font-semibold">Ticketing Connections</h2>
         {connections.length === 0 ? (
-          <EmptyState onConnect={() => setDialogOpen(true)} />
+          <EmptyState
+            icon={Ticket}
+            title="No Ticketing Systems Connected"
+            description="Connect a ticketing system to automatically create and track remediation tickets."
+            action={
+              <Button size="sm" onClick={() => setDialogOpen(true)}>
+                <Plus className="me-2 h-4 w-4" />
+                Connect Ticketing System
+              </Button>
+            }
+          />
         ) : (
           <div className="space-y-4">
             {connections.map((conn) => (
@@ -526,46 +652,6 @@ export default function TicketingIntegrationPage() {
           </div>
         )}
       </div>
-
-      {/* Auto-ticketing rules */}
-      {connections.length > 0 && (
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Settings className="h-5 w-5" />
-              Auto-Ticketing Rules
-            </CardTitle>
-            <CardDescription>
-              Configure rules for automatic ticket creation based on finding severity and type.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {AUTO_RULES.map((item) => (
-                <div
-                  key={item.rule}
-                  className="flex items-center justify-between rounded-lg border p-3"
-                >
-                  <div>
-                    <div className="flex items-center gap-2">
-                      {item.enabled ? (
-                        <CheckCircle className="h-4 w-4 text-green-500" />
-                      ) : (
-                        <XCircle className="h-4 w-4 text-muted-foreground" />
-                      )}
-                      <span className="text-sm font-medium">{item.rule}</span>
-                      <Badge variant={item.enabled ? 'default' : 'secondary'} className="text-xs">
-                        {item.enabled ? 'Active' : 'Inactive'}
-                      </Badge>
-                    </div>
-                    <p className="text-muted-foreground mt-0.5 pl-6 text-xs">{item.desc}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       <ConnectJiraDialog
         open={dialogOpen}

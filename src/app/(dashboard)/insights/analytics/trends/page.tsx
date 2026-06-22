@@ -268,13 +268,13 @@ export default function RiskTrendsPage() {
                   <table className="w-full">
                     <thead>
                       <tr className="border-b">
-                        <th className="py-3 text-left text-sm font-medium text-muted-foreground">
+                        <th className="py-3 text-start text-sm font-medium text-muted-foreground">
                           Severity
                         </th>
-                        <th className="py-3 text-right text-sm font-medium text-muted-foreground">
+                        <th className="py-3 text-end text-sm font-medium text-muted-foreground">
                           Count
                         </th>
-                        <th className="py-3 text-right text-sm font-medium text-muted-foreground">
+                        <th className="py-3 text-end text-sm font-medium text-muted-foreground">
                           Percentage
                         </th>
                       </tr>
@@ -293,8 +293,8 @@ export default function RiskTrendsPage() {
                                 {severity.charAt(0).toUpperCase() + severity.slice(1)}
                               </Badge>
                             </td>
-                            <td className="py-3 text-right text-sm font-medium">{count}</td>
-                            <td className="py-3 text-right text-sm text-muted-foreground">
+                            <td className="py-3 text-end text-sm font-medium">{count}</td>
+                            <td className="py-3 text-end text-sm text-muted-foreground">
                               {percentage}%
                             </td>
                           </tr>
@@ -302,8 +302,8 @@ export default function RiskTrendsPage() {
                       })}
                       <tr className="border-t-2">
                         <td className="py-3 text-sm font-medium">Total</td>
-                        <td className="py-3 text-right text-sm font-bold">{latestCounts.total}</td>
-                        <td className="py-3 text-right text-sm text-muted-foreground">100%</td>
+                        <td className="py-3 text-end text-sm font-bold">{latestCounts.total}</td>
+                        <td className="py-3 text-end text-sm text-muted-foreground">100%</td>
                       </tr>
                     </tbody>
                   </table>
