@@ -441,6 +441,40 @@ export function useSetFindingTagsApi(findingId: string) {
   )
 }
 
+/**
+ * Input for creating an external ticket from a finding. `project_key` is
+ * optional — when omitted the backend routes to the tenant's configured default
+ * project / routing rules. `provider` defaults to "jira" server-side.
+ */
+export interface CreateFindingTicketInput {
+  provider?: string
+  project_key?: string
+  issue_type?: string
+}
+
+/** Response from creating a ticket from a finding. */
+export interface FindingTicketInfo {
+  finding_id: string
+  ticket_key: string
+  ticket_url: string
+  linked_at: string
+}
+
+/**
+ * Create (and link) an external ticket from a finding.
+ * POST /api/v1/findings/{id}/create-ticket
+ */
+export function useCreateFindingTicketApi(findingId: string) {
+  const { currentTenant } = useTenant()
+
+  return useSWRMutation(
+    currentTenant && findingId ? `${buildFindingEndpoint(findingId)}/create-ticket` : null,
+    async (url: string, { arg }: { arg: CreateFindingTicketInput }) => {
+      return post<FindingTicketInfo>(url, arg)
+    }
+  )
+}
+
 // ============================================
 // COMMENT HOOKS
 // ============================================
