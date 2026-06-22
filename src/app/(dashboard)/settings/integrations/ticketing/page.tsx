@@ -136,7 +136,34 @@ function ConfigureTicketingDialog({
   const [projectKey, setProjectKey] = useState<string>(
     (getTicketingConfig(integration).project_key as string) ?? ''
   )
+
+  // Mapping config (severity→priority, issue type, default priority, outbound
+  // status names). Read existing values so partial edits preserve the rest.
+  const cfg = getTicketingConfig(integration)
+  const sev0 = (cfg.severity_to_priority as Record<string, string> | undefined) ?? {}
+  const out0 = (cfg.status_outbound as Record<string, string> | undefined) ?? {}
+  const [issueType, setIssueType] = useState<string>((cfg.issue_type as string) ?? '')
+  const [defaultPriority, setDefaultPriority] = useState<string>(
+    (cfg.default_priority as string) ?? ''
+  )
+  const [sevPriority, setSevPriority] = useState<Record<string, string>>({
+    critical: sev0.critical ?? '',
+    high: sev0.high ?? '',
+    medium: sev0.medium ?? '',
+    low: sev0.low ?? '',
+  })
+  const [statusOutbound, setStatusOutbound] = useState<Record<string, string>>({
+    confirmed: out0.confirmed ?? '',
+    in_progress: out0.in_progress ?? '',
+    fix_applied: out0.fix_applied ?? '',
+    resolved: out0.resolved ?? '',
+  })
+
   const { trigger: update, isMutating } = useUpdateIntegrationApi(integration.id)
+
+  // Drop empty values so we don't overwrite defaults with blanks.
+  const pruned = (obj: Record<string, string>): Record<string, string> =>
+    Object.fromEntries(Object.entries(obj).filter(([, v]) => v.trim() !== ''))
 
   // Fetch the projects visible to this Jira integration for the picker. Only
   // meaningful while the dialog is open and the integration is connected;
@@ -151,6 +178,8 @@ function ConfigureTicketingDialog({
       // only the ticketing keys we own changed (preserve maps, routing, etc.).
       const existingConfig = (integration.config as Record<string, unknown>) ?? {}
       const existingTicketing = (existingConfig.ticketing as Record<string, unknown>) ?? {}
+      const sevMap = pruned(sevPriority)
+      const outMap = pruned(statusOutbound)
       await update({
         config: {
           ...existingConfig,
@@ -158,6 +187,18 @@ function ConfigureTicketingDialog({
             ...existingTicketing,
             sync_enabled: syncEnabled,
             project_key: projectKey.trim(),
+            issue_type: issueType.trim(),
+            default_priority: defaultPriority.trim(),
+            // Merge over existing maps so unshown keys (e.g. extra outbound
+            // statuses set elsewhere) are preserved.
+            severity_to_priority: {
+              ...((existingTicketing.severity_to_priority as Record<string, string>) ?? {}),
+              ...sevMap,
+            },
+            status_outbound: {
+              ...((existingTicketing.status_outbound as Record<string, string>) ?? {}),
+              ...outMap,
+            },
           },
         },
       })
@@ -171,7 +212,7 @@ function ConfigureTicketingDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Configure {integration.name}</DialogTitle>
           <DialogDescription>Control how OpenCTEM syncs with this tracker.</DialogDescription>
@@ -225,6 +266,90 @@ function ConfigureTicketingDialog({
               </p>
             </div>
             <Switch id="sync-enabled" checked={syncEnabled} onCheckedChange={setSyncEnabled} />
+          </div>
+
+          {/* Ticket defaults + severity→priority mapping */}
+          <div className="space-y-3 rounded-lg border p-3">
+            <Label className="font-medium">Ticket defaults &amp; mapping</Label>
+            <p className="text-muted-foreground text-xs">
+              Override how OpenCTEM fills new tickets. Leave blank to use the defaults.
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label htmlFor="issue-type" className="text-xs">
+                  Issue type
+                </Label>
+                <Input
+                  id="issue-type"
+                  value={issueType}
+                  onChange={(e) => setIssueType(e.target.value)}
+                  placeholder="Bug"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="default-priority" className="text-xs">
+                  Default priority
+                </Label>
+                <Input
+                  id="default-priority"
+                  value={defaultPriority}
+                  onChange={(e) => setDefaultPriority(e.target.value)}
+                  placeholder="Medium"
+                />
+              </div>
+            </div>
+            <Label className="text-xs">Severity → Jira priority</Label>
+            <div className="grid grid-cols-2 gap-3">
+              {(['critical', 'high', 'medium', 'low'] as const).map((sev) => (
+                <div key={sev} className="space-y-1">
+                  <Label
+                    htmlFor={`sev-${sev}`}
+                    className="text-muted-foreground text-xs capitalize"
+                  >
+                    {sev}
+                  </Label>
+                  <Input
+                    id={`sev-${sev}`}
+                    value={sevPriority[sev]}
+                    onChange={(e) => setSevPriority((p) => ({ ...p, [sev]: e.target.value }))}
+                    placeholder={
+                      { critical: 'Highest', high: 'High', medium: 'Medium', low: 'Low' }[sev]
+                    }
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Outbound status mapping (finding status → Jira status NAME) */}
+          <div className="space-y-3 rounded-lg border p-3">
+            <Label className="font-medium">Outbound status names</Label>
+            <p className="text-muted-foreground text-xs">
+              When bidirectional sync moves a Jira issue, use these status names (match your Jira
+              workflow). Blank = stock default.
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              {(
+                [
+                  ['confirmed', 'To Do'],
+                  ['in_progress', 'In Progress'],
+                  ['fix_applied', 'Done'],
+                  ['resolved', 'Done'],
+                ] as const
+              ).map(([fs, ph]) => (
+                <div key={fs} className="space-y-1">
+                  <Label htmlFor={`out-${fs}`} className="text-muted-foreground text-xs">
+                    {fs.replace('_', ' ')}
+                  </Label>
+                  <Input
+                    id={`out-${fs}`}
+                    value={statusOutbound[fs]}
+                    onChange={(e) => setStatusOutbound((p) => ({ ...p, [fs]: e.target.value }))}
+                    placeholder={ph}
+                  />
+                </div>
+              ))}
+            </div>
           </div>
         </div>
         <DialogFooter>
