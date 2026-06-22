@@ -26,6 +26,14 @@ export interface RemediationCampaign {
   tags: string[]
   created_at: string
   updated_at: string
+  /** Linked external tracker epic (e.g. Jira), or null when not linked. */
+  ticket: CampaignTicketLink | null
+}
+
+export interface CampaignTicketLink {
+  provider: string
+  issue_key: string
+  issue_url: string
 }
 
 interface PaginatedResponse<T> {
