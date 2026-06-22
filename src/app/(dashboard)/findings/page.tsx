@@ -40,6 +40,7 @@ import {
   Route,
   ClipboardList,
   AlertOctagon,
+  Ticket,
 } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import {
@@ -53,6 +54,7 @@ import { PriorityClassBadge } from '@/features/findings/components/priority-clas
 import { AssigneeSelect } from '@/features/findings/components/assignee-select'
 import { FindingGroupsTab } from '@/features/findings/components/finding-groups-tab'
 import { MarkFixedDialog } from '@/features/findings/components/mark-fixed-dialog'
+import { CreateTicketDialog } from '@/features/findings/components/create-ticket-dialog'
 import { PendingReviewTab } from '@/features/findings/components/pending-review-tab'
 import {
   usePendingVerificationCount,
@@ -297,6 +299,7 @@ function FindingsContent() {
   const debouncedSearch = useDebounce(searchQuery, 300)
   const [mainTab, setMainTab] = useState<'findings' | 'groups' | 'pending'>('findings')
   const [markFixedGroup, setMarkFixedGroup] = useState<FindingGroup | null>(null)
+  const [ticketFinding, setTicketFinding] = useState<Finding | null>(null)
   const { hasPermission } = usePermissions()
   const pendingCount = usePendingVerificationCount()
 
@@ -622,6 +625,9 @@ function FindingsContent() {
         case 'delete':
           handleDeleteClick(finding)
           break
+        case 'create_ticket':
+          setTicketFinding(finding)
+          break
         case 'assign':
         case 'status':
         case 'false_positive':
@@ -827,6 +833,10 @@ function FindingsContent() {
                 <DropdownMenuItem onClick={() => handleRowAction('status', finding)}>
                   <CheckCircle className="me-2 h-4 w-4" />
                   Change Status
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleRowAction('create_ticket', finding)}>
+                  <Ticket className="me-2 h-4 w-4" />
+                  Create Jira Ticket
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => handleRowAction('copy_id', finding)}>
@@ -1297,6 +1307,18 @@ function FindingsContent() {
             setMarkFixedGroup(null)
             mutateFindings()
             mutateStats()
+          }}
+        />
+      )}
+
+      {/* Create Jira Ticket Dialog */}
+      {ticketFinding && (
+        <CreateTicketDialog
+          findingId={ticketFinding.id}
+          findingTitle={ticketFinding.title}
+          open={!!ticketFinding}
+          onOpenChange={(open) => {
+            if (!open) setTicketFinding(null)
           }}
         />
       )}
