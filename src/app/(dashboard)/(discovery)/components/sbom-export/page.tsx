@@ -114,6 +114,15 @@ export default function SBOMExportPage() {
       filename = `sbom-${exportFormat}.json`
       mimeType = 'application/json'
     } else {
+      // Escape XML special chars — package names/PURLs legally contain &, <, >
+      // which would otherwise produce a malformed/corrupt SBOM.
+      const xml = (v: string) =>
+        v
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&apos;')
       // Simple XML conversion (in production, use proper XML library)
       content = `<?xml version="1.0" encoding="UTF-8"?>
 <bom xmlns="http://cyclonedx.org/schema/bom/1.5">
@@ -124,9 +133,9 @@ export default function SBOMExportPage() {
 ${components
   .map(
     (c) => `    <component type="library">
-      <name>${c.name}</name>
-      <version>${c.version || ''}</version>
-      <purl>${c.purl || ''}</purl>
+      <name>${xml(c.name)}</name>
+      <version>${xml(c.version || '')}</version>
+      <purl>${xml(c.purl || '')}</purl>
     </component>`
   )
   .join('\n')}
@@ -350,12 +359,12 @@ ${components
               <Button onClick={handleExport} disabled={isExporting} className="w-full" size="lg">
                 {isExporting ? (
                   <>
-                    <Clock className="mr-2 h-4 w-4 animate-spin" />
+                    <Clock className="me-2 h-4 w-4 animate-spin" />
                     Generating SBOM...
                   </>
                 ) : (
                   <>
-                    <Download className="mr-2 h-4 w-4" />
+                    <Download className="me-2 h-4 w-4" />
                     Export SBOM
                   </>
                 )}

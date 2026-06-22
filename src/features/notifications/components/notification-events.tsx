@@ -115,7 +115,7 @@ function NotificationEventItem({ entry }: { entry: NotificationEventEntry }) {
             variant="outline"
             className={cn('text-xs flex-shrink-0', severityConfig.color, severityConfig.bgColor)}
           >
-            <SeverityIcon className="h-3 w-3 mr-1" />
+            <SeverityIcon className="h-3 w-3 me-1" />
             {entry.severity}
           </Badge>
           <Badge
@@ -185,7 +185,7 @@ export function NotificationEvents({ integrationId, limit = 10 }: NotificationEv
             <ChevronDown className="h-4 w-4 transition-transform duration-200 [&[data-state=open]>svg]:rotate-180" />
             Recent Notifications
             {history.length > 0 && (
-              <Badge variant="secondary" className="ml-1">
+              <Badge variant="secondary" className="ms-1">
                 {history.length}
               </Badge>
             )}

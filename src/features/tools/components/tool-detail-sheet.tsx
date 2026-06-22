@@ -74,7 +74,7 @@ function CommandBlock({ label, command }: { label: string; command: string }) {
             <div className="h-2.5 w-2.5 rounded-full bg-yellow-500/80" />
             <div className="h-2.5 w-2.5 rounded-full bg-green-500/80" />
           </div>
-          <code className="block px-3 py-2.5 pr-10 text-xs font-mono text-zinc-300 break-all">
+          <code className="block px-3 py-2.5 pe-10 text-xs font-mono text-zinc-300 break-all">
             <span className="text-green-400 select-none">$ </span>
             {command}
           </code>
@@ -216,7 +216,7 @@ export function ToolDetailSheet({
                   >
                     <span
                       className={cn(
-                        'mr-1.5 h-1.5 w-1.5 rounded-full',
+                        'me-1.5 h-1.5 w-1.5 rounded-full',
                         tool.is_active ? 'bg-green-500 animate-pulse' : 'bg-zinc-400'
                       )}
                     />
@@ -235,7 +235,7 @@ export function ToolDetailSheet({
                       variant="outline"
                       className="text-xs border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400"
                     >
-                      <ArrowUpCircle className="mr-1 h-3 w-3" />
+                      <ArrowUpCircle className="me-1 h-3 w-3" />
                       Update Available
                     </Badge>
                   )}
@@ -331,7 +331,7 @@ export function ToolDetailSheet({
                   variant="outline"
                   className={cn('text-xs', getCategoryBadgeColor(categoryName))}
                 >
-                  <ToolCategoryIcon category={categoryName} className="mr-1 h-3 w-3" />
+                  <ToolCategoryIcon category={categoryName} className="me-1 h-3 w-3" />
                   {categoryDisplayName}
                 </Badge>
               }

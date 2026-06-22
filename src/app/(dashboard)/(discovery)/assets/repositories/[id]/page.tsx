@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo, useCallback } from 'react'
+import { csrfFetch } from '@/lib/api/client'
 import { useFindingsApi } from '@/features/findings/api/use-findings-api'
 import type { ApiFinding } from '@/features/findings/api/finding-api.types'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
@@ -26,6 +27,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import {
   Select,
   SelectContent,
@@ -636,7 +647,7 @@ function transformToRepositoryView(asset: ApiAssetResponse): RepositoryView {
   }
 }
 
-import { cn } from '@/lib/utils'
+import { cn, sanitizeExternalUrl } from '@/lib/utils'
 import { copyToClipboard } from '@/lib/clipboard'
 import { Can, Permission } from '@/lib/permissions'
 import { getErrorMessage } from '@/lib/api/error-handler'
@@ -1191,7 +1202,7 @@ function BranchesTab({
               onClick={handleCompare}
               disabled={isComparing || !compareBranch}
             >
-              {isComparing ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
+              {isComparing ? <Loader2 className="h-4 w-4 animate-spin me-1" /> : null}
               Compare
             </Button>
           </div>
@@ -1314,7 +1325,7 @@ function BranchesTab({
                           {branch.findings_summary.by_severity.high}H
                         </Badge>
                       )}
-                      <span className="text-sm text-muted-foreground ml-1">
+                      <span className="text-sm text-muted-foreground ms-1">
                         ({branch.findings_summary.total} total)
                       </span>
                     </div>
@@ -1384,18 +1395,14 @@ function BranchesTab({
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => toast.info('Triggering scan...')}>
-                          <Play className="mr-2 h-4 w-4" />
-                          Scan Branch
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <Eye className="mr-2 h-4 w-4" />
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onViewBranchFindings?.(branch.name)
+                          }}
+                        >
+                          <Eye className="me-2 h-4 w-4" />
                           View Findings
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem>
-                          <Settings className="mr-2 h-4 w-4" />
-                          Branch Settings
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -1434,6 +1441,11 @@ function FindingsTab({
   const [branchFilter, setBranchFilter] = useState<string>(
     branchFromUrl || searchParams.get('branch') || 'all'
   )
+  // Per-branch occurrence state: all | open | fixed (only applies when a specific
+  // branch is selected). 'open' = present on the branch, 'fixed' = resolved there.
+  const [branchStatusFilter, setBranchStatusFilter] = useState<string>(
+    searchParams.get('branch_status') || 'all'
+  )
   const [page, setPage] = useState(Number(searchParams.get('page')) || 1)
   const pageSize = 20
 
@@ -1465,6 +1477,18 @@ function FindingsTab({
       page,
       per_page: pageSize,
     }
+    // Branch filter is applied server-side by branch_id. The selector value is a
+    // branch name (shareable URL); map it to the branch's id for the API so the
+    // results AND the total/pagination reflect the selected branch.
+    if (branchFilter !== 'all') {
+      const selected = branches.find((b) => b.name === branchFilter)
+      if (selected) {
+        f.branch_id = selected.id
+        if (branchStatusFilter === 'open' || branchStatusFilter === 'fixed') {
+          f.branch_status = branchStatusFilter
+        }
+      }
+    }
     if (severityFilter !== 'all')
       f.severities = [severityFilter as 'critical' | 'high' | 'medium' | 'low' | 'info']
     if (statusFilter !== 'all')
@@ -1481,7 +1505,18 @@ function FindingsTab({
       f.sources = [scannerFilter as 'sast' | 'sca' | 'secret' | 'dast' | 'iac' | 'container']
     if (debouncedSearch) f.search = debouncedSearch
     return f
-  }, [repositoryId, page, pageSize, severityFilter, statusFilter, scannerFilter, debouncedSearch])
+  }, [
+    repositoryId,
+    page,
+    pageSize,
+    branchFilter,
+    branchStatusFilter,
+    branches,
+    severityFilter,
+    statusFilter,
+    scannerFilter,
+    debouncedSearch,
+  ])
 
   const { data: findingsData, isLoading: findingsLoading } = useFindingsApi(apiFilters)
 
@@ -1493,11 +1528,10 @@ function FindingsTab({
   const total = findingsData?.total ?? 0
   const totalPages = findingsData?.total_pages ?? 0
 
-  // Branch filter is client-side (findings have branch name in first_detected_branch)
-  const filteredFindings = useMemo(() => {
-    if (branchFilter === 'all') return findings
-    return findings.filter((f) => f.branches.includes(branchFilter))
-  }, [findings, branchFilter])
+  // Findings are already filtered server-side (including by branch_id), so the
+  // table renders them directly — no client-side branch filter that would only
+  // see the current page and desync from `total`.
+  const filteredFindings = findings
 
   return (
     <div className="space-y-6">
@@ -1507,7 +1541,7 @@ function FindingsTab({
             <CardTitle className="flex items-center gap-2 text-base shrink-0">
               <Shield className="h-4 w-4" />
               Findings
-              <Badge variant="secondary" className="ml-1">
+              <Badge variant="secondary" className="ms-1">
                 {total}
               </Badge>
             </CardTitle>
@@ -1518,7 +1552,7 @@ function FindingsTab({
                   placeholder="Search..."
                   value={searchInput}
                   onChange={(e) => setSearchInput(e.target.value)}
-                  className="pl-7 h-7 text-xs w-[140px]"
+                  className="ps-7 h-7 text-xs w-[140px]"
                 />
               </div>
               <Select
@@ -1587,6 +1621,23 @@ function FindingsTab({
                         </span>
                       </SelectItem>
                     ))}
+                  </SelectContent>
+                </Select>
+              )}
+              {branchFilter !== 'all' && (
+                <Select
+                  value={branchStatusFilter}
+                  onValueChange={(v) =>
+                    handleFilterChange(setBranchStatusFilter, 'branch_status', v)
+                  }
+                >
+                  <SelectTrigger className="w-[130px] h-8 text-xs">
+                    <SelectValue placeholder="On branch" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All on branch</SelectItem>
+                    <SelectItem value="open">Open on branch</SelectItem>
+                    <SelectItem value="fixed">Fixed on branch</SelectItem>
                   </SelectContent>
                 </Select>
               )}
@@ -1857,12 +1908,12 @@ function ActivityTab({ activities }: { activities: ActivityLog[] }) {
                           </span>
                           {activity.scan_summary.quality_gate_passed ? (
                             <Badge variant="outline" className="text-green-500 border-green-500/20">
-                              <CheckCircle className="h-3 w-3 mr-1" />
+                              <CheckCircle className="h-3 w-3 me-1" />
                               Passed
                             </Badge>
                           ) : (
                             <Badge variant="outline" className="text-red-500 border-red-500/20">
-                              <XCircle className="h-3 w-3 mr-1" />
+                              <XCircle className="h-3 w-3 me-1" />
                               Failed
                             </Badge>
                           )}
@@ -1912,7 +1963,7 @@ function ActivityTab({ activities }: { activities: ActivityLog[] }) {
 }
 
 // Settings Tab
-function SettingsTab({ repository }: { repository: Repository }) {
+function SettingsTab({ repository, onDelete }: { repository: Repository; onDelete?: () => void }) {
   const [autoScan, setAutoScan] = useState(repository.scan_settings?.auto_scan ?? false)
   const [scanOnPush, setScanOnPush] = useState(repository.scan_settings?.scan_on_push ?? false)
   const [scanOnPR, setScanOnPR] = useState(repository.scan_settings?.scan_on_pr ?? false)
@@ -1926,18 +1977,19 @@ function SettingsTab({ repository }: { repository: Repository }) {
     if (pattern && !branchPatterns.includes(pattern)) {
       setBranchPatterns([...branchPatterns, pattern])
       setBranchPatternInput('')
-      toast.success(`Pattern "${pattern}" added`)
     }
   }
 
   const handleRemovePattern = (pattern: string) => {
     setBranchPatterns(branchPatterns.filter((p) => p !== pattern))
-    toast.success(`Pattern "${pattern}" removed`)
   }
 
-  const handleToggle = (name: string, value: boolean, setter: (v: boolean) => void) => {
+  // NOTE: scan-automation settings are not yet persisted to the backend, so we
+  // only update local state here. We deliberately do NOT toast "enabled/saved"
+  // — that would falsely imply the setting took effect. A persistence endpoint
+  // is tracked as a follow-up; until then the section is preview-only.
+  const handleToggle = (_name: string, value: boolean, setter: (v: boolean) => void) => {
     setter(value)
-    toast.success(`${name} ${value ? 'enabled' : 'disabled'}`)
   }
 
   // Security features from repo data or defaults
@@ -2007,6 +2059,9 @@ function SettingsTab({ repository }: { repository: Repository }) {
           <Separator />
 
           <div className="space-y-4">
+            <p className="text-xs text-muted-foreground rounded-md border border-dashed px-3 py-2">
+              Preview only — scan automation settings below are not yet persisted to the backend.
+            </p>
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-medium text-sm">Auto Scan</p>
@@ -2071,7 +2126,7 @@ function SettingsTab({ repository }: { repository: Repository }) {
                   <GitBranch className="h-3 w-3" />
                   {pattern}
                   <button
-                    className="ml-1 hover:text-destructive"
+                    className="ms-1 hover:text-destructive"
                     onClick={() => handleRemovePattern(pattern)}
                   >
                     <XCircle className="h-3 w-3" />
@@ -2170,6 +2225,8 @@ function SettingsTab({ repository }: { repository: Repository }) {
               <Button
                 variant="outline"
                 className="text-red-500 border-red-500/50 hover:bg-red-500/10"
+                disabled
+                title="Archiving is not yet available"
               >
                 Archive
               </Button>
@@ -2183,7 +2240,9 @@ function SettingsTab({ repository }: { repository: Repository }) {
                   Permanently delete this repository and all associated data.
                 </p>
               </div>
-              <Button variant="destructive">Delete</Button>
+              <Button variant="destructive" onClick={onDelete} disabled={!onDelete}>
+                Delete
+              </Button>
             </div>
           </Can>
         </CardContent>
@@ -2295,6 +2354,7 @@ export default function RepositoryDetailPage() {
   const [isSyncing, setIsSyncing] = useState(false)
   const [isScanning, setIsScanning] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
 
   // Fetch repository data from API
   const {
@@ -2341,7 +2401,7 @@ export default function RepositoryDetailPage() {
     if (!repository) return
     setIsSyncing(true)
     try {
-      const response = await fetch(`/api/v1/assets/${repository.id}/sync`, {
+      const response = await csrfFetch(`/api/v1/assets/${repository.id}/sync`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       })
@@ -2361,7 +2421,7 @@ export default function RepositoryDetailPage() {
     if (!repository) return
     setIsScanning(true)
     try {
-      const response = await fetch(`/api/v1/assets/${repository.id}/scan`, {
+      const response = await csrfFetch(`/api/v1/assets/${repository.id}/scan`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ scanMode: 'full' }),
@@ -2380,16 +2440,10 @@ export default function RepositoryDetailPage() {
 
   const handleDelete = useCallback(async () => {
     if (!repository) return
-    if (
-      !confirm(
-        `Are you sure you want to delete "${repository.name}"? This action cannot be undone.`
-      )
-    ) {
-      return
-    }
+    setShowDeleteDialog(false)
     setIsDeleting(true)
     try {
-      const response = await fetch(`/api/v1/assets/${repository.id}`, {
+      const response = await csrfFetch(`/api/v1/assets/${repository.id}`, {
         method: 'DELETE',
       })
       if (!response.ok) {
@@ -2420,11 +2474,11 @@ export default function RepositoryDetailPage() {
           </p>
           <div className="flex gap-2 justify-center">
             <Button variant="outline" onClick={() => mutateRepo()}>
-              <RefreshCw className="mr-2 h-4 w-4" />
+              <RefreshCw className="me-2 h-4 w-4" />
               Retry
             </Button>
             <Button onClick={() => router.push('/assets/repositories')}>
-              <ArrowLeft className="mr-2 h-4 w-4" />
+              <ArrowLeft className="me-2 h-4 w-4" />
               Back to Repositories
             </Button>
           </div>
@@ -2443,7 +2497,7 @@ export default function RepositoryDetailPage() {
             The repository you&apos;re looking for doesn&apos;t exist.
           </p>
           <Button onClick={() => router.push('/assets/repositories')}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
+            <ArrowLeft className="me-2 h-4 w-4" />
             Back to Repositories
           </Button>
         </div>
@@ -2512,24 +2566,30 @@ export default function RepositoryDetailPage() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => window.open(repository.repository?.webUrl, '_blank')}
+                onClick={() =>
+                  window.open(
+                    sanitizeExternalUrl(repository.repository?.webUrl ?? ''),
+                    '_blank',
+                    'noopener,noreferrer'
+                  )
+                }
               >
-                <ExternalLink className="mr-2 h-4 w-4" />
+                <ExternalLink className="me-2 h-4 w-4" />
                 Open in {SCM_PROVIDER_LABELS[repository.scm_provider]}
               </Button>
               <Button variant="outline" size="sm" onClick={handleSync} disabled={isSyncing}>
                 {isSyncing ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="me-2 h-4 w-4 animate-spin" />
                 ) : (
-                  <RefreshCw className="mr-2 h-4 w-4" />
+                  <RefreshCw className="me-2 h-4 w-4" />
                 )}
                 {isSyncing ? 'Syncing...' : 'Sync'}
               </Button>
               <Button size="sm" onClick={handleScan} disabled={isScanning}>
                 {isScanning ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="me-2 h-4 w-4 animate-spin" />
                 ) : (
-                  <Play className="mr-2 h-4 w-4" />
+                  <Play className="me-2 h-4 w-4" />
                 )}
                 {isScanning ? 'Scanning...' : 'Scan Now'}
               </Button>
@@ -2552,18 +2612,42 @@ export default function RepositoryDetailPage() {
                       else toast.error('Failed to copy')
                     }}
                   >
-                    <Copy className="mr-2 h-4 w-4" />
+                    <Copy className="me-2 h-4 w-4" />
                     Copy URL
                   </DropdownMenuItem>
                   <Can permission={Permission.AssetsDelete}>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem className="text-red-500" onClick={handleDelete}>
-                      <Trash2 className="mr-2 h-4 w-4" />
+                    <DropdownMenuItem
+                      className="text-red-500"
+                      onClick={() => setShowDeleteDialog(true)}
+                    >
+                      <Trash2 className="me-2 h-4 w-4" />
                       Delete Repository
                     </DropdownMenuItem>
                   </Can>
                 </DropdownMenuContent>
               </DropdownMenu>
+
+              <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete repository?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will permanently delete &quot;{repository.name}&quot;. This action cannot
+                      be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleDelete}
+                      className="bg-red-500 text-white hover:bg-red-600"
+                    >
+                      Delete
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
           </div>
         </div>
@@ -2583,14 +2667,14 @@ export default function RepositoryDetailPage() {
             <TabsTrigger value="branches" className="gap-2">
               <GitBranch className="h-4 w-4" />
               Branches
-              <Badge variant="secondary" className="ml-1 h-5 px-1.5">
+              <Badge variant="secondary" className="ms-1 h-5 px-1.5">
                 {branches.length}
               </Badge>
             </TabsTrigger>
             <TabsTrigger value="findings" className="gap-2">
               <Shield className="h-4 w-4" />
               Findings
-              <Badge variant="secondary" className="ml-1 h-5 px-1.5">
+              <Badge variant="secondary" className="ms-1 h-5 px-1.5">
                 {findings.length}
               </Badge>
             </TabsTrigger>
@@ -2642,7 +2726,7 @@ export default function RepositoryDetailPage() {
           </TabsContent>
 
           <TabsContent value="settings">
-            <SettingsTab repository={repository} />
+            <SettingsTab repository={repository} onDelete={() => setShowDeleteDialog(true)} />
           </TabsContent>
         </Tabs>
       </Main>

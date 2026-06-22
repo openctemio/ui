@@ -17,7 +17,7 @@
  * URL leaks into access logs. Tickets are useless after redemption.
  */
 
-import { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react'
+import { createContext, useContext, useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import {
   WebSocketClient,
   initWebSocketClient,
@@ -159,11 +159,13 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
     }
   }, [isBootstrapped, connect])
 
-  const value: WebSocketContextValue = {
-    state,
-    isConnected: state === 'connected',
-    reconnect: connect,
-  }
+  // Memoized so the context value identity is stable across renders — this
+  // provider wraps the whole dashboard, so a fresh object each render would
+  // re-render every useWebSocket() consumer.
+  const value = useMemo<WebSocketContextValue>(
+    () => ({ state, isConnected: state === 'connected', reconnect: connect }),
+    [state, connect]
+  )
 
   return <WebSocketContext.Provider value={value}>{children}</WebSocketContext.Provider>
 }

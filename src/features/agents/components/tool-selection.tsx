@@ -195,7 +195,7 @@ export const ToolSelection = memo(function ToolSelection({
           placeholder="Search tools..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-9"
+          className="ps-9"
         />
       </div>
 
@@ -209,7 +209,7 @@ export const ToolSelection = memo(function ToolSelection({
           )}
         </div>
       ) : (
-        <div className="space-y-4 overflow-y-auto pr-2 max-h-[calc(85vh-320px)]">
+        <div className="space-y-4 overflow-y-auto pe-2 max-h-[calc(85vh-320px)]">
           {categoryEntries.map(([category, categoryTools]) => (
             <CategorySection
               key={category}

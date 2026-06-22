@@ -80,6 +80,7 @@ import type { AssetGroup, CreateAssetGroupInput } from '@/features/asset-groups/
 import type { AssetGroupApiFilters } from '@/features/asset-groups/api'
 import { copyToClipboard } from '@/lib/clipboard'
 import { Can, Permission } from '@/lib/permissions'
+import { useCsvExport, type ExportFieldConfig } from '@/hooks/use-csv-export'
 
 // ============================================
 // CONSTANTS
@@ -115,6 +116,19 @@ const DEFAULT_FILTERS: Filters = {
   riskScoreRange: [0, 100],
   hasFindings: null,
 }
+
+const ASSET_GROUP_EXPORT_FIELDS: ExportFieldConfig<AssetGroup>[] = [
+  { header: 'Name', accessor: (g) => g.name },
+  { header: 'Description', accessor: (g) => g.description ?? '' },
+  { header: 'Environment', accessor: (g) => g.environment },
+  { header: 'Criticality', accessor: (g) => g.criticality },
+  { header: 'Business Unit', accessor: (g) => g.businessUnit ?? '' },
+  { header: 'Owner', accessor: (g) => g.owner ?? '' },
+  { header: 'Assets', accessor: (g) => g.assetCount },
+  { header: 'Findings', accessor: (g) => g.findingCount },
+  { header: 'Risk Score', accessor: (g) => g.riskScore },
+  { header: 'Tags', accessor: (g) => (g.tags ?? []).join('; ') },
+]
 
 // ============================================
 // ADD ASSETS DIALOG (Simplified for list page)
@@ -169,7 +183,7 @@ function AddAssetsDialog({
               placeholder="Search assets..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-9"
+              className="ps-9"
             />
           </div>
 
@@ -287,6 +301,27 @@ export default function AssetGroupsPage() {
 
   // Fetch data
   const { data: groups, isLoading, mutate: refreshData } = useAssetGroups({ filters: apiFilters })
+
+  // CSV export of the current (filtered) groups list.
+  const { handleExport: handleExportCsv } = useCsvExport(
+    groups,
+    ASSET_GROUP_EXPORT_FIELDS,
+    'asset-groups'
+  )
+  const handleExportJson = () => {
+    if (!groups.length) {
+      toast.error('No data to export')
+      return
+    }
+    const blob = new Blob([JSON.stringify(groups, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `asset-groups-${new Date().toISOString().slice(0, 10)}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+    toast.success('Exported successfully')
+  }
 
   // Get all assets for create dialog (lazy: only fetch when dialog is open)
   const { assets: allAssets } = useAssets({ pageSize: 100, skip: !isCreateOpen })
@@ -484,42 +519,42 @@ export default function AssetGroupsPage() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => setViewGroup(group)}>
-                <Eye className="mr-2 h-4 w-4" />
+                <Eye className="me-2 h-4 w-4" />
                 Quick View
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => router.push(`/asset-groups/${group.id}`)}>
-                <ExternalLink className="mr-2 h-4 w-4" />
+                <ExternalLink className="me-2 h-4 w-4" />
                 Open Full Page
               </DropdownMenuItem>
               <Can permission={Permission.AssetGroupsWrite}>
                 <DropdownMenuItem onClick={() => setEditGroup(group)}>
-                  <Pencil className="mr-2 h-4 w-4" />
+                  <Pencil className="me-2 h-4 w-4" />
                   Edit
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setAddAssetsGroup(group)}>
-                  <Plus className="mr-2 h-4 w-4" />
+                  <Plus className="me-2 h-4 w-4" />
                   Add Assets
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => router.push(`/asset-groups/${group.id}?tab=assets`)}
                 >
-                  <Package className="mr-2 h-4 w-4" />
+                  <Package className="me-2 h-4 w-4" />
                   Manage Assets
                 </DropdownMenuItem>
               </Can>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => handleCopyId(group.id)}>
-                <Copy className="mr-2 h-4 w-4" />
+                <Copy className="me-2 h-4 w-4" />
                 Copy ID
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleCopyLink(group.id)}>
-                <Link className="mr-2 h-4 w-4" />
+                <Link className="me-2 h-4 w-4" />
                 Copy Link
               </DropdownMenuItem>
               <Can permission={Permission.AssetGroupsDelete}>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem className="text-red-400" onClick={() => setDeleteGroup(group)}>
-                  <Trash2 className="mr-2 h-4 w-4" />
+                  <Trash2 className="me-2 h-4 w-4" />
                   Delete
                 </DropdownMenuItem>
               </Can>
@@ -539,33 +574,21 @@ export default function AssetGroupsPage() {
         >
           <div className="flex flex-wrap items-center gap-2">
             <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isLoading}>
-              <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`me-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
               Refresh
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm">
-                  <Download className="mr-2 h-4 w-4" />
+                  <Download className="me-2 h-4 w-4" />
                   Export
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem
-                  onClick={() =>
-                    toast.success('Exporting as CSV...', {
-                      description: 'Your file will be downloaded shortly',
-                    })
-                  }
-                >
+                <DropdownMenuItem onClick={handleExportCsv} disabled={groups.length === 0}>
                   Export as CSV
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() =>
-                    toast.success('Exporting as JSON...', {
-                      description: 'Your file will be downloaded shortly',
-                    })
-                  }
-                >
+                <DropdownMenuItem onClick={handleExportJson} disabled={groups.length === 0}>
                   Export as JSON
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -575,10 +598,10 @@ export default function AssetGroupsPage() {
             <Popover open={isFilterOpen} onOpenChange={setIsFilterOpen}>
               <PopoverTrigger asChild>
                 <Button variant="outline" size="sm" className="relative">
-                  <Filter className="mr-2 h-4 w-4" />
+                  <Filter className="me-2 h-4 w-4" />
                   Filters
                   {activeFilterCount > 0 && (
-                    <Badge className="ml-2 h-5 w-5 rounded-full p-0 text-xs">
+                    <Badge className="ms-2 h-5 w-5 rounded-full p-0 text-xs">
                       {activeFilterCount}
                     </Badge>
                   )}
@@ -707,7 +730,7 @@ export default function AssetGroupsPage() {
 
             <Can permission={Permission.AssetGroupsWrite} mode="disable">
               <Button size="sm" onClick={() => setIsCreateOpen(true)}>
-                <Plus className="mr-2 h-4 w-4" />
+                <Plus className="me-2 h-4 w-4" />
                 New Group
               </Button>
             </Can>
@@ -769,7 +792,7 @@ export default function AssetGroupsPage() {
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" size="sm">
-                      <Tags className="mr-2 h-4 w-4" />
+                      <Tags className="me-2 h-4 w-4" />
                       Criticality
                     </Button>
                   </DropdownMenuTrigger>
@@ -779,7 +802,7 @@ export default function AssetGroupsPage() {
                         key={crit}
                         onClick={() => handleBulkAction('change-criticality', crit)}
                       >
-                        <Badge className={`mr-2 ${CRITICALITY_BADGE[crit]}`}>{crit}</Badge>
+                        <Badge className={`me-2 ${CRITICALITY_BADGE[crit]}`}>{crit}</Badge>
                       </DropdownMenuItem>
                     ))}
                   </DropdownMenuContent>
@@ -788,7 +811,7 @@ export default function AssetGroupsPage() {
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" size="sm">
-                      <SlidersHorizontal className="mr-2 h-4 w-4" />
+                      <SlidersHorizontal className="me-2 h-4 w-4" />
                       Environment
                     </Button>
                   </DropdownMenuTrigger>
@@ -812,7 +835,7 @@ export default function AssetGroupsPage() {
                   className="text-red-500 hover:text-red-600"
                   onClick={() => setBulkDeleteConfirm(true)}
                 >
-                  <Trash2 className="mr-2 h-4 w-4" />
+                  <Trash2 className="me-2 h-4 w-4" />
                   Delete
                 </Button>
                 <Button variant="outline" size="sm" onClick={() => setSelectedIds([])}>

@@ -49,7 +49,7 @@ import {
   getCurrentSession,
   getOtherSessions,
 } from '@/features/account'
-import { formatDistanceToNow } from 'date-fns'
+import { formatRelative } from '@/lib/format-date'
 
 export default function SecurityPage() {
   const { profile } = useProfile()
@@ -236,7 +236,7 @@ export default function SecurityPage() {
             </div>
             {otherSessions.length > 0 && (
               <Button variant="outline" size="sm" onClick={() => setShowRevokeAllDialog(true)}>
-                <LogOut className="h-4 w-4 mr-2" />
+                <LogOut className="h-4 w-4 me-2" />
                 Sign Out All Others
               </Button>
             )}
@@ -281,10 +281,7 @@ export default function SecurityPage() {
                           {currentSession.location && ` • ${currentSession.location}`}
                         </p>
                         <p className="text-xs text-muted-foreground mt-1">
-                          Last active:{' '}
-                          {formatDistanceToNow(new Date(currentSession.last_active_at), {
-                            addSuffix: true,
-                          })}
+                          Last active: {formatRelative(currentSession.last_active_at)}
                         </p>
                       </div>
                     </div>
@@ -315,10 +312,7 @@ export default function SecurityPage() {
                           {session.location && ` • ${session.location}`}
                         </p>
                         <p className="text-xs text-muted-foreground mt-1">
-                          Last active:{' '}
-                          {formatDistanceToNow(new Date(session.last_active_at), {
-                            addSuffix: true,
-                          })}
+                          Last active: {formatRelative(session.last_active_at)}
                         </p>
                       </div>
                     </div>
@@ -385,7 +379,7 @@ export default function SecurityPage() {
               Cancel
             </Button>
             <Button onClick={handleChangePassword} disabled={isChanging}>
-              {isChanging && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isChanging && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
               Change Password
             </Button>
           </DialogFooter>
@@ -411,7 +405,7 @@ export default function SecurityPage() {
               disabled={isRevoking}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {isRevoking && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isRevoking && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
               Revoke
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -434,7 +428,7 @@ export default function SecurityPage() {
               disabled={isRevokingAll}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {isRevokingAll && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isRevokingAll && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
               Sign Out All
             </AlertDialogAction>
           </AlertDialogFooter>

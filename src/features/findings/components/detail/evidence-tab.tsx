@@ -190,7 +190,7 @@ export function EvidenceTab({ evidence, finding }: EvidenceTabProps) {
           <div className="bg-muted/30 rounded-lg border p-4">
             <div className="flex aspect-video items-center justify-center rounded bg-neutral-800/50">
               <ImageIcon className="text-muted-foreground h-12 w-12" />
-              <span className="text-muted-foreground ml-2 text-sm">[Screenshot Preview]</span>
+              <span className="text-muted-foreground ms-2 text-sm">[Screenshot Preview]</span>
             </div>
           </div>
         )
@@ -200,7 +200,7 @@ export function EvidenceTab({ evidence, finding }: EvidenceTabProps) {
           <div className="bg-muted/30 rounded-lg border p-4">
             <div className="flex aspect-video items-center justify-center rounded bg-neutral-800/50">
               <Video className="text-muted-foreground h-12 w-12" />
-              <span className="text-muted-foreground ml-2 text-sm">[Video Preview]</span>
+              <span className="text-muted-foreground ms-2 text-sm">[Video Preview]</span>
             </div>
           </div>
         )
@@ -252,11 +252,11 @@ export function EvidenceTab({ evidence, finding }: EvidenceTabProps) {
               >
                 {isExpanded ? (
                   <>
-                    <ChevronUp className="mr-1 h-3 w-3" /> Show Less
+                    <ChevronUp className="me-1 h-3 w-3" /> Show Less
                   </>
                 ) : (
                   <>
-                    <ChevronDown className="mr-1 h-3 w-3" /> Show All {lines.length} Lines
+                    <ChevronDown className="me-1 h-3 w-3" /> Show All {lines.length} Lines
                   </>
                 )}
               </Button>
@@ -322,7 +322,7 @@ export function EvidenceTab({ evidence, finding }: EvidenceTabProps) {
           No evidence has been attached to this finding yet.
         </p>
         <Button size="sm">
-          <Plus className="mr-2 h-4 w-4" />
+          <Plus className="me-2 h-4 w-4" />
           Add Evidence
         </Button>
       </div>
@@ -360,7 +360,7 @@ export function EvidenceTab({ evidence, finding }: EvidenceTabProps) {
                           `-${finding.endLine}`}
                       </span>
                     )}
-                    <ExternalLink className="h-3 w-3 shrink-0 ml-1" />
+                    <ExternalLink className="h-3 w-3 shrink-0 ms-1" />
                   </a>
                 ) : (
                   <p className="text-sm font-mono text-slate-300 break-all">
@@ -444,7 +444,7 @@ export function EvidenceTab({ evidence, finding }: EvidenceTabProps) {
                 Evidence ({evidence.length})
               </h3>
               <Button size="sm" variant="outline">
-                <Plus className="mr-2 h-4 w-4" />
+                <Plus className="me-2 h-4 w-4" />
                 Add Evidence
               </Button>
             </div>
@@ -522,7 +522,7 @@ export function EvidenceTab({ evidence, finding }: EvidenceTabProps) {
                             key={frameIndex}
                             className="flex items-start gap-2 text-sm font-mono"
                           >
-                            <span className="text-muted-foreground w-6 text-right">
+                            <span className="text-muted-foreground w-6 text-end">
                               {frameIndex + 1}.
                             </span>
                             <div className="flex-1 min-w-0">
@@ -539,7 +539,7 @@ export function EvidenceTab({ evidence, finding }: EvidenceTabProps) {
                                 </span>
                               )}
                               {frame.module && (
-                                <span className="text-muted-foreground ml-2">({frame.module})</span>
+                                <span className="text-muted-foreground ms-2">({frame.module})</span>
                               )}
                             </div>
                           </div>
@@ -554,11 +554,11 @@ export function EvidenceTab({ evidence, finding }: EvidenceTabProps) {
                         >
                           {isExpanded ? (
                             <>
-                              <ChevronUp className="mr-1 h-3 w-3" /> Show Less
+                              <ChevronUp className="me-1 h-3 w-3" /> Show Less
                             </>
                           ) : (
                             <>
-                              <ChevronDown className="mr-1 h-3 w-3" /> Show All {frames.length}{' '}
+                              <ChevronDown className="me-1 h-3 w-3" /> Show All {frames.length}{' '}
                               Frames
                             </>
                           )}

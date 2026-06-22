@@ -103,11 +103,11 @@ export function DastPanel({ finding }: DastPanelProps) {
               >
                 {expanded ? (
                   <>
-                    <ChevronUp className="h-3 w-3 mr-1" /> Collapse
+                    <ChevronUp className="h-3 w-3 me-1" /> Collapse
                   </>
                 ) : (
                   <>
-                    <ChevronDown className="h-3 w-3 mr-1" /> Expand
+                    <ChevronDown className="h-3 w-3 me-1" /> Expand
                   </>
                 )}
               </Button>

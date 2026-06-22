@@ -4,7 +4,7 @@ import { useMemo } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Activity, Search, Bug, CheckCircle, Timer, BarChart3, Clock } from 'lucide-react'
-import { formatDistanceToNow } from 'date-fns'
+import { formatRelative } from '@/lib/format-date'
 
 import { useAgentSessionStats, useActiveAgentSession } from '@/lib/api/agent-hooks'
 
@@ -72,7 +72,7 @@ export function AgentAnalytics({ agentId, showActiveSession = true }: AgentAnaly
             Active Session
           </Badge>
           <span className="text-xs text-muted-foreground">
-            Started {formatDistanceToNow(new Date(activeSession.started_at), { addSuffix: true })}
+            Started {formatRelative(activeSession.started_at)}
           </span>
         </div>
       )}

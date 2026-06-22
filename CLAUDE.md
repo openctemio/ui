@@ -4,9 +4,12 @@
 
 ## Project Overview
 
-Next.js 16 dashboard with i18n (en/vi/ar), RTL support, Zustand auth, and shadcn/ui.
+Next.js 16 dashboard with locale/RTL **direction** support (en/vi/ar locales are
+detected and drive `dir`; a translation layer is NOT yet wired — UI strings are
+currently English), Zustand auth, and shadcn/ui.
 
-**Status**: Production-ready | TypeScript strict | React Compiler | Turbopack
+**Status**: Production-ready | TypeScript strict | Turbopack
+(React Compiler is NOT currently enabled — see Tech Stack)
 
 **Multi-tenant**: Backend enforces `WHERE tenant_id = ?` on all queries. JWT includes tenant context automatically. Never attempt cross-tenant API access.
 
@@ -15,7 +18,11 @@ Next.js 16 dashboard with i18n (en/vi/ar), RTL support, Zustand auth, and shadcn
 ## Tech Stack
 
 - **Next.js 16** (App Router, Turbopack, Server Components, `proxy.ts` replaces `middleware.ts`)
-- **React 19** with Server Components + React Compiler (no manual memoization)
+- **React 19** with Server Components. NOTE: the React Compiler is **not enabled**
+  yet (`next.config.ts` leaves it off; `babel-plugin-react-compiler` is an unused
+  devDependency). Manual memoization (`useMemo`/`useCallback`) is therefore
+  **load-bearing — do not strip it**. To enable the compiler, wire `reactCompiler`
+  in `next.config.ts` and verify the build, then memoization becomes optional.
 - **TypeScript** strict mode, no `any` (use `unknown`)
 - **shadcn/ui** + Tailwind CSS + CVA + `cn()` utility
 - **Zustand** for global state (auth), **React Context** for UI state (theme, direction, layout)

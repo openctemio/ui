@@ -230,7 +230,7 @@ export function EditConnectionDialog({
                       <Input
                         type={showToken ? 'text' : 'password'}
                         placeholder="Leave empty to keep current token"
-                        className="pr-10"
+                        className="pe-10"
                         {...field}
                       />
                       <Button
@@ -261,7 +261,7 @@ export function EditConnectionDialog({
                 Cancel
               </Button>
               <Button type="submit" disabled={isSaving}>
-                {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                {isSaving ? <Loader2 className="me-2 h-4 w-4 animate-spin" /> : null}
                 Save Changes
               </Button>
             </DialogFooter>

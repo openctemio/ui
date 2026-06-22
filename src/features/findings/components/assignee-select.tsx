@@ -177,7 +177,7 @@ export function AssigneeSelect({
                   <>
                     <CommandGroup>
                       <CommandItem onSelect={handleUnassign} className="text-muted-foreground">
-                        <User className="mr-2 h-4 w-4" />
+                        <User className="me-2 h-4 w-4" />
                         Unassign
                       </CommandItem>
                     </CommandGroup>

@@ -406,14 +406,14 @@ export default function PreferencesPage() {
       {/* Actions */}
       <div className="flex justify-between">
         <Button variant="outline" onClick={handleReset}>
-          <RotateCcw className="mr-2 h-4 w-4" />
+          <RotateCcw className="me-2 h-4 w-4" />
           Reset to Defaults
         </Button>
         <Button onClick={handleSave} disabled={!hasChanges || isUpdating}>
           {isUpdating ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            <Loader2 className="me-2 h-4 w-4 animate-spin" />
           ) : (
-            <Save className="mr-2 h-4 w-4" />
+            <Save className="me-2 h-4 w-4" />
           )}
           {isUpdating ? 'Saving...' : 'Save Preferences'}
         </Button>

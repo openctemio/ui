@@ -102,6 +102,8 @@ interface BackendAsset {
   primary_owner?: { id: string; type: string; name: string; email?: string }
   first_seen: string
   last_seen: string
+  lifecycle_paused_until?: string | null
+  manual_status_override?: boolean
   created_at: string
   updated_at: string
   repository?: BackendRepositoryExtension
@@ -117,7 +119,7 @@ function transformAsset(backend: BackendAsset): Asset {
     category: (backend.category as AssetCategory) || undefined,
     provider: backend.provider,
     criticality: backend.criticality as Criticality,
-    status: backend.status as 'active' | 'inactive' | 'archived',
+    status: backend.status as Asset['status'],
     description: backend.description,
     ownerRef: backend.owner_ref,
     scope: backend.scope as AssetScope,
@@ -138,6 +140,8 @@ function transformAsset(backend: BackendAsset): Asset {
     lastSeen: backend.last_seen,
     createdAt: backend.created_at,
     updatedAt: backend.updated_at,
+    lifecyclePausedUntil: backend.lifecycle_paused_until ?? null,
+    manualStatusOverride: backend.manual_status_override ?? false,
     repository: backend.repository ? transformRepositoryExtension(backend.repository) : undefined,
   }
 }
@@ -443,6 +447,10 @@ export async function createAsset(input: CreateAssetInput): Promise<Asset> {
     exposure: input.exposure || 'unknown',
     owner_ref: input.ownerRef,
     tags: input.tags,
+    // Per-type fields collected by the form live in `metadata`; the backend
+    // stores them under `properties`. Without this they were silently dropped.
+    properties:
+      input.metadata && Object.keys(input.metadata).length > 0 ? input.metadata : undefined,
   })
   return transformAsset(response)
 }
@@ -459,6 +467,10 @@ export async function updateAsset(assetId: string, input: UpdateAssetInput): Pro
     exposure: input.exposure,
     owner_ref: input.ownerRef,
     tags: input.tags,
+    // Per-type form fields live in `metadata`; backend merges them into
+    // `properties` (preserving keys like is_crown_jewel). Previously dropped.
+    properties:
+      input.metadata && Object.keys(input.metadata).length > 0 ? input.metadata : undefined,
   })
   return transformAsset(response)
 }

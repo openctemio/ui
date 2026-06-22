@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { csrfFetch } from '@/lib/api/client'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -336,7 +337,7 @@ export function EditNotificationDialog({
         }
       }
 
-      const response = await fetch(`/api/v1/integrations/${integration.id}/notification`, {
+      const response = await csrfFetch(`/api/v1/integrations/${integration.id}/notification`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -393,7 +394,7 @@ export function EditNotificationDialog({
 
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0">
           {/* Scrollable content area */}
-          <div className="space-y-4 py-4 overflow-y-auto flex-1 pr-1">
+          <div className="space-y-4 py-4 overflow-y-auto flex-1 pe-1">
             <div className="space-y-2">
               <Label htmlFor="name">Name</Label>
               <Input id="name" placeholder="e.g., Security Alerts" {...register('name')} />
@@ -764,7 +765,7 @@ export function EditNotificationDialog({
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isSubmitting && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
               Save Changes
             </Button>
           </div>

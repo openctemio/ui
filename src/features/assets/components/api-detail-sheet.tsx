@@ -164,7 +164,7 @@ export function ApiDetailSheet({
           {/* Quick Actions */}
           <div className="flex flex-wrap gap-2 mt-4">
             <Button size="sm" variant="secondary" onClick={onEdit}>
-              <Pencil className="mr-2 h-4 w-4" />
+              <Pencil className="me-2 h-4 w-4" />
               Edit
             </Button>
             {quickActions}

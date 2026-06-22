@@ -89,7 +89,7 @@ export function CreatableSelect({
           )}
         >
           <span className="truncate">{value ? selectedLabel : placeholder}</span>
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          <ChevronsUpDown className="ms-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
       <PopoverContent
@@ -127,7 +127,7 @@ export function CreatableSelect({
                 >
                   <Check
                     className={cn(
-                      'mr-2 h-4 w-4',
+                      'me-2 h-4 w-4',
                       value === option.value ? 'opacity-100' : 'opacity-0'
                     )}
                   />
@@ -140,7 +140,7 @@ export function CreatableSelect({
                 <CommandSeparator />
                 <CommandGroup>
                   <CommandItem onSelect={handleCreate}>
-                    <Plus className="mr-2 h-4 w-4" />
+                    <Plus className="me-2 h-4 w-4" />
                     Create &quot;{search.trim()}&quot;
                   </CommandItem>
                 </CommandGroup>

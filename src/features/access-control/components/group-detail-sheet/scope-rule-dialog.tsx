@@ -276,7 +276,7 @@ export function ScopeRuleDialog({
                 )}
               </div>
               {matchAssetGroupIds.length > 0 && (
-                <p className="text-xs text-muted-foreground text-right">
+                <p className="text-xs text-muted-foreground text-end">
                   {matchAssetGroupIds.length} group{matchAssetGroupIds.length !== 1 ? 's' : ''}{' '}
                   selected
                 </p>
@@ -323,11 +323,11 @@ export function ScopeRuleDialog({
           </Button>
           <Button onClick={handleSubmit} disabled={isSubmitting || !isValid}>
             {isSubmitting ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <Loader2 className="me-2 h-4 w-4 animate-spin" />
             ) : isEditing ? (
-              <Save className="mr-2 h-4 w-4" />
+              <Save className="me-2 h-4 w-4" />
             ) : (
-              <Plus className="mr-2 h-4 w-4" />
+              <Plus className="me-2 h-4 w-4" />
             )}
             {isEditing ? 'Save Changes' : 'Create Rule'}
           </Button>

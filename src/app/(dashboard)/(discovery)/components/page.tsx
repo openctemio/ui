@@ -62,7 +62,7 @@ export default function ComponentsOverviewPage() {
         >
           <Link href="/components/sbom-export">
             <Button>
-              <Download className="mr-2 h-4 w-4" />
+              <Download className="me-2 h-4 w-4" />
               Export SBOM
             </Button>
           </Link>
@@ -175,7 +175,7 @@ export default function ComponentsOverviewPage() {
               <Link href="/components/vulnerable">
                 <Button variant="ghost" size="sm">
                   View All
-                  <ArrowRight className="ml-2 h-4 w-4" />
+                  <ArrowRight className="ms-2 h-4 w-4" />
                 </Button>
               </Link>
             </CardHeader>
@@ -245,7 +245,7 @@ export default function ComponentsOverviewPage() {
               <Link href="/components/ecosystems">
                 <Button variant="ghost" size="sm">
                   View All
-                  <ArrowRight className="ml-2 h-4 w-4" />
+                  <ArrowRight className="ms-2 h-4 w-4" />
                 </Button>
               </Link>
             </CardHeader>
@@ -304,7 +304,7 @@ export default function ComponentsOverviewPage() {
               <Link href="/components/licenses">
                 <Button variant="ghost" size="sm">
                   View All
-                  <ArrowRight className="ml-2 h-4 w-4" />
+                  <ArrowRight className="ms-2 h-4 w-4" />
                 </Button>
               </Link>
             </CardHeader>
@@ -371,16 +371,16 @@ export default function ComponentsOverviewPage() {
               <div className="grid gap-3">
                 <Link href="/components/all">
                   <Button variant="outline" className="w-full justify-start">
-                    <Package className="mr-2 h-4 w-4" />
+                    <Package className="me-2 h-4 w-4" />
                     View All Components
                   </Button>
                 </Link>
                 <Link href="/components/vulnerable">
                   <Button variant="outline" className="w-full justify-start">
-                    <ShieldAlert className="mr-2 h-4 w-4" />
+                    <ShieldAlert className="me-2 h-4 w-4" />
                     Review Vulnerable Components
                     {vulnerableCount > 0 && (
-                      <Badge variant="destructive" className="ml-auto">
+                      <Badge variant="destructive" className="ms-auto">
                         {vulnerableCount}
                       </Badge>
                     )}
@@ -388,10 +388,10 @@ export default function ComponentsOverviewPage() {
                 </Link>
                 <Link href="/components/licenses">
                   <Button variant="outline" className="w-full justify-start">
-                    <Scale className="mr-2 h-4 w-4" />
+                    <Scale className="me-2 h-4 w-4" />
                     License Compliance Report
                     {licenseRiskHigh > 0 && (
-                      <Badge className="ml-auto bg-orange-500/15 text-orange-600">
+                      <Badge className="ms-auto bg-orange-500/15 text-orange-600">
                         {licenseRiskHigh}
                       </Badge>
                     )}
@@ -399,7 +399,7 @@ export default function ComponentsOverviewPage() {
                 </Link>
                 <Link href="/components/sbom-export">
                   <Button variant="outline" className="w-full justify-start">
-                    <Download className="mr-2 h-4 w-4" />
+                    <Download className="me-2 h-4 w-4" />
                     Export SBOM
                   </Button>
                 </Link>
@@ -425,7 +425,7 @@ export default function ComponentsOverviewPage() {
               <Link href="/components/vulnerable?cisaKev=true">
                 <Button variant="destructive">
                   View KEV Components
-                  <ArrowRight className="ml-2 h-4 w-4" />
+                  <ArrowRight className="ms-2 h-4 w-4" />
                 </Button>
               </Link>
             </CardContent>

@@ -72,7 +72,7 @@ export function MembersTab({
       <div className="flex items-center justify-between mb-4">
         <h4 className="text-sm font-medium">Group Members ({totalCount})</h4>
         <Button size="sm" onClick={onAddMember}>
-          <UserPlus className="mr-2 h-4 w-4" />
+          <UserPlus className="me-2 h-4 w-4" />
           Add Member
         </Button>
       </div>
@@ -81,7 +81,7 @@ export function MembersTab({
         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
         <Input
           placeholder="Search members..."
-          className="pl-9"
+          className="ps-9"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
         />
@@ -125,7 +125,7 @@ export function MembersTab({
                     <p className="text-xs text-muted-foreground">
                       {email}
                       {(member.added_by_name || member.added_by) && (
-                        <span className="ml-1 text-xs text-muted-foreground/60">
+                        <span className="ms-1 text-xs text-muted-foreground/60">
                           • Added by {member.added_by_name || member.added_by}
                         </span>
                       )}
@@ -134,9 +134,9 @@ export function MembersTab({
                 </div>
                 <div className="flex items-center gap-2">
                   <Badge className={`${roleConfig.bgColor} ${roleConfig.color} border-0 text-xs`}>
-                    {member.role === 'owner' && <Crown className="h-3 w-3 mr-1" />}
-                    {member.role === 'lead' && <Crown className="h-3 w-3 mr-1" />}
-                    {member.role === 'member' && <User className="h-3 w-3 mr-1" />}
+                    {member.role === 'owner' && <Crown className="h-3 w-3 me-1" />}
+                    {member.role === 'lead' && <Crown className="h-3 w-3 me-1" />}
+                    {member.role === 'member' && <User className="h-3 w-3 me-1" />}
                     {roleConfig.label}
                   </Badge>
                   <DropdownMenu>
@@ -152,7 +152,7 @@ export function MembersTab({
                           onRemoveMember(member.user_id || member.user?.id || '', name)
                         }
                       >
-                        <Trash2 className="mr-2 h-4 w-4" />
+                        <Trash2 className="me-2 h-4 w-4" />
                         Remove
                       </DropdownMenuItem>
                     </DropdownMenuContent>

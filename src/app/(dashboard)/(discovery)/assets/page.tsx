@@ -237,7 +237,7 @@ export default function AssetsOverviewPage() {
         >
           <Link href="/attack-surface">
             <Button>
-              <Target className="mr-2 h-4 w-4" />
+              <Target className="me-2 h-4 w-4" />
               Attack Surface
             </Button>
           </Link>
@@ -338,7 +338,7 @@ export default function AssetsOverviewPage() {
               <div className="flex flex-wrap gap-2 justify-center">
                 <Link href="/scans">
                   <Button>
-                    <Target className="mr-2 h-4 w-4" />
+                    <Target className="me-2 h-4 w-4" />
                     Run Discovery Scan
                   </Button>
                 </Link>
@@ -479,28 +479,28 @@ export default function AssetsOverviewPage() {
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <Link href="/scans">
                 <Button variant="outline" className="w-full justify-start">
-                  <Target className="mr-2 h-4 w-4" />
+                  <Target className="me-2 h-4 w-4" />
                   Run Discovery Scan
                 </Button>
               </Link>
               <Link href="/asset-groups">
                 <Button variant="outline" className="w-full justify-start">
-                  <Container className="mr-2 h-4 w-4" />
+                  <Container className="me-2 h-4 w-4" />
                   Manage Asset Groups
                 </Button>
               </Link>
               <Link href="/scope-config">
                 <Button variant="outline" className="w-full justify-start">
-                  <Target className="mr-2 h-4 w-4" />
+                  <Target className="me-2 h-4 w-4" />
                   Configure Scope
                 </Button>
               </Link>
               <Link href="/findings">
                 <Button variant="outline" className="w-full justify-start">
-                  <AlertTriangle className="mr-2 h-4 w-4" />
+                  <AlertTriangle className="me-2 h-4 w-4" />
                   View All Findings
                   {totalFindings > 0 && (
-                    <Badge variant="secondary" className="ml-auto">
+                    <Badge variant="secondary" className="ms-auto">
                       {totalFindings}
                     </Badge>
                   )}

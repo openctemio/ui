@@ -46,6 +46,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { Plus, Trash2, Lock } from 'lucide-react'
 import { get, post, del } from '@/lib/api/client'
+import { Can, Permission } from '@/lib/permissions'
 import { toast } from 'sonner'
 
 interface AttackerProfile {
@@ -162,10 +163,12 @@ export default function AttackerProfilesPage() {
           title="Attacker Profiles"
           description="Define threat actor profiles for exposure assessment"
         >
-          <Button size="sm" onClick={() => setIsCreateOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            New Profile
-          </Button>
+          <Can permission={Permission.AttackerProfilesWrite}>
+            <Button size="sm" onClick={() => setIsCreateOpen(true)}>
+              <Plus className="me-2 h-4 w-4" />
+              New Profile
+            </Button>
+          </Can>
         </PageHeader>
 
         <Card>
@@ -191,7 +194,7 @@ export default function AttackerProfilesPage() {
                     <TableHead>Type</TableHead>
                     <TableHead>Capabilities</TableHead>
                     <TableHead>Default</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead className="text-end">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -252,16 +255,18 @@ export default function AttackerProfilesPage() {
                           <span className="text-muted-foreground text-sm">Custom</span>
                         )}
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-end">
                         {!profile.is_default && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setDeleteProfile(profile)}
-                            className="text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          <Can permission={Permission.AttackerProfilesWrite}>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setDeleteProfile(profile)}
+                              className="text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </Can>
                         )}
                       </TableCell>
                     </TableRow>

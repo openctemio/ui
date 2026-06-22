@@ -14,7 +14,7 @@ import {
   useReactTable,
 } from '@tanstack/react-table'
 import { Main } from '@/components/layout'
-import { PageHeader, StatusBadge } from '@/features/shared'
+import { PageHeader, StatusBadge, RunStatusBadge } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -124,7 +124,6 @@ import type {
   ScheduleType,
 } from '@/lib/api/scan-types'
 import {
-  PlatformUsageCard,
   NewScanDialog,
   CloneScanDialog,
   EditScanDialog,
@@ -179,26 +178,6 @@ const runStatusFilters: { value: RunStatusFilter; label: string }[] = [
 ]
 
 // Map API status to UI-friendly status for StatusBadge
-function mapSessionStatusToUI(
-  status: ScanRunStatus
-): 'active' | 'completed' | 'pending' | 'failed' | 'inactive' {
-  switch (status) {
-    case 'running':
-      return 'active'
-    case 'completed':
-      return 'completed'
-    case 'queued':
-    case 'pending':
-      return 'pending'
-    case 'failed':
-    case 'timeout':
-    case 'canceled':
-      return 'failed'
-    default:
-      return 'inactive'
-  }
-}
-
 // ============================================
 // UTILS
 // ============================================
@@ -260,11 +239,11 @@ export default function ScansPage() {
           <Can permission={Permission.ScansWrite} mode="disable">
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => setQuickScanOpen(true)}>
-                <Zap className="mr-2 h-4 w-4" />
+                <Zap className="me-2 h-4 w-4" />
                 Quick Scan
               </Button>
               <Button onClick={() => setDialogOpen(true)}>
-                <Plus className="mr-2 h-4 w-4" />
+                <Plus className="me-2 h-4 w-4" />
                 New Scan
               </Button>
             </div>
@@ -401,41 +380,41 @@ function ConfigActionsCell({ config, onAction }: ConfigActionsCellProps) {
       <DropdownMenuContent align="end">
         <DropdownMenuItem asChild>
           <Link href={`/scans/${config.id}`} className="flex items-center">
-            <Eye className="mr-2 h-4 w-4" />
+            <Eye className="me-2 h-4 w-4" />
             View Details
           </Link>
         </DropdownMenuItem>
         <Can permission={Permission.ScansWrite}>
           <DropdownMenuItem onClick={() => onAction('edit', config)}>
-            <Pencil className="mr-2 h-4 w-4" />
+            <Pencil className="me-2 h-4 w-4" />
             Edit
           </DropdownMenuItem>
         </Can>
         <DropdownMenuItem onClick={() => onAction('trigger', config)}>
-          <Play className="mr-2 h-4 w-4" />
+          <Play className="me-2 h-4 w-4" />
           Trigger Scan
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => onAction('clone', config)}>
-          <Copy className="mr-2 h-4 w-4" />
+          <Copy className="me-2 h-4 w-4" />
           Clone
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         {config.status === 'active' && (
           <DropdownMenuItem onClick={() => onAction('pause', config)}>
-            <Pause className="mr-2 h-4 w-4" />
+            <Pause className="me-2 h-4 w-4" />
             Pause
           </DropdownMenuItem>
         )}
         {config.status === 'paused' && (
           <DropdownMenuItem onClick={() => onAction('activate', config)}>
-            <Play className="mr-2 h-4 w-4" />
+            <Play className="me-2 h-4 w-4" />
             Resume
           </DropdownMenuItem>
         )}
         <Can permission={Permission.ScansDelete}>
           <DropdownMenuSeparator />
           <DropdownMenuItem className="text-red-400" onClick={() => onAction('delete', config)}>
-            <Trash2 className="mr-2 h-4 w-4" />
+            <Trash2 className="me-2 h-4 w-4" />
             Delete
           </DropdownMenuItem>
         </Can>
@@ -713,10 +692,10 @@ function ConfigurationsTab() {
           <Button
             variant="ghost"
             onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-            className="-ml-4"
+            className="-ms-4"
           >
             Name
-            <ArrowUpDown className="ml-2 h-4 w-4" />
+            <ArrowUpDown className="ms-2 h-4 w-4" />
           </Button>
         ),
         cell: ({ row }) => (
@@ -765,10 +744,10 @@ function ConfigurationsTab() {
           <Button
             variant="ghost"
             onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-            className="-ml-4"
+            className="-ms-4"
           >
             Runs
-            <ArrowUpDown className="ml-2 h-4 w-4" />
+            <ArrowUpDown className="ms-2 h-4 w-4" />
           </Button>
         ),
         cell: ({ row }) => <span className="text-sm">{row.original.total_runs}</span>,
@@ -779,10 +758,10 @@ function ConfigurationsTab() {
           <Button
             variant="ghost"
             onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-            className="-ml-4"
+            className="-ms-4"
           >
             Results
-            <ArrowUpDown className="ml-2 h-4 w-4" />
+            <ArrowUpDown className="ms-2 h-4 w-4" />
           </Button>
         ),
         cell: ({ row }) => {
@@ -983,7 +962,7 @@ function ConfigurationsTab() {
                 placeholder="Search configurations..."
                 value={globalFilter}
                 onChange={(e) => setGlobalFilter(e.target.value)}
-                className="pl-9"
+                className="ps-9"
               />
             </div>
 
@@ -1058,7 +1037,7 @@ function ConfigurationsTab() {
                           placeholder="Filter by tag..."
                           value={tagFilter}
                           onChange={(e) => setTagFilter(e.target.value)}
-                          className="pl-8 h-8 text-sm"
+                          className="ps-8 h-8 text-sm"
                         />
                       </div>
                     </div>
@@ -1072,7 +1051,7 @@ function ConfigurationsTab() {
                     <Button variant="outline" size="sm" disabled={isBulkOperating}>
                       {isBulkOperating ? (
                         <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          <Loader2 className="me-2 h-4 w-4 animate-spin" />
                           Processing...
                         </>
                       ) : (
@@ -1082,15 +1061,15 @@ function ConfigurationsTab() {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem onClick={handleBulkActivate} disabled={isBulkOperating}>
-                      <Play className="mr-2 h-4 w-4" />
+                      <Play className="me-2 h-4 w-4" />
                       Activate Selected
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={handleBulkPause} disabled={isBulkOperating}>
-                      <Pause className="mr-2 h-4 w-4" />
+                      <Pause className="me-2 h-4 w-4" />
                       Pause Selected
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={handleBulkDisable} disabled={isBulkOperating}>
-                      <XCircle className="mr-2 h-4 w-4" />
+                      <XCircle className="me-2 h-4 w-4" />
                       Disable Selected
                     </DropdownMenuItem>
                     <Can permission={Permission.ScansDelete}>
@@ -1100,7 +1079,7 @@ function ConfigurationsTab() {
                         onClick={handleBulkDelete}
                         disabled={isBulkOperating}
                       >
-                        <Trash2 className="mr-2 h-4 w-4" />
+                        <Trash2 className="me-2 h-4 w-4" />
                         Delete Selected
                       </DropdownMenuItem>
                     </Can>
@@ -1119,7 +1098,7 @@ function ConfigurationsTab() {
                   Type: {configTypeFilters.find((f) => f.value === typeFilter)?.label}
                   <button
                     onClick={() => setTypeFilter('all')}
-                    className="ml-1 hover:text-foreground"
+                    className="ms-1 hover:text-foreground"
                   >
                     x
                   </button>
@@ -1130,7 +1109,7 @@ function ConfigurationsTab() {
                   Schedule: {configScheduleFilters.find((f) => f.value === scheduleFilter)?.label}
                   <button
                     onClick={() => setScheduleFilter('all')}
-                    className="ml-1 hover:text-foreground"
+                    className="ms-1 hover:text-foreground"
                   >
                     x
                   </button>
@@ -1139,7 +1118,7 @@ function ConfigurationsTab() {
               {tagFilter && (
                 <Badge variant="secondary" className="gap-1">
                   Tag: {tagFilter}
-                  <button onClick={() => setTagFilter('')} className="ml-1 hover:text-foreground">
+                  <button onClick={() => setTagFilter('')} className="ms-1 hover:text-foreground">
                     x
                   </button>
                 </Badge>
@@ -1403,8 +1382,8 @@ function ConfigDetailSheet({ config, onClose: _onClose, onDelete }: ConfigDetail
               : 'bg-gradient-to-br from-gray-500/20 via-gray-500/10 to-transparent'
         }`}
       >
-        {/* Status & Type Row - pr-14 to avoid overlap with close button */}
-        <div className="flex items-center justify-between mb-4 pr-14">
+        {/* Status & Type Row - pe-14 to avoid overlap with close button */}
+        <div className="flex items-center justify-between mb-4 pe-14">
           <Badge variant="outline" className="font-medium">
             {SCAN_TYPE_LABELS[config.scan_type]}
           </Badge>
@@ -1427,7 +1406,7 @@ function ConfigDetailSheet({ config, onClose: _onClose, onDelete }: ConfigDetail
           <h2 className="text-xl font-bold line-clamp-2">{config.name}</h2>
         </div>
         {config.description && (
-          <p className="text-sm text-muted-foreground pl-[52px]">{config.description}</p>
+          <p className="text-sm text-muted-foreground ps-[52px]">{config.description}</p>
         )}
 
         {/* Progress Bar */}
@@ -1477,9 +1456,9 @@ function ConfigDetailSheet({ config, onClose: _onClose, onDelete }: ConfigDetail
                 disabled={isTriggering || isPausing}
               >
                 {isTriggering ? (
-                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  <RefreshCw className="me-2 h-4 w-4 animate-spin" />
                 ) : (
-                  <Play className="mr-2 h-4 w-4" />
+                  <Play className="me-2 h-4 w-4" />
                 )}
                 Trigger
               </Button>
@@ -1491,9 +1470,9 @@ function ConfigDetailSheet({ config, onClose: _onClose, onDelete }: ConfigDetail
                 disabled={isPausing || isTriggering}
               >
                 {isPausing ? (
-                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  <RefreshCw className="me-2 h-4 w-4 animate-spin" />
                 ) : (
-                  <Pause className="mr-2 h-4 w-4" />
+                  <Pause className="me-2 h-4 w-4" />
                 )}
                 Pause
               </Button>
@@ -1508,9 +1487,9 @@ function ConfigDetailSheet({ config, onClose: _onClose, onDelete }: ConfigDetail
                 disabled={isActivating || isTriggering}
               >
                 {isActivating ? (
-                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  <RefreshCw className="me-2 h-4 w-4 animate-spin" />
                 ) : (
-                  <Play className="mr-2 h-4 w-4" />
+                  <Play className="me-2 h-4 w-4" />
                 )}
                 Resume
               </Button>
@@ -1522,9 +1501,9 @@ function ConfigDetailSheet({ config, onClose: _onClose, onDelete }: ConfigDetail
                 disabled={isTriggering || isActivating}
               >
                 {isTriggering ? (
-                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  <RefreshCw className="me-2 h-4 w-4 animate-spin" />
                 ) : (
-                  <RefreshCw className="mr-2 h-4 w-4" />
+                  <RefreshCw className="me-2 h-4 w-4" />
                 )}
                 Trigger
               </Button>
@@ -1538,9 +1517,9 @@ function ConfigDetailSheet({ config, onClose: _onClose, onDelete }: ConfigDetail
               disabled={isActivating}
             >
               {isActivating ? (
-                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                <RefreshCw className="me-2 h-4 w-4 animate-spin" />
               ) : (
-                <Play className="mr-2 h-4 w-4" />
+                <Play className="me-2 h-4 w-4" />
               )}
               Enable
             </Button>
@@ -1819,7 +1798,7 @@ function ConfigDetailSheet({ config, onClose: _onClose, onDelete }: ConfigDetail
                 className="w-full"
                 onClick={handleDeleteConfig}
               >
-                <Trash2 className="mr-2 h-4 w-4" />
+                <Trash2 className="me-2 h-4 w-4" />
                 Delete Configuration
               </Button>
             </div>
@@ -1858,25 +1837,25 @@ function RunActionsCell({
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem onClick={() => onViewDetails(session)}>
-          <Eye className="mr-2 h-4 w-4" />
+          <Eye className="me-2 h-4 w-4" />
           View Details
         </DropdownMenuItem>
         {session.status === 'running' && (
           <DropdownMenuItem onClick={() => onStop(session)} disabled={isActioning}>
-            <XCircle className="mr-2 h-4 w-4" />
+            <XCircle className="me-2 h-4 w-4" />
             Stop
           </DropdownMenuItem>
         )}
         {session.status === 'failed' && (
           <DropdownMenuItem onClick={() => onRetry(session)} disabled={isActioning}>
-            <RefreshCw className="mr-2 h-4 w-4" />
+            <RefreshCw className="me-2 h-4 w-4" />
             Retry
           </DropdownMenuItem>
         )}
         {session.status === 'completed' && session.findings_total > 0 && (
           <DropdownMenuItem asChild>
             <Link href={`/findings?scan_id=${session.id}`}>
-              <Shield className="mr-2 h-4 w-4" />
+              <Shield className="me-2 h-4 w-4" />
               View {session.findings_total} Findings
             </Link>
           </DropdownMenuItem>
@@ -2061,10 +2040,10 @@ function RunsTab() {
           <Button
             variant="ghost"
             onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-            className="-ml-4"
+            className="-ms-4"
           >
             Scanner
-            <ArrowUpDown className="ml-2 h-4 w-4" />
+            <ArrowUpDown className="ms-2 h-4 w-4" />
           </Button>
         ),
         cell: ({ row }) => (
@@ -2089,7 +2068,7 @@ function RunsTab() {
       {
         accessorKey: 'status',
         header: 'Status',
-        cell: ({ row }) => <StatusBadge status={mapSessionStatusToUI(row.original.status)} />,
+        cell: ({ row }) => <RunStatusBadge status={row.original.status} />,
       },
       {
         accessorKey: 'findings_total',
@@ -2097,10 +2076,10 @@ function RunsTab() {
           <Button
             variant="ghost"
             onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-            className="-ml-4"
+            className="-ms-4"
           >
             Findings
-            <ArrowUpDown className="ml-2 h-4 w-4" />
+            <ArrowUpDown className="ms-2 h-4 w-4" />
           </Button>
         ),
         cell: ({ row }) => {
@@ -2285,7 +2264,6 @@ function RunsTab() {
                 <CardTitle className="text-3xl">{stats?.findings_total ?? 0}</CardTitle>
               </CardHeader>
             </Card>
-            <PlatformUsageCard variant="compact" />
           </>
         )}
       </div>
@@ -2327,7 +2305,7 @@ function RunsTab() {
                 placeholder="Search scanner, target..."
                 value={globalFilter}
                 onChange={(e) => setGlobalFilter(e.target.value)}
-                className="pl-9"
+                className="ps-9"
               />
             </div>
 
@@ -2348,11 +2326,11 @@ function RunsTab() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem onClick={handleExportCSV}>
-                    <FileSpreadsheet className="mr-2 h-4 w-4" />
+                    <FileSpreadsheet className="me-2 h-4 w-4" />
                     Export as CSV
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleExportJSON}>
-                    <FileJson className="mr-2 h-4 w-4" />
+                    <FileJson className="me-2 h-4 w-4" />
                     Export as JSON
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -2552,7 +2530,7 @@ function SessionDetailSheet({ session, onStop, onRetry, isActioning }: SessionDe
             {session.scanner_name}
             {session.scanner_version && ` v${session.scanner_version}`}
           </Badge>
-          <StatusBadge status={mapSessionStatusToUI(session.status)} />
+          <RunStatusBadge status={session.status} />
         </div>
 
         {/* Title */}
@@ -2616,9 +2594,9 @@ function SessionDetailSheet({ session, onStop, onRetry, isActioning }: SessionDe
               disabled={isActioning}
             >
               {isActioning ? (
-                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                <RefreshCw className="me-2 h-4 w-4 animate-spin" />
               ) : (
-                <XCircle className="mr-2 h-4 w-4" />
+                <XCircle className="me-2 h-4 w-4" />
               )}
               Stop
             </Button>
@@ -2631,9 +2609,9 @@ function SessionDetailSheet({ session, onStop, onRetry, isActioning }: SessionDe
               disabled={isActioning}
             >
               {isActioning ? (
-                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                <RefreshCw className="me-2 h-4 w-4 animate-spin" />
               ) : (
-                <RefreshCw className="mr-2 h-4 w-4" />
+                <RefreshCw className="me-2 h-4 w-4" />
               )}
               Retry
             </Button>
@@ -2641,7 +2619,7 @@ function SessionDetailSheet({ session, onStop, onRetry, isActioning }: SessionDe
           {session.status === 'completed' && session.findings_total > 0 && (
             <Button asChild size="sm" className="flex-1">
               <Link href={`/findings?scan_id=${session.id}`}>
-                <Eye className="mr-2 h-4 w-4" />
+                <Eye className="me-2 h-4 w-4" />
                 View {session.findings_total} Findings
               </Link>
             </Button>
@@ -2657,7 +2635,7 @@ function SessionDetailSheet({ session, onStop, onRetry, isActioning }: SessionDe
                 toast.success('Session ID copied to clipboard')
               }}
             >
-              <Copy className="mr-2 h-4 w-4" />
+              <Copy className="me-2 h-4 w-4" />
               Copy ID
             </Button>
           )}

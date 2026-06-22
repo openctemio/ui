@@ -1,6 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
+import { csrfFetch } from '@/lib/api/client'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -222,7 +223,7 @@ export function SCMConnectionsBanner() {
             className="shrink-0"
           >
             {hasConnections ? 'Manage Connections' : 'Add Connection'}
-            <ArrowRight className="ml-2 h-4 w-4" />
+            <ArrowRight className="ms-2 h-4 w-4" />
           </Button>
         </div>
       </CardContent>
@@ -236,7 +237,7 @@ export function SCMConnectionsBanner() {
 
 async function triggerScan(assetId: string, name: string) {
   try {
-    const response = await fetch(`/api/v1/assets/${assetId}/scan`, {
+    const response = await csrfFetch(`/api/v1/assets/${assetId}/scan`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
     })
@@ -253,7 +254,7 @@ async function triggerScan(assetId: string, name: string) {
 
 async function syncRepository(assetId: string, name: string) {
   try {
-    const response = await fetch(`/api/v1/assets/${assetId}/sync`, {
+    const response = await csrfFetch(`/api/v1/assets/${assetId}/sync`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
     })
@@ -318,7 +319,7 @@ export const repositoriesConfig: AssetPageConfig = {
               <TooltipTrigger asChild>
                 <div className="flex items-center gap-1.5">
                   <Badge variant="outline" className={cn('text-xs', SCM_PROVIDER_COLORS[provider])}>
-                    <ProviderIcon provider={provider} className="h-3 w-3 mr-1" />
+                    <ProviderIcon provider={provider} className="h-3 w-3 me-1" />
                     {SCM_PROVIDER_LABELS[provider as keyof typeof SCM_PROVIDER_LABELS] || provider}
                   </Badge>
                 </div>
@@ -484,7 +485,7 @@ export const repositoriesConfig: AssetPageConfig = {
       onClick: async (assets) => {
         const results = await Promise.allSettled(
           assets.map((a) =>
-            fetch(`/api/v1/assets/${a.id}/scan`, {
+            csrfFetch(`/api/v1/assets/${a.id}/scan`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
             })
@@ -520,7 +521,7 @@ export const repositoriesConfig: AssetPageConfig = {
         }
         const results = await Promise.allSettled(
           syncable.map((a) =>
-            fetch(`/api/v1/assets/${a.id}/sync`, {
+            csrfFetch(`/api/v1/assets/${a.id}/sync`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
             })
@@ -574,7 +575,7 @@ export const repositoriesConfig: AssetPageConfig = {
             const provider = getProviderFromAsset(asset)
             return (
               <Badge variant="outline" className={cn('text-xs', SCM_PROVIDER_COLORS[provider])}>
-                <ProviderIcon provider={provider} className="h-3 w-3 mr-1" />
+                <ProviderIcon provider={provider} className="h-3 w-3 me-1" />
                 {SCM_PROVIDER_LABELS[provider as keyof typeof SCM_PROVIDER_LABELS] || provider}
               </Badge>
             )
@@ -657,7 +658,7 @@ export const repositoriesConfig: AssetPageConfig = {
                   <p className="font-medium">
                     {repo.componentCount ?? 0}
                     {(repo.vulnerableComponentCount ?? 0) > 0 && (
-                      <span className="text-red-500 ml-1">
+                      <span className="text-red-500 ms-1">
                         ({repo.vulnerableComponentCount} vulnerable)
                       </span>
                     )}

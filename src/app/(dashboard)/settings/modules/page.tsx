@@ -46,6 +46,7 @@ import { useSWRConfig } from 'swr'
 import { ApiClientError, getErrorMessage } from '@/lib/api/error-handler'
 import { fetcherWithOptions } from '@/lib/api/client'
 import { tenantEndpoints } from '@/lib/api/endpoints'
+import { Can, Permission } from '@/lib/permissions'
 import {
   useTenantModules,
   useUpdateTenantModules,
@@ -399,15 +400,17 @@ export default function ModuleManagementPage() {
           title="Module Management"
           description="Enable or disable modules for your organization. Core modules required for platform operation cannot be disabled."
         />
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setShowResetDialog(true)}
-          disabled={isResetting}
-        >
-          <RotateCcw className="mr-2 h-4 w-4" />
-          Reset to Defaults
-        </Button>
+        <Can permission={Permission.TeamUpdate}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowResetDialog(true)}
+            disabled={isResetting}
+          >
+            <RotateCcw className="me-2 h-4 w-4" />
+            Reset to Defaults
+          </Button>
+        </Can>
       </div>
 
       {/* Summary Cards */}
@@ -432,50 +435,52 @@ export default function ModuleManagementPage() {
           Renders above the manual toggle area so admins see the
           "don't toggle 100 things, pick a bundle" affordance first. */}
       {presets.length > 0 && (
-        <Card className="mt-6">
-          <CardHeader className="py-3">
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-amber-500" />
-              <CardTitle className="text-base">Quick start with a preset</CardTitle>
-              <Badge variant="outline" className="text-xs">
-                {presets.length}
-              </Badge>
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Curated module bundles for common use cases. Applying a preset overwrites your current
-              module configuration — review the diff before committing.
-            </p>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {presets.map((p) => {
-                const Icon = PRESET_ICONS[p.icon] ?? Sparkles
-                return (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => handlePresetPreview(p)}
-                    className="text-left rounded-lg border bg-card hover:bg-accent/50 hover:border-primary/50 transition-colors p-3 flex flex-col gap-1.5 focus:outline-none focus:ring-2 focus:ring-primary"
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <Icon className="h-4 w-4 text-primary shrink-0" />
-                        <span className="font-medium text-sm truncate">{p.name}</span>
+        <Can permission={Permission.TeamUpdate}>
+          <Card className="mt-6">
+            <CardHeader className="py-3">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-amber-500" />
+                <CardTitle className="text-base">Quick start with a preset</CardTitle>
+                <Badge variant="outline" className="text-xs">
+                  {presets.length}
+                </Badge>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Curated module bundles for common use cases. Applying a preset overwrites your
+                current module configuration — review the diff before committing.
+              </p>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {presets.map((p) => {
+                  const Icon = PRESET_ICONS[p.icon] ?? Sparkles
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => handlePresetPreview(p)}
+                      className="text-start rounded-lg border bg-card hover:bg-accent/50 hover:border-primary/50 transition-colors p-3 flex flex-col gap-1.5 focus:outline-none focus:ring-2 focus:ring-primary"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Icon className="h-4 w-4 text-primary shrink-0" />
+                          <span className="font-medium text-sm truncate">{p.name}</span>
+                        </div>
+                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0 shrink-0">
+                          {p.module_count}
+                        </Badge>
                       </div>
-                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0 shrink-0">
-                        {p.module_count}
-                      </Badge>
-                    </div>
-                    <p className="text-xs text-muted-foreground line-clamp-2">{p.description}</p>
-                    <p className="text-[10px] text-muted-foreground/70 mt-0.5">
-                      For: {p.target_persona}
-                    </p>
-                  </button>
-                )
-              })}
-            </div>
-          </CardContent>
-        </Card>
+                      <p className="text-xs text-muted-foreground line-clamp-2">{p.description}</p>
+                      <p className="text-[10px] text-muted-foreground/70 mt-0.5">
+                        For: {p.target_persona}
+                      </p>
+                    </button>
+                  )
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        </Can>
       )}
 
       <div className={`mt-6 space-y-4 ${isDirty ? 'pb-20' : ''}`}>
@@ -567,26 +572,28 @@ export default function ModuleManagementPage() {
 
       {/* Sticky Save Bar */}
       {isDirty && (
-        <div className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background p-4 shadow-lg">
-          <div className="mx-auto flex max-w-5xl items-center justify-between">
-            <div className="text-sm text-muted-foreground">
-              {pendingEnabled > 0 && (
-                <span className="text-green-600 mr-3">+{pendingEnabled} enabling</span>
-              )}
-              {pendingDisabled > 0 && (
-                <span className="text-red-600">-{pendingDisabled} disabling</span>
-              )}
-            </div>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={handleDiscard}>
-                Discard
-              </Button>
-              <Button onClick={handleSave} disabled={isUpdating}>
-                {isUpdating ? 'Saving...' : 'Save Changes'}
-              </Button>
+        <Can permission={Permission.TeamUpdate}>
+          <div className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background p-4 shadow-lg">
+            <div className="mx-auto flex max-w-5xl items-center justify-between">
+              <div className="text-sm text-muted-foreground">
+                {pendingEnabled > 0 && (
+                  <span className="text-green-600 me-3">+{pendingEnabled} enabling</span>
+                )}
+                {pendingDisabled > 0 && (
+                  <span className="text-red-600">-{pendingDisabled} disabling</span>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={handleDiscard}>
+                  Discard
+                </Button>
+                <Button onClick={handleSave} disabled={isUpdating}>
+                  {isUpdating ? 'Saving...' : 'Save Changes'}
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
+        </Can>
       )}
 
       {/* Dependency-violation Dialog — shown when the backend rejects
@@ -743,7 +750,7 @@ export default function ModuleManagementPage() {
                         <summary className="cursor-pointer text-red-700 hover:underline">
                           {toDisable.length} module(s) will be disabled
                         </summary>
-                        <ul className="mt-1.5 pl-3 space-y-0.5 max-h-32 overflow-y-auto">
+                        <ul className="mt-1.5 ps-3 space-y-0.5 max-h-32 overflow-y-auto">
                           {toDisable.map((m) => (
                             <li key={m.module_id} className="text-muted-foreground">
                               {m.name}{' '}
@@ -760,7 +767,7 @@ export default function ModuleManagementPage() {
                         <summary className="cursor-pointer text-green-700 hover:underline">
                           {toEnable.length} module(s) will be enabled
                         </summary>
-                        <ul className="mt-1.5 pl-3 space-y-0.5 max-h-32 overflow-y-auto">
+                        <ul className="mt-1.5 ps-3 space-y-0.5 max-h-32 overflow-y-auto">
                           {toEnable.map((m) => (
                             <li key={m.module_id} className="text-muted-foreground">
                               {m.name}{' '}
@@ -917,7 +924,7 @@ function ModuleRow({
             <p className="text-xs text-muted-foreground mt-0.5 truncate">{mod.description}</p>
           )}
         </div>
-        <div className="ml-4">
+        <div className="ms-4">
           <Switch
             checked={isEnabled}
             onCheckedChange={() => onToggle(mod.id, isEnabled)}
@@ -928,7 +935,7 @@ function ModuleRow({
       </div>
       {visibleSubModules.length > 0 && (
         <div
-          className={`pb-2 pl-6 space-y-0.5 ${!isEnabled ? 'opacity-40 pointer-events-none' : ''}`}
+          className={`pb-2 ps-6 space-y-0.5 ${!isEnabled ? 'opacity-40 pointer-events-none' : ''}`}
         >
           {visibleSubModules.map((sub) => (
             <SubModuleRow

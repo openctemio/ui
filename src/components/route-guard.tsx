@@ -226,11 +226,11 @@ function AccessDenied({ reason, permission, module, message }: AccessDeniedProps
           {/* Actions */}
           <div className="flex justify-center gap-3">
             <Button variant="outline" onClick={handleGoBack}>
-              <ArrowLeft className="mr-2 h-4 w-4" />
+              <ArrowLeft className="me-2 h-4 w-4" />
               Go Back
             </Button>
             <Button onClick={handleGoHome}>
-              <Home className="mr-2 h-4 w-4" />
+              <Home className="me-2 h-4 w-4" />
               Dashboard
             </Button>
           </div>

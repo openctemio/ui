@@ -106,6 +106,16 @@ export function useAssetType(id: string | undefined) {
  * for backwards compatibility with existing scope config UI
  */
 export function assetTypeToScopeConfig(assetType: ApiAssetType) {
+  // A malformed pattern_regex from the API must not crash consumers; fall back
+  // to an accept-anything pattern.
+  let pattern = /^.+$/
+  if (assetType.pattern_regex) {
+    try {
+      pattern = new RegExp(assetType.pattern_regex)
+    } catch {
+      pattern = /^.+$/
+    }
+  }
   return {
     type: assetType.code,
     label: assetType.name,
@@ -113,7 +123,7 @@ export function assetTypeToScopeConfig(assetType: ApiAssetType) {
     placeholder: assetType.pattern_placeholder ?? '',
     helpText: assetType.description ?? '',
     validation: {
-      pattern: assetType.pattern_regex ? new RegExp(assetType.pattern_regex) : /^.+$/,
+      pattern,
       message: `Invalid ${assetType.name.toLowerCase()} format`,
     },
     supportsWildcard: assetType.supports_wildcard,

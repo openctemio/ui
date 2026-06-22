@@ -134,7 +134,7 @@ export function TagFilterChips({
   return (
     <div className="flex items-center gap-1.5 flex-wrap">
       {value.map((tag) => (
-        <Badge key={tag} variant="secondary" className="gap-1 pl-2 pr-1 py-0.5 text-xs">
+        <Badge key={tag} variant="secondary" className="gap-1 ps-2 pe-1 py-0.5 text-xs">
           <span className="text-muted-foreground">tag:</span>
           <span className="truncate max-w-[160px] font-medium">{tag}</span>
           <button

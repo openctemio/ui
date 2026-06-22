@@ -105,7 +105,7 @@ function ModuleDisabledPage({
         </p>
         <Link href={backUrl} className="mt-6">
           <Button variant="outline">
-            <ArrowLeft className="mr-2 h-4 w-4" />
+            <ArrowLeft className="me-2 h-4 w-4" />
             {backLabel}
           </Button>
         </Link>

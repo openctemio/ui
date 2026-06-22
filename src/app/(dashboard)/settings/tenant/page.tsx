@@ -13,8 +13,6 @@ import {
   Globe,
   Shield,
   Key,
-  Copy,
-  RefreshCw,
   Upload,
   Loader2,
   AlertCircle,
@@ -233,9 +231,9 @@ function StorageConfigTab() {
           <div className="flex justify-end">
             <Button onClick={handleSave} disabled={saving || (isCloud && !bucket)}>
               {saving ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="me-2 h-4 w-4 animate-spin" />
               ) : (
-                <Save className="mr-2 h-4 w-4" />
+                <Save className="me-2 h-4 w-4" />
               )}
               Save Configuration
             </Button>
@@ -699,21 +697,21 @@ export default function TenantPage() {
         />
 
         <Tabs defaultValue="general" className="mt-6">
-          <TabsList>
+          <TabsList className="w-max max-w-full overflow-x-auto">
             <TabsTrigger value="general">
-              <Building className="mr-2 h-4 w-4" />
+              <Building className="me-2 h-4 w-4" />
               General
             </TabsTrigger>
             <TabsTrigger value="security">
-              <Shield className="mr-2 h-4 w-4" />
+              <Shield className="me-2 h-4 w-4" />
               Security
             </TabsTrigger>
             <TabsTrigger value="api">
-              <Key className="mr-2 h-4 w-4" />
+              <Key className="me-2 h-4 w-4" />
               API & Webhooks
             </TabsTrigger>
             <TabsTrigger value="storage">
-              <Upload className="mr-2 h-4 w-4" />
+              <Upload className="me-2 h-4 w-4" />
               File Storage
             </TabsTrigger>
           </TabsList>
@@ -732,7 +730,7 @@ export default function TenantPage() {
                 {/* 2-Column Layout: Logo | Details */}
                 <div className="flex flex-col lg:flex-row gap-8">
                   {/* Left Column - Logo */}
-                  <div className="flex flex-col items-center lg:items-start gap-3 lg:border-r lg:pr-8">
+                  <div className="flex flex-col items-center lg:items-start gap-3 lg:border-r lg:pe-8">
                     {/* Logo with Hover Upload */}
                     <div className="relative group">
                       <Avatar className="h-24 w-24 ring-2 ring-border">
@@ -1020,11 +1018,11 @@ export default function TenantPage() {
                         disabled={isUpdatingGeneral || !canUpdateTenant}
                       >
                         {isUpdatingGeneral ? (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          <Loader2 className="me-2 h-4 w-4 animate-spin" />
                         ) : !canUpdateTenant ? (
-                          <Lock className="mr-2 h-4 w-4" />
+                          <Lock className="me-2 h-4 w-4" />
                         ) : (
-                          <Save className="mr-2 h-4 w-4" />
+                          <Save className="me-2 h-4 w-4" />
                         )}
                         Save Settings
                       </Button>
@@ -1194,7 +1192,7 @@ export default function TenantPage() {
                         <CollapsibleTrigger asChild>
                           <button
                             type="button"
-                            className="flex w-full items-center justify-between p-4 text-left hover:bg-accent/50 transition-colors"
+                            className="flex w-full items-center justify-between p-4 text-start hover:bg-accent/50 transition-colors"
                           >
                             <div className="flex items-center gap-3">
                               <div>
@@ -1388,7 +1386,7 @@ export default function TenantPage() {
                                     className="text-destructive hover:text-destructive"
                                     onClick={() => setSsoDeleteTarget(existing)}
                                   >
-                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    <Trash2 className="me-2 h-4 w-4" />
                                     Remove
                                   </Button>
                                 ) : (
@@ -1400,9 +1398,9 @@ export default function TenantPage() {
                                   disabled={isSaving}
                                 >
                                   {isSaving ? (
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    <Loader2 className="me-2 h-4 w-4 animate-spin" />
                                   ) : (
-                                    <Save className="mr-2 h-4 w-4" />
+                                    <Save className="me-2 h-4 w-4" />
                                   )}
                                   {isConfigured ? 'Save Changes' : 'Configure'}
                                 </Button>
@@ -1479,11 +1477,11 @@ export default function TenantPage() {
                         disabled={isUpdatingSecurity || !canUpdateTenant}
                       >
                         {isUpdatingSecurity ? (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          <Loader2 className="me-2 h-4 w-4 animate-spin" />
                         ) : !canUpdateTenant ? (
-                          <Lock className="mr-2 h-4 w-4" />
+                          <Lock className="me-2 h-4 w-4" />
                         ) : (
-                          <Save className="mr-2 h-4 w-4" />
+                          <Save className="me-2 h-4 w-4" />
                         )}
                         Save Security Settings
                       </Button>
@@ -1531,22 +1529,10 @@ export default function TenantPage() {
                     <Separator />
                     <div className="space-y-2">
                       <Label>API Key</Label>
-                      <div className="flex gap-2">
-                        <Input
-                          value="rsec_live_xxxxxxxxxxxxxxxxxxxxxxxx"
-                          readOnly
-                          className="font-mono"
-                        />
-                        <Button variant="outline" size="icon" disabled title="Coming soon">
-                          <Copy className="h-4 w-4" />
-                        </Button>
-                        <Button variant="outline" size="icon" disabled title="Coming soon">
-                          <RefreshCw className="h-4 w-4" />
-                        </Button>
+                      <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+                        API key generation and rotation are coming soon. Once available, you&apos;ll
+                        be able to create and manage keys here.
                       </div>
-                      <p className="text-sm text-muted-foreground">
-                        Keep your API key secure. Do not share it publicly.
-                      </p>
                     </div>
                   </>
                 )}
@@ -1609,11 +1595,11 @@ export default function TenantPage() {
                     <span>
                       <Button onClick={handleSaveAPI} disabled={isUpdatingAPI || !canUpdateTenant}>
                         {isUpdatingAPI ? (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          <Loader2 className="me-2 h-4 w-4 animate-spin" />
                         ) : !canUpdateTenant ? (
-                          <Lock className="mr-2 h-4 w-4" />
+                          <Lock className="me-2 h-4 w-4" />
                         ) : (
-                          <Save className="mr-2 h-4 w-4" />
+                          <Save className="me-2 h-4 w-4" />
                         )}
                         Save API Settings
                       </Button>

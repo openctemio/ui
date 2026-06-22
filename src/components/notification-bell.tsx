@@ -3,7 +3,7 @@
 import { useCallback } from 'react'
 import { useState } from 'react'
 import Link from 'next/link'
-import { formatDistanceToNow } from 'date-fns'
+import { formatRelative } from '@/lib/format-date'
 import {
   AlertTriangle,
   Bell,
@@ -122,9 +122,7 @@ function NotificationItem({ notification, onMarkAsRead, onClose }: NotificationI
           </p>
         )}
         <p className="text-[11px] text-muted-foreground sm:text-xs">
-          {formatDistanceToNow(new Date(notification.created_at), {
-            addSuffix: true,
-          })}
+          {formatRelative(notification.created_at)}
         </p>
       </div>
       {!notification.is_read && (
@@ -237,7 +235,7 @@ export function NotificationBell() {
               className="h-auto px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
               onClick={handleMarkAllAsRead}
             >
-              <CheckCheck className="h-3 w-3 mr-1 sm:mr-1" />
+              <CheckCheck className="h-3 w-3 me-1 sm:me-1" />
               <span className="hidden sm:inline">Mark all as read</span>
               <span className="sm:hidden">Mark read</span>
             </Button>

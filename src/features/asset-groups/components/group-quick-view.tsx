@@ -118,7 +118,7 @@ function QuickViewAssets({ groupId, onRefresh }: { groupId: string; onRefresh?: 
           onClick={() => router.push(`/asset-groups/${groupId}?tab=assets`)}
         >
           Manage All
-          <ExternalLink className="ml-1 h-3 w-3" />
+          <ExternalLink className="ms-1 h-3 w-3" />
         </Button>
       </div>
       {displayAssets.length === 0 ? (
@@ -259,7 +259,7 @@ export function GroupQuickView({
                   className="h-8"
                   onClick={() => handleCopyId(group.id)}
                 >
-                  <Copy className="h-3.5 w-3.5 mr-1" />
+                  <Copy className="h-3.5 w-3.5 me-1" />
                   Copy ID
                 </Button>
                 <Button
@@ -268,7 +268,7 @@ export function GroupQuickView({
                   className="h-8"
                   onClick={() => handleCopyLink(group.id)}
                 >
-                  <Link className="h-3.5 w-3.5 mr-1" />
+                  <Link className="h-3.5 w-3.5 me-1" />
                   Copy Link
                 </Button>
               </div>
@@ -340,7 +340,7 @@ export function GroupQuickView({
                       onEdit(group)
                     }}
                   >
-                    <Pencil className="mr-2 h-4 w-4" />
+                    <Pencil className="me-2 h-4 w-4" />
                     Edit Group
                   </Button>
                 </Can>
@@ -352,7 +352,7 @@ export function GroupQuickView({
                     router.push(`/asset-groups/${group.id}`)
                   }}
                 >
-                  <ExternalLink className="mr-2 h-4 w-4" />
+                  <ExternalLink className="me-2 h-4 w-4" />
                   Open Full Page
                 </Button>
               </div>
@@ -376,7 +376,7 @@ export function GroupQuickView({
                         onDelete(group)
                       }}
                     >
-                      <Trash2 className="mr-2 h-4 w-4" />
+                      <Trash2 className="me-2 h-4 w-4" />
                       Delete
                     </Button>
                   </div>

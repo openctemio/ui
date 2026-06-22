@@ -286,7 +286,7 @@ export function RelationshipCard({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem onClick={() => onEdit?.(relationship)}>
-              <Pencil className="mr-2 h-4 w-4" />
+              <Pencil className="me-2 h-4 w-4" />
               Edit
             </DropdownMenuItem>
             <DropdownMenuItem
@@ -296,12 +296,12 @@ export function RelationshipCard({
                   : onSourceClick?.(relationship.sourceAssetId)
               }
             >
-              <ExternalLink className="mr-2 h-4 w-4" />
+              <ExternalLink className="me-2 h-4 w-4" />
               View {isSource ? 'Target' : 'Source'} Asset
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => onDelete?.(relationship)} className="text-red-600">
-              <Trash2 className="mr-2 h-4 w-4" />
+              <Trash2 className="me-2 h-4 w-4" />
               Delete
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -420,7 +420,7 @@ export function RelationshipListItem({
         type="button"
         onClick={() => onAssetClick?.(otherAsset.id)}
         disabled={!onAssetClick}
-        className="flex items-center gap-3 flex-1 min-w-0 text-left disabled:cursor-default"
+        className="flex items-center gap-3 flex-1 min-w-0 text-start disabled:cursor-default"
       >
         <div
           className={cn('h-9 w-9 rounded-lg flex items-center justify-center shrink-0', colors.bg)}

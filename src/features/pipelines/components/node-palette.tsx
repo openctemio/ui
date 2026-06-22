@@ -279,7 +279,7 @@ export function NodePalette({ onDragStart, position = 'right' }: NodePaletteProp
             placeholder="Search tools..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="h-8 pl-8 text-xs"
+            className="h-8 ps-8 text-xs"
           />
         </div>
         <p className="text-[10px] text-muted-foreground mt-2">
@@ -313,12 +313,12 @@ export function NodePalette({ onDragStart, position = 'right' }: NodePaletteProp
                     <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
                   )}
                   <span className="truncate">{category}</span>
-                  <span className="ml-auto text-xs text-muted-foreground">{tools.length}</span>
+                  <span className="ms-auto text-xs text-muted-foreground">{tools.length}</span>
                 </button>
 
                 {/* Tools in Category */}
                 {isExpanded && (
-                  <div className="ml-2 mt-1 space-y-1">
+                  <div className="ms-2 mt-1 space-y-1">
                     {tools.map((toolWithConfig) => {
                       const tool = toolWithConfig.tool
                       const Icon = getIconForTool(tool)

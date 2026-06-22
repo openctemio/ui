@@ -5,6 +5,7 @@ import { ColumnDef } from '@tanstack/react-table'
 import { Main } from '@/components/layout'
 import { PageHeader, DataTable, DataTableColumnHeader, RiskScoreBadge } from '@/features/shared'
 import { Can, Permission } from '@/lib/permissions'
+import { useCsvExport, type ExportFieldConfig } from '@/hooks/use-csv-export'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -143,6 +144,18 @@ const categoryLabels: Record<AssetCategory, string> = {
 
 const CROWN_JEWELS_KEY = '/api/v1/assets?is_crown_jewel=true&per_page=100'
 
+const CROWN_JEWEL_EXPORT_FIELDS: ExportFieldConfig<CrownJewel>[] = [
+  { header: 'Name', accessor: (j) => j.name },
+  { header: 'Category', accessor: (j) => j.category },
+  { header: 'Description', accessor: (j) => j.description ?? '' },
+  { header: 'Status', accessor: (j) => j.status },
+  { header: 'Owner', accessor: (j) => j.owner },
+  { header: 'Business Unit', accessor: (j) => j.businessUnit },
+  { header: 'Risk Score', accessor: (j) => j.riskScore },
+  { header: 'Exposures', accessor: (j) => j.exposureCount ?? 0 },
+  { header: 'Tags', accessor: (j) => (j.tags ?? []).join('; ') },
+]
+
 export default function CrownJewelsPage() {
   // Fetch from API, fallback to mock if no API data
   const { data: apiCrownJewels } = useCrownJewels()
@@ -177,6 +190,7 @@ export default function CrownJewelsPage() {
     )
   }, [apiCrownJewels])
   const [crownJewels, setCrownJewels] = useState<CrownJewel[]>([])
+  const { handleExport } = useCsvExport(crownJewels, CROWN_JEWEL_EXPORT_FIELDS, 'crown-jewels')
   useEffect(() => {
     setCrownJewels(apiMapped)
   }, [apiMapped])
@@ -210,8 +224,11 @@ export default function CrownJewelsPage() {
         exposed: jewels.filter((j) => j.status === 'exposed').length,
         under_review: jewels.filter((j) => j.status === 'under_review').length,
       },
-      totalExposures: jewels.reduce((acc, j) => acc + j.exposureCount, 0),
-      averageRiskScore: Math.round(jewels.reduce((acc, j) => acc + j.riskScore, 0) / jewels.length),
+      totalExposures: jewels.reduce((acc, j) => acc + (j.exposureCount ?? 0), 0),
+      // Guard against divide-by-zero on an empty tenant (was rendering "NaN").
+      averageRiskScore: jewels.length
+        ? Math.round(jewels.reduce((acc, j) => acc + (j.riskScore ?? 0), 0) / jewels.length)
+        : 0,
     }
   }, [crownJewels])
 
@@ -345,7 +362,7 @@ export default function CrownJewelsPage() {
         const StatusIcon = statusIcons[status]
         return (
           <Badge variant="outline" className={statusColors[status]}>
-            <StatusIcon className="mr-1 h-3 w-3" />
+            <StatusIcon className="me-1 h-3 w-3" />
             {status.replace('_', ' ')}
           </Badge>
         )
@@ -356,7 +373,7 @@ export default function CrownJewelsPage() {
       header: ({ column }) => <DataTableColumnHeader column={column} title="Protection" />,
       cell: ({ row }) => (
         <Badge variant="outline" className={protectionColors[row.original.protectionLevel]}>
-          <Lock className="mr-1 h-3 w-3" />
+          <Lock className="me-1 h-3 w-3" />
           {row.original.protectionLevel}
         </Badge>
       ),
@@ -410,12 +427,12 @@ export default function CrownJewelsPage() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => setViewJewel(jewel)}>
-                  <Eye className="mr-2 h-4 w-4" />
+                  <Eye className="me-2 h-4 w-4" />
                   View Details
                 </DropdownMenuItem>
                 <Can permission={Permission.ScopeWrite}>
                   <DropdownMenuItem onClick={() => openEdit(jewel)}>
-                    <Pencil className="mr-2 h-4 w-4" />
+                    <Pencil className="me-2 h-4 w-4" />
                     Edit
                   </DropdownMenuItem>
                 </Can>
@@ -425,7 +442,7 @@ export default function CrownJewelsPage() {
                     onClick={() => setDeleteJewel(jewel)}
                     className="text-destructive"
                   >
-                    <Trash2 className="mr-2 h-4 w-4" />
+                    <Trash2 className="me-2 h-4 w-4" />
                     Remove
                   </DropdownMenuItem>
                 </Can>
@@ -438,7 +455,7 @@ export default function CrownJewelsPage() {
   ]
 
   const formFields = (
-    <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+    <div className="space-y-4 max-h-[60vh] overflow-y-auto pe-2">
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="name">Name *</Label>
@@ -587,13 +604,18 @@ export default function CrownJewelsPage() {
           title="Crown Jewels"
           description="Identify and protect your most critical assets"
         >
-          <Button variant="outline" size="sm">
-            <Download className="mr-2 h-4 w-4" />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExport}
+            disabled={crownJewels.length === 0}
+          >
+            <Download className="me-2 h-4 w-4" />
             Export
           </Button>
           <Can permission={Permission.ScopeWrite}>
             <Button size="sm" onClick={() => setIsCreateOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
+              <Plus className="me-2 h-4 w-4" />
               Add Crown Jewel
             </Button>
           </Can>
@@ -696,7 +718,7 @@ export default function CrownJewelsPage() {
                     setFilterCategory('all')
                   }}
                 >
-                  <X className="mr-1 h-3 w-3" />
+                  <X className="me-1 h-3 w-3" />
                   Clear filters
                 </Button>
               )}
@@ -743,7 +765,7 @@ export default function CrownJewelsPage() {
               Select an existing asset to designate as a Crown Jewel requiring special protection
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+          <div className="space-y-4 max-h-[60vh] overflow-y-auto pe-2">
             <div className="space-y-2">
               <Label htmlFor="asset-search">Search Asset *</Label>
               <Input
@@ -761,7 +783,7 @@ export default function CrownJewelsPage() {
                     <button
                       key={a.id as string}
                       type="button"
-                      className={`w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors ${
+                      className={`w-full text-start px-3 py-2 text-sm hover:bg-muted transition-colors ${
                         selectedAssetId === a.id ? 'bg-muted font-medium' : ''
                       }`}
                       onClick={() => {
@@ -771,7 +793,7 @@ export default function CrownJewelsPage() {
                     >
                       <span className="font-medium">{a.name as string}</span>
                       {(a.type as string | undefined) && (
-                        <span className="ml-2 text-xs text-muted-foreground">
+                        <span className="ms-2 text-xs text-muted-foreground">
                           {a.type as string}
                         </span>
                       )}
@@ -1020,7 +1042,7 @@ export default function CrownJewelsPage() {
 
               <div className="mt-6 flex gap-2">
                 <Button variant="outline" className="flex-1" onClick={() => openEdit(viewJewel)}>
-                  <Pencil className="mr-2 h-4 w-4" />
+                  <Pencil className="me-2 h-4 w-4" />
                   Edit
                 </Button>
                 <Button
@@ -1031,7 +1053,7 @@ export default function CrownJewelsPage() {
                     setDeleteJewel(viewJewel)
                   }}
                 >
-                  <Trash2 className="mr-2 h-4 w-4" />
+                  <Trash2 className="me-2 h-4 w-4" />
                   Remove
                 </Button>
               </div>

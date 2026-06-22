@@ -38,8 +38,8 @@ import { SEVERITY_CHART_COLORS as SEVERITY_COLORS } from '@/lib/severity-colors'
 // Inline skeleton for stats cards section
 function StatsCardsSkeleton() {
   return (
-    <section className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-5">
-      {[1, 2, 3, 4, 5].map((i) => (
+    <section className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+      {[1, 2, 3, 4].map((i) => (
         <Card key={i}>
           <CardHeader className="pb-2">
             <Skeleton className="h-4 w-24" />
@@ -199,7 +199,7 @@ export default function Dashboard() {
               >
                 <Button asChild className="w-full justify-start" size="sm">
                   <Link href="/scans">
-                    <Plus className="mr-2 h-4 w-4" />
+                    <Plus className="me-2 h-4 w-4" />
                     New Scan
                   </Link>
                 </Button>
@@ -211,7 +211,7 @@ export default function Dashboard() {
               >
                 <Button asChild variant="outline" className="w-full justify-start" size="sm">
                   <Link href="/findings">
-                    <FileWarning className="mr-2 h-4 w-4" />
+                    <FileWarning className="me-2 h-4 w-4" />
                     View Findings
                   </Link>
                 </Button>
@@ -223,7 +223,7 @@ export default function Dashboard() {
               >
                 <Button asChild variant="outline" className="w-full justify-start" size="sm">
                   <Link href="/remediation">
-                    <ListChecks className="mr-2 h-4 w-4" />
+                    <ListChecks className="me-2 h-4 w-4" />
                     Remediation Tasks
                   </Link>
                 </Button>
@@ -235,7 +235,7 @@ export default function Dashboard() {
               >
                 <Button asChild variant="outline" className="w-full justify-start" size="sm">
                   <Link href="/reports">
-                    <ArrowRight className="mr-2 h-4 w-4" />
+                    <ArrowRight className="me-2 h-4 w-4" />
                     Generate Report
                   </Link>
                 </Button>
@@ -275,7 +275,7 @@ export default function Dashboard() {
           <StatsCardsSkeleton />
         ) : (
           !error && (
-            <section className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-5">
+            <section className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
               <StatsCard
                 title="Total Assets"
                 value={stats.assets.total}
@@ -316,17 +316,19 @@ export default function Dashboard() {
                 changeType={stats.repositories.withFindings > 0 ? 'negative' : 'neutral'}
                 icon={ListChecks}
               />
-              {/* Platform Agents - shows cloud scan capacity */}
-              <PlatformStatsCard />
             </section>
           )
         )}
 
-        {/* MTTR & Risk Velocity */}
+        {/* Operations Row — rich-content cards grouped together so heights balance.
+            Platform Agents lived in the stats row before, but its 4-row body
+            (Active Jobs / Queued / Available / Agents-by-Tier) forced the four
+            scalar stat cards to match its height, leaving them visually empty. */}
         {!isLoading && !error && (
-          <section className="mb-6 grid gap-4 md:grid-cols-2">
+          <section className="mb-6 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             <MTTRCard />
             <RiskVelocityCard />
+            <PlatformStatsCard />
           </section>
         )}
 
@@ -359,8 +361,8 @@ export default function Dashboard() {
                           type="monotone"
                           dataKey="critical"
                           stackId="1"
-                          stroke="#ef4444"
-                          fill="#ef4444"
+                          stroke={SEVERITY_COLORS.critical}
+                          fill={SEVERITY_COLORS.critical}
                           fillOpacity={0.8}
                           name="Critical"
                         />
@@ -368,8 +370,8 @@ export default function Dashboard() {
                           type="monotone"
                           dataKey="high"
                           stackId="1"
-                          stroke="#f97316"
-                          fill="#f97316"
+                          stroke={SEVERITY_COLORS.high}
+                          fill={SEVERITY_COLORS.high}
                           fillOpacity={0.8}
                           name="High"
                         />
@@ -377,8 +379,8 @@ export default function Dashboard() {
                           type="monotone"
                           dataKey="medium"
                           stackId="1"
-                          stroke="#eab308"
-                          fill="#eab308"
+                          stroke={SEVERITY_COLORS.medium}
+                          fill={SEVERITY_COLORS.medium}
                           fillOpacity={0.8}
                           name="Medium"
                         />
@@ -386,8 +388,8 @@ export default function Dashboard() {
                           type="monotone"
                           dataKey="low"
                           stackId="1"
-                          stroke="#3b82f6"
-                          fill="#3b82f6"
+                          stroke={SEVERITY_COLORS.low}
+                          fill={SEVERITY_COLORS.low}
                           fillOpacity={0.8}
                           name="Low"
                         />

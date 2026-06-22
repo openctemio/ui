@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react'
 import { Main } from '@/components/layout'
-import { PageHeader } from '@/features/shared'
+import { PageHeader, EmptyState } from '@/features/shared'
 import { StatsCard } from '@/features/shared/components/stats-card'
 import { useDashboardStats } from '@/features/dashboard/hooks/use-dashboard-stats'
 import { useTenant } from '@/context/tenant-provider'
@@ -38,14 +38,7 @@ import {
   Activity,
   Clock,
 } from 'lucide-react'
-
-const SEVERITY_COLORS: Record<string, string> = {
-  critical: '#dc2626',
-  high: '#ea580c',
-  medium: '#ca8a04',
-  low: '#2563eb',
-  info: '#6b7280',
-}
+import { SEVERITY_CHART_COLORS as SEVERITY_COLORS } from '@/lib/severity-colors'
 
 const STATUS_COLORS: Record<string, string> = {
   open: '#ef4444',
@@ -101,20 +94,6 @@ function LoadingSkeleton() {
   )
 }
 
-function EmptyState() {
-  return (
-    <Card>
-      <CardContent className="flex flex-col items-center justify-center py-12">
-        <Crown className="text-muted-foreground mb-4 h-12 w-12" />
-        <h3 className="mb-1 text-lg font-semibold">No Data Available</h3>
-        <p className="text-muted-foreground mb-4 text-sm">
-          Executive reports will appear once assets and findings data is available.
-        </p>
-      </CardContent>
-    </Card>
-  )
-}
-
 export default function ExecutiveReportsPage() {
   const { currentTenant } = useTenant()
   const { stats, isLoading } = useDashboardStats(currentTenant?.id || null)
@@ -124,7 +103,7 @@ export default function ExecutiveReportsPage() {
       Object.entries(stats.findings.bySeverity).map(([name, value]) => ({
         name: name.charAt(0).toUpperCase() + name.slice(1),
         value,
-        fill: SEVERITY_COLORS[name] || '#6b7280',
+        fill: (SEVERITY_COLORS as Record<string, string>)[name] || '#6b7280',
       })),
     [stats.findings.bySeverity]
   )
@@ -163,7 +142,11 @@ export default function ExecutiveReportsPage() {
           description="High-level security posture reports for leadership"
         />
         <div className="mt-6">
-          <EmptyState />
+          <EmptyState
+            icon={Crown}
+            title="No Data Available"
+            description="Executive reports will appear once assets and findings data is available."
+          />
         </div>
       </Main>
     )
@@ -176,12 +159,12 @@ export default function ExecutiveReportsPage() {
         description="High-level security posture reports for leadership"
       >
         <div className="flex items-center gap-2">
-          <Button size="sm" disabled>
-            <FileText className="mr-2 h-4 w-4" />
+          <Button size="sm" disabled title="PDF export is coming soon">
+            <FileText className="me-2 h-4 w-4" />
             Generate PDF
           </Button>
-          <Button variant="outline" size="sm" disabled>
-            <Download className="mr-2 h-4 w-4" />
+          <Button variant="outline" size="sm" disabled title="Data export is coming soon">
+            <Download className="me-2 h-4 w-4" />
             Export Data
           </Button>
         </div>

@@ -44,7 +44,9 @@ import {
   ArrowRight,
   ShieldCheck,
   ChevronDown,
+  AlertOctagon,
 } from 'lucide-react'
+import { PriorityClassBadge } from './priority-class-badge'
 import {
   DATA_FLOW_LOCATION_CONFIG,
   SEVERITY_CONFIG,
@@ -490,15 +492,52 @@ export function FindingDetailDrawer({
             </TooltipProvider>
 
             {/* Header */}
-            <SheetHeader className="space-y-3 border-b px-4 sm:px-6 pb-4 text-left">
+            <SheetHeader className="space-y-3 border-b px-4 sm:px-6 pb-4 text-start">
               {/* Title */}
               <SheetTitle className="text-lg leading-snug">{finding.title}</SheetTitle>
 
-              {/* CVE/CWE badges */}
-              {(finding.cve || finding.cwe) && (
-                <div className="flex flex-wrap gap-2">
+              {/* Risk signals — KEV / EPSS / CVSS / priority surfaced up top so the
+                  severity story reads at a glance, instead of CVSS being buried in
+                  the meta grid at the bottom with no exploit context. */}
+              {(finding.isInKev ||
+                (finding.epssScore !== undefined && finding.epssScore > 0) ||
+                finding.cvss !== undefined ||
+                finding.priorityClass ||
+                finding.cve ||
+                finding.cwe) && (
+                <div className="flex flex-wrap items-center gap-2">
+                  {finding.isInKev && (
+                    <Badge
+                      className="gap-1 bg-red-600 text-xs font-semibold text-white hover:bg-red-600"
+                      title={
+                        finding.kevDueDate
+                          ? `CISA KEV — remediate by ${formatDate(finding.kevDueDate)}`
+                          : 'CISA Known Exploited Vulnerability'
+                      }
+                    >
+                      <AlertOctagon className="h-3 w-3" />
+                      KEV
+                    </Badge>
+                  )}
+                  {finding.priorityClass && (
+                    <PriorityClassBadge priorityClass={finding.priorityClass} showTooltip={false} />
+                  )}
+                  {finding.cvss !== undefined && (
+                    <Badge variant="outline" className="font-mono text-xs">
+                      CVSS {finding.cvss}
+                    </Badge>
+                  )}
+                  {finding.epssScore !== undefined && finding.epssScore > 0 && (
+                    <Badge
+                      variant="outline"
+                      className="border-amber-500/40 font-mono text-xs text-amber-700 dark:text-amber-400"
+                      title="EPSS — probability of exploitation in the next 30 days"
+                    >
+                      EPSS {(finding.epssScore * 100).toFixed(1)}%
+                    </Badge>
+                  )}
                   {finding.cve && (
-                    <Badge variant="outline" className="text-xs">
+                    <Badge variant="outline" className="font-mono text-xs">
                       {finding.cve}
                     </Badge>
                   )}
@@ -515,7 +554,7 @@ export function FindingDetailDrawer({
               </SheetDescription>
             </SheetHeader>
 
-            {/* Quick Actions Bar - no longer needs ml-auto for "..." button */}
+            {/* Quick Actions Bar - no longer needs ms-auto for "..." button */}
             <div className="flex items-center gap-1.5 sm:gap-2 border-b px-3 sm:px-6 py-3 bg-muted/30">
               {/* Status Select */}
               <StatusSelect
@@ -822,7 +861,7 @@ export function FindingDetailDrawer({
                             />
                           ))}
                           {(finding.dataFlow.intermediates?.length ?? 0) > 2 && (
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground pl-6">
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground ps-6">
                               <ArrowRight className="h-3 w-3" />+
                               {(finding.dataFlow.intermediates?.length ?? 0) - 2} more steps
                             </div>
@@ -942,7 +981,7 @@ export function FindingDetailDrawer({
                       Cancel
                     </Button>
                     <Button size="sm" onClick={handleAddComment} disabled={!comment.trim()}>
-                      <Send className="mr-1.5 h-3 w-3" />
+                      <Send className="me-1.5 h-3 w-3" />
                       Send
                     </Button>
                   </div>
@@ -955,7 +994,7 @@ export function FindingDetailDrawer({
                     className="w-full justify-start text-muted-foreground hover:text-foreground"
                     onClick={() => setShowCommentInput(true)}
                   >
-                    <MessageSquare className="mr-2 h-4 w-4" />
+                    <MessageSquare className="me-2 h-4 w-4" />
                     Add a comment...
                   </Button>
                 </div>
@@ -964,7 +1003,7 @@ export function FindingDetailDrawer({
               {/* View Details Button */}
               <div className="p-4">
                 <Button className="w-full" onClick={handleViewDetails}>
-                  <ExternalLink className="mr-2 h-4 w-4" />
+                  <ExternalLink className="me-2 h-4 w-4" />
                   View Full Details
                 </Button>
               </div>

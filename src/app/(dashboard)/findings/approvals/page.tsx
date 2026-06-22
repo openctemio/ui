@@ -55,8 +55,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 import { getErrorMessage } from '@/lib/api/error-handler'
-import { PermissionGate } from '@/components/permission-gate'
-import { Permission } from '@/lib/permissions'
+import { Can, Permission } from '@/lib/permissions'
 
 import {
   usePendingApprovals,
@@ -372,18 +371,18 @@ export default function ApprovalsPage() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <PermissionGate permission={Permission.FindingsApprove}>
+                <Can permission={Permission.FindingsApprove}>
                   <DropdownMenuItem onClick={() => handleApproveClick(approval)}>
-                    <Check className="mr-2 h-4 w-4 text-emerald-500" />
+                    <Check className="me-2 h-4 w-4 text-emerald-500" />
                     Approve
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => handleRejectClick(approval)}>
-                    <X className="mr-2 h-4 w-4 text-red-500" />
+                    <X className="me-2 h-4 w-4 text-red-500" />
                     Reject
                   </DropdownMenuItem>
-                </PermissionGate>
+                </Can>
                 <DropdownMenuItem onClick={() => handleCancelClick(approval)}>
-                  <Ban className="mr-2 h-4 w-4" />
+                  <Ban className="me-2 h-4 w-4" />
                   Cancel
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -409,7 +408,7 @@ export default function ApprovalsPage() {
             {error?.message || 'An unexpected error occurred'}
           </p>
           <Button onClick={() => mutate()}>
-            <RefreshCw className="mr-2 h-4 w-4" />
+            <RefreshCw className="me-2 h-4 w-4" />
             Retry
           </Button>
         </div>
@@ -445,9 +444,9 @@ export default function ApprovalsPage() {
         >
           <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isLoading}>
             {isLoading ? (
-              <Loader2 className="h-4 w-4 sm:mr-2 animate-spin" />
+              <Loader2 className="h-4 w-4 sm:me-2 animate-spin" />
             ) : (
-              <RefreshCw className="h-4 w-4 sm:mr-2" />
+              <RefreshCw className="h-4 w-4 sm:me-2" />
             )}
             <span className="hidden sm:inline">Refresh</span>
           </Button>
@@ -570,7 +569,7 @@ export default function ApprovalsPage() {
                 <Badge
                   variant="outline"
                   className={cn(
-                    'text-xs ml-1',
+                    'text-xs ms-1',
                     FINDING_STATUS_CONFIG[
                       selectedApproval.requested_status as keyof typeof FINDING_STATUS_CONFIG
                     ]?.bgColor,
@@ -592,7 +591,7 @@ export default function ApprovalsPage() {
             <AlertDialogAction onClick={handleApproveConfirm} disabled={isApproving}>
               {isApproving ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="me-2 h-4 w-4 animate-spin" />
                   Approving...
                 </>
               ) : (
@@ -628,9 +627,7 @@ export default function ApprovalsPage() {
               rows={3}
               maxLength={2000}
             />
-            <p className="text-xs text-muted-foreground text-right">
-              {rejectionReason.length}/2000
-            </p>
+            <p className="text-xs text-muted-foreground text-end">{rejectionReason.length}/2000</p>
           </div>
           <DialogFooter>
             <Button
@@ -647,7 +644,7 @@ export default function ApprovalsPage() {
             >
               {isRejecting ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="me-2 h-4 w-4 animate-spin" />
                   Rejecting...
                 </>
               ) : (
@@ -676,7 +673,7 @@ export default function ApprovalsPage() {
             >
               {isCancelling ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="me-2 h-4 w-4 animate-spin" />
                   Canceling...
                 </>
               ) : (

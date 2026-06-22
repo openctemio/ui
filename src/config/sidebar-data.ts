@@ -50,6 +50,7 @@ import {
   RotateCcw,
   BookTemplate,
   History,
+  Clock,
   Bot,
   FileSliders,
   Wrench,
@@ -315,14 +316,52 @@ export const sidebarData: SidebarData = {
           ],
         },
         // ----------------------------------------
-        // EXPOSURES (Non-CVE security issues)
+        // EXPOSURES (CVEs + non-CVE security issues)
         // ----------------------------------------
+        // Note: route guard at `/exposures/**` checks the `findings` module.
+        // Backend keeps a separate `exposures` module record (migration 000004)
+        // but no route enforces it, so binding sidebar to it caused a divergence.
         {
           title: 'Exposures',
-          url: '/exposures',
           icon: AlertTriangle,
-          permission: Permission.FindingsRead,
-          module: 'exposures',
+          // Group is visible if user has EITHER findings:read OR vulnerabilities:read.
+          // Sub-items self-gate by their own permission.
+          permission: [Permission.FindingsRead, Permission.VulnerabilitiesRead],
+          module: 'findings',
+          items: [
+            {
+              title: 'Overview',
+              url: '/exposures',
+              icon: AlertTriangle,
+            },
+            {
+              // The CTEM "Active CVEs" view lives at /exposures/vulnerabilities.
+              // It is the default tab — distinct from /exposures (event-style
+              // exposures) and from the global CVE catalog browser.
+              title: 'Vulnerabilities',
+              url: '/exposures/vulnerabilities',
+              icon: ShieldAlert,
+              permission: Permission.VulnerabilitiesRead,
+            },
+            {
+              title: 'Misconfigurations',
+              url: '/exposures/misconfigurations',
+              icon: Settings2,
+              permission: Permission.FindingsRead,
+            },
+            {
+              title: 'Secrets',
+              url: '/exposures/secrets',
+              icon: KeyRound,
+              permission: Permission.FindingsRead,
+            },
+            {
+              title: 'Code',
+              url: '/exposures/code',
+              icon: FileCode2,
+              permission: Permission.FindingsRead,
+            },
+          ],
         },
         // ----------------------------------------
         // CREDENTIAL LEAKS
@@ -375,6 +414,8 @@ export const sidebarData: SidebarData = {
               title: 'SBOM Export',
               url: '/components/sbom-export',
               icon: Download,
+              // Same pattern as MITRE Coverage — own module post-000161.
+              module: 'sbom_export',
             },
           ],
         },
@@ -467,6 +508,11 @@ export const sidebarData: SidebarData = {
               title: 'MITRE Coverage',
               url: '/pentest/mitre-coverage',
               icon: LayoutGrid,
+              // Bound to its own module (post-000161) — without this, the
+              // entry inherits parent's `pentest` module and stays visible
+              // even when `mitre_coverage` is disabled, only to dump the
+              // user on a "Feature Not Available" screen after click.
+              module: 'mitre_coverage',
             },
           ],
         },
@@ -682,6 +728,14 @@ export const sidebarData: SidebarData = {
               module: 'risk_scoring',
             },
             {
+              title: 'Asset Lifecycle',
+              url: '/settings/asset-lifecycle',
+              icon: Clock,
+              // Admin-level config: worker transitions asset status without
+              // a human in the loop, so keep this gated to team:update.
+              permission: Permission.TeamUpdate,
+            },
+            {
               title: 'Modules',
               url: '/settings/modules',
               icon: Boxes,
@@ -739,6 +793,12 @@ export const sidebarData: SidebarData = {
               url: '/settings/integrations/siem',
               icon: Shield,
               subModuleKey: 'siem',
+            },
+            {
+              title: 'SCIM Provisioning',
+              url: '/settings/integrations/scim-tokens',
+              icon: Users,
+              subModuleKey: 'scim',
             },
           ],
         },

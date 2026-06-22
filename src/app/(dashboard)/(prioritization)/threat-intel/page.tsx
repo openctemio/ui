@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Main } from '@/components/layout'
+import { PageHeader } from '@/features/shared'
 import { cn } from '@/lib/utils'
 import {
   TrendingUp,
@@ -54,25 +55,22 @@ export default function ThreatIntelPage() {
       <Main>
         <div className="space-y-6">
           {/* Page Header */}
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight">Threat Intelligence</h1>
-              <p className="text-muted-foreground">
-                EPSS and CISA KEV data for vulnerability prioritization
-              </p>
-            </div>
+          <PageHeader
+            title="Threat Intelligence"
+            description="EPSS and CISA KEV data for vulnerability prioritization"
+          >
             <div className="flex items-center gap-4">
               <CompactSyncStatus statuses={syncStatuses} />
               <Button variant="outline" onClick={handleRefreshAll} disabled={isLoading}>
                 {isLoading ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="me-2 h-4 w-4 animate-spin" />
                 ) : (
-                  <RefreshCw className="mr-2 h-4 w-4" />
+                  <RefreshCw className="me-2 h-4 w-4" />
                 )}
                 Refresh
               </Button>
             </div>
-          </div>
+          </PageHeader>
 
           {/* Main Content */}
           <Tabs defaultValue="overview" className="space-y-4">
@@ -222,14 +220,14 @@ function CVELookup() {
                 value={cveId}
                 onChange={(e) => setCveId(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleLookup()}
-                className="pl-9"
+                className="ps-9"
               />
             </div>
             <Button onClick={handleLookup} disabled={isLookingUp}>
               {isLookingUp ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="me-2 h-4 w-4 animate-spin" />
               ) : (
-                <Search className="mr-2 h-4 w-4" />
+                <Search className="me-2 h-4 w-4" />
               )}
               Lookup
             </Button>

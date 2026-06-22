@@ -64,6 +64,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { get, post, put, del } from '@/lib/api/client'
+import { Can, Permission } from '@/lib/permissions'
 
 type Criticality = 'critical' | 'high' | 'medium' | 'low'
 
@@ -129,7 +130,7 @@ const emptyForm: FormState = {
 }
 
 export default function BusinessServicesPage() {
-  const { data, mutate, isLoading } = useSWR<ListResponse>(
+  const { data, mutate, isLoading, error } = useSWR<ListResponse>(
     '/api/v1/business-services',
     (url: string) => get<ListResponse>(url)
   )
@@ -260,10 +261,12 @@ export default function BusinessServicesPage() {
         title="Business Services"
         description="Define business services and their compliance, data handling, and availability requirements."
       >
-        <Button onClick={openCreate}>
-          <Plus className="mr-2 h-4 w-4" />
-          Create Service
-        </Button>
+        <Can permission={Permission.BusinessServicesWrite}>
+          <Button onClick={openCreate}>
+            <Plus className="me-2 h-4 w-4" />
+            Create Service
+          </Button>
+        </Can>
       </PageHeader>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mt-6">
@@ -327,6 +330,28 @@ export default function BusinessServicesPage() {
                 <TableRow>
                   <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                     Loading...
+                  </TableCell>
+                </TableRow>
+              ) : error ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="py-8">
+                    <div className="mx-auto flex max-w-md flex-col items-center gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-4 text-center">
+                      <p className="text-sm font-medium text-destructive">
+                        Failed to load business services
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {error instanceof Error ? error.message : 'Unknown error'}
+                      </p>
+                      <button
+                        type="button"
+                        className="mt-1 text-xs text-primary hover:underline"
+                        onClick={() => {
+                          void mutate()
+                        }}
+                      >
+                        Retry
+                      </button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ) : services.length === 0 ? (
@@ -401,27 +426,29 @@ export default function BusinessServicesPage() {
                         : '—'}
                     </TableCell>
                     <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => openEdit(service)}>
-                            <Pencil className="mr-2 h-4 w-4" />
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            className="text-red-500"
-                            onClick={() => setDeletingService(service)}
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      <Can permission={Permission.BusinessServicesWrite}>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => openEdit(service)}>
+                              <Pencil className="me-2 h-4 w-4" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-red-500"
+                              onClick={() => setDeletingService(service)}
+                            >
+                              <Trash2 className="me-2 h-4 w-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </Can>
                     </TableCell>
                   </TableRow>
                 ))

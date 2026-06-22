@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import { CommandMenu } from '@/components/command-menu'
 
 type SearchContextType = {
@@ -28,8 +28,10 @@ export function SearchProvider({ children }: SearchProviderProps) {
     return () => document.removeEventListener('keydown', down)
   }, [])
 
+  const value = useMemo(() => ({ open, setOpen }), [open])
+
   return (
-    <SearchContext.Provider value={{ open, setOpen }}>
+    <SearchContext.Provider value={value}>
       {children}
       <CommandMenu />
     </SearchContext.Provider>

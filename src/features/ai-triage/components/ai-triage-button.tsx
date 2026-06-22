@@ -284,7 +284,7 @@ export function AITriageButton({
     if (isRequesting || currentStatus === 'processing') {
       return (
         <>
-          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          <Loader2 className="h-4 w-4 me-2 animate-spin" />
           Analyzing...
         </>
       )
@@ -293,7 +293,7 @@ export function AITriageButton({
     if (currentStatus === 'pending') {
       return (
         <>
-          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          <Loader2 className="h-4 w-4 me-2 animate-spin" />
           Queued...
         </>
       )
@@ -302,7 +302,7 @@ export function AITriageButton({
     if (currentStatus === 'completed') {
       return (
         <>
-          <RotateCcw className="h-4 w-4 mr-2" />
+          <RotateCcw className="h-4 w-4 me-2" />
           Re-analyze
         </>
       )
@@ -311,7 +311,7 @@ export function AITriageButton({
     if (currentStatus === 'failed') {
       return (
         <>
-          <AlertCircle className="h-4 w-4 mr-2" />
+          <AlertCircle className="h-4 w-4 me-2" />
           Retry
         </>
       )
@@ -319,7 +319,7 @@ export function AITriageButton({
 
     return (
       <>
-        <Sparkles className="h-4 w-4 mr-2" />
+        <Sparkles className="h-4 w-4 me-2" />
         AI Triage
       </>
     )

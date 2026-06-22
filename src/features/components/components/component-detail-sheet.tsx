@@ -8,6 +8,7 @@
 'use client'
 
 import * as React from 'react'
+import { useRouter } from 'next/navigation'
 import {
   Package,
   ExternalLink,
@@ -18,7 +19,12 @@ import {
   AlertTriangle,
   CheckCircle,
   Copy,
-  FileCode,
+  Globe,
+  Layers,
+  Loader2,
+  Server,
+  ChevronRight,
+  Zap,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -34,8 +40,19 @@ import { toast } from 'sonner'
 import { EcosystemBadge } from './ecosystem-badge'
 import { SeverityBadge } from './severity-badge'
 import { LicenseRiskBadge, LicenseCategoryBadge } from './license-badge'
-import { RiskScoreBadge, SheetDetailToolbar } from '@/features/shared'
+import {
+  RiskScoreBadge,
+  SheetDetailToolbar,
+  SheetInfoRow as InfoRow,
+  SheetPaginationFooter as PaginationFooter,
+  SheetStatCard as StatCard,
+} from '@/features/shared'
 import type { Component } from '../types'
+import { useComponentAssetsApi, useComponentVulnsApi } from '../api/use-components-api'
+import { VulnerabilityDetailSheet } from '@/features/vulnerabilities'
+import type { Vulnerability } from '@/features/vulnerabilities'
+import type { Severity } from '@/features/shared/types'
+import type { ApiComponentVulnerability } from '../api/component-api.types'
 
 // ============================================
 // Types
@@ -56,62 +73,91 @@ interface ComponentDetailSheetProps {
 // Helper Components
 // ============================================
 
-function StatCard({
-  icon: Icon,
-  label,
-  value,
-  color,
-  description,
-}: {
-  icon: React.ElementType
-  label: string
-  value: string | number
-  color: string
-  description?: string
-}) {
-  return (
-    <div className="rounded-lg border p-3 space-y-1">
-      <div className="flex items-center gap-2 text-muted-foreground">
-        <Icon className={cn('h-4 w-4', color)} />
-        <span className="text-xs font-medium">{label}</span>
-      </div>
-      <p className={cn('text-lg font-bold', color)}>{value}</p>
-      {description && <p className="text-xs text-muted-foreground">{description}</p>}
-    </div>
-  )
-}
+// StatCard, InfoRow, PaginationFooter are imported as aliases from
+// @/features/shared (sheet-primitives) — see imports above.
 
-function InfoRow({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="flex items-center justify-between py-2">
-      <span className="text-sm text-muted-foreground">{label}</span>
-      <div className="flex items-center gap-2">{children}</div>
-    </div>
-  )
+/**
+ * Build a partial Vulnerability object from a row in the component-vulns API.
+ * Used as `fallback` for VulnerabilityDetailSheet so its header renders
+ * immediately while the full /vulnerabilities/{id} fetch is in flight.
+ */
+function vulnFallbackFromRow(v: ApiComponentVulnerability): Vulnerability {
+  return {
+    id: v.vulnerability_id,
+    cve_id: v.cve_id,
+    title: v.title,
+    severity: v.severity as Severity,
+    cvss_score: v.cvss_score ?? undefined,
+    epss_score: v.epss_score ?? undefined,
+    exploit_available: v.exploit_available,
+    exploit_maturity: (v.exploit_maturity ?? 'none') as Vulnerability['exploit_maturity'],
+    fixed_versions: v.fixed_versions,
+    status: 'open',
+    risk_score: 0,
+    created_at: v.first_detected_at,
+    updated_at: v.last_seen_at,
+  }
 }
 
 // ============================================
 // Component
 // ============================================
 
-export function ComponentDetailSheet({ component, open, onOpenChange }: ComponentDetailSheetProps) {
-  const [activeTab, setActiveTab] = React.useState('overview')
+const CRITICALITY_BADGE: Record<string, string> = {
+  critical: 'bg-red-500/15 text-red-700 dark:text-red-400 border-red-500/30',
+  high: 'bg-orange-500/15 text-orange-700 dark:text-orange-400 border-orange-500/30',
+  medium: 'bg-yellow-500/15 text-yellow-700 dark:text-yellow-400 border-yellow-500/30',
+  low: 'bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/30',
+}
 
-  // Reset tab when component changes
+const VULNS_PER_PAGE = 10
+const ASSETS_PER_PAGE = 10
+
+export function ComponentDetailSheet({ component, open, onOpenChange }: ComponentDetailSheetProps) {
+  const router = useRouter()
+  const [activeTab, setActiveTab] = React.useState('overview')
+  const [vulnsPage, setVulnsPage] = React.useState(1)
+  const [assetsPage, setAssetsPage] = React.useState(1)
+  // Selected CVE for the nested vulnerability detail sheet (cross-link).
+  // We carry both id + a fallback Vulnerability object built from the row data
+  // so the nested sheet's header renders instantly while the full detail loads.
+  const [selectedVuln, setSelectedVuln] = React.useState<{
+    id: string
+    fallback: Vulnerability
+  } | null>(null)
+
+  // Vulnerabilities and Assets are both fetched as soon as the sheet opens
+  // (page 1 only). The `total` from each response feeds the Overview tab
+  // counts, and the data is reused when user clicks into the tab.
+  // Subsequent page changes refetch via SWR key change.
+  const componentId = open ? (component?.id ?? null) : null
+  const {
+    data: vulnsData,
+    isLoading: vulnsLoading,
+    error: vulnsError,
+  } = useComponentVulnsApi(componentId, {
+    page: vulnsPage,
+    perPage: VULNS_PER_PAGE,
+  })
+  const {
+    data: assetsData,
+    isLoading: assetsLoading,
+    error: assetsError,
+  } = useComponentAssetsApi(componentId, assetsPage, ASSETS_PER_PAGE)
+
+  // Reset tab + pagination when component changes
   React.useEffect(() => {
     if (component) {
       setActiveTab('overview')
+      setVulnsPage(1)
+      setAssetsPage(1)
     }
   }, [component])
 
   if (!component) return null
 
-  const hasVulnerabilities = component.vulnerabilities.length > 0
-  const totalVulns =
-    component.vulnerabilityCount.critical +
-    component.vulnerabilityCount.high +
-    component.vulnerabilityCount.medium +
-    component.vulnerabilityCount.low
+  const distinctCveCount = vulnsData?.total ?? 0
+  const usedByAssetsCount = assetsData?.total ?? 0
 
   const handleCopyPurl = () => {
     copyToClipboard(component.purl)
@@ -236,7 +282,7 @@ export function ComponentDetailSheet({ component, open, onOpenChange }: Componen
                   )
                 }
               >
-                <ExternalLink className="mr-2 h-4 w-4" />
+                <ExternalLink className="me-2 h-4 w-4" />
                 Homepage
               </Button>
             )}
@@ -252,7 +298,7 @@ export function ComponentDetailSheet({ component, open, onOpenChange }: Componen
                   )
                 }
               >
-                <GitBranch className="mr-2 h-4 w-4" />
+                <GitBranch className="me-2 h-4 w-4" />
                 Repository
               </Button>
             )}
@@ -264,18 +310,20 @@ export function ComponentDetailSheet({ component, open, onOpenChange }: Componen
           <TabsList className="grid w-full grid-cols-3 mb-4">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="vulnerabilities" className="gap-1">
-              Vulns
-              {hasVulnerabilities && (
-                <Badge variant="destructive" className="h-5 px-1.5 text-xs ml-1">
-                  {totalVulns}
+              CVEs
+              {distinctCveCount > 0 && (
+                <Badge variant="destructive" className="h-5 px-1.5 text-xs ms-1">
+                  {distinctCveCount}
                 </Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="sources" className="gap-1">
-              Sources
-              <Badge variant="secondary" className="h-5 px-1.5 text-xs ml-1">
-                {component.sourceCount}
-              </Badge>
+            <TabsTrigger value="assets" className="gap-1">
+              Assets
+              {usedByAssetsCount > 0 && (
+                <Badge variant="secondary" className="h-5 px-1.5 text-xs ms-1">
+                  {usedByAssetsCount}
+                </Badge>
+              )}
             </TabsTrigger>
           </TabsList>
 
@@ -304,15 +352,22 @@ export function ComponentDetailSheet({ component, open, onOpenChange }: Componen
               />
               <StatCard
                 icon={AlertTriangle}
-                label="Vulnerabilities"
-                value={totalVulns}
-                color={totalVulns > 0 ? 'text-red-500' : 'text-green-500'}
+                label="CVEs"
+                value={vulnsLoading && !vulnsData ? '…' : distinctCveCount}
+                color={distinctCveCount > 0 ? 'text-red-500' : 'text-green-500'}
                 description={
-                  component.vulnerabilityCount.critical > 0
-                    ? `${component.vulnerabilityCount.critical} critical`
-                    : totalVulns > 0
-                      ? 'No critical'
-                      : 'No issues'
+                  // Use the first row's severity as the "worst" indicator —
+                  // backend orders by severity → KEV → CVSS so row 0 is the
+                  // most concerning CVE. We avoid `data.filter().length` here
+                  // because data is paginated (would only count page 1, not
+                  // the full set).
+                  distinctCveCount === 0
+                    ? 'No issues'
+                    : vulnsData?.data?.[0]
+                      ? `Worst: ${vulnsData.data[0].severity}${
+                          vulnsData.data[0].in_cisa_kev ? ' · KEV' : ''
+                        }`
+                      : 'View list'
                 }
               />
             </div>
@@ -393,6 +448,43 @@ export function ComponentDetailSheet({ component, open, onOpenChange }: Componen
               </CardContent>
             </Card>
 
+            {/* Reach (replaces the old Sources tab — concise summary) */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Server className="h-4 w-4" />
+                  Reach in your environment
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <InfoRow label="Used by assets">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('assets')}
+                    className="inline-flex items-center gap-1 text-sm font-medium hover:underline disabled:no-underline disabled:cursor-default"
+                    disabled={usedByAssetsCount === 0}
+                  >
+                    <span>{usedByAssetsCount}</span>
+                    {usedByAssetsCount > 0 && <ChevronRight className="h-3 w-3" />}
+                  </button>
+                </InfoRow>
+                <Separator />
+                <InfoRow label="Known CVEs">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('vulnerabilities')}
+                    className="inline-flex items-center gap-1 text-sm font-medium hover:underline disabled:no-underline disabled:cursor-default"
+                    disabled={distinctCveCount === 0}
+                  >
+                    <span className={cn(distinctCveCount > 0 && 'text-red-500')}>
+                      {distinctCveCount}
+                    </span>
+                    {distinctCveCount > 0 && <ChevronRight className="h-3 w-3" />}
+                  </button>
+                </InfoRow>
+              </CardContent>
+            </Card>
+
             {/* Timestamps */}
             <Card>
               <CardHeader className="pb-2">
@@ -417,174 +509,281 @@ export function ComponentDetailSheet({ component, open, onOpenChange }: Componen
             </Card>
           </TabsContent>
 
-          {/* Vulnerabilities Tab */}
+          {/* Vulnerabilities Tab — real CVEs paginated, click to drill into VulnDetailSheet */}
           <TabsContent value="vulnerabilities" className="mt-0">
-            {hasVulnerabilities ? (
-              <div className="space-y-4">
-                {/* Vulnerability Summary */}
-                <Card className="border-red-500/30 bg-red-500/5">
-                  <CardContent className="pt-4">
-                    <div className="grid grid-cols-4 gap-2 text-center">
-                      {[
-                        {
-                          label: 'Critical',
-                          count: component.vulnerabilityCount.critical,
-                          color: 'text-red-600 bg-red-500',
-                        },
-                        {
-                          label: 'High',
-                          count: component.vulnerabilityCount.high,
-                          color: 'text-orange-600 bg-orange-500',
-                        },
-                        {
-                          label: 'Medium',
-                          count: component.vulnerabilityCount.medium,
-                          color: 'text-yellow-600 bg-yellow-500',
-                        },
-                        {
-                          label: 'Low',
-                          count: component.vulnerabilityCount.low,
-                          color: 'text-blue-600 bg-blue-500',
-                        },
-                      ].map((item) => (
-                        <div key={item.label}>
-                          <div
-                            className={cn(
-                              'text-2xl font-bold',
-                              item.count > 0 ? item.color.split(' ')[0] : 'text-muted-foreground'
-                            )}
-                          >
-                            {item.count}
-                          </div>
-                          <div className="text-xs text-muted-foreground">{item.label}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
+            {vulnsError ? (
+              <Card className="border-destructive/50">
+                <CardContent className="flex flex-col items-center justify-center py-12">
+                  <AlertTriangle className="h-12 w-12 text-destructive mb-3" />
+                  <h3 className="text-lg font-medium text-destructive">Failed to load CVEs</h3>
+                  <p className="text-muted-foreground text-sm text-center mt-1 max-w-xs">
+                    {vulnsError instanceof Error
+                      ? vulnsError.message
+                      : 'Could not fetch vulnerabilities for this component.'}
+                  </p>
+                </CardContent>
+              </Card>
+            ) : vulnsLoading && !vulnsData ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : distinctCveCount === 0 ? (
+              <Card>
+                <CardContent className="flex flex-col items-center justify-center py-12">
+                  <div className="h-12 w-12 rounded-full bg-green-500/20 flex items-center justify-center mb-4">
+                    <CheckCircle className="h-6 w-6 text-green-500" />
+                  </div>
+                  <h3 className="text-lg font-medium">No CVEs Detected</h3>
+                  <p className="text-muted-foreground text-sm text-center">
+                    No open findings link this component to any CVE in your tenant.
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-3">
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm">
+                      {distinctCveCount} distinct CVE{distinctCveCount === 1 ? '' : 's'} affect this
+                      component
+                    </CardTitle>
+                    <CardDescription>
+                      Sorted by severity, then KEV status, then CVSS. Click a row for full CVE
+                      detail.
+                    </CardDescription>
+                  </CardHeader>
                 </Card>
 
-                {/* Vulnerability List */}
-                <div className="space-y-3">
-                  {component.vulnerabilities.map((vuln) => (
+                <div className="space-y-2">
+                  {vulnsData?.data.map((v) => (
                     <Card
-                      key={vuln.id}
-                      className={cn('overflow-hidden', vuln.inCisaKev && 'border-red-500/50')}
+                      key={v.vulnerability_id}
+                      className={cn(
+                        'overflow-hidden cursor-pointer transition-colors hover:border-primary',
+                        v.in_cisa_kev && 'border-red-500/50'
+                      )}
+                      onClick={() =>
+                        setSelectedVuln({
+                          id: v.vulnerability_id,
+                          fallback: vulnFallbackFromRow(v),
+                        })
+                      }
                     >
-                      {/* Severity indicator bar */}
                       <div
                         className={cn(
                           'h-1',
-                          vuln.severity === 'critical' && 'bg-red-500',
-                          vuln.severity === 'high' && 'bg-orange-500',
-                          vuln.severity === 'medium' && 'bg-yellow-500',
-                          vuln.severity === 'low' && 'bg-blue-500'
+                          v.severity === 'critical' && 'bg-red-500',
+                          v.severity === 'high' && 'bg-orange-500',
+                          v.severity === 'medium' && 'bg-yellow-500',
+                          v.severity === 'low' && 'bg-blue-500'
                         )}
                       />
                       <CardContent className="pt-4">
                         <div className="flex items-start justify-between gap-2 mb-2">
-                          <div className="flex items-center gap-2 flex-wrap">
+                          <div className="flex items-center gap-2 flex-wrap min-w-0">
                             <Badge variant="outline" className="font-mono text-xs">
-                              {vuln.cveId}
+                              {v.cve_id}
                             </Badge>
-                            <SeverityBadge severity={vuln.severity} />
-                            {vuln.inCisaKev && (
+                            <SeverityBadge severity={v.severity as Severity} />
+                            {v.in_cisa_kev && (
                               <Badge className="bg-red-600 text-white text-xs">CISA KEV</Badge>
                             )}
+                            {v.exploit_available && (
+                              <Badge
+                                variant="outline"
+                                className="text-xs gap-1 border-orange-500/50 text-orange-700 dark:text-orange-400"
+                              >
+                                <Zap className="h-3 w-3" />
+                                Exploit
+                              </Badge>
+                            )}
                           </div>
-                          {vuln.cvssScore && (
+                          {v.cvss_score != null && (
                             <Badge variant="secondary" className="text-xs shrink-0">
-                              CVSS {vuln.cvssScore}
+                              CVSS {v.cvss_score.toFixed(1)}
                             </Badge>
                           )}
                         </div>
-                        <p className="text-sm mb-2">{vuln.title}</p>
-                        <div className="flex items-center justify-between">
-                          {vuln.epssScore && (
-                            <div className="text-xs text-muted-foreground">
-                              EPSS: {(vuln.epssScore * 100).toFixed(1)}%
-                            </div>
+                        <p className="text-sm mb-2 line-clamp-2">{v.title}</p>
+                        <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                          <span className="inline-flex items-center gap-1">
+                            <Server className="h-3 w-3" />
+                            {v.affected_assets_count} asset
+                            {v.affected_assets_count === 1 ? '' : 's'}
+                          </span>
+                          {v.open_finding_count > 0 ? (
+                            <span className="text-red-500">
+                              {v.open_finding_count} open / {v.total_finding_count} finding
+                              {v.total_finding_count === 1 ? '' : 's'}
+                            </span>
+                          ) : (
+                            <span>{v.total_finding_count} finding(s)</span>
                           )}
-                          {vuln.fixAvailable && vuln.fixedVersion && (
-                            <Badge className="bg-green-500 text-white text-xs gap-1">
+                          {v.epss_score != null && (
+                            <span>EPSS: {(v.epss_score * 100).toFixed(1)}%</span>
+                          )}
+                          {v.fixed_versions.length > 0 && (
+                            <span className="ms-auto inline-flex items-center gap-1 text-green-600">
                               <CheckCircle className="h-3 w-3" />
-                              Fix: {vuln.fixedVersion}
-                            </Badge>
+                              Fix: {v.fixed_versions[0]}
+                              {v.fixed_versions.length > 1 && ` (+${v.fixed_versions.length - 1})`}
+                            </span>
                           )}
                         </div>
                       </CardContent>
                     </Card>
                   ))}
                 </div>
+
+                {(vulnsData?.total_pages ?? 1) > 1 && (
+                  <PaginationFooter
+                    page={vulnsPage}
+                    totalPages={vulnsData?.total_pages ?? 1}
+                    pageSize={VULNS_PER_PAGE}
+                    total={distinctCveCount}
+                    rendered={vulnsData?.data?.length ?? 0}
+                    onPageChange={setVulnsPage}
+                  />
+                )}
               </div>
-            ) : (
-              <Card>
-                <CardContent className="flex flex-col items-center justify-center py-12">
-                  <div className="h-12 w-12 rounded-full bg-green-500/20 flex items-center justify-center mb-4">
-                    <CheckCircle className="h-6 w-6 text-green-500" />
-                  </div>
-                  <h3 className="text-lg font-medium">No Vulnerabilities</h3>
-                  <p className="text-muted-foreground text-sm text-center">
-                    This component has no known security vulnerabilities.
-                  </p>
-                </CardContent>
-              </Card>
             )}
           </TabsContent>
 
-          {/* Sources Tab */}
-          <TabsContent value="sources" className="mt-0">
-            <div className="space-y-4">
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm">
-                    Found in {component.sourceCount} location(s)
-                  </CardTitle>
-                  <CardDescription>Assets where this component was discovered</CardDescription>
-                </CardHeader>
+          {/* Used By Assets Tab — blast-radius reverse lookup */}
+          <TabsContent value="assets" className="mt-0">
+            {assetsError ? (
+              <Card className="border-destructive/50">
+                <CardContent className="flex flex-col items-center justify-center py-12">
+                  <AlertTriangle className="h-12 w-12 text-destructive mb-3" />
+                  <h3 className="text-lg font-medium text-destructive">Failed to load assets</h3>
+                  <p className="text-muted-foreground text-sm text-center mt-1 max-w-xs">
+                    {assetsError instanceof Error
+                      ? assetsError.message
+                      : 'Could not fetch assets using this component.'}
+                  </p>
+                </CardContent>
               </Card>
-
-              <div className="space-y-2">
-                {component.sources.map((source) => (
-                  <Card key={source.id} className="overflow-hidden">
-                    <CardContent className="pt-4">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <FileCode className="h-4 w-4 text-muted-foreground shrink-0" />
-                            <span className="font-medium truncate">{source.assetName}</span>
-                          </div>
-                          <code className="text-xs text-muted-foreground font-mono block truncate">
-                            {source.filePath}
-                          </code>
-                        </div>
-                        <Badge variant="secondary" className="text-xs capitalize shrink-0">
-                          {source.type}
-                        </Badge>
-                      </div>
-                      <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
-                        <Clock className="h-3 w-3" />
-                        Discovered: {new Date(source.discoveredAt).toLocaleDateString()}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+            ) : assetsLoading && !assetsData ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
-
-              {component.sources.length === 0 && (
+            ) : (assetsData?.data?.length ?? 0) === 0 ? (
+              <Card>
+                <CardContent className="flex flex-col items-center justify-center py-12">
+                  <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-4">
+                    <Server className="h-6 w-6 text-muted-foreground" />
+                  </div>
+                  <h3 className="text-lg font-medium">Not Used By Any Asset</h3>
+                  <p className="text-muted-foreground text-sm text-center">
+                    No asset in this tenant currently links to this component.
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-3">
                 <Card>
-                  <CardContent className="flex flex-col items-center justify-center py-12">
-                    <FileCode className="h-12 w-12 text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-medium">No Sources Found</h3>
-                    <p className="text-muted-foreground text-sm">
-                      Source information is not available.
-                    </p>
-                  </CardContent>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm">
+                      Used by {assetsData?.total} asset{(assetsData?.total ?? 0) === 1 ? '' : 's'}
+                    </CardTitle>
+                    <CardDescription>
+                      Sorted by criticality, then risk score. Internet-exposed assets first.
+                    </CardDescription>
+                  </CardHeader>
                 </Card>
-              )}
-            </div>
+
+                <div className="space-y-2">
+                  {assetsData?.data.map((u) => (
+                    <Card
+                      key={u.dependency_id}
+                      className="overflow-hidden cursor-pointer transition-colors hover:border-primary"
+                      onClick={() => {
+                        onOpenChange(false)
+                        router.push(`/assets/${u.asset_id}`)
+                      }}
+                    >
+                      <CardContent className="pt-4">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-2 mb-1">
+                              <Server className="h-4 w-4 text-muted-foreground shrink-0" />
+                              <span className="font-medium truncate">{u.asset_name}</span>
+                              <Badge variant="outline" className="text-xs capitalize shrink-0">
+                                {u.asset_type.replace(/_/g, ' ')}
+                              </Badge>
+                              {u.is_internet_accessible && (
+                                <Badge
+                                  variant="outline"
+                                  className="text-xs gap-1 border-orange-500/50 text-orange-700 dark:text-orange-400"
+                                >
+                                  <Globe className="h-3 w-3" />
+                                  Internet
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2 mt-1">
+                              <Badge
+                                variant="outline"
+                                className={cn(
+                                  'text-xs capitalize',
+                                  CRITICALITY_BADGE[u.criticality]
+                                )}
+                              >
+                                {u.criticality}
+                              </Badge>
+                              <Badge variant="secondary" className="text-xs gap-1">
+                                <Layers className="h-3 w-3" />
+                                {u.is_direct ? 'direct' : `transitive (depth ${u.depth})`}
+                              </Badge>
+                              {u.vulnerability_count > 0 && (
+                                <Badge variant="destructive" className="text-xs gap-1">
+                                  <AlertTriangle className="h-3 w-3" />
+                                  {u.vulnerability_count} vuln
+                                  {u.vulnerability_count === 1 ? '' : 's'}
+                                </Badge>
+                              )}
+                            </div>
+                            {u.manifest_file && (
+                              <code className="text-xs text-muted-foreground font-mono block mt-2 truncate">
+                                {u.manifest_path
+                                  ? `${u.manifest_path} (${u.manifest_file})`
+                                  : u.manifest_file}
+                              </code>
+                            )}
+                          </div>
+                          <div className="text-end shrink-0">
+                            <div className="text-xs text-muted-foreground">Risk</div>
+                            <div className="text-lg font-bold">{u.risk_score}</div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+
+                {(assetsData?.total_pages ?? 1) > 1 && (
+                  <PaginationFooter
+                    page={assetsPage}
+                    totalPages={assetsData?.total_pages ?? 1}
+                    pageSize={ASSETS_PER_PAGE}
+                    total={usedByAssetsCount}
+                    rendered={assetsData?.data?.length ?? 0}
+                    onPageChange={setAssetsPage}
+                  />
+                )}
+              </div>
+            )}
           </TabsContent>
         </Tabs>
       </SheetContent>
+
+      {/* Nested vulnerability detail sheet — opens when user clicks a CVE row */}
+      <VulnerabilityDetailSheet
+        vulnerabilityId={selectedVuln?.id ?? null}
+        fallback={selectedVuln?.fallback ?? null}
+        open={selectedVuln !== null}
+        onOpenChange={(o) => !o && setSelectedVuln(null)}
+      />
     </Sheet>
   )
 }
