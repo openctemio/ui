@@ -42,7 +42,7 @@ import {
   ChevronRight,
 } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   DropdownMenu,
