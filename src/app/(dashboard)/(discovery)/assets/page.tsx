@@ -26,13 +26,11 @@ import {
   Server,
   Boxes,
   Database,
-  Smartphone,
   GitBranch,
   Cloud,
   ShieldCheck,
   Network,
   HardDrive,
-  Cpu,
   ArrowRight,
   AlertTriangle,
   TrendingUp,
@@ -112,25 +110,6 @@ const ASSET_TYPE_ICONS: Record<string, LucideIcon> = {
   identity: ShieldCheck,
   repository: GitBranch,
   unclassified: Boxes,
-}
-
-const ASSET_TYPE_NAMES: Record<string, string> = {
-  domain: 'Domains',
-  subdomain: 'Subdomains',
-  certificate: 'Certificates',
-  ip_address: 'IP Addresses',
-  application: 'Applications',
-  service: 'Services',
-  host: 'Hosts',
-  container: 'Containers',
-  kubernetes: 'Kubernetes',
-  network: 'Network Devices',
-  cloud_account: 'Cloud Accounts',
-  storage: 'Storage',
-  database: 'Databases',
-  identity: 'Identity',
-  repository: 'Repositories',
-  unclassified: 'Unclassified',
 }
 
 // Mapping from asset type to sub-module slug (for filtering based on module visibility)
