@@ -72,7 +72,7 @@ export default function AllComponentsPage() {
   const perPage = 20
 
   // API Hooks
-  const { data: apiData, isLoading } = useComponentsApi({
+  const { data: apiData } = useComponentsApi({
     page,
     per_page: perPage,
     name: searchQuery || undefined,
