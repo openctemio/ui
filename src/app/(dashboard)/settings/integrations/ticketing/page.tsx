@@ -557,19 +557,23 @@ function TicketingIntegrationCard({ integration }: { integration: Integration })
         </div>
       </CardContent>
 
-      {integration.provider === 'jira' && (
-        <>
-          <ConfigureTicketingDialog
-            integration={integration}
-            open={configOpen}
-            onOpenChange={setConfigOpen}
-          />
-          <RoutingRulesDialog
-            integration={integration}
-            open={routingOpen}
-            onOpenChange={setRoutingOpen}
-          />
-        </>
+      {/* Mount-on-open so each dialog re-seeds its useState from the freshly
+          revalidated `integration` prop every time it opens (otherwise the
+          always-mounted form keeps stale values after a save) — and so the two
+          dialogs never build their config payload from a stale prop. */}
+      {integration.provider === 'jira' && configOpen && (
+        <ConfigureTicketingDialog
+          integration={integration}
+          open={configOpen}
+          onOpenChange={setConfigOpen}
+        />
+      )}
+      {integration.provider === 'jira' && routingOpen && (
+        <RoutingRulesDialog
+          integration={integration}
+          open={routingOpen}
+          onOpenChange={setRoutingOpen}
+        />
       )}
     </Card>
   )
