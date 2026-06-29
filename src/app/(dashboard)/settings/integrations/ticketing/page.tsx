@@ -37,11 +37,6 @@ import {
   Route,
   X,
 } from 'lucide-react'
-
-// Finding statuses a Jira webhook may set inbound. false_positive/accepted need
-// approval and resolved needs verification, so they're excluded (the backend
-// rejects them anyway; "done"-like Jira statuses should map to fix_applied).
-const INBOUND_FINDING_STATUSES = ['confirmed', 'in_progress', 'fix_applied', 'duplicate'] as const
 import { RoutingRulesDialog } from '@/features/integrations/components/routing-rules-dialog'
 import { Switch } from '@/components/ui/switch'
 import {
@@ -57,6 +52,11 @@ import type {
 } from '@/features/integrations/types/integration.types'
 import { toast } from 'sonner'
 import { mutate } from 'swr'
+
+// Finding statuses a Jira webhook may set inbound. false_positive/accepted need
+// approval and resolved needs verification, so they're excluded (the backend
+// rejects them anyway; "done"-like Jira statuses should map to fix_applied).
+const INBOUND_FINDING_STATUSES = ['confirmed', 'in_progress', 'fix_applied', 'duplicate'] as const
 
 // ─────────────────────────────────────────────────────────
 // Provider helpers
