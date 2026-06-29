@@ -860,13 +860,7 @@ export interface AssetMetadata {
   // Network-specific (NEW)
   // ============================================
   networkType?:
-    | 'vpc'
-    | 'vnet'
-    | 'firewall'
-    | 'load_balancer'
-    | 'nat_gateway'
-    | 'vpn'
-    | 'transit_gateway'
+    'vpc' | 'vnet' | 'firewall' | 'load_balancer' | 'nat_gateway' | 'vpn' | 'transit_gateway'
   vpcCidr?: string
   subnetCidrs?: string[]
   routeTableCount?: number
@@ -1105,12 +1099,7 @@ export const REPO_VISIBILITY_COLORS: Record<
  * SCM Provider type
  */
 export type SCMProvider =
-  | 'github'
-  | 'gitlab'
-  | 'bitbucket'
-  | 'azure_devops'
-  | 'codecommit'
-  | 'local'
+  'github' | 'gitlab' | 'bitbucket' | 'azure_devops' | 'codecommit' | 'local'
 
 export const SCM_PROVIDER_LABELS: Record<SCMProvider, string> = {
   github: 'GitHub',
@@ -1271,12 +1260,7 @@ export interface K8sCluster {
 }
 
 export type WorkloadType =
-  | 'deployment'
-  | 'statefulset'
-  | 'daemonset'
-  | 'job'
-  | 'cronjob'
-  | 'replicaset'
+  'deployment' | 'statefulset' | 'daemonset' | 'job' | 'cronjob' | 'replicaset'
 
 /**
  * Kubernetes Workload (Deployment, StatefulSet, DaemonSet, etc.)
@@ -1414,11 +1398,7 @@ export interface Api {
 
 export type FindingSeverity = 'critical' | 'high' | 'medium' | 'low' | 'info'
 export type FindingType =
-  | 'vulnerability'
-  | 'misconfiguration'
-  | 'exposure'
-  | 'secret'
-  | 'compliance'
+  'vulnerability' | 'misconfiguration' | 'exposure' | 'secret' | 'compliance'
 export type FindingStatus = 'open' | 'in_progress' | 'resolved' | 'accepted' | 'false_positive'
 
 /**

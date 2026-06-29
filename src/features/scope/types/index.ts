@@ -46,14 +46,7 @@ export type ScanType =
   | 'configuration'
 
 export type ScanFrequency =
-  | 'hourly'
-  | 'daily'
-  | 'weekly'
-  | 'monthly'
-  | 'quarterly'
-  | 'continuous'
-  | 'on_commit'
-  | 'on_demand'
+  'hourly' | 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'continuous' | 'on_commit' | 'on_demand'
 
 /**
  * Scope Target - defines what should be scanned

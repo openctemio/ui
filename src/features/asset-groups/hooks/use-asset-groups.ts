@@ -513,11 +513,7 @@ export function useBulkAssetGroupOperations() {
           group_ids: groupIds,
           update: {
             environment: update.environment as
-              | 'production'
-              | 'staging'
-              | 'development'
-              | 'testing'
-              | undefined,
+              'production' | 'staging' | 'development' | 'testing' | undefined,
             criticality: update.criticality as 'critical' | 'high' | 'medium' | 'low' | undefined,
           },
         })

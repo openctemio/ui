@@ -9,23 +9,11 @@ export type FindingSeverity = 'critical' | 'high' | 'medium' | 'low' | 'info'
 
 // Finding status
 export type FindingStatus =
-  | 'new'
-  | 'triaged'
-  | 'in_progress'
-  | 'resolved'
-  | 'false_positive'
-  | 'accepted_risk'
+  'new' | 'triaged' | 'in_progress' | 'resolved' | 'false_positive' | 'accepted_risk'
 
 // Finding source (how the finding was discovered)
 export type FindingSource =
-  | 'sast'
-  | 'sca'
-  | 'dast'
-  | 'iac'
-  | 'secret'
-  | 'manual'
-  | 'pentest'
-  | 'bug_bounty'
+  'sast' | 'sca' | 'dast' | 'iac' | 'secret' | 'manual' | 'pentest' | 'bug_bounty'
 
 /**
  * Finding entity from API

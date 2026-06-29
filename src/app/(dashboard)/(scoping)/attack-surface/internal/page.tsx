@@ -134,28 +134,26 @@ export default function InternalSurfacePage() {
   })
   const apiMapped = useMemo<InternalAsset[]>(() => {
     if (!apiAssets || apiAssets.length === 0) return []
-    return apiAssets.map(
-      (a): InternalAsset => ({
-        id: a.id,
-        hostname: a.name,
-        type: a.type as InternalAsset['type'],
-        ipAddress: (a.metadata?.ip as string) || (a.metadata?.ip_address as string) || '',
-        operatingSystem: (a.metadata?.os as string) || undefined,
-        networkZone: (a.scope === 'internal' ? 'internal' : 'dmz') as InternalAsset['networkZone'],
-        status: (a.status === 'active' ? 'active' : 'inactive') as InternalAsset['status'],
-        riskLevel:
-          a.riskScore >= 70
-            ? 'critical'
-            : a.riskScore >= 50
-              ? 'high'
-              : a.riskScore >= 30
-                ? 'medium'
-                : 'low',
-        lastSeen: a.updatedAt || a.createdAt,
-        discoveredAt: a.createdAt,
-        findingsCount: a.findingCount || 0,
-      })
-    )
+    return apiAssets.map((a): InternalAsset => ({
+      id: a.id,
+      hostname: a.name,
+      type: a.type as InternalAsset['type'],
+      ipAddress: (a.metadata?.ip as string) || (a.metadata?.ip_address as string) || '',
+      operatingSystem: (a.metadata?.os as string) || undefined,
+      networkZone: (a.scope === 'internal' ? 'internal' : 'dmz') as InternalAsset['networkZone'],
+      status: (a.status === 'active' ? 'active' : 'inactive') as InternalAsset['status'],
+      riskLevel:
+        a.riskScore >= 70
+          ? 'critical'
+          : a.riskScore >= 50
+            ? 'high'
+            : a.riskScore >= 30
+              ? 'medium'
+              : 'low',
+      lastSeen: a.updatedAt || a.createdAt,
+      discoveredAt: a.createdAt,
+      findingsCount: a.findingCount || 0,
+    }))
   }, [apiAssets])
 
   // Real internal assets from the assets API; empty until data loads.

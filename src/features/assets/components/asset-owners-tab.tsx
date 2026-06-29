@@ -348,27 +348,23 @@ export function AssetOwnersTab({ assetId }: AssetOwnersTabProps) {
   // icon and the submit handler can decide between userId vs groupId.
   const userOptions: PickerOption[] = useMemo(() => {
     return (membersData?.data ?? [])
-      .map(
-        (m): PickerOption => ({
-          kind: 'user',
-          id: m.user_id,
-          label: m.name?.trim() || m.email || '(unnamed user)',
-          sublabel: m.name?.trim() ? m.email : undefined,
-        })
-      )
+      .map((m): PickerOption => ({
+        kind: 'user',
+        id: m.user_id,
+        label: m.name?.trim() || m.email || '(unnamed user)',
+        sublabel: m.name?.trim() ? m.email : undefined,
+      }))
       .filter((o) => o.id && !takenUserIds.has(o.id))
   }, [membersData, takenUserIds])
 
   const groupOptions: PickerOption[] = useMemo(() => {
     return (groupsData ?? [])
-      .map(
-        (g): PickerOption => ({
-          kind: 'group',
-          id: g.id,
-          label: g.name,
-          sublabel: g.description || undefined,
-        })
-      )
+      .map((g): PickerOption => ({
+        kind: 'group',
+        id: g.id,
+        label: g.name,
+        sublabel: g.description || undefined,
+      }))
       .filter((o) => o.id && !takenGroupIds.has(o.id))
   }, [groupsData, takenGroupIds])
 
