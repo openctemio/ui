@@ -3,12 +3,7 @@
  */
 
 export type AssetCategory =
-  | 'data'
-  | 'system'
-  | 'application'
-  | 'infrastructure'
-  | 'intellectual_property'
-  | 'financial'
+  'data' | 'system' | 'application' | 'infrastructure' | 'intellectual_property' | 'financial'
 
 export type ProtectionLevel = 'maximum' | 'high' | 'standard' | 'basic'
 export type DataClassification = 'top_secret' | 'confidential' | 'internal' | 'public'
