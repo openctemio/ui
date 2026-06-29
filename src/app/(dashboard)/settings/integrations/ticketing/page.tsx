@@ -35,7 +35,13 @@ import {
   Link2,
   ExternalLink,
   Route,
+  X,
 } from 'lucide-react'
+
+// Finding statuses a Jira webhook may set inbound. false_positive/accepted need
+// approval and resolved needs verification, so they're excluded (the backend
+// rejects them anyway; "done"-like Jira statuses should map to fix_applied).
+const INBOUND_FINDING_STATUSES = ['confirmed', 'in_progress', 'fix_applied', 'duplicate'] as const
 import { RoutingRulesDialog } from '@/features/integrations/components/routing-rules-dialog'
 import { Switch } from '@/components/ui/switch'
 import {
@@ -159,6 +165,12 @@ function ConfigureTicketingDialog({
     resolved: out0.resolved ?? '',
   })
 
+  // Inbound: arbitrary Jira status name → finding status (freeform rows).
+  const in0 = (cfg.status_inbound as Record<string, string> | undefined) ?? {}
+  const [statusInbound, setStatusInbound] = useState<Array<{ jira: string; finding: string }>>(
+    Object.entries(in0).map(([jira, finding]) => ({ jira, finding }))
+  )
+
   const { trigger: update, isMutating } = useUpdateIntegrationApi(integration.id)
 
   // Drop empty values so we don't overwrite defaults with blanks.
@@ -180,6 +192,13 @@ function ConfigureTicketingDialog({
       const existingTicketing = (existingConfig.ticketing as Record<string, unknown>) ?? {}
       const sevMap = pruned(sevPriority)
       const outMap = pruned(statusOutbound)
+      // The inbound editor shows every existing key, so it is authoritative —
+      // build the full map from the rows (drop blanks).
+      const inMap = Object.fromEntries(
+        statusInbound
+          .map((r) => [r.jira.trim(), r.finding.trim()] as const)
+          .filter(([j, f]) => j !== '' && f !== '')
+      )
       await update({
         config: {
           ...existingConfig,
@@ -199,6 +218,7 @@ function ConfigureTicketingDialog({
               ...((existingTicketing.status_outbound as Record<string, string>) ?? {}),
               ...outMap,
             },
+            status_inbound: inMap,
           },
         },
       })
@@ -350,6 +370,76 @@ function ConfigureTicketingDialog({
                 </div>
               ))}
             </div>
+          </div>
+
+          {/* Inbound status mapping (Jira status NAME → finding status) */}
+          <div className="space-y-3 rounded-lg border p-3">
+            <Label className="font-medium">Inbound status mapping</Label>
+            <p className="text-muted-foreground text-xs">
+              Map your Jira workflow status names to OpenCTEM finding statuses so a Jira-side status
+              change updates the finding. Stock Jira names (To Do / In Progress / Done…) already
+              work — only add rows for custom workflow statuses.
+            </p>
+            {statusInbound.length === 0 && (
+              <p className="text-muted-foreground text-xs italic">
+                No custom mappings — stock defaults apply.
+              </p>
+            )}
+            {statusInbound.map((row, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <Input
+                  value={row.jira}
+                  onChange={(e) =>
+                    setStatusInbound((rows) =>
+                      rows.map((r, j) => (j === i ? { ...r, jira: e.target.value } : r))
+                    )
+                  }
+                  placeholder="Jira status (e.g. Shipped)"
+                  className="flex-1"
+                />
+                <span className="text-muted-foreground text-xs">→</span>
+                <Select
+                  value={row.finding || undefined}
+                  onValueChange={(v) =>
+                    setStatusInbound((rows) =>
+                      rows.map((r, j) => (j === i ? { ...r, finding: v } : r))
+                    )
+                  }
+                >
+                  <SelectTrigger className="w-40">
+                    <SelectValue placeholder="Finding status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {INBOUND_FINDING_STATUSES.map((s) => (
+                      <SelectItem key={s} value={s}>
+                        {s.replace('_', ' ')}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 shrink-0"
+                  onClick={() => setStatusInbound((rows) => rows.filter((_, j) => j !== i))}
+                  aria-label="Remove mapping"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                setStatusInbound((rows) => [...rows, { jira: '', finding: 'confirmed' }])
+              }
+            >
+              <Plus className="me-2 h-4 w-4" />
+              Add mapping
+            </Button>
           </div>
         </div>
         <DialogFooter>
