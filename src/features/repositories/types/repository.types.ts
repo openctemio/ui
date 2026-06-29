@@ -187,12 +187,7 @@ export const SEVERITY_COLORS: Record<Severity, { bg: string; text: string; borde
 // ============================================
 
 export type FindingStatus =
-  | 'open'
-  | 'confirmed'
-  | 'in_progress'
-  | 'resolved'
-  | 'false_positive'
-  | 'accepted_risk'
+  'open' | 'confirmed' | 'in_progress' | 'resolved' | 'false_positive' | 'accepted_risk'
 
 export const FINDING_STATUS_LABELS: Record<FindingStatus, string> = {
   open: 'Open',

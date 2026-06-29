@@ -56,14 +56,7 @@ import { Separator } from '@/components/ui/separator'
 
 // Status filter type - matches ScanSessionStatus
 type StatusFilter =
-  | 'all'
-  | 'queued'
-  | 'pending'
-  | 'running'
-  | 'completed'
-  | 'failed'
-  | 'canceled'
-  | 'timeout'
+  'all' | 'queued' | 'pending' | 'running' | 'completed' | 'failed' | 'canceled' | 'timeout'
 
 const statusFilters: { value: StatusFilter; label: string }[] = [
   { value: 'all', label: 'All' },

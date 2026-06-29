@@ -150,31 +150,29 @@ export default function CloudSurfacePage() {
 
   const apiResources = useMemo<CloudResource[]>(() => {
     if (!apiAssets || apiAssets.length === 0) return []
-    return apiAssets.map(
-      (a): CloudResource => ({
-        id: a.id,
-        name: a.name,
-        provider: (a.metadata?.cloud_provider as CloudProvider) || 'aws',
-        resourceType: (a.metadata?.resource_type as ResourceType) || 'compute',
-        region: (a.metadata?.region as string) || 'unknown',
-        accountId: (a.metadata?.account_id as string) || '',
-        accountName: a.name,
-        status: a.status === 'active' ? 'running' : 'stopped',
-        exposure: String(a.exposure) === 'external' ? 'public' : 'private',
-        riskLevel:
-          a.riskScore >= 70
-            ? 'critical'
-            : a.riskScore >= 50
-              ? 'high'
-              : a.riskScore >= 30
-                ? 'medium'
-                : 'low',
-        lastSeen: a.updatedAt || a.createdAt,
-        discoveredAt: a.createdAt,
-        findingsCount: a.findingCount || 0,
-        tags: {},
-      })
-    )
+    return apiAssets.map((a): CloudResource => ({
+      id: a.id,
+      name: a.name,
+      provider: (a.metadata?.cloud_provider as CloudProvider) || 'aws',
+      resourceType: (a.metadata?.resource_type as ResourceType) || 'compute',
+      region: (a.metadata?.region as string) || 'unknown',
+      accountId: (a.metadata?.account_id as string) || '',
+      accountName: a.name,
+      status: a.status === 'active' ? 'running' : 'stopped',
+      exposure: String(a.exposure) === 'external' ? 'public' : 'private',
+      riskLevel:
+        a.riskScore >= 70
+          ? 'critical'
+          : a.riskScore >= 50
+            ? 'high'
+            : a.riskScore >= 30
+              ? 'medium'
+              : 'low',
+      lastSeen: a.updatedAt || a.createdAt,
+      discoveredAt: a.createdAt,
+      findingsCount: a.findingCount || 0,
+      tags: {},
+    }))
   }, [apiAssets])
 
   // Real discovered resources from the assets API; empty until data loads.
