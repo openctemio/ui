@@ -88,14 +88,16 @@ import { TASK_STATUS_LABELS, TASK_PRIORITY_LABELS } from '@/features/remediation
 import {
   useRemediationCampaigns,
   useCreateRemediationCampaign,
+  type RemediationCampaign,
 } from '@/features/remediation/api/use-remediation-campaigns'
+import { fetchAllPages } from '@/lib/api/fetch-all-pages'
 import { CreateJiraEpicDialog } from '@/features/remediation/components/create-jira-epic-dialog'
 import { getErrorMessage } from '@/lib/api/error-handler'
 import { patch, del } from '@/lib/api/client'
 import { useFindingsApi } from '@/features/findings/api/use-findings-api'
 import type { TaskStatus, TaskPriority, RemediationTask } from '@/features/remediation/types'
 import type { Severity } from '@/features/shared/types'
-import { useCsvExport, type ExportFieldConfig } from '@/hooks/use-csv-export'
+import { exportToCsv, type ExportFieldConfig } from '@/hooks/use-csv-export'
 
 const REMEDIATION_EXPORT_FIELDS: ExportFieldConfig<RemediationTask>[] = [
   { header: 'Title', accessor: (t) => t.title },
@@ -243,6 +245,51 @@ function checkOverdue(task: RemediationTask): boolean {
   return !isNaN(d.getTime()) && d < new Date()
 }
 
+/** Map a remediation campaign (API) to the UI task row. */
+function campaignToTask(c: RemediationCampaign): RemediationTask {
+  return {
+    id: c.id,
+    title: c.name,
+    description: c.description || '',
+    status: normalizeStatus(c.status),
+    priority: normalizePriority(c.priority),
+    findingId: '',
+    findingTitle: `${c.finding_count} finding${c.finding_count !== 1 ? 's' : ''} linked`,
+    severity: (c.priority === 'critical' ? 'critical' : c.priority) as Severity,
+    assigneeId: c.assigned_to || '',
+    assigneeName: c.assigned_team || '',
+    dueDate: c.due_date || '',
+    completedAt: c.completed_at || undefined,
+    createdAt: c.created_at,
+    updatedAt: c.updated_at,
+    finding_count: c.finding_count,
+    resolved_count: c.resolved_count,
+    progress: c.progress,
+    is_overdue: c.is_overdue,
+    tags: c.tags || [],
+    ticketKey: c.ticket?.issue_key,
+    ticketUrl: c.ticket?.issue_url,
+  } as RemediationTask
+}
+
+/** Apply the page's quick-filter + advanced filters to a task list. Shared by
+ *  the table view and the "export all" action so both agree. */
+function applyTaskFilters(tasks: RemediationTask[], quickFilter: string, filters: Filters) {
+  let data = [...tasks]
+  if (quickFilter === 'open') data = data.filter((t) => t.status === 'open')
+  else if (quickFilter === 'in_progress') data = data.filter((t) => t.status === 'in_progress')
+  else if (quickFilter === 'review') data = data.filter((t) => t.status === 'review')
+  else if (quickFilter === 'blocked') data = data.filter((t) => t.status === 'blocked')
+  else if (quickFilter === 'overdue') data = data.filter((t) => checkOverdue(t))
+
+  if (filters.priorities.length > 0)
+    data = data.filter((t) => filters.priorities.includes(t.priority))
+  if (filters.statuses.length > 0) data = data.filter((t) => filters.statuses.includes(t.status))
+  if (filters.assignees.length > 0)
+    data = data.filter((t) => filters.assignees.includes(t.assigneeName))
+  return data
+}
+
 /** Context-aware status actions */
 function getAvailableActions(status: TaskStatus) {
   switch (status) {
@@ -292,29 +339,7 @@ export default function RemediationPage() {
 
   const tasks: RemediationTask[] = useMemo(() => {
     if (!campaignData?.data?.length) return []
-    return campaignData.data.map((c) => ({
-      id: c.id,
-      title: c.name,
-      description: c.description || '',
-      status: normalizeStatus(c.status),
-      priority: normalizePriority(c.priority),
-      findingId: '',
-      findingTitle: `${c.finding_count} finding${c.finding_count !== 1 ? 's' : ''} linked`,
-      severity: (c.priority === 'critical' ? 'critical' : c.priority) as Severity,
-      assigneeId: c.assigned_to || '',
-      assigneeName: c.assigned_team || '',
-      dueDate: c.due_date || '',
-      completedAt: c.completed_at || undefined,
-      createdAt: c.created_at,
-      updatedAt: c.updated_at,
-      finding_count: c.finding_count,
-      resolved_count: c.resolved_count,
-      progress: c.progress,
-      is_overdue: c.is_overdue,
-      tags: c.tags || [],
-      ticketKey: c.ticket?.issue_key,
-      ticketUrl: c.ticket?.issue_url,
-    })) as RemediationTask[]
+    return campaignData.data.map(campaignToTask)
   }, [campaignData])
 
   // ─── Computed ────────────────────────────────────────────────────
@@ -373,45 +398,58 @@ export default function RemediationPage() {
     return count
   }, [filters])
 
-  const filteredData = useMemo(() => {
-    let data = [...tasks]
-
-    if (quickFilter === 'open') data = data.filter((t) => t.status === 'open')
-    else if (quickFilter === 'in_progress') data = data.filter((t) => t.status === 'in_progress')
-    else if (quickFilter === 'review') data = data.filter((t) => t.status === 'review')
-    else if (quickFilter === 'blocked') data = data.filter((t) => t.status === 'blocked')
-    else if (quickFilter === 'overdue') data = data.filter((t) => checkOverdue(t))
-
-    if (filters.priorities.length > 0)
-      data = data.filter((t) => filters.priorities.includes(t.priority))
-    if (filters.statuses.length > 0) data = data.filter((t) => filters.statuses.includes(t.status))
-    if (filters.assignees.length > 0)
-      data = data.filter((t) => filters.assignees.includes(t.assigneeName))
-
-    return data
-  }, [tasks, quickFilter, filters])
+  const filteredData = useMemo(
+    () => applyTaskFilters(tasks, quickFilter, filters),
+    [tasks, quickFilter, filters]
+  )
 
   // ─── Handlers ────────────────────────────────────────────────────
 
-  const { handleExport: handleExportCsv } = useCsvExport(
-    filteredData,
-    REMEDIATION_EXPORT_FIELDS,
-    'remediation-tasks'
-  )
-  const handleExportJson = useCallback(() => {
-    if (!filteredData.length) {
-      toast.error('No data to export')
-      return
+  // Export covers EVERY campaign (all pages) mapped to tasks and re-filtered by
+  // the current filters — not just the loaded page (per_page=50 in the hook).
+  const [isExporting, setIsExporting] = useState(false)
+  const fetchAllFilteredTasks = useCallback(async (): Promise<RemediationTask[]> => {
+    const campaigns = await fetchAllPages<RemediationCampaign>(
+      (page, per_page) => `/api/v1/remediation/campaigns?page=${page}&per_page=${per_page}`
+    )
+    return applyTaskFilters(campaigns.map(campaignToTask), quickFilter, filters)
+  }, [quickFilter, filters])
+
+  const handleExportCsv = useCallback(async () => {
+    if (isExporting) return
+    setIsExporting(true)
+    try {
+      exportToCsv(await fetchAllFilteredTasks(), REMEDIATION_EXPORT_FIELDS, 'remediation-tasks')
+    } catch {
+      toast.error('Failed to export remediation tasks')
+    } finally {
+      setIsExporting(false)
     }
-    const blob = new Blob([JSON.stringify(filteredData, null, 2)], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `remediation-tasks-${new Date().toISOString().slice(0, 10)}.json`
-    a.click()
-    URL.revokeObjectURL(url)
-    toast.success('Exported successfully')
-  }, [filteredData])
+  }, [isExporting, fetchAllFilteredTasks])
+
+  const handleExportJson = useCallback(async () => {
+    if (isExporting) return
+    setIsExporting(true)
+    try {
+      const all = await fetchAllFilteredTasks()
+      if (!all.length) {
+        toast.error('No data to export')
+        return
+      }
+      const blob = new Blob([JSON.stringify(all, null, 2)], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `remediation-tasks-${new Date().toISOString().slice(0, 10)}.json`
+      a.click()
+      URL.revokeObjectURL(url)
+      toast.success(`Exported ${all.length} row${all.length === 1 ? '' : 's'}`)
+    } catch {
+      toast.error('Failed to export remediation tasks')
+    } finally {
+      setIsExporting(false)
+    }
+  }, [isExporting, fetchAllFilteredTasks])
 
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true)
@@ -853,10 +891,16 @@ export default function RemediationPage() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={handleExportCsv} disabled={filteredData.length === 0}>
+                <DropdownMenuItem
+                  onClick={handleExportCsv}
+                  disabled={isExporting || tasks.length === 0}
+                >
                   Export as CSV
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleExportJson} disabled={filteredData.length === 0}>
+                <DropdownMenuItem
+                  onClick={handleExportJson}
+                  disabled={isExporting || tasks.length === 0}
+                >
                   Export as JSON
                 </DropdownMenuItem>
               </DropdownMenuContent>
