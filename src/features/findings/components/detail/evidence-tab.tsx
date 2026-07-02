@@ -33,6 +33,7 @@ import type { Evidence, EvidenceType, FindingDetail } from '../../types'
 import { EVIDENCE_TYPE_CONFIG } from '../../types'
 import { CodeHighlighter } from './code-highlighter'
 import { ValidationEvidencePanel } from './validation-evidence-panel'
+import { ComplianceMappingCard } from './compliance-mapping-card'
 import { buildRepositoryCodeUrl } from '../../lib/repository-url'
 
 interface EvidenceTabProps {
@@ -339,6 +340,7 @@ export function EvidenceTab({ evidence, finding }: EvidenceTabProps) {
       {finding?.id && (
         <>
           <ValidationEvidencePanel findingId={finding.id} />
+          <ComplianceMappingCard findingId={finding.id} />
           <Separator />
         </>
       )}
