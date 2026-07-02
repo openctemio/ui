@@ -4,30 +4,37 @@ import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import type { Severity } from '@/features/shared/types'
 
+// Soft-tint severity palette. Text colors are dark-paired so labels stay legible
+// in dark mode (600-weight text is too dark on the translucent tint there).
 const severityConfig: Record<Severity, { label: string; className: string }> = {
   critical: {
     label: 'Critical',
-    className: 'bg-red-500/15 text-red-600 border-red-500/30 hover:bg-red-500/25',
+    className: 'bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/30 hover:bg-red-500/25',
   },
   high: {
     label: 'High',
-    className: 'bg-orange-500/15 text-orange-600 border-orange-500/30 hover:bg-orange-500/25',
+    className:
+      'bg-orange-500/15 text-orange-600 dark:text-orange-400 border-orange-500/30 hover:bg-orange-500/25',
   },
   medium: {
     label: 'Medium',
-    className: 'bg-yellow-500/15 text-yellow-600 border-yellow-500/30 hover:bg-yellow-500/25',
+    className:
+      'bg-yellow-500/15 text-yellow-600 dark:text-yellow-400 border-yellow-500/30 hover:bg-yellow-500/25',
   },
   low: {
     label: 'Low',
-    className: 'bg-blue-500/15 text-blue-600 border-blue-500/30 hover:bg-blue-500/25',
+    className:
+      'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30 hover:bg-blue-500/25',
   },
   info: {
     label: 'Info',
-    className: 'bg-slate-500/15 text-slate-600 border-slate-500/30 hover:bg-slate-500/25',
+    className:
+      'bg-slate-500/15 text-slate-600 dark:text-slate-400 border-slate-500/30 hover:bg-slate-500/25',
   },
   none: {
     label: 'None',
-    className: 'bg-slate-500/15 text-slate-600 border-slate-500/30 hover:bg-slate-500/25',
+    className:
+      'bg-slate-500/15 text-slate-600 dark:text-slate-400 border-slate-500/30 hover:bg-slate-500/25',
   },
 }
 
@@ -65,7 +72,10 @@ export function VulnerabilityCountBadge({ counts, className }: VulnerabilityCoun
     return (
       <Badge
         variant="outline"
-        className={cn('bg-green-500/15 text-green-600 border-green-500/30', className)}
+        className={cn(
+          'bg-green-500/15 text-green-600 dark:text-green-400 border-green-500/30',
+          className
+        )}
       >
         0
       </Badge>
