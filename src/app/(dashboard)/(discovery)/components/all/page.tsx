@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
+import { toast } from 'sonner'
 import { Main } from '@/components/layout'
 import { PageHeader } from '@/features/shared'
 import { Button } from '@/components/ui/button'
@@ -34,10 +35,13 @@ import {
 import {
   useComponentStatsApi,
   useEcosystemStatsApi,
+  buildComponentsEndpoint,
 } from '@/features/components/api/use-components-api'
+import type { ComponentApiFilters } from '@/features/components/api/component-api.types'
 import { mapApiComponentToUi } from '@/features/components/api/mapper' // Best to export this from features/components/index.ts
 import type { Component } from '@/features/components'
-import { useCsvExport, type ExportFieldConfig } from '@/hooks/use-csv-export'
+import { exportToCsv, type ExportFieldConfig } from '@/hooks/use-csv-export'
+import { fetchAllPages } from '@/lib/api/fetch-all-pages'
 
 const totalVulns = (c: Component) =>
   c.vulnerabilityCount.critical +
@@ -71,10 +75,9 @@ export default function AllComponentsPage() {
   const [page, _setPage] = useState(1)
   const perPage = 20
 
-  // API Hooks
-  const { data: apiData } = useComponentsApi({
-    page,
-    per_page: perPage,
+  // Shared filter set (excludes pagination) — used by both the table query and
+  // the "export all" action so the CSV honors the same filters.
+  const componentFilters: ComponentApiFilters = {
     name: searchQuery || undefined,
     ecosystems: ecosystemFilter !== 'all' ? [ecosystemFilter as ApiComponentEcosystem] : undefined,
     dependency_types:
@@ -85,7 +88,10 @@ export default function AllComponentsPage() {
           : undefined,
     // Note: API doesn't fully support all UI filters yet (like outdated or specific vulnerability severity breakdown)
     has_vulnerabilities: filterType === 'vulnerable' ? true : undefined,
-  })
+  }
+
+  // API Hooks
+  const { data: apiData } = useComponentsApi({ ...componentFilters, page, per_page: perPage })
 
   // Map Data
   const filteredComponents = useMemo(() => {
@@ -118,7 +124,25 @@ export default function AllComponentsPage() {
     vulnerable: stats.componentsWithVulnerabilities,
   }
 
-  const { handleExport } = useCsvExport(filteredComponents, COMPONENT_EXPORT_FIELDS, 'components')
+  // Export ALL components matching the current filters (every page), not just
+  // the page rendered in the table.
+  const [isExporting, setIsExporting] = useState(false)
+  const handleExport = useCallback(async () => {
+    if (isExporting) return
+    setIsExporting(true)
+    try {
+      const raw = await fetchAllPages<Parameters<typeof mapApiComponentToUi>[0]>((p, per_page) =>
+        buildComponentsEndpoint({ ...componentFilters, page: p, per_page })
+      )
+      exportToCsv(raw.map(mapApiComponentToUi), COMPONENT_EXPORT_FIELDS, 'components')
+    } catch {
+      toast.error('Failed to export components')
+    } finally {
+      setIsExporting(false)
+    }
+    // componentFilters is derived from the filter state below; those are the deps.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isExporting, searchQuery, ecosystemFilter, filterType])
 
   return (
     <>
@@ -127,9 +151,9 @@ export default function AllComponentsPage() {
           title="All Components"
           description={`${stats.totalComponents} software components in your organization`}
         >
-          <Button variant="outline" onClick={handleExport}>
+          <Button variant="outline" onClick={handleExport} disabled={isExporting}>
             <Download className="me-2 h-4 w-4" />
-            Export CSV
+            {isExporting ? 'Exporting…' : 'Export CSV'}
           </Button>
         </PageHeader>
 
