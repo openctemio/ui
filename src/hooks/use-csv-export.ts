@@ -37,37 +37,59 @@ export function sanitizeCsvCell(value: unknown): string {
  * a memory leak. Used by asset pages (via the `useAssetExport` alias) and the
  * exposures page; reach for this whenever a list view needs "Export to CSV".
  */
+/**
+ * Build a sanitized CSV from an explicit dataset and trigger a download.
+ * Standalone (not a hook) so callers can export a dynamically-fetched dataset
+ * \u2014 e.g. "export ALL rows" by fetching every page first, rather than only the
+ * page currently rendered. Returns false (and toasts) when there is nothing to
+ * export.
+ */
+export function exportToCsv<T>(
+  data: T[],
+  fields: ExportFieldConfig<T>[],
+  filename: string
+): boolean {
+  if (!data?.length) {
+    toast.error('No data to export')
+    return false
+  }
+
+  // Sanitize headers too, not just cells: a header sourced from user-defined
+  // data (e.g. a custom field name) starting with =/+/-/@ would otherwise be
+  // a formula-injection vector when the CSV is opened in a spreadsheet.
+  const headers = fields.map((f) => sanitizeCsvCell(f.header)).join(',')
+  const rows = data.map((item) =>
+    fields
+      .map((f) => {
+        const raw = f.accessor(item)
+        const value = f.transform ? f.transform(raw) : raw
+        return sanitizeCsvCell(value)
+      })
+      .join(',')
+  )
+  const csv = [headers, ...rows].join('\n')
+
+  // BOM prefix for Excel to correctly detect UTF-8
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `${filename}-${new Date().toISOString().slice(0, 10)}.csv`
+  a.click()
+  URL.revokeObjectURL(url) // Prevent memory leak
+  toast.success(`Exported ${data.length} row${data.length === 1 ? '' : 's'}`)
+  return true
+}
+
+/**
+ * Generic, reusable CSV export hook. Exports the `data` passed in (the caller's
+ * current dataset). For "export everything" use `exportToCsv` with a
+ * fully-fetched dataset \u2014 passing only the current page here exports only that
+ * page.
+ */
 export function useCsvExport<T>(data: T[], fields: ExportFieldConfig<T>[], filename: string) {
   const handleExport = useCallback(() => {
-    if (!data?.length) {
-      toast.error('No data to export')
-      return
-    }
-
-    // Sanitize headers too, not just cells: a header sourced from user-defined
-    // data (e.g. a custom field name) starting with =/+/-/@ would otherwise be
-    // a formula-injection vector when the CSV is opened in a spreadsheet.
-    const headers = fields.map((f) => sanitizeCsvCell(f.header)).join(',')
-    const rows = data.map((item) =>
-      fields
-        .map((f) => {
-          const raw = f.accessor(item)
-          const value = f.transform ? f.transform(raw) : raw
-          return sanitizeCsvCell(value)
-        })
-        .join(',')
-    )
-    const csv = [headers, ...rows].join('\n')
-
-    // BOM prefix for Excel to correctly detect UTF-8
-    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `${filename}-${new Date().toISOString().slice(0, 10)}.csv`
-    a.click()
-    URL.revokeObjectURL(url) // Prevent memory leak
-    toast.success('Exported successfully')
+    exportToCsv(data, fields, filename)
   }, [data, fields, filename])
 
   return { handleExport }

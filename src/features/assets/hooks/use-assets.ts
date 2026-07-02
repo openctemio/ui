@@ -323,6 +323,35 @@ function buildAssetQueryParams(filters?: AssetSearchFilters): Record<string, str
 }
 
 /**
+ * Fetch EVERY asset matching the given filters by walking all pages. Used by
+ * "Export" so the CSV covers the whole filtered dataset, not just the page
+ * currently rendered in the table. Any page/pageSize on the passed filters is
+ * ignored; it pages at per_page=100 (the API maximum) with a hard cap to avoid
+ * a runaway loop.
+ */
+export async function fetchAllAssets(filters?: AssetSearchFilters): Promise<Asset[]> {
+  const perPage = 100
+  const maxPages = 500 // hard safety cap (≈50k assets)
+  const all: Asset[] = []
+  let page = 1
+  let totalPages = 1
+
+  do {
+    const params = buildAssetQueryParams({ ...filters, page, pageSize: perPage })
+    const queryString =
+      Object.keys(params).length > 0 ? '?' + new URLSearchParams(params).toString() : ''
+    const resp = await get<BackendListResponse<BackendAsset>>(`/api/v1/assets${queryString}`)
+    for (const a of resp.data ?? []) {
+      all.push(transformAsset(a))
+    }
+    totalPages = resp.total_pages || 1
+    page++
+  } while (page <= totalPages && page <= maxPages)
+
+  return all
+}
+
+/**
  * Hook to fetch paginated assets list
  * Only fetches if user has assets:read permission
  */

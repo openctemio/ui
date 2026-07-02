@@ -355,14 +355,16 @@ describe('useAssetExport', () => {
       vi.useRealTimers()
     })
 
-    it('shows success toast after export', () => {
+    it('shows success toast with the exported row count', () => {
       const { result } = renderHook(() => useAssetExport(sampleData, fields, 'test'))
 
       act(() => {
         result.current.handleExport()
       })
 
-      expect(toast.success).toHaveBeenCalledWith('Exported successfully')
+      expect(toast.success).toHaveBeenCalledWith(
+        `Exported ${sampleData.length} row${sampleData.length === 1 ? '' : 's'}`
+      )
     })
   })
 })
