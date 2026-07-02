@@ -55,9 +55,9 @@ export function ComplianceMappingCard({ findingId }: ComplianceMappingCardProps)
           {hasPermission('compliance:mappings:write') && (
             <Button size="sm" variant="outline" onClick={handleAutoMap} disabled={isMutating}>
               {isMutating ? (
-                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                <Loader2 className="me-1.5 h-3.5 w-3.5 animate-spin" />
               ) : (
-                <Sparkles className="mr-1.5 h-3.5 w-3.5" />
+                <Sparkles className="me-1.5 h-3.5 w-3.5" />
               )}
               Auto-map to OWASP
             </Button>

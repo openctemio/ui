@@ -260,7 +260,7 @@ export default function SamlSettingsPage() {
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button variant="outline" disabled={isDeleting}>
-                        <Trash2 className="mr-1.5 h-4 w-4" />
+                        <Trash2 className="me-1.5 h-4 w-4" />
                         Remove
                       </Button>
                     </AlertDialogTrigger>
