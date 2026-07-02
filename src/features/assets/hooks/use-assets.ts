@@ -334,9 +334,9 @@ export async function fetchAllAssets(filters?: AssetSearchFilters): Promise<Asse
   const maxPages = 500 // hard safety cap (≈50k assets)
   const all: Asset[] = []
   let page = 1
-  let totalPages = 1
+  let hasMore = true
 
-  do {
+  while (hasMore && page <= maxPages) {
     const params = buildAssetQueryParams({ ...filters, page, pageSize: perPage })
     const queryString =
       Object.keys(params).length > 0 ? '?' + new URLSearchParams(params).toString() : ''
@@ -344,9 +344,9 @@ export async function fetchAllAssets(filters?: AssetSearchFilters): Promise<Asse
     for (const a of resp.data ?? []) {
       all.push(transformAsset(a))
     }
-    totalPages = resp.total_pages || 1
+    hasMore = page < (resp.total_pages || 1)
     page++
-  } while (page <= totalPages && page <= maxPages)
+  }
 
   return all
 }
