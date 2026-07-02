@@ -32,6 +32,7 @@ import { copyToClipboard } from '@/lib/clipboard'
 import type { Evidence, EvidenceType, FindingDetail } from '../../types'
 import { EVIDENCE_TYPE_CONFIG } from '../../types'
 import { CodeHighlighter } from './code-highlighter'
+import { ValidationEvidencePanel } from './validation-evidence-panel'
 import { buildRepositoryCodeUrl } from '../../lib/repository-url'
 
 interface EvidenceTabProps {
@@ -334,6 +335,14 @@ export function EvidenceTab({ evidence, finding }: EvidenceTabProps) {
 
   return (
     <div className="space-y-6">
+      {/* Validation (CTEM Stage-4): re-check + evidence timeline */}
+      {finding?.id && (
+        <>
+          <ValidationEvidencePanel findingId={finding.id} />
+          <Separator />
+        </>
+      )}
+
       {/* Affected Code - File location with repository link */}
       {hasAffectedCode && finding?.filePath && (
         <div>
