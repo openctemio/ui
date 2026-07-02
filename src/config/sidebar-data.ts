@@ -800,6 +800,11 @@ export const sidebarData: SidebarData = {
               icon: Users,
               subModuleKey: 'scim',
             },
+            {
+              title: 'SAML SSO',
+              url: '/settings/integrations/saml',
+              icon: ShieldCheck,
+            },
           ],
         },
       ],
