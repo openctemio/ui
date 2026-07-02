@@ -54,7 +54,7 @@ function EvidenceRow({ item }: { item: ValidationEvidenceItem }) {
         {item.technique ? (
           <span className="text-muted-foreground text-xs">· {item.technique}</span>
         ) : null}
-        <span className="text-muted-foreground ml-auto text-xs">
+        <span className="text-muted-foreground ms-auto text-xs">
           {formatTimestamp(item.created_at)}
         </span>
       </div>
@@ -101,9 +101,9 @@ export function ValidationEvidencePanel({ findingId }: ValidationEvidencePanelPr
         {hasPermission('findings:write') ? (
           <Button size="sm" variant="outline" onClick={handleValidate} disabled={isMutating}>
             {isMutating ? (
-              <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+              <Loader2 className="me-1.5 h-3.5 w-3.5 animate-spin" />
             ) : (
-              <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
+              <RefreshCw className="me-1.5 h-3.5 w-3.5" />
             )}
             Validate now
           </Button>
