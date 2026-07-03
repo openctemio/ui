@@ -25,12 +25,6 @@ import { SeverityBadge } from '@/features/shared'
 import { useFindingGroups, type FindingGroup } from '../api/use-finding-groups'
 import { usePermissions } from '@/context/permission-provider'
 
-interface VerifyResponse {
-  updated: number
-  failed: number
-  errors?: string[]
-}
-
 export function PendingReviewTab() {
   const { hasPermission } = usePermissions()
   const canVerify = hasPermission('findings:verify')

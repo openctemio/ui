@@ -26,8 +26,8 @@ import {
   GitBranch,
   Cloud,
   KeyRound,
-  BarChart3,
   Building2,
+  Crown,
   Swords,
   ShieldCheck,
   ListChecks,
@@ -76,6 +76,8 @@ import {
   FolderGit2,
   Lock,
   FileCode2,
+  // Attack path icons
+  Route,
 } from 'lucide-react'
 import { type SidebarData } from '@/components/types'
 import { Permission, Role } from '@/lib/permissions'
@@ -152,6 +154,20 @@ export const sidebarData: SidebarData = {
           icon: Building,
           permission: Permission.BusinessServicesRead,
           module: 'business_services',
+        },
+        {
+          title: 'Business Units',
+          url: '/business-units',
+          icon: Building2,
+          permission: Permission.ScopeRead,
+          module: 'scope_config',
+        },
+        {
+          title: 'Crown Jewels',
+          url: '/crown-jewels',
+          icon: Crown,
+          permission: Permission.ScopeRead,
+          module: 'scope_config',
         },
         {
           title: 'CTEM Cycles',
@@ -435,18 +451,18 @@ export const sidebarData: SidebarData = {
       title: 'Prioritization',
       items: [
         {
+          title: 'Exposure Chains',
+          url: '/exposure-chains',
+          icon: Route,
+          permission: Permission.AssetsRead,
+          module: 'attack_surface',
+        },
+        {
           title: 'Threat Intel',
           url: '/threat-intel',
           icon: TrendingUp,
           permission: Permission.VulnerabilitiesRead,
           module: 'threat_intel',
-        },
-        {
-          title: 'Risk Analysis',
-          url: '/risk-analysis',
-          icon: BarChart3,
-          permission: Permission.VulnerabilitiesRead,
-          module: 'risk_analysis',
         },
         {
           title: 'Business Impact',
@@ -799,6 +815,11 @@ export const sidebarData: SidebarData = {
               url: '/settings/integrations/scim-tokens',
               icon: Users,
               subModuleKey: 'scim',
+            },
+            {
+              title: 'SAML SSO',
+              url: '/settings/integrations/saml',
+              icon: ShieldCheck,
             },
           ],
         },

@@ -57,12 +57,15 @@ export function CreateTicketDialog({
         project_key: projectKey.trim() || undefined,
         issue_type: issueType.trim() || undefined,
       })
+      // Only offer "Open" for a real http(s) ticket URL (guard against a
+      // javascript:/data: URL slipping through to window.open).
+      const safeUrl = /^https?:\/\//i.test(info.ticket_url ?? '') ? info.ticket_url : ''
       toast.success(`Created ${info.ticket_key}`, {
         description: 'Jira ticket linked to this finding.',
-        action: info.ticket_url
+        action: safeUrl
           ? {
               label: 'Open',
-              onClick: () => window.open(info.ticket_url, '_blank', 'noopener,noreferrer'),
+              onClick: () => window.open(safeUrl, '_blank', 'noopener,noreferrer'),
             }
           : undefined,
       })
@@ -73,8 +76,12 @@ export function CreateTicketDialog({
       setIssueType('')
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to create ticket'
+      // Match the backend's specific "no destination project" validation, not any
+      // error that merely contains the word "project" (e.g. "project not found",
+      // permission errors) — those should surface their real message.
+      const noProject = /no default project|project_key is required/i.test(message)
       toast.error('Could not create ticket', {
-        description: message.includes('project')
+        description: noProject
           ? 'No project specified and no default project is configured. Set a default project under Settings → Integrations → Ticketing, or enter a project key here.'
           : message,
       })

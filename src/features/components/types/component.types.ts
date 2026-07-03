@@ -189,12 +189,7 @@ export const COMMON_LICENSES: {
 // ============================================
 
 export type ComponentSourceType =
-  | 'project'
-  | 'repository'
-  | 'container'
-  | 'mobile_app'
-  | 'host'
-  | 'serverless'
+  'project' | 'repository' | 'container' | 'mobile_app' | 'host' | 'serverless'
 
 export interface ComponentSource {
   id: string

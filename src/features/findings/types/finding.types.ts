@@ -1024,14 +1024,7 @@ export interface SecretDetails {
 // ============================================
 
 export type ComplianceFramework =
-  | 'pci-dss'
-  | 'hipaa'
-  | 'soc2'
-  | 'cis'
-  | 'nist'
-  | 'iso27001'
-  | 'gdpr'
-  | 'fedramp'
+  'pci-dss' | 'hipaa' | 'soc2' | 'cis' | 'nist' | 'iso27001' | 'gdpr' | 'fedramp'
 
 export type ComplianceResult = 'pass' | 'fail' | 'manual' | 'not_applicable'
 

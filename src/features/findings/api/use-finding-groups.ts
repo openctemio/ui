@@ -49,13 +49,7 @@ export interface RelatedCVEsResponse {
 }
 
 export type GroupByDimension =
-  | 'cve_id'
-  | 'asset_id'
-  | 'owner_id'
-  | 'component_id'
-  | 'severity'
-  | 'source'
-  | 'finding_type'
+  'cve_id' | 'asset_id' | 'owner_id' | 'component_id' | 'severity' | 'source' | 'finding_type'
 
 export interface FindingGroupsFilters {
   group_by: GroupByDimension

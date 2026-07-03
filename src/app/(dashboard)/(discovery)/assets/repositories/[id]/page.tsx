@@ -114,12 +114,7 @@ import {
 // Additional types for detail page
 type Repository = RepositoryView
 type FindingStatus =
-  | 'open'
-  | 'confirmed'
-  | 'in_progress'
-  | 'resolved'
-  | 'false_positive'
-  | 'accepted_risk'
+  'open' | 'confirmed' | 'in_progress' | 'resolved' | 'false_positive' | 'accepted_risk'
 type TriageStatus = 'needs_triage' | 'triaged' | 'escalated'
 type ActivityAction =
   | 'scan_started'
@@ -569,18 +564,9 @@ function transformToRepositoryView(asset: ApiAssetResponse): RepositoryView {
     criticality: asset.criticality as 'critical' | 'high' | 'medium' | 'low',
     status: asset.status as 'active' | 'inactive' | 'archived' | 'pending',
     scope: (scopeMap[asset.scope] || 'internal') as
-      | 'internal'
-      | 'external'
-      | 'cloud'
-      | 'partner'
-      | 'vendor'
-      | 'shadow',
+      'internal' | 'external' | 'cloud' | 'partner' | 'vendor' | 'shadow',
     exposure: (exposureMap[asset.exposure] || 'unknown') as
-      | 'public'
-      | 'restricted'
-      | 'private'
-      | 'isolated'
-      | 'unknown',
+      'public' | 'restricted' | 'private' | 'isolated' | 'unknown',
     riskScore: asset.risk_score,
     findingCount: asset.finding_count,
     tags: asset.tags || [],
@@ -598,15 +584,9 @@ function transformToRepositoryView(asset: ApiAssetResponse): RepositoryView {
     risk_score: asset.risk_score,
     sync_status: (repo?.sync_status || 'synced') as 'synced' | 'syncing' | 'pending' | 'error',
     compliance_status: (repo?.compliance_status || 'not_assessed') as
-      | 'compliant'
-      | 'non_compliant'
-      | 'partial'
-      | 'not_assessed',
+      'compliant' | 'non_compliant' | 'partial' | 'not_assessed',
     quality_gate_status: (repo?.quality_gate_status || 'not_computed') as
-      | 'passed'
-      | 'failed'
-      | 'warning'
-      | 'not_computed',
+      'passed' | 'failed' | 'warning' | 'not_computed',
     findings_summary: findingsSummary,
     components_summary: repo?.components_summary,
     scan_settings: scanSettings,

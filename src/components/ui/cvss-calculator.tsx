@@ -283,7 +283,7 @@ interface CvssCalculatorProps {
 }
 
 export function CvssCalculator({
-  score,
+  score: _score,
   vector,
   onScoreChange,
   onVectorChange,

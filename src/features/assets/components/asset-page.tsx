@@ -94,7 +94,8 @@ import type { AssetType } from '../types'
 import type { AssetPageConfig } from '../types/page-config.types'
 import { useAssetCRUD } from '../hooks/use-asset-crud'
 import { useAssetDialogs } from '../hooks/use-asset-dialogs'
-import { useAssetExport } from '../hooks/use-asset-export'
+import { fetchAllAssets } from '../hooks/use-assets'
+import { exportToCsv } from '@/hooks/use-csv-export'
 import { useAssetTags } from '../hooks/use-asset-tags'
 import { updateAsset } from '../hooks/use-assets'
 import { AssetFormDialogShared } from './asset-form-dialog-shared'
@@ -315,7 +316,40 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
   // Shared hooks
   const crud = useAssetCRUD(config.type as AssetType, config.label, mutate)
   const dialogs = useAssetDialogs()
-  const { handleExport } = useAssetExport(transformedAssets, config.exportFields, config.type)
+
+  // Export the ENTIRE filtered dataset, not just the page currently rendered.
+  // Fetches every matching asset across all pages (same server-side filters as
+  // the table), applies the page's optional dataTransform, then writes the CSV.
+  const [isExporting, setIsExporting] = useState(false)
+  const handleExport = useCallback(async () => {
+    if (isExporting) return
+    setIsExporting(true)
+    try {
+      const all = await fetchAllAssets({
+        types: typeFilter,
+        subType: subTypeFilter,
+        propertiesFilter: Object.keys(propertiesFilter).length > 0 ? propertiesFilter : undefined,
+        search: debouncedSearch || undefined,
+        tags: tagFilters.length > 0 ? tagFilters : undefined,
+        sort: sortParam,
+      })
+      const rows = config.dataTransform ? config.dataTransform(all) : all
+      exportToCsv(rows, config.exportFields, config.type)
+    } catch {
+      toast.error('Failed to export assets')
+    } finally {
+      setIsExporting(false)
+    }
+  }, [
+    isExporting,
+    typeFilter,
+    subTypeFilter,
+    propertiesFilter,
+    debouncedSearch,
+    tagFilters,
+    sortParam,
+    config,
+  ])
 
   // Table state — initialise from URL where applicable
   const [sorting, setSorting] = useState<SortingState>(() => {
@@ -957,9 +991,9 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
           description={`${typeStats.total.toLocaleString()} ${config.labelPlural.toLowerCase()} in your infrastructure`}
         >
           <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={handleExport}>
+            <Button variant="outline" onClick={handleExport} disabled={isExporting}>
               <Download className="me-2 h-4 w-4" />
-              Export
+              {isExporting ? 'Exporting…' : 'Export'}
             </Button>
             <Can permission={Permission.AssetsWrite}>
               <Button

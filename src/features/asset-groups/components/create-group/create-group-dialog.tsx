@@ -128,14 +128,12 @@ export function CreateGroupDialog({
           formData.selectedAssetIds.length > 0 ? formData.selectedAssetIds : undefined,
         newAssets:
           formData.newAssets.length > 0
-            ? formData.newAssets.map(
-                (asset): CreateAssetInGroupInput => ({
-                  type: asset.type,
-                  name: asset.name.trim(),
-                  description: asset.description?.trim() || undefined,
-                  tags: asset.tags.length > 0 ? asset.tags : undefined,
-                })
-              )
+            ? formData.newAssets.map((asset): CreateAssetInGroupInput => ({
+                type: asset.type,
+                name: asset.name.trim(),
+                description: asset.description?.trim() || undefined,
+                tags: asset.tags.length > 0 ? asset.tags : undefined,
+              }))
             : undefined,
       }
 

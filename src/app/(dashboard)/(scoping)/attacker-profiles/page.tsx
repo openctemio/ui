@@ -54,12 +54,7 @@ interface AttackerProfile {
   name: string
   description: string
   profile_type:
-    | 'nation_state'
-    | 'cybercriminal'
-    | 'hacktivist'
-    | 'insider'
-    | 'script_kiddie'
-    | 'custom'
+    'nation_state' | 'cybercriminal' | 'hacktivist' | 'insider' | 'script_kiddie' | 'custom'
   capabilities: {
     network_access?: string
     credential_level?: string

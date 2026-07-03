@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react'
 import { Main } from '@/components/layout'
 import { PageHeader } from '@/features/shared'
+import { ValidationCoverageCard } from '@/features/validation/components/validation-coverage-card'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -596,6 +597,11 @@ export default function ControlTestingPage() {
             <Progress value={summaryStats.coveragePct} className="h-1.5" />
           </CardContent>
         </Card>
+      </div>
+
+      {/* Validation coverage KPI: how much exposure has been re-checked. */}
+      <div className="mt-6">
+        <ValidationCoverageCard />
       </div>
 
       {/* Framework Breakdown */}

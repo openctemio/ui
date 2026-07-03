@@ -196,7 +196,6 @@ export const networksConfig: AssetPageConfig = {
   copyAction: {
     label: 'Copy IP',
     getValue: (asset: Asset) => {
-      const meta = asset.metadata as Record<string, unknown>
       return getManagementIP(asset) || asset.name
     },
   },

@@ -10,11 +10,7 @@
 import type { Severity } from '@/features/shared/types'
 
 export type VulnerabilityStatus =
-  | 'open'
-  | 'patched'
-  | 'mitigated'
-  | 'not_affected'
-  | 'investigating'
+  'open' | 'patched' | 'mitigated' | 'not_affected' | 'investigating'
 
 export type ExploitMaturity = 'none' | 'poc' | 'functional' | 'weaponized'
 

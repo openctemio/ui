@@ -121,28 +121,26 @@ export default function ExternalSurfacePage() {
   })
   const apiMapped = useMemo<ExternalAsset[]>(() => {
     if (!apiAssets || apiAssets.length === 0) return []
-    return apiAssets.map(
-      (a): ExternalAsset => ({
-        id: a.id,
-        name: a.name,
-        type: a.type as ExternalAsset['type'],
-        ipAddress:
-          (a.metadata?.ip_address as string) || (a.metadata?.resolved_ip as string) || undefined,
-        status: a.status === 'active' ? 'active' : 'inactive',
-        riskLevel:
-          a.riskScore >= 70
-            ? 'critical'
-            : a.riskScore >= 50
-              ? 'high'
-              : a.riskScore >= 30
-                ? 'medium'
-                : 'low',
-        lastSeen: a.updatedAt || a.createdAt,
-        discoveredAt: a.createdAt,
-        findingsCount: a.findingCount || 0,
-        technologies: a.tags,
-      })
-    )
+    return apiAssets.map((a): ExternalAsset => ({
+      id: a.id,
+      name: a.name,
+      type: a.type as ExternalAsset['type'],
+      ipAddress:
+        (a.metadata?.ip_address as string) || (a.metadata?.resolved_ip as string) || undefined,
+      status: a.status === 'active' ? 'active' : 'inactive',
+      riskLevel:
+        a.riskScore >= 70
+          ? 'critical'
+          : a.riskScore >= 50
+            ? 'high'
+            : a.riskScore >= 30
+              ? 'medium'
+              : 'low',
+      lastSeen: a.updatedAt || a.createdAt,
+      discoveredAt: a.createdAt,
+      findingsCount: a.findingCount || 0,
+      technologies: a.tags,
+    }))
   }, [apiAssets])
 
   // Real external assets from the assets API; empty until data loads.

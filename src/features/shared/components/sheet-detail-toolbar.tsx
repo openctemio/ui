@@ -90,7 +90,13 @@ export function SheetDetailToolbar({
         {actions.length > 0 && <Separator orientation="vertical" className="h-4 mx-1" />}
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onClose}>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              aria-label="Close"
+              onClick={onClose}
+            >
               <X className="h-3.5 w-3.5" />
             </Button>
           </TooltipTrigger>
@@ -106,7 +112,13 @@ function ToolbarButton({ action }: { action: ToolbarAction }) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={action.onClick}>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7"
+          aria-label={action.label}
+          onClick={action.onClick}
+        >
           <Icon className="h-3.5 w-3.5" />
         </Button>
       </TooltipTrigger>

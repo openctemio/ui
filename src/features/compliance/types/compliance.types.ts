@@ -3,13 +3,7 @@
  */
 
 export type ComplianceFramework =
-  | 'pci_dss'
-  | 'soc2'
-  | 'iso_27001'
-  | 'gdpr'
-  | 'hipaa'
-  | 'nist'
-  | 'cis'
+  'pci_dss' | 'soc2' | 'iso_27001' | 'gdpr' | 'hipaa' | 'nist' | 'cis'
 
 export type ComplianceStatus = 'compliant' | 'non_compliant' | 'partial' | 'not_assessed'
 export type ControlStatus = 'implemented' | 'partial' | 'not_implemented' | 'not_applicable'

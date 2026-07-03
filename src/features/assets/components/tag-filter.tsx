@@ -67,8 +67,6 @@ export function TagFilter({
     onChange([...value, tag])
   }
 
-  const clearAll = () => onChange([])
-
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>

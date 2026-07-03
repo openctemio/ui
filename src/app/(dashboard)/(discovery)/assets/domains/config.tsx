@@ -1,7 +1,6 @@
 'use client'
 
 import type { AssetPageConfig } from '@/features/assets/types/page-config.types'
-import type { Asset } from '@/features/assets'
 import { Badge } from '@/components/ui/badge'
 import { Globe, AlertTriangle, Shield } from 'lucide-react'
 import { toStringArray } from '@/features/assets/lib/property-utils'
