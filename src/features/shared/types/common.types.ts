@@ -7,13 +7,7 @@
 export type Severity = 'critical' | 'high' | 'medium' | 'low' | 'info' | 'none'
 
 export type Status =
-  | 'active'
-  | 'stale'
-  | 'inactive'
-  | 'archived'
-  | 'pending'
-  | 'completed'
-  | 'failed'
+  'active' | 'stale' | 'inactive' | 'archived' | 'pending' | 'completed' | 'failed'
 
 export type Environment = 'production' | 'staging' | 'development' | 'testing'
 
@@ -21,11 +15,7 @@ export type Criticality = 'critical' | 'high' | 'medium' | 'low'
 
 // Security Process Steps
 export type SecurityProcessStep =
-  | 'scoping'
-  | 'discovery'
-  | 'prioritization'
-  | 'validation'
-  | 'mobilization'
+  'scoping' | 'discovery' | 'prioritization' | 'validation' | 'mobilization'
 
 export const SECURITY_PROCESS_STEPS: {
   id: SecurityProcessStep

@@ -427,6 +427,68 @@ export function useRequestVerificationScanApi(findingId: string) {
   )
 }
 
+// ============================================
+// VALIDATION (CTEM Stage-4)
+// ============================================
+
+/** Result of requesting a validation (safe-check) run for a finding. */
+export interface RequestValidationResult {
+  finding_id: string
+  command_id: string
+  status: string
+}
+
+/**
+ * Request a CTEM Stage-4 validation run for a finding (RFC-011).
+ * POST /api/v1/findings/{id}/validate — dispatches a safe-check job to an agent;
+ * the outcome is applied to the finding asynchronously when the agent reports back.
+ */
+export function useRequestValidationApi(findingId: string) {
+  const { currentTenant } = useTenant()
+
+  return useSWRMutation(
+    currentTenant && findingId ? `${buildFindingEndpoint(findingId)}/validate` : null,
+    async (url: string) => {
+      return post<RequestValidationResult>(url, {})
+    }
+  )
+}
+
+/** A single validation-evidence record recorded against a finding. */
+export interface ValidationEvidenceItem {
+  id: string
+  finding_id: string
+  executor_kind: string
+  technique: string
+  outcome: string
+  summary: string
+  created_at: string
+  started_at?: string
+  ended_at?: string
+}
+
+interface ValidationEvidenceResponse {
+  evidence: ValidationEvidenceItem[]
+}
+
+/**
+ * Fetch the validation evidence recorded for a finding.
+ * GET /api/v1/findings/{id}/evidence
+ */
+export function useFindingValidationEvidenceApi(
+  findingId: string | null,
+  config?: SWRConfiguration
+) {
+  const { currentTenant } = useTenant()
+  const key = currentTenant && findingId ? `${buildFindingEndpoint(findingId)}/evidence` : null
+
+  return useSWR<ValidationEvidenceResponse>(
+    key,
+    (url: string) => get<ValidationEvidenceResponse>(url),
+    { ...defaultConfig, ...config }
+  )
+}
+
 /**
  * Set finding tags
  */

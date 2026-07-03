@@ -24,7 +24,7 @@ base('login form rejects invalid credentials', async ({ page }, testInfo) => {
   await page.goto('/login')
 
   await page.getByLabel('Email').fill('not-a-real-user@example.invalid')
-  await page.getByLabel('Password').fill('definitely-wrong-password')
+  await page.getByLabel('Password', { exact: true }).fill('definitely-wrong-password')
   await page.getByRole('button', { name: 'Sign in' }).click()
 
   // The page must NOT navigate away from /login on failure.
@@ -59,7 +59,7 @@ base('login flow lands on a tenant route', async ({ page }, testInfo) => {
 
   await loginAs(page, cfg.config)
   await expect(page).not.toHaveURL(/\/login(\?|$)/)
-  await expect(page.getByRole('navigation').first()).toBeVisible({ timeout: 15_000 })
+  await expect(page.locator('[data-sidebar="sidebar"]').first()).toBeVisible({ timeout: 15_000 })
 })
 
 base('public invitation preview handles unknown token gracefully', async ({ page }) => {

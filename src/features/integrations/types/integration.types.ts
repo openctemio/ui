@@ -50,12 +50,7 @@ export type IntegrationProvider =
  * Integration status
  */
 export type IntegrationStatus =
-  | 'connected'
-  | 'disconnected'
-  | 'error'
-  | 'pending'
-  | 'expired'
-  | 'disabled'
+  'connected' | 'disconnected' | 'error' | 'pending' | 'expired' | 'disabled'
 
 /**
  * Authentication type

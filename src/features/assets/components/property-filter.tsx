@@ -45,8 +45,8 @@ export function PropertyFilter({
   subType,
   value,
   onChange,
-  filtered,
-  total,
+  filtered: _filtered,
+  total: _total,
 }: PropertyFilterProps) {
   const [open, setOpen] = useState(false)
   const [step, setStep] = useState<'key' | 'value'>('key')
@@ -68,13 +68,6 @@ export function PropertyFilter({
   // All facets are available (user can add more values to existing keys)
   const availableFacets = useMemo(() => facets ?? [], [facets])
 
-  const activeFilters = Object.entries(value)
-  const facetLabelMap = useMemo(() => {
-    const map: Record<string, string> = {}
-    for (const f of facets ?? []) map[f.Key] = f.Label
-    return map
-  }, [facets])
-
   const handleSelectKey = (facet: PropertyFacet) => {
     setSelectedKey(facet.Key)
     setSelectedFacet(facet)
@@ -91,14 +84,6 @@ export function PropertyFilter({
     setSelectedKey('')
     setSelectedFacet(null)
   }
-
-  const handleRemove = (key: string) => {
-    const next = { ...value }
-    delete next[key]
-    onChange(next)
-  }
-
-  const handleClearAll = () => onChange({})
 
   return (
     <>

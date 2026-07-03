@@ -110,20 +110,9 @@ updates:
     commit-message:
       prefix: 'deps(actions)'
 
-  # Docker
-  - package-ecosystem: 'docker'
-    directory: '/'
-    target-branch: 'develop'
-    schedule:
-      interval: 'weekly'
-      day: 'monday'
-      time: '06:00'
-      timezone: 'Asia/Ho_Chi_Minh'
-    open-pull-requests-limit: 3
-    reviewers:
-      - 'openctemio/security'
-    labels:
-      - 'dependencies'
-      - 'docker'
-    commit-message:
-      prefix: 'deps(docker)'
+  # Docker base-image updates are intentionally NOT managed by Dependabot.
+  # The Dockerfile pins base images on public.ecr.aws (ECR Public) to avoid
+  # Docker Hub pull rate limits in CI. Dependabot's docker updater cannot
+  # authenticate/query ECR Public for tags (it fails every run with
+  # "DENIED Not Authorized" / HTTP 429), so the job only ever errored and never
+  # produced a PR. Bump base images manually instead.

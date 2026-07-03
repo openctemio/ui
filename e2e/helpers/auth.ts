@@ -18,7 +18,7 @@ export async function loginAs(page: Page, config: E2EConfig): Promise<void> {
   // Email + password fields. Targeting by accessible label survives
   // class name and DOM structure changes.
   await page.getByLabel('Email').fill(config.userEmail)
-  await page.getByLabel('Password').fill(config.userPassword)
+  await page.getByLabel('Password', { exact: true }).fill(config.userPassword)
 
   await Promise.all([
     page.waitForURL((url) => !url.pathname.startsWith('/login'), { timeout: 30_000 }),

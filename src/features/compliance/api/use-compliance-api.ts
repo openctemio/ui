@@ -206,6 +206,13 @@ export function useMapFindingToControl(findingId: string) {
   )
 }
 
+export function useAutoMapFinding(findingId: string) {
+  return useSWRMutation(
+    `/api/v1/compliance/findings/${findingId}/controls/auto-map`,
+    (url: string) => post<{ created: ComplianceMappingApi[]; count: number }>(url, {})
+  )
+}
+
 export function useUnmapFindingFromControl(findingId: string, mappingId: string) {
   return useSWRMutation(
     `/api/v1/compliance/findings/${findingId}/controls/${mappingId}`,
