@@ -76,19 +76,24 @@ export default function AllComponentsPage() {
   const perPage = 20
 
   // Shared filter set (excludes pagination) — used by both the table query and
-  // the "export all" action so the CSV honors the same filters.
-  const componentFilters: ComponentApiFilters = {
-    name: searchQuery || undefined,
-    ecosystems: ecosystemFilter !== 'all' ? [ecosystemFilter as ApiComponentEcosystem] : undefined,
-    dependency_types:
-      filterType === 'direct'
-        ? ['direct']
-        : filterType === 'transitive'
-          ? ['transitive']
-          : undefined,
-    // Note: API doesn't fully support all UI filters yet (like outdated or specific vulnerability severity breakdown)
-    has_vulnerabilities: filterType === 'vulnerable' ? true : undefined,
-  }
+  // the "export all" action. Memoized so it is a stable dependency for the
+  // export callback (satisfies react-hooks/exhaustive-deps).
+  const componentFilters: ComponentApiFilters = useMemo(
+    () => ({
+      name: searchQuery || undefined,
+      ecosystems:
+        ecosystemFilter !== 'all' ? [ecosystemFilter as ApiComponentEcosystem] : undefined,
+      dependency_types:
+        filterType === 'direct'
+          ? ['direct']
+          : filterType === 'transitive'
+            ? ['transitive']
+            : undefined,
+      // Note: API doesn't fully support all UI filters yet (like outdated or specific vulnerability severity breakdown)
+      has_vulnerabilities: filterType === 'vulnerable' ? true : undefined,
+    }),
+    [searchQuery, ecosystemFilter, filterType]
+  )
 
   // API Hooks
   const { data: apiData } = useComponentsApi({ ...componentFilters, page, per_page: perPage })
@@ -140,9 +145,7 @@ export default function AllComponentsPage() {
     } finally {
       setIsExporting(false)
     }
-    // componentFilters is derived from the filter state below; those are the deps.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isExporting, searchQuery, ecosystemFilter, filterType])
+  }, [isExporting, componentFilters])
 
   return (
     <>
