@@ -1039,14 +1039,14 @@ export function FindingDetailDrawer({
           )}
         </SheetContent>
       </Sheet>
-      {finding && (
-        <CreateTicketDialog
-          findingId={finding.id}
-          findingTitle={finding.title}
-          open={ticketOpen}
-          onOpenChange={setTicketOpen}
-        />
-      )}
+      {/* `finding` is non-null past the `if (!finding) return null` guard above,
+          so this renders unconditionally (removes a CodeQL useless-conditional). */}
+      <CreateTicketDialog
+        findingId={finding.id}
+        findingTitle={finding.title}
+        open={ticketOpen}
+        onOpenChange={setTicketOpen}
+      />
     </>
   )
 }
