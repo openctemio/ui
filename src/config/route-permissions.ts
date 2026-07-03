@@ -106,6 +106,10 @@ export const routePermissions: Record<string, RoutePermissionConfig> = {
     permission: Permission.AssetsRead,
     module: Module.AttackSurface,
   },
+  '/exposure-chains': {
+    permission: Permission.AssetsRead,
+    module: Module.AttackSurface,
+  },
   '/attack-surface/cloud': {
     permission: Permission.AssetsRead,
     module: Module.AttackSurface,
