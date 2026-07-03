@@ -86,6 +86,7 @@ export function Pagination({
             variant="outline"
             size="icon"
             className="h-8 w-8"
+            aria-label="First page"
             onClick={() => onPageChange(1)}
             disabled={!canPreviousPage}
           >
@@ -95,6 +96,7 @@ export function Pagination({
             variant="outline"
             size="icon"
             className="h-8 w-8"
+            aria-label="Previous page"
             onClick={() => onPageChange(currentPage - 1)}
             disabled={!canPreviousPage}
           >
@@ -113,6 +115,7 @@ export function Pagination({
             variant="outline"
             size="icon"
             className="h-8 w-8"
+            aria-label="Next page"
             onClick={() => onPageChange(currentPage + 1)}
             disabled={!canNextPage}
           >
@@ -122,6 +125,7 @@ export function Pagination({
             variant="outline"
             size="icon"
             className="h-8 w-8"
+            aria-label="Last page"
             onClick={() => onPageChange(totalPages)}
             disabled={!canNextPage}
           >
