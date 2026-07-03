@@ -76,6 +76,8 @@ import {
   FolderGit2,
   Lock,
   FileCode2,
+  // Attack path icons
+  Route,
 } from 'lucide-react'
 import { type SidebarData } from '@/components/types'
 import { Permission, Role } from '@/lib/permissions'
@@ -448,6 +450,13 @@ export const sidebarData: SidebarData = {
     {
       title: 'Prioritization',
       items: [
+        {
+          title: 'Exposure Chains',
+          url: '/exposure-chains',
+          icon: Route,
+          permission: Permission.AssetsRead,
+          module: 'attack_surface',
+        },
         {
           title: 'Threat Intel',
           url: '/threat-intel',
