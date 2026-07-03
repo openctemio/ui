@@ -3,10 +3,19 @@
 import { useEffect } from 'react'
 import { ThemeProvider } from '@/context/theme-provider'
 import { DirectionProvider } from '@/context/direction-provider'
+import { I18nProvider } from '@/context/i18n-provider'
 import { SWRProvider } from '@/lib/swr-config'
 import { Toaster } from 'sonner'
 
-export function Providers({ children, dir }: { children: React.ReactNode; dir: 'ltr' | 'rtl' }) {
+export function Providers({
+  children,
+  dir,
+  locale,
+}: {
+  children: React.ReactNode
+  dir: 'ltr' | 'rtl'
+  locale: string
+}) {
   // Initialize Web Vitals reporting (lazy load to avoid bundling optional dependencies)
   useEffect(() => {
     // Only load web-vitals module if Sentry DSN is configured
@@ -23,7 +32,7 @@ export function Providers({ children, dir }: { children: React.ReactNode; dir: '
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
       <SWRProvider>
         <DirectionProvider dir={dir}>
-          {children}
+          <I18nProvider locale={locale}>{children}</I18nProvider>
           <Toaster
             richColors
             position="bottom-right"

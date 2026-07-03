@@ -1,0 +1,16 @@
+{
+  "nav.group.scoping": "Scoping",
+  "nav.group.discovery": "Discovery",
+  "nav.group.prioritization": "Prioritization",
+  "nav.group.validation": "Validation",
+  "nav.group.mobilization": "Mobilization",
+  "nav.group.insights": "Insights",
+  "nav.group.settings": "Settings",
+  "common.loading": "Loading…",
+  "common.search": "Search",
+  "common.export": "Export",
+  "common.save": "Save",
+  "common.cancel": "Cancel",
+  "common.noData": "No data",
+  "common.rowsExported": "Exported {count} rows"
+}
