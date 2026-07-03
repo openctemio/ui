@@ -18,12 +18,17 @@ export interface ExportFieldConfig<T> {
  * Wraps cells containing commas, quotes, or newlines in double quotes.
  */
 export function sanitizeCsvCell(value: unknown): string {
-  const str = String(value ?? '')
-  // Prevent formula injection (OWASP CSV injection)
-  // Check for dangerous chars including after leading whitespace
-  if (/^\s*[=+\-@\t\r]/.test(str)) return `'${str}`
-  // Escape quotes and wrap if contains delimiters
-  if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+  let str = String(value ?? '')
+  // Prevent formula injection (OWASP CSV injection): prefix a single quote when
+  // the cell begins with a formula trigger (optionally after leading whitespace).
+  if (/^\s*[=+\-@\t\r]/.test(str)) {
+    str = `'${str}`
+  }
+  // Escape quotes and wrap when the value contains a delimiter, quote, or
+  // newline. This MUST run even for formula-prefixed cells — otherwise a value
+  // like "-a, b" or "@team, ops" gets the quote prefix but leaks its comma/
+  // newline into the grid, shifting every following column/row.
+  if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
     return `"${str.replace(/"/g, '""')}"`
   }
   return str
