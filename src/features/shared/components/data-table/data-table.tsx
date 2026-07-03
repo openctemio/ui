@@ -307,6 +307,7 @@ export function DataTable<TData, TValue>({
                 variant="outline"
                 size="icon"
                 className="h-8 w-8"
+                aria-label="First page"
                 onClick={() => table.setPageIndex(0)}
                 disabled={!table.getCanPreviousPage()}
               >
@@ -316,6 +317,7 @@ export function DataTable<TData, TValue>({
                 variant="outline"
                 size="icon"
                 className="h-8 w-8"
+                aria-label="Previous page"
                 onClick={() => table.previousPage()}
                 disabled={!table.getCanPreviousPage()}
               >
@@ -334,6 +336,7 @@ export function DataTable<TData, TValue>({
                 variant="outline"
                 size="icon"
                 className="h-8 w-8"
+                aria-label="Next page"
                 onClick={() => table.nextPage()}
                 disabled={!table.getCanNextPage()}
               >
@@ -343,6 +346,7 @@ export function DataTable<TData, TValue>({
                 variant="outline"
                 size="icon"
                 className="h-8 w-8"
+                aria-label="Last page"
                 onClick={() => table.setPageIndex(table.getPageCount() - 1)}
                 disabled={!table.getCanNextPage()}
               >
