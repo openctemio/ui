@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -42,7 +42,9 @@ import {
 import { toast } from 'sonner'
 import { formatRelative } from '@/lib/format-date'
 import { useTenant } from '@/context/tenant-provider'
-import { useCsvExport, type ExportFieldConfig } from '@/hooks/use-csv-export'
+import { exportToCsv, type ExportFieldConfig } from '@/hooks/use-csv-export'
+import { fetchAllPages } from '@/lib/api/fetch-all-pages'
+import { exposureEndpoints } from '@/lib/api/endpoints'
 
 import {
   useExposures,
@@ -124,12 +126,15 @@ export default function ExposuresPage() {
   const [detailExposure, setDetailExposure] = useState<ExposureEvent | null>(null)
 
   // Build filters for API based on active tab
-  const apiFilters: ExposureListFilters = {
-    ...filters,
-    search: searchQuery || undefined,
-    severities: selectedSeverities.length > 0 ? selectedSeverities : undefined,
-    states: getStatesForTab(activeTab),
-  }
+  const apiFilters: ExposureListFilters = useMemo(
+    () => ({
+      ...filters,
+      search: searchQuery || undefined,
+      severities: selectedSeverities.length > 0 ? selectedSeverities : undefined,
+      states: getStatesForTab(activeTab),
+    }),
+    [filters, searchQuery, selectedSeverities, activeTab]
+  )
 
   // Data fetching
   const {
@@ -146,7 +151,23 @@ export default function ExposuresPage() {
   const isLoading = exposuresLoading || statsLoading
 
   // CSV export of the currently loaded exposures
-  const { handleExport } = useCsvExport(exposures, EXPOSURE_EXPORT_FIELDS, 'exposures')
+  // Export EVERY exposure matching the current filters (all pages), not just
+  // the page rendered in the table.
+  const [isExporting, setIsExporting] = useState(false)
+  const handleExport = useCallback(async () => {
+    if (isExporting) return
+    setIsExporting(true)
+    try {
+      const all = await fetchAllPages<ExposureEvent>((p, per_page) =>
+        exposureEndpoints.list({ ...apiFilters, page: p, per_page })
+      )
+      exportToCsv(all, EXPOSURE_EXPORT_FIELDS, 'exposures')
+    } catch {
+      toast.error('Failed to export exposures')
+    } finally {
+      setIsExporting(false)
+    }
+  }, [isExporting, apiFilters])
 
   // Handlers
   const handleRefresh = useCallback(() => {
@@ -246,10 +267,10 @@ export default function ExposuresPage() {
               <Button
                 variant="outline"
                 onClick={handleExport}
-                disabled={exposuresLoading || exposures.length === 0}
+                disabled={isExporting || exposuresLoading || total === 0}
               >
                 <Download className="me-2 h-4 w-4" />
-                Export
+                {isExporting ? 'Exporting…' : 'Export'}
               </Button>
             </div>
           </PageHeader>

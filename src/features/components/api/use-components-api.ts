@@ -59,7 +59,7 @@ const defaultConfig: SWRConfiguration = {
 // ENDPOINT BUILDERS
 // ============================================
 
-function buildComponentsEndpoint(filters?: ComponentApiFilters): string {
+export function buildComponentsEndpoint(filters?: ComponentApiFilters): string {
   const baseUrl = `/api/v1/components`
 
   if (!filters) return baseUrl
