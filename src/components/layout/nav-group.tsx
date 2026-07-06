@@ -36,6 +36,12 @@ import {
   useTenantModules,
   type LicensingModule,
 } from '@/features/integrations/api/use-tenant-modules'
+import { useTranslation } from '@/context/i18n-provider'
+
+/** Maps a sidebar group title to its i18n key, e.g. "Scoping" → "nav.group.scoping". */
+function groupTitleKey(title: string): string {
+  return `nav.group.${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`
+}
 
 /**
  * NavGroup Component
@@ -49,10 +55,11 @@ import {
 function NavGroupComponent({ title, items }: NavGroupProps) {
   const { state, isMobile } = useSidebar()
   const dynamicBadges = useDynamicBadges()
+  const { t } = useTranslation()
 
   return (
     <SidebarGroup>
-      {title && <SidebarGroupLabel>{title}</SidebarGroupLabel>}
+      {title && <SidebarGroupLabel>{t(groupTitleKey(title), title)}</SidebarGroupLabel>}
       <SidebarMenu>
         {items.map((item) => {
           const key = 'items' in item ? item.title : `${item.title}-${String(item.url)}`
