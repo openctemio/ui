@@ -158,8 +158,14 @@ export default function ExposuresPage() {
     if (isExporting) return
     setIsExporting(true)
     try {
-      const all = await fetchAllPages<ExposureEvent>((p, per_page) =>
-        exposureEndpoints.list({ ...apiFilters, page: p, per_page })
+      const all = await fetchAllPages<ExposureEvent>(
+        (p, per_page) => exposureEndpoints.list({ ...apiFilters, page: p, per_page }),
+        {
+          onTruncated: (loaded) =>
+            toast.warning(
+              `Export limited to the first ${loaded.toLocaleString()} exposures — refine filters to export the rest`
+            ),
+        }
       )
       exportToCsv(all, EXPOSURE_EXPORT_FIELDS, 'exposures')
     } catch {
