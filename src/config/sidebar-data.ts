@@ -78,6 +78,7 @@ import {
   FileCode2,
   // Attack path icons
   Route,
+  Waypoints,
 } from 'lucide-react'
 import { type SidebarData } from '@/components/types'
 import { Permission, Role } from '@/lib/permissions'
@@ -454,6 +455,13 @@ export const sidebarData: SidebarData = {
           title: 'Exposure Chains',
           url: '/exposure-chains',
           icon: Route,
+          permission: Permission.AssetsRead,
+          module: 'attack_surface',
+        },
+        {
+          title: 'Attack Paths',
+          url: '/attack-paths',
+          icon: Waypoints,
           permission: Permission.AssetsRead,
           module: 'attack_surface',
         },
