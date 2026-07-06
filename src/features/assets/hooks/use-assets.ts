@@ -329,7 +329,10 @@ function buildAssetQueryParams(filters?: AssetSearchFilters): Record<string, str
  * ignored; it pages at per_page=100 (the API maximum) with a hard cap to avoid
  * a runaway loop.
  */
-export async function fetchAllAssets(filters?: AssetSearchFilters): Promise<Asset[]> {
+export async function fetchAllAssets(
+  filters?: AssetSearchFilters,
+  onTruncated?: (loaded: number, cap: number) => void
+): Promise<Asset[]> {
   const perPage = 100
   const maxPages = 500 // hard safety cap (≈50k assets)
   const all: Asset[] = []
@@ -346,6 +349,11 @@ export async function fetchAllAssets(filters?: AssetSearchFilters): Promise<Asse
     }
     hasMore = page < (resp.total_pages || 1)
     page++
+  }
+
+  // Stopped at the cap with pages still remaining → the export is incomplete.
+  if (hasMore) {
+    onTruncated?.(all.length, maxPages * perPage)
   }
 
   return all

@@ -136,8 +136,14 @@ export default function AllComponentsPage() {
     if (isExporting) return
     setIsExporting(true)
     try {
-      const raw = await fetchAllPages<Parameters<typeof mapApiComponentToUi>[0]>((p, per_page) =>
-        buildComponentsEndpoint({ ...componentFilters, page: p, per_page })
+      const raw = await fetchAllPages<Parameters<typeof mapApiComponentToUi>[0]>(
+        (p, per_page) => buildComponentsEndpoint({ ...componentFilters, page: p, per_page }),
+        {
+          onTruncated: (loaded) =>
+            toast.warning(
+              `Export limited to the first ${loaded.toLocaleString()} components — refine filters to export the rest`
+            ),
+        }
       )
       exportToCsv(raw.map(mapApiComponentToUi), COMPONENT_EXPORT_FIELDS, 'components')
     } catch {
