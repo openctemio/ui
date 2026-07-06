@@ -1,0 +1,16 @@
+{
+  "nav.group.scoping": "Phạm vi",
+  "nav.group.discovery": "Khám phá",
+  "nav.group.prioritization": "Ưu tiên hóa",
+  "nav.group.validation": "Kiểm chứng",
+  "nav.group.mobilization": "Điều phối khắc phục",
+  "nav.group.insights": "Phân tích",
+  "nav.group.settings": "Cài đặt",
+  "common.loading": "Đang tải…",
+  "common.search": "Tìm kiếm",
+  "common.export": "Xuất",
+  "common.save": "Lưu",
+  "common.cancel": "Hủy",
+  "common.noData": "Không có dữ liệu",
+  "common.rowsExported": "Đã xuất {count} dòng"
+}

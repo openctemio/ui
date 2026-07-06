@@ -39,7 +39,9 @@ export default async function RootLayout({
         className="antialiased"
         suppressHydrationWarning
       >
-        <Providers dir={dir}>{children}</Providers>
+        <Providers dir={dir} locale={locale}>
+          {children}
+        </Providers>
       </body>
     </html>
   )
