@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { getDictionary, translate, getDirFromLocale } from '../i18n'
+import en from '../i18n/dictionaries/en.json'
+import vi from '../i18n/dictionaries/vi.json'
 
 describe('i18n translate', () => {
   it('resolves a key from the requested locale catalog', () => {
@@ -37,5 +39,17 @@ describe('i18n translate', () => {
   it('RTL direction still derives from locale (ar) independent of translation', () => {
     expect(getDirFromLocale('ar')).toBe('rtl')
     expect(getDirFromLocale('vi')).toBe('ltr')
+  })
+
+  // Guards catalog drift: every English key must have a Vietnamese translation
+  // (and vice-versa), and no value may be left empty.
+  it('en and vi catalogs have identical, non-empty keys', () => {
+    const enKeys = Object.keys(en).sort()
+    const viKeys = Object.keys(vi).sort()
+    expect(viKeys).toEqual(enKeys)
+    for (const k of enKeys) {
+      expect((en as Record<string, string>)[k]).not.toBe('')
+      expect((vi as Record<string, string>)[k]).not.toBe('')
+    }
   })
 })

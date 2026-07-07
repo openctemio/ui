@@ -43,6 +43,21 @@ function groupTitleKey(title: string): string {
   return `nav.group.${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`
 }
 
+/** Maps a sidebar item title to its i18n key, e.g. "Attack Surface" → "nav.item.attack-surface". */
+function navItemKey(title: string): string {
+  return `nav.item.${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`
+}
+
+/**
+ * Translated sidebar item label. Centralises the t() call so the many memoized
+ * menu sub-components can render a localized label with the English title as the
+ * fallback (untranslated items degrade gracefully).
+ */
+function NavLabel({ title }: { title: string }) {
+  const { t } = useTranslation()
+  return <>{t(navItemKey(title), title)}</>
+}
+
 /**
  * NavGroup Component
  *
@@ -200,7 +215,9 @@ const SidebarMenuLink = memo(function SidebarMenuLink({
           className="cursor-not-allowed opacity-60"
         >
           {item.icon && <item.icon />}
-          <span>{item.title}</span>
+          <span>
+            <NavLabel title={item.title} />
+          </span>
           {releaseStatusBadge && (
             <NavBadge variant={releaseStatusBadge.variant}>{releaseStatusBadge.text}</NavBadge>
           )}
@@ -214,7 +231,9 @@ const SidebarMenuLink = memo(function SidebarMenuLink({
       <SidebarMenuButton asChild isActive={checkIsActive(pathname, item)} tooltip={item.title}>
         <Link href={item.url} prefetch={false} onClick={() => setOpenMobile(false)}>
           {item.icon && <item.icon />}
-          <span>{item.title}</span>
+          <span>
+            <NavLabel title={item.title} />
+          </span>
           {releaseStatusBadge ? (
             <NavBadge variant={releaseStatusBadge.variant}>{releaseStatusBadge.text}</NavBadge>
           ) : (
@@ -257,7 +276,9 @@ const SidebarMenuCollapsible = memo(function SidebarMenuCollapsible({
         <CollapsibleTrigger asChild>
           <SidebarMenuButton tooltip={item.title}>
             {item.icon && <item.icon />}
-            <span>{item.title}</span>
+            <span>
+              <NavLabel title={item.title} />
+            </span>
             {releaseStatusBadge ? (
               <NavBadge variant={releaseStatusBadge.variant}>{releaseStatusBadge.text}</NavBadge>
             ) : (
@@ -277,7 +298,9 @@ const SidebarMenuCollapsible = memo(function SidebarMenuCollapsible({
                   <SidebarMenuSubItem key={subItem.title}>
                     <SidebarMenuSubButton className="cursor-not-allowed opacity-60">
                       {subItem.icon && <subItem.icon className="shrink-0" />}
-                      <span className="flex-1 truncate">{subItem.title}</span>
+                      <span className="flex-1 truncate">
+                        <NavLabel title={subItem.title} />
+                      </span>
                       {subReleaseStatusBadge && (
                         <NavBadge variant={subReleaseStatusBadge.variant}>
                           {subReleaseStatusBadge.text}
@@ -293,7 +316,9 @@ const SidebarMenuCollapsible = memo(function SidebarMenuCollapsible({
                   <SidebarMenuSubButton asChild isActive={checkIsActive(pathname, subItem)}>
                     <Link href={subItem.url} prefetch={false} onClick={() => setOpenMobile(false)}>
                       {subItem.icon && <subItem.icon className="shrink-0" />}
-                      <span className="flex-1 truncate">{subItem.title}</span>
+                      <span className="flex-1 truncate">
+                        <NavLabel title={subItem.title} />
+                      </span>
                       {subReleaseStatusBadge ? (
                         <NavBadge variant={subReleaseStatusBadge.variant}>
                           {subReleaseStatusBadge.text}
@@ -339,7 +364,9 @@ const SidebarMenuCollapsedDropdown = memo(function SidebarMenuCollapsedDropdown(
         <DropdownMenuTrigger asChild>
           <SidebarMenuButton tooltip={item.title} isActive={checkIsActive(pathname, item)}>
             {item.icon && <item.icon />}
-            <span>{item.title}</span>
+            <span>
+              <NavLabel title={item.title} />
+            </span>
             {releaseStatusBadge ? (
               <NavBadge variant={releaseStatusBadge.variant}>{releaseStatusBadge.text}</NavBadge>
             ) : (
@@ -350,7 +377,7 @@ const SidebarMenuCollapsedDropdown = memo(function SidebarMenuCollapsedDropdown(
         </DropdownMenuTrigger>
         <DropdownMenuContent side="right" align="start" sideOffset={4}>
           <DropdownMenuLabel>
-            {item.title}{' '}
+            <NavLabel title={item.title} />{' '}
             {releaseStatusBadge
               ? `(${releaseStatusBadge.text})`
               : item.badge
