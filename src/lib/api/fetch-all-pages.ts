@@ -19,7 +19,12 @@ interface PagedResponse<T> {
  */
 export async function fetchAllPages<T>(
   buildUrl: (page: number, perPage: number) => string,
-  opts?: { perPage?: number; maxPages?: number }
+  opts?: {
+    perPage?: number
+    maxPages?: number
+    /** Called when the maxPages cap truncated the result (loaded rows, cap rows). */
+    onTruncated?: (loaded: number, cap: number) => void
+  }
 ): Promise<T[]> {
   const perPage = opts?.perPage ?? 100
   const maxPages = opts?.maxPages ?? 500
@@ -34,6 +39,11 @@ export async function fetchAllPages<T>(
     }
     hasMore = page < (resp?.total_pages ?? 1)
     page++
+  }
+
+  // Stopped at the cap with pages still remaining → the export is incomplete.
+  if (hasMore) {
+    opts?.onTruncated?.(all.length, maxPages * perPage)
   }
 
   return all

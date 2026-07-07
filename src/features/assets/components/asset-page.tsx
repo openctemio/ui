@@ -325,14 +325,20 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
     if (isExporting) return
     setIsExporting(true)
     try {
-      const all = await fetchAllAssets({
-        types: typeFilter,
-        subType: subTypeFilter,
-        propertiesFilter: Object.keys(propertiesFilter).length > 0 ? propertiesFilter : undefined,
-        search: debouncedSearch || undefined,
-        tags: tagFilters.length > 0 ? tagFilters : undefined,
-        sort: sortParam,
-      })
+      const all = await fetchAllAssets(
+        {
+          types: typeFilter,
+          subType: subTypeFilter,
+          propertiesFilter: Object.keys(propertiesFilter).length > 0 ? propertiesFilter : undefined,
+          search: debouncedSearch || undefined,
+          tags: tagFilters.length > 0 ? tagFilters : undefined,
+          sort: sortParam,
+        },
+        (loaded) =>
+          toast.warning(
+            `Export limited to the first ${loaded.toLocaleString()} assets — refine filters to export the rest`
+          )
+      )
       const rows = config.dataTransform ? config.dataTransform(all) : all
       exportToCsv(rows, config.exportFields, config.type)
     } catch {
