@@ -12,5 +12,6 @@
   "common.save": "Lưu",
   "common.cancel": "Hủy",
   "common.noData": "Không có dữ liệu",
-  "common.rowsExported": "Đã xuất {count} dòng"
+  "common.rowsExported": "Đã xuất {count} dòng",
+  "common.language": "Ngôn ngữ"
 }
