@@ -410,7 +410,13 @@ export default function RemediationPage() {
   const [isExporting, setIsExporting] = useState(false)
   const fetchAllFilteredTasks = useCallback(async (): Promise<RemediationTask[]> => {
     const campaigns = await fetchAllPages<RemediationCampaign>(
-      (page, per_page) => `/api/v1/remediation/campaigns?page=${page}&per_page=${per_page}`
+      (page, per_page) => `/api/v1/remediation/campaigns?page=${page}&per_page=${per_page}`,
+      {
+        onTruncated: (loaded) =>
+          toast.warning(
+            `Export limited to the first ${loaded.toLocaleString()} campaigns — refine filters to export the rest`
+          ),
+      }
     )
     return applyTaskFilters(campaigns.map(campaignToTask), quickFilter, filters)
   }, [quickFilter, filters])
