@@ -1,7 +1,7 @@
 'use client'
 
 import { Main } from '@/components/layout'
-import { PageHeader } from '@/features/shared'
+import { PageHeader } from './page-header'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
