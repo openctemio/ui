@@ -90,7 +90,7 @@ import type { ApiScopeTarget, ApiScopeExclusion } from '@/features/scope/api/sco
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import { useDebounce } from '@/hooks/use-debounce'
 // Status filter is now string-based to support custom status values
-import type { AssetType } from '../types'
+import type { AssetType, Criticality, AssetScope, ExposureLevel } from '../types'
 import type { AssetPageConfig } from '../types/page-config.types'
 import { useAssetCRUD } from '../hooks/use-asset-crud'
 import { useAssetDialogs } from '../hooks/use-asset-dialogs'
@@ -586,13 +586,15 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
         }
       }
 
+      // Classification is now set by the operator via the shared form (falls
+      // back to sensible defaults only when absent) instead of being hardcoded.
       return crud.handleCreate({
         name: String(data.name ?? ''),
         type: config.type as never,
-        criticality: 'medium',
+        criticality: (data.criticality as string | undefined) || 'medium',
         description: String(data.description ?? ''),
-        scope: 'internal',
-        exposure: 'unknown',
+        scope: (data.scope as string | undefined) || 'internal',
+        exposure: (data.exposure as string | undefined) || 'unknown',
         ownerRef,
         tags,
         ...topLevel,
@@ -607,9 +609,16 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
       const tags = (data.tags as string[] | undefined) ?? []
       delete data.tags
 
-      // owner_ref is a universal field on every form, not in config.formFields
+      // owner_ref + classification are universal fields on every form, not in
+      // config.formFields — pull them out before the config loop.
       const ownerRef = data.ownerRef as string | undefined
       delete data.ownerRef
+      const criticality = data.criticality as Criticality | undefined
+      const scope = data.scope as AssetScope | undefined
+      const exposure = data.exposure as ExposureLevel | undefined
+      delete data.criticality
+      delete data.scope
+      delete data.exposure
 
       // Collect metadata and top-level fields (same logic as create)
       const metadata: Record<string, unknown> = {}
@@ -629,6 +638,9 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
         name: String(data.name ?? ''),
         description: String(data.description ?? ''),
         ownerRef,
+        ...(criticality ? { criticality } : {}),
+        ...(scope ? { scope } : {}),
+        ...(exposure ? { exposure } : {}),
         tags,
         ...(Object.keys(metadata).length > 0 ? { metadata } : {}),
         ...topLevel,
