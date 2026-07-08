@@ -4,6 +4,5 @@
 
 export * from './types'
 export * from './hooks'
-export * from './lib/mock-data'
 export * from './lib/domain-hierarchy'
 export * from './components'
