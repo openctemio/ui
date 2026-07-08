@@ -95,22 +95,6 @@ export function cachedFetch<T>(
  */
 
 /**
- * Cached asset statistics fetcher
- * Use in Server Components for dashboard stats
- */
-export const getCachedAssetStats = cachedFetch(
-  async () => {
-    // Uses mock data — wire to real API when dashboard stats endpoints are available.
-    // const res = await fetch(`${process.env.BACKEND_API_URL}/api/assets/stats`);
-    // return res.json();
-    const { getAssetStats } = await import('@/features/assets')
-    return getAssetStats()
-  },
-  ['asset-stats'],
-  { revalidate: CACHE_DURATIONS.MEDIUM, tags: [CACHE_TAGS.ASSETS] }
-)
-
-/**
  * Cached findings statistics fetcher
  */
 export const getCachedFindingStats = cachedFetch(
