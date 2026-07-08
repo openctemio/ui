@@ -233,6 +233,12 @@ export const sidebarData: SidebarData = {
               url: '/assets',
               icon: Container,
             },
+            // Duplicate review — approve/reject correlator-flagged asset merges
+            {
+              title: 'Duplicates',
+              url: '/assets/duplicates',
+              icon: GitMerge,
+            },
             // External Attack Surface
             {
               title: 'Domains',
