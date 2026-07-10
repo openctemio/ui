@@ -328,6 +328,14 @@ export const routePermissions: Record<string, RoutePermissionConfig> = {
     permission: Permission.RemediationRead,
     module: Module.RemediationTasks,
   },
+  '/remediations': {
+    permission: Permission.RemediationRead,
+    module: Module.RemediationTasks,
+  },
+  '/remediations/**': {
+    permission: Permission.RemediationRead,
+    module: Module.RemediationTasks,
+  },
   '/pipelines': {
     permission: Permission.PipelinesRead,
     module: Module.ScanPipelines,
