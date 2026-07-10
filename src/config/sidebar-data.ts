@@ -586,6 +586,13 @@ export const sidebarData: SidebarData = {
           module: 'remediation_tasks',
         },
         {
+          title: 'Remediations',
+          url: '/remediations',
+          icon: Wrench,
+          permission: Permission.RemediationRead,
+          module: 'remediation_tasks',
+        },
+        {
           title: 'Workflows',
           url: '/workflows',
           icon: Workflow,
