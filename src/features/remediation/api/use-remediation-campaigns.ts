@@ -89,6 +89,24 @@ export function useDeleteRemediationCampaign(id: string) {
   return useSWRMutation(`/api/v1/remediation/campaigns/${id}`, (url: string) => del(url))
 }
 
+export interface ResolveCampaignRequest {
+  status?: 'fix_applied' | 'resolved'
+  resolution?: string
+  approved?: boolean
+}
+
+export interface ResolveCampaignResult {
+  resolved: number
+}
+
+/** Actively resolves the campaign's open findings in one action (RFC-015 Phase 3). */
+export function useResolveRemediationCampaign(id: string) {
+  return useSWRMutation<ResolveCampaignResult, Error, string, ResolveCampaignRequest>(
+    `/api/v1/remediation/campaigns/${id}/resolve`,
+    (url: string, { arg }: { arg: ResolveCampaignRequest }) => post(url, arg)
+  )
+}
+
 export interface CampaignTicketInfo {
   campaign_id: string
   provider: string
