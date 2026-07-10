@@ -842,6 +842,11 @@ export const sidebarData: SidebarData = {
               url: '/settings/integrations/saml',
               icon: ShieldCheck,
             },
+            {
+              title: 'AI Access (MCP)',
+              url: '/settings/integrations/mcp',
+              icon: Bot,
+            },
           ],
         },
       ],
