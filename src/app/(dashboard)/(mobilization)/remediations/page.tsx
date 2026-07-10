@@ -16,6 +16,7 @@ import { Can, Permission } from '@/lib/permissions'
 import {
   useRemediationGroups,
   ResolveGroupDialog,
+  CreateCampaignFromGroupDialog,
   type RemediationGroup,
 } from '@/features/remediation-groups'
 
@@ -42,10 +43,17 @@ export default function RemediationsPage() {
 
   const [selected, setSelected] = useState<RemediationGroup | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [campaignGroup, setCampaignGroup] = useState<RemediationGroup | null>(null)
+  const [campaignOpen, setCampaignOpen] = useState(false)
 
   const openResolve = (g: RemediationGroup) => {
     setSelected(g)
     setDialogOpen(true)
+  }
+
+  const openCampaign = (g: RemediationGroup) => {
+    setCampaignGroup(g)
+    setCampaignOpen(true)
   }
 
   const columns = useMemo<ColumnDef<RemediationGroup>[]>(
@@ -79,7 +87,10 @@ export default function RemediationsPage() {
         header: '',
         cell: ({ row }) => (
           <Can permission={Permission.RemediationWrite}>
-            <div className="flex justify-end">
+            <div className="flex justify-end gap-2">
+              <Button size="sm" variant="outline" onClick={() => openCampaign(row.original)}>
+                Track as campaign
+              </Button>
               <Button size="sm" onClick={() => openResolve(row.original)}>
                 Resolve all
               </Button>
@@ -119,6 +130,12 @@ export default function RemediationsPage() {
         onOpenChange={setDialogOpen}
         group={selected}
         onSuccess={() => mutate()}
+      />
+
+      <CreateCampaignFromGroupDialog
+        open={campaignOpen}
+        onOpenChange={setCampaignOpen}
+        group={campaignGroup}
       />
     </Main>
   )
