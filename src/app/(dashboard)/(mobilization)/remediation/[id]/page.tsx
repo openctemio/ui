@@ -5,6 +5,8 @@ import { useParams, useRouter } from 'next/navigation'
 import { useSWRConfig } from 'swr'
 import { Main } from '@/components/layout'
 import { Button } from '@/components/ui/button'
+import { Can, Permission } from '@/lib/permissions'
+import { ResolveCampaignDialog } from '@/features/remediation/components/resolve-campaign-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
@@ -160,6 +162,7 @@ export default function CampaignDetailPage() {
   const { trigger: updateStatus, isMutating: isStatusUpdating } = useUpdateCampaignStatus(id)
 
   // Inline edit state
+  const [resolveOpen, setResolveOpen] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const [editForm, setEditForm] = useState({
     name: '',
@@ -348,8 +351,26 @@ export default function CampaignDetailPage() {
               <span className="font-medium">{campaign.progress}%</span>
             </div>
             <Progress value={campaign.progress} className="h-2" />
+            {campaign.finding_count > campaign.resolved_count ? (
+              <Can permission={Permission.RemediationWrite}>
+                <div className="flex justify-end pt-1">
+                  <Button size="sm" onClick={() => setResolveOpen(true)}>
+                    Resolve open findings
+                  </Button>
+                </div>
+              </Can>
+            ) : null}
           </CardContent>
         </Card>
+
+        <ResolveCampaignDialog
+          open={resolveOpen}
+          onOpenChange={setResolveOpen}
+          campaignId={id}
+          campaignName={campaign.name}
+          openCount={campaign.finding_count - campaign.resolved_count}
+          onSuccess={() => mutateCampaign()}
+        />
 
         {/* Info cards */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
