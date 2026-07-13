@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useCallback, useEffect } from 'react'
 import { Main } from '@/components/layout'
-import { PageHeader } from '@/features/shared'
+import { PageHeader, DataTableRowActions } from '@/features/shared'
 import { Can, Permission, useHasPermission } from '@/lib/permissions'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -35,12 +35,6 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -60,7 +54,6 @@ import {
   Globe,
   Shield,
   Plus,
-  MoreHorizontal,
   Pencil,
   Trash2,
   Clock,
@@ -1404,30 +1397,23 @@ export default function ScopeConfigPage() {
                           </TableCell>
                           <TableCell>
                             <Can permission={[Permission.ScopeWrite, Permission.ScopeDelete]}>
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                    <MoreHorizontal className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <Can permission={Permission.ScopeWrite}>
-                                    <DropdownMenuItem onClick={() => openEditTarget(target)}>
-                                      <Pencil className="me-2 h-4 w-4" />
-                                      Edit
-                                    </DropdownMenuItem>
-                                  </Can>
-                                  <Can permission={Permission.ScopeDelete}>
-                                    <DropdownMenuItem
-                                      className="text-red-400"
-                                      onClick={() => setDeleteTarget(target)}
-                                    >
-                                      <Trash2 className="me-2 h-4 w-4" />
-                                      Remove
-                                    </DropdownMenuItem>
-                                  </Can>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
+                              <DataTableRowActions
+                                actions={[
+                                  {
+                                    label: 'Edit',
+                                    icon: Pencil,
+                                    onClick: () => openEditTarget(target),
+                                    permission: Permission.ScopeWrite,
+                                  },
+                                  {
+                                    label: 'Remove',
+                                    icon: Trash2,
+                                    onClick: () => setDeleteTarget(target),
+                                    destructive: true,
+                                    permission: Permission.ScopeDelete,
+                                  },
+                                ]}
+                              />
                             </Can>
                           </TableCell>
                         </TableRow>
@@ -1579,30 +1565,23 @@ export default function ScopeConfigPage() {
                           </TableCell>
                           <TableCell>
                             <Can permission={[Permission.ScopeWrite, Permission.ScopeDelete]}>
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                    <MoreHorizontal className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <Can permission={Permission.ScopeWrite}>
-                                    <DropdownMenuItem onClick={() => openEditExclusion(exclusion)}>
-                                      <Pencil className="me-2 h-4 w-4" />
-                                      Edit
-                                    </DropdownMenuItem>
-                                  </Can>
-                                  <Can permission={Permission.ScopeDelete}>
-                                    <DropdownMenuItem
-                                      className="text-red-400"
-                                      onClick={() => setDeleteExclusion(exclusion)}
-                                    >
-                                      <Trash2 className="me-2 h-4 w-4" />
-                                      Remove
-                                    </DropdownMenuItem>
-                                  </Can>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
+                              <DataTableRowActions
+                                actions={[
+                                  {
+                                    label: 'Edit',
+                                    icon: Pencil,
+                                    onClick: () => openEditExclusion(exclusion),
+                                    permission: Permission.ScopeWrite,
+                                  },
+                                  {
+                                    label: 'Remove',
+                                    icon: Trash2,
+                                    onClick: () => setDeleteExclusion(exclusion),
+                                    destructive: true,
+                                    permission: Permission.ScopeDelete,
+                                  },
+                                ]}
+                              />
                             </Can>
                           </TableCell>
                         </TableRow>
@@ -1763,36 +1742,29 @@ export default function ScopeConfigPage() {
                                   Permission.ScopeDelete,
                                 ]}
                               >
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                      <MoreHorizontal className="h-4 w-4" />
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end">
-                                    <Can permission={Permission.ScansExecute}>
-                                      <DropdownMenuItem onClick={() => handleRunNow(schedule)}>
-                                        <Play className="me-2 h-4 w-4" />
-                                        Run Now
-                                      </DropdownMenuItem>
-                                    </Can>
-                                    <Can permission={Permission.ScopeWrite}>
-                                      <DropdownMenuItem onClick={() => openEditSchedule(schedule)}>
-                                        <Pencil className="me-2 h-4 w-4" />
-                                        Edit
-                                      </DropdownMenuItem>
-                                    </Can>
-                                    <Can permission={Permission.ScopeDelete}>
-                                      <DropdownMenuItem
-                                        className="text-red-400"
-                                        onClick={() => setDeleteSchedule(schedule)}
-                                      >
-                                        <Trash2 className="me-2 h-4 w-4" />
-                                        Delete
-                                      </DropdownMenuItem>
-                                    </Can>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
+                                <DataTableRowActions
+                                  actions={[
+                                    {
+                                      label: 'Run Now',
+                                      icon: Play,
+                                      onClick: () => handleRunNow(schedule),
+                                      permission: Permission.ScansExecute,
+                                    },
+                                    {
+                                      label: 'Edit',
+                                      icon: Pencil,
+                                      onClick: () => openEditSchedule(schedule),
+                                      permission: Permission.ScopeWrite,
+                                    },
+                                    {
+                                      label: 'Delete',
+                                      icon: Trash2,
+                                      onClick: () => setDeleteSchedule(schedule),
+                                      destructive: true,
+                                      permission: Permission.ScopeDelete,
+                                    },
+                                  ]}
+                                />
                               </Can>
                             </TableCell>
                           </TableRow>

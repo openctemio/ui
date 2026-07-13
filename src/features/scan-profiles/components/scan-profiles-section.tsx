@@ -13,7 +13,6 @@ import {
   Copy,
   Pencil,
   Trash2,
-  MoreHorizontal,
   Sparkles,
   ChevronDown,
 } from 'lucide-react'
@@ -28,7 +27,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -50,6 +48,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 
+import { DataTableRowActions, type RowAction } from '@/features/shared'
 import { AddScanProfileDialog } from './add-scan-profile-dialog'
 import { EditScanProfileDialog } from './edit-scan-profile-dialog'
 import { CloneScanProfileDialog } from './clone-scan-profile-dialog'
@@ -311,48 +310,45 @@ export function ScanProfilesSection() {
                         <Can
                           permission={[Permission.ScanProfilesWrite, Permission.ScanProfilesDelete]}
                         >
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <Can permission={Permission.ScanProfilesWrite}>
-                                {!profile.is_default && (
-                                  <DropdownMenuItem
-                                    onClick={() => handleSetDefault(profile)}
-                                    disabled={isSettingDefault}
-                                  >
-                                    <Star className="me-2 h-4 w-4" />
-                                    Set as Default
-                                  </DropdownMenuItem>
-                                )}
-                                <DropdownMenuItem onClick={() => handleEditProfile(profile)}>
-                                  <Pencil className="me-2 h-4 w-4" />
-                                  Edit
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleCloneProfile(profile)}>
-                                  <Copy className="me-2 h-4 w-4" />
-                                  Clone
-                                </DropdownMenuItem>
-                              </Can>
-                              <Can permission={Permission.ScanProfilesDelete}>
-                                {!profile.is_system && (
-                                  <>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem
-                                      className="text-red-500"
-                                      onClick={() => handleDeleteClick(profile)}
-                                    >
-                                      <Trash2 className="me-2 h-4 w-4" />
-                                      Delete
-                                    </DropdownMenuItem>
-                                  </>
-                                )}
-                              </Can>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                          <DataTableRowActions
+                            actions={[
+                              ...(!profile.is_default
+                                ? ([
+                                    {
+                                      label: 'Set as Default',
+                                      icon: Star,
+                                      onClick: () => handleSetDefault(profile),
+                                      disabled: isSettingDefault,
+                                      permission: Permission.ScanProfilesWrite,
+                                    },
+                                  ] satisfies RowAction[])
+                                : []),
+                              {
+                                label: 'Edit',
+                                icon: Pencil,
+                                onClick: () => handleEditProfile(profile),
+                                permission: Permission.ScanProfilesWrite,
+                              },
+                              {
+                                label: 'Clone',
+                                icon: Copy,
+                                onClick: () => handleCloneProfile(profile),
+                                permission: Permission.ScanProfilesWrite,
+                              },
+                              ...(!profile.is_system
+                                ? ([
+                                    {
+                                      label: 'Delete',
+                                      icon: Trash2,
+                                      onClick: () => handleDeleteClick(profile),
+                                      destructive: true,
+                                      separatorBefore: true,
+                                      permission: Permission.ScanProfilesDelete,
+                                    },
+                                  ] satisfies RowAction[])
+                                : []),
+                            ]}
+                          />
                         </Can>
                       </TableCell>
                     </TableRow>

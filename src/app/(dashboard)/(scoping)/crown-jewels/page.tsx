@@ -3,7 +3,12 @@
 import { useState, useMemo, useEffect } from 'react'
 import { ColumnDef } from '@tanstack/react-table'
 import { Main } from '@/components/layout'
-import { PageHeader, DataTable, DataTableColumnHeader } from '@/features/shared'
+import {
+  PageHeader,
+  DataTable,
+  DataTableColumnHeader,
+  DataTableRowActions,
+} from '@/features/shared'
 import { Can, Permission } from '@/lib/permissions'
 import { useCsvExport, type ExportFieldConfig } from '@/hooks/use-csv-export'
 import { Button } from '@/components/ui/button'
@@ -15,7 +20,6 @@ import {
   Plus,
   Download,
   Filter,
-  MoreHorizontal,
   Eye,
   Pencil,
   Trash2,
@@ -36,13 +40,6 @@ import {
   ShieldX,
 } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import {
   Dialog,
   DialogContent,
@@ -451,35 +448,25 @@ export default function CrownJewelsPage() {
         const jewel = row.original
         return (
           <Can permission={[Permission.ScopeWrite, Permission.ScopeDelete]}>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon">
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setViewJewel(jewel)}>
-                  <Eye className="me-2 h-4 w-4" />
-                  View Details
-                </DropdownMenuItem>
-                <Can permission={Permission.ScopeWrite}>
-                  <DropdownMenuItem onClick={() => openEdit(jewel)}>
-                    <Pencil className="me-2 h-4 w-4" />
-                    Edit
-                  </DropdownMenuItem>
-                </Can>
-                <Can permission={Permission.ScopeDelete}>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onClick={() => setDeleteJewel(jewel)}
-                    className="text-destructive"
-                  >
-                    <Trash2 className="me-2 h-4 w-4" />
-                    Remove
-                  </DropdownMenuItem>
-                </Can>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <DataTableRowActions
+              actions={[
+                { label: 'View Details', icon: Eye, onClick: () => setViewJewel(jewel) },
+                {
+                  label: 'Edit',
+                  icon: Pencil,
+                  onClick: () => openEdit(jewel),
+                  permission: Permission.ScopeWrite,
+                },
+                {
+                  label: 'Remove',
+                  icon: Trash2,
+                  onClick: () => setDeleteJewel(jewel),
+                  destructive: true,
+                  separatorBefore: true,
+                  permission: Permission.ScopeDelete,
+                },
+              ]}
+            />
           </Can>
         )
       },
