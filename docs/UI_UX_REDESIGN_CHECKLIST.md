@@ -16,23 +16,23 @@ Systematic per-page UI/UX audit + redesign of the OpenCTEM dashboard. **183 rout
 
 ## Scoping (15)
 
-| Route                        | Audit | Redesign | PR  | QA  | Notes                                                                   |
-| ---------------------------- | :---: | :------: | :-: | :-: | ----------------------------------------------------------------------- |
-| `/asset-groups`              |   ☐   |    ☐     |     |  ☐  |                                                                         |
-| `/asset-groups/[id]`         |   ☐   |    ☐     |     |  ☐  |                                                                         |
-| `/attack-surface`            |  🔎   |    ☐     |     |  ☐  | 14-card overview — verify mock data + hierarchy; detailed pass pending. |
-| `/attack-surface/cloud`      |   ☐   |    ☐     |     |  ☐  |                                                                         |
-| `/attack-surface/external`   |   ☐   |    ☐     |     |  ☐  |                                                                         |
-| `/attack-surface/internal`   |   ☐   |    ☐     |     |  ☐  |                                                                         |
-| `/attacker-profiles`         |   ☐   |    ☐     |     |  ☐  |                                                                         |
-| `/business-services`         |   ☐   |    ☐     |     |  ☐  |                                                                         |
-| `/business-units`            |   ☐   |    ☐     |     |  ☐  |                                                                         |
-| `/capabilities`              |   ☐   |    ☐     |     |  ☐  |                                                                         |
-| `/compliance`                |   ☐   |    ☐     |     |  ☐  |                                                                         |
-| `/crown-jewels`              |   ☐   |    ☐     |     |  ☐  |                                                                         |
-| `/cycles`                    |   ☐   |    ☐     |     |  ☐  |                                                                         |
-| `/relationships/suggestions` |   ☐   |    ☐     |     |  ☐  |                                                                         |
-| `/scope-config`              |   ☐   |    ☐     |     |  ☐  |                                                                         |
+| Route                        | Audit | Redesign | PR  | QA  | Notes                                                                                                                                                                   |
+| ---------------------------- | :---: | :------: | :-: | :-: | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/asset-groups`              |  🔎   |    ☐     |     |  ☐  | Good DataTable; but every group Assets=0 & Total Assets=0 while groups have findings/risk — asset-count join not populated.                                             |
+| `/asset-groups/[id]`         |   ☐   |    ☐     |     |  ☐  |                                                                                                                                                                         |
+| `/attack-surface`            |  ✅   |    ➖    |     |  ☐  | Clean overview (4 stats + breakdown). Seed data reads placeholder; subtitle "external" but mixes internal — wording drift.                                              |
+| `/attack-surface/cloud`      |  🔎   |    ☐     |     |  ☐  | Data bug: gcp-named row shows AWS badge + GCP/Azure distribution=0; region "unknown"; risk "Critical 1" contradicts "Clean 100% / Findings 0".                          |
+| `/attack-surface/external`   |  🔎   |    ☐     |     |  ☐  | 🐛 CRASH — error boundary "Failed to load scope config"; console: Element type is invalid (undefined import in shared scope component). HIGH priority.                  |
+| `/attack-surface/internal`   |  🔎   |    ☐     |     |  ☐  | 🐛 CRASH — same undefined-import crash as /external (one fix resolves both). HIGH priority.                                                                             |
+| `/attacker-profiles`         |  ✅   |    ➖    |     |  ☐  | Tidy profiles table w/ capability chips. Nit: Actions col only shows a "Default" badge (reads like 2nd column) — rename/real action.                                    |
+| `/business-services`         |  ✅   |    ➖    |     |  ☐  | Clean table (criticality, tags, SLA). Owners are example.com seed placeholders.                                                                                         |
+| `/business-units`            |  🔎   |    ☐     |     |  ☐  | Empty metrics: Total Assets/Avg Risk/Avg Compliance all 0; Compliance col renders bare "%" + empty bars; "0 active/0 inactive" vs 3 units.                              |
+| `/capabilities`              |  ✅   |    ➖    |     |  ☐  | Polished card grid + stats + tabs + grid/table toggle. Nit: "Add Capability" muted-gray vs black primary elsewhere — button drift.                                      |
+| `/compliance`                |  🔎   |    ☐     |     |  ☐  | Module-gate correct BUT still fires query → 2×403 + 2 stacked red permission toasts on the gate; gate should short-circuit fetch. Gated pages also drop top header bar. |
+| `/crown-jewels`              |  ✅   |    ➖    |     |  ☐  | Full-featured (risk/impact bars, exposure). Nits: ugly seed asset id; "None" vs "0" label inconsistency.                                                                |
+| `/cycles`                    |  ✅   |    ➖    |     |  ☐  | Correct module-gate "Feature Not Available (ctem_cycles)" — intentional, not a stub.                                                                                    |
+| `/relationships/suggestions` |  ✅   |    ➖    |     |  ☐  | Useful (suggestions w/ confidence %, Approve/Reject, Approve-All). Nit: Reason truncated, no tooltip; example.com seed.                                                 |
+| `/scope-config`              |  ✅   |    ➖    |     |  ☐  | Strong (tabs, donut, status bar). Nits: donut ~18 tiny slices (top-N+other); unexplained red "Scope Status 11.48%".                                                     |
 
 ## Discovery (61)
 
