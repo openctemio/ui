@@ -1,7 +1,7 @@
 'use client'
 
 import { Main } from '@/components/layout'
-import { PageHeader } from '@/features/shared'
+import { PageHeader, AttackSurfaceTabs } from '@/features/shared'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -122,9 +122,10 @@ export default function AttackSurfacePage() {
     <>
       <Main>
         <PageHeader
-          title="Attack Surface Overview"
-          description="Visualize and monitor your organization's external attack surface"
+          title="Attack Surface"
+          description="Your organization's attack surface across external, internal, and cloud"
         />
+        <AttackSurfaceTabs />
 
         {error && (
           <div className="mt-6 rounded-lg border border-red-200 bg-red-50 p-4 text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-300">
