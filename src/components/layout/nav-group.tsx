@@ -1,6 +1,6 @@
 'use client'
 
-import { type ReactNode, useMemo, memo } from 'react'
+import { type ReactNode, useEffect, useMemo, useState, memo } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { ChevronRight } from 'lucide-react'
@@ -266,12 +266,22 @@ const SidebarMenuCollapsible = memo(function SidebarMenuCollapsible({
   // Filter sub-items based on sub-modules from API
   const filteredItems = useFilteredSubItems(item.items, item.module, subModules)
 
+  // Longest-matching sub-item drives both the highlight and the open state.
+  const activeSubUrl = useMemo(
+    () => activeSubItemUrl(pathname, filteredItems),
+    [pathname, filteredItems]
+  )
+  const isActive = activeSubUrl !== undefined
+
+  // Auto-open when a child route is active, but still let the user toggle.
+  // Resetting the manual override whenever `isActive` flips means navigating
+  // into a group always opens it, without fighting a manual collapse.
+  const [manuallyOpen, setManuallyOpen] = useState<boolean | null>(null)
+  useEffect(() => setManuallyOpen(null), [isActive])
+  const open = manuallyOpen ?? isActive
+
   return (
-    <Collapsible
-      asChild
-      defaultOpen={checkIsActive(pathname, item, true)}
-      className="group/collapsible"
-    >
+    <Collapsible asChild open={open} onOpenChange={setManuallyOpen} className="group/collapsible">
       <SidebarMenuItem>
         <CollapsibleTrigger asChild>
           <SidebarMenuButton tooltip={item.title}>
@@ -313,7 +323,7 @@ const SidebarMenuCollapsible = memo(function SidebarMenuCollapsible({
 
               return (
                 <SidebarMenuSubItem key={subItem.title}>
-                  <SidebarMenuSubButton asChild isActive={checkIsActive(pathname, subItem)}>
+                  <SidebarMenuSubButton asChild isActive={subItem.url === activeSubUrl}>
                     <Link href={subItem.url} prefetch={false} onClick={() => setOpenMobile(false)}>
                       {subItem.icon && <subItem.icon className="shrink-0" />}
                       <span className="flex-1 truncate">
@@ -357,6 +367,10 @@ const SidebarMenuCollapsedDropdown = memo(function SidebarMenuCollapsedDropdown(
 
   // Filter sub-items based on sub-modules from API
   const filteredItems = useFilteredSubItems(item.items, item.module, subModules)
+  const activeSubUrl = useMemo(
+    () => activeSubItemUrl(pathname, filteredItems),
+    [pathname, filteredItems]
+  )
 
   return (
     <SidebarMenuItem>
@@ -412,7 +426,7 @@ const SidebarMenuCollapsedDropdown = memo(function SidebarMenuCollapsedDropdown(
                 <Link
                   href={sub.url}
                   prefetch={false}
-                  className={`${checkIsActive(pathname, sub) ? 'bg-secondary' : ''}`}
+                  className={`${sub.url === activeSubUrl ? 'bg-secondary' : ''}`}
                 >
                   {sub.icon && <sub.icon />}
                   <span className="max-w-52 text-wrap">{sub.title}</span>
@@ -433,16 +447,41 @@ const SidebarMenuCollapsedDropdown = memo(function SidebarMenuCollapsedDropdown(
 
 SidebarMenuCollapsedDropdown.displayName = 'SidebarMenuCollapsedDropdown'
 
+/**
+ * A nav url is active for the current path on an exact match OR a child route
+ * (`/assets/repositories` is active on `/assets/repositories/<id>`), but never
+ * on a mere string prefix (`/scans` is NOT active on `/scan-profiles`).
+ */
+function isUrlActive(pathname: string, url: unknown): boolean {
+  return typeof url === 'string' && (pathname === url || pathname.startsWith(`${url}/`))
+}
+
+/**
+ * Of a group's sub-items, the url that best matches the current path — the
+ * longest one that is active. Prevents a short "Overview" url (`/assets`) from
+ * lighting up alongside the deeper item (`/assets/repositories`) on a detail page.
+ */
+function activeSubItemUrl(
+  pathname: string,
+  items: readonly { url: NavLink['url'] }[]
+): string | undefined {
+  return items
+    .map((i) => i.url)
+    .filter((url): url is string => typeof url === 'string' && isUrlActive(pathname, url))
+    .sort((a, b) => b.length - a.length)[0]
+}
+
 function checkIsActive(pathname: string, item: NavItem, mainNav = false) {
-  // For collapsible items with sub-items, check if any sub-item is active
+  // For collapsible items with sub-items, active if any sub-item matches —
+  // including child/detail routes — so the group highlights + auto-opens.
   if ('items' in item) {
-    return item.items.some((i) => pathname === i.url)
+    return item.items.some((i) => isUrlActive(pathname, i.url))
   }
 
   // For leaf items with a url
   if ('url' in item && typeof item.url === 'string') {
-    // Exact match always counts
-    if (pathname === item.url) {
+    // Exact match or a child route (keeps the item active on its detail pages)
+    if (isUrlActive(pathname, item.url)) {
       return true
     }
 
