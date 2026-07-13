@@ -1168,13 +1168,13 @@ function OverviewTab({
                 >
                   <SeverityBadge severity={finding.severity} />
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <code className="text-xs bg-muted px-1.5 py-0.5 rounded">{finding.id}</code>
-                      <span className="font-medium text-sm truncate">{finding.title}</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {finding.file_path}:{finding.line_start}
-                    </p>
+                    <span className="block truncate text-sm font-medium">{finding.title}</span>
+                    {finding.file_path && (
+                      <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                        {finding.file_path}
+                        {finding.line_start ? `:${finding.line_start}` : ''}
+                      </p>
+                    )}
                   </div>
                   <div className="flex items-center gap-2">
                     <FindingStatusBadge status={finding.status} />
@@ -1757,36 +1757,43 @@ function FindingsTab({
                     <SeverityBadge severity={finding.severity} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">
-                        {finding.id}
-                      </code>
+                    {/* Title leads; the raw UUID is dropped from the row (it's
+                        machine noise — the row is clickable to the detail page). */}
+                    <h4 className="font-medium leading-snug">{finding.title}</h4>
+                    {finding.description && finding.description !== finding.title && (
+                      <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
+                        {finding.description}
+                      </p>
+                    )}
+                    <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                       <Badge variant="outline" className="text-xs">
                         {SCANNER_TYPE_LABELS[finding.scanner_type]}
                       </Badge>
-                      <TriageStatusBadge status={finding.triage_status} />
-                    </div>
-                    <h4 className="font-medium mb-1">{finding.title}</h4>
-                    <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
-                      {finding.description}
-                    </p>
-                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <FileCode className="h-3 w-3" />
-                        {finding.file_path}:{finding.line_start}
-                      </span>
-                      <span className="flex items-center gap-1" title={finding.branches.join(', ')}>
-                        <GitBranch className="h-3 w-3" />
-                        {finding.branches.length > 0 ? (
-                          finding.branches.map((b) => (
+                      {/* Only surface triage when it needs action; "Triaged" is
+                          the normal state and just adds noise on every row. */}
+                      {finding.triage_status !== 'triaged' && (
+                        <TriageStatusBadge status={finding.triage_status} />
+                      )}
+                      {finding.file_path && (
+                        <span className="flex items-center gap-1">
+                          <FileCode className="h-3 w-3" />
+                          {finding.file_path}
+                          {finding.line_start ? `:${finding.line_start}` : ''}
+                        </span>
+                      )}
+                      {finding.branches.length > 0 && (
+                        <span
+                          className="flex items-center gap-1"
+                          title={finding.branches.join(', ')}
+                        >
+                          <GitBranch className="h-3 w-3" />
+                          {finding.branches.map((b) => (
                             <code key={b} className="bg-muted px-1 rounded text-[10px]">
                               {b}
                             </code>
-                          ))
-                        ) : (
-                          <span className="text-muted-foreground">no branch</span>
-                        )}
-                      </span>
+                          ))}
+                        </span>
+                      )}
                       {finding.cwe_ids && finding.cwe_ids.length > 0 && (
                         <span className="flex items-center gap-1">
                           <Shield className="h-3 w-3" />
