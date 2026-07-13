@@ -8,7 +8,7 @@ import { useDebounce } from '@/hooks/use-debounce'
 import { ColumnDef } from '@tanstack/react-table'
 import { Main } from '@/components/layout'
 import { PageHeader, SeverityBadge, DataTable, DataTableColumnHeader } from '@/features/shared'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
@@ -1166,52 +1166,8 @@ function FindingsContent() {
               </div>
             ) : (
               <>
-                {/* Stats Cards - Always visible once loaded */}
-                {/* Mobile: 2x2 grid showing Critical, High, Medium, Low */}
-                {/* Desktop: 5 columns showing all severities */}
-                <div className="mt-6 grid gap-3 sm:gap-4 grid-cols-2 sm:grid-cols-4 lg:grid-cols-5">
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardDescription>Critical</CardDescription>
-                      <CardTitle className="text-2xl sm:text-3xl text-red-500">
-                        {stats.bySeverity.critical}
-                      </CardTitle>
-                    </CardHeader>
-                  </Card>
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardDescription>High</CardDescription>
-                      <CardTitle className="text-2xl sm:text-3xl text-orange-500">
-                        {stats.bySeverity.high}
-                      </CardTitle>
-                    </CardHeader>
-                  </Card>
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardDescription>Medium</CardDescription>
-                      <CardTitle className="text-2xl sm:text-3xl text-yellow-500">
-                        {stats.bySeverity.medium}
-                      </CardTitle>
-                    </CardHeader>
-                  </Card>
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardDescription>Low</CardDescription>
-                      <CardTitle className="text-2xl sm:text-3xl text-blue-500">
-                        {stats.bySeverity.low}
-                      </CardTitle>
-                    </CardHeader>
-                  </Card>
-                  {/* Info card - hidden on mobile to maintain 2x2 grid */}
-                  <Card className="hidden lg:block">
-                    <CardHeader className="pb-2">
-                      <CardDescription>Info</CardDescription>
-                      <CardTitle className="text-3xl text-gray-500">
-                        {stats.bySeverity.info}
-                      </CardTitle>
-                    </CardHeader>
-                  </Card>
-                </div>
+                {/* Severity stat-cards removed — the counts already live in the
+                    severity filter tabs below, so showing them twice was noise. */}
 
                 {/* Tabs with DataTable */}
                 <Tabs value={severityTab} onValueChange={setSeverityTab} className="mt-6">
