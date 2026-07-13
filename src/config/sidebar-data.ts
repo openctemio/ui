@@ -586,7 +586,7 @@ export const sidebarData: SidebarData = {
           module: 'remediation_tasks',
         },
         {
-          title: 'Remediations',
+          title: 'Remediation Groups',
           url: '/remediations',
           icon: Wrench,
           permission: Permission.RemediationRead,
