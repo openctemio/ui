@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react'
 import useSWR from 'swr'
 import { Main } from '@/components/layout'
-import { PageHeader } from '@/features/shared'
+import { PageHeader, DataTableRowActions } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -20,13 +20,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import {
   Dialog,
   DialogContent,
@@ -52,7 +45,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Plus, MoreHorizontal, Pencil, Trash2, Info, X, FlaskConical } from 'lucide-react'
+import { Plus, Pencil, Trash2, Info, X, FlaskConical } from 'lucide-react'
 import { toast } from 'sonner'
 import { get, post, put, del } from '@/lib/api/client'
 import { Can, Permission } from '@/lib/permissions'
@@ -521,39 +514,28 @@ export default function PriorityRulesPage() {
                     </TableCell>
                     <TableCell>
                       <Can permission={Permission.PriorityRulesWrite}>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => openEdit(rule)}>
-                              <Pencil className="me-2 h-4 w-4" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() =>
+                        <DataTableRowActions
+                          actions={[
+                            { label: 'Edit', icon: Pencil, onClick: () => openEdit(rule) },
+                            {
+                              label: 'Dry run',
+                              icon: FlaskConical,
+                              onClick: () =>
                                 setDryRunRule({
                                   name: rule.name,
                                   priority_class: rule.priority_class,
                                   conditions: rule.conditions,
-                                })
-                              }
-                            >
-                              <FlaskConical className="me-2 h-4 w-4" />
-                              Dry run
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              className="text-red-500"
-                              onClick={() => setDeletingRule(rule)}
-                            >
-                              <Trash2 className="me-2 h-4 w-4" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                                }),
+                            },
+                            {
+                              label: 'Delete',
+                              icon: Trash2,
+                              destructive: true,
+                              separatorBefore: true,
+                              onClick: () => setDeletingRule(rule),
+                            },
+                          ]}
+                        />
                       </Can>
                     </TableCell>
                   </TableRow>

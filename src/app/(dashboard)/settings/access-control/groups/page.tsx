@@ -12,7 +12,7 @@ import {
   useReactTable,
 } from '@tanstack/react-table'
 import { Main } from '@/components/layout'
-import { PageHeader, DataTablePagination } from '@/features/shared'
+import { PageHeader, DataTablePagination, DataTableRowActions } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -39,14 +39,12 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { toast } from 'sonner'
 import {
   Users,
   Plus,
-  MoreHorizontal,
   Trash2,
   ArrowUpDown,
   Search as SearchIcon,
@@ -196,38 +194,28 @@ export default function GroupsPage() {
         const group = row.original
 
         return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setSelectedGroupId(group.id)}>
-                <Eye className="me-2 h-4 w-4" />
-                View Details
-              </DropdownMenuItem>
-              <Can permission={Permission.GroupsWrite}>
-                <DropdownMenuItem onClick={() => setSelectedGroupId(group.id)}>
-                  <Pencil className="me-2 h-4 w-4" />
-                  Edit Team
-                </DropdownMenuItem>
-              </Can>
-              <Can permission={Permission.GroupsDelete}>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  className="text-red-400"
-                  onClick={() => {
-                    setGroupToDelete(group)
-                    setDeleteDialogOpen(true)
-                  }}
-                >
-                  <Trash2 className="me-2 h-4 w-4" />
-                  Delete Team
-                </DropdownMenuItem>
-              </Can>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <DataTableRowActions
+            actions={[
+              { label: 'View Details', icon: Eye, onClick: () => setSelectedGroupId(group.id) },
+              {
+                label: 'Edit Team',
+                icon: Pencil,
+                permission: Permission.GroupsWrite,
+                onClick: () => setSelectedGroupId(group.id),
+              },
+              {
+                label: 'Delete Team',
+                icon: Trash2,
+                destructive: true,
+                separatorBefore: true,
+                permission: Permission.GroupsDelete,
+                onClick: () => {
+                  setGroupToDelete(group)
+                  setDeleteDialogOpen(true)
+                },
+              },
+            ]}
+          />
         )
       },
     },

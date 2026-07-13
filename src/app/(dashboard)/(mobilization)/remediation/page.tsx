@@ -4,7 +4,14 @@ import { useState, useMemo, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { ColumnDef } from '@tanstack/react-table'
 import { Main } from '@/components/layout'
-import { PageHeader, SeverityBadge, DataTable, DataTableColumnHeader } from '@/features/shared'
+import {
+  PageHeader,
+  SeverityBadge,
+  DataTable,
+  DataTableColumnHeader,
+  DataTableRowActions,
+  type RowAction,
+} from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -20,7 +27,6 @@ import {
   Download,
   Filter,
   RefreshCw,
-  MoreHorizontal,
   Pencil,
   Trash2,
   UserPlus,
@@ -48,7 +54,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
@@ -790,73 +795,67 @@ export default function RemediationPage() {
         id: 'actions',
         cell: ({ row }) => {
           const task = row.original
-          const actions = getAvailableActions(task.status)
-          return (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handleTaskAction('view', task)}>
-                  <ChevronRight className="me-2 h-4 w-4" />
-                  View Details
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleTaskAction('open_campaign', task)}>
-                  <ExternalLink className="me-2 h-4 w-4" />
-                  Open Campaign
-                </DropdownMenuItem>
-                <Can permission={Permission.RemediationWrite}>
-                  <DropdownMenuItem onClick={() => handleTaskAction('edit', task)}>
-                    <Pencil className="me-2 h-4 w-4" />
-                    Edit
-                  </DropdownMenuItem>
-                </Can>
-                <DropdownMenuItem onClick={() => handleTaskAction('reassign', task)}>
-                  <UserPlus className="me-2 h-4 w-4" />
-                  Reassign
-                </DropdownMenuItem>
-                {task.ticketUrl ? (
-                  <DropdownMenuItem
-                    onClick={() => window.open(task.ticketUrl, '_blank', 'noopener,noreferrer')}
-                  >
-                    <ExternalLink className="me-2 h-4 w-4" />
-                    View Jira Epic ({task.ticketKey})
-                  </DropdownMenuItem>
-                ) : (
-                  <Can permission={Permission.RemediationWrite}>
-                    <DropdownMenuItem onClick={() => setJiraTask(task)}>
-                      <ExternalLink className="me-2 h-4 w-4" />
-                      Create Jira Epic
-                    </DropdownMenuItem>
-                  </Can>
-                )}
-                {actions.length > 0 && <DropdownMenuSeparator />}
-                {actions.map(({ action, label, icon: Icon }) => (
-                  <DropdownMenuItem key={action} onClick={() => handleTaskAction(action, task)}>
-                    <Icon className="me-2 h-4 w-4" />
-                    {label}
-                  </DropdownMenuItem>
-                ))}
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => handleCopyId(task.id)}>
-                  <Copy className="me-2 h-4 w-4" />
-                  Copy ID
-                </DropdownMenuItem>
-                <Can permission={Permission.RemediationWrite}>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    className="text-red-400"
-                    onClick={() => handleTaskAction('delete', task)}
-                  >
-                    <Trash2 className="me-2 h-4 w-4" />
-                    Delete
-                  </DropdownMenuItem>
-                </Can>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )
+          const statusActions = getAvailableActions(task.status)
+          const rowActions: RowAction[] = [
+            {
+              label: 'View Details',
+              icon: ChevronRight,
+              onClick: () => handleTaskAction('view', task),
+            },
+            {
+              label: 'Open Campaign',
+              icon: ExternalLink,
+              onClick: () => handleTaskAction('open_campaign', task),
+            },
+            {
+              label: 'Edit',
+              icon: Pencil,
+              onClick: () => handleTaskAction('edit', task),
+              permission: Permission.RemediationWrite,
+            },
+            {
+              label: 'Reassign',
+              icon: UserPlus,
+              onClick: () => handleTaskAction('reassign', task),
+            },
+          ]
+          if (task.ticketUrl) {
+            rowActions.push({
+              label: `View Jira Epic (${task.ticketKey})`,
+              icon: ExternalLink,
+              onClick: () => window.open(task.ticketUrl, '_blank', 'noopener,noreferrer'),
+            })
+          } else {
+            rowActions.push({
+              label: 'Create Jira Epic',
+              icon: ExternalLink,
+              onClick: () => setJiraTask(task),
+              permission: Permission.RemediationWrite,
+            })
+          }
+          statusActions.forEach(({ action, label, icon }, idx) => {
+            rowActions.push({
+              label,
+              icon,
+              onClick: () => handleTaskAction(action, task),
+              separatorBefore: idx === 0,
+            })
+          })
+          rowActions.push({
+            label: 'Copy ID',
+            icon: Copy,
+            onClick: () => handleCopyId(task.id),
+            separatorBefore: true,
+          })
+          rowActions.push({
+            label: 'Delete',
+            icon: Trash2,
+            onClick: () => handleTaskAction('delete', task),
+            separatorBefore: true,
+            destructive: true,
+            permission: Permission.RemediationWrite,
+          })
+          return <DataTableRowActions actions={rowActions} />
         },
       },
     ],

@@ -12,7 +12,12 @@ import {
   useReactTable,
 } from '@tanstack/react-table'
 import { Main } from '@/components/layout'
-import { PageHeader, DataTablePagination } from '@/features/shared'
+import {
+  PageHeader,
+  DataTablePagination,
+  DataTableRowActions,
+  type RowAction,
+} from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -38,7 +43,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -47,7 +51,6 @@ import { Can, Permission } from '@/lib/permissions'
 import {
   Plus,
   Shield,
-  MoreHorizontal,
   Trash2,
   ArrowUpDown,
   Search as SearchIcon,
@@ -299,55 +302,32 @@ export default function RolesPage() {
       cell: ({ row }) => {
         const role = row.original
 
-        return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setSelectedRole(role)
-                }}
-              >
-                <Eye className="me-2 h-4 w-4" />
-                View Details
-              </DropdownMenuItem>
-              {!role.is_system && (
-                <>
-                  <Can permission={Permission.RolesWrite}>
-                    <DropdownMenuItem
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setEditRole(role)
-                      }}
-                    >
-                      <Pencil className="me-2 h-4 w-4" />
-                      Edit Role
-                    </DropdownMenuItem>
-                  </Can>
-                  <Can permission={Permission.RolesDelete}>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      className="text-red-400"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setRoleToDelete(role)
-                        setDeleteDialogOpen(true)
-                      }}
-                    >
-                      <Trash2 className="me-2 h-4 w-4" />
-                      Delete Role
-                    </DropdownMenuItem>
-                  </Can>
-                </>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )
+        const actions: RowAction[] = [
+          { label: 'View Details', icon: Eye, onClick: () => setSelectedRole(role) },
+          ...(!role.is_system
+            ? [
+                {
+                  label: 'Edit Role',
+                  icon: Pencil,
+                  permission: Permission.RolesWrite,
+                  onClick: () => setEditRole(role),
+                },
+                {
+                  label: 'Delete Role',
+                  icon: Trash2,
+                  destructive: true,
+                  separatorBefore: true,
+                  permission: Permission.RolesDelete,
+                  onClick: () => {
+                    setRoleToDelete(role)
+                    setDeleteDialogOpen(true)
+                  },
+                },
+              ]
+            : []),
+        ]
+
+        return <DataTableRowActions actions={actions} />
       },
     },
   ]

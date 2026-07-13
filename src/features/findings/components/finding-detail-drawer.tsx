@@ -16,17 +16,11 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
-import { SheetDetailToolbar } from '@/features/shared'
+import { SheetDetailToolbar, DataTableRowActions } from '@/features/shared'
 import { Progress } from '@/components/ui/progress'
 import { Textarea } from '@/components/ui/textarea'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import {
   ExternalLink,
   FileText,
@@ -38,7 +32,6 @@ import {
   Copy,
   Link2,
   MessageSquare,
-  MoreHorizontal,
   Route,
   LogIn,
   ArrowRight,
@@ -608,24 +601,18 @@ export function FindingDetailDrawer({
                 />
 
                 {/* Overflow actions */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="ms-auto h-8 w-8"
-                      title="More actions"
-                    >
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => setTicketOpen(true)}>
-                      <Ticket className="me-2 h-4 w-4" />
-                      Create Jira Ticket
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <div className="ms-auto">
+                  <DataTableRowActions
+                    label="More actions"
+                    actions={[
+                      {
+                        label: 'Create Jira Ticket',
+                        icon: Ticket,
+                        onClick: () => setTicketOpen(true),
+                      },
+                    ]}
+                  />
+                </div>
               </div>
 
               {/* Scrollable Content */}
