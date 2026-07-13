@@ -19,17 +19,26 @@ const AVAILABLE = [
     id: 'asm',
     name: 'Attack Surface Management',
     description: 'External recon',
+    target_persona: 'ASM team',
     icon: 'Globe',
     module_count: 20,
+    key_outcomes: ['Track external assets'],
   },
   {
     id: 'aspm',
     name: 'Application Security Posture',
     description: 'AppSec',
+    target_persona: 'AppSec',
     icon: 'Boxes',
     module_count: 24,
+    key_outcomes: ['One AppSec view'],
   },
 ]
+
+// The product grid is collapsed by default — expand it before interacting.
+async function openProducts() {
+  await userEvent.click(screen.getByRole('button', { name: /^products/i }))
+}
 
 describe('BundleSubscriptionCard', () => {
   beforeEach(() => {
@@ -37,19 +46,25 @@ describe('BundleSubscriptionCard', () => {
     bundlesState = { subscribed: [], available: AVAILABLE, isLoading: false }
   })
 
-  it('renders the available bundles and defaults to "All modules"', () => {
+  it('is collapsed by default and expands to show the available products', async () => {
     render(<BundleSubscriptionCard tenantId="t1" />)
+    // Header badge is visible while collapsed…
+    expect(screen.getByText('None · full platform')).toBeInTheDocument()
+    // …but product cards are hidden until expanded.
+    expect(screen.queryByText('Attack Surface Management')).not.toBeInTheDocument()
+
+    await openProducts()
     expect(screen.getByText('Attack Surface Management')).toBeInTheDocument()
     expect(screen.getByText('Application Security Posture')).toBeInTheDocument()
-    expect(screen.getByText('All modules')).toBeInTheDocument()
   })
 
-  it('subscribes to the selected bundle on save', async () => {
+  it('subscribes to the selected product on save', async () => {
     mockSubscribe.mockResolvedValueOnce({})
     render(<BundleSubscriptionCard tenantId="t1" onChanged={vi.fn()} />)
 
+    await openProducts()
     await userEvent.click(screen.getByRole('button', { name: /attack surface management/i }))
-    await userEvent.click(screen.getByRole('button', { name: /save bundles/i }))
+    await userEvent.click(screen.getByRole('button', { name: /save products/i }))
 
     expect(mockSubscribe).toHaveBeenCalledWith({ bundle_ids: ['asm'] })
   })
@@ -58,11 +73,12 @@ describe('BundleSubscriptionCard', () => {
     bundlesState = { subscribed: ['asm'], available: AVAILABLE, isLoading: false }
     render(<BundleSubscriptionCard tenantId="t1" />)
 
-    // No change yet → save disabled.
-    expect(screen.getByRole('button', { name: /save bundles/i })).toBeDisabled()
+    // Save lives in the always-visible footer. No change yet → disabled.
+    expect(screen.getByRole('button', { name: /save products/i })).toBeDisabled()
 
-    // Toggle asm off → now dirty → enabled.
+    // Expand, toggle asm off → now dirty → enabled.
+    await openProducts()
     await userEvent.click(screen.getByRole('button', { name: /attack surface management/i }))
-    expect(screen.getByRole('button', { name: /save bundles/i })).toBeEnabled()
+    expect(screen.getByRole('button', { name: /save products/i })).toBeEnabled()
   })
 })
