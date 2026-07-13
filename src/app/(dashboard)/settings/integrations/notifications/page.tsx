@@ -4,7 +4,7 @@ import { useState, useMemo, useCallback } from 'react'
 import { csrfFetch } from '@/lib/api/client'
 import { useRouter } from 'next/navigation'
 import { Main } from '@/components/layout'
-import { PageHeader } from '@/features/shared'
+import { PageHeader, EmptyState } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -355,20 +355,20 @@ export default function NotificationIntegrationsPage() {
                 ))}
               </div>
             ) : integrations.length === 0 ? (
-              <div className="rounded-lg border border-dashed p-12 text-center">
-                <Bell className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No Notification Channels</h3>
-                <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-                  Add Slack, Microsoft Teams, Telegram, or webhook integrations to receive security
-                  alerts.
-                </p>
-                <Can permission={Permission.NotificationsWrite}>
-                  <Button onClick={() => setAddDialogOpen(true)}>
-                    <Plus className="me-2 h-4 w-4" />
-                    Add Your First Channel
-                  </Button>
-                </Can>
-              </div>
+              <EmptyState
+                card={false}
+                icon={Bell}
+                title="No Notification Channels"
+                description="Add Slack, Microsoft Teams, Telegram, or webhook integrations to receive security alerts."
+                action={
+                  <Can permission={Permission.NotificationsWrite}>
+                    <Button onClick={() => setAddDialogOpen(true)}>
+                      <Plus className="me-2 h-4 w-4" />
+                      Add Your First Channel
+                    </Button>
+                  </Can>
+                }
+              />
             ) : (
               <div className="rounded-md border">
                 <Table>

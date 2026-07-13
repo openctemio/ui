@@ -41,6 +41,7 @@ import { EcosystemBadge } from './ecosystem-badge'
 import { SeverityBadge } from './severity-badge'
 import { LicenseRiskBadge, LicenseCategoryBadge } from './license-badge'
 import {
+  EmptyState,
   RiskScoreBadge,
   SheetDetailToolbar,
   SheetInfoRow as InfoRow,
@@ -528,17 +529,11 @@ export function ComponentDetailSheet({ component, open, onOpenChange }: Componen
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
             ) : distinctCveCount === 0 ? (
-              <Card>
-                <CardContent className="flex flex-col items-center justify-center py-12">
-                  <div className="h-12 w-12 rounded-full bg-green-500/20 flex items-center justify-center mb-4">
-                    <CheckCircle className="h-6 w-6 text-green-500" />
-                  </div>
-                  <h3 className="text-lg font-medium">No CVEs Detected</h3>
-                  <p className="text-muted-foreground text-sm text-center">
-                    No open findings link this component to any CVE in your tenant.
-                  </p>
-                </CardContent>
-              </Card>
+              <EmptyState
+                icon={CheckCircle}
+                title="No CVEs Detected"
+                description="No open findings link this component to any CVE in your tenant."
+              />
             ) : (
               <div className="space-y-3">
                 <Card>
@@ -668,17 +663,11 @@ export function ComponentDetailSheet({ component, open, onOpenChange }: Componen
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
             ) : (assetsData?.data?.length ?? 0) === 0 ? (
-              <Card>
-                <CardContent className="flex flex-col items-center justify-center py-12">
-                  <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-4">
-                    <Server className="h-6 w-6 text-muted-foreground" />
-                  </div>
-                  <h3 className="text-lg font-medium">Not Used By Any Asset</h3>
-                  <p className="text-muted-foreground text-sm text-center">
-                    No asset in this tenant currently links to this component.
-                  </p>
-                </CardContent>
-              </Card>
+              <EmptyState
+                icon={Server}
+                title="Not Used By Any Asset"
+                description="No asset in this tenant currently links to this component."
+              />
             ) : (
               <div className="space-y-3">
                 <Card>

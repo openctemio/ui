@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react'
 import { Main } from '@/components/layout'
-import { PageHeader } from '@/features/shared'
+import { PageHeader, EmptyState } from '@/features/shared'
 import { StatsCard } from '@/features/shared/components/stats-card'
 import { useDashboardStats } from '@/features/dashboard/hooks/use-dashboard-stats'
 import { useTenant } from '@/context/tenant-provider'
@@ -159,15 +159,12 @@ export default function PrivilegedAccessPage() {
       </div>
 
       {!hasData ? (
-        <Card className="mt-6">
-          <CardContent className="flex flex-col items-center justify-center py-16">
-            <Crown className="text-muted-foreground mb-4 h-12 w-12" />
-            <h3 className="text-lg font-semibold">No Privileged Access Data</h3>
-            <p className="text-muted-foreground mt-1 text-sm">
-              Privileged access monitoring data will appear once accounts are discovered.
-            </p>
-          </CardContent>
-        </Card>
+        <EmptyState
+          className="mt-6"
+          icon={Crown}
+          title="No Privileged Access Data"
+          description="Privileged access monitoring data will appear once accounts are discovered."
+        />
       ) : (
         <>
           <div className="mt-6 grid gap-6 lg:grid-cols-2">

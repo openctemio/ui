@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { Main } from '@/components/layout'
-import { PageHeader, DataTableRowActions, StatsCard } from '@/features/shared'
+import { PageHeader, DataTableRowActions, StatsCard, EmptyState } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -388,9 +388,7 @@ export default function CompliancePage() {
             {loadingFrameworks ? (
               <div className="text-center py-12 text-muted-foreground">Loading frameworks...</div>
             ) : frameworks.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
-                No compliance frameworks configured yet.
-              </div>
+              <EmptyState icon={Shield} title="No compliance frameworks configured yet." />
             ) : (
               <div className="grid gap-4 md:grid-cols-2">
                 {frameworks.map((fw) => (
@@ -473,7 +471,7 @@ export default function CompliancePage() {
                 {loadingControls ? (
                   <div className="py-8 text-center text-muted-foreground">Loading controls...</div>
                 ) : filteredRows.length === 0 ? (
-                  <div className="py-8 text-center text-muted-foreground">No controls found.</div>
+                  <EmptyState icon={ClipboardCheck} title="No controls found." card={false} />
                 ) : (
                   <div className="space-y-3">
                     {filteredRows.map((req) => {

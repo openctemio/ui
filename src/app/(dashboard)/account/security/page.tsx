@@ -30,6 +30,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { getErrorMessage } from '@/lib/api/error-handler'
+import { EmptyState } from '@/features/shared'
 import { useProfile } from '@/features/account'
 import {
   useChangePassword,
@@ -240,9 +241,7 @@ export default function SecurityPage() {
               <Skeleton className="h-20 w-full" />
             </div>
           ) : sessions.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-8">
-              No active sessions found
-            </p>
+            <EmptyState icon={Monitor} title="No active sessions found" card={false} />
           ) : (
             <div className="space-y-4">
               {/* Current Session */}

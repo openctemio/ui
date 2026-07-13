@@ -19,7 +19,7 @@ import {
   UserPlus,
 } from 'lucide-react'
 import { AutoAssignDialog } from './auto-assign-dialog'
-import { SeverityBadge } from '@/features/shared'
+import { EmptyState, SeverityBadge } from '@/features/shared'
 import {
   useFindingGroups,
   type FindingGroup,
@@ -113,15 +113,11 @@ export function FindingGroupsTab({ onViewFindings, onMarkFixed }: FindingGroupsT
           </CardContent>
         </Card>
       ) : groups.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <ShieldAlert className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-medium mb-1">No findings grouped yet</h3>
-            <p className="text-muted-foreground text-sm">
-              Run a scan to discover vulnerabilities, then come back to view groups.
-            </p>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={ShieldAlert}
+          title="No findings grouped yet"
+          description="Run a scan to discover vulnerabilities, then come back to view groups."
+        />
       ) : (
         <div className="space-y-3">
           {groups.map((group) => (

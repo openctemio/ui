@@ -3,7 +3,7 @@
 import { useMemo } from 'react'
 import Link from 'next/link'
 import { Main } from '@/components/layout'
-import { PageHeader } from '@/features/shared'
+import { PageHeader, EmptyState } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
@@ -441,13 +441,12 @@ export default function LicensesPage() {
                 </Table>
               </div>
             ) : (
-              <div className="text-center py-12 text-muted-foreground">
-                <Scale className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No license data available</p>
-                <p className="text-sm mt-1">
-                  License information will appear once components are scanned
-                </p>
-              </div>
+              <EmptyState
+                card={false}
+                icon={Scale}
+                title="No license data available"
+                description="License information will appear once components are scanned"
+              />
             )}
           </CardContent>
         </Card>

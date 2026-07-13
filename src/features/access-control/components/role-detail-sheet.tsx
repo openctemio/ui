@@ -43,7 +43,7 @@ import {
   UserMinus,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { SheetDetailToolbar } from '@/features/shared'
+import { SheetDetailToolbar, EmptyState } from '@/features/shared'
 import {
   useRoleMembers,
   useTenantPermissionModules,
@@ -512,21 +512,13 @@ export function RoleDetailSheet({
                     <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                   </div>
                 ) : filteredPermissions.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-12 text-center">
-                    {searchQuery ? (
-                      <>
-                        <Search className="h-8 w-8 text-muted-foreground/50 mb-2" />
-                        <p className="text-sm text-muted-foreground">
-                          No permissions match your search
-                        </p>
-                      </>
-                    ) : (
-                      <>
-                        <Shield className="h-8 w-8 text-muted-foreground/50 mb-2" />
-                        <p className="text-sm text-muted-foreground">No permissions assigned</p>
-                      </>
-                    )}
-                  </div>
+                  <EmptyState
+                    icon={searchQuery ? Search : Shield}
+                    title={
+                      searchQuery ? 'No permissions match your search' : 'No permissions assigned'
+                    }
+                    card={false}
+                  />
                 ) : (
                   <div className="space-y-2 pb-6">
                     {filteredPermissions.map((module) => {
@@ -639,25 +631,27 @@ export function RoleDetailSheet({
                     <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                   </div>
                 ) : filteredMembers.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-12 text-center">
-                    <Users className="h-8 w-8 text-muted-foreground/50 mb-2" />
-                    <p className="text-sm text-muted-foreground">
-                      {memberSearchQuery
+                  <EmptyState
+                    icon={Users}
+                    title={
+                      memberSearchQuery
                         ? 'No members match your search'
-                        : 'No members with this role'}
-                    </p>
-                    {!memberSearchQuery && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="mt-4"
-                        onClick={() => setAddMemberDialogOpen(true)}
-                      >
-                        <UserPlus className="me-1.5 h-4 w-4" />
-                        Add First Member
-                      </Button>
-                    )}
-                  </div>
+                        : 'No members with this role'
+                    }
+                    card={false}
+                    action={
+                      !memberSearchQuery ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setAddMemberDialogOpen(true)}
+                        >
+                          <UserPlus className="me-1.5 h-4 w-4" />
+                          Add First Member
+                        </Button>
+                      ) : undefined
+                    }
+                  />
                 ) : (
                   <div className="space-y-2 pb-6">
                     {filteredMembers.map((member) => (

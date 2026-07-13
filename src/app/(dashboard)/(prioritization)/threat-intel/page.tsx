@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Main } from '@/components/layout'
-import { PageHeader } from '@/features/shared'
+import { PageHeader, EmptyState } from '@/features/shared'
 import { cn } from '@/lib/utils'
 import {
   TrendingUp,
@@ -377,14 +377,7 @@ function CVELookup() {
 
           {/* No Data State */}
           {!result.epss && !result.kev && (
-            <Card>
-              <CardContent className="pt-6">
-                <div className="text-center text-muted-foreground">
-                  <Info className="mx-auto h-8 w-8 mb-2" />
-                  <p>No threat intelligence data available for this CVE</p>
-                </div>
-              </CardContent>
-            </Card>
+            <EmptyState icon={Info} title="No threat intelligence data available for this CVE" />
           )}
         </div>
       )}
