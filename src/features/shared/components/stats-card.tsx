@@ -13,6 +13,11 @@ interface StatsCardProps {
   icon?: LucideIcon
   description?: string
   className?: string
+  /** Optional color class for the value, for semantic KPIs (e.g. a red
+   *  "Critical" count, a green "Passed"). Omit for the default neutral style. */
+  valueClassName?: string
+  /** Optional color class for the icon (defaults to muted). */
+  iconClassName?: string
 }
 
 export function StatsCard({
@@ -23,6 +28,8 @@ export function StatsCard({
   icon: Icon,
   description,
   className,
+  valueClassName,
+  iconClassName,
 }: StatsCardProps) {
   const changeColors = {
     positive: 'text-green-500',
@@ -37,10 +44,10 @@ export function StatsCard({
     <Card className={cn(className)}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium">{title}</CardTitle>
-        {Icon && <Icon className="text-muted-foreground h-4 w-4" />}
+        {Icon && <Icon className={cn('h-4 w-4', iconClassName ?? 'text-muted-foreground')} />}
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold">{value}</div>
+        <div className={cn('text-2xl font-bold', valueClassName)}>{value}</div>
         {(change || description) && (
           <div className="flex items-center gap-1">
             {change && (

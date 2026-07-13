@@ -521,50 +521,30 @@ export default function TrendingExposuresPage() {
           {/* RFC-005: Data Quality Stats */}
           {dataQuality && (
             <section className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium">Ownership</CardTitle>
-                  <Users className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{dataQuality.ownership_pct.toFixed(1)}%</div>
-                  <p className="text-xs text-muted-foreground">Assets with assigned owners</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium">Evidence</CardTitle>
-                  <FileSearch className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{dataQuality.evidence_pct.toFixed(1)}%</div>
-                  <p className="text-xs text-muted-foreground">Findings with evidence attached</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium">Freshness</CardTitle>
-                  <CalendarClock className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    {dataQuality.avg_last_seen_days.toFixed(0)}d
-                  </div>
-                  <p className="text-xs text-muted-foreground">Avg days since last seen</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium">Total Assets</CardTitle>
-                  <Database className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    {dataQuality.total_assets.toLocaleString()}
-                  </div>
-                  <p className="text-xs text-muted-foreground">In current inventory</p>
-                </CardContent>
-              </Card>
+              <StatsCard
+                title="Ownership"
+                value={`${dataQuality.ownership_pct.toFixed(1)}%`}
+                icon={Users}
+                description="Assets with assigned owners"
+              />
+              <StatsCard
+                title="Evidence"
+                value={`${dataQuality.evidence_pct.toFixed(1)}%`}
+                icon={FileSearch}
+                description="Findings with evidence attached"
+              />
+              <StatsCard
+                title="Freshness"
+                value={`${dataQuality.avg_last_seen_days.toFixed(0)}d`}
+                icon={CalendarClock}
+                description="Avg days since last seen"
+              />
+              <StatsCard
+                title="Total Assets"
+                value={dataQuality.total_assets.toLocaleString()}
+                icon={Database}
+                description="In current inventory"
+              />
             </section>
           )}
 
