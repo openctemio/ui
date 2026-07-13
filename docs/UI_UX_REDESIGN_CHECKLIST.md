@@ -16,89 +16,89 @@ Systematic per-page UI/UX audit + redesign of the OpenCTEM dashboard. **183 rout
 
 ## Scoping (15)
 
-| Route                        | Audit | Redesign | PR  | QA  | Notes |
-| ---------------------------- | :---: | :------: | :-: | :-: | ----- |
-| `/asset-groups`              |   ☐   |    ☐     |     |  ☐  |       |
-| `/asset-groups/[id]`         |   ☐   |    ☐     |     |  ☐  |       |
-| `/attack-surface`            |   ☐   |    ☐     |     |  ☐  |       |
-| `/attack-surface/cloud`      |   ☐   |    ☐     |     |  ☐  |       |
-| `/attack-surface/external`   |   ☐   |    ☐     |     |  ☐  |       |
-| `/attack-surface/internal`   |   ☐   |    ☐     |     |  ☐  |       |
-| `/attacker-profiles`         |   ☐   |    ☐     |     |  ☐  |       |
-| `/business-services`         |   ☐   |    ☐     |     |  ☐  |       |
-| `/business-units`            |   ☐   |    ☐     |     |  ☐  |       |
-| `/capabilities`              |   ☐   |    ☐     |     |  ☐  |       |
-| `/compliance`                |   ☐   |    ☐     |     |  ☐  |       |
-| `/crown-jewels`              |   ☐   |    ☐     |     |  ☐  |       |
-| `/cycles`                    |   ☐   |    ☐     |     |  ☐  |       |
-| `/relationships/suggestions` |   ☐   |    ☐     |     |  ☐  |       |
-| `/scope-config`              |   ☐   |    ☐     |     |  ☐  |       |
+| Route                        | Audit | Redesign | PR  | QA  | Notes                                                                   |
+| ---------------------------- | :---: | :------: | :-: | :-: | ----------------------------------------------------------------------- |
+| `/asset-groups`              |   ☐   |    ☐     |     |  ☐  |                                                                         |
+| `/asset-groups/[id]`         |   ☐   |    ☐     |     |  ☐  |                                                                         |
+| `/attack-surface`            |  🔎   |    ☐     |     |  ☐  | 14-card overview — verify mock data + hierarchy; detailed pass pending. |
+| `/attack-surface/cloud`      |   ☐   |    ☐     |     |  ☐  |                                                                         |
+| `/attack-surface/external`   |   ☐   |    ☐     |     |  ☐  |                                                                         |
+| `/attack-surface/internal`   |   ☐   |    ☐     |     |  ☐  |                                                                         |
+| `/attacker-profiles`         |   ☐   |    ☐     |     |  ☐  |                                                                         |
+| `/business-services`         |   ☐   |    ☐     |     |  ☐  |                                                                         |
+| `/business-units`            |   ☐   |    ☐     |     |  ☐  |                                                                         |
+| `/capabilities`              |   ☐   |    ☐     |     |  ☐  |                                                                         |
+| `/compliance`                |   ☐   |    ☐     |     |  ☐  |                                                                         |
+| `/crown-jewels`              |   ☐   |    ☐     |     |  ☐  |                                                                         |
+| `/cycles`                    |   ☐   |    ☐     |     |  ☐  |                                                                         |
+| `/relationships/suggestions` |   ☐   |    ☐     |     |  ☐  |                                                                         |
+| `/scope-config`              |   ☐   |    ☐     |     |  ☐  |                                                                         |
 
 ## Discovery (61)
 
-| Route                             | Audit | Redesign | PR  | QA  | Notes |
-| --------------------------------- | :---: | :------: | :-: | :-: | ----- |
-| `/agents`                         |   ☐   |    ☐     |     |  ☐  |       |
-| `/assets`                         |   ☐   |    ☐     |     |  ☐  |       |
-| `/assets/[id]`                    |   ☐   |    ☐     |     |  ☐  |       |
-| `/assets/apis`                    |   ☐   |    ☐     |     |  ☐  |       |
-| `/assets/certificates`            |   ☐   |    ☐     |     |  ☐  |       |
-| `/assets/cloud-accounts`          |   ☐   |    ☐     |     |  ☐  |       |
-| `/assets/cloud-resources`         |   ☐   |    ☐     |     |  ☐  |       |
-| `/assets/containers`              |   ☐   |    ☐     |     |  ☐  |       |
-| `/assets/databases`               |   ☐   |    ☐     |     |  ☐  |       |
-| `/assets/discovered-urls`         |   ☐   |    ☐     |     |  ☐  |       |
-| `/assets/domains`                 |   ☐   |    ☐     |     |  ☐  |       |
-| `/assets/duplicates`              |   ☐   |    ☐     |     |  ☐  |       |
-| `/assets/hosts`                   |   ☐   |    ☐     |     |  ☐  |       |
-| `/assets/http-services`           |   ☐   |    ☐     |     |  ☐  |       |
-| `/assets/iam-roles`               |   ☐   |    ☐     |     |  ☐  |       |
-| `/assets/iam-users`               |   ☐   |    ☐     |     |  ☐  |       |
-| `/assets/identity`                |   ☐   |    ☐     |     |  ☐  |       |
-| `/assets/ip-addresses`            |   ☐   |    ☐     |     |  ☐  |       |
-| `/assets/mobile`                  |   ☐   |    ☐     |     |  ☐  |       |
-| `/assets/networks`                |   ☐   |    ☐     |     |  ☐  |       |
-| `/assets/open-ports`              |   ☐   |    ☐     |     |  ☐  |       |
-| `/assets/repositories`            |   ☐   |    ☐     |     |  ☐  |       |
-| `/assets/repositories/[id]`       |   ☐   |    ☐     |     |  ☐  |       |
-| `/assets/serverless`              |   ☐   |    ☐     |     |  ☐  |       |
-| `/assets/service-accounts`        |   ☐   |    ☐     |     |  ☐  |       |
-| `/assets/services`                |   ☐   |    ☐     |     |  ☐  |       |
-| `/assets/storage`                 |   ☐   |    ☐     |     |  ☐  |       |
-| `/assets/vpcs`                    |   ☐   |    ☐     |     |  ☐  |       |
-| `/assets/web-applications`        |   ☐   |    ☐     |     |  ☐  |       |
-| `/assets/websites`                |   ☐   |    ☐     |     |  ☐  |       |
-| `/components`                     |   ☐   |    ☐     |     |  ☐  |       |
-| `/components/all`                 |   ☐   |    ☐     |     |  ☐  |       |
-| `/components/ecosystems`          |   ☐   |    ☐     |     |  ☐  |       |
-| `/components/licenses`            |   ☐   |    ☐     |     |  ☐  |       |
-| `/components/sbom-export`         |   ☐   |    ☐     |     |  ☐  |       |
-| `/components/vulnerable`          |   ☐   |    ☐     |     |  ☐  |       |
-| `/credentials`                    |   ☐   |    ☐     |     |  ☐  |       |
-| `/exposures`                      |   ☐   |    ☐     |     |  ☐  |       |
-| `/exposures/code`                 |   ☐   |    ☐     |     |  ☐  |       |
-| `/exposures/credentials`          |   ☐   |    ☐     |     |  ☐  |       |
-| `/exposures/misconfigurations`    |   ☐   |    ☐     |     |  ☐  |       |
-| `/exposures/secrets`              |   ☐   |    ☐     |     |  ☐  |       |
-| `/exposures/vulnerabilities`      |   ☐   |    ☐     |     |  ☐  |       |
-| `/identities`                     |   ☐   |    ☐     |     |  ☐  |       |
-| `/identities/access-analysis`     |   ☐   |    ☐     |     |  ☐  |       |
-| `/identities/api-keys`            |   ☐   |    ☐     |     |  ☐  |       |
-| `/identities/exposed-credentials` |   ☐   |    ☐     |     |  ☐  |       |
-| `/identities/oauth-apps`          |   ☐   |    ☐     |     |  ☐  |       |
-| `/identities/service-accounts`    |   ☐   |    ☐     |     |  ☐  |       |
-| `/identities/users`               |   ☐   |    ☐     |     |  ☐  |       |
-| `/identity/privileged`            |   ☐   |    ☐     |     |  ☐  |       |
-| `/identity/risks`                 |   ☐   |    ☐     |     |  ☐  |       |
-| `/identity/shadow-it`             |   ☐   |    ☐     |     |  ☐  |       |
-| `/runners`                        |   ☐   |    ☐     |     |  ☐  |       |
-| `/scan-profiles`                  |   ☐   |    ☐     |     |  ☐  |       |
-| `/scanner-templates`              |   ☐   |    ☐     |     |  ☐  |       |
-| `/scans`                          |   ☐   |    ☐     |     |  ☐  |       |
-| `/scans/[id]`                     |   ☐   |    ☐     |     |  ☐  |       |
-| `/secret-store`                   |   ☐   |    ☐     |     |  ☐  |       |
-| `/template-sources`               |   ☐   |    ☐     |     |  ☐  |       |
-| `/tools`                          |   ☐   |    ☐     |     |  ☐  |       |
+| Route                             | Audit | Redesign | PR  | QA  | Notes                                                                       |
+| --------------------------------- | :---: | :------: | :-: | :-: | --------------------------------------------------------------------------- |
+| `/agents`                         |   ☐   |    ☐     |     |  ☐  |                                                                             |
+| `/assets`                         |  🔎   |    ✅    |     |  ☐  | Already redesigned (dedup + Duplicates card). Clean.                        |
+| `/assets/[id]`                    |   ☐   |    ☐     |     |  ☐  |                                                                             |
+| `/assets/apis`                    |   ☐   |    ☐     |     |  ☐  |                                                                             |
+| `/assets/certificates`            |   ☐   |    ☐     |     |  ☐  |                                                                             |
+| `/assets/cloud-accounts`          |   ☐   |    ☐     |     |  ☐  |                                                                             |
+| `/assets/cloud-resources`         |   ☐   |    ☐     |     |  ☐  |                                                                             |
+| `/assets/containers`              |   ☐   |    ☐     |     |  ☐  |                                                                             |
+| `/assets/databases`               |   ☐   |    ☐     |     |  ☐  |                                                                             |
+| `/assets/discovered-urls`         |   ☐   |    ☐     |     |  ☐  |                                                                             |
+| `/assets/domains`                 |   ☐   |    ☐     |     |  ☐  |                                                                             |
+| `/assets/duplicates`              |   ☐   |    ☐     |     |  ☐  |                                                                             |
+| `/assets/hosts`                   |   ☐   |    ☐     |     |  ☐  |                                                                             |
+| `/assets/http-services`           |   ☐   |    ☐     |     |  ☐  |                                                                             |
+| `/assets/iam-roles`               |   ☐   |    ☐     |     |  ☐  |                                                                             |
+| `/assets/iam-users`               |   ☐   |    ☐     |     |  ☐  |                                                                             |
+| `/assets/identity`                |   ☐   |    ☐     |     |  ☐  |                                                                             |
+| `/assets/ip-addresses`            |   ☐   |    ☐     |     |  ☐  |                                                                             |
+| `/assets/mobile`                  |   ☐   |    ☐     |     |  ☐  |                                                                             |
+| `/assets/networks`                |   ☐   |    ☐     |     |  ☐  |                                                                             |
+| `/assets/open-ports`              |   ☐   |    ☐     |     |  ☐  |                                                                             |
+| `/assets/repositories`            |   ☐   |    ☐     |     |  ☐  |                                                                             |
+| `/assets/repositories/[id]`       |   ☐   |    ☐     |     |  ☐  |                                                                             |
+| `/assets/serverless`              |   ☐   |    ☐     |     |  ☐  |                                                                             |
+| `/assets/service-accounts`        |   ☐   |    ☐     |     |  ☐  |                                                                             |
+| `/assets/services`                |   ☐   |    ☐     |     |  ☐  |                                                                             |
+| `/assets/storage`                 |   ☐   |    ☐     |     |  ☐  |                                                                             |
+| `/assets/vpcs`                    |   ☐   |    ☐     |     |  ☐  |                                                                             |
+| `/assets/web-applications`        |   ☐   |    ☐     |     |  ☐  |                                                                             |
+| `/assets/websites`                |   ☐   |    ☐     |     |  ☐  |                                                                             |
+| `/components`                     |   ☐   |    ☐     |     |  ☐  |                                                                             |
+| `/components/all`                 |   ☐   |    ☐     |     |  ☐  |                                                                             |
+| `/components/ecosystems`          |   ☐   |    ☐     |     |  ☐  |                                                                             |
+| `/components/licenses`            |   ☐   |    ☐     |     |  ☐  |                                                                             |
+| `/components/sbom-export`         |   ☐   |    ☐     |     |  ☐  |                                                                             |
+| `/components/vulnerable`          |   ☐   |    ☐     |     |  ☐  |                                                                             |
+| `/credentials`                    |   ☐   |    ☐     |     |  ☐  |                                                                             |
+| `/exposures`                      |  🔎   |    ☐     |     |  ☐  | Exposure Events + DataTable — check dup controls + UUID cols; pass pending. |
+| `/exposures/code`                 |   ☐   |    ☐     |     |  ☐  |                                                                             |
+| `/exposures/credentials`          |   ☐   |    ☐     |     |  ☐  |                                                                             |
+| `/exposures/misconfigurations`    |   ☐   |    ☐     |     |  ☐  |                                                                             |
+| `/exposures/secrets`              |   ☐   |    ☐     |     |  ☐  |                                                                             |
+| `/exposures/vulnerabilities`      |   ☐   |    ☐     |     |  ☐  |                                                                             |
+| `/identities`                     |   ☐   |    ☐     |     |  ☐  |                                                                             |
+| `/identities/access-analysis`     |   ☐   |    ☐     |     |  ☐  |                                                                             |
+| `/identities/api-keys`            |   ☐   |    ☐     |     |  ☐  |                                                                             |
+| `/identities/exposed-credentials` |   ☐   |    ☐     |     |  ☐  |                                                                             |
+| `/identities/oauth-apps`          |   ☐   |    ☐     |     |  ☐  |                                                                             |
+| `/identities/service-accounts`    |   ☐   |    ☐     |     |  ☐  |                                                                             |
+| `/identities/users`               |   ☐   |    ☐     |     |  ☐  |                                                                             |
+| `/identity/privileged`            |   ☐   |    ☐     |     |  ☐  |                                                                             |
+| `/identity/risks`                 |   ☐   |    ☐     |     |  ☐  |                                                                             |
+| `/identity/shadow-it`             |   ☐   |    ☐     |     |  ☐  |                                                                             |
+| `/runners`                        |   ☐   |    ☐     |     |  ☐  |                                                                             |
+| `/scan-profiles`                  |   ☐   |    ☐     |     |  ☐  |                                                                             |
+| `/scanner-templates`              |   ☐   |    ☐     |     |  ☐  |                                                                             |
+| `/scans`                          |   ☐   |    ☐     |     |  ☐  |                                                                             |
+| `/scans/[id]`                     |   ☐   |    ☐     |     |  ☐  |                                                                             |
+| `/secret-store`                   |   ☐   |    ☐     |     |  ☐  |                                                                             |
+| `/template-sources`               |   ☐   |    ☐     |     |  ☐  |                                                                             |
+| `/tools`                          |   ☐   |    ☐     |     |  ☐  |                                                                             |
 
 ## Prioritization (11)
 
@@ -230,9 +230,9 @@ Systematic per-page UI/UX audit + redesign of the OpenCTEM dashboard. **183 rout
 
 ## Other (4)
 
-| Route                 | Audit | Redesign | PR  | QA  | Notes |
-| --------------------- | :---: | :------: | :-: | :-: | ----- |
-| `/`                   |   ☐   |    ☐     |     |  ☐  |       |
-| `/findings`           |   ☐   |    ☐     |     |  ☐  |       |
-| `/findings/[id]`      |   ☐   |    ☐     |     |  ☐  |       |
-| `/findings/approvals` |   ☐   |    ☐     |     |  ☐  |       |
+| Route                 | Audit | Redesign | PR  | QA  | Notes                                                                                                      |
+| --------------------- | :---: | :------: | :-: | :-: | ---------------------------------------------------------------------------------------------------------- |
+| `/`                   |  🔎   |    ☐     |     |  ☐  | CTEM stepper misleading (1 resolved → "Mobilization done"); rest OK. Backlog: stepper→bottleneck.          |
+| `/findings`           |  🔎   |    ☐     |     |  ☐  | Dup severity cards vs filter tabs; double search; Location=raw UUID; empty Priority col. High-value dedup. |
+| `/findings/[id]`      |   ☐   |    ☐     |     |  ☐  |                                                                                                            |
+| `/findings/approvals` |   ☐   |    ☐     |     |  ☐  |                                                                                                            |
