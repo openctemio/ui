@@ -1,28 +1,23 @@
 'use client'
 
 import { useState, useMemo, useCallback } from 'react'
+import type { ColumnDef } from '@tanstack/react-table'
 import { csrfFetch } from '@/lib/api/client'
 import { useRouter } from 'next/navigation'
 import { Main } from '@/components/layout'
-import { PageHeader, EmptyState } from '@/features/shared'
+import {
+  PageHeader,
+  EmptyState,
+  DataTable,
+  DataTableColumnHeader,
+  DataTableRowActions,
+  StackedCell,
+  RelativeTime,
+  type RowAction,
+} from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
@@ -31,7 +26,6 @@ import {
   Plus,
   Link2,
   RefreshCw,
-  MoreHorizontal,
   Eye,
   Pencil,
   Trash2,
@@ -189,6 +183,134 @@ export default function SCMConnectionsPage() {
     setDeleteDialogOpen(true)
   }
 
+  const columns = useMemo<ColumnDef<SCMConnection>[]>(
+    () => [
+      {
+        accessorKey: 'name',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Connection" />,
+        cell: ({ row }) => {
+          const connection = row.original
+          return (
+            <div className="flex items-center gap-3">
+              <div
+                className={cn(
+                  'flex h-10 w-10 items-center justify-center rounded-lg',
+                  SCM_PROVIDER_COLORS[connection.provider] || 'bg-gray-100'
+                )}
+              >
+                <ProviderIcon provider={connection.provider} className="h-5 w-5" />
+              </div>
+              <StackedCell
+                primary={connection.name}
+                secondary={
+                  <span className="truncate max-w-[200px] inline-block align-bottom">
+                    {connection.baseUrl}
+                  </span>
+                }
+              />
+            </div>
+          )
+        },
+      },
+      {
+        accessorKey: 'provider',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Provider" />,
+        cell: ({ row }) => (
+          <Badge variant="outline" className="text-xs">
+            {PROVIDER_LABELS[row.original.provider] || row.original.provider}
+          </Badge>
+        ),
+      },
+      {
+        accessorKey: 'scmOrganization',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Organization" />,
+        cell: ({ row }) => <span className="text-sm">{row.original.scmOrganization || '-'}</span>,
+      },
+      {
+        accessorKey: 'status',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
+        cell: ({ row }) => {
+          const connection = row.original
+          const statusConfig = STATUS_CONFIG[connection.status] || STATUS_CONFIG.pending
+          return (
+            <>
+              <Badge variant="outline" className={cn('gap-1', statusConfig.color)}>
+                {statusConfig.icon}
+                {statusConfig.label}
+              </Badge>
+              {connection.errorMessage && connection.status === 'error' && (
+                <p className="text-xs text-red-500 mt-1 max-w-[200px] truncate">
+                  {connection.errorMessage}
+                </p>
+              )}
+            </>
+          )
+        },
+      },
+      {
+        id: 'repositories',
+        header: 'Repositories',
+        enableSorting: false,
+        cell: ({ row }) => {
+          const connection = row.original
+          return (
+            <Button
+              variant="link"
+              size="sm"
+              className="h-auto p-0 text-blue-500"
+              onClick={() => handleSyncClick(connection)}
+            >
+              {connection.repositoryCount || 0} repos
+              <ExternalLink className="ms-1 h-3 w-3" />
+            </Button>
+          )
+        },
+      },
+      {
+        accessorKey: 'lastValidatedAt',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Last Verified" />,
+        cell: ({ row }) => <RelativeTime date={row.original.lastValidatedAt} />,
+      },
+      {
+        id: 'actions',
+        header: '',
+        enableSorting: false,
+        enableHiding: false,
+        cell: ({ row }) => {
+          const connection = row.original
+          const actions: RowAction[] = [
+            {
+              label: 'Sync Repositories',
+              icon: GitBranch,
+              onClick: () => handleSyncClick(connection),
+            },
+            {
+              label: 'Test Connection',
+              icon: Eye,
+              onClick: () => handleTestConnection(connection),
+            },
+            {
+              label: 'Edit',
+              icon: Pencil,
+              onClick: () => handleEditClick(connection),
+              permission: Permission.ScmConnectionsWrite,
+            },
+            {
+              label: 'Delete',
+              icon: Trash2,
+              onClick: () => handleDeleteClick(connection),
+              destructive: true,
+              separatorBefore: true,
+              permission: Permission.ScmConnectionsDelete,
+            },
+          ]
+          return <DataTableRowActions actions={actions} />
+        },
+      },
+    ],
+    [handleTestConnection]
+  )
+
   // Error state
   if (error) {
     return (
@@ -339,129 +461,13 @@ export default function SCMConnectionsPage() {
                 }
               />
             ) : (
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Connection</TableHead>
-                      <TableHead>Provider</TableHead>
-                      <TableHead>Organization</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Repositories</TableHead>
-                      <TableHead>Last Verified</TableHead>
-                      <TableHead className="w-[70px]"></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {connections.map((connection) => {
-                      const statusConfig = STATUS_CONFIG[connection.status] || STATUS_CONFIG.pending
-                      return (
-                        <TableRow key={connection.id}>
-                          <TableCell>
-                            <div className="flex items-center gap-3">
-                              <div
-                                className={cn(
-                                  'flex h-10 w-10 items-center justify-center rounded-lg',
-                                  SCM_PROVIDER_COLORS[connection.provider] || 'bg-gray-100'
-                                )}
-                              >
-                                <ProviderIcon provider={connection.provider} className="h-5 w-5" />
-                              </div>
-                              <div>
-                                <p className="font-medium">{connection.name}</p>
-                                <p className="text-xs text-muted-foreground truncate max-w-[200px]">
-                                  {connection.baseUrl}
-                                </p>
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className="text-xs">
-                              {PROVIDER_LABELS[connection.provider] || connection.provider}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <span className="text-sm">{connection.scmOrganization || '-'}</span>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className={cn('gap-1', statusConfig.color)}>
-                              {statusConfig.icon}
-                              {statusConfig.label}
-                            </Badge>
-                            {connection.errorMessage && connection.status === 'error' && (
-                              <p className="text-xs text-red-500 mt-1 max-w-[200px] truncate">
-                                {connection.errorMessage}
-                              </p>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <Button
-                              variant="link"
-                              size="sm"
-                              className="h-auto p-0 text-blue-500"
-                              onClick={() => handleSyncClick(connection)}
-                            >
-                              {connection.repositoryCount || 0} repos
-                              <ExternalLink className="ms-1 h-3 w-3" />
-                            </Button>
-                          </TableCell>
-                          <TableCell>
-                            <span className="text-sm text-muted-foreground">
-                              {connection.lastValidatedAt
-                                ? new Date(connection.lastValidatedAt).toLocaleDateString()
-                                : 'Never'}
-                            </span>
-                          </TableCell>
-                          <TableCell>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-8 w-8 p-0"
-                                  disabled={actionInProgress === connection.id}
-                                >
-                                  {actionInProgress === connection.id ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                  ) : (
-                                    <MoreHorizontal className="h-4 w-4" />
-                                  )}
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => handleSyncClick(connection)}>
-                                  <GitBranch className="me-2 h-4 w-4" />
-                                  Sync Repositories
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleTestConnection(connection)}>
-                                  <Eye className="me-2 h-4 w-4" />
-                                  Test Connection
-                                </DropdownMenuItem>
-                                <Can permission={Permission.ScmConnectionsWrite}>
-                                  <DropdownMenuItem onClick={() => handleEditClick(connection)}>
-                                    <Pencil className="me-2 h-4 w-4" />
-                                    Edit
-                                  </DropdownMenuItem>
-                                </Can>
-                                <Can permission={Permission.ScmConnectionsDelete}>
-                                  <DropdownMenuSeparator />
-                                  <DropdownMenuItem
-                                    className="text-red-500"
-                                    onClick={() => handleDeleteClick(connection)}
-                                  >
-                                    <Trash2 className="me-2 h-4 w-4" />
-                                    Delete
-                                  </DropdownMenuItem>
-                                </Can>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </TableCell>
-                        </TableRow>
-                      )
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
+              <DataTable
+                columns={columns}
+                data={connections}
+                searchPlaceholder="Search connections..."
+                emptyMessage="No SCM Connections"
+                emptyDescription="No connections match the current search."
+              />
             )}
           </CardContent>
         </Card>
