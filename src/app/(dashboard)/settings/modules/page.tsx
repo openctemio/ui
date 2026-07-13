@@ -63,6 +63,7 @@ import type {
   ModulePreset,
   PresetDiff,
 } from '@/features/organization/api/use-tenant-modules'
+import { BundleSubscriptionCard } from '@/features/organization/components/bundle-subscription-card'
 
 // Details payload nested under ApiClientError.details when the backend
 // rejects a toggle because of the dependency graph. Shape mirrors
@@ -430,6 +431,13 @@ export default function ModuleManagementPage() {
           <SummaryCard label="Core (Always On)" value={summary.core} variant="info" />
         </div>
       )}
+
+      {/* Bundle subscription — pick which large product modules this team runs.
+          The enabled set resolves live from the chosen bundles; the manual
+          toggles below layer on top as overrides. */}
+      <Can permission={Permission.TeamUpdate}>
+        <BundleSubscriptionCard tenantId={tenantId} onChanged={() => mutate()} />
+      </Can>
 
       {/* Preset picker — curated bundles for common use cases.
           Renders above the manual toggle area so admins see the
