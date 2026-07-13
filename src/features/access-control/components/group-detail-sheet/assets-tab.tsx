@@ -15,7 +15,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react'
-import { DataTableRowActions } from '@/features/shared'
+import { DataTableRowActions, EmptyState } from '@/features/shared'
 import { type GroupAsset } from '@/features/access-control'
 import { useState, useEffect } from 'react'
 
@@ -110,10 +110,7 @@ export function AssetsTab({
           ))}
         </div>
       ) : totalCount === 0 ? (
-        <div className="text-center py-8 text-muted-foreground">
-          <Box className="h-8 w-8 mx-auto mb-2 opacity-50" />
-          <p>No assets assigned to this group</p>
-        </div>
+        <EmptyState icon={Box} title="No assets assigned to this group" card={false} />
       ) : filteredAssets.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground">
           <p>No assets found matching &quot;{searchQuery}&quot;</p>

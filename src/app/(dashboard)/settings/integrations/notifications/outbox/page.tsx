@@ -22,6 +22,7 @@ import {
 import { toast } from 'sonner'
 
 import { Main } from '@/components/layout'
+import { EmptyState } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -345,15 +346,16 @@ export default function NotificationOutboxPage() {
                     ))}
                   </div>
                 ) : entries.length === 0 ? (
-                  <div className="rounded-lg border border-dashed p-8 text-center">
-                    <Inbox className="mx-auto h-10 w-10 text-muted-foreground" />
-                    <h3 className="mt-3 font-semibold">No entries found</h3>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      {statusFilter !== 'all'
+                  <EmptyState
+                    card={false}
+                    icon={Inbox}
+                    title="No entries found"
+                    description={
+                      statusFilter !== 'all'
                         ? `No ${statusFilter} entries in the queue`
-                        : 'The notification queue is empty'}
-                    </p>
-                  </div>
+                        : 'The notification queue is empty'
+                    }
+                  />
                 ) : (
                   <>
                     <div className="rounded-md border">

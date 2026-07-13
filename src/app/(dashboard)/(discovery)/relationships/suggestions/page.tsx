@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from 'react'
 import { Main } from '@/components/layout'
+import { EmptyState } from '@/features/shared'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -327,17 +328,16 @@ export default function RelationshipSuggestionsPage() {
               ))}
             </div>
           ) : suggestions.length === 0 && !error ? (
-            <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-              <Link2 className="h-10 w-10 mb-3 opacity-30" />
-              <p className="text-sm font-medium">
-                {debouncedSearch ? 'No matching suggestions' : 'No pending suggestions'}
-              </p>
-              <p className="text-xs mt-1">
-                {debouncedSearch
+            <EmptyState
+              card={false}
+              icon={Link2}
+              title={debouncedSearch ? 'No matching suggestions' : 'No pending suggestions'}
+              description={
+                debouncedSearch
                   ? 'Try a different search term'
-                  : 'Click "Scan" to detect new connections'}
-              </p>
-            </div>
+                  : 'Click "Scan" to detect new connections'
+              }
+            />
           ) : suggestions.length > 0 ? (
             <>
               <div className="overflow-x-auto">

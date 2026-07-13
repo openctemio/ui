@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { formatDistanceToNow } from 'date-fns'
 import { Main } from '@/components/layout'
-import { PageHeader } from '@/features/shared'
+import { EmptyState, PageHeader } from '@/features/shared'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -69,15 +69,11 @@ export function DedupReviewPage() {
           </CardContent>
         </Card>
       ) : reviews.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center gap-2 py-12 text-center">
-            <CopyCheck className="h-8 w-8 text-muted-foreground" />
-            <p className="font-medium">No duplicates to review</p>
-            <p className="text-sm text-muted-foreground">
-              The correlator hasn&apos;t flagged any assets as likely duplicates.
-            </p>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={CopyCheck}
+          title="No duplicates to review"
+          description="The correlator hasn't flagged any assets as likely duplicates."
+        />
       ) : (
         <Card>
           <CardContent className="p-0">

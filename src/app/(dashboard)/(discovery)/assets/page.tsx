@@ -13,7 +13,7 @@
 
 import Link from 'next/link'
 import { Main } from '@/components/layout'
-import { PageHeader } from '@/features/shared'
+import { PageHeader, EmptyState } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -304,16 +304,12 @@ export default function AssetsOverviewPage() {
             "first-run" experience: clarifies the next step rather than
             leaving the user staring at an empty page. */}
         {!statsLoading && totalAssets === 0 && (
-          <Card className="mt-8 border-dashed">
-            <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-              <div className="rounded-full bg-muted p-4 mb-4">
-                <Container className="h-8 w-8 text-muted-foreground" />
-              </div>
-              <h3 className="text-lg font-semibold mb-1">No assets discovered yet</h3>
-              <p className="text-sm text-muted-foreground max-w-md mb-6">
-                Run a discovery scan, connect a cloud provider, or add assets manually to start
-                building your inventory.
-              </p>
+          <EmptyState
+            className="mt-8 border-dashed"
+            icon={Container}
+            title="No assets discovered yet"
+            description="Run a discovery scan, connect a cloud provider, or add assets manually to start building your inventory."
+            action={
               <div className="flex flex-wrap gap-2 justify-center">
                 <Link href="/scans">
                   <Button>
@@ -328,8 +324,8 @@ export default function AssetsOverviewPage() {
                   <Button variant="outline">Configure Scope</Button>
                 </Link>
               </div>
-            </CardContent>
-          </Card>
+            }
+          />
         )}
 
         {/* Asset Categories — hide empty categories once stats finish loading

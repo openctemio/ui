@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react'
 import { Main } from '@/components/layout'
-import { PageHeader } from '@/features/shared'
+import { PageHeader, EmptyState } from '@/features/shared'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
@@ -241,13 +241,12 @@ export default function BusinessImpactPage() {
                   ))}
                 </div>
               ) : topCrownJewels.length === 0 ? (
-                <div className="text-muted-foreground flex flex-col items-center justify-center py-8 text-center">
-                  <Crown className="mb-2 h-8 w-8 opacity-30" />
-                  <p className="text-sm">No crown jewels designated yet.</p>
-                  <p className="text-xs mt-1">
-                    Mark assets as crown jewels from the Crown Jewels page.
-                  </p>
-                </div>
+                <EmptyState
+                  icon={Crown}
+                  title="No crown jewels designated yet."
+                  description="Mark assets as crown jewels from the Crown Jewels page."
+                  card={false}
+                />
               ) : (
                 <div className="space-y-3">
                   {topCrownJewels.map((asset) => {
@@ -299,11 +298,12 @@ export default function BusinessImpactPage() {
                 ))}
               </div>
             ) : sortedUnits.length === 0 ? (
-              <div className="text-muted-foreground flex flex-col items-center justify-center py-8 text-center">
-                <Building2 className="mb-2 h-8 w-8 opacity-30" />
-                <p className="text-sm">No business units configured.</p>
-                <p className="text-xs mt-1">Create business units from the Scoping section.</p>
-              </div>
+              <EmptyState
+                icon={Building2}
+                title="No business units configured."
+                description="Create business units from the Scoping section."
+                card={false}
+              />
             ) : (
               <Table>
                 <TableHeader>

@@ -4,7 +4,7 @@ import { useMemo } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Main } from '@/components/layout'
-import { StatusBadge } from '@/features/shared'
+import { StatusBadge, EmptyState } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -459,11 +459,12 @@ export default function ScanDetailPage() {
                   ))}
                 </div>
               ) : recentRuns.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Activity className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No runs yet</p>
-                  <p className="text-sm">Trigger this scan to see run history</p>
-                </div>
+                <EmptyState
+                  card={false}
+                  icon={Activity}
+                  title="No runs yet"
+                  description="Trigger this scan to see run history"
+                />
               ) : (
                 <Table>
                   <TableHeader>

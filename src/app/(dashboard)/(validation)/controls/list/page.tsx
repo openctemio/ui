@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react'
 import { Main } from '@/components/layout'
-import { PageHeader, StatsCard } from '@/features/shared'
+import { PageHeader, StatsCard, EmptyState } from '@/features/shared'
 import { useDashboardStats } from '@/features/dashboard/hooks/use-dashboard-stats'
 import { useTenant } from '@/context/tenant-provider'
 import {
@@ -258,15 +258,11 @@ export default function SecurityControlsPage() {
       />
 
       {isEmptyState ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-16">
-            <Shield className="text-muted-foreground mb-4 h-12 w-12" />
-            <p className="text-muted-foreground text-center">
-              No control data available yet. Run security scans and add assets to start tracking
-              controls.
-            </p>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={Shield}
+          title="No control data available yet."
+          description="Run security scans and add assets to start tracking controls."
+        />
       ) : (
         <>
           {/* Stats Row */}

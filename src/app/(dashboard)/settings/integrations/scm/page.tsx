@@ -4,7 +4,7 @@ import { useState, useMemo, useCallback } from 'react'
 import { csrfFetch } from '@/lib/api/client'
 import { useRouter } from 'next/navigation'
 import { Main } from '@/components/layout'
-import { PageHeader } from '@/features/shared'
+import { PageHeader, EmptyState } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -324,20 +324,20 @@ export default function SCMConnectionsPage() {
                 ))}
               </div>
             ) : connections.length === 0 ? (
-              <div className="rounded-lg border border-dashed p-12 text-center">
-                <Link2 className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No SCM Connections</h3>
-                <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-                  Connect your GitHub, GitLab, Bitbucket, or Azure DevOps account to import and scan
-                  repositories.
-                </p>
-                <Can permission={Permission.ScmConnectionsWrite}>
-                  <Button onClick={() => setAddDialogOpen(true)}>
-                    <Plus className="me-2 h-4 w-4" />
-                    Add Your First Connection
-                  </Button>
-                </Can>
-              </div>
+              <EmptyState
+                card={false}
+                icon={Link2}
+                title="No SCM Connections"
+                description="Connect your GitHub, GitLab, Bitbucket, or Azure DevOps account to import and scan repositories."
+                action={
+                  <Can permission={Permission.ScmConnectionsWrite}>
+                    <Button onClick={() => setAddDialogOpen(true)}>
+                      <Plus className="me-2 h-4 w-4" />
+                      Add Your First Connection
+                    </Button>
+                  </Can>
+                }
+              />
             ) : (
               <div className="rounded-md border">
                 <Table>

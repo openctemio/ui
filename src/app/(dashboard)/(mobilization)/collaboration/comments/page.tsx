@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react'
 import { Main } from '@/components/layout'
-import { PageHeader } from '@/features/shared'
+import { EmptyState, PageHeader } from '@/features/shared'
 import { StatsCard } from '@/features/shared/components/stats-card'
 import { useDashboardStats } from '@/features/dashboard/hooks/use-dashboard-stats'
 import { useTenant } from '@/context/tenant-provider'
@@ -153,15 +153,12 @@ export default function DiscussionThreadPage() {
       </div>
 
       {!hasData ? (
-        <Card className="mt-6">
-          <CardContent className="flex flex-col items-center justify-center py-16">
-            <MessageSquare className="text-muted-foreground mb-4 h-12 w-12" />
-            <h3 className="text-lg font-semibold">No Discussions Yet</h3>
-            <p className="text-muted-foreground mt-1 text-sm">
-              Discussions will appear here once team members start collaborating on findings.
-            </p>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={MessageSquare}
+          title="No Discussions Yet"
+          description="Discussions will appear here once team members start collaborating on findings."
+          className="mt-6"
+        />
       ) : (
         <>
           <div className="mt-6 grid gap-6 lg:grid-cols-2">

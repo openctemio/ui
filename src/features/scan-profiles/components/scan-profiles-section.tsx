@@ -40,7 +40,7 @@ import {
 } from '@/components/ui/table'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 
-import { DataTableRowActions, type RowAction } from '@/features/shared'
+import { DataTableRowActions, EmptyState, type RowAction } from '@/features/shared'
 import { AddScanProfileDialog } from './add-scan-profile-dialog'
 import { EditScanProfileDialog } from './edit-scan-profile-dialog'
 import { CloneScanProfileDialog } from './clone-scan-profile-dialog'
@@ -348,23 +348,26 @@ export function ScanProfilesSection() {
                 </TableBody>
               </Table>
             ) : (
-              <div className="rounded-lg border border-dashed p-8 text-center">
-                <Settings2 className="mx-auto mb-3 h-10 w-10 text-muted-foreground" />
-                <h3 className="mb-1 font-medium">No Scan Profiles Found</h3>
-                <p className="mb-4 text-sm text-muted-foreground">
-                  {searchQuery
+              <EmptyState
+                card={false}
+                icon={Settings2}
+                title="No Scan Profiles Found"
+                description={
+                  searchQuery
                     ? 'No profiles match your search criteria.'
-                    : 'Create a profile to define reusable scan configurations.'}
-                </p>
-                {!searchQuery && (
-                  <Can permission={Permission.ScanProfilesWrite}>
-                    <Button onClick={() => setAddDialogOpen(true)}>
-                      <Plus className="me-2 h-4 w-4" />
-                      Create Your First Profile
-                    </Button>
-                  </Can>
-                )}
-              </div>
+                    : 'Create a profile to define reusable scan configurations.'
+                }
+                action={
+                  !searchQuery ? (
+                    <Can permission={Permission.ScanProfilesWrite}>
+                      <Button onClick={() => setAddDialogOpen(true)}>
+                        <Plus className="me-2 h-4 w-4" />
+                        Create Your First Profile
+                      </Button>
+                    </Can>
+                  ) : undefined
+                }
+              />
             )}
           </CardContent>
         </Card>

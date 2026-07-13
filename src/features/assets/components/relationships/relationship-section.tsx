@@ -23,6 +23,7 @@ import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { cn } from '@/lib/utils'
+import { EmptyState } from '@/features/shared'
 import type {
   AssetRelationship,
   RelationshipDirection,
@@ -170,21 +171,20 @@ export function RelationshipSection({
   if (relationships.length === 0) {
     return (
       <div className={cn('rounded-xl border p-6 bg-card', className)}>
-        <div className="flex flex-col items-center justify-center text-center">
-          <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-3">
-            <Link2 className="h-6 w-6 text-muted-foreground" />
-          </div>
-          <h4 className="text-sm font-medium mb-1">No Relationships</h4>
-          <p className="text-xs text-muted-foreground mb-4">
-            This asset has no relationships with other assets yet.
-          </p>
-          {onAddClick && (
-            <Button size="sm" onClick={onAddClick}>
-              <Plus className="me-2 h-4 w-4" />
-              Add Relationship
-            </Button>
-          )}
-        </div>
+        <EmptyState
+          card={false}
+          icon={Link2}
+          title="No Relationships"
+          description="This asset has no relationships with other assets yet."
+          action={
+            onAddClick && (
+              <Button size="sm" onClick={onAddClick}>
+                <Plus className="me-2 h-4 w-4" />
+                Add Relationship
+              </Button>
+            )
+          }
+        />
       </div>
     )
   }
