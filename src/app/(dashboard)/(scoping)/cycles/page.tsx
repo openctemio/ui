@@ -50,9 +50,12 @@ interface PaginatedResponse {
 }
 
 const statusColors: Record<CtemCycle['status'], string> = {
-  planning: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
-  active: 'bg-green-500/10 text-green-500 border-green-500/20',
-  review: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20',
+  planning:
+    'bg-blue-500/10 text-blue-500 border-blue-500/20 dark:bg-blue-900/30 dark:text-blue-400',
+  active:
+    'bg-green-500/10 text-green-500 border-green-500/20 dark:bg-green-900/30 dark:text-green-400',
+  review:
+    'bg-yellow-500/10 text-yellow-500 border-yellow-500/20 dark:bg-yellow-900/30 dark:text-yellow-400',
   closed: 'bg-muted text-muted-foreground',
 }
 
