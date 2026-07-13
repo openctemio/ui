@@ -102,19 +102,19 @@ Systematic per-page UI/UX audit + redesign of the OpenCTEM dashboard. **183 rout
 
 ## Prioritization (11)
 
-| Route                        | Audit | Redesign | PR  | QA  | Notes |
-| ---------------------------- | :---: | :------: | :-: | :-: | ----- |
-| `/attack-path-visualization` |   ☐   |    ☐     |     |  ☐  |       |
-| `/attack-paths`              |   ☐   |    ☐     |     |  ☐  |       |
-| `/business-impact`           |   ☐   |    ☐     |     |  ☐  |       |
-| `/exposure-chains`           |   ☐   |    ☐     |     |  ☐  |       |
-| `/risk-analysis`             |   ☐   |    ☐     |     |  ☐  |       |
-| `/scoring`                   |   ☐   |    ☐     |     |  ☐  |       |
-| `/threat-intel`              |   ☐   |    ☐     |     |  ☐  |       |
-| `/threats/active`            |   ☐   |    ☐     |     |  ☐  |       |
-| `/threats/exploitability`    |   ☐   |    ☐     |     |  ☐  |       |
-| `/threats/feeds`             |   ☐   |    ☐     |     |  ☐  |       |
-| `/trending`                  |   ☐   |    ☐     |     |  ☐  |       |
+| Route                        | Audit | Redesign | PR  | QA  | Notes                                                                                                                                                                |
+| ---------------------------- | :---: | :------: | :-: | :-: | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/attack-path-visualization` |  🔎   |    ☐     |     |  ☐  | 🐛 React missing-key warning (AttackPathVisual) + pinned tooltip on load + Risk Score 0. Duplicates /attack-paths — merge as "Visualize" tab.                        |
+| `/attack-paths`              |  ✅   |    ➖    |     |  ☐  | Ranked assets by path score + entry points panel, real ARNs. Nit: 2 assets tie at 280 w/ identical bars — add tiebreaker/score components.                           |
+| `/business-impact`           |  🗑️   |    ☐     |     |  ☐  | Module-gated (business_impact) — correct. Reachable nav dead-ends on upgrade wall; hide gated or badge "Upgrade".                                                    |
+| `/exposure-chains`           |  ✅   |    ➖    |     |  ☐  | Purpose-built (KPIs + ranked chains + explainer). Seed data (api.example.com), 2 chains — verify at scale (long URLs/hops).                                          |
+| `/risk-analysis`             |  🗑️   |    ☐     |     |  ☐  | "Coming Soon" stub (styled, non-functional). Overlaps built /scoring — fold in or ship; low value in primary nav.                                                    |
+| `/scoring`                   |  🔎   |    ☐     |     |  ☐  | Best scoring-methodology page (weighting bars, factors) BUT headline Risk Score 0.0/10 (cross-cutting bug) undercuts it. Fix aggregation.                            |
+| `/threat-intel`              |  ✅   |    ➖    |     |  ☐  | Best-in-cluster (tabs, EPSS+KEV cards, real sync ts). Nit: header "Sync failed 7h ago" vs body "Last synced 9:22 AM" — reconcile.                                    |
+| `/threats/active`            |  🔎   |    ☐     |     |  ☐  | 🐛 Threat Timeline x-axis = "Invalid Date" all ticks. Donut Info sliver has no label — keep tiny segments readable.                                                  |
+| `/threats/exploitability`    |  🔎   |    ☐     |     |  ☐  | 🐛 Risk Score 0.0 "None risk" (green) contradicts CVSS 7.8 + 41 high-exploit findings — cross-cutting risk-score-0 bug, actively misleading.                         |
+| `/threats/feeds`             |  ✅   |    ➖    |     |  ☐  | Correlated-findings KPIs + real threat-activity feed. Nit: timeline zeros at current month; every item "64d ago" — check relative-time.                              |
+| `/trending`                  |  🔎   |    ☐     |     |  ☐  | 🐛 HARD CRASH — server 500 + TypeError undefined.toFixed() in TrendingExposuresPage; "Prioritization Error" full-page. Guard numeric + handle API. DEAD ROUTE. HIGH. |
 
 ## Validation (19)
 
@@ -142,32 +142,32 @@ Systematic per-page UI/UX audit + redesign of the OpenCTEM dashboard. **183 rout
 
 ## Mobilization (24)
 
-| Route                         | Audit | Redesign | PR  | QA  | Notes |
-| ----------------------------- | :---: | :------: | :-: | :-: | ----- |
-| `/collaboration/assignments`  |   ☐   |    ☐     |     |  ☐  |       |
-| `/collaboration/comments`     |   ☐   |    ☐     |     |  ☐  |       |
-| `/collaboration/tickets`      |   ☐   |    ☐     |     |  ☐  |       |
-| `/exceptions/accepted`        |   ☐   |    ☐     |     |  ☐  |       |
-| `/exceptions/false-positives` |   ☐   |    ☐     |     |  ☐  |       |
-| `/exceptions/pending`         |   ☐   |    ☐     |     |  ☐  |       |
-| `/pipelines`                  |   ☐   |    ☐     |     |  ☐  |       |
-| `/pipelines/[id]/builder`     |   ☐   |    ☐     |     |  ☐  |       |
-| `/progress`                   |   ☐   |    ☐     |     |  ☐  |       |
-| `/remediation`                |   ☐   |    ☐     |     |  ☐  |       |
-| `/remediation/[id]`           |   ☐   |    ☐     |     |  ☐  |       |
-| `/remediation/overdue`        |   ☐   |    ☐     |     |  ☐  |       |
-| `/remediation/priority`       |   ☐   |    ☐     |     |  ☐  |       |
-| `/remediation/tasks`          |   ☐   |    ☐     |     |  ☐  |       |
-| `/remediation/teams`          |   ☐   |    ☐     |     |  ☐  |       |
-| `/remediations`               |   ☐   |    ☐     |     |  ☐  |       |
-| `/response/detection`         |   ☐   |    ☐     |     |  ☐  |       |
-| `/response/playbooks`         |   ☐   |    ☐     |     |  ☐  |       |
-| `/response/time`              |   ☐   |    ☐     |     |  ☐  |       |
-| `/sla`                        |   ☐   |    ☐     |     |  ☐  |       |
-| `/workflows`                  |   ☐   |    ☐     |     |  ☐  |       |
-| `/workflows/active`           |   ☐   |    ☐     |     |  ☐  |       |
-| `/workflows/automations`      |   ☐   |    ☐     |     |  ☐  |       |
-| `/workflows/templates`        |   ☐   |    ☐     |     |  ☐  |       |
+| Route                         | Audit | Redesign | PR  | QA  | Notes                                                                                                                                                            |
+| ----------------------------- | :---: | :------: | :-: | :-: | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/collaboration/assignments`  |   ☐   |    ☐     |     |  ☐  |                                                                                                                                                                  |
+| `/collaboration/comments`     |   ☐   |    ☐     |     |  ☐  |                                                                                                                                                                  |
+| `/collaboration/tickets`      |   ☐   |    ☐     |     |  ☐  |                                                                                                                                                                  |
+| `/exceptions/accepted`        |   ☐   |    ☐     |     |  ☐  |                                                                                                                                                                  |
+| `/exceptions/false-positives` |   ☐   |    ☐     |     |  ☐  |                                                                                                                                                                  |
+| `/exceptions/pending`         |   ☐   |    ☐     |     |  ☐  |                                                                                                                                                                  |
+| `/pipelines`                  |   ☐   |    ☐     |     |  ☐  |                                                                                                                                                                  |
+| `/pipelines/[id]/builder`     |   ☐   |    ☐     |     |  ☐  |                                                                                                                                                                  |
+| `/progress`                   |  ✅   |    ➖    |     |  ☐  | Clean remediation dashboard. Semantics glitch: "Open 0" excludes In-Progress (largest bar) → misleading; align KPI def. Timeline likely shares Invalid-Date bug. |
+| `/remediation`                |   ☐   |    ☐     |     |  ☐  |                                                                                                                                                                  |
+| `/remediation/[id]`           |   ☐   |    ☐     |     |  ☐  |                                                                                                                                                                  |
+| `/remediation/overdue`        |   ☐   |    ☐     |     |  ☐  |                                                                                                                                                                  |
+| `/remediation/priority`       |   ☐   |    ☐     |     |  ☐  |                                                                                                                                                                  |
+| `/remediation/tasks`          |   ☐   |    ☐     |     |  ☐  |                                                                                                                                                                  |
+| `/remediation/teams`          |   ☐   |    ☐     |     |  ☐  |                                                                                                                                                                  |
+| `/remediations`               |   ☐   |    ☐     |     |  ☐  |                                                                                                                                                                  |
+| `/response/detection`         |   ☐   |    ☐     |     |  ☐  |                                                                                                                                                                  |
+| `/response/playbooks`         |   ☐   |    ☐     |     |  ☐  |                                                                                                                                                                  |
+| `/response/time`              |   ☐   |    ☐     |     |  ☐  |                                                                                                                                                                  |
+| `/sla`                        |   ☐   |    ☐     |     |  ☐  |                                                                                                                                                                  |
+| `/workflows`                  |   ☐   |    ☐     |     |  ☐  |                                                                                                                                                                  |
+| `/workflows/active`           |   ☐   |    ☐     |     |  ☐  |                                                                                                                                                                  |
+| `/workflows/automations`      |   ☐   |    ☐     |     |  ☐  |                                                                                                                                                                  |
+| `/workflows/templates`        |   ☐   |    ☐     |     |  ☐  |                                                                                                                                                                  |
 
 ## Insights (14)
 
