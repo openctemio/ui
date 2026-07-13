@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { ColumnDef } from '@tanstack/react-table'
 import { Main } from '@/components/layout'
-import { PageHeader, DataTable, DataTableColumnHeader, RiskScoreBadge } from '@/features/shared'
+import { PageHeader, DataTable, DataTableColumnHeader } from '@/features/shared'
 import { Can, Permission } from '@/lib/permissions'
 import { useCsvExport, type ExportFieldConfig } from '@/hooks/use-csv-export'
 import { Button } from '@/components/ui/button'
@@ -21,7 +21,6 @@ import {
   Trash2,
   Crown,
   AlertTriangle,
-  Lock,
   Database,
   Server,
   AppWindow,
@@ -35,7 +34,6 @@ import {
   ShieldAlert,
   ShieldCheck,
   ShieldX,
-  Clock,
 } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -85,7 +83,6 @@ import {
   type AssetCategory,
   type ProtectionLevel,
   type DataClassification,
-  type JewelStatus,
 } from '@/features/crown-jewels'
 import {
   useCrownJewels,
@@ -95,34 +92,6 @@ import {
 } from '@/features/crown-jewels/api/use-crown-jewels'
 import { mutate } from 'swr'
 
-const statusColors: Record<JewelStatus, string> = {
-  protected: 'bg-green-500/10 text-green-500 border-green-500/20',
-  at_risk: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20',
-  exposed: 'bg-red-500/10 text-red-500 border-red-500/20',
-  under_review: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
-}
-
-const statusIcons: Record<JewelStatus, React.ElementType> = {
-  protected: ShieldCheck,
-  at_risk: ShieldAlert,
-  exposed: ShieldX,
-  under_review: Clock,
-}
-
-const protectionColors: Record<ProtectionLevel, string> = {
-  maximum: 'bg-purple-500/10 text-purple-500 border-purple-500/20',
-  high: 'bg-red-500/10 text-red-500 border-red-500/20',
-  standard: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20',
-  basic: 'bg-gray-500/10 text-gray-500 border-gray-500/20',
-}
-
-const classificationColors: Record<DataClassification, string> = {
-  top_secret: 'bg-red-500/10 text-red-500 border-red-500/20',
-  confidential: 'bg-orange-500/10 text-orange-500 border-orange-500/20',
-  internal: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
-  public: 'bg-green-500/10 text-green-500 border-green-500/20',
-}
-
 const categoryIcons: Record<AssetCategory, React.ElementType> = {
   data: Database,
   system: Server,
@@ -130,15 +99,6 @@ const categoryIcons: Record<AssetCategory, React.ElementType> = {
   infrastructure: HardDrive,
   intellectual_property: Lightbulb,
   financial: DollarSign,
-}
-
-const categoryLabels: Record<AssetCategory, string> = {
-  data: 'Data',
-  system: 'System',
-  application: 'Application',
-  infrastructure: 'Infrastructure',
-  intellectual_property: 'IP',
-  financial: 'Financial',
 }
 
 const CROWN_JEWELS_KEY = '/api/v1/assets?is_crown_jewel=true&per_page=100'
@@ -155,6 +115,47 @@ const CROWN_JEWEL_EXPORT_FIELDS: ExportFieldConfig<CrownJewel>[] = [
   { header: 'Tags', accessor: (j) => (j.tags ?? []).join('; ') },
 ]
 
+// Risk band → color + label (mirrors the asset risk_score 0-100 scale).
+function riskBand(score: number) {
+  if (score >= 70)
+    return { text: 'text-red-600', bar: 'bg-red-600', dot: 'bg-red-600', label: 'Critical' }
+  if (score >= 40)
+    return { text: 'text-orange-600', bar: 'bg-orange-500', dot: 'bg-orange-500', label: 'High' }
+  if (score >= 20)
+    return { text: 'text-amber-600', bar: 'bg-amber-500', dot: 'bg-amber-500', label: 'Medium' }
+  return { text: 'text-green-600', bar: 'bg-green-600', dot: 'bg-green-600', label: 'Low' }
+}
+
+// Real reachability → exposed vs not (drives the "Exposure" signal).
+function isExposed(j: CrownJewel) {
+  return Boolean(j.isInternetAccessible) || j.exposure === 'internet' || j.exposure === 'external'
+}
+
+// Compact findings-by-severity chips (only non-zero bands).
+function SeverityChips({ sev }: { sev?: CrownJewel['findingSeverity'] }) {
+  if (!sev) return <span className="text-muted-foreground text-xs">—</span>
+  const parts: { n: number; cls: string; k: string }[] = [
+    { n: sev.critical, cls: 'bg-red-600', k: 'C' },
+    { n: sev.high, cls: 'bg-orange-500', k: 'H' },
+    { n: sev.medium, cls: 'bg-amber-500', k: 'M' },
+    { n: sev.low, cls: 'bg-slate-500', k: 'L' },
+  ].filter((p) => p.n > 0)
+  if (parts.length === 0) return <span className="text-muted-foreground text-xs">None</span>
+  return (
+    <span className="inline-flex items-center gap-1">
+      {parts.map((p) => (
+        <span
+          key={p.k}
+          className={`rounded px-1.5 py-0.5 text-[10px] font-bold text-white ${p.cls}`}
+        >
+          {p.n}
+          {p.k}
+        </span>
+      ))}
+    </span>
+  )
+}
+
 export default function CrownJewelsPage() {
   // Fetch from API, fallback to mock if no API data
   const { data: apiCrownJewels } = useCrownJewels()
@@ -167,26 +168,43 @@ export default function CrownJewelsPage() {
   const { data: allAssets } = useAllAssets(assetSearch)
   const apiMapped: CrownJewel[] = useMemo(() => {
     if (!apiCrownJewels?.data?.length) return []
-    return apiCrownJewels.data.map(
-      (a: Record<string, unknown>) =>
-        ({
-          id: a.id,
-          name: a.name,
-          category: (a.type || 'other') as AssetCategory,
-          description: a.description || '',
-          status: 'identified' as JewelStatus,
-          protectionLevel: 'standard' as ProtectionLevel,
-          dataClassification: 'internal' as DataClassification,
-          businessValueScore:
-            ((a.properties as Record<string, unknown>)?.business_impact_score as number) || 0,
-          riskScore: (a.risk_score as number) || 0,
-          findingCount: (a.finding_count as number) || 0,
-          owner: (a.owner_ref as string) || 'Unassigned',
-          dependencies: [],
-          tags: (a.tags as string[]) || [],
-          lastAssessedAt: (a.updated_at as string) || '',
-        }) as unknown as CrownJewel
-    )
+    return apiCrownJewels.data.map((a: Record<string, unknown>) => {
+      const props = (a.properties as Record<string, unknown>) || {}
+      const sev = (a.finding_severity_counts as Record<string, number>) || {}
+      const owner = a.primary_owner as { name?: string; email?: string } | undefined
+      const biz = Number(props.business_impact_score ?? 0)
+      const cls = (a.data_classification as string) || ''
+      return {
+        id: a.id,
+        name: a.name,
+        description: (a.description as string) || '',
+        // Real fields from the assets API.
+        assetType: (a.type as string) || 'asset',
+        riskScore: (a.risk_score as number) || 0,
+        businessImpactScore: biz,
+        findingCount: (a.finding_count as number) || 0,
+        findingSeverity: {
+          critical: sev.critical || 0,
+          high: sev.high || 0,
+          medium: sev.medium || 0,
+          low: sev.low || 0,
+        },
+        exposure: (a.exposure as string) || 'unknown',
+        isInternetAccessible: Boolean(a.is_internet_accessible),
+        criticality: (a.criticality as string) || '',
+        dataClassification: (cls || 'internal') as DataClassification,
+        piiExposed: Boolean(a.pii_data_exposed),
+        phiExposed: Boolean(a.phi_data_exposed),
+        owner: owner?.name || (a.owner_ref as string) || 'Unassigned',
+        ownerEmail: owner?.email || '',
+        tags: (a.tags as string[]) || [],
+        exposureCount: (a.exposure_count as number) || 0,
+        dependencyCount: 0,
+        createdAt: (a.created_at as string) || '',
+        lastAssessed: (a.updated_at as string) || '',
+        updatedAt: (a.updated_at as string) || '',
+      } as unknown as CrownJewel
+    })
   }, [apiCrownJewels])
   const [crownJewels, setCrownJewels] = useState<CrownJewel[]>([])
   const { handleExport } = useCsvExport(crownJewels, CROWN_JEWEL_EXPORT_FIELDS, 'crown-jewels')
@@ -331,22 +349,25 @@ export default function CrownJewelsPage() {
   const columns: ColumnDef<CrownJewel>[] = [
     {
       accessorKey: 'name',
-      header: ({ column }) => <DataTableColumnHeader column={column} title="Crown Jewel" />,
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Asset" />,
       cell: ({ row }) => {
         const jewel = row.original
-        const CategoryIcon = categoryIcons[jewel.category]
+        // Icon by real asset category when known, else a neutral default —
+        // never render an undefined element.
+        const CategoryIcon = categoryIcons[jewel.category] ?? Database
         return (
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-500/10">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-500/10">
               <CategoryIcon className="h-5 w-5 text-amber-500" />
             </div>
-            <div>
-              <div className="font-medium flex items-center gap-2">
-                {jewel.name}
-                <Crown className="h-3 w-3 text-amber-500" />
+            <div className="min-w-0">
+              <div className="font-medium flex items-center gap-1.5">
+                <span className="truncate font-mono text-[13px]">{jewel.name}</span>
+                <Crown className="h-3 w-3 shrink-0 text-amber-500" />
               </div>
-              <div className="text-xs text-muted-foreground">
-                {categoryLabels[jewel.category]} | {jewel.businessUnit}
+              <div className="text-xs text-muted-foreground capitalize">
+                {jewel.assetType ?? 'asset'}
+                {jewel.criticality ? ` · ${jewel.criticality}` : ''}
               </div>
             </div>
           </div>
@@ -354,52 +375,64 @@ export default function CrownJewelsPage() {
       },
     },
     {
-      accessorKey: 'status',
-      header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
+      accessorKey: 'riskScore',
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Risk" />,
       cell: ({ row }) => {
-        const status = row.original.status
-        const StatusIcon = statusIcons[status]
+        const s = row.original.riskScore
+        const band = riskBand(s)
         return (
-          <Badge variant="outline" className={statusColors[status]}>
-            <StatusIcon className="me-1 h-3 w-3" />
-            {status.replace('_', ' ')}
-          </Badge>
+          <div className="flex items-center gap-2">
+            <span
+              className={`inline-flex items-center gap-1.5 font-semibold tabular-nums ${band.text}`}
+            >
+              <span className={`h-2 w-2 rounded-full ${band.dot}`} />
+              {s}
+            </span>
+            <div className="h-1.5 w-16 overflow-hidden rounded-full bg-muted">
+              <div className={`h-full rounded-full ${band.bar}`} style={{ width: `${s}%` }} />
+            </div>
+          </div>
         )
       },
     },
     {
-      accessorKey: 'protectionLevel',
-      header: ({ column }) => <DataTableColumnHeader column={column} title="Protection" />,
-      cell: ({ row }) => (
-        <Badge variant="outline" className={protectionColors[row.original.protectionLevel]}>
-          <Lock className="me-1 h-3 w-3" />
-          {row.original.protectionLevel}
-        </Badge>
-      ),
-    },
-    {
-      accessorKey: 'dataClassification',
-      header: ({ column }) => <DataTableColumnHeader column={column} title="Classification" />,
-      cell: ({ row }) => (
-        <Badge variant="outline" className={classificationColors[row.original.dataClassification]}>
-          {row.original.dataClassification.replace('_', ' ')}
-        </Badge>
-      ),
-    },
-    {
-      accessorKey: 'riskScore',
-      header: ({ column }) => <DataTableColumnHeader column={column} title="Risk Score" />,
-      cell: ({ row }) => <RiskScoreBadge score={row.original.riskScore} />,
-    },
-    {
-      accessorKey: 'exposureCount',
-      header: ({ column }) => <DataTableColumnHeader column={column} title="Exposures" />,
+      accessorKey: 'businessImpactScore',
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Business impact" />,
       cell: ({ row }) => {
-        const count = row.original.exposureCount
+        const b = row.original.businessImpactScore ?? 0
         return (
-          <span className={count > 0 ? 'text-red-500 font-medium' : 'text-muted-foreground'}>
-            {count}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="font-semibold tabular-nums text-amber-600">
+              {b}
+              <span className="text-muted-foreground text-xs font-normal">/100</span>
+            </span>
+            <div className="h-1.5 w-16 overflow-hidden rounded-full bg-muted">
+              <div className="h-full rounded-full bg-amber-500" style={{ width: `${b}%` }} />
+            </div>
+          </div>
+        )
+      },
+    },
+    {
+      id: 'findings',
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Findings" />,
+      cell: ({ row }) => <SeverityChips sev={row.original.findingSeverity} />,
+    },
+    {
+      id: 'exposure',
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Exposure" />,
+      cell: ({ row }) => {
+        const exposed = isExposed(row.original)
+        return exposed ? (
+          <Badge variant="outline" className="border-red-300 bg-red-500/5 text-red-600">
+            <ShieldX className="me-1 h-3 w-3" />
+            Internet-exposed
+          </Badge>
+        ) : (
+          <Badge variant="outline" className="border-green-300 bg-green-500/5 text-green-600">
+            <ShieldCheck className="me-1 h-3 w-3" />
+            Not exposed
+          </Badge>
         )
       },
     },
@@ -621,7 +654,7 @@ export default function CrownJewelsPage() {
               Select an existing asset to designate as a Crown Jewel requiring special protection
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 max-h-[60vh] overflow-y-auto pe-2">
+          <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="asset-search">Search Asset *</Label>
               <Input
@@ -634,7 +667,7 @@ export default function CrownJewelsPage() {
                 placeholder="Type to search assets..."
               />
               {allAssets?.data && allAssets.data.length > 0 && (
-                <div className="border rounded-md max-h-40 overflow-y-auto">
+                <div className="border rounded-md max-h-64 overflow-y-auto overscroll-contain">
                   {allAssets.data.map((a) => (
                     <button
                       key={a.id as string}
@@ -725,7 +758,7 @@ export default function CrownJewelsPage() {
 
       {/* View Sheet */}
       <Sheet open={!!viewJewel} onOpenChange={(open) => !open && setViewJewel(null)}>
-        <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
+        <SheetContent className="w-full overflow-x-hidden overflow-y-auto sm:max-w-xl">
           {viewJewel && (
             <>
               <SheetHeader>
@@ -733,118 +766,210 @@ export default function CrownJewelsPage() {
                   <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-500/10">
                     <Crown className="h-6 w-6 text-amber-500" />
                   </div>
-                  <div>
-                    <SheetTitle>{viewJewel.name}</SheetTitle>
-                    <SheetDescription>{viewJewel.description}</SheetDescription>
+                  <div className="min-w-0">
+                    <SheetTitle className="break-all font-mono text-base">
+                      {viewJewel.name}
+                    </SheetTitle>
+                    <SheetDescription className="capitalize">
+                      {viewJewel.assetType ?? 'asset'}
+                      {viewJewel.description ? ` · ${viewJewel.description}` : ''}
+                    </SheetDescription>
                   </div>
                 </div>
               </SheetHeader>
 
-              <Tabs defaultValue="overview" className="mt-6">
+              <Tabs defaultValue="overview" className="mt-6 px-4">
                 <TabsList className="grid w-full grid-cols-2">
                   <TabsTrigger value="overview">Overview</TabsTrigger>
                   <TabsTrigger value="dependencies">Dependencies</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="overview" className="space-y-4 mt-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <p className="text-sm text-muted-foreground">Status</p>
-                      <Badge variant="outline" className={statusColors[viewJewel.status]}>
-                        {viewJewel.status.replace('_', ' ')}
-                      </Badge>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-sm text-muted-foreground">Protection Level</p>
-                      <Badge
-                        variant="outline"
-                        className={protectionColors[viewJewel.protectionLevel]}
+                  {/* The three things that actually matter for a crown jewel. */}
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="rounded-lg border p-3 text-center">
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                        Risk
+                      </p>
+                      <p
+                        className={`mt-1 text-2xl font-bold tabular-nums ${riskBand(viewJewel.riskScore).text}`}
                       >
-                        {viewJewel.protectionLevel}
-                      </Badge>
+                        {viewJewel.riskScore}
+                      </p>
+                      <p className={`text-xs font-semibold ${riskBand(viewJewel.riskScore).text}`}>
+                        {riskBand(viewJewel.riskScore).label}
+                      </p>
                     </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <p className="text-sm text-muted-foreground">Category</p>
-                      <Badge variant="secondary">{categoryLabels[viewJewel.category]}</Badge>
+                    <div className="rounded-lg border border-amber-200 bg-amber-500/5 p-3 text-center">
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                        Business impact
+                      </p>
+                      <p className="mt-1 text-2xl font-bold tabular-nums text-amber-600">
+                        {viewJewel.businessImpactScore ?? 0}
+                      </p>
+                      <p className="text-xs font-semibold text-amber-600">
+                        {(viewJewel.businessImpactScore ?? 0) >= 67
+                          ? 'High'
+                          : (viewJewel.businessImpactScore ?? 0) >= 34
+                            ? 'Medium'
+                            : 'Low'}
+                      </p>
                     </div>
-                    <div className="space-y-1">
-                      <p className="text-sm text-muted-foreground">Classification</p>
-                      <Badge
-                        variant="outline"
-                        className={classificationColors[viewJewel.dataClassification]}
+                    <div className="rounded-lg border p-3 text-center">
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                        Exposure
+                      </p>
+                      <p
+                        className={`mt-1 flex justify-center ${isExposed(viewJewel) ? 'text-red-600' : 'text-green-600'}`}
                       >
-                        {viewJewel.dataClassification.replace('_', ' ')}
-                      </Badge>
+                        {isExposed(viewJewel) ? (
+                          <ShieldX className="h-7 w-7" />
+                        ) : (
+                          <ShieldCheck className="h-7 w-7" />
+                        )}
+                      </p>
+                      <p
+                        className={`text-xs font-semibold ${isExposed(viewJewel) ? 'text-red-600' : 'text-green-600'}`}
+                      >
+                        {isExposed(viewJewel) ? 'Exposed' : 'Not exposed'}
+                      </p>
                     </div>
                   </div>
 
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Risk Score</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <RiskScoreBadge score={viewJewel.riskScore} />
-                    </CardContent>
-                  </Card>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm">Exposures</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div
-                          className={`text-2xl font-bold ${viewJewel.exposureCount > 0 ? 'text-red-500' : ''}`}
-                        >
-                          {viewJewel.exposureCount}
-                        </div>
-                      </CardContent>
-                    </Card>
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm">Dependencies</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-2xl font-bold">{viewJewel.dependencyCount}</div>
-                      </CardContent>
-                    </Card>
+                  {/* Why it's a crown jewel — one honest sentence. */}
+                  <div className="rounded-lg border border-amber-200 bg-amber-500/5 p-3 text-sm leading-relaxed">
+                    <span className="font-medium">Why it&apos;s critical: </span>
+                    compromise would have{' '}
+                    {(viewJewel.businessImpactScore ?? 0) >= 67
+                      ? 'high'
+                      : (viewJewel.businessImpactScore ?? 0) >= 34
+                        ? 'moderate'
+                        : 'limited'}{' '}
+                    business impact ({viewJewel.businessImpactScore ?? 0}/100)
+                    {viewJewel.piiExposed ? ' and it handles PII' : ''}.{' '}
+                    {isExposed(viewJewel)
+                      ? 'It is reachable from the internet — reducing its exposure is the priority.'
+                      : 'It is not internet-reachable, which keeps its risk contained.'}
                   </div>
 
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Business Impact</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm">{viewJewel.businessImpact}</p>
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Owner</CardTitle>
-                    </CardHeader>
-                    <CardContent>
+                  {/* Open findings by severity — real signal, not an empty card. */}
+                  <div>
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Open findings
+                    </p>
+                    {(viewJewel.findingCount ?? 0) > 0 ? (
                       <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
-                          <Users className="h-5 w-5" />
+                        <SeverityChips sev={viewJewel.findingSeverity} />
+                        <span className="text-sm text-muted-foreground">
+                          {viewJewel.findingCount} total
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-500/5 px-3 py-2 text-sm text-green-700">
+                        <ShieldCheck className="h-4 w-4" /> No open findings on this asset.
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Reachability — honest empty/real state. */}
+                  <div>
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Reachability
+                    </p>
+                    {isExposed(viewJewel) ? (
+                      <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-500/5 px-3 py-2 text-sm text-red-700">
+                        <ShieldX className="mt-0.5 h-4 w-4 shrink-0" />
+                        <span>
+                          Reachable from the internet ({viewJewel.exposure}). This drives its risk —
+                          review attack paths in Exposure Chains.
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="flex items-start gap-2 rounded-lg border border-green-200 bg-green-500/5 px-3 py-2 text-sm text-green-700">
+                        <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
+                        <span>
+                          Not reachable from the internet — no public attack path reaches this
+                          asset.
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Details — only real, populated fields. */}
+                  <div>
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Details
+                    </p>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Type</span>
+                        <span className="font-medium capitalize">
+                          {viewJewel.assetType ?? 'asset'}
+                        </span>
+                      </div>
+                      {viewJewel.criticality && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Criticality</span>
+                          <span className="font-medium capitalize">{viewJewel.criticality}</span>
                         </div>
-                        <div>
-                          <p className="font-medium">{viewJewel.owner}</p>
-                          <p className="text-sm text-muted-foreground flex items-center gap-1">
+                      )}
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Data classification</span>
+                        <span className="font-medium capitalize">
+                          {viewJewel.dataClassification.replace('_', ' ')}
+                        </span>
+                      </div>
+                      {(viewJewel.piiExposed || viewJewel.phiExposed) && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Sensitive data</span>
+                          <span className="font-medium text-amber-600">
+                            {[viewJewel.piiExposed && 'PII', viewJewel.phiExposed && 'PHI']
+                              .filter(Boolean)
+                              .join(', ')}
+                          </span>
+                        </div>
+                      )}
+                      {viewJewel.lastAssessed && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Last assessed</span>
+                          <span className="font-medium">
+                            {new Date(viewJewel.lastAssessed).toLocaleDateString()}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Owner */}
+                  <div>
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Owner
+                    </p>
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-muted">
+                        <Users className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                      <div>
+                        <p className="font-medium">{viewJewel.owner}</p>
+                        {viewJewel.ownerEmail ? (
+                          <p className="flex items-center gap-1 text-sm text-muted-foreground">
                             <Mail className="h-3 w-3" />
                             {viewJewel.ownerEmail}
                           </p>
-                        </div>
+                        ) : (
+                          <p className="text-xs text-muted-foreground">
+                            Assign an owner so alerts route correctly
+                          </p>
+                        )}
                       </div>
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </div>
 
                   {viewJewel.tags.length > 0 && (
-                    <div className="space-y-2">
-                      <p className="text-sm text-muted-foreground">Tags</p>
+                    <div>
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        Tags
+                      </p>
                       <div className="flex flex-wrap gap-2">
                         {viewJewel.tags.map((tag) => (
                           <Badge key={tag} variant="secondary">
@@ -896,7 +1021,7 @@ export default function CrownJewelsPage() {
                 </TabsContent>
               </Tabs>
 
-              <div className="mt-6 flex gap-2">
+              <div className="mt-6 flex gap-2 px-4 pb-4">
                 <Button variant="outline" className="flex-1" onClick={() => openEdit(viewJewel)}>
                   <Pencil className="me-2 h-4 w-4" />
                   Edit
