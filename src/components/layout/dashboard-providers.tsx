@@ -20,7 +20,7 @@
  */
 
 import { TenantProvider } from '@/context/tenant-provider'
-import { BootstrapProvider } from '@/context/bootstrap-provider'
+import { BootstrapProvider, BootstrapGate } from '@/context/bootstrap-provider'
 import { PermissionProvider } from '@/context/permission-provider'
 import { WebSocketProvider } from '@/context/websocket-provider'
 import { RiskScoringProvider } from '@/context/risk-scoring-provider'
@@ -33,11 +33,13 @@ export function DashboardProviders({ children }: DashboardProvidersProps) {
   return (
     <TenantProvider>
       <BootstrapProvider>
-        <PermissionProvider>
-          <RiskScoringProvider>
-            <WebSocketProvider>{children}</WebSocketProvider>
-          </RiskScoringProvider>
-        </PermissionProvider>
+        <BootstrapGate>
+          <PermissionProvider>
+            <RiskScoringProvider>
+              <WebSocketProvider>{children}</WebSocketProvider>
+            </RiskScoringProvider>
+          </PermissionProvider>
+        </BootstrapGate>
       </BootstrapProvider>
     </TenantProvider>
   )
