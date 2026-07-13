@@ -535,7 +535,7 @@ export default function ExternalSurfacePage() {
               </TableHeader>
               <TableBody>
                 {filteredAssets.map((asset) => {
-                  const TypeIcon = typeIcons[asset.type]
+                  const TypeIcon = typeIcons[asset.type] ?? Globe
                   return (
                     <TableRow
                       key={asset.id}

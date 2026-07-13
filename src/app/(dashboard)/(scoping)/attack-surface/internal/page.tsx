@@ -632,7 +632,7 @@ export default function InternalSurfacePage() {
               </TableHeader>
               <TableBody>
                 {filteredAssets.map((asset) => {
-                  const TypeIcon = typeIcons[asset.type]
+                  const TypeIcon = typeIcons[asset.type] ?? Server
                   return (
                     <TableRow
                       key={asset.id}
