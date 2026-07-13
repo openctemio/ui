@@ -1,6 +1,6 @@
 'use client'
 
-import { type ReactNode, useEffect, useMemo, useState, memo } from 'react'
+import { type ReactNode, useMemo, memo } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { ChevronRight } from 'lucide-react'
@@ -266,22 +266,16 @@ const SidebarMenuCollapsible = memo(function SidebarMenuCollapsible({
   // Filter sub-items based on sub-modules from API
   const filteredItems = useFilteredSubItems(item.items, item.module, subModules)
 
-  // Longest-matching sub-item drives both the highlight and the open state.
+  // Longest-matching sub-item drives the highlight, and seeds the initial open
+  // state so a group is expanded when you land on one of its pages. Uncontrolled
+  // (defaultOpen) keeps it simple + stable — the user can freely toggle after.
   const activeSubUrl = useMemo(
     () => activeSubItemUrl(pathname, filteredItems),
     [pathname, filteredItems]
   )
-  const isActive = activeSubUrl !== undefined
-
-  // Auto-open when a child route is active, but still let the user toggle.
-  // Resetting the manual override whenever `isActive` flips means navigating
-  // into a group always opens it, without fighting a manual collapse.
-  const [manuallyOpen, setManuallyOpen] = useState<boolean | null>(null)
-  useEffect(() => setManuallyOpen(null), [isActive])
-  const open = manuallyOpen ?? isActive
 
   return (
-    <Collapsible asChild open={open} onOpenChange={setManuallyOpen} className="group/collapsible">
+    <Collapsible asChild defaultOpen={activeSubUrl !== undefined} className="group/collapsible">
       <SidebarMenuItem>
         <CollapsibleTrigger asChild>
           <SidebarMenuButton tooltip={item.title}>
