@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react'
 import { Main } from '@/components/layout'
-import { PageHeader, EmptyState } from '@/features/shared'
+import { PageHeader, EmptyState, formatRiskScore, getRiskScoreChangeType } from '@/features/shared'
 import { StatsCard } from '@/features/shared/components/stats-card'
 import { useDashboardStats } from '@/features/dashboard/hooks/use-dashboard-stats'
 import { useTenant } from '@/context/tenant-provider'
@@ -171,9 +171,9 @@ export default function AttackPathVisualizationPage() {
         />
         <StatsCard
           title="Risk Score"
-          value={stats.assets.riskScore}
+          value={formatRiskScore(stats.assets.riskScore)}
           icon={Shield}
-          changeType={stats.assets.riskScore > 50 ? 'negative' : 'positive'}
+          changeType={getRiskScoreChangeType(stats.assets.riskScore)}
           description="Overall attack surface risk"
         />
       </div>

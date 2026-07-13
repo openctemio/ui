@@ -23,6 +23,7 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Progress } from '@/components/ui/progress'
 import { cn } from '@/lib/utils'
+import { getRiskLevel, getRiskScoreTextColor } from '@/features/shared'
 import { AlertTriangle, ShieldAlert, Clock, Activity } from 'lucide-react'
 
 // Severity colors for charts
@@ -34,30 +35,17 @@ const SEVERITY_COLORS: Record<string, string> = {
   info: '#6b7280',
 }
 
-function getRiskColor(score: number): string {
-  if (score >= 8) return 'text-red-500'
-  if (score >= 6) return 'text-orange-500'
-  if (score >= 3) return 'text-yellow-500'
-  return 'text-green-500'
-}
-
+// Risk score is on the canonical 0–100 scale (see @/features/shared risk helpers).
 function getRiskProgressColor(score: number): string {
-  if (score >= 8) return '[&_[data-slot=progress-indicator]]:bg-red-500'
-  if (score >= 6) return '[&_[data-slot=progress-indicator]]:bg-orange-500'
-  if (score >= 3) return '[&_[data-slot=progress-indicator]]:bg-yellow-500'
+  if (score >= 80) return '[&_[data-slot=progress-indicator]]:bg-red-500'
+  if (score >= 60) return '[&_[data-slot=progress-indicator]]:bg-orange-500'
+  if (score >= 40) return '[&_[data-slot=progress-indicator]]:bg-yellow-500'
   return '[&_[data-slot=progress-indicator]]:bg-green-500'
 }
 
-function getRiskLabel(score: number): string {
-  if (score >= 8) return 'Critical'
-  if (score >= 6) return 'High'
-  if (score >= 3) return 'Medium'
-  return 'Low'
-}
-
 function getRiskBadgeVariant(score: number): 'destructive' | 'secondary' | 'outline' | 'default' {
-  if (score >= 8) return 'destructive'
-  if (score >= 6) return 'default'
+  if (score >= 80) return 'destructive'
+  if (score >= 60) return 'default'
   return 'secondary'
 }
 
@@ -230,16 +218,23 @@ export default function RiskOverviewPage() {
             </CardHeader>
             <CardContent className="flex flex-col items-center gap-4">
               <div className="flex items-end gap-2">
-                <span className={cn('text-5xl font-bold tabular-nums', getRiskColor(riskScore))}>
+                <span
+                  className={cn(
+                    'text-5xl font-bold tabular-nums',
+                    getRiskScoreTextColor(riskScore)
+                  )}
+                >
                   {riskScore.toFixed(1)}
                 </span>
-                <span className="text-muted-foreground text-lg mb-1">/ 10</span>
+                <span className="text-muted-foreground text-lg mb-1">/ 100</span>
               </div>
               <Progress
-                value={riskScore * 10}
+                value={riskScore}
                 className={cn('h-3 w-full max-w-md', getRiskProgressColor(riskScore))}
               />
-              <Badge variant={getRiskBadgeVariant(riskScore)}>{getRiskLabel(riskScore)} Risk</Badge>
+              <Badge variant={getRiskBadgeVariant(riskScore)}>
+                {getRiskLevel(riskScore).label} Risk
+              </Badge>
             </CardContent>
           </Card>
 

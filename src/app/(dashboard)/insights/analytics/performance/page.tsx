@@ -1,8 +1,16 @@
 'use client'
 
 import { useMemo } from 'react'
+import { formatChartDate } from '@/lib/format-chart-date'
 import { Main } from '@/components/layout'
-import { PageHeader, StatsCard, EmptyState } from '@/features/shared'
+import {
+  PageHeader,
+  StatsCard,
+  EmptyState,
+  formatRiskScore,
+  getRiskScoreChangeType,
+  getRiskLevel,
+} from '@/features/shared'
 import { useDashboardStats } from '@/features/dashboard/hooks/use-dashboard-stats'
 import { useTenant } from '@/context/tenant-provider'
 import {
@@ -125,7 +133,7 @@ export default function ScanPerformancePage() {
 
   const findingTrendTotals = useMemo(() => {
     return stats.findingTrend.map((point) => ({
-      date: point.date,
+      date: formatChartDate(point.date),
       total: point.critical + point.high + point.medium + point.low + point.info,
     }))
   }, [stats.findingTrend])
@@ -140,7 +148,7 @@ export default function ScanPerformancePage() {
       })
     }
 
-    if (stats.assets.riskScore > 7) {
+    if (stats.assets.riskScore >= 60) {
       items.push({
         label: 'High risk score detected - prioritize critical findings',
         severity: 'critical',
@@ -203,21 +211,9 @@ export default function ScanPerformancePage() {
             />
             <StatsCard
               title="Risk Score"
-              value={stats.assets.riskScore.toFixed(1)}
-              changeType={
-                stats.assets.riskScore > 7
-                  ? 'negative'
-                  : stats.assets.riskScore > 4
-                    ? 'neutral'
-                    : 'positive'
-              }
-              change={
-                stats.assets.riskScore > 7
-                  ? 'High risk'
-                  : stats.assets.riskScore > 4
-                    ? 'Medium risk'
-                    : 'Low risk'
-              }
+              value={formatRiskScore(stats.assets.riskScore)}
+              changeType={getRiskScoreChangeType(stats.assets.riskScore)}
+              change={`${getRiskLevel(stats.assets.riskScore).label} risk`}
               icon={ShieldAlert}
             />
           </section>

@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo } from 'react'
+import { formatChartDate } from '@/lib/format-chart-date'
 import { Main } from '@/components/layout'
 import { PageHeader, StatsCard } from '@/features/shared'
 import { useDashboardStats } from '@/features/dashboard/hooks/use-dashboard-stats'
@@ -151,7 +152,7 @@ export default function SLAManagementPage() {
     return (stats.findingTrend || []).map((point) => {
       const total = point.critical + point.high + point.medium + point.low + point.info
       return {
-        date: new Date(point.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        date: formatChartDate(point.date),
         total,
         critical: point.critical,
         high: point.high,

@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo } from 'react'
+import { formatChartDate } from '@/lib/format-chart-date'
 import { Main } from '@/components/layout'
 import { PageHeader, StatsCard, EmptyState } from '@/features/shared'
 import { useDashboardStats, useMTTRMetrics } from '@/features/dashboard/hooks/use-dashboard-stats'
@@ -142,7 +143,7 @@ export default function MTTRPage() {
 
   const trendData = useMemo(() => {
     return stats.findingTrend.map((point) => ({
-      date: point.date,
+      date: formatChartDate(point.date),
       total: point.critical + point.high + point.medium + point.low + point.info,
     }))
   }, [stats.findingTrend])
