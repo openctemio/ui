@@ -450,6 +450,12 @@ export const tenantEndpoints = {
     `${API_BASE.TENANTS}/${tenantIdOrSlug}/settings/modules/presets/${presetId}/preview`,
   modulesPresetApply: (tenantIdOrSlug: string, presetId: string) =>
     `${API_BASE.TENANTS}/${tenantIdOrSlug}/settings/modules/presets/${presetId}/apply`,
+  /**
+   * Product-bundle subscription. GET returns the current subscription +
+   * catalog; POST replaces the subscription (live-resolved module set).
+   */
+  modulesBundles: (tenantIdOrSlug: string) =>
+    `${API_BASE.TENANTS}/${tenantIdOrSlug}/settings/modules/bundles`,
 } as const
 
 // ============================================
