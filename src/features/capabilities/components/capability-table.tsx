@@ -230,6 +230,7 @@ export function CapabilityTable({
       columns={columns}
       data={capabilities}
       showSearch={false}
+      showColumnToggle={false}
       emptyMessage="No capabilities"
       emptyDescription="No capabilities match the current filters."
     />
