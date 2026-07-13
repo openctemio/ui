@@ -38,15 +38,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import {
-  AlertDialog,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 
 import { DataTableRowActions, type RowAction } from '@/features/shared'
 import { AddScanProfileDialog } from './add-scan-profile-dialog'
@@ -406,24 +398,21 @@ export function ScanProfilesSection() {
       )}
 
       {/* Delete Confirmation */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Scan Profile</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete <strong>{selectedProfile?.name}</strong>? This action
-              cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-            <Button variant="destructive" onClick={handleDeleteConfirm} disabled={isDeleting}>
-              {isDeleting && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
-              Delete
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        title="Delete Scan Profile"
+        desc={
+          <>
+            Are you sure you want to delete <strong>{selectedProfile?.name}</strong>? This action
+            cannot be undone.
+          </>
+        }
+        confirmText="Delete"
+        destructive
+        isLoading={isDeleting}
+        handleConfirm={handleDeleteConfirm}
+      />
     </>
   )
 }

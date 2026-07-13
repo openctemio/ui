@@ -34,16 +34,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import {
   KeyRound,
   Plus,
@@ -329,29 +320,16 @@ function KeyRow({ k, onChanged }: { k: APIKey; onChanged: () => void }) {
             <Trash2 className="h-4 w-4" />
           </Button>
         </div>
-        <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Delete {k.name}?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Any client using this key will immediately lose access. This cannot be undone.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={(e) => {
-                  e.preventDefault()
-                  void handleDelete()
-                }}
-                disabled={deleting}
-                className="bg-red-600 hover:bg-red-700"
-              >
-                {deleting ? 'Deleting...' : 'Delete'}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        <ConfirmDialog
+          open={deleteOpen}
+          onOpenChange={setDeleteOpen}
+          title={`Delete ${k.name}?`}
+          desc="Any client using this key will immediately lose access. This cannot be undone."
+          confirmText={deleting ? 'Deleting...' : 'Delete'}
+          destructive
+          isLoading={deleting}
+          handleConfirm={() => void handleDelete()}
+        />
       </TableCell>
     </TableRow>
   )

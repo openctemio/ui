@@ -7,16 +7,7 @@ import { MarkdownPreview } from '@/components/ui/markdown-editor'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import {
   PlusCircle,
   MessageSquare,
@@ -668,33 +659,20 @@ export function ActivityPanel({
         </div>
       </div>
 
-      <AlertDialog
+      <ConfirmDialog
         open={!!deletingCommentId}
         onOpenChange={(open) => !open && setDeletingCommentId(null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete this comment?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete the comment. This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                if (deletingCommentId) {
-                  onDeleteComment?.(deletingCommentId)
-                }
-                setDeletingCommentId(null)
-              }}
-              className="bg-red-500 text-white hover:bg-red-600"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        title="Delete this comment?"
+        desc="This will permanently delete the comment. This action cannot be undone."
+        confirmText="Delete"
+        destructive
+        handleConfirm={() => {
+          if (deletingCommentId) {
+            onDeleteComment?.(deletingCommentId)
+          }
+          setDeletingCommentId(null)
+        }}
+      />
     </div>
   )
 }

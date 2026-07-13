@@ -78,16 +78,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
@@ -1329,23 +1320,20 @@ export default function RemediationPage() {
       />
 
       {/* ─── Delete Confirmation ──────────────────────────────────────── */}
-      <AlertDialog open={!!deleteTask} onOpenChange={() => setDeleteTask(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Task</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete &quot;{deleteTask?.title}&quot;? This action cannot be
-              undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction className="bg-red-500 hover:bg-red-600" onClick={handleDelete}>
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={!!deleteTask}
+        onOpenChange={() => setDeleteTask(null)}
+        title="Delete Task"
+        desc={
+          <>
+            Are you sure you want to delete &quot;{deleteTask?.title}&quot;? This action cannot be
+            undone.
+          </>
+        }
+        confirmText="Delete"
+        destructive
+        handleConfirm={handleDelete}
+      />
 
       <CreateJiraEpicDialog
         campaign={jiraTask ? { id: jiraTask.id, name: jiraTask.title } : null}
