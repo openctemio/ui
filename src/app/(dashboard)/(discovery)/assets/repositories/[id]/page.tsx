@@ -748,11 +748,13 @@ function OverviewTab({
   branches,
   findings,
   activities,
+  onScan,
 }: {
   repository: Repository
   branches: BranchDetail[]
   findings: FindingDetail[]
   activities: ActivityLog[]
+  onScan?: () => void
 }) {
   const router = useRouter()
   const overdueFindingsCount = getOverdueFindingsCount(findings)
@@ -760,11 +762,48 @@ function OverviewTab({
   const defaultBranch = branches.find((b) => b.is_default)
 
   // Compute severity from actual findings data (not from repo extension which may be stale)
-  const criticalCount = findings.filter((f) => f.severity === 'critical').length
-  const highCount = findings.filter((f) => f.severity === 'high').length
+  const sevCounts: Record<Severity, number> = {
+    critical: findings.filter((f) => f.severity === 'critical').length,
+    high: findings.filter((f) => f.severity === 'high').length,
+    medium: findings.filter((f) => f.severity === 'medium').length,
+    low: findings.filter((f) => f.severity === 'low').length,
+    info: findings.filter((f) => f.severity === 'info').length,
+  }
+  const criticalCount = sevCounts.critical
+  const highCount = sevCounts.high
+  // The repo carries ingested findings but OpenCTEM hasn't mapped its branches yet.
+  const neverScanned = !repository.last_scanned_at && branches.length === 0
+  // Real security posture always available from findings — used to fill the
+  // left card even before any branch is scanned (no more empty dead-space).
+  const sevRank: Severity[] = ['critical', 'high', 'medium', 'low', 'info']
+  const topFindings = [...findings]
+    .sort((a, b) => sevRank.indexOf(a.severity) - sevRank.indexOf(b.severity))
+    .slice(0, 5)
 
   return (
     <div className="space-y-6">
+      {neverScanned && (
+        <div className="flex items-center gap-3 rounded-xl border border-primary/30 border-l-4 border-l-primary bg-primary/[0.03] p-4">
+          <div className="bg-primary/10 text-primary flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
+            <Play className="h-4 w-4" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium">
+              This repo has findings from ingest, but OpenCTEM hasn’t scanned it yet.
+            </p>
+            <p className="text-muted-foreground text-xs">
+              Run a scan to map its branches, build the SBOM (components), and enable per-branch
+              drift &amp; SLA tracking.
+            </p>
+          </div>
+          {onScan && (
+            <Button size="sm" onClick={onScan} className="shrink-0">
+              <Play className="me-2 h-4 w-4" />
+              Run first scan
+            </Button>
+          )}
+        </div>
+      )}
       {/* Key Metrics */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
         <Card>
@@ -806,11 +845,20 @@ function OverviewTab({
               <GitBranch className="h-4 w-4 text-blue-500" />
               Branches
             </CardDescription>
-            <CardTitle className="text-3xl text-blue-500">{branches.length}</CardTitle>
+            <CardTitle
+              className={cn(
+                'text-3xl',
+                neverScanned ? 'text-muted-foreground/50' : 'text-blue-500'
+              )}
+            >
+              {neverScanned ? '—' : branches.length}
+            </CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
             <p className="text-xs text-muted-foreground">
-              {branches.filter((b) => b.scan_status === 'passed').length} passing
+              {neverScanned
+                ? 'scan to map branches'
+                : `${branches.filter((b) => b.scan_status === 'passed').length} passing`}
             </p>
           </CardContent>
         </Card>
@@ -821,13 +869,22 @@ function OverviewTab({
               <Package className="h-4 w-4 text-purple-500" />
               Components
             </CardDescription>
-            <CardTitle className="text-3xl text-purple-500">
-              {repository.components_summary?.total || 0}
+            <CardTitle
+              className={cn(
+                'text-3xl',
+                !repository.components_summary?.total
+                  ? 'text-muted-foreground/50'
+                  : 'text-purple-500'
+              )}
+            >
+              {repository.components_summary?.total ? repository.components_summary.total : '—'}
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
             <p className="text-xs text-muted-foreground">
-              {repository.components_summary?.vulnerable || 0} vulnerable
+              {repository.components_summary?.total
+                ? `${repository.components_summary?.vulnerable || 0} vulnerable`
+                : 'scan to build SBOM'}
             </p>
           </CardContent>
         </Card>
@@ -847,16 +904,17 @@ function OverviewTab({
 
       {/* Two column layout */}
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Default Branch Status */}
+        {/* Default Branch Status — falls back to overall security posture when
+            no branch has been scanned yet, so the card is never empty. */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <GitBranch className="h-4 w-4" />
-              Default Branch
+              {defaultBranch ? 'Default Branch' : 'Security posture'}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {defaultBranch && (
+            {defaultBranch ? (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -945,6 +1003,86 @@ function OverviewTab({
                     </code>
                   </div>
                 )}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {/* Severity breakdown from real findings — available even before a scan */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span>Findings by severity</span>
+                    <span className="text-muted-foreground">{findings.length} total</span>
+                  </div>
+                  <div className="flex h-3 overflow-hidden rounded-full bg-muted">
+                    {(['critical', 'high', 'medium', 'low', 'info'] as Severity[]).map(
+                      (severity) => {
+                        const count = sevCounts[severity]
+                        if (count === 0) return null
+                        const colors: Record<Severity, string> = {
+                          critical: 'bg-red-500',
+                          high: 'bg-orange-500',
+                          medium: 'bg-yellow-500',
+                          low: 'bg-blue-500',
+                          info: 'bg-gray-400',
+                        }
+                        return (
+                          <div
+                            key={severity}
+                            className={cn(colors[severity])}
+                            style={{ width: `${(count / (findings.length || 1)) * 100}%` }}
+                          />
+                        )
+                      }
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-4 text-xs">
+                    <span className="flex items-center gap-1">
+                      <span className="h-2 w-2 rounded-full bg-red-500" />
+                      Critical: {sevCounts.critical}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <span className="h-2 w-2 rounded-full bg-orange-500" />
+                      High: {sevCounts.high}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <span className="h-2 w-2 rounded-full bg-yellow-500" />
+                      Medium: {sevCounts.medium}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Top findings — replaces the previously-empty branch panel */}
+                {topFindings.length > 0 && (
+                  <div className="divide-y rounded-lg border">
+                    {topFindings.map((f) => {
+                      const dot: Record<Severity, string> = {
+                        critical: 'bg-red-500',
+                        high: 'bg-orange-500',
+                        medium: 'bg-yellow-500',
+                        low: 'bg-blue-500',
+                        info: 'bg-gray-400',
+                      }
+                      return (
+                        <button
+                          key={f.id}
+                          type="button"
+                          onClick={() => router.push(`/findings/${f.id}`)}
+                          className="hover:bg-muted/50 flex w-full items-center gap-2.5 px-3 py-2 text-start"
+                        >
+                          <span className={cn('h-2 w-2 shrink-0 rounded-full', dot[f.severity])} />
+                          <span className="flex-1 truncate text-sm">{f.title}</span>
+                          <span className="text-muted-foreground shrink-0 text-xs capitalize">
+                            {f.severity}
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+
+                <p className="text-muted-foreground flex items-center gap-1.5 text-xs">
+                  <GitBranch className="h-3.5 w-3.5" />
+                  No branches scanned yet — run a scan to see per-branch drift &amp; SLA.
+                </p>
               </div>
             )}
           </CardContent>
@@ -2650,6 +2788,7 @@ export default function RepositoryDetailPage() {
               branches={branches}
               findings={findings}
               activities={activities}
+              onScan={handleScan}
             />
           </TabsContent>
 
