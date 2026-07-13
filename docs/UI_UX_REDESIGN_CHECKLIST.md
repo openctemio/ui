@@ -171,22 +171,22 @@ Systematic per-page UI/UX audit + redesign of the OpenCTEM dashboard. **183 rout
 
 ## Insights (14)
 
-| Route                             | Audit | Redesign | PR  | QA  | Notes |
-| --------------------------------- | :---: | :------: | :-: | :-: | ----- |
-| `/insights/analytics/coverage`    |   ☐   |    ☐     |     |  ☐  |       |
-| `/insights/analytics/mttr`        |   ☐   |    ☐     |     |  ☐  |       |
-| `/insights/analytics/performance` |   ☐   |    ☐     |     |  ☐  |       |
-| `/insights/analytics/trends`      |   ☐   |    ☐     |     |  ☐  |       |
-| `/insights/ctem-maturity`         |   ☐   |    ☐     |     |  ☐  |       |
-| `/insights/executive`             |   ☐   |    ☐     |     |  ☐  |       |
-| `/insights/findings`              |   ☐   |    ☐     |     |  ☐  |       |
-| `/insights/reports/compliance`    |   ☐   |    ☐     |     |  ☐  |       |
-| `/insights/reports/executive`     |   ☐   |    ☐     |     |  ☐  |       |
-| `/insights/reports/scheduled`     |   ☐   |    ☐     |     |  ☐  |       |
-| `/insights/reports/technical`     |   ☐   |    ☐     |     |  ☐  |       |
-| `/notifications`                  |   ☐   |    ☐     |     |  ☐  |       |
-| `/overview`                       |   ☐   |    ☐     |     |  ☐  |       |
-| `/reports`                        |   ☐   |    ☐     |     |  ☐  |       |
+| Route                             | Audit | Redesign | PR  | QA  | Notes                                                                                                                                                                     |
+| --------------------------------- | :---: | :------: | :-: | :-: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/insights/analytics/coverage`    |  ✅   |    ➖    |     |  ☐  | Real: 64 assets/19 types, 6/6 repos donut, assets-by-type bar. Good.                                                                                                      |
+| `/insights/analytics/mttr`        |  ✅   |    ➖    |     |  ☐  | Best analytics: Avg MTTR 323h, SLA-vs-actual bars, real counts. Add "insufficient data" caption vs blank bars.                                                            |
+| `/insights/analytics/performance` |  🗑️   |    ☐     |     |  ☐  | Mislabeled — "Scan Performance" but shows SAME asset-by-type + repo donut as Coverage (no execution metrics) + Risk Score 0.0. Merge into Coverage or build real metrics. |
+| `/insights/analytics/trends`      |  🔎   |    ☐     |     |  ☐  | Nice stacked-area BUT curve falls to 0 in Jun/Jul while total=65 → looks synthetic/interpolated. Verify real time-series or label.                                        |
+| `/insights/ctem-maturity`         |  🗑️   |    ☐     |     |  ☐  | Module-gated (ctem_maturity, 409). Gate drops h1/breadcrumb → dead end. Hide nav or preview+CTA.                                                                          |
+| `/insights/executive`             |  🔎   |    ☐     |     |  ☐  | 🐛 Risk Score 52.7/10 (scale bug, impossible on 0-10); MTTR Critical/High tiles show 0m vs MTTR page 645h/323h (wrong source). Real Top-Risks table good.                 |
+| `/insights/findings`              |  ✅   |    ➖    |     |  ☐  | Solid: severity donut + status bar + trend, numbers reconcile (65/41). Minor overlap w/ /overview charts.                                                                 |
+| `/insights/reports/compliance`    |  🗑️   |    ☐     |     |  ☐  | Module-gated (compliance) hard wall — same as ctem-maturity. Hide nav or preview+CTA.                                                                                     |
+| `/insights/reports/executive`     |  🔎   |    ☐     |     |  ☐  | Good (PDF/CSV, gauges, donuts) BUT duplicates /insights/executive AND /overview. Risk Score 0. Consolidate 3 exec surfaces.                                               |
+| `/insights/reports/scheduled`     |  🗑️   |    ☐     |     |  ☐  | "Coming Soon — requires dedicated API endpoints." Dead feature in nav; all KPIs 0. Hide until wired.                                                                      |
+| `/insights/reports/technical`     |  ✅   |    ➖    |     |  ☐  | Strong (severity %, generate/export, trend). Nit: Asset-Type pie ~19 slices overlapping labels ("confetti pie") — use horizontal bar.                                     |
+| `/notifications`                  |  ✅   |    ➖    |     |  ☐  | Clean empty state, Unread/Read/Total tiles, severity+type filters. Good.                                                                                                  |
+| `/overview`                       |  🔎   |    ☐     |     |  ☐  | Risk Score 0.0/10 "Low Risk" (conflicts executive 52.7). Overlaps /insights/executive + /insights/reports/executive — 3 near-identical dashboards. Pick one home.         |
+| `/reports`                        |  🗑️   |    ☐     |     |  ☐  | SECOND parallel reporting system (own templates/scheduled/generate) duplicating whole /insights/reports/* tree — all empty. Unify to one report IA.                       |
 
 ## Settings (35)
 
@@ -235,4 +235,4 @@ Systematic per-page UI/UX audit + redesign of the OpenCTEM dashboard. **183 rout
 | `/`                   |  🔎   |    ☐     |     |  ☐  | CTEM stepper misleading (1 resolved → "Mobilization done"); rest OK. Backlog: stepper→bottleneck.          |
 | `/findings`           |  🔎   |    ☐     |     |  ☐  | Dup severity cards vs filter tabs; double search; Location=raw UUID; empty Priority col. High-value dedup. |
 | `/findings/[id]`      |   ☐   |    ☐     |     |  ☐  |                                                                                                            |
-| `/findings/approvals` |   ☐   |    ☐     |     |  ☐  |                                                                                                            |
+| `/findings/approvals` |  ✅   |    ➖    |     |  ☐  | Well-built (stat cards, status tabs, sortable table, empty state). Nit: pager "Page 1 of 0" when empty.    |
