@@ -1,8 +1,16 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import type { ColumnDef } from '@tanstack/react-table'
 import { Main } from '@/components/layout'
-import { PageHeader, EmptyState } from '@/features/shared'
+import {
+  PageHeader,
+  EmptyState,
+  DataTable,
+  DataTableColumnHeader,
+  RelativeTime,
+  StackedCell,
+} from '@/features/shared'
 import { StatsCard } from '@/features/shared/components/stats-card'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -11,14 +19,6 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import {
   Select,
   SelectContent,
@@ -240,10 +240,10 @@ function RevealKeyDialog({ value, onClose }: { value: string; onClose: () => voi
 }
 
 // ─────────────────────────────────────────────────────────
-// Key row
+// Row actions (revoke / delete) — inline prominent buttons
 // ─────────────────────────────────────────────────────────
 
-function KeyRow({ k, onChanged }: { k: APIKey; onChanged: () => void }) {
+function KeyRowActions({ k, onChanged }: { k: APIKey; onChanged: () => void }) {
   const [deleteOpen, setDeleteOpen] = useState(false)
   const { trigger: revoke, isMutating: revoking } = useRevokeApiKey()
   const { trigger: del, isMutating: deleting } = useDeleteApiKey()
@@ -269,69 +269,38 @@ function KeyRow({ k, onChanged }: { k: APIKey; onChanged: () => void }) {
   }
 
   return (
-    <TableRow>
-      <TableCell>
-        <div className="font-medium">{k.name}</div>
-        <code className="text-muted-foreground text-xs">{k.key_prefix}…</code>
-      </TableCell>
-      <TableCell>
-        <div className="flex flex-wrap gap-1">
-          {k.scopes.slice(0, 3).map((s) => (
-            <Badge key={s} variant="secondary" className="font-mono text-[10px]">
-              {s}
-            </Badge>
-          ))}
-          {k.scopes.length > 3 && (
-            <Badge variant="outline" className="text-[10px]">
-              +{k.scopes.length - 3}
-            </Badge>
-          )}
-        </div>
-      </TableCell>
-      <TableCell>
-        <StatusBadge k={k} />
-      </TableCell>
-      <TableCell className="text-muted-foreground text-xs">
-        {k.last_used_at ? new Date(k.last_used_at).toLocaleDateString() : 'Never'}
-      </TableCell>
-      <TableCell className="text-muted-foreground text-xs">
-        {k.expires_at ? new Date(k.expires_at).toLocaleDateString() : 'Never'}
-      </TableCell>
-      <TableCell className="text-right">
-        <div className="flex justify-end gap-1">
-          {isActive(k) && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleRevoke}
-              disabled={revoking}
-              title="Revoke"
-            >
-              <Ban className="h-4 w-4 text-orange-500" />
-            </Button>
-          )}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setDeleteOpen(true)}
-            title="Delete"
-            className="text-red-500 hover:text-red-600"
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
-        <ConfirmDialog
-          open={deleteOpen}
-          onOpenChange={setDeleteOpen}
-          title={`Delete ${k.name}?`}
-          desc="Any client using this key will immediately lose access. This cannot be undone."
-          confirmText={deleting ? 'Deleting...' : 'Delete'}
-          destructive
-          isLoading={deleting}
-          handleConfirm={() => void handleDelete()}
-        />
-      </TableCell>
-    </TableRow>
+    <div className="flex justify-end gap-1">
+      {isActive(k) && (
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={handleRevoke}
+          disabled={revoking}
+          title="Revoke"
+        >
+          <Ban className="h-4 w-4 text-orange-500" />
+        </Button>
+      )}
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => setDeleteOpen(true)}
+        title="Delete"
+        className="text-red-500 hover:text-red-600"
+      >
+        <Trash2 className="h-4 w-4" />
+      </Button>
+      <ConfirmDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title={`Delete ${k.name}?`}
+        desc="Any client using this key will immediately lose access. This cannot be undone."
+        confirmText={deleting ? 'Deleting...' : 'Delete'}
+        destructive
+        isLoading={deleting}
+        handleConfirm={() => void handleDelete()}
+      />
+    </div>
   )
 }
 
@@ -359,6 +328,75 @@ export default function APIKeysPage() {
   const [newKey, setNewKey] = useState('')
 
   const keys = useMemo(() => data?.data ?? [], [data])
+
+  const columns = useMemo<ColumnDef<APIKey>[]>(
+    () => [
+      {
+        accessorKey: 'name',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Name" />,
+        cell: ({ row }) => (
+          <StackedCell
+            primary={row.original.name}
+            secondary={<code>{row.original.key_prefix}…</code>}
+          />
+        ),
+      },
+      {
+        id: 'scopes',
+        header: 'Scopes',
+        enableSorting: false,
+        cell: ({ row }) => (
+          <div className="flex flex-wrap gap-1">
+            {row.original.scopes.slice(0, 3).map((s) => (
+              <Badge key={s} variant="secondary" className="font-mono text-[10px]">
+                {s}
+              </Badge>
+            ))}
+            {row.original.scopes.length > 3 && (
+              <Badge variant="outline" className="text-[10px]">
+                +{row.original.scopes.length - 3}
+              </Badge>
+            )}
+          </div>
+        ),
+      },
+      {
+        id: 'status',
+        header: 'Status',
+        enableSorting: false,
+        cell: ({ row }) => <StatusBadge k={row.original} />,
+      },
+      {
+        accessorKey: 'last_used_at',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Last used" />,
+        cell: ({ row }) =>
+          row.original.last_used_at ? (
+            <RelativeTime date={row.original.last_used_at} />
+          ) : (
+            <span className="text-muted-foreground text-xs">Never</span>
+          ),
+      },
+      {
+        accessorKey: 'expires_at',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Expires" />,
+        cell: ({ row }) =>
+          row.original.expires_at ? (
+            <RelativeTime date={row.original.expires_at} />
+          ) : (
+            <span className="text-muted-foreground text-xs">Never</span>
+          ),
+      },
+      {
+        id: 'actions',
+        header: () => <div className="text-end">Actions</div>,
+        enableSorting: false,
+        enableHiding: false,
+        cell: ({ row }) => <KeyRowActions k={row.original} onChanged={() => mutate()} />,
+      },
+    ],
+    [mutate]
+  )
+
   const stats = useMemo(() => {
     const active = keys.filter(isActive).length
     const expired = keys.filter(isExpired).length
@@ -427,23 +465,13 @@ export default function APIKeysPage() {
               }
             />
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Scopes</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Last used</TableHead>
-                  <TableHead>Expires</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {keys.map((k) => (
-                  <KeyRow key={k.id} k={k} onChanged={() => mutate()} />
-                ))}
-              </TableBody>
-            </Table>
+            <DataTable
+              columns={columns}
+              data={keys}
+              searchPlaceholder="Search API keys..."
+              emptyMessage="No API keys"
+              emptyDescription="No API keys match your search."
+            />
           )}
         </CardContent>
       </Card>
