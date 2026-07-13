@@ -224,66 +224,6 @@ export function CapabilitiesSection() {
   return (
     <>
       <div className="space-y-6">
-        {/* Stats Cards - 2 per row on mobile, 4 on lg+ */}
-        {!isLoading && (
-          <div className="grid grid-cols-2 gap-2 sm:gap-4 lg:grid-cols-4">
-            <Card>
-              <CardContent className="p-3 sm:pt-6 sm:px-6">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">
-                      Total
-                    </p>
-                    <p className="text-xl sm:text-2xl font-bold">
-                      {capabilitiesData?.items?.length || 0}
-                    </p>
-                  </div>
-                  <Zap className="h-6 w-6 sm:h-8 sm:w-8 text-muted-foreground/50 shrink-0" />
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-3 sm:pt-6 sm:px-6">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">
-                      Platform
-                    </p>
-                    <p className="text-xl sm:text-2xl font-bold">{platformCount}</p>
-                  </div>
-                  <Globe className="h-6 w-6 sm:h-8 sm:w-8 text-muted-foreground/50 shrink-0" />
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-3 sm:pt-6 sm:px-6">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">
-                      Custom
-                    </p>
-                    <p className="text-xl sm:text-2xl font-bold">{customCount}</p>
-                  </div>
-                  <Sparkles className="h-6 w-6 sm:h-8 sm:w-8 text-muted-foreground/50 shrink-0" />
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-3 sm:pt-6 sm:px-6">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">
-                      Categories
-                    </p>
-                    <p className="text-xl sm:text-2xl font-bold">{categories.length}</p>
-                  </div>
-                  <LayoutGrid className="h-6 w-6 sm:h-8 sm:w-8 text-muted-foreground/50 shrink-0" />
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
         {/* Main Content Card */}
         <Card>
           <CardHeader className="pb-4">
@@ -296,7 +236,10 @@ export function CapabilitiesSection() {
                 </div>
                 <div className="min-w-0">
                   <CardTitle>Tool Capabilities</CardTitle>
-                  <CardDescription className="truncate">Manage what tools can do</CardDescription>
+                  <CardDescription className="truncate">
+                    Manage what tools can do · {capabilitiesData?.items?.length ?? 0} total ·{' '}
+                    {categories.length} categories
+                  </CardDescription>
                 </div>
               </div>
 
@@ -352,10 +295,10 @@ export function CapabilitiesSection() {
           </CardHeader>
 
           <CardContent>
-            {/* Category Filter + View Toggle */}
-            <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            {/* Toolbar: Category filter · Search · View toggle — one row */}
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center">
               {/* Category Filter */}
-              <div className="flex-1 overflow-hidden">
+              <div className="min-w-0 flex-1 overflow-hidden">
                 <Tabs
                   value={categoryFilter}
                   onValueChange={(v) => setCategoryFilter(v as CategoryFilter)}
@@ -372,29 +315,9 @@ export function CapabilitiesSection() {
                 </Tabs>
               </div>
 
-              {/* View Toggle */}
-              <div className="flex shrink-0 items-center gap-1">
-                <Button
-                  variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
-                  size="sm"
-                  onClick={() => setViewMode('grid')}
-                >
-                  <LayoutGrid className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant={viewMode === 'table' ? 'secondary' : 'ghost'}
-                  size="sm"
-                  onClick={() => setViewMode('table')}
-                >
-                  <TableIcon className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-
-            {/* Search */}
-            <div className="mb-4">
-              <form onSubmit={handleSearch}>
-                <div className="relative max-w-md">
+              {/* Search + View Toggle */}
+              <div className="flex w-full shrink-0 items-center gap-2 sm:w-auto">
+                <form onSubmit={handleSearch} className="relative flex-1 sm:w-64 sm:flex-none">
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     placeholder="Search capabilities..."
@@ -402,8 +325,24 @@ export function CapabilitiesSection() {
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="ps-9"
                   />
+                </form>
+                <div className="flex shrink-0 items-center gap-1">
+                  <Button
+                    variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+                    size="sm"
+                    onClick={() => setViewMode('grid')}
+                  >
+                    <LayoutGrid className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant={viewMode === 'table' ? 'secondary' : 'ghost'}
+                    size="sm"
+                    onClick={() => setViewMode('table')}
+                  >
+                    <TableIcon className="h-4 w-4" />
+                  </Button>
                 </div>
-              </form>
+              </div>
             </div>
 
             {/* Content */}
