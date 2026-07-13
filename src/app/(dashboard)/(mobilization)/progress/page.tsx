@@ -5,6 +5,7 @@ import { Main } from '@/components/layout'
 import { PageHeader, StatsCard } from '@/features/shared'
 import { useDashboardStats } from '@/features/dashboard/hooks/use-dashboard-stats'
 import { useTenant } from '@/context/tenant-provider'
+import { FINDING_STATUS_CONFIG, type FindingStatus } from '@/features/findings/types/finding.types'
 import {
   AreaChart,
   Area,
@@ -137,8 +138,16 @@ export default function ProgressTrackingPage() {
     return (findingsByStatus.resolved || 0) + (findingsByStatus.closed || 0)
   }, [findingsByStatus])
 
+  // "Awaiting remediation" = every finding whose status is NOT in a closed
+  // category (resolved/false_positive/accepted/duplicate/verified). This spans
+  // new, confirmed, in_progress, fix_applied, retest, in_review, remediation —
+  // counting only status==='open' here understated the backlog to 0 whenever
+  // findings had progressed to in_progress/confirmed.
   const openCount = useMemo(() => {
-    return findingsByStatus.open || 0
+    return Object.entries(findingsByStatus).reduce((sum, [status, count]) => {
+      const category = FINDING_STATUS_CONFIG[status as FindingStatus]?.category
+      return category === 'open' || category === 'in_progress' ? sum + (count || 0) : sum
+    }, 0)
   }, [findingsByStatus])
 
   const resolutionRate = useMemo(() => {
