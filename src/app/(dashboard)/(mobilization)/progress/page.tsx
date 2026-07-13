@@ -26,22 +26,47 @@ import { Progress } from '@/components/ui/progress'
 import { cn } from '@/lib/utils'
 import { CheckCircle, Clock, AlertTriangle, Target, TrendingUp, BarChart3 } from 'lucide-react'
 
+// Cover every FindingStatus the backend can emit — otherwise the status chart
+// silently drops findings in statuses not listed here (new/confirmed/fix_applied/
+// retest/…), so its bars wouldn't sum to the totals shown above it.
 const STATUS_COLORS: Record<string, string> = {
-  open: '#ef4444',
+  new: '#3b82f6',
+  confirmed: '#f97316',
   in_progress: '#f59e0b',
+  fix_applied: '#eab308',
+  remediation: '#f59e0b',
+  in_review: '#06b6d4',
+  retest: '#14b8a6',
   resolved: '#22c55e',
-  closed: '#6b7280',
+  verified: '#10b981',
   accepted: '#8b5cf6',
+  accepted_risk: '#8b5cf6',
   false_positive: '#a3a3a3',
+  duplicate: '#6b7280',
+  draft: '#9ca3af',
+  // legacy/compat statuses
+  open: '#ef4444',
+  closed: '#6b7280',
 }
 
 const STATUS_LABELS: Record<string, string> = {
-  open: 'Open',
+  new: 'New',
+  confirmed: 'Confirmed',
   in_progress: 'In Progress',
+  fix_applied: 'Fix Applied',
+  remediation: 'Remediation',
+  in_review: 'In Review',
+  retest: 'Retest',
   resolved: 'Resolved',
-  closed: 'Closed',
+  verified: 'Verified',
   accepted: 'Accepted',
+  accepted_risk: 'Accepted Risk',
   false_positive: 'False Positive',
+  duplicate: 'Duplicate',
+  draft: 'Draft',
+  // legacy/compat statuses
+  open: 'Open',
+  closed: 'Closed',
 }
 
 const SEVERITY_COLORS: Record<string, string> = {
