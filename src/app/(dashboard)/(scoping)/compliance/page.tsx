@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { Main } from '@/components/layout'
-import { PageHeader, DataTableRowActions } from '@/features/shared'
+import { PageHeader, DataTableRowActions, StatsCard } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -339,30 +339,18 @@ export default function CompliancePage() {
 
         {/* Stats Cards */}
         <div className="grid gap-4 md:grid-cols-4 mb-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Frameworks</CardTitle>
-              <ClipboardCheck className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.totalFrameworks}</div>
-              <p className="text-xs text-muted-foreground">Active frameworks</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Controls</CardTitle>
-              <Shield className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {apiStats?.total_controls ?? stats.totalControls}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {stats.byStatus.implemented} implemented
-              </p>
-            </CardContent>
-          </Card>
+          <StatsCard
+            title="Frameworks"
+            value={stats.totalFrameworks}
+            icon={ClipboardCheck}
+            description="Active frameworks"
+          />
+          <StatsCard
+            title="Controls"
+            value={apiStats?.total_controls ?? stats.totalControls}
+            icon={Shield}
+            description={`${stats.byStatus.implemented} implemented`}
+          />
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">Avg Compliance</CardTitle>
@@ -375,16 +363,13 @@ export default function CompliancePage() {
               <Progress value={stats.averageComplianceScore} className="mt-2" />
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Overdue</CardTitle>
-              <AlertTriangle className="h-4 w-4 text-red-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-500">{stats.overdueControls}</div>
-              <p className="text-xs text-muted-foreground">Controls need attention</p>
-            </CardContent>
-          </Card>
+          <StatsCard
+            title="Overdue"
+            value={stats.overdueControls}
+            valueClassName="text-red-600"
+            icon={AlertTriangle}
+            description="Controls need attention"
+          />
         </div>
 
         <Tabs defaultValue="frameworks" className="space-y-6">
