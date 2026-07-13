@@ -52,16 +52,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
@@ -975,42 +966,36 @@ export default function AssetGroupsPage() {
       )}
 
       {/* Delete Confirmation */}
-      <AlertDialog open={!!deleteGroup} onOpenChange={() => setDeleteGroup(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Asset Group</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete &quot;{deleteGroup?.name}&quot;? This action cannot be
-              undone. All assets in this group will be unassigned.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction className="bg-red-500 hover:bg-red-600" onClick={handleDelete}>
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={!!deleteGroup}
+        onOpenChange={() => setDeleteGroup(null)}
+        title="Delete Asset Group"
+        desc={
+          <>
+            Are you sure you want to delete &quot;{deleteGroup?.name}&quot;? This action cannot be
+            undone. All assets in this group will be unassigned.
+          </>
+        }
+        confirmText="Delete"
+        destructive
+        handleConfirm={handleDelete}
+      />
 
       {/* Bulk Delete Confirmation */}
-      <AlertDialog open={bulkDeleteConfirm} onOpenChange={setBulkDeleteConfirm}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete {selectedIds.length} Asset Groups</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete {selectedIds.length} group(s)? This action cannot be
-              undone. All assets in these groups will be unassigned.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction className="bg-red-500 hover:bg-red-600" onClick={handleBulkDelete}>
-              Delete {selectedIds.length} Groups
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={bulkDeleteConfirm}
+        onOpenChange={setBulkDeleteConfirm}
+        title={`Delete ${selectedIds.length} Asset Groups`}
+        desc={
+          <>
+            Are you sure you want to delete {selectedIds.length} group(s)? This action cannot be
+            undone. All assets in these groups will be unassigned.
+          </>
+        }
+        confirmText={`Delete ${selectedIds.length} Groups`}
+        destructive
+        handleConfirm={handleBulkDelete}
+      />
 
       {/* Add Assets Dialog */}
       {addAssetsGroup && (

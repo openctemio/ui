@@ -57,16 +57,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from 'sonner'
 import { type BusinessUnit, type Criticality, type RiskTolerance } from '@/features/business-units'
@@ -901,31 +892,25 @@ export default function BusinessUnitsPage() {
       </Sheet>
 
       {/* Delete Confirmation */}
-      <AlertDialog open={!!deleteUnit} onOpenChange={(open) => !open && setDeleteUnit(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Business Unit?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete &quot;{deleteUnit?.name}&quot;? This action cannot be
-              undone.
-              {getChildUnits(businessUnits, deleteUnit?.id || '').length > 0 && (
-                <span className="block mt-2 text-destructive">
-                  Warning: This unit has sub-units that will also be affected.
-                </span>
-              )}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              className="bg-destructive text-destructive-foreground"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={!!deleteUnit}
+        onOpenChange={(open) => !open && setDeleteUnit(null)}
+        title="Delete Business Unit?"
+        desc={
+          <>
+            Are you sure you want to delete &quot;{deleteUnit?.name}&quot;? This action cannot be
+            undone.
+            {getChildUnits(businessUnits, deleteUnit?.id || '').length > 0 && (
+              <span className="block mt-2 text-destructive">
+                Warning: This unit has sub-units that will also be affected.
+              </span>
+            )}
+          </>
+        }
+        confirmText="Delete"
+        destructive
+        handleConfirm={handleDelete}
+      />
     </>
   )
 }

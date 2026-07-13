@@ -26,16 +26,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import { KeyRound, Plus, ShieldCheck, Ban, Copy, Check, Link2 } from 'lucide-react'
 import {
   useScimTokens,
@@ -250,30 +241,16 @@ function TokenRow({ t, onChanged }: { t: ScimToken; onChanged: () => void }) {
             <Ban className="h-4 w-4" />
           </Button>
         )}
-        <AlertDialog open={revokeOpen} onOpenChange={setRevokeOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Revoke {t.name}?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Your identity provider will immediately lose access to SCIM provisioning with this
-                token. This cannot be undone.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={(e) => {
-                  e.preventDefault()
-                  void handleRevoke()
-                }}
-                disabled={revoking}
-                className="bg-red-600 hover:bg-red-700"
-              >
-                {revoking ? 'Revoking...' : 'Revoke'}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        <ConfirmDialog
+          open={revokeOpen}
+          onOpenChange={setRevokeOpen}
+          title={`Revoke ${t.name}?`}
+          desc="Your identity provider will immediately lose access to SCIM provisioning with this token. This cannot be undone."
+          confirmText={revoking ? 'Revoking...' : 'Revoke'}
+          destructive
+          isLoading={revoking}
+          handleConfirm={() => void handleRevoke()}
+        />
       </TableCell>
     </TableRow>
   )

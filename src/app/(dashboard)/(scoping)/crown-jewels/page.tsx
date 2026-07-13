@@ -62,16 +62,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from 'sonner'
 import {
@@ -1031,27 +1022,21 @@ export default function CrownJewelsPage() {
       </Sheet>
 
       {/* Delete Confirmation */}
-      <AlertDialog open={!!deleteJewel} onOpenChange={(open) => !open && setDeleteJewel(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Remove Crown Jewel?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to remove &quot;{deleteJewel?.name}&quot; from your crown
-              jewels? This will remove tracking and protection requirements.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              className="bg-destructive text-destructive-foreground"
-              disabled={isUndesignating}
-            >
-              {isUndesignating ? 'Removing...' : 'Remove'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={!!deleteJewel}
+        onOpenChange={(open) => !open && setDeleteJewel(null)}
+        title="Remove Crown Jewel?"
+        desc={
+          <>
+            Are you sure you want to remove &quot;{deleteJewel?.name}&quot; from your crown jewels?
+            This will remove tracking and protection requirements.
+          </>
+        }
+        confirmText={isUndesignating ? 'Removing...' : 'Remove'}
+        destructive
+        isLoading={isUndesignating}
+        handleConfirm={handleDelete}
+      />
     </>
   )
 }

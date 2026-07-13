@@ -29,15 +29,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import {
-  AlertDialog,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Can, Permission } from '@/lib/permissions'
 
@@ -611,24 +603,21 @@ export function ToolsSection({ onToolSelect, selectedToolId }: ToolsSectionProps
 
       {/* Delete Confirmation (only for custom tools) */}
       {isCustomToolsMode && (
-        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Delete Tool</AlertDialogTitle>
-              <AlertDialogDescription>
-                Are you sure you want to delete <strong>{selectedTool?.display_name}</strong>? This
-                action cannot be undone.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-              <Button variant="destructive" onClick={handleDeleteConfirm} disabled={isDeleting}>
-                {isDeleting && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
-                Delete
-              </Button>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        <ConfirmDialog
+          open={deleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
+          title="Delete Tool"
+          desc={
+            <>
+              Are you sure you want to delete <strong>{selectedTool?.display_name}</strong>? This
+              action cannot be undone.
+            </>
+          }
+          confirmText="Delete"
+          destructive
+          isLoading={isDeleting}
+          handleConfirm={handleDeleteConfirm}
+        />
       )}
     </>
   )
