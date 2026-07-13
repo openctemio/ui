@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useAssets } from '@/features/assets'
 import { Main } from '@/components/layout'
-import { PageHeader, DataTableRowActions, StatsCard } from '@/features/shared'
+import { PageHeader, DataTableRowActions, StatsCard, AttackSurfaceTabs } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -471,6 +471,7 @@ export default function InternalSurfacePage() {
             </Can>
           </div>
         </PageHeader>
+        <AttackSurfaceTabs />
 
         {/* Stats Cards */}
         <div className="grid gap-4 md:grid-cols-5 mb-6">
