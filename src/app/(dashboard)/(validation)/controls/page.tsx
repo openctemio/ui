@@ -60,22 +60,29 @@ interface PaginatedResponse {
 }
 
 const controlTypeColors: Record<string, string> = {
-  preventive: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
-  detective: 'bg-purple-500/10 text-purple-500 border-purple-500/20',
-  corrective: 'bg-orange-500/10 text-orange-500 border-orange-500/20',
-  compensating: 'bg-green-500/10 text-green-500 border-green-500/20',
+  preventive:
+    'bg-blue-500/10 text-blue-500 border-blue-500/20 dark:bg-blue-900/30 dark:text-blue-400',
+  detective:
+    'bg-purple-500/10 text-purple-500 border-purple-500/20 dark:bg-purple-900/30 dark:text-purple-400',
+  corrective:
+    'bg-orange-500/10 text-orange-500 border-orange-500/20 dark:bg-orange-900/30 dark:text-orange-400',
+  compensating:
+    'bg-green-500/10 text-green-500 border-green-500/20 dark:bg-green-900/30 dark:text-green-400',
 }
 
 const statusColors: Record<string, string> = {
-  active: 'bg-green-500/10 text-green-500 border-green-500/20',
+  active:
+    'bg-green-500/10 text-green-500 border-green-500/20 dark:bg-green-900/30 dark:text-green-400',
   inactive: 'bg-muted text-muted-foreground',
-  pending: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20',
+  pending:
+    'bg-yellow-500/10 text-yellow-500 border-yellow-500/20 dark:bg-yellow-900/30 dark:text-yellow-400',
 }
 
 const testResultColors: Record<string, string> = {
-  pass: 'bg-green-500/10 text-green-500 border-green-500/20',
-  fail: 'bg-red-500/10 text-red-500 border-red-500/20',
-  partial: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20',
+  pass: 'bg-green-500/10 text-green-500 border-green-500/20 dark:bg-green-900/30 dark:text-green-400',
+  fail: 'bg-red-500/10 text-red-500 border-red-500/20 dark:bg-red-900/30 dark:text-red-400',
+  partial:
+    'bg-yellow-500/10 text-yellow-500 border-yellow-500/20 dark:bg-yellow-900/30 dark:text-yellow-400',
 }
 
 function formatDate(dateStr: string | null): string {

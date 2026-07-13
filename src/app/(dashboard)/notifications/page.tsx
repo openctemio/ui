@@ -44,18 +44,18 @@ import {
 } from '@/features/notifications/lib/notification-types'
 
 const severityColors: Record<string, string> = {
-  critical: 'text-red-500',
-  high: 'text-orange-500',
-  medium: 'text-yellow-500',
-  low: 'text-blue-500',
+  critical: 'text-red-500 dark:text-red-400',
+  high: 'text-orange-500 dark:text-orange-400',
+  medium: 'text-yellow-500 dark:text-yellow-400',
+  low: 'text-blue-500 dark:text-blue-400',
   info: 'text-muted-foreground',
 }
 
 const severityBgColors: Record<string, string> = {
-  critical: 'bg-red-500/10 border-red-500/20',
-  high: 'bg-orange-500/10 border-orange-500/20',
-  medium: 'bg-yellow-500/10 border-yellow-500/20',
-  low: 'bg-blue-500/10 border-blue-500/20',
+  critical: 'bg-red-500/10 border-red-500/20 dark:bg-red-900/30',
+  high: 'bg-orange-500/10 border-orange-500/20 dark:bg-orange-900/30',
+  medium: 'bg-yellow-500/10 border-yellow-500/20 dark:bg-yellow-900/30',
+  low: 'bg-blue-500/10 border-blue-500/20 dark:bg-blue-900/30',
   info: 'bg-muted border-muted-foreground/10',
 }
 

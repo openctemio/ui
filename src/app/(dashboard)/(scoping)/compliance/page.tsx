@@ -106,10 +106,14 @@ function mapAssessmentPriority(p: string | undefined): Priority {
 }
 
 const statusColors: Record<ControlStatus, string> = {
-  implemented: 'bg-green-500/10 text-green-500 border-green-500/20',
-  partial: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20',
-  not_implemented: 'bg-red-500/10 text-red-500 border-red-500/20',
-  not_applicable: 'bg-gray-500/10 text-gray-500 border-gray-500/20',
+  implemented:
+    'bg-green-500/10 text-green-500 border-green-500/20 dark:bg-green-900/30 dark:text-green-400',
+  partial:
+    'bg-yellow-500/10 text-yellow-500 border-yellow-500/20 dark:bg-yellow-900/30 dark:text-yellow-400',
+  not_implemented:
+    'bg-red-500/10 text-red-500 border-red-500/20 dark:bg-red-900/30 dark:text-red-400',
+  not_applicable:
+    'bg-gray-500/10 text-gray-500 border-gray-500/20 dark:bg-gray-800 dark:text-gray-400',
 }
 
 const statusLabels: Record<ControlStatus, string> = {
@@ -127,10 +131,11 @@ const statusIcons: Record<ControlStatus, React.ElementType> = {
 }
 
 const priorityColors: Record<Priority, string> = {
-  critical: 'bg-red-500/10 text-red-500 border-red-500/20',
-  high: 'bg-orange-500/10 text-orange-500 border-orange-500/20',
-  medium: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20',
-  low: 'bg-green-500/10 text-green-500 border-green-500/20',
+  critical: 'bg-red-500/10 text-red-500 border-red-500/20 dark:bg-red-900/30 dark:text-red-400',
+  high: 'bg-orange-500/10 text-orange-500 border-orange-500/20 dark:bg-orange-900/30 dark:text-orange-400',
+  medium:
+    'bg-yellow-500/10 text-yellow-500 border-yellow-500/20 dark:bg-yellow-900/30 dark:text-yellow-400',
+  low: 'bg-green-500/10 text-green-500 border-green-500/20 dark:bg-green-900/30 dark:text-green-400',
 }
 
 export default function CompliancePage() {
