@@ -8,19 +8,11 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
+import { DataTableRowActions } from '@/features/shared'
 import {
-  MoreHorizontal,
   Check,
   X,
   AlertTriangle,
@@ -317,43 +309,42 @@ export function ExposureTable({
                   </span>
                 </TableCell>
                 <TableCell onClick={(e) => e.stopPropagation()}>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <MoreHorizontal className="h-4 w-4" />
-                        <span className="sr-only">Open menu</span>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => onViewDetails?.(exposure)}>
-                        <Eye className="me-2 h-4 w-4" />
-                        View Details
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      {exposure.state === 'active' && (
-                        <>
-                          <DropdownMenuItem onClick={() => onResolve?.(exposure)}>
-                            <Check className="me-2 h-4 w-4 text-green-500" />
-                            Mark Resolved
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => onAccept?.(exposure)}>
-                            <AlertTriangle className="me-2 h-4 w-4 text-yellow-500" />
-                            Accept Risk
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => onMarkFalsePositive?.(exposure)}>
-                            <X className="me-2 h-4 w-4 text-muted-foreground" />
-                            False Positive
-                          </DropdownMenuItem>
-                        </>
-                      )}
-                      {exposure.state !== 'active' && (
-                        <DropdownMenuItem onClick={() => onReactivate?.(exposure)}>
-                          <RefreshCw className="me-2 h-4 w-4 text-blue-500" />
-                          Reactivate
-                        </DropdownMenuItem>
-                      )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <DataTableRowActions
+                    actions={[
+                      {
+                        label: 'View Details',
+                        icon: Eye,
+                        onClick: () => onViewDetails?.(exposure),
+                      },
+                      ...(exposure.state === 'active'
+                        ? [
+                            {
+                              label: 'Mark Resolved',
+                              icon: Check,
+                              onClick: () => onResolve?.(exposure),
+                              separatorBefore: true,
+                            },
+                            {
+                              label: 'Accept Risk',
+                              icon: AlertTriangle,
+                              onClick: () => onAccept?.(exposure),
+                            },
+                            {
+                              label: 'False Positive',
+                              icon: X,
+                              onClick: () => onMarkFalsePositive?.(exposure),
+                            },
+                          ]
+                        : [
+                            {
+                              label: 'Reactivate',
+                              icon: RefreshCw,
+                              onClick: () => onReactivate?.(exposure),
+                              separatorBefore: true,
+                            },
+                          ]),
+                    ]}
+                  />
                 </TableCell>
               </TableRow>
             )

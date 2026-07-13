@@ -9,7 +9,6 @@ import {
   RefreshCw,
   Loader2,
   Search,
-  MoreHorizontal,
   Pencil,
   Trash2,
   GitBranch,
@@ -27,13 +26,6 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Table,
@@ -54,6 +46,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
+import { DataTableRowActions } from '@/features/shared'
 import { AddCredentialDialog } from './add-credential-dialog'
 import { EditCredentialDialog } from './edit-credential-dialog'
 import { Can, Permission } from '@/lib/permissions'
@@ -319,33 +312,24 @@ export function SecretStoreSection() {
                           <Can
                             permission={[Permission.CredentialsWrite, Permission.CredentialsWrite]}
                           >
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <Can permission={Permission.CredentialsWrite}>
-                                  <DropdownMenuItem
-                                    onClick={() => handleEditCredential(credential)}
-                                  >
-                                    <Pencil className="me-2 h-4 w-4" />
-                                    Edit
-                                  </DropdownMenuItem>
-                                </Can>
-                                <Can permission={Permission.CredentialsWrite}>
-                                  <DropdownMenuSeparator />
-                                  <DropdownMenuItem
-                                    className="text-red-500"
-                                    onClick={() => handleDeleteClick(credential)}
-                                  >
-                                    <Trash2 className="me-2 h-4 w-4" />
-                                    Delete
-                                  </DropdownMenuItem>
-                                </Can>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                            <DataTableRowActions
+                              actions={[
+                                {
+                                  label: 'Edit',
+                                  icon: Pencil,
+                                  onClick: () => handleEditCredential(credential),
+                                  permission: Permission.CredentialsWrite,
+                                },
+                                {
+                                  label: 'Delete',
+                                  icon: Trash2,
+                                  onClick: () => handleDeleteClick(credential),
+                                  destructive: true,
+                                  separatorBefore: true,
+                                  permission: Permission.CredentialsWrite,
+                                },
+                              ]}
+                            />
                           </Can>
                         </TableCell>
                       </TableRow>

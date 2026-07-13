@@ -13,7 +13,13 @@ import {
   useReactTable,
 } from '@tanstack/react-table'
 import { Main } from '@/components/layout'
-import { PageHeader, StatusBadge, RiskScoreBadge, DataTablePagination } from '@/features/shared'
+import {
+  PageHeader,
+  StatusBadge,
+  RiskScoreBadge,
+  DataTablePagination,
+  DataTableRowActions,
+} from '@/features/shared'
 import {
   AssetDetailSheet,
   StatCard,
@@ -58,13 +64,6 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -76,7 +75,6 @@ import {
   Plus,
   KeyRound,
   Search as SearchIcon,
-  MoreHorizontal,
   Eye,
   Pencil,
   Trash2,
@@ -116,7 +114,7 @@ import type {
 } from '@/features/credentials/api/credential-api.types'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { copyToClipboard } from '@/lib/clipboard'
-import { Can, Permission } from '@/lib/permissions'
+import { Permission } from '@/lib/permissions'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Skeleton } from '@/components/ui/skeleton'
 
@@ -415,42 +413,37 @@ export default function CredentialsPage() {
       cell: ({ row }) => {
         const credential = row.original
         return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setSelectedCredential(credential)}>
-                <Eye className="me-2 h-4 w-4" />
-                View Details
-              </DropdownMenuItem>
-              <Can permission={Permission.CredentialsWrite}>
-                <DropdownMenuItem onClick={() => handleOpenEdit(credential)}>
-                  <Pencil className="me-2 h-4 w-4" />
-                  Edit
-                </DropdownMenuItem>
-              </Can>
-              <DropdownMenuItem onClick={() => handleCopyCredential(credential)}>
-                <Copy className="me-2 h-4 w-4" />
-                Copy Name
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <Can permission={Permission.CredentialsWrite}>
-                <DropdownMenuItem
-                  className="text-destructive"
-                  onClick={() => {
-                    setCredentialToDelete(credential)
-                    setDeleteDialogOpen(true)
-                  }}
-                >
-                  <Trash2 className="me-2 h-4 w-4" />
-                  Delete
-                </DropdownMenuItem>
-              </Can>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <DataTableRowActions
+            actions={[
+              {
+                label: 'View Details',
+                icon: Eye,
+                onClick: () => setSelectedCredential(credential),
+              },
+              {
+                label: 'Edit',
+                icon: Pencil,
+                onClick: () => handleOpenEdit(credential),
+                permission: Permission.CredentialsWrite,
+              },
+              {
+                label: 'Copy Name',
+                icon: Copy,
+                onClick: () => handleCopyCredential(credential),
+              },
+              {
+                label: 'Delete',
+                icon: Trash2,
+                onClick: () => {
+                  setCredentialToDelete(credential)
+                  setDeleteDialogOpen(true)
+                },
+                destructive: true,
+                separatorBefore: true,
+                permission: Permission.CredentialsWrite,
+              },
+            ]}
+          />
         )
       },
     },

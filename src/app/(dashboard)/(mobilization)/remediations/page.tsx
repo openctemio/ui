@@ -8,6 +8,7 @@ import {
   DataTable,
   DataTableColumnHeader,
   SeverityBadge,
+  SectionTabs,
   type Severity,
 } from '@/features/shared'
 import { Button } from '@/components/ui/button'
@@ -105,8 +106,15 @@ export default function RemediationsPage() {
   return (
     <Main>
       <PageHeader
-        title="Remediations"
+        title="Remediation"
         description="One fix, many findings — resolve a whole solution family in a single action."
+      />
+
+      <SectionTabs
+        tabs={[
+          { label: 'Tasks', href: '/remediation' },
+          { label: 'Solution Families', href: '/remediations' },
+        ]}
       />
 
       {isLoading ? (

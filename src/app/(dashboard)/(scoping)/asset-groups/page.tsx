@@ -4,7 +4,13 @@ import { useState, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { ColumnDef } from '@tanstack/react-table'
 import { Main } from '@/components/layout'
-import { PageHeader, DataTable, DataTableColumnHeader, RiskScoreBadge } from '@/features/shared'
+import {
+  PageHeader,
+  DataTable,
+  DataTableColumnHeader,
+  DataTableRowActions,
+  RiskScoreBadge,
+} from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -16,7 +22,6 @@ import {
   Download,
   Filter,
   RefreshCw,
-  MoreHorizontal,
   Eye,
   Pencil,
   Trash2,
@@ -37,7 +42,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
@@ -511,55 +515,49 @@ export default function AssetGroupsPage() {
       cell: ({ row }) => {
         const group = row.original
         return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setViewGroup(group)}>
-                <Eye className="me-2 h-4 w-4" />
-                Quick View
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => router.push(`/asset-groups/${group.id}`)}>
-                <ExternalLink className="me-2 h-4 w-4" />
-                Open Full Page
-              </DropdownMenuItem>
-              <Can permission={Permission.AssetGroupsWrite}>
-                <DropdownMenuItem onClick={() => setEditGroup(group)}>
-                  <Pencil className="me-2 h-4 w-4" />
-                  Edit
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setAddAssetsGroup(group)}>
-                  <Plus className="me-2 h-4 w-4" />
-                  Add Assets
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => router.push(`/asset-groups/${group.id}?tab=assets`)}
-                >
-                  <Package className="me-2 h-4 w-4" />
-                  Manage Assets
-                </DropdownMenuItem>
-              </Can>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => handleCopyId(group.id)}>
-                <Copy className="me-2 h-4 w-4" />
-                Copy ID
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleCopyLink(group.id)}>
-                <Link className="me-2 h-4 w-4" />
-                Copy Link
-              </DropdownMenuItem>
-              <Can permission={Permission.AssetGroupsDelete}>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem className="text-red-400" onClick={() => setDeleteGroup(group)}>
-                  <Trash2 className="me-2 h-4 w-4" />
-                  Delete
-                </DropdownMenuItem>
-              </Can>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <DataTableRowActions
+            actions={[
+              { label: 'Quick View', icon: Eye, onClick: () => setViewGroup(group) },
+              {
+                label: 'Open Full Page',
+                icon: ExternalLink,
+                onClick: () => router.push(`/asset-groups/${group.id}`),
+              },
+              {
+                label: 'Edit',
+                icon: Pencil,
+                onClick: () => setEditGroup(group),
+                permission: Permission.AssetGroupsWrite,
+              },
+              {
+                label: 'Add Assets',
+                icon: Plus,
+                onClick: () => setAddAssetsGroup(group),
+                permission: Permission.AssetGroupsWrite,
+              },
+              {
+                label: 'Manage Assets',
+                icon: Package,
+                onClick: () => router.push(`/asset-groups/${group.id}?tab=assets`),
+                permission: Permission.AssetGroupsWrite,
+              },
+              {
+                label: 'Copy ID',
+                icon: Copy,
+                onClick: () => handleCopyId(group.id),
+                separatorBefore: true,
+              },
+              { label: 'Copy Link', icon: Link, onClick: () => handleCopyLink(group.id) },
+              {
+                label: 'Delete',
+                icon: Trash2,
+                onClick: () => setDeleteGroup(group),
+                destructive: true,
+                separatorBefore: true,
+                permission: Permission.AssetGroupsDelete,
+              },
+            ]}
+          />
         )
       },
     },

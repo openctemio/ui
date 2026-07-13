@@ -9,7 +9,6 @@ import {
   RefreshCw,
   Loader2,
   Search,
-  MoreHorizontal,
   Trash2,
   Download,
   CheckCircle,
@@ -29,13 +28,6 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Table,
@@ -64,6 +56,7 @@ import {
 } from '@/components/ui/select'
 
 import { AddScannerTemplateDialog } from './add-scanner-template-dialog'
+import { DataTableRowActions, type RowAction } from '@/features/shared'
 import { Can, Permission } from '@/lib/permissions'
 import {
   useScannerTemplates,
@@ -568,37 +561,33 @@ export function ScannerTemplatesSection() {
                         </span>
                       </TableCell>
                       <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleDownload(template)}>
-                              <Download className="me-2 h-4 w-4" />
-                              Download
-                            </DropdownMenuItem>
-                            <Can permission={Permission.ScannerTemplatesWrite}>
-                              {template.status === 'active' && (
-                                <DropdownMenuItem onClick={() => handleDeprecateClick(template)}>
-                                  <Archive className="me-2 h-4 w-4" />
-                                  Deprecate
-                                </DropdownMenuItem>
-                              )}
-                            </Can>
-                            <Can permission={Permission.ScannerTemplatesDelete}>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                className="text-red-500"
-                                onClick={() => handleDeleteClick(template)}
-                              >
-                                <Trash2 className="me-2 h-4 w-4" />
-                                Delete
-                              </DropdownMenuItem>
-                            </Can>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        <DataTableRowActions
+                          actions={[
+                            {
+                              label: 'Download',
+                              icon: Download,
+                              onClick: () => handleDownload(template),
+                            },
+                            ...(template.status === 'active'
+                              ? ([
+                                  {
+                                    label: 'Deprecate',
+                                    icon: Archive,
+                                    onClick: () => handleDeprecateClick(template),
+                                    permission: Permission.ScannerTemplatesWrite,
+                                  },
+                                ] satisfies RowAction[])
+                              : []),
+                            {
+                              label: 'Delete',
+                              icon: Trash2,
+                              onClick: () => handleDeleteClick(template),
+                              destructive: true,
+                              separatorBefore: true,
+                              permission: Permission.ScannerTemplatesDelete,
+                            },
+                          ]}
+                        />
                       </TableCell>
                     </TableRow>
                   ))}

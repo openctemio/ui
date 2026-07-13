@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react'
 import useSWR from 'swr'
 import { Main } from '@/components/layout'
-import { PageHeader } from '@/features/shared'
+import { PageHeader, DataTableRowActions } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -19,13 +19,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import {
   Dialog,
   DialogContent,
@@ -54,7 +47,6 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import {
   Plus,
-  MoreHorizontal,
   Pencil,
   Trash2,
   Briefcase,
@@ -427,27 +419,18 @@ export default function BusinessServicesPage() {
                     </TableCell>
                     <TableCell>
                       <Can permission={Permission.BusinessServicesWrite}>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => openEdit(service)}>
-                              <Pencil className="me-2 h-4 w-4" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              className="text-red-500"
-                              onClick={() => setDeletingService(service)}
-                            >
-                              <Trash2 className="me-2 h-4 w-4" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        <DataTableRowActions
+                          actions={[
+                            { label: 'Edit', icon: Pencil, onClick: () => openEdit(service) },
+                            {
+                              label: 'Delete',
+                              icon: Trash2,
+                              onClick: () => setDeletingService(service),
+                              destructive: true,
+                              separatorBefore: true,
+                            },
+                          ]}
+                        />
                       </Can>
                     </TableCell>
                   </TableRow>

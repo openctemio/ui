@@ -579,15 +579,11 @@ export const sidebarData: SidebarData = {
       title: 'Mobilization',
       items: [
         {
-          title: 'Remediation Tasks',
+          // One nav item; the two related views (Tasks / Solution Families) are
+          // presented as in-page <SectionTabs> rather than two near-identical
+          // sidebar entries.
+          title: 'Remediation',
           url: '/remediation',
-          icon: ListChecks,
-          permission: Permission.RemediationRead,
-          module: 'remediation_tasks',
-        },
-        {
-          title: 'Remediations',
-          url: '/remediations',
           icon: Wrench,
           permission: Permission.RemediationRead,
           module: 'remediation_tasks',
