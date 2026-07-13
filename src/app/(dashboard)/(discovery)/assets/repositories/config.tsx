@@ -32,7 +32,11 @@ import { cn } from '@/lib/utils'
 import { sanitizeExternalUrl } from '@/lib/utils'
 import { getErrorMessage } from '@/lib/api/error-handler'
 import { useSCMConnections } from '@/features/repositories/hooks/use-repositories'
-import { invalidateRepositoriesCache, SCM_PROVIDER_LABELS } from '@/features/repositories'
+import {
+  invalidateRepositoriesCache,
+  SCM_PROVIDER_LABELS,
+  detectProviderFromUrl,
+} from '@/features/repositories'
 import type { Asset } from '@/features/assets'
 import type { AssetPageConfig } from '@/features/assets/types/page-config.types'
 
@@ -274,14 +278,35 @@ async function syncRepository(assetId: string, name: string) {
   }
 }
 
+// SCM providers the UI can label/style directly. Anything else (empty or a
+// generic backend value like "other") is treated as unknown and re-derived
+// from the real repository URL host.
+const KNOWN_SCM_PROVIDERS = new Set<string>([
+  'github',
+  'gitlab',
+  'bitbucket',
+  'azure_devops',
+  'codecommit',
+  'local',
+])
+
 function getProviderFromAsset(asset: Asset): string {
   const meta = asset.metadata as Record<string, unknown>
-  return (
-    asset.provider ||
-    (meta.project_provider as string) ||
-    (meta.repo_provider as string) ||
-    'github'
-  )
+  const declared =
+    asset.provider || (meta.project_provider as string) || (meta.repo_provider as string) || ''
+
+  if (declared && KNOWN_SCM_PROVIDERS.has(declared)) {
+    return declared
+  }
+
+  // Backend left the provider unset or generic ("other"): infer it from the
+  // actual clone/web URL host instead of showing a meaningless label.
+  const url = asset.repository?.webUrl || asset.repository?.cloneUrl
+  if (url) {
+    return detectProviderFromUrl(url)
+  }
+
+  return declared || 'github'
 }
 
 function getWebUrl(asset: Asset): string | undefined {
@@ -412,9 +437,14 @@ export const repositoriesConfig: AssetPageConfig = {
       variant: 'warning',
     },
     {
-      title: 'Total',
-      icon: GitBranch,
-      compute: (_assets, stats) => stats.total,
+      // Distinct from "With Findings" (# of repos affected) and "Avg Risk
+      // Score" (mean) — surfaces how many repos are high-risk. The shared
+      // AssetPage template already renders a "Total Repositories" card, so a
+      // second "Total" here was redundant.
+      title: 'High Risk',
+      icon: Shield,
+      compute: (_assets, stats) => stats.highRiskCount,
+      variant: 'danger',
     },
     {
       // Backend exposes risk_score_avg across the type-filtered set
