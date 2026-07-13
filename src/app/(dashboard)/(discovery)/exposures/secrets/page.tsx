@@ -2,7 +2,14 @@
 
 import { useMemo } from 'react'
 import { Main } from '@/components/layout'
-import { PageHeader, StatsCard, EmptyState } from '@/features/shared'
+import {
+  PageHeader,
+  StatsCard,
+  EmptyState,
+  formatRiskScore,
+  getRiskScoreChangeType,
+  getRiskLevel,
+} from '@/features/shared'
 import { useDashboardStats } from '@/features/dashboard/hooks/use-dashboard-stats'
 import { useTenant } from '@/context/tenant-provider'
 import {
@@ -180,21 +187,9 @@ export default function SecretsExposurePage() {
             />
             <StatsCard
               title="Risk Score"
-              value={stats.assets.riskScore.toFixed(0)}
-              changeType={
-                stats.assets.riskScore > 70
-                  ? 'negative'
-                  : stats.assets.riskScore > 40
-                    ? 'neutral'
-                    : 'positive'
-              }
-              change={
-                stats.assets.riskScore > 70
-                  ? 'High risk'
-                  : stats.assets.riskScore > 40
-                    ? 'Medium risk'
-                    : 'Low risk'
-              }
+              value={formatRiskScore(stats.assets.riskScore)}
+              changeType={getRiskScoreChangeType(stats.assets.riskScore)}
+              change={`${getRiskLevel(stats.assets.riskScore).label} risk`}
               icon={Shield}
             />
           </section>

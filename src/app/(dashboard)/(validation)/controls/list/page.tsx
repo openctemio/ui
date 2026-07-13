@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo } from 'react'
+import { formatChartDate } from '@/lib/format-chart-date'
 import { Main } from '@/components/layout'
 import { PageHeader, StatsCard, EmptyState } from '@/features/shared'
 import { useDashboardStats } from '@/features/dashboard/hooks/use-dashboard-stats'
@@ -179,7 +180,7 @@ export default function SecurityControlsPage() {
   // Control Performance Trend
   const trendChartData = useMemo(() => {
     return stats.findingTrend.map((point) => ({
-      date: point.date,
+      date: formatChartDate(point.date),
       critical: point.critical,
       high: point.high,
       medium: point.medium,

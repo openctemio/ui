@@ -2,7 +2,13 @@
 
 import { useMemo } from 'react'
 import { Main } from '@/components/layout'
-import { PageHeader, StatsCard, EmptyState } from '@/features/shared'
+import {
+  PageHeader,
+  StatsCard,
+  EmptyState,
+  formatRiskScore,
+  getRiskScoreChangeType,
+} from '@/features/shared'
 import { useDashboardStats } from '@/features/dashboard/hooks/use-dashboard-stats'
 import { useTenant } from '@/context/tenant-provider'
 import {
@@ -229,9 +235,9 @@ export default function ExposureScoringPage() {
           <section className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
             <StatsCard
               title="Risk Score"
-              value={`${riskScore.toFixed(1)} / 10`}
+              value={formatRiskScore(riskScore)}
               description="Overall exposure risk"
-              changeType={riskScore >= 7 ? 'negative' : riskScore >= 4 ? 'neutral' : 'positive'}
+              changeType={getRiskScoreChangeType(riskScore)}
               icon={Gauge}
             />
             <StatsCard
