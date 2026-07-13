@@ -6,12 +6,6 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Input } from '@/components/ui/input'
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -21,7 +15,6 @@ import {
 } from '@/components/ui/dialog'
 import {
   Plus,
-  MoreHorizontal,
   Pencil,
   Trash2,
   Eye,
@@ -33,6 +26,7 @@ import {
   Search,
   AlertCircle,
 } from 'lucide-react'
+import { DataTableRowActions } from '@/features/shared'
 import { toast } from 'sonner'
 import {
   useScopeRules,
@@ -298,39 +292,29 @@ export function ScopeRulesTab({ groupId }: ScopeRulesTabProps) {
                 </div>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 w-8 p-0"
-                      aria-label={`Actions for ${rule.name}`}
-                    >
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => handlePreview(rule)}>
-                      <Eye className="me-2 h-4 w-4" />
-                      Preview
-                    </DropdownMenuItem>
-                    <Can permission={Permission.GroupsWrite}>
-                      <DropdownMenuItem onClick={() => setEditingRule(rule)}>
-                        <Pencil className="me-2 h-4 w-4" />
-                        Edit
-                      </DropdownMenuItem>
-                    </Can>
-                    <Can permission={Permission.GroupsDelete}>
-                      <DropdownMenuItem
-                        className="text-red-400"
-                        onClick={() => setDeleteConfirm(rule)}
-                      >
-                        <Trash2 className="me-2 h-4 w-4" />
-                        Delete
-                      </DropdownMenuItem>
-                    </Can>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <DataTableRowActions
+                  label={`Actions for ${rule.name}`}
+                  actions={[
+                    {
+                      label: 'Preview',
+                      icon: Eye,
+                      onClick: () => handlePreview(rule),
+                    },
+                    {
+                      label: 'Edit',
+                      icon: Pencil,
+                      permission: Permission.GroupsWrite,
+                      onClick: () => setEditingRule(rule),
+                    },
+                    {
+                      label: 'Delete',
+                      icon: Trash2,
+                      destructive: true,
+                      permission: Permission.GroupsDelete,
+                      onClick: () => setDeleteConfirm(rule),
+                    },
+                  ]}
+                />
               </div>
             </div>
           ))}

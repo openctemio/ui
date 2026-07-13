@@ -12,7 +12,12 @@ import {
   useReactTable,
 } from '@tanstack/react-table'
 import { Main } from '@/components/layout'
-import { PageHeader, DataTablePagination } from '@/features/shared'
+import {
+  PageHeader,
+  DataTablePagination,
+  DataTableRowActions,
+  type RowAction,
+} from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -40,7 +45,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -48,7 +52,6 @@ import { toast } from 'sonner'
 import {
   Shield,
   Plus,
-  MoreHorizontal,
   Trash2,
   ArrowUpDown,
   Search as SearchIcon,
@@ -231,44 +234,36 @@ export default function PermissionSetsPage() {
         const permissionSet = row.original
         const isSystem = permissionSet.is_system
 
-        return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setSelectedPermissionSetId(permissionSet.id)}>
-                <Eye className="me-2 h-4 w-4" />
-                View Details
-              </DropdownMenuItem>
-              {!isSystem && (
-                <>
-                  <Can permission={Permission.PermissionSetsWrite}>
-                    <DropdownMenuItem onClick={() => setSelectedPermissionSetId(permissionSet.id)}>
-                      <Pencil className="me-2 h-4 w-4" />
-                      Edit
-                    </DropdownMenuItem>
-                  </Can>
-                  <Can permission={Permission.PermissionSetsDelete}>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      className="text-red-400"
-                      onClick={() => {
-                        setPermissionSetToDelete(permissionSet)
-                        setDeleteDialogOpen(true)
-                      }}
-                    >
-                      <Trash2 className="me-2 h-4 w-4" />
-                      Delete
-                    </DropdownMenuItem>
-                  </Can>
-                </>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )
+        const actions: RowAction[] = [
+          {
+            label: 'View Details',
+            icon: Eye,
+            onClick: () => setSelectedPermissionSetId(permissionSet.id),
+          },
+          ...(!isSystem
+            ? [
+                {
+                  label: 'Edit',
+                  icon: Pencil,
+                  permission: Permission.PermissionSetsWrite,
+                  onClick: () => setSelectedPermissionSetId(permissionSet.id),
+                },
+                {
+                  label: 'Delete',
+                  icon: Trash2,
+                  destructive: true,
+                  separatorBefore: true,
+                  permission: Permission.PermissionSetsDelete,
+                  onClick: () => {
+                    setPermissionSetToDelete(permissionSet)
+                    setDeleteDialogOpen(true)
+                  },
+                },
+              ]
+            : []),
+        ]
+
+        return <DataTableRowActions actions={actions} />
       },
     },
   ]
