@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { Main } from '@/components/layout'
-import { PageHeader } from '@/features/shared'
+import { PageHeader, DataTableRowActions } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -12,7 +12,6 @@ import { Progress } from '@/components/ui/progress'
 import {
   Download,
   Filter,
-  MoreHorizontal,
   Eye,
   Pencil,
   ClipboardCheck,
@@ -29,12 +28,6 @@ import {
   Circle,
 } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import {
   Dialog,
   DialogContent,
@@ -527,23 +520,22 @@ export default function CompliancePage() {
                                 {req.evidenceCount} evidence
                               </div>
                             </div>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                                <Button variant="ghost" size="icon">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => setViewRequirement(req)}>
-                                  <Eye className="me-2 h-4 w-4" />
-                                  View Details
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => openEdit(req)}>
-                                  <Pencil className="me-2 h-4 w-4" />
-                                  Update Status
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                            <span onClick={(e) => e.stopPropagation()}>
+                              <DataTableRowActions
+                                actions={[
+                                  {
+                                    label: 'View Details',
+                                    icon: Eye,
+                                    onClick: () => setViewRequirement(req),
+                                  },
+                                  {
+                                    label: 'Update Status',
+                                    icon: Pencil,
+                                    onClick: () => openEdit(req),
+                                  },
+                                ]}
+                              />
+                            </span>
                             <ChevronRight className="h-4 w-4 text-muted-foreground" />
                           </div>
                         </div>

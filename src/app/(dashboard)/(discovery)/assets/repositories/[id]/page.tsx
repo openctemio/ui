@@ -6,7 +6,7 @@ import { useFindingsApi } from '@/features/findings/api/use-findings-api'
 import type { ApiFinding } from '@/features/findings/api/finding-api.types'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { Main } from '@/components/layout'
-import { RiskScoreBadge } from '@/features/shared'
+import { RiskScoreBadge, DataTableRowActions } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
@@ -1368,24 +1368,15 @@ function BranchesTab({
                     </div>
                   </TableCell>
                   <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            onViewBranchFindings?.(branch.name)
-                          }}
-                        >
-                          <Eye className="me-2 h-4 w-4" />
-                          View Findings
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <DataTableRowActions
+                      actions={[
+                        {
+                          label: 'View Findings',
+                          icon: Eye,
+                          onClick: () => onViewBranchFindings?.(branch.name),
+                        },
+                      ]}
+                    />
                   </TableCell>
                 </TableRow>
               ))}

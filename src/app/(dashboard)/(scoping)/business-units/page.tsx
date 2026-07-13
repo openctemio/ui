@@ -3,7 +3,13 @@
 import { useState, useMemo, useEffect } from 'react'
 import { ColumnDef } from '@tanstack/react-table'
 import { Main } from '@/components/layout'
-import { PageHeader, DataTable, DataTableColumnHeader, RiskScoreBadge } from '@/features/shared'
+import {
+  PageHeader,
+  DataTable,
+  DataTableColumnHeader,
+  DataTableRowActions,
+  RiskScoreBadge,
+} from '@/features/shared'
 import { Can, Permission } from '@/lib/permissions'
 import { useCsvExport, type ExportFieldConfig } from '@/hooks/use-csv-export'
 import { Button } from '@/components/ui/button'
@@ -16,7 +22,6 @@ import {
   Plus,
   Download,
   Filter,
-  MoreHorizontal,
   Eye,
   Pencil,
   Trash2,
@@ -30,13 +35,6 @@ import {
   X,
 } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import {
   Dialog,
   DialogContent,
@@ -389,35 +387,25 @@ export default function BusinessUnitsPage() {
         const unit = row.original
         return (
           <Can permission={[Permission.ScopeWrite, Permission.ScopeDelete]}>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon">
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setViewUnit(unit)}>
-                  <Eye className="me-2 h-4 w-4" />
-                  View Details
-                </DropdownMenuItem>
-                <Can permission={Permission.ScopeWrite}>
-                  <DropdownMenuItem onClick={() => openEdit(unit)}>
-                    <Pencil className="me-2 h-4 w-4" />
-                    Edit
-                  </DropdownMenuItem>
-                </Can>
-                <Can permission={Permission.ScopeDelete}>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onClick={() => setDeleteUnit(unit)}
-                    className="text-destructive"
-                  >
-                    <Trash2 className="me-2 h-4 w-4" />
-                    Delete
-                  </DropdownMenuItem>
-                </Can>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <DataTableRowActions
+              actions={[
+                { label: 'View Details', icon: Eye, onClick: () => setViewUnit(unit) },
+                {
+                  label: 'Edit',
+                  icon: Pencil,
+                  onClick: () => openEdit(unit),
+                  permission: Permission.ScopeWrite,
+                },
+                {
+                  label: 'Delete',
+                  icon: Trash2,
+                  onClick: () => setDeleteUnit(unit),
+                  destructive: true,
+                  separatorBefore: true,
+                  permission: Permission.ScopeDelete,
+                },
+              ]}
+            />
           </Can>
         )
       },
