@@ -3,7 +3,7 @@
 import useSWR from 'swr'
 import { get, post } from '@/lib/api/client'
 
-interface DedupReview {
+export interface DedupReview {
   id: string
   tenant_id: string
   normalized_name: string

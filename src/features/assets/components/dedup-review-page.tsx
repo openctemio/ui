@@ -1,25 +1,29 @@
 'use client'
 
-import { useState } from 'react'
-import { formatDistanceToNow } from 'date-fns'
+import { useMemo, useState } from 'react'
+import type { ColumnDef } from '@tanstack/react-table'
 import { Main } from '@/components/layout'
-import { EmptyState, PageHeader } from '@/features/shared'
+import {
+  DataTable,
+  DataTableColumnHeader,
+  EmptyState,
+  PageHeader,
+  RelativeTime,
+  StackedCell,
+} from '@/features/shared'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import { Can, Permission } from '@/lib/permissions'
 import { GitMerge, Check, X, CopyCheck } from 'lucide-react'
 import { toast } from 'sonner'
-import { useDedupReviews, approveDedupReview, rejectDedupReview } from '../api/use-asset-dedup'
+import {
+  useDedupReviews,
+  approveDedupReview,
+  rejectDedupReview,
+  type DedupReview,
+} from '../api/use-asset-dedup'
 
 // DedupReviewPage surfaces the identity/dedup pipeline that was previously
 // invisible: the correlator enqueues a pending review when several assets share
@@ -49,6 +53,94 @@ export function DedupReviewPage() {
     }
   }
 
+  const columns = useMemo<ColumnDef<DedupReview>[]>(
+    () => [
+      {
+        accessorKey: 'normalized_name',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Identity" />,
+        cell: ({ row }) => (
+          <div>
+            <div className="font-medium">{row.original.normalized_name}</div>
+            <Badge variant="outline" className="mt-1">
+              {row.original.asset_type}
+            </Badge>
+          </div>
+        ),
+      },
+      {
+        accessorKey: 'keep_asset_name',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Keep" />,
+        cell: ({ row }) => (
+          <StackedCell
+            primary={row.original.keep_asset_name}
+            secondary={`${row.original.keep_finding_count} finding${
+              row.original.keep_finding_count === 1 ? '' : 's'
+            }`}
+          />
+        ),
+      },
+      {
+        id: 'merge',
+        header: 'Merge into it',
+        enableSorting: false,
+        cell: ({ row }) => (
+          <div>
+            <div className="flex flex-wrap gap-1">
+              {row.original.merge_asset_names.map((name, i) => (
+                <Badge key={i} variant="secondary">
+                  {name}
+                </Badge>
+              ))}
+            </div>
+            <div className="mt-1 text-xs text-muted-foreground">
+              {row.original.merge_asset_ids.length} asset
+              {row.original.merge_asset_ids.length === 1 ? '' : 's'} ·{' '}
+              {row.original.merge_finding_count} finding
+              {row.original.merge_finding_count === 1 ? '' : 's'}
+            </div>
+          </div>
+        ),
+      },
+      {
+        accessorKey: 'created_at',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Flagged" />,
+        cell: ({ row }) => <RelativeTime date={row.original.created_at} />,
+      },
+      {
+        id: 'actions',
+        header: () => <div className="text-end">Actions</div>,
+        enableSorting: false,
+        enableHiding: false,
+        cell: ({ row }) => (
+          <Can permission={Permission.AssetsWrite}>
+            <div className="flex justify-end gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={busyId === row.original.id}
+                onClick={() => act(row.original.id, 'reject')}
+              >
+                <X className="me-1 h-3.5 w-3.5" />
+                Keep separate
+              </Button>
+              <Button
+                size="sm"
+                disabled={busyId === row.original.id}
+                onClick={() => act(row.original.id, 'approve')}
+              >
+                <GitMerge className="me-1 h-3.5 w-3.5" />
+                Merge
+              </Button>
+            </div>
+          </Can>
+        ),
+      },
+    ],
+    // act is stable within a render; busyId drives the disabled state
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [busyId]
+  )
+
   return (
     <Main>
       <PageHeader
@@ -75,78 +167,7 @@ export function DedupReviewPage() {
           description="The correlator hasn't flagged any assets as likely duplicates."
         />
       ) : (
-        <Card>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Identity</TableHead>
-                  <TableHead>Keep</TableHead>
-                  <TableHead>Merge into it</TableHead>
-                  <TableHead>Flagged</TableHead>
-                  <TableHead className="text-end">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {reviews.map((r) => (
-                  <TableRow key={r.id}>
-                    <TableCell>
-                      <div className="font-medium">{r.normalized_name}</div>
-                      <Badge variant="outline" className="mt-1">
-                        {r.asset_type}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="font-medium">{r.keep_asset_name}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {r.keep_finding_count} finding{r.keep_finding_count === 1 ? '' : 's'}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {r.merge_asset_names.map((name, i) => (
-                          <Badge key={i} variant="secondary">
-                            {name}
-                          </Badge>
-                        ))}
-                      </div>
-                      <div className="mt-1 text-xs text-muted-foreground">
-                        {r.merge_asset_ids.length} asset{r.merge_asset_ids.length === 1 ? '' : 's'}{' '}
-                        · {r.merge_finding_count} finding{r.merge_finding_count === 1 ? '' : 's'}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {formatDistanceToNow(new Date(r.created_at), { addSuffix: true })}
-                    </TableCell>
-                    <TableCell>
-                      <Can permission={Permission.AssetsWrite}>
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            disabled={busyId === r.id}
-                            onClick={() => act(r.id, 'reject')}
-                          >
-                            <X className="me-1 h-3.5 w-3.5" />
-                            Keep separate
-                          </Button>
-                          <Button
-                            size="sm"
-                            disabled={busyId === r.id}
-                            onClick={() => act(r.id, 'approve')}
-                          >
-                            <GitMerge className="me-1 h-3.5 w-3.5" />
-                            Merge
-                          </Button>
-                        </div>
-                      </Can>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+        <DataTable columns={columns} data={reviews} searchPlaceholder="Search reviews..." />
       )}
 
       <p className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
