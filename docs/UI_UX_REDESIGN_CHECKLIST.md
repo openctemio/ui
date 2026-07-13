@@ -118,27 +118,27 @@ Systematic per-page UI/UX audit + redesign of the OpenCTEM dashboard. **183 rout
 
 ## Validation (19)
 
-| Route                          | Audit | Redesign | PR  | QA  | Notes |
-| ------------------------------ | :---: | :------: | :-: | :-: | ----- |
-| `/attack-simulation`           |   ☐   |    ☐     |     |  ☐  |       |
-| `/control-testing`             |   ☐   |    ☐     |     |  ☐  |       |
-| `/controls`                    |   ☐   |    ☐     |     |  ☐  |       |
-| `/controls/effectiveness`      |   ☐   |    ☐     |     |  ☐  |       |
-| `/controls/gaps`               |   ☐   |    ☐     |     |  ☐  |       |
-| `/controls/list`               |   ☐   |    ☐     |     |  ☐  |       |
-| `/pentest/campaigns`           |   ☐   |    ☐     |     |  ☐  |       |
-| `/pentest/findings`            |   ☐   |    ☐     |     |  ☐  |       |
-| `/pentest/findings/[id]/edit`  |   ☐   |    ☐     |     |  ☐  |       |
-| `/pentest/findings/new`        |   ☐   |    ☐     |     |  ☐  |       |
-| `/pentest/mitre-coverage`      |   ☐   |    ☐     |     |  ☐  |       |
-| `/pentest/reports`             |   ☐   |    ☐     |     |  ☐  |       |
-| `/pentest/retests`             |   ☐   |    ☐     |     |  ☐  |       |
-| `/pentest/templates`           |   ☐   |    ☐     |     |  ☐  |       |
-| `/pentest/templates/[id]/edit` |   ☐   |    ☐     |     |  ☐  |       |
-| `/pentest/templates/new`       |   ☐   |    ☐     |     |  ☐  |       |
-| `/simulation/campaigns`        |   ☐   |    ☐     |     |  ☐  |       |
-| `/simulation/results`          |   ☐   |    ☐     |     |  ☐  |       |
-| `/simulation/scenarios`        |   ☐   |    ☐     |     |  ☐  |       |
+| Route                          | Audit | Redesign | PR  | QA  | Notes                                                                                                                                                                       |
+| ------------------------------ | :---: | :------: | :-: | :-: | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/attack-simulation`           |  🗑️   |    ☐     |     |  ☐  | Gated (attack_simulation, 1×403). Inconsistency: gated while /simulation/* render fully — align BAS entitlement policy.                                                     |
+| `/control-testing`             |  🗑️   |    ☐     |     |  ☐  | Gated (control_testing) BUT fires 3×403 behind the gate — guard fetches behind module check.                                                                                |
+| `/controls`                    |  🗑️   |    ☐     |     |  ☐  | Module-gated (compensating_controls) — intentional. But sidebar routes admin to dead-end; empty <h1> (gate uses h2). Consider hide-gated-nav or upsell.                     |
+| `/controls/effectiveness`      |  🗑️   |    ☐     |     |  ☐  | Same compensating_controls gate. Nav dead-end.                                                                                                                              |
+| `/controls/gaps`               |  🗑️   |    ☐     |     |  ☐  | Same compensating_controls gate.                                                                                                                                            |
+| `/controls/list`               |  🗑️   |    ☐     |     |  ☐  | Controls cluster — module-gated (compensating_controls).                                                                                                                    |
+| `/pentest/campaigns`           |  ✅   |    ➖    |     |  ☐  | Clean KPI+filter+DataTable, real data, pagination. Nit: 2× "Failed to fetch" console race on mount (fires before session settles).                                          |
+| `/pentest/findings`            |  ✅   |    ➖    |     |  ☐  | Exemplary: severity tiles, filters, proper empty-state with headers preserved, sortable CVSS/Severity. No errors.                                                           |
+| `/pentest/findings/[id]/edit`  |   ☐   |    ☐     |     |  ☐  |                                                                                                                                                                             |
+| `/pentest/findings/new`        |   ☐   |    ☐     |     |  ☐  |                                                                                                                                                                             |
+| `/pentest/mitre-coverage`      |  🔎   |    ☐     |     |  ☐  | 🐛 403 on load (missing attack_simulation source) → coverage 0/14 empty cells; verify 403 not zeroing real coverage. Add hover/"no coverage" hint so empty matrix ≠ broken. |
+| `/pentest/reports`             |  ✅   |    ➖    |     |  ☐  | Clean empty state + filters. Nit: orphan "- total size" dash — format "0 B" or omit.                                                                                        |
+| `/pentest/retests`             |  ✅   |    ➖    |     |  ☐  | Nice tabbed (Pending/History) + illustrated empty state. No errors.                                                                                                         |
+| `/pentest/templates`           |  ✅   |    ➖    |     |  ☐  | Best in cluster: 8 templates w/ real CWE mappings, list/grid toggle, full CRUD. No errors.                                                                                  |
+| `/pentest/templates/[id]/edit` |   ☐   |    ☐     |     |  ☐  |                                                                                                                                                                             |
+| `/pentest/templates/new`       |   ☐   |    ☐     |     |  ☐  |                                                                                                                                                                             |
+| `/simulation/campaigns`        |  🔎   |    ☐     |     |  ☐  | 🐛 "Invalid Date" on all Activity-Trend x-axis ticks (date parse fail, shared trend comp). "Risk Score 0" vs 65 findings inconsistent.                                      |
+| `/simulation/results`          |  🔎   |    ☐     |     |  ☐  | 🐛 Same "Invalid Date" on Results-Trend axis (shared comp, one fix). Detection 100%/Prevention 5% suspiciously absolute — synthetic; add methodology tooltip.               |
+| `/simulation/scenarios`        |  🔎   |    ☐     |     |  ☐  | Rich (KPIs, donut, bar, recommendations) but metrics computed/synthetic (100% coverage from findings, not executed sims). Label as derived.                                 |
 
 ## Mobilization (24)
 
