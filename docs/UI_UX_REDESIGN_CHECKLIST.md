@@ -190,43 +190,43 @@ Systematic per-page UI/UX audit + redesign of the OpenCTEM dashboard. **183 rout
 
 ## Settings (35)
 
-| Route                                          | Audit | Redesign | PR  | QA  | Notes |
-| ---------------------------------------------- | :---: | :------: | :-: | :-: | ----- |
-| `/account`                                     |   ☐   |    ☐     |     |  ☐  |       |
-| `/account/activity`                            |   ☐   |    ☐     |     |  ☐  |       |
-| `/account/preferences`                         |   ☐   |    ☐     |     |  ☐  |       |
-| `/account/security`                            |   ☐   |    ☐     |     |  ☐  |       |
-| `/settings`                                    |   ☐   |    ☐     |     |  ☐  |       |
-| `/settings/access-control/assignment-rules`    |   ☐   |    ☐     |     |  ☐  |       |
-| `/settings/access-control/groups`              |   ☐   |    ☐     |     |  ☐  |       |
-| `/settings/access-control/permission-sets`     |   ☐   |    ☐     |     |  ☐  |       |
-| `/settings/asset-lifecycle`                    |   ☐   |    ☐     |     |  ☐  |       |
-| `/settings/audit`                              |   ☐   |    ☐     |     |  ☐  |       |
-| `/settings/general`                            |   ☐   |    ☐     |     |  ☐  |       |
-| `/settings/integrations`                       |   ☐   |    ☐     |     |  ☐  |       |
-| `/settings/integrations/api-keys`              |   ☐   |    ☐     |     |  ☐  |       |
-| `/settings/integrations/apps`                  |   ☐   |    ☐     |     |  ☐  |       |
-| `/settings/integrations/cicd`                  |   ☐   |    ☐     |     |  ☐  |       |
-| `/settings/integrations/mcp`                   |   ☐   |    ☐     |     |  ☐  |       |
-| `/settings/integrations/notifications`         |   ☐   |    ☐     |     |  ☐  |       |
-| `/settings/integrations/notifications/history` |   ☐   |    ☐     |     |  ☐  |       |
-| `/settings/integrations/notifications/outbox`  |   ☐   |    ☐     |     |  ☐  |       |
-| `/settings/integrations/saml`                  |   ☐   |    ☐     |     |  ☐  |       |
-| `/settings/integrations/scim-tokens`           |   ☐   |    ☐     |     |  ☐  |       |
-| `/settings/integrations/scm`                   |   ☐   |    ☐     |     |  ☐  |       |
-| `/settings/integrations/security`              |   ☐   |    ☐     |     |  ☐  |       |
-| `/settings/integrations/siem`                  |   ☐   |    ☐     |     |  ☐  |       |
-| `/settings/integrations/ticketing`             |   ☐   |    ☐     |     |  ☐  |       |
-| `/settings/modules`                            |   ☐   |    ☐     |     |  ☐  |       |
-| `/settings/notifications`                      |   ☐   |    ☐     |     |  ☐  |       |
-| `/settings/pentest`                            |   ☐   |    ☐     |     |  ☐  |       |
-| `/settings/priority-rules`                     |   ☐   |    ☐     |     |  ☐  |       |
-| `/settings/roles`                              |   ☐   |    ☐     |     |  ☐  |       |
-| `/settings/scoring`                            |   ☐   |    ☐     |     |  ☐  |       |
-| `/settings/sla-policies`                       |   ☐   |    ☐     |     |  ☐  |       |
-| `/settings/tenant`                             |   ☐   |    ☐     |     |  ☐  |       |
-| `/settings/tenant/create`                      |   ☐   |    ☐     |     |  ☐  |       |
-| `/settings/users`                              |   ☐   |    ☐     |     |  ☐  |       |
+| Route                                          | Audit | Redesign | PR  | QA  | Notes                                                                                                                     |
+| ---------------------------------------------- | :---: | :------: | :-: | :-: | ------------------------------------------------------------------------------------------------------------------------- |
+| `/account`                                     |   ☐   |    ☐     |     |  ☐  |                                                                                                                           |
+| `/account/activity`                            |   ☐   |    ☐     |     |  ☐  |                                                                                                                           |
+| `/account/preferences`                         |   ☐   |    ☐     |     |  ☐  |                                                                                                                           |
+| `/account/security`                            |   ☐   |    ☐     |     |  ☐  |                                                                                                                           |
+| `/settings`                                    |  🔎   |    ☐     |     |  ☐  | Duplicate/alias of Tenant Settings (identical page) — redirect to real landing/index, not a dup.                          |
+| `/settings/access-control/assignment-rules`    |  ✅   |    ➖    |     |  ☐  | Priority-ordered asset→group rules. Clean.                                                                                |
+| `/settings/access-control/groups`              |  🔎   |    ☐     |     |  ☐  | Route "groups" but H1 says "Teams" vs breadcrumb "Groups" — naming inconsistency. Content good.                           |
+| `/settings/access-control/permission-sets`     |  ✅   |    ➖    |     |  ☐  | Empty + proper empty-state/CTA. Overlaps Roles conceptually (IA).                                                         |
+| `/settings/asset-lifecycle`                    |  ✅   |    ➖    |     |  ☐  | Thoughtful staleness worker config w/ guardrails (pause-when-silent, dry-run).                                            |
+| `/settings/audit`                              |  🔎   |    ☐     |     |  ☐  | "Failed to load audit logs" (429-confounded during run; error-state UI good). Re-verify standalone — may be real bug.     |
+| `/settings/general`                            |  🔎   |    ☐     |     |  ☐  | Clean form BUT Localization section duplicates Tenant Settings — dedupe.                                                  |
+| `/settings/integrations`                       |  ✅   |    ➖    |     |  ☐  | Good hub: 6 provider cards + summary tiles. 2/6 (CICD/SIEM) lead to Coming-Soon.                                          |
+| `/settings/integrations/api-keys`              |  🔎   |    ☐     |     |  ☐  | Likely mock/seed: 3 keys all "Last used Never" — confirm real vs fixtures.                                                |
+| `/settings/integrations/apps`                  |  🗑️   |    ☐     |     |  ☐  | Coming-Soon stub (Snyk/Qualys/AWS). Hide until built.                                                                     |
+| `/settings/integrations/cicd`                  |  🗑️   |    ☐     |     |  ☐  | Coming-Soon stub (honest, planned features + Notify Me). Hide from IA until built.                                        |
+| `/settings/integrations/mcp`                   |  ✅   |    ➖    |     |  ☐  | Excellent: read-only scopes, generate-key, copyable client JSON.                                                          |
+| `/settings/integrations/notifications`         |  🔎   |    ☐     |     |  ☐  | 🐛 "Add Channel" header button CLIPPED off right edge at 1440px — action row overflows. Channel table functional (Slack). |
+| `/settings/integrations/notifications/history` |   ☐   |    ☐     |     |  ☐  |                                                                                                                           |
+| `/settings/integrations/notifications/outbox`  |  ✅   |    ➖    |     |  ☐  | Minimal correct "Queue is healthy" state.                                                                                 |
+| `/settings/integrations/saml`                  |  ✅   |    ➖    |     |  ☐  | Full IdP config + SP details w/ copy. (Benign 404 for not-yet-saved config.)                                              |
+| `/settings/integrations/scim-tokens`           |  ✅   |    ➖    |     |  ☐  | SCIM endpoint + copy + token empty-state. Complete.                                                                       |
+| `/settings/integrations/scm`                   |  ✅   |    ➖    |     |  ☐  | Empty-state w/ clear first-connection CTA + provider list.                                                                |
+| `/settings/integrations/security`              |  ✅   |    ➖    |     |  ☐  | Strong: Tenable runner/direct modes, coverage tiles ("7 critical never scanned"). Very useful.                            |
+| `/settings/integrations/siem`                  |  🗑️   |    ☐     |     |  ☐  | Coming-Soon stub. Hide until built.                                                                                       |
+| `/settings/integrations/ticketing`             |  ✅   |    ➖    |     |  ☐  | Real Jira connection (Pending) w/ Routing/Configure.                                                                      |
+| `/settings/modules`                            |  ✅   |    ➖    |     |  ☐  | Excellent — product bundles + feature toggles w/ dependency hints. Best in set.                                           |
+| `/settings/notifications`                      |  🔎   |    ☐     |     |  ☐  | Personal prefs. "Email Digest (coming soon)" but Digest-Frequency dropdown still interactive — disable/hide.              |
+| `/settings/pentest`                            |  ✅   |    ➖    |     |  ☐  | Editable campaign-type/methodology key→label lists.                                                                       |
+| `/settings/priority-rules`                     |  ✅   |    ➖    |     |  ☐  | Clear KEV/EPSS/reachability rules + evaluation-order explainer.                                                           |
+| `/settings/roles`                              |  ✅   |    ➖    |     |  ☐  | 4 system roles w/ permission counts + data-access + levels. Overlaps access-control (IA).                                 |
+| `/settings/scoring`                            |  ✅   |    ➖    |     |  ☐  | Industry presets + weighted sliders auto-balancing to 100%. Strong.                                                       |
+| `/settings/sla-policies`                       |  🔎   |    ☐     |     |  ☐  | 🐛 "Daily Finding Intake" chart x-axis = "Invalid Date" all labels (date parse). Otherwise rich.                          |
+| `/settings/tenant`                             |  ✅   |    ➖    |     |  ☐  | Solid org form (logo/slug/website/industry).                                                                              |
+| `/settings/tenant/create`                      |   ☐   |    ☐     |     |  ☐  |                                                                                                                           |
+| `/settings/users`                              |  ✅   |    ➖    |     |  ☐  | Good: stat tiles, filter tabs, invite flow. Complete.                                                                     |
 
 ## Other (4)
 
