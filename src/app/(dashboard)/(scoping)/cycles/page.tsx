@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import useSWR from 'swr'
 import { Main } from '@/components/layout'
-import { PageHeader } from '@/features/shared'
+import { PageHeader, EmptyState } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -27,7 +27,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Plus, Play, Eye, CheckCircle } from 'lucide-react'
+import { Plus, Play, Eye, CheckCircle, RefreshCw } from 'lucide-react'
 import { get, post, patch } from '@/lib/api/client'
 import { toast } from 'sonner'
 
@@ -176,9 +176,12 @@ export default function CtemCyclesPage() {
                 ))}
               </div>
             ) : cycles.length === 0 ? (
-              <p className="text-muted-foreground text-center py-8 text-sm">
-                No CTEM cycles yet. Create one to get started.
-              </p>
+              <EmptyState
+                icon={RefreshCw}
+                title="No CTEM cycles yet."
+                description="Create one to get started."
+                card={false}
+              />
             ) : (
               <Table>
                 <TableHeader>

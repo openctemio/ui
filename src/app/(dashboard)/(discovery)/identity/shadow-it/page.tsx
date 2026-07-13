@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react'
 import { Main } from '@/components/layout'
-import { PageHeader } from '@/features/shared'
+import { PageHeader, EmptyState } from '@/features/shared'
 import { StatsCard } from '@/features/shared/components/stats-card'
 import { useDashboardStats } from '@/features/dashboard/hooks/use-dashboard-stats'
 import { useTenant } from '@/context/tenant-provider'
@@ -153,15 +153,12 @@ export default function ShadowITPage() {
       </div>
 
       {!hasData ? (
-        <Card className="mt-6">
-          <CardContent className="flex flex-col items-center justify-center py-16">
-            <EyeOff className="text-muted-foreground mb-4 h-12 w-12" />
-            <h3 className="text-lg font-semibold">No Shadow IT Detected</h3>
-            <p className="text-muted-foreground mt-1 text-sm">
-              Shadow IT discovery data will appear once asset scanning is configured.
-            </p>
-          </CardContent>
-        </Card>
+        <EmptyState
+          className="mt-6"
+          icon={EyeOff}
+          title="No Shadow IT Detected"
+          description="Shadow IT discovery data will appear once asset scanning is configured."
+        />
       ) : (
         <>
           <div className="mt-6 grid gap-6 lg:grid-cols-2">

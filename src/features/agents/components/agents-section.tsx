@@ -72,6 +72,7 @@ import {
 } from '@/lib/api/agent-hooks'
 import type { AgentListFilters, Agent } from '@/lib/api/agent-types'
 import { PlatformStatsCard } from '@/features/platform'
+import { EmptyState } from '@/features/shared'
 
 type TabFilter = 'all' | 'daemon' | 'standalone' | 'collector'
 type AgentTypeFilter = 'runner' | 'worker' | 'collector' | 'sensor'
@@ -724,23 +725,26 @@ export function AgentsSection({ typeFilter }: AgentsSectionProps) {
                 onRegenerateKey={handleRegenerateKey}
               />
             ) : (
-              <div className="rounded-lg border border-dashed p-8 text-center">
-                <Bot className="mx-auto mb-3 h-10 w-10 text-muted-foreground" />
-                <h3 className="mb-1 font-medium">No Agents Found</h3>
-                <p className="mb-4 text-sm text-muted-foreground">
-                  {searchQuery
+              <EmptyState
+                icon={Bot}
+                title="No Agents Found"
+                description={
+                  searchQuery
                     ? 'No agents match your search. Try adjusting your search.'
-                    : 'Create an agent to start scanning and collecting data.'}
-                </p>
-                {!searchQuery && (
-                  <Can permission={Permission.AgentsWrite}>
-                    <Button onClick={() => setAddDialogOpen(true)}>
-                      <Plus className="me-2 h-4 w-4" />
-                      Add Your First Agent
-                    </Button>
-                  </Can>
-                )}
-              </div>
+                    : 'Create an agent to start scanning and collecting data.'
+                }
+                card={false}
+                action={
+                  !searchQuery ? (
+                    <Can permission={Permission.AgentsWrite}>
+                      <Button onClick={() => setAddDialogOpen(true)}>
+                        <Plus className="me-2 h-4 w-4" />
+                        Add Your First Agent
+                      </Button>
+                    </Can>
+                  ) : undefined
+                }
+              />
             )}
           </CardContent>
         </Card>

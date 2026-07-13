@@ -28,6 +28,7 @@ import {
   Github,
   GitBranch,
 } from 'lucide-react'
+import { EmptyState } from '@/features/shared'
 import { copyToClipboard } from '@/lib/clipboard'
 import type { Evidence, EvidenceType, FindingDetail } from '../../types'
 import { EVIDENCE_TYPE_CONFIG } from '../../types'
@@ -317,17 +318,18 @@ export function EvidenceTab({ evidence, finding }: EvidenceTabProps) {
 
   if (!hasAnyContent) {
     return (
-      <div className="flex flex-col items-center justify-center py-12">
-        <Paperclip className="text-muted-foreground mb-4 h-12 w-12" />
-        <h3 className="mb-2 text-lg font-semibold">No Evidence</h3>
-        <p className="text-muted-foreground mb-4 text-center text-sm">
-          No evidence has been attached to this finding yet.
-        </p>
-        <Button size="sm">
-          <Plus className="me-2 h-4 w-4" />
-          Add Evidence
-        </Button>
-      </div>
+      <EmptyState
+        icon={Paperclip}
+        title="No Evidence"
+        description="No evidence has been attached to this finding yet."
+        card={false}
+        action={
+          <Button size="sm">
+            <Plus className="me-2 h-4 w-4" />
+            Add Evidence
+          </Button>
+        }
+      />
     )
   }
 

@@ -57,7 +57,7 @@ import {
 } from '@/components/ui/select'
 
 import { AddScannerTemplateDialog } from './add-scanner-template-dialog'
-import { DataTableRowActions, type RowAction } from '@/features/shared'
+import { DataTableRowActions, EmptyState, type RowAction } from '@/features/shared'
 import { Can, Permission } from '@/lib/permissions'
 import {
   useScannerTemplates,
@@ -595,23 +595,26 @@ export function ScannerTemplatesSection() {
                 </TableBody>
               </Table>
             ) : (
-              <div className="rounded-lg border border-dashed p-8 text-center">
-                <FileCode2 className="mx-auto mb-3 h-10 w-10 text-muted-foreground" />
-                <h3 className="mb-1 font-medium">No Scanner Templates Found</h3>
-                <p className="mb-4 text-sm text-muted-foreground">
-                  {searchQuery || typeFilter !== 'all' || statusFilter !== 'all'
+              <EmptyState
+                card={false}
+                icon={FileCode2}
+                title="No Scanner Templates Found"
+                description={
+                  searchQuery || typeFilter !== 'all' || statusFilter !== 'all'
                     ? 'No templates match your filters.'
-                    : 'Upload custom templates for Nuclei, Semgrep, or Gitleaks scanners.'}
-                </p>
-                {!searchQuery && typeFilter === 'all' && statusFilter === 'all' && (
-                  <Can permission={Permission.ScannerTemplatesWrite}>
-                    <Button onClick={() => setAddDialogOpen(true)}>
-                      <Plus className="me-2 h-4 w-4" />
-                      Upload Your First Template
-                    </Button>
-                  </Can>
-                )}
-              </div>
+                    : 'Upload custom templates for Nuclei, Semgrep, or Gitleaks scanners.'
+                }
+                action={
+                  !searchQuery && typeFilter === 'all' && statusFilter === 'all' ? (
+                    <Can permission={Permission.ScannerTemplatesWrite}>
+                      <Button onClick={() => setAddDialogOpen(true)}>
+                        <Plus className="me-2 h-4 w-4" />
+                        Upload Your First Template
+                      </Button>
+                    </Can>
+                  ) : undefined
+                }
+              />
             )}
           </CardContent>
         </Card>

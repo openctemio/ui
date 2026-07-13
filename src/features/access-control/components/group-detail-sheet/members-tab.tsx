@@ -13,7 +13,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react'
-import { DataTableRowActions } from '@/features/shared'
+import { DataTableRowActions, EmptyState } from '@/features/shared'
 import { MemberRoleConfig, getInitials, type GroupMember } from '@/features/access-control'
 import { useState, useEffect } from 'react'
 
@@ -88,10 +88,7 @@ export function MembersTab({
           ))}
         </div>
       ) : totalCount === 0 ? (
-        <div className="text-center py-8 text-muted-foreground">
-          <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
-          <p>No members in this group yet</p>
-        </div>
+        <EmptyState icon={Users} title="No members in this group yet" card={false} />
       ) : filteredMembers.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground">
           <p>No members found matching &quot;{searchQuery}&quot;</p>

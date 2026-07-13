@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react'
 import { Main } from '@/components/layout'
-import { PageHeader } from '@/features/shared'
+import { PageHeader, EmptyState } from '@/features/shared'
 import { StatsCard } from '@/features/shared/components/stats-card'
 import { useDashboardStats } from '@/features/dashboard/hooks/use-dashboard-stats'
 import { useTenant } from '@/context/tenant-provider'
@@ -179,15 +179,12 @@ export default function AttackPathVisualizationPage() {
       </div>
 
       {!hasData ? (
-        <Card className="mt-6">
-          <CardContent className="flex flex-col items-center justify-center py-16">
-            <Route className="text-muted-foreground mb-4 h-12 w-12" />
-            <h3 className="text-lg font-semibold">No Attack Paths Identified</h3>
-            <p className="text-muted-foreground mt-1 text-sm">
-              Attack path data will appear once assets and findings are analyzed.
-            </p>
-          </CardContent>
-        </Card>
+        <EmptyState
+          className="mt-6"
+          icon={Route}
+          title="No Attack Paths Identified"
+          description="Attack path data will appear once assets and findings are analyzed."
+        />
       ) : (
         <>
           <div className="mt-6 grid gap-6 lg:grid-cols-2">

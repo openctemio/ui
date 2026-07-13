@@ -15,7 +15,7 @@ import {
 import { Link2, Copy, Eye, ExternalLink, Plus, Repeat, Fingerprint } from 'lucide-react'
 import type { FindingDetail, RelatedFinding } from '../../types'
 import { FINDING_STATUS_CONFIG } from '../../types'
-import { SeverityBadge } from '@/features/shared'
+import { EmptyState, SeverityBadge } from '@/features/shared'
 
 interface RelatedTabProps {
   finding: FindingDetail
@@ -115,23 +115,24 @@ export function RelatedTab({ finding }: RelatedTabProps) {
   // Empty state - show only when no related findings AND no tracking info
   if (totalRelated === 0 && !hasTrackingInfo) {
     return (
-      <div className="flex flex-col items-center justify-center py-12">
-        <Link2 className="text-muted-foreground mb-4 h-12 w-12" />
-        <h3 className="mb-2 text-lg font-semibold">No Related Findings</h3>
-        <p className="text-muted-foreground mb-4 text-center text-sm">
-          No similar or linked findings have been identified yet.
-        </p>
-        <div className="flex gap-2">
-          <Button size="sm" variant="outline">
-            <Eye className="me-2 h-4 w-4" />
-            Find Similar
-          </Button>
-          <Button size="sm">
-            <Plus className="me-2 h-4 w-4" />
-            Link Finding
-          </Button>
-        </div>
-      </div>
+      <EmptyState
+        icon={Link2}
+        title="No Related Findings"
+        description="No similar or linked findings have been identified yet."
+        card={false}
+        action={
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline">
+              <Eye className="me-2 h-4 w-4" />
+              Find Similar
+            </Button>
+            <Button size="sm">
+              <Plus className="me-2 h-4 w-4" />
+              Link Finding
+            </Button>
+          </div>
+        }
+      />
     )
   }
 

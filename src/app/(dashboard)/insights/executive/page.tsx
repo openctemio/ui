@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import useSWR from 'swr'
 import { Main } from '@/components/layout'
-import { PageHeader, StatsCard } from '@/features/shared'
+import { PageHeader, StatsCard, EmptyState } from '@/features/shared'
 import { useTenant } from '@/context/tenant-provider'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -429,12 +429,11 @@ export default function ExecutiveSummaryPage() {
                 </TableBody>
               </Table>
             ) : (
-              <div className="flex flex-col items-center justify-center py-10">
-                <ShieldCheck className="mb-3 h-10 w-10 text-muted-foreground" />
-                <p className="text-sm text-muted-foreground">
-                  No top risks for the selected period.
-                </p>
-              </div>
+              <EmptyState
+                icon={ShieldCheck}
+                title="No top risks for the selected period."
+                card={false}
+              />
             )}
           </CardContent>
         </Card>

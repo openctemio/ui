@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react'
 import { Main } from '@/components/layout'
-import { PageHeader, StatsCard } from '@/features/shared'
+import { PageHeader, StatsCard, EmptyState } from '@/features/shared'
 import { useDashboardStats } from '@/features/dashboard/hooks/use-dashboard-stats'
 import { useTenant } from '@/context/tenant-provider'
 import {
@@ -218,14 +218,11 @@ export default function ExposureScoringPage() {
       {isLoading ? (
         <LoadingSkeleton />
       ) : isEmpty ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-16">
-            <Gauge className="text-muted-foreground mb-4 h-12 w-12" />
-            <p className="text-muted-foreground text-center text-sm">
-              No scoring data available. Start scanning to generate risk scores.
-            </p>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={Gauge}
+          title="No scoring data available"
+          description="Start scanning to generate risk scores."
+        />
       ) : (
         <>
           {/* Stats Row */}

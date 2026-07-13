@@ -6,7 +6,7 @@ import { useFindingsApi } from '@/features/findings/api/use-findings-api'
 import type { ApiFinding } from '@/features/findings/api/finding-api.types'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { Main } from '@/components/layout'
-import { RiskScoreBadge, DataTableRowActions } from '@/features/shared'
+import { RiskScoreBadge, DataTableRowActions, EmptyState } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
@@ -1829,10 +1829,7 @@ function FindingsTab({
               </div>
             ))}
             {filteredFindings.length === 0 && !findingsLoading && (
-              <div className="text-center py-12 text-muted-foreground">
-                <Shield className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No findings match your filters</p>
-              </div>
+              <EmptyState card={false} icon={Shield} title="No findings match your filters" />
             )}
             {findingsLoading && (
               <div className="space-y-3">

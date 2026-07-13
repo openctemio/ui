@@ -3,7 +3,7 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Input } from '@/components/ui/input'
 import { Shield, Plus, Trash2, Search, ChevronRight } from 'lucide-react'
-import { DataTableRowActions } from '@/features/shared'
+import { DataTableRowActions, EmptyState } from '@/features/shared'
 import { type PermissionSet } from '@/features/access-control'
 import { useState } from 'react'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
@@ -59,10 +59,7 @@ export function PermissionsTab({
           ))}
         </div>
       ) : permissionSets.length === 0 ? (
-        <div className="text-center py-8 text-muted-foreground">
-          <Shield className="h-8 w-8 mx-auto mb-2 opacity-50" />
-          <p>No permission sets assigned</p>
-        </div>
+        <EmptyState icon={Shield} title="No permission sets assigned" card={false} />
       ) : filteredPermissionSets.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground">
           <p>No permission sets found matching &quot;{searchQuery}&quot;</p>
