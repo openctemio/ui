@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
+import type { ColumnDef } from '@tanstack/react-table'
 import useSWR from 'swr'
 import { Main } from '@/components/layout'
-import { PageHeader, EmptyState } from '@/features/shared'
+import { PageHeader, EmptyState, DataTable, DataTableColumnHeader } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -18,14 +19,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { ConfirmDialog } from '@/components/confirm-dialog'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Plus, Play, Eye, CheckCircle, RefreshCw } from 'lucide-react'
 import { get, post, patch } from '@/lib/api/client'
@@ -151,6 +144,102 @@ export default function CtemCyclesPage() {
     await handleStatusChange(id, action)
   }
 
+  const columns = useMemo<ColumnDef<CtemCycle>[]>(
+    () => [
+      {
+        accessorKey: 'name',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Name" />,
+        cell: ({ row }) => <span className="font-medium">{row.original.name}</span>,
+      },
+      {
+        accessorKey: 'status',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
+        cell: ({ row }) => (
+          <Badge variant="outline" className={statusColors[row.original.status]}>
+            {row.original.status}
+          </Badge>
+        ),
+      },
+      {
+        accessorKey: 'start_date',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Start Date" />,
+        cell: ({ row }) => formatDate(row.original.start_date),
+      },
+      {
+        accessorKey: 'end_date',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="End Date" />,
+        cell: ({ row }) => formatDate(row.original.end_date),
+      },
+      {
+        id: 'actions',
+        header: () => <div className="text-end">Actions</div>,
+        enableSorting: false,
+        enableHiding: false,
+        cell: ({ row }) => {
+          const cycle = row.original
+          return (
+            <div className="flex items-center justify-end gap-1">
+              {cycle.status === 'planning' && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() =>
+                    setPendingAction({
+                      id: cycle.id,
+                      action: 'activate',
+                      cycleName: cycle.name,
+                    })
+                  }
+                >
+                  <Play className="me-1 h-3 w-3" />
+                  Activate
+                </Button>
+              )}
+              {cycle.status === 'active' && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() =>
+                    setPendingAction({
+                      id: cycle.id,
+                      action: 'review',
+                      cycleName: cycle.name,
+                    })
+                  }
+                >
+                  <Eye className="me-1 h-3 w-3" />
+                  Start Review
+                </Button>
+              )}
+              {cycle.status === 'review' && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() =>
+                    setPendingAction({
+                      id: cycle.id,
+                      action: 'close',
+                      cycleName: cycle.name,
+                    })
+                  }
+                >
+                  <CheckCircle className="me-1 h-3 w-3" />
+                  Close
+                </Button>
+              )}
+              {cycle.status === 'closed' && (
+                <Badge variant="outline" className="text-xs">
+                  Completed
+                </Badge>
+              )}
+            </div>
+          )
+        },
+      },
+    ],
+    []
+  )
+
   return (
     <>
       <Main>
@@ -183,88 +272,13 @@ export default function CtemCyclesPage() {
                 card={false}
               />
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Start Date</TableHead>
-                    <TableHead>End Date</TableHead>
-                    <TableHead className="text-end">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {cycles.map((cycle) => (
-                    <TableRow key={cycle.id}>
-                      <TableCell className="font-medium">{cycle.name}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={statusColors[cycle.status]}>
-                          {cycle.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{formatDate(cycle.start_date)}</TableCell>
-                      <TableCell>{formatDate(cycle.end_date)}</TableCell>
-                      <TableCell className="text-end">
-                        <div className="flex items-center justify-end gap-1">
-                          {cycle.status === 'planning' && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() =>
-                                setPendingAction({
-                                  id: cycle.id,
-                                  action: 'activate',
-                                  cycleName: cycle.name,
-                                })
-                              }
-                            >
-                              <Play className="me-1 h-3 w-3" />
-                              Activate
-                            </Button>
-                          )}
-                          {cycle.status === 'active' && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() =>
-                                setPendingAction({
-                                  id: cycle.id,
-                                  action: 'review',
-                                  cycleName: cycle.name,
-                                })
-                              }
-                            >
-                              <Eye className="me-1 h-3 w-3" />
-                              Start Review
-                            </Button>
-                          )}
-                          {cycle.status === 'review' && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() =>
-                                setPendingAction({
-                                  id: cycle.id,
-                                  action: 'close',
-                                  cycleName: cycle.name,
-                                })
-                              }
-                            >
-                              <CheckCircle className="me-1 h-3 w-3" />
-                              Close
-                            </Button>
-                          )}
-                          {cycle.status === 'closed' && (
-                            <Badge variant="outline" className="text-xs">
-                              Completed
-                            </Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <DataTable
+                columns={columns}
+                data={cycles}
+                searchPlaceholder="Search cycles..."
+                emptyMessage="No cycles found"
+                emptyDescription="No cycles match the current search."
+              />
             )}
           </CardContent>
         </Card>
