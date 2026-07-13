@@ -27,16 +27,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import {
   Select,
   SelectContent,
@@ -614,29 +605,20 @@ export default function BusinessServicesPage() {
         </DialogContent>
       </Dialog>
 
-      <AlertDialog
+      <ConfirmDialog
         open={!!deletingService}
         onOpenChange={(open) => !open && setDeletingService(null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete business service?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete &quot;{deletingService?.name}&quot;. This action cannot
-              be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              className="bg-red-500 text-white hover:bg-red-600"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        title="Delete business service?"
+        desc={
+          <>
+            This will permanently delete &quot;{deletingService?.name}&quot;. This action cannot be
+            undone.
+          </>
+        }
+        confirmText="Delete"
+        destructive
+        handleConfirm={handleDelete}
+      />
     </Main>
   )
 }

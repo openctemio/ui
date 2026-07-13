@@ -51,6 +51,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Can, Permission } from '@/lib/permissions'
 
 import { AddAgentDialog } from './add-agent-dialog'
@@ -790,49 +791,39 @@ export function AgentsSection({ typeFilter }: AgentsSectionProps) {
       )}
 
       {/* Delete Confirmation */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Agent</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete <strong>{selectedAgent?.name}</strong>? This action
-              cannot be undone and will invalidate the agent&apos;s API key.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-            <Button variant="destructive" onClick={handleDeleteConfirm} disabled={isDeleting}>
-              {isDeleting && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
-              Delete
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        title="Delete Agent"
+        desc={
+          <>
+            Are you sure you want to delete <strong>{selectedAgent?.name}</strong>? This action
+            cannot be undone and will invalidate the agent&apos;s API key.
+          </>
+        }
+        confirmText="Delete"
+        destructive
+        isLoading={isDeleting}
+        handleConfirm={handleDeleteConfirm}
+      />
 
       {/* Bulk Delete Confirmation */}
-      <AlertDialog open={bulkDeleteDialogOpen} onOpenChange={setBulkDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Multiple Agents</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete{' '}
-              <strong>{Object.keys(rowSelection).filter((k) => rowSelection[k]).length}</strong>{' '}
-              agent(s)? This action cannot be undone and will invalidate all their API keys.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isBulkDeleting}>Cancel</AlertDialogCancel>
-            <Button
-              variant="destructive"
-              onClick={handleBulkDeleteConfirm}
-              disabled={isBulkDeleting}
-            >
-              {isBulkDeleting && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
-              Delete All
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={bulkDeleteDialogOpen}
+        onOpenChange={setBulkDeleteDialogOpen}
+        title="Delete Multiple Agents"
+        desc={
+          <>
+            Are you sure you want to delete{' '}
+            <strong>{Object.keys(rowSelection).filter((k) => rowSelection[k]).length}</strong>{' '}
+            agent(s)? This action cannot be undone and will invalidate all their API keys.
+          </>
+        }
+        confirmText="Delete All"
+        destructive
+        isLoading={isBulkDeleting}
+        handleConfirm={handleBulkDeleteConfirm}
+      />
 
       {/* Revoke Confirmation */}
       <AlertDialog open={revokeDialogOpen} onOpenChange={setRevokeDialogOpen}>

@@ -42,16 +42,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
 import { toast } from 'sonner'
@@ -1259,27 +1250,21 @@ function ConfigurationsTab() {
       </Sheet>
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Scan Configuration</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete &quot;{configToDelete?.name}&quot;? This action cannot
-              be undone and will remove all associated run history.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleConfirmDelete}
-              disabled={isDeleting}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              {isDeleting ? 'Deleting...' : 'Delete'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={deleteConfirmOpen}
+        onOpenChange={setDeleteConfirmOpen}
+        title="Delete Scan Configuration"
+        desc={
+          <>
+            Are you sure you want to delete &quot;{configToDelete?.name}&quot;? This action cannot
+            be undone and will remove all associated run history.
+          </>
+        }
+        confirmText={isDeleting ? 'Deleting...' : 'Delete'}
+        destructive
+        isLoading={isDeleting}
+        handleConfirm={handleConfirmDelete}
+      />
 
       {/* Clone Scan Dialog */}
       <CloneScanDialog

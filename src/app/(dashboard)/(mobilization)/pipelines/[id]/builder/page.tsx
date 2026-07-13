@@ -7,16 +7,7 @@ import Link from 'next/link'
 import { Main } from '@/components/layout'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Save, ArrowLeft, Cloud, Server, Loader2, AlertTriangle } from 'lucide-react'
 import { toast } from 'sonner'
@@ -438,47 +429,31 @@ export default function PipelineBuilderPage({ params }: PageProps) {
       </Main>
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={!!deleteStepId} onOpenChange={() => setDeleteStepId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-destructive" />
-              Delete Step
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete this step? This action cannot be undone. Any
-              dependencies on this step will be removed.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleConfirmDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={!!deleteStepId}
+        onOpenChange={() => setDeleteStepId(null)}
+        title={
+          <span className="flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 text-destructive" />
+            Delete Step
+          </span>
+        }
+        desc="Are you sure you want to delete this step? This action cannot be undone. Any dependencies on this step will be removed."
+        confirmText="Delete"
+        destructive
+        handleConfirm={handleConfirmDelete}
+      />
 
       {/* Unsaved Changes Dialog */}
-      <AlertDialog open={showUnsavedDialog} onOpenChange={setShowUnsavedDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Unsaved Changes</AlertDialogTitle>
-            <AlertDialogDescription>
-              You have unsaved changes. Are you sure you want to leave without saving?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Continue Editing</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDiscardAndNavigate}>
-              Discard Changes
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={showUnsavedDialog}
+        onOpenChange={setShowUnsavedDialog}
+        title="Unsaved Changes"
+        desc="You have unsaved changes. Are you sure you want to leave without saving?"
+        cancelBtnText="Continue Editing"
+        confirmText="Discard Changes"
+        handleConfirm={handleDiscardAndNavigate}
+      />
     </>
   )
 }

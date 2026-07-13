@@ -22,16 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -1144,46 +1135,37 @@ function AssetGroupDetailContent({ params }: PageProps) {
       />
 
       {/* Delete Dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Asset Group</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete &quot;{group.name}&quot;? This action cannot be
-              undone. All {group.assetCount} assets will be unassigned.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-red-500 hover:bg-red-600"
-              onClick={handleDelete}
-              disabled={isDeleting}
-            >
-              {isDeleting ? 'Deleting...' : 'Delete'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        title="Delete Asset Group"
+        desc={
+          <>
+            Are you sure you want to delete &quot;{group.name}&quot;? This action cannot be undone.
+            All {group.assetCount} assets will be unassigned.
+          </>
+        }
+        confirmText={isDeleting ? 'Deleting...' : 'Delete'}
+        destructive
+        isLoading={isDeleting}
+        handleConfirm={handleDelete}
+      />
 
       {/* Remove Assets Dialog */}
-      <AlertDialog open={removeAssetsDialogOpen} onOpenChange={setRemoveAssetsDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Remove Assets from Group</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to remove {selectedAssets.length} assets from this group? They
-              will become ungrouped assets.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isRemovingAssets}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleRemoveAssets} disabled={isRemovingAssets}>
-              {isRemovingAssets ? 'Removing...' : 'Remove Assets'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={removeAssetsDialogOpen}
+        onOpenChange={setRemoveAssetsDialogOpen}
+        title="Remove Assets from Group"
+        desc={
+          <>
+            Are you sure you want to remove {selectedAssets.length} assets from this group? They
+            will become ungrouped assets.
+          </>
+        }
+        confirmText={isRemovingAssets ? 'Removing...' : 'Remove Assets'}
+        isLoading={isRemovingAssets}
+        handleConfirm={handleRemoveAssets}
+      />
 
       {/* Add Assets Dialog */}
       <AddAssetsDialog

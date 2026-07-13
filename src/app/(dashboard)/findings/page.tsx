@@ -65,16 +65,7 @@ import {
   useFindingStatsApi,
   invalidateFindingsCache,
 } from '@/features/findings/api/use-findings-api'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import type {
   ApiFinding,
   FindingApiFilters,
@@ -1345,45 +1336,35 @@ function FindingsContent() {
       />
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Finding?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete this finding. This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          {findingToDelete && (
-            <div className="rounded-lg border bg-muted/50 p-3 my-2">
-              <p className="font-medium truncate">{findingToDelete.title}</p>
-              <p className="text-sm text-muted-foreground">
-                {findingToDelete.severity.toUpperCase()} severity
-                {findingToDelete.scanner && ` · ${findingToDelete.scanner}`}
-              </p>
-            </div>
-          )}
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={(e) => {
-                e.preventDefault()
-                handleDeleteConfirm()
-              }}
-              disabled={isDeleting}
-              className="bg-red-600 hover:bg-red-700 text-white"
-            >
-              {isDeleting ? (
-                <>
-                  <Loader2 className="me-2 h-4 w-4 animate-spin" />
-                  Deleting...
-                </>
-              ) : (
-                'Delete'
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        title="Delete Finding?"
+        desc="This will permanently delete this finding. This action cannot be undone."
+        confirmText={
+          isDeleting ? (
+            <>
+              <Loader2 className="me-2 h-4 w-4 animate-spin" />
+              Deleting...
+            </>
+          ) : (
+            'Delete'
+          )
+        }
+        destructive
+        isLoading={isDeleting}
+        handleConfirm={handleDeleteConfirm}
+      >
+        {findingToDelete && (
+          <div className="rounded-lg border bg-muted/50 p-3 my-2">
+            <p className="font-medium truncate">{findingToDelete.title}</p>
+            <p className="text-sm text-muted-foreground">
+              {findingToDelete.severity.toUpperCase()} severity
+              {findingToDelete.scanner && ` · ${findingToDelete.scanner}`}
+            </p>
+          </div>
+        )}
+      </ConfirmDialog>
     </>
   )
 }

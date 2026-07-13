@@ -33,16 +33,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Plus, Trash2, Lock } from 'lucide-react'
 import { get, post, del } from '@/lib/api/client'
@@ -342,26 +333,20 @@ export default function AttackerProfilesPage() {
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={!!deleteProfile} onOpenChange={(open) => !open && setDeleteProfile(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Attacker Profile?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete &quot;{deleteProfile?.name}&quot;? This action cannot
-              be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              className="bg-destructive text-destructive-foreground"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={!!deleteProfile}
+        onOpenChange={(open) => !open && setDeleteProfile(null)}
+        title="Delete Attacker Profile?"
+        desc={
+          <>
+            Are you sure you want to delete &quot;{deleteProfile?.name}&quot;? This action cannot be
+            undone.
+          </>
+        }
+        confirmText="Delete"
+        destructive
+        handleConfirm={handleDelete}
+      />
     </>
   )
 }
