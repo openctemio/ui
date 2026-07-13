@@ -376,17 +376,15 @@ const SidebarMenuCollapsedDropdown = memo(function SidebarMenuCollapsedDropdown(
     <SidebarMenuItem>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
+          {/* Collapsed (icon-rail) trigger: icon only. The label/badge/chevron
+              are dropped here rather than clipped via overflow — WebKit could
+              leave the wrapped label visible, breaking the rail. The full
+              label + items live in the dropdown content below. */}
           <SidebarMenuButton tooltip={item.title} isActive={checkIsActive(pathname, item)}>
             {item.icon && <item.icon />}
-            <span>
+            <span className="sr-only">
               <NavLabel title={item.title} />
             </span>
-            {releaseStatusBadge ? (
-              <NavBadge variant={releaseStatusBadge.variant}>{releaseStatusBadge.text}</NavBadge>
-            ) : (
-              item.badge && <NavBadge>{item.badge}</NavBadge>
-            )}
-            <ChevronRight className="ms-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
           </SidebarMenuButton>
         </DropdownMenuTrigger>
         <DropdownMenuContent side="right" align="start" sideOffset={4}>
