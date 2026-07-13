@@ -17,16 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import {
   Table,
   TableBody,
@@ -330,35 +321,26 @@ export default function CtemCyclesPage() {
         </DialogContent>
       </Dialog>
 
-      {/* F-10: AlertDialog for irreversible cycle transitions. */}
-      <AlertDialog
+      {/* F-10: ConfirmDialog for irreversible cycle transitions. */}
+      <ConfirmDialog
         open={pendingAction !== null}
         onOpenChange={(open) => !open && setPendingAction(null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {pendingAction ? confirmCopy[pendingAction.action].title : ''}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {pendingAction && (
-                <>
-                  <span className="block font-medium text-foreground">
-                    Cycle: {pendingAction.cycleName}
-                  </span>
-                  <span className="block mt-2">{confirmCopy[pendingAction.action].body}</span>
-                </>
-              )}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmStatusChange}>
-              {pendingAction ? confirmCopy[pendingAction.action].actionLabel : ''}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        title={pendingAction ? confirmCopy[pendingAction.action].title : ''}
+        desc={
+          pendingAction ? (
+            <>
+              <span className="block font-medium text-foreground">
+                Cycle: {pendingAction.cycleName}
+              </span>
+              <span className="block mt-2">{confirmCopy[pendingAction.action].body}</span>
+            </>
+          ) : (
+            ''
+          )
+        }
+        confirmText={pendingAction ? confirmCopy[pendingAction.action].actionLabel : ''}
+        handleConfirm={confirmStatusChange}
+      />
     </>
   )
 }

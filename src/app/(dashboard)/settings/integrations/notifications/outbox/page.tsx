@@ -40,16 +40,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import {
   Select,
   SelectContent,
@@ -559,37 +550,32 @@ export default function NotificationOutboxPage() {
         )}
 
         {/* Delete Confirmation Dialog */}
-        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Delete Entry</AlertDialogTitle>
-              <AlertDialogDescription>
-                Are you sure you want to delete this notification entry? This action cannot be
-                undone.
-                {selectedEntry && (
-                  <span className="mt-2 block font-medium">{selectedEntry.title}</span>
-                )}
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={handleDeleteConfirm}
-                disabled={isDeleting}
-                className="bg-red-500 hover:bg-red-600"
-              >
-                {isDeleting ? (
-                  <>
-                    <Loader2 className="me-2 h-4 w-4 animate-spin" />
-                    Deleting...
-                  </>
-                ) : (
-                  'Delete'
-                )}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        <ConfirmDialog
+          open={deleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
+          title="Delete Entry"
+          desc={
+            <>
+              Are you sure you want to delete this notification entry? This action cannot be undone.
+              {selectedEntry && (
+                <span className="mt-2 block font-medium">{selectedEntry.title}</span>
+              )}
+            </>
+          }
+          confirmText={
+            isDeleting ? (
+              <>
+                <Loader2 className="me-2 h-4 w-4 animate-spin" />
+                Deleting...
+              </>
+            ) : (
+              'Delete'
+            )
+          }
+          destructive
+          isLoading={isDeleting}
+          handleConfirm={() => void handleDeleteConfirm()}
+        />
       </Main>
     </>
   )

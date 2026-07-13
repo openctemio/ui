@@ -19,6 +19,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import {
   Lock,
   RotateCcw,
@@ -621,23 +622,15 @@ export default function ModuleManagementPage() {
       </AlertDialog>
 
       {/* Reset Confirmation Dialog */}
-      <AlertDialog open={showResetDialog} onOpenChange={setShowResetDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Reset Modules to Defaults</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will enable all modules for your organization. Any modules you previously
-              disabled will be re-enabled. This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleReset} disabled={isResetting}>
-              {isResetting ? 'Resetting...' : 'Reset All'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={showResetDialog}
+        onOpenChange={setShowResetDialog}
+        title="Reset Modules to Defaults"
+        desc="This will enable all modules for your organization. Any modules you previously disabled will be re-enabled. This action cannot be undone."
+        confirmText={isResetting ? 'Resetting...' : 'Reset All'}
+        isLoading={isResetting}
+        handleConfirm={() => void handleReset()}
+      />
     </Main>
   )
 }

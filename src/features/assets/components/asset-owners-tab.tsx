@@ -32,16 +32,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import {
   Command,
   CommandEmpty,
@@ -840,30 +831,22 @@ export function AssetOwnersTab({ assetId }: AssetOwnersTabProps) {
       </Dialog>
 
       {/* Remove Confirmation */}
-      <AlertDialog
+      <ConfirmDialog
         open={!!removeOwnerTarget}
         onOpenChange={(open) => !open && setRemoveOwnerTarget(null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Remove Owner</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to remove{' '}
-              {removeOwnerTarget?.userName || removeOwnerTarget?.groupName || 'this owner'} from
-              this asset? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleRemove}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {isSubmitting ? 'Removing...' : 'Remove'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        title="Remove Owner"
+        desc={
+          <>
+            Are you sure you want to remove{' '}
+            {removeOwnerTarget?.userName || removeOwnerTarget?.groupName || 'this owner'} from this
+            asset? This action cannot be undone.
+          </>
+        }
+        confirmText={isSubmitting ? 'Removing...' : 'Remove'}
+        destructive
+        isLoading={isSubmitting}
+        handleConfirm={handleRemove}
+      />
     </div>
   )
 }

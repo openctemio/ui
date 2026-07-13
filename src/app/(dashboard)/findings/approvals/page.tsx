@@ -33,16 +33,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import {
   Dialog,
   DialogContent,
@@ -554,53 +545,49 @@ export default function ApprovalsPage() {
       </Main>
 
       {/* Approve Confirmation Dialog */}
-      <AlertDialog open={approveDialogOpen} onOpenChange={setApproveDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Approve Status Change</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to approve this request?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          {selectedApproval && (
-            <div className="rounded-lg border bg-muted/50 p-3 my-2">
-              <p className="font-medium">
-                Change to{' '}
-                <Badge
-                  variant="outline"
-                  className={cn(
-                    'text-xs ms-1',
-                    FINDING_STATUS_CONFIG[
-                      selectedApproval.requested_status as keyof typeof FINDING_STATUS_CONFIG
-                    ]?.bgColor,
-                    FINDING_STATUS_CONFIG[
-                      selectedApproval.requested_status as keyof typeof FINDING_STATUS_CONFIG
-                    ]?.textColor
-                  )}
-                >
-                  {getRequestedStatusLabel(selectedApproval.requested_status)}
-                </Badge>
-              </p>
-              <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                {selectedApproval.justification}
-              </p>
-            </div>
-          )}
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isApproving}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleApproveConfirm} disabled={isApproving}>
-              {isApproving ? (
-                <>
-                  <Loader2 className="me-2 h-4 w-4 animate-spin" />
-                  Approving...
-                </>
-              ) : (
-                'Approve'
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={approveDialogOpen}
+        onOpenChange={setApproveDialogOpen}
+        title="Approve Status Change"
+        desc="Are you sure you want to approve this request?"
+        confirmText={
+          isApproving ? (
+            <>
+              <Loader2 className="me-2 h-4 w-4 animate-spin" />
+              Approving...
+            </>
+          ) : (
+            'Approve'
+          )
+        }
+        isLoading={isApproving}
+        handleConfirm={handleApproveConfirm}
+      >
+        {selectedApproval && (
+          <div className="rounded-lg border bg-muted/50 p-3 my-2">
+            <p className="font-medium">
+              Change to{' '}
+              <Badge
+                variant="outline"
+                className={cn(
+                  'text-xs ms-1',
+                  FINDING_STATUS_CONFIG[
+                    selectedApproval.requested_status as keyof typeof FINDING_STATUS_CONFIG
+                  ]?.bgColor,
+                  FINDING_STATUS_CONFIG[
+                    selectedApproval.requested_status as keyof typeof FINDING_STATUS_CONFIG
+                  ]?.textColor
+                )}
+              >
+                {getRequestedStatusLabel(selectedApproval.requested_status)}
+              </Badge>
+            </p>
+            <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+              {selectedApproval.justification}
+            </p>
+          </div>
+        )}
+      </ConfirmDialog>
 
       {/* Reject Dialog */}
       <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
@@ -656,33 +643,26 @@ export default function ApprovalsPage() {
       </Dialog>
 
       {/* Cancel Confirmation Dialog */}
-      <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Cancel Request</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to cancel this approval request? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isCancelling}>Keep Request</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleCancelConfirm}
-              disabled={isCancelling}
-              className="bg-red-600 hover:bg-red-700 text-white"
-            >
-              {isCancelling ? (
-                <>
-                  <Loader2 className="me-2 h-4 w-4 animate-spin" />
-                  Canceling...
-                </>
-              ) : (
-                'Cancel Request'
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={cancelDialogOpen}
+        onOpenChange={setCancelDialogOpen}
+        title="Cancel Request"
+        desc="Are you sure you want to cancel this approval request? This action cannot be undone."
+        cancelBtnText="Keep Request"
+        confirmText={
+          isCancelling ? (
+            <>
+              <Loader2 className="me-2 h-4 w-4 animate-spin" />
+              Canceling...
+            </>
+          ) : (
+            'Cancel Request'
+          )
+        }
+        destructive
+        isLoading={isCancelling}
+        handleConfirm={handleCancelConfirm}
+      />
     </>
   )
 }

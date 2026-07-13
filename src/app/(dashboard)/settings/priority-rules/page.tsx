@@ -28,16 +28,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import {
   Select,
   SelectContent,
@@ -751,26 +742,20 @@ export default function PriorityRulesPage() {
         rule={dryRunRule}
       />
 
-      <AlertDialog open={!!deletingRule} onOpenChange={(open) => !open && setDeletingRule(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete priority rule?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete &quot;{deletingRule?.name}&quot;. This action cannot be
-              undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              className="bg-red-500 text-white hover:bg-red-600"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={!!deletingRule}
+        onOpenChange={(open) => !open && setDeletingRule(null)}
+        title="Delete priority rule?"
+        desc={
+          <>
+            This will permanently delete &quot;{deletingRule?.name}&quot;. This action cannot be
+            undone.
+          </>
+        }
+        confirmText="Delete"
+        destructive
+        handleConfirm={() => void handleDelete()}
+      />
     </Main>
   )
 }

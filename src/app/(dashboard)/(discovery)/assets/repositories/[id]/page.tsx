@@ -27,16 +27,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import {
   Select,
   SelectContent,
@@ -2599,26 +2590,20 @@ export default function RepositoryDetailPage() {
                 </DropdownMenuContent>
               </DropdownMenu>
 
-              <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Delete repository?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This will permanently delete &quot;{repository.name}&quot;. This action cannot
-                      be undone.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={handleDelete}
-                      className="bg-red-500 text-white hover:bg-red-600"
-                    >
-                      Delete
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+              <ConfirmDialog
+                open={showDeleteDialog}
+                onOpenChange={setShowDeleteDialog}
+                title="Delete repository?"
+                desc={
+                  <>
+                    This will permanently delete &quot;{repository.name}&quot;. This action cannot
+                    be undone.
+                  </>
+                }
+                confirmText="Delete"
+                destructive
+                handleConfirm={handleDelete}
+              />
             </div>
           </div>
         </div>
