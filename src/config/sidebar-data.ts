@@ -389,7 +389,7 @@ export const sidebarData: SidebarData = {
         // Module: credentials (requires Team+ plan)
         // ----------------------------------------
         {
-          title: 'Credential Leaks',
+          title: 'Credentials',
           url: '/credentials',
           icon: KeyRound,
           // Badge is now dynamic - fetched from API via useDynamicBadges hook
