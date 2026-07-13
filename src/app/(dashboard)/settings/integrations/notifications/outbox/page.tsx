@@ -289,7 +289,7 @@ export default function NotificationOutboxPage() {
             </Button>
             <div className="h-6 w-px bg-border" />
             <div>
-              <h1 className="text-xl font-semibold">Notification Queue</h1>
+              <h1 className="text-2xl font-bold tracking-tight">Notification Queue</h1>
             </div>
           </div>
           <Button variant="outline" size="sm" onClick={handleRefresh}>
