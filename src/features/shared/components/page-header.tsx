@@ -5,7 +5,8 @@ import type { ReactNode } from 'react'
 
 interface PageHeaderProps {
   title: string
-  description?: string
+  /** String or rich node (e.g. inline stat chips) shown under the title. */
+  description?: ReactNode
   children?: ReactNode
   className?: string
 }
