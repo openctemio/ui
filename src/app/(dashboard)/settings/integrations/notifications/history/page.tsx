@@ -478,7 +478,7 @@ function HistoryContent() {
           </Button>
           <div className="h-6 w-px bg-border" />
           <div>
-            <h1 className="text-xl font-semibold">Notification Events</h1>
+            <h1 className="text-2xl font-bold tracking-tight">Notification Events</h1>
           </div>
         </div>
 
