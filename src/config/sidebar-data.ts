@@ -233,12 +233,10 @@ export const sidebarData: SidebarData = {
               url: '/assets',
               icon: Container,
             },
-            // Duplicate review — approve/reject correlator-flagged asset merges
-            {
-              title: 'Duplicates',
-              url: '/assets/duplicates',
-              icon: GitMerge,
-            },
+            // Duplicate review is surfaced as a card on the Overview page
+            // (/assets) rather than a standing nav item — it's an occasional
+            // workflow, not a top-level asset category. Route still lives at
+            // /assets/duplicates.
             // External Attack Surface
             {
               title: 'Domains',
