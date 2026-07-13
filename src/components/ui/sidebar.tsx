@@ -359,13 +359,16 @@ function SidebarContent({ className, ...props }: React.ComponentProps<'div'>) {
       data-slot="sidebar-content"
       data-sidebar="content"
       className={cn(
-        'flex min-h-0 flex-1 flex-col overflow-auto',
-        // Touch-scroll hardening: pan-y keeps a vertical drag a scroll (not eaten
-        // by the interactive menu buttons); overscroll-contain stops rubber-band
-        // chaining; a stable scrollbar gutter prevents the content width from
-        // oscillating on scroll — which was animating the buttons'
-        // transition-[width] and making the collapsed icons "wobble".
-        'overscroll-contain [touch-action:pan-y] [scrollbar-gutter:stable]',
+        // Block (not flex) scroller: iOS Safari touch-scrolls a block overflow
+        // container reliably but is flaky on a flex one — the nav groups stack
+        // as blocks either way. flex-1 + min-h-0 keep it bounded inside the
+        // fixed sidebar so it scrolls instead of growing.
+        'min-h-0 flex-1 overflow-auto',
+        // Touch-scroll hardening: overscroll-contain stops rubber-band chaining;
+        // a stable scrollbar gutter prevents the content width from oscillating
+        // on scroll — which was animating the buttons' transition-[width] and
+        // making the collapsed icons "wobble".
+        'overscroll-contain [scrollbar-gutter:stable]',
         // Allow scrolling in collapsed icon mode but hide scrollbar for cleaner look
         'group-data-[collapsible=icon]:overflow-y-auto group-data-[collapsible=icon]:no-scrollbar',
         className
