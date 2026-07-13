@@ -1,9 +1,16 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import type { ColumnDef } from '@tanstack/react-table'
 import useSWR from 'swr'
 import { Main } from '@/components/layout'
-import { PageHeader, DataTableRowActions } from '@/features/shared'
+import {
+  PageHeader,
+  DataTable,
+  DataTableColumnHeader,
+  DataTableRowActions,
+  StackedCell,
+} from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -12,14 +19,6 @@ import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
 import { Card, CardContent } from '@/components/ui/card'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import {
   Dialog,
   DialogContent,
@@ -339,6 +338,104 @@ export default function PriorityRulesPage() {
     }
   }
 
+  const columns = useMemo<ColumnDef<PriorityRule>[]>(
+    () => [
+      {
+        accessorKey: 'name',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Name" />,
+        cell: ({ row }) => (
+          <StackedCell primary={row.original.name} secondary={row.original.description} />
+        ),
+      },
+      {
+        accessorKey: 'priority_class',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Target Class" />,
+        cell: ({ row }) => (
+          <PriorityClassBadge priorityClass={row.original.priority_class} showTooltip={false} />
+        ),
+      },
+      {
+        id: 'conditions',
+        header: 'Conditions',
+        enableSorting: false,
+        cell: ({ row }) => {
+          const conditions = row.original.conditions ?? []
+          return (
+            <div className="flex flex-wrap gap-1">
+              {conditions.length === 0 ? (
+                <span className="text-xs text-muted-foreground">No conditions</span>
+              ) : (
+                conditions.map((c, i) => (
+                  <Badge
+                    key={i}
+                    variant="outline"
+                    className="text-xs font-mono"
+                    title={`${c.field} ${OPERATOR_LABEL[c.operator]} ${formatConditionValue(c)}`}
+                  >
+                    {c.field} {OPERATOR_LABEL[c.operator]} {formatConditionValue(c)}
+                  </Badge>
+                ))
+              )}
+            </div>
+          )
+        },
+      },
+      {
+        accessorKey: 'evaluation_order',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Evaluation Order" />,
+        cell: ({ row }) => row.original.evaluation_order,
+      },
+      {
+        id: 'active',
+        header: 'Active',
+        enableSorting: false,
+        cell: ({ row }) => (
+          <Switch
+            checked={row.original.is_active}
+            onCheckedChange={(checked) => toggleActive(row.original, checked)}
+          />
+        ),
+      },
+      {
+        id: 'actions',
+        header: '',
+        enableSorting: false,
+        enableHiding: false,
+        cell: ({ row }) => {
+          const rule = row.original
+          return (
+            <Can permission={Permission.PriorityRulesWrite}>
+              <DataTableRowActions
+                actions={[
+                  { label: 'Edit', icon: Pencil, onClick: () => openEdit(rule) },
+                  {
+                    label: 'Dry run',
+                    icon: FlaskConical,
+                    onClick: () =>
+                      setDryRunRule({
+                        name: rule.name,
+                        priority_class: rule.priority_class,
+                        conditions: rule.conditions,
+                      }),
+                  },
+                  {
+                    label: 'Delete',
+                    icon: Trash2,
+                    destructive: true,
+                    separatorBefore: true,
+                    onClick: () => setDeletingRule(rule),
+                  },
+                ]}
+              />
+            </Can>
+          )
+        },
+      },
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  )
+
   function renderValueInput(c: Condition, idx: number) {
     const cfg = FIELD_CONFIG[c.field]
     if (cfg.type === 'bool') {
@@ -440,100 +537,17 @@ export default function PriorityRulesPage() {
 
       <Card className="mt-6">
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Target Class</TableHead>
-                <TableHead>Conditions</TableHead>
-                <TableHead className="w-[140px]">Evaluation Order</TableHead>
-                <TableHead className="w-[90px]">Active</TableHead>
-                <TableHead className="w-[50px]" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                    Loading...
-                  </TableCell>
-                </TableRow>
-              ) : rules.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                    No priority rules yet. Click &quot;Create Rule&quot; to add one.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                rules.map((rule) => (
-                  <TableRow key={rule.id}>
-                    <TableCell>
-                      <div className="font-medium">{rule.name}</div>
-                      {rule.description && (
-                        <div className="text-xs text-muted-foreground mt-0.5">
-                          {rule.description}
-                        </div>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <PriorityClassBadge priorityClass={rule.priority_class} showTooltip={false} />
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {(rule.conditions ?? []).length === 0 ? (
-                          <span className="text-xs text-muted-foreground">No conditions</span>
-                        ) : (
-                          (rule.conditions ?? []).map((c, i) => (
-                            <Badge
-                              key={i}
-                              variant="outline"
-                              className="text-xs font-mono"
-                              title={`${c.field} ${OPERATOR_LABEL[c.operator]} ${formatConditionValue(c)}`}
-                            >
-                              {c.field} {OPERATOR_LABEL[c.operator]} {formatConditionValue(c)}
-                            </Badge>
-                          ))
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>{rule.evaluation_order}</TableCell>
-                    <TableCell>
-                      <Switch
-                        checked={rule.is_active}
-                        onCheckedChange={(checked) => toggleActive(rule, checked)}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Can permission={Permission.PriorityRulesWrite}>
-                        <DataTableRowActions
-                          actions={[
-                            { label: 'Edit', icon: Pencil, onClick: () => openEdit(rule) },
-                            {
-                              label: 'Dry run',
-                              icon: FlaskConical,
-                              onClick: () =>
-                                setDryRunRule({
-                                  name: rule.name,
-                                  priority_class: rule.priority_class,
-                                  conditions: rule.conditions,
-                                }),
-                            },
-                            {
-                              label: 'Delete',
-                              icon: Trash2,
-                              destructive: true,
-                              separatorBefore: true,
-                              onClick: () => setDeletingRule(rule),
-                            },
-                          ]}
-                        />
-                      </Can>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+          {isLoading ? (
+            <div className="text-center text-muted-foreground py-8">Loading...</div>
+          ) : (
+            <DataTable
+              columns={columns}
+              data={rules}
+              searchPlaceholder="Search rules..."
+              emptyMessage="No priority rules yet"
+              emptyDescription='Click "Create Rule" to add one.'
+            />
+          )}
         </CardContent>
       </Card>
 

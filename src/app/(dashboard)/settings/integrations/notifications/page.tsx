@@ -4,25 +4,20 @@ import { useState, useMemo, useCallback } from 'react'
 import { csrfFetch } from '@/lib/api/client'
 import { useRouter } from 'next/navigation'
 import { Main } from '@/components/layout'
-import { PageHeader, EmptyState } from '@/features/shared'
+import {
+  PageHeader,
+  EmptyState,
+  DataTable,
+  DataTableColumnHeader,
+  DataTableRowActions,
+  RelativeTime,
+  StackedCell,
+  type RowAction,
+} from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+import type { ColumnDef } from '@tanstack/react-table'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
@@ -32,7 +27,6 @@ import {
   Plus,
   Bell,
   RefreshCw,
-  MoreHorizontal,
   Send,
   Pencil,
   Trash2,
@@ -205,15 +199,304 @@ export default function NotificationIntegrationsPage() {
     }
   }, [selectedIntegration, mutate])
 
-  const handleDeleteClick = (integration: Integration) => {
+  const handleDeleteClick = useCallback((integration: Integration) => {
     setSelectedIntegration(integration)
     setDeleteDialogOpen(true)
-  }
+  }, [])
 
-  const handleEditClick = (integration: Integration) => {
+  const handleEditClick = useCallback((integration: Integration) => {
     setSelectedIntegration(integration)
     setEditDialogOpen(true)
-  }
+  }, [])
+
+  const columns = useMemo<ColumnDef<Integration>[]>(
+    () => [
+      {
+        accessorKey: 'name',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Channel" />,
+        cell: ({ row }) => {
+          const integration = row.original
+          const ext = integration.notification_extension
+          return (
+            <div className="flex items-center gap-3">
+              <div
+                className={cn(
+                  'flex h-10 w-10 items-center justify-center rounded-lg',
+                  PROVIDER_COLORS[integration.provider] || 'bg-gray-100'
+                )}
+              >
+                <ProviderIcon provider={integration.provider} className="h-5 w-5" />
+              </div>
+              <StackedCell
+                primary={integration.name}
+                secondary={ext?.channel_name ? `#${ext.channel_name}` : undefined}
+              />
+            </div>
+          )
+        },
+      },
+      {
+        accessorKey: 'provider',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Provider" />,
+        cell: ({ row }) => (
+          <Badge variant="outline" className="text-xs">
+            {PROVIDER_LABELS[row.original.provider] || row.original.provider}
+          </Badge>
+        ),
+      },
+      {
+        accessorKey: 'status',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
+        cell: ({ row }) => {
+          const integration = row.original
+          const statusConfig = STATUS_CONFIG[integration.status] || STATUS_CONFIG.pending
+          return (
+            <div className="space-y-1">
+              <Badge variant="outline" className={cn('gap-1', statusConfig.color)}>
+                {statusConfig.icon}
+                {statusConfig.label}
+              </Badge>
+              {integration.status_message && integration.status === 'error' && (
+                <p
+                  className="text-xs text-red-500 max-w-[250px]"
+                  title={integration.status_message}
+                >
+                  {integration.status_message}
+                </p>
+              )}
+            </div>
+          )
+        },
+      },
+      {
+        id: 'severity_filters',
+        header: 'Severity Filters',
+        enableSorting: false,
+        cell: ({ row }) => {
+          const ext = row.original.notification_extension
+          return (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex gap-1 flex-wrap cursor-default">
+                    {(() => {
+                      // null/undefined means no filter = all severities
+                      // empty array also means all severities
+                      // 5+ severities (accounting for legacy data missing 'medium') = all severities
+                      const severities = ext?.enabled_severities
+                      const isAllSeverities =
+                        !severities ||
+                        severities.length === 0 ||
+                        severities.length >= ALL_NOTIFICATION_SEVERITIES.length - 1
+                      if (isAllSeverities) {
+                        return <span className="text-xs text-muted-foreground">All severities</span>
+                      }
+                      // Show max 3 severity badges, then "+N more"
+                      const maxShow = 3
+                      const shown = severities.slice(0, maxShow)
+                      const remaining = severities.length - maxShow
+                      return (
+                        <>
+                          {shown.map((sev) => {
+                            const colorClass =
+                              {
+                                critical: 'bg-red-500/10 text-red-600 border-red-200',
+                                high: 'bg-orange-500/10 text-orange-600 border-orange-200',
+                                medium: 'bg-yellow-500/10 text-yellow-600 border-yellow-200',
+                                low: 'bg-blue-500/10 text-blue-600 border-blue-200',
+                                info: 'bg-gray-500/10 text-gray-600 border-gray-200',
+                                none: 'bg-gray-200/10 text-gray-400 border-gray-200',
+                              }[sev] || 'bg-gray-500/10 text-gray-600 border-gray-200'
+                            const config = ALL_NOTIFICATION_SEVERITIES.find((s) => s.value === sev)
+                            return (
+                              <Badge
+                                key={sev}
+                                variant="outline"
+                                className={cn('text-xs', colorClass)}
+                              >
+                                {config?.label || sev}
+                              </Badge>
+                            )
+                          })}
+                          {remaining > 0 && (
+                            <Badge
+                              variant="outline"
+                              className="text-xs bg-gray-100 text-gray-600 border-gray-200"
+                            >
+                              +{remaining}
+                            </Badge>
+                          )}
+                        </>
+                      )
+                    })()}
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-[200px]">
+                  <p className="text-xs font-medium mb-1">Severity Filters:</p>
+                  <p className="text-xs text-muted-foreground">
+                    {(() => {
+                      const severities = ext?.enabled_severities
+                      const isAllSeverities =
+                        !severities ||
+                        severities.length === 0 ||
+                        severities.length >= ALL_NOTIFICATION_SEVERITIES.length - 1
+                      if (isAllSeverities) {
+                        // Show actual list of all severities
+                        return ALL_NOTIFICATION_SEVERITIES.map((s) => s.label).join(', ')
+                      }
+                      return severities
+                        .map((sev) => {
+                          const config = ALL_NOTIFICATION_SEVERITIES.find((s) => s.value === sev)
+                          return config?.label || sev
+                        })
+                        .join(', ')
+                    })()}
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )
+        },
+      },
+      {
+        id: 'event_types',
+        header: 'Event Types',
+        enableSorting: false,
+        cell: ({ row }) => {
+          const ext = row.original.notification_extension
+          return (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex gap-1 flex-wrap cursor-default">
+                    {(() => {
+                      const eventTypes = ext?.enabled_event_types ?? DEFAULT_ENABLED_EVENT_TYPES
+                      if (
+                        eventTypes.length === 0 ||
+                        eventTypes.length === ALL_NOTIFICATION_EVENT_TYPES.length
+                      ) {
+                        return <span className="text-xs text-muted-foreground">All events</span>
+                      }
+                      // Group by category and show summary
+                      const byCategory = new Map<NotificationEventCategory, string[]>()
+                      eventTypes.forEach((et) => {
+                        const config = ALL_NOTIFICATION_EVENT_TYPES.find((t) => t.value === et)
+                        if (config) {
+                          const cat = config.category
+                          if (!byCategory.has(cat)) byCategory.set(cat, [])
+                          byCategory.get(cat)!.push(config.label)
+                        }
+                      })
+                      // Show category badges with count
+                      const categories = Array.from(byCategory.entries())
+                      if (categories.length <= 2) {
+                        // Show category names with count
+                        return categories.map(([cat, items]) => (
+                          <Badge
+                            key={cat}
+                            variant="outline"
+                            className="text-xs bg-purple-500/10 text-purple-600 border-purple-200"
+                          >
+                            {EVENT_CATEGORY_LABELS[cat].replace(' Events', '')} ({items.length})
+                          </Badge>
+                        ))
+                      }
+                      // Show total count
+                      return (
+                        <Badge
+                          variant="outline"
+                          className="text-xs bg-purple-500/10 text-purple-600 border-purple-200"
+                        >
+                          {eventTypes.length} event types
+                        </Badge>
+                      )
+                    })()}
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-[280px]">
+                  <p className="text-xs font-medium mb-1">Event Types:</p>
+                  {(() => {
+                    const eventTypes = ext?.enabled_event_types ?? DEFAULT_ENABLED_EVENT_TYPES
+                    if (
+                      eventTypes.length === 0 ||
+                      eventTypes.length === ALL_NOTIFICATION_EVENT_TYPES.length
+                    ) {
+                      return (
+                        <p className="text-xs text-muted-foreground">All event types enabled</p>
+                      )
+                    }
+                    // Group by category for tooltip
+                    const byCategory = new Map<NotificationEventCategory, string[]>()
+                    eventTypes.forEach((et) => {
+                      const config = ALL_NOTIFICATION_EVENT_TYPES.find((t) => t.value === et)
+                      if (config) {
+                        const cat = config.category
+                        if (!byCategory.has(cat)) byCategory.set(cat, [])
+                        byCategory.get(cat)!.push(config.label)
+                      }
+                    })
+                    return Array.from(byCategory.entries()).map(([cat, items]) => (
+                      <div key={cat} className="mb-1 last:mb-0">
+                        <span className="text-xs font-medium">{EVENT_CATEGORY_LABELS[cat]}:</span>
+                        <span className="text-xs text-muted-foreground ms-1">
+                          {items.join(', ')}
+                        </span>
+                      </div>
+                    ))
+                  })()}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )
+        },
+      },
+      {
+        accessorKey: 'last_sync_at',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Last Used" />,
+        cell: ({ row }) => <RelativeTime date={row.original.last_sync_at} />,
+      },
+      {
+        id: 'actions',
+        header: '',
+        enableSorting: false,
+        enableHiding: false,
+        cell: ({ row }) => {
+          const integration = row.original
+          const actions: RowAction[] = [
+            {
+              label: 'Send Test',
+              icon: Send,
+              onClick: () => void handleTestNotification(integration),
+            },
+            {
+              label: 'Edit',
+              icon: Pencil,
+              onClick: () => handleEditClick(integration),
+              permission: Permission.NotificationsWrite,
+            },
+            {
+              label: 'View Events',
+              icon: History,
+              onClick: () =>
+                router.push(
+                  `/settings/integrations/notifications/history?integration=${integration.id}`
+                ),
+            },
+            {
+              label: 'Delete',
+              icon: Trash2,
+              onClick: () => handleDeleteClick(integration),
+              destructive: true,
+              separatorBefore: true,
+              permission: Permission.NotificationsDelete,
+            },
+          ]
+          return <DataTableRowActions actions={actions} />
+        },
+      },
+    ],
+    [router, handleTestNotification, handleEditClick, handleDeleteClick]
+  )
 
   // Error state
   if (error) {
@@ -370,332 +653,13 @@ export default function NotificationIntegrationsPage() {
                 }
               />
             ) : (
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Channel</TableHead>
-                      <TableHead>Provider</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Severity Filters</TableHead>
-                      <TableHead>Event Types</TableHead>
-                      <TableHead>Last Used</TableHead>
-                      <TableHead className="w-[70px]"></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {integrations.map((integration) => {
-                      const statusConfig =
-                        STATUS_CONFIG[integration.status] || STATUS_CONFIG.pending
-                      const ext = integration.notification_extension
-                      return (
-                        <TableRow key={integration.id}>
-                          <TableCell>
-                            <div className="flex items-center gap-3">
-                              <div
-                                className={cn(
-                                  'flex h-10 w-10 items-center justify-center rounded-lg',
-                                  PROVIDER_COLORS[integration.provider] || 'bg-gray-100'
-                                )}
-                              >
-                                <ProviderIcon provider={integration.provider} className="h-5 w-5" />
-                              </div>
-                              <div>
-                                <p className="font-medium">{integration.name}</p>
-                                {ext?.channel_name && (
-                                  <p className="text-xs text-muted-foreground">
-                                    #{ext.channel_name}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className="text-xs">
-                              {PROVIDER_LABELS[integration.provider] || integration.provider}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <div className="space-y-1">
-                              <Badge variant="outline" className={cn('gap-1', statusConfig.color)}>
-                                {statusConfig.icon}
-                                {statusConfig.label}
-                              </Badge>
-                              {integration.status_message && integration.status === 'error' && (
-                                <p
-                                  className="text-xs text-red-500 max-w-[250px]"
-                                  title={integration.status_message}
-                                >
-                                  {integration.status_message}
-                                </p>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <div className="flex gap-1 flex-wrap cursor-default">
-                                    {(() => {
-                                      // null/undefined means no filter = all severities
-                                      // empty array also means all severities
-                                      // 5+ severities (accounting for legacy data missing 'medium') = all severities
-                                      const severities = ext?.enabled_severities
-                                      const isAllSeverities =
-                                        !severities ||
-                                        severities.length === 0 ||
-                                        severities.length >= ALL_NOTIFICATION_SEVERITIES.length - 1
-                                      if (isAllSeverities) {
-                                        return (
-                                          <span className="text-xs text-muted-foreground">
-                                            All severities
-                                          </span>
-                                        )
-                                      }
-                                      // Show max 3 severity badges, then "+N more"
-                                      const maxShow = 3
-                                      const shown = severities.slice(0, maxShow)
-                                      const remaining = severities.length - maxShow
-                                      return (
-                                        <>
-                                          {shown.map((sev) => {
-                                            const colorClass =
-                                              {
-                                                critical:
-                                                  'bg-red-500/10 text-red-600 border-red-200',
-                                                high: 'bg-orange-500/10 text-orange-600 border-orange-200',
-                                                medium:
-                                                  'bg-yellow-500/10 text-yellow-600 border-yellow-200',
-                                                low: 'bg-blue-500/10 text-blue-600 border-blue-200',
-                                                info: 'bg-gray-500/10 text-gray-600 border-gray-200',
-                                                none: 'bg-gray-200/10 text-gray-400 border-gray-200',
-                                              }[sev] ||
-                                              'bg-gray-500/10 text-gray-600 border-gray-200'
-                                            const config = ALL_NOTIFICATION_SEVERITIES.find(
-                                              (s) => s.value === sev
-                                            )
-                                            return (
-                                              <Badge
-                                                key={sev}
-                                                variant="outline"
-                                                className={cn('text-xs', colorClass)}
-                                              >
-                                                {config?.label || sev}
-                                              </Badge>
-                                            )
-                                          })}
-                                          {remaining > 0 && (
-                                            <Badge
-                                              variant="outline"
-                                              className="text-xs bg-gray-100 text-gray-600 border-gray-200"
-                                            >
-                                              +{remaining}
-                                            </Badge>
-                                          )}
-                                        </>
-                                      )
-                                    })()}
-                                  </div>
-                                </TooltipTrigger>
-                                <TooltipContent side="bottom" className="max-w-[200px]">
-                                  <p className="text-xs font-medium mb-1">Severity Filters:</p>
-                                  <p className="text-xs text-muted-foreground">
-                                    {(() => {
-                                      const severities = ext?.enabled_severities
-                                      const isAllSeverities =
-                                        !severities ||
-                                        severities.length === 0 ||
-                                        severities.length >= ALL_NOTIFICATION_SEVERITIES.length - 1
-                                      if (isAllSeverities) {
-                                        // Show actual list of all severities
-                                        return ALL_NOTIFICATION_SEVERITIES.map((s) => s.label).join(
-                                          ', '
-                                        )
-                                      }
-                                      return severities
-                                        .map((sev) => {
-                                          const config = ALL_NOTIFICATION_SEVERITIES.find(
-                                            (s) => s.value === sev
-                                          )
-                                          return config?.label || sev
-                                        })
-                                        .join(', ')
-                                    })()}
-                                  </p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          </TableCell>
-                          <TableCell>
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <div className="flex gap-1 flex-wrap cursor-default">
-                                    {(() => {
-                                      const eventTypes =
-                                        ext?.enabled_event_types ?? DEFAULT_ENABLED_EVENT_TYPES
-                                      if (
-                                        eventTypes.length === 0 ||
-                                        eventTypes.length === ALL_NOTIFICATION_EVENT_TYPES.length
-                                      ) {
-                                        return (
-                                          <span className="text-xs text-muted-foreground">
-                                            All events
-                                          </span>
-                                        )
-                                      }
-                                      // Group by category and show summary
-                                      const byCategory = new Map<
-                                        NotificationEventCategory,
-                                        string[]
-                                      >()
-                                      eventTypes.forEach((et) => {
-                                        const config = ALL_NOTIFICATION_EVENT_TYPES.find(
-                                          (t) => t.value === et
-                                        )
-                                        if (config) {
-                                          const cat = config.category
-                                          if (!byCategory.has(cat)) byCategory.set(cat, [])
-                                          byCategory.get(cat)!.push(config.label)
-                                        }
-                                      })
-                                      // Show category badges with count
-                                      const categories = Array.from(byCategory.entries())
-                                      if (categories.length <= 2) {
-                                        // Show category names with count
-                                        return categories.map(([cat, items]) => (
-                                          <Badge
-                                            key={cat}
-                                            variant="outline"
-                                            className="text-xs bg-purple-500/10 text-purple-600 border-purple-200"
-                                          >
-                                            {EVENT_CATEGORY_LABELS[cat].replace(' Events', '')} (
-                                            {items.length})
-                                          </Badge>
-                                        ))
-                                      }
-                                      // Show total count
-                                      return (
-                                        <Badge
-                                          variant="outline"
-                                          className="text-xs bg-purple-500/10 text-purple-600 border-purple-200"
-                                        >
-                                          {eventTypes.length} event types
-                                        </Badge>
-                                      )
-                                    })()}
-                                  </div>
-                                </TooltipTrigger>
-                                <TooltipContent side="bottom" className="max-w-[280px]">
-                                  <p className="text-xs font-medium mb-1">Event Types:</p>
-                                  {(() => {
-                                    const eventTypes =
-                                      ext?.enabled_event_types ?? DEFAULT_ENABLED_EVENT_TYPES
-                                    if (
-                                      eventTypes.length === 0 ||
-                                      eventTypes.length === ALL_NOTIFICATION_EVENT_TYPES.length
-                                    ) {
-                                      return (
-                                        <p className="text-xs text-muted-foreground">
-                                          All event types enabled
-                                        </p>
-                                      )
-                                    }
-                                    // Group by category for tooltip
-                                    const byCategory = new Map<
-                                      NotificationEventCategory,
-                                      string[]
-                                    >()
-                                    eventTypes.forEach((et) => {
-                                      const config = ALL_NOTIFICATION_EVENT_TYPES.find(
-                                        (t) => t.value === et
-                                      )
-                                      if (config) {
-                                        const cat = config.category
-                                        if (!byCategory.has(cat)) byCategory.set(cat, [])
-                                        byCategory.get(cat)!.push(config.label)
-                                      }
-                                    })
-                                    return Array.from(byCategory.entries()).map(([cat, items]) => (
-                                      <div key={cat} className="mb-1 last:mb-0">
-                                        <span className="text-xs font-medium">
-                                          {EVENT_CATEGORY_LABELS[cat]}:
-                                        </span>
-                                        <span className="text-xs text-muted-foreground ms-1">
-                                          {items.join(', ')}
-                                        </span>
-                                      </div>
-                                    ))
-                                  })()}
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          </TableCell>
-                          <TableCell>
-                            <span className="text-sm text-muted-foreground">
-                              {integration.last_sync_at
-                                ? new Date(integration.last_sync_at).toLocaleDateString()
-                                : 'Never'}
-                            </span>
-                          </TableCell>
-                          <TableCell>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-8 w-8 p-0"
-                                  disabled={actionInProgress === integration.id}
-                                >
-                                  {actionInProgress === integration.id ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                  ) : (
-                                    <MoreHorizontal className="h-4 w-4" />
-                                  )}
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem
-                                  onClick={() => handleTestNotification(integration)}
-                                >
-                                  <Send className="me-2 h-4 w-4" />
-                                  Send Test
-                                </DropdownMenuItem>
-                                <Can permission={Permission.NotificationsWrite}>
-                                  <DropdownMenuItem onClick={() => handleEditClick(integration)}>
-                                    <Pencil className="me-2 h-4 w-4" />
-                                    Edit
-                                  </DropdownMenuItem>
-                                </Can>
-                                <DropdownMenuItem
-                                  onClick={() =>
-                                    router.push(
-                                      `/settings/integrations/notifications/history?integration=${integration.id}`
-                                    )
-                                  }
-                                >
-                                  <History className="me-2 h-4 w-4" />
-                                  View Events
-                                </DropdownMenuItem>
-                                <Can permission={Permission.NotificationsDelete}>
-                                  <DropdownMenuSeparator />
-                                  <DropdownMenuItem
-                                    className="text-red-500"
-                                    onClick={() => handleDeleteClick(integration)}
-                                  >
-                                    <Trash2 className="me-2 h-4 w-4" />
-                                    Delete
-                                  </DropdownMenuItem>
-                                </Can>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </TableCell>
-                        </TableRow>
-                      )
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
+              <DataTable
+                columns={columns}
+                data={integrations}
+                searchPlaceholder="Search channels..."
+                emptyMessage="No Notification Channels"
+                emptyDescription="Add Slack, Microsoft Teams, Telegram, or webhook integrations to receive security alerts."
+              />
             )}
           </CardContent>
         </Card>
