@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useAssets } from '@/features/assets'
 import { Main } from '@/components/layout'
-import { PageHeader, DataTableRowActions } from '@/features/shared'
+import { PageHeader, DataTableRowActions, StatsCard } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -470,46 +470,26 @@ export default function InternalSurfacePage() {
 
         {/* Stats Cards */}
         <div className="grid gap-4 md:grid-cols-5 mb-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Total Assets</CardTitle>
-              <Layers className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.total}</div>
-              <p className="text-xs text-muted-foreground">{stats.online} online</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Critical Risk</CardTitle>
-              <AlertTriangle className="h-4 w-4 text-red-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-500">{stats.critical}</div>
-              <p className="text-xs text-muted-foreground">Needs attention</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Findings</CardTitle>
-              <Shield className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.totalFindings}</div>
-              <p className="text-xs text-muted-foreground">Security issues</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Network Zones</CardTitle>
-              <Network className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">4</div>
-              <p className="text-xs text-muted-foreground">Segmented zones</p>
-            </CardContent>
-          </Card>
+          <StatsCard
+            title="Total Assets"
+            value={stats.total}
+            icon={Layers}
+            description={`${stats.online} online`}
+          />
+          <StatsCard
+            title="Critical Risk"
+            value={stats.critical}
+            valueClassName="text-red-600"
+            icon={AlertTriangle}
+            description="Needs attention"
+          />
+          <StatsCard
+            title="Findings"
+            value={stats.totalFindings}
+            icon={Shield}
+            description="Security issues"
+          />
+          <StatsCard title="Network Zones" value={4} icon={Network} description="Segmented zones" />
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">Coverage</CardTitle>

@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { Main } from '@/components/layout'
-import { PageHeader } from '@/features/shared'
+import { PageHeader, StatsCard } from '@/features/shared'
 import { ValidationCoverageCard } from '@/features/validation/components/validation-coverage-card'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -570,24 +570,9 @@ export default function ControlTestingPage() {
 
       {/* Summary Stats */}
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Total Controls</CardDescription>
-            <CardTitle className="text-3xl">{summaryStats.total}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Passed</CardDescription>
-            <CardTitle className="text-3xl text-green-500">{summaryStats.passed}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Failed</CardDescription>
-            <CardTitle className="text-3xl text-red-500">{summaryStats.failed}</CardTitle>
-          </CardHeader>
-        </Card>
+        <StatsCard title="Total Controls" value={summaryStats.total} />
+        <StatsCard title="Passed" value={summaryStats.passed} valueClassName="text-green-600" />
+        <StatsCard title="Failed" value={summaryStats.failed} valueClassName="text-red-600" />
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Coverage</CardDescription>
