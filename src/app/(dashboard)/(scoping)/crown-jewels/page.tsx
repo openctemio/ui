@@ -334,7 +334,10 @@ export default function CrownJewelsPage() {
       header: ({ column }) => <DataTableColumnHeader column={column} title="Crown Jewel" />,
       cell: ({ row }) => {
         const jewel = row.original
-        const CategoryIcon = categoryIcons[jewel.category]
+        // Fall back to a generic icon: `category` is mapped from the asset's raw
+        // type, which may be outside the fixed AssetCategory set — an unmapped
+        // key would otherwise render `undefined` and crash the whole table.
+        const CategoryIcon = categoryIcons[jewel.category] ?? Database
         return (
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-500/10">
@@ -346,7 +349,7 @@ export default function CrownJewelsPage() {
                 <Crown className="h-3 w-3 text-amber-500" />
               </div>
               <div className="text-xs text-muted-foreground">
-                {categoryLabels[jewel.category]} | {jewel.businessUnit}
+                {categoryLabels[jewel.category] ?? 'Other'} | {jewel.businessUnit}
               </div>
             </div>
           </div>
@@ -358,7 +361,8 @@ export default function CrownJewelsPage() {
       header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
       cell: ({ row }) => {
         const status = row.original.status
-        const StatusIcon = statusIcons[status]
+        // Same guard: an unmapped status must not render an undefined element.
+        const StatusIcon = statusIcons[status] ?? ShieldCheck
         return (
           <Badge variant="outline" className={statusColors[status]}>
             <StatusIcon className="me-1 h-3 w-3" />

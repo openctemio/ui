@@ -26,6 +26,7 @@ import {
   X,
   Calendar,
   ChevronRight,
+  Circle,
 } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -493,7 +494,8 @@ export default function CompliancePage() {
                 ) : (
                   <div className="space-y-3">
                     {filteredRows.map((req) => {
-                      const StatusIcon = statusIcons[req.status]
+                      // Guard: an unmapped status must not render undefined.
+                      const StatusIcon = statusIcons[req.status] ?? Circle
                       return (
                         <div
                           key={req.id}
