@@ -129,7 +129,12 @@ function SidebarProvider({
             } as React.CSSProperties
           }
           className={cn(
-            'group/sidebar-wrapper has-data-[variant=inset]:bg-sidebar flex min-h-svh w-full',
+            // App-shell scroll model: the shell is exactly one viewport tall and
+            // never scrolls the document — the sidebar and the main content each
+            // scroll inside their own pane. Document scroll + a position:fixed
+            // sidebar is what broke sidebar touch-scroll on iOS after the body
+            // had scrolled (the body captured the gesture).
+            'group/sidebar-wrapper has-data-[variant=inset]:bg-sidebar flex h-svh w-full overflow-hidden',
             className
           )}
           {...props}
@@ -300,7 +305,7 @@ function SidebarInset({ className, ...props }: React.ComponentProps<'div'>) {
     <div
       data-slot="sidebar-inset"
       className={cn(
-        'bg-background relative flex w-full flex-1 flex-col',
+        'bg-background relative flex w-full min-h-0 flex-1 flex-col overflow-hidden',
         'md:peer-data-[variant=inset]:m-2 md:peer-data-[variant=inset]:ms-0 md:peer-data-[variant=inset]:rounded-xl md:peer-data-[variant=inset]:shadow-sm md:peer-data-[variant=inset]:peer-data-[state=collapsed]:ms-2',
         className
       )}

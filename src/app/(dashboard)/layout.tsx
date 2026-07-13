@@ -57,9 +57,17 @@ export default async function SiteLayout({ children }: SiteLayoutProps) {
                     The overflow-hidden scope is gated by data-layout=fixed
                     so "normal" pages still scroll naturally at the body.
                   */}
+                  {/*
+                    Normal pages scroll HERE (their own pane), not the document —
+                    so the fixed sidebar keeps its own touch-scroll on iOS. Pages
+                    that opt into a full-viewport builder via <Main fixed> match
+                    the has-[data-layout=fixed] rule, whose :has() specificity
+                    overrides overflow-y-auto back to overflow-hidden so the
+                    builder manages its own scroll/pan.
+                  */}
                   <main
                     id="content"
-                    className="flex flex-1 flex-col has-[[data-layout=fixed]]:overflow-hidden"
+                    className="flex min-h-0 flex-1 flex-col overflow-y-auto has-[[data-layout=fixed]]:overflow-hidden"
                   >
                     {children}
                   </main>
