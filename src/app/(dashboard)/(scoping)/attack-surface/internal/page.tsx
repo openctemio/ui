@@ -91,23 +91,27 @@ interface InternalAsset {
 }
 
 const statusColors: Record<AssetStatus, string> = {
-  online: 'bg-green-500/10 text-green-500 border-green-500/20',
-  offline: 'bg-gray-500/10 text-gray-500 border-gray-500/20',
-  unknown: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20',
+  online:
+    'bg-green-500/10 text-green-500 border-green-500/20 dark:bg-green-900/30 dark:text-green-400',
+  offline: 'bg-gray-500/10 text-gray-500 border-gray-500/20 dark:bg-gray-800 dark:text-gray-400',
+  unknown:
+    'bg-yellow-500/10 text-yellow-500 border-yellow-500/20 dark:bg-yellow-900/30 dark:text-yellow-400',
 }
 
 const riskColors: Record<RiskLevel, string> = {
-  critical: 'bg-red-500/10 text-red-500 border-red-500/20',
-  high: 'bg-orange-500/10 text-orange-500 border-orange-500/20',
-  medium: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20',
-  low: 'bg-green-500/10 text-green-500 border-green-500/20',
+  critical: 'bg-red-500/10 text-red-500 border-red-500/20 dark:bg-red-900/30 dark:text-red-400',
+  high: 'bg-orange-500/10 text-orange-500 border-orange-500/20 dark:bg-orange-900/30 dark:text-orange-400',
+  medium:
+    'bg-yellow-500/10 text-yellow-500 border-yellow-500/20 dark:bg-yellow-900/30 dark:text-yellow-400',
+  low: 'bg-green-500/10 text-green-500 border-green-500/20 dark:bg-green-900/30 dark:text-green-400',
 }
 
 const zoneColors: Record<NetworkZone, string> = {
-  dmz: 'bg-purple-500/10 text-purple-500 border-purple-500/20',
-  internal: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
-  restricted: 'bg-red-500/10 text-red-500 border-red-500/20',
-  guest: 'bg-gray-500/10 text-gray-500 border-gray-500/20',
+  dmz: 'bg-purple-500/10 text-purple-500 border-purple-500/20 dark:bg-purple-900/30 dark:text-purple-400',
+  internal:
+    'bg-blue-500/10 text-blue-500 border-blue-500/20 dark:bg-blue-900/30 dark:text-blue-400',
+  restricted: 'bg-red-500/10 text-red-500 border-red-500/20 dark:bg-red-900/30 dark:text-red-400',
+  guest: 'bg-gray-500/10 text-gray-500 border-gray-500/20 dark:bg-gray-800 dark:text-gray-400',
 }
 
 const typeIcons: Record<AssetType, React.ElementType> = {
