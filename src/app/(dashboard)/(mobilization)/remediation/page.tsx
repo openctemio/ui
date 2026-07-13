@@ -10,8 +10,14 @@ import {
   DataTable,
   DataTableColumnHeader,
   DataTableRowActions,
+  SectionTabs,
   type RowAction,
 } from '@/features/shared'
+
+const REMEDIATION_TABS = [
+  { label: 'Tasks', href: '/remediation' },
+  { label: 'Solution Families', href: '/remediations' },
+]
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -1021,6 +1027,8 @@ export default function RemediationPage() {
             </Button>
           </div>
         </PageHeader>
+
+        <SectionTabs tabs={REMEDIATION_TABS} />
 
         {/* Loading State */}
         {isLoading && (

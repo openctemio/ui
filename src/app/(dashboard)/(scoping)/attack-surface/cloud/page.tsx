@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useAssets } from '@/features/assets'
 import { Main } from '@/components/layout'
-import { PageHeader } from '@/features/shared'
+import { PageHeader, DataTableRowActions } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -12,7 +12,6 @@ import { Progress } from '@/components/ui/progress'
 import {
   Cloud,
   Plus,
-  MoreHorizontal,
   Eye,
   Pencil,
   Trash2,
@@ -33,12 +32,6 @@ import {
   Box,
 } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import {
   Dialog,
   DialogContent,
@@ -753,34 +746,30 @@ export default function CloudSurfacePage() {
                       </TableCell>
                       <TableCell>
                         <Can permission={[Permission.ScopeWrite, Permission.ScopeDelete]}>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                              <Button variant="ghost" size="icon">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => setViewResource(resource)}>
-                                <Eye className="me-2 h-4 w-4" />
-                                View Details
-                              </DropdownMenuItem>
-                              <Can permission={Permission.ScopeWrite}>
-                                <DropdownMenuItem onClick={() => openEdit(resource)}>
-                                  <Pencil className="me-2 h-4 w-4" />
-                                  Edit
-                                </DropdownMenuItem>
-                              </Can>
-                              <Can permission={Permission.ScopeDelete}>
-                                <DropdownMenuItem
-                                  className="text-red-500"
-                                  onClick={() => setDeleteResource(resource)}
-                                >
-                                  <Trash2 className="me-2 h-4 w-4" />
-                                  Delete
-                                </DropdownMenuItem>
-                              </Can>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                          <span onClick={(e) => e.stopPropagation()}>
+                            <DataTableRowActions
+                              actions={[
+                                {
+                                  label: 'View Details',
+                                  icon: Eye,
+                                  onClick: () => setViewResource(resource),
+                                },
+                                {
+                                  label: 'Edit',
+                                  icon: Pencil,
+                                  onClick: () => openEdit(resource),
+                                  permission: Permission.ScopeWrite,
+                                },
+                                {
+                                  label: 'Delete',
+                                  icon: Trash2,
+                                  onClick: () => setDeleteResource(resource),
+                                  destructive: true,
+                                  permission: Permission.ScopeDelete,
+                                },
+                              ]}
+                            />
+                          </span>
                         </Can>
                       </TableCell>
                     </TableRow>
