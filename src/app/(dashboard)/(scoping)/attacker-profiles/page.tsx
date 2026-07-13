@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
+import type { ColumnDef } from '@tanstack/react-table'
 import useSWR from 'swr'
 import { Main } from '@/components/layout'
-import { PageHeader, EmptyState } from '@/features/shared'
+import { PageHeader, EmptyState, DataTable, DataTableColumnHeader } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -18,14 +19,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import {
   Select,
   SelectContent,
@@ -142,6 +135,104 @@ export default function AttackerProfilesPage() {
     }
   }
 
+  const columns = useMemo<ColumnDef<AttackerProfile>[]>(
+    () => [
+      {
+        accessorKey: 'name',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Name" />,
+        cell: ({ row }) => {
+          const profile = row.original
+          return (
+            <div className="flex items-center gap-2 font-medium">
+              {profile.name}
+              {profile.is_default && <Lock className="h-3 w-3 text-muted-foreground" />}
+            </div>
+          )
+        },
+      },
+      {
+        accessorKey: 'profile_type',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Type" />,
+        cell: ({ row }) => {
+          const profile = row.original
+          return (
+            <Badge
+              variant="outline"
+              className={profileTypeColors[profile.profile_type] || profileTypeColors.custom}
+            >
+              {profileTypeLabels[profile.profile_type] || profile.profile_type}
+            </Badge>
+          )
+        },
+      },
+      {
+        id: 'capabilities',
+        header: 'Capabilities',
+        enableSorting: false,
+        cell: ({ row }) => {
+          const profile = row.original
+          const caps = profile.capabilities ?? {}
+          const items: string[] = []
+          if (caps.network_access) items.push(`net: ${caps.network_access}`)
+          if (caps.credential_level) items.push(`cred: ${caps.credential_level}`)
+          if (caps.persistence) items.push('persistent')
+          if (Array.isArray(caps.tools)) {
+            items.push(...caps.tools.slice(0, 2))
+          }
+          return (
+            <div className="flex flex-wrap gap-1">
+              {items.slice(0, 3).map((cap, i) => (
+                <Badge key={`${cap}-${i}`} variant="secondary" className="text-xs">
+                  {cap}
+                </Badge>
+              ))}
+              {items.length > 3 && (
+                <Badge variant="secondary" className="text-xs">
+                  +{items.length - 3}
+                </Badge>
+              )}
+            </div>
+          )
+        },
+      },
+      {
+        accessorKey: 'is_default',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Default" />,
+        cell: ({ row }) =>
+          row.original.is_default ? (
+            <Badge variant="outline">Default</Badge>
+          ) : (
+            <span className="text-muted-foreground text-sm">Custom</span>
+          ),
+      },
+      {
+        id: 'actions',
+        header: 'Actions',
+        enableSorting: false,
+        enableHiding: false,
+        cell: ({ row }) => {
+          const profile = row.original
+          if (profile.is_default) return null
+          return (
+            <div className="text-end">
+              <Can permission={Permission.AttackerProfilesWrite}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setDeleteProfile(profile)}
+                  className="text-destructive"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </Can>
+            </div>
+          )
+        },
+      },
+    ],
+    []
+  )
+
   return (
     <>
       <Main>
@@ -176,92 +267,7 @@ export default function AttackerProfilesPage() {
                 card={false}
               />
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Capabilities</TableHead>
-                    <TableHead>Default</TableHead>
-                    <TableHead className="text-end">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {profiles.map((profile) => (
-                    <TableRow key={profile.id}>
-                      <TableCell className="font-medium">
-                        <div className="flex items-center gap-2">
-                          {profile.name}
-                          {profile.is_default && <Lock className="h-3 w-3 text-muted-foreground" />}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant="outline"
-                          className={
-                            profileTypeColors[profile.profile_type] || profileTypeColors.custom
-                          }
-                        >
-                          {profileTypeLabels[profile.profile_type] || profile.profile_type}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap gap-1">
-                          {(() => {
-                            const caps = profile.capabilities ?? {}
-                            const items: string[] = []
-                            if (caps.network_access) items.push(`net: ${caps.network_access}`)
-                            if (caps.credential_level) items.push(`cred: ${caps.credential_level}`)
-                            if (caps.persistence) items.push('persistent')
-                            if (Array.isArray(caps.tools)) {
-                              items.push(...caps.tools.slice(0, 2))
-                            }
-                            return (
-                              <>
-                                {items.slice(0, 3).map((cap, i) => (
-                                  <Badge
-                                    key={`${cap}-${i}`}
-                                    variant="secondary"
-                                    className="text-xs"
-                                  >
-                                    {cap}
-                                  </Badge>
-                                ))}
-                                {items.length > 3 && (
-                                  <Badge variant="secondary" className="text-xs">
-                                    +{items.length - 3}
-                                  </Badge>
-                                )}
-                              </>
-                            )
-                          })()}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {profile.is_default ? (
-                          <Badge variant="outline">Default</Badge>
-                        ) : (
-                          <span className="text-muted-foreground text-sm">Custom</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-end">
-                        {!profile.is_default && (
-                          <Can permission={Permission.AttackerProfilesWrite}>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setDeleteProfile(profile)}
-                              className="text-destructive"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </Can>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <DataTable columns={columns} data={profiles} searchPlaceholder="Search profiles..." />
             )}
           </CardContent>
         </Card>
