@@ -16,8 +16,10 @@
 'use client'
 
 import * as React from 'react'
+import { ServerCrash, Loader2 } from 'lucide-react'
 import { get } from '@/lib/api/client'
 import { devLog } from '@/lib/logger'
+import { Button } from '@/components/ui/button'
 import { useTenant } from './tenant-provider'
 import type { TenantModulesResponse } from '@/features/integrations/api/use-tenant-modules'
 import type { RiskLevelThresholds } from '@/features/shared/types/common.types'
@@ -205,6 +207,68 @@ export function BootstrapProvider({ children }: BootstrapProviderProps) {
   }, [data, isLoading, error, isBootstrapped, fetchedTenantId, tenantId, refresh])
 
   return <BootstrapContext.Provider value={value}>{children}</BootstrapContext.Provider>
+}
+
+// ============================================
+// GATE
+// ============================================
+
+/**
+ * Full-screen "can't reach the server" state with a Retry button.
+ *
+ * Why this exists: when /me/bootstrap fails (server 5xx / network / API down),
+ * the provider degrades to EMPTY permissions. Without this gate every route
+ * then renders "Access Denied — missing permission", which is a lie: the real
+ * problem is the backend, not the user's roles. (This masqueraded as a
+ * permissions bug during a real outage.) The gate turns a backend failure into
+ * an honest, actionable message.
+ */
+function ConnectionErrorScreen({ retrying, onRetry }: { retrying: boolean; onRetry: () => void }) {
+  return (
+    <div className="flex min-h-svh flex-col items-center justify-center gap-4 p-6 text-center">
+      <div className="bg-destructive/10 text-destructive flex h-14 w-14 items-center justify-center rounded-full">
+        <ServerCrash className="h-7 w-7" />
+      </div>
+      <div className="space-y-1">
+        <h1 className="text-lg font-semibold">Can’t reach the server</h1>
+        <p className="text-muted-foreground max-w-sm text-sm">
+          We couldn’t load your workspace. This is usually a temporary connection or server issue —
+          not a problem with your account.
+        </p>
+      </div>
+      <Button onClick={onRetry} disabled={retrying}>
+        {retrying ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+        {retrying ? 'Retrying…' : 'Retry'}
+      </Button>
+    </div>
+  )
+}
+
+/**
+ * Blocks the app shell when bootstrap has definitively failed, so a backend
+ * outage never surfaces as a permissions error. A successful-but-empty
+ * permission set is NOT an error and passes through untouched.
+ */
+export function BootstrapGate({ children }: { children: React.ReactNode }) {
+  const { error, isBootstrapped, isLoading, refresh } = useBootstrapContext()
+  const [retrying, setRetrying] = React.useState(false)
+
+  if (error && isBootstrapped && !isLoading) {
+    return (
+      <ConnectionErrorScreen
+        retrying={retrying}
+        onRetry={async () => {
+          setRetrying(true)
+          try {
+            await refresh()
+          } finally {
+            setRetrying(false)
+          }
+        }}
+      />
+    )
+  }
+  return <>{children}</>
 }
 
 // ============================================
