@@ -98,7 +98,7 @@ export class WebSocketClient {
       ...DEFAULT_CONFIG,
       ...config,
       onStateChange: config.onStateChange ?? (() => {}),
-      onError: config.onError ?? ((err) => devLog.error('[WebSocket] Error:', err)),
+      onError: config.onError ?? ((err) => devLog.warn('[WebSocket] Error:', err)),
       onConnect: config.onConnect ?? (() => {}),
       onDisconnect: config.onDisconnect ?? (() => {}),
     }
@@ -334,9 +334,13 @@ export class WebSocketClient {
       this.scheduleReconnect()
     }
 
-    this.ws.onerror = (event) => {
-      devLog.error('[WebSocket] Error:', event)
-      this.handleError(new Error('WebSocket error'))
+    this.ws.onerror = () => {
+      // A WebSocket error event carries no actionable detail and is always
+      // followed by onclose, which owns reconnection. Log at warn (error would
+      // surface in the dev overlay as a blocking issue) and let onclose retry —
+      // routing through handleError here would double-schedule the reconnect.
+      devLog.warn('[WebSocket] Connection error (will retry)')
+      this.setState('error')
     }
 
     this.ws.onmessage = (event) => {
@@ -447,7 +451,7 @@ export class WebSocketClient {
       this.config.maxReconnectAttempts > 0 &&
       this.reconnectAttempts >= this.config.maxReconnectAttempts
     ) {
-      devLog.error('[WebSocket] Max reconnect attempts reached')
+      devLog.warn('[WebSocket] Max reconnect attempts reached')
       this.setState('error')
       this.config.onError?.(new Error('Max reconnect attempts reached'))
       return

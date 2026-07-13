@@ -135,7 +135,9 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
           devLog.log('[WebSocket] State changed:', newState)
           setState(newState)
         },
-        onError: (error) => devLog.error('[WebSocket] Connection error:', error),
+        // Connection errors are transient (auto-retried with backoff); warn so
+        // they don't surface as blocking issues in the dev error overlay.
+        onError: (error) => devLog.warn('[WebSocket] Connection error:', error),
       })
 
       clientRef.current.connect()
