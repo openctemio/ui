@@ -76,7 +76,9 @@ function useDashboardStatsForBadges(shouldFetch: boolean = true) {
  * // badges = { '/asset-groups': '12', '/findings': '24', ... }
  */
 export function useDynamicBadges(): DynamicBadges {
-  // Check if sidebar badges feature is enabled
+  // Sidebar count badges (Findings / Credential Leaks) are gated by the
+  // NEXT_PUBLIC_ENABLE_SIDEBAR_BADGES env flag (off by default) so the feature
+  // stays available but can be toggled per-deployment without a code change.
   const badgesEnabled = env.features.sidebarBadges
 
   // Check user permissions to determine which APIs to call
