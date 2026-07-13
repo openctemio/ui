@@ -8,6 +8,7 @@ import {
   DataTable,
   DataTableColumnHeader,
   DataTableRowActions,
+  StatsCard,
 } from '@/features/shared'
 import { Can, Permission } from '@/lib/permissions'
 import { useCsvExport, type ExportFieldConfig } from '@/hooks/use-csv-export'
@@ -490,48 +491,32 @@ export default function CrownJewelsPage() {
 
         {/* Stats Cards */}
         <div className="grid gap-4 md:grid-cols-4 mb-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Total Jewels</CardTitle>
-              <Crown className="h-4 w-4 text-amber-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.total}</div>
-              <p className="text-xs text-muted-foreground">{stats.byStatus.protected} protected</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">At Risk</CardTitle>
-              <ShieldAlert className="h-4 w-4 text-yellow-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-yellow-500">{stats.byStatus.at_risk}</div>
-              <p className="text-xs text-muted-foreground">Needs attention</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Exposed</CardTitle>
-              <ShieldX className="h-4 w-4 text-red-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-500">{stats.byStatus.exposed}</div>
-              <p className="text-xs text-muted-foreground">
-                {stats.totalExposures} total exposures
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Avg Risk Score</CardTitle>
-              <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.averageRiskScore}</div>
-              <p className="text-xs text-muted-foreground">Across all jewels</p>
-            </CardContent>
-          </Card>
+          <StatsCard
+            title="Total Jewels"
+            value={stats.total}
+            icon={Crown}
+            description={`${stats.byStatus.protected} protected`}
+          />
+          <StatsCard
+            title="At Risk"
+            value={stats.byStatus.at_risk}
+            valueClassName="text-amber-600"
+            icon={ShieldAlert}
+            description="Needs attention"
+          />
+          <StatsCard
+            title="Exposed"
+            value={stats.byStatus.exposed}
+            valueClassName="text-red-600"
+            icon={ShieldX}
+            description={`${stats.totalExposures} total exposures`}
+          />
+          <StatsCard
+            title="Avg Risk Score"
+            value={stats.averageRiskScore}
+            icon={AlertTriangle}
+            description="Across all jewels"
+          />
         </div>
 
         {/* Filters */}

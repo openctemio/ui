@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react'
 import { Main } from '@/components/layout'
-import { PageHeader } from '@/features/shared'
+import { PageHeader, StatsCard } from '@/features/shared'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -203,33 +203,19 @@ export default function AttackSimulationPage() {
 
       {/* Stats */}
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription className="flex items-center gap-2">
-              <Swords className="h-4 w-4" />
-              Total Simulations
-            </CardDescription>
-            <CardTitle className="text-3xl">{stats.total}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription className="flex items-center gap-2">
-              <CheckCircle className="h-4 w-4" />
-              Detected / Prevented
-            </CardDescription>
-            <CardTitle className="text-3xl text-green-500">{stats.completed}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription className="flex items-center gap-2">
-              <XCircle className="h-4 w-4" />
-              Bypassed
-            </CardDescription>
-            <CardTitle className="text-3xl text-red-500">{stats.failed}</CardTitle>
-          </CardHeader>
-        </Card>
+        <StatsCard title="Total Simulations" value={stats.total} icon={Swords} />
+        <StatsCard
+          title="Detected / Prevented"
+          value={stats.completed}
+          valueClassName="text-green-600"
+          icon={CheckCircle}
+        />
+        <StatsCard
+          title="Bypassed"
+          value={stats.failed}
+          valueClassName="text-red-600"
+          icon={XCircle}
+        />
         <Card>
           <CardHeader className="pb-2">
             <CardDescription className="flex items-center gap-2">

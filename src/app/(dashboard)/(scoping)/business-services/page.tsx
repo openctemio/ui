@@ -3,14 +3,14 @@
 import { useMemo, useState } from 'react'
 import useSWR from 'swr'
 import { Main } from '@/components/layout'
-import { PageHeader, DataTableRowActions } from '@/features/shared'
+import { PageHeader, DataTableRowActions, StatsCard } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import {
   Table,
   TableBody,
@@ -253,45 +253,10 @@ export default function BusinessServicesPage() {
       </PageHeader>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mt-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Services</CardTitle>
-            <Briefcase className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.total}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Critical Services</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-red-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.critical}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Handles PII</CardTitle>
-            <ShieldCheck className="h-4 w-4 text-blue-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.pii}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Handles Financial</CardTitle>
-            <DollarSign className="h-4 w-4 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.financial}</div>
-          </CardContent>
-        </Card>
+        <StatsCard title="Total Services" value={stats.total} icon={Briefcase} />
+        <StatsCard title="Critical Services" value={stats.critical} icon={AlertTriangle} />
+        <StatsCard title="Handles PII" value={stats.pii} icon={ShieldCheck} />
+        <StatsCard title="Handles Financial" value={stats.financial} icon={DollarSign} />
       </div>
 
       <Card className="mt-6">

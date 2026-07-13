@@ -4,7 +4,7 @@ import { use, useState, useMemo, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useUrlParams } from '@/hooks/use-url-param'
 import { Main } from '@/components/layout'
-import { RiskScoreBadge } from '@/features/shared'
+import { RiskScoreBadge, StatsCard } from '@/features/shared'
 import { copyToClipboard } from '@/lib/clipboard'
 import { Can, Permission } from '@/lib/permissions'
 import { Button } from '@/components/ui/button'
@@ -567,18 +567,8 @@ function AssetGroupDetailContent({ params }: PageProps) {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>Total Assets</CardDescription>
-              <CardTitle className="text-3xl">{group.assetCount}</CardTitle>
-            </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>Findings</CardDescription>
-              <CardTitle className="text-3xl text-orange-500">{group.findingCount}</CardTitle>
-            </CardHeader>
-          </Card>
+          <StatsCard title="Total Assets" value={group.assetCount} />
+          <StatsCard title="Findings" value={group.findingCount} />
           <Card>
             <CardHeader className="pb-2">
               <CardDescription>Risk Score</CardDescription>

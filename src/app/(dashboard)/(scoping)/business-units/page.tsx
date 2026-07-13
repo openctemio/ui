@@ -9,6 +9,7 @@ import {
   DataTableColumnHeader,
   DataTableRowActions,
   RiskScoreBadge,
+  StatsCard,
 } from '@/features/shared'
 import { Can, Permission } from '@/lib/permissions'
 import { useCsvExport, type ExportFieldConfig } from '@/hooks/use-csv-export'
@@ -549,28 +550,18 @@ export default function BusinessUnitsPage() {
 
         {/* Stats Cards */}
         <div className="grid gap-4 md:grid-cols-4 mb-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Total Units</CardTitle>
-              <Layers className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.total}</div>
-              <p className="text-xs text-muted-foreground">
-                {stats.active} active, {stats.inactive} inactive
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Total Assets</CardTitle>
-              <Shield className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.totalAssets}</div>
-              <p className="text-xs text-muted-foreground">Across all units</p>
-            </CardContent>
-          </Card>
+          <StatsCard
+            title="Total Units"
+            value={stats.total}
+            icon={Layers}
+            description={`${stats.active} active, ${stats.inactive} inactive`}
+          />
+          <StatsCard
+            title="Total Assets"
+            value={stats.totalAssets}
+            icon={Shield}
+            description="Across all units"
+          />
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">Avg Risk Score</CardTitle>
