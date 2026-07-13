@@ -1,9 +1,17 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import type { ColumnDef } from '@tanstack/react-table'
 import useSWR from 'swr'
 import { Main } from '@/components/layout'
-import { PageHeader, DataTableRowActions, StatsCard } from '@/features/shared'
+import {
+  PageHeader,
+  DataTable,
+  DataTableColumnHeader,
+  DataTableRowActions,
+  StackedCell,
+  StatsCard,
+} from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -11,14 +19,6 @@ import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
 import { Card, CardContent } from '@/components/ui/card'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import {
   Dialog,
   DialogContent,
@@ -162,6 +162,121 @@ export default function BusinessServicesPage() {
     setIsDialogOpen(true)
   }
 
+  const columns = useMemo<ColumnDef<BusinessService>[]>(
+    () => [
+      {
+        accessorKey: 'name',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Name" />,
+        cell: ({ row }) => {
+          const service = row.original
+          return (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="cursor-help font-medium">{service.name}</span>
+                </TooltipTrigger>
+                {service.description && (
+                  <TooltipContent className="max-w-sm">{service.description}</TooltipContent>
+                )}
+              </Tooltip>
+            </TooltipProvider>
+          )
+        },
+      },
+      {
+        accessorKey: 'criticality',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Criticality" />,
+        cell: ({ row }) => (
+          <Badge variant="outline" className={criticalityColors[row.original.criticality]}>
+            {row.original.criticality}
+          </Badge>
+        ),
+      },
+      {
+        id: 'data_handling',
+        header: 'Data Handling',
+        enableSorting: false,
+        cell: ({ row }) => {
+          const service = row.original
+          return (
+            <div className="flex flex-wrap gap-1">
+              {service.handles_pii && (
+                <Badge variant="secondary" className="text-xs">
+                  PII
+                </Badge>
+              )}
+              {service.handles_phi && (
+                <Badge variant="secondary" className="text-xs">
+                  PHI
+                </Badge>
+              )}
+              {service.handles_financial && (
+                <Badge variant="secondary" className="text-xs">
+                  Financial
+                </Badge>
+              )}
+            </div>
+          )
+        },
+      },
+      {
+        id: 'compliance_scope',
+        header: 'Compliance Scope',
+        enableSorting: false,
+        cell: ({ row }) => (
+          <div className="flex flex-wrap gap-1">
+            {(row.original.compliance_scope ?? []).map((framework) => (
+              <Badge key={framework} variant="outline" className="text-xs">
+                {framework}
+              </Badge>
+            ))}
+          </div>
+        ),
+      },
+      {
+        accessorKey: 'owner_name',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Owner" />,
+        cell: ({ row }) => (
+          <StackedCell
+            primary={row.original.owner_name || '—'}
+            secondary={row.original.owner_email}
+          />
+        ),
+      },
+      {
+        accessorKey: 'availability_target',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Availability" />,
+        cell: ({ row }) =>
+          row.original.availability_target != null
+            ? `${row.original.availability_target.toFixed(2)}%`
+            : '—',
+      },
+      {
+        id: 'actions',
+        header: '',
+        enableSorting: false,
+        enableHiding: false,
+        cell: ({ row }) => (
+          <Can permission={Permission.BusinessServicesWrite}>
+            <DataTableRowActions
+              actions={[
+                { label: 'Edit', icon: Pencil, onClick: () => openEdit(row.original) },
+                {
+                  label: 'Delete',
+                  icon: Trash2,
+                  onClick: () => setDeletingService(row.original),
+                  destructive: true,
+                  separatorBefore: true,
+                },
+              ]}
+            />
+          </Can>
+        ),
+      },
+    ],
+    []
+  )
+
   function toggleCompliance(framework: string) {
     setForm((prev) => {
       const exists = prev.compliance_scope.includes(framework)
@@ -260,143 +375,45 @@ export default function BusinessServicesPage() {
         <StatsCard title="Handles Financial" value={stats.financial} icon={DollarSign} />
       </div>
 
-      <Card className="mt-6">
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Criticality</TableHead>
-                <TableHead>Data Handling</TableHead>
-                <TableHead>Compliance Scope</TableHead>
-                <TableHead>Owner</TableHead>
-                <TableHead>Availability</TableHead>
-                <TableHead className="w-[50px]" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                    Loading...
-                  </TableCell>
-                </TableRow>
-              ) : error ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="py-8">
-                    <div className="mx-auto flex max-w-md flex-col items-center gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-4 text-center">
-                      <p className="text-sm font-medium text-destructive">
-                        Failed to load business services
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {error instanceof Error ? error.message : 'Unknown error'}
-                      </p>
-                      <button
-                        type="button"
-                        className="mt-1 text-xs text-primary hover:underline"
-                        onClick={() => {
-                          void mutate()
-                        }}
-                      >
-                        Retry
-                      </button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ) : services.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                    No business services yet. Click &quot;Create Service&quot; to add one.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                services.map((service) => (
-                  <TableRow key={service.id}>
-                    <TableCell className="font-medium">
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span className="cursor-help">{service.name}</span>
-                          </TooltipTrigger>
-                          {service.description && (
-                            <TooltipContent className="max-w-sm">
-                              {service.description}
-                            </TooltipContent>
-                          )}
-                        </Tooltip>
-                      </TooltipProvider>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className={criticalityColors[service.criticality]}>
-                        {service.criticality}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {service.handles_pii && (
-                          <Badge variant="secondary" className="text-xs">
-                            PII
-                          </Badge>
-                        )}
-                        {service.handles_phi && (
-                          <Badge variant="secondary" className="text-xs">
-                            PHI
-                          </Badge>
-                        )}
-                        {service.handles_financial && (
-                          <Badge variant="secondary" className="text-xs">
-                            Financial
-                          </Badge>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {(service.compliance_scope ?? []).map((framework) => (
-                          <Badge key={framework} variant="outline" className="text-xs">
-                            {framework}
-                          </Badge>
-                        ))}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-col">
-                        <span className="text-sm">{service.owner_name || '—'}</span>
-                        {service.owner_email && (
-                          <span className="text-xs text-muted-foreground">
-                            {service.owner_email}
-                          </span>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {service.availability_target != null
-                        ? `${service.availability_target.toFixed(2)}%`
-                        : '—'}
-                    </TableCell>
-                    <TableCell>
-                      <Can permission={Permission.BusinessServicesWrite}>
-                        <DataTableRowActions
-                          actions={[
-                            { label: 'Edit', icon: Pencil, onClick: () => openEdit(service) },
-                            {
-                              label: 'Delete',
-                              icon: Trash2,
-                              onClick: () => setDeletingService(service),
-                              destructive: true,
-                              separatorBefore: true,
-                            },
-                          ]}
-                        />
-                      </Can>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+      {isLoading ? (
+        <Card className="mt-6">
+          <CardContent className="py-8 text-center text-sm text-muted-foreground">
+            Loading...
+          </CardContent>
+        </Card>
+      ) : error ? (
+        <Card className="mt-6">
+          <CardContent className="py-8">
+            <div className="mx-auto flex max-w-md flex-col items-center gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-4 text-center">
+              <p className="text-sm font-medium text-destructive">
+                Failed to load business services
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {error instanceof Error ? error.message : 'Unknown error'}
+              </p>
+              <button
+                type="button"
+                className="mt-1 text-xs text-primary hover:underline"
+                onClick={() => {
+                  void mutate()
+                }}
+              >
+                Retry
+              </button>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="mt-6">
+          <DataTable
+            columns={columns}
+            data={services}
+            searchPlaceholder="Search services..."
+            emptyMessage="No business services yet"
+            emptyDescription='Click "Create Service" to add one.'
+          />
+        </div>
+      )}
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">

@@ -1,21 +1,20 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
+import type { ColumnDef } from '@tanstack/react-table'
 import { Main } from '@/components/layout'
-import { PageHeader, StatsCard } from '@/features/shared'
+import {
+  PageHeader,
+  StatsCard,
+  DataTable,
+  DataTableColumnHeader,
+  StackedCell,
+} from '@/features/shared'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { Skeleton } from '@/components/ui/skeleton'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import {
   Swords,
   Play,
@@ -65,67 +64,6 @@ const resultConfig: Record<string, string> = {
   error: 'bg-gray-500/20 text-gray-400',
 }
 
-function SimulationRow({ sim, onRun }: { sim: Simulation; onRun: (id: string) => void }) {
-  const status = statusConfig[sim.status] ?? statusConfig.draft
-  const result = resultConfig[sim.last_result] ?? ''
-
-  return (
-    <TableRow className="hover:bg-muted/50">
-      <TableCell>
-        <div>
-          <p className="font-medium">{sim.name}</p>
-          <p className="text-muted-foreground text-xs">
-            {sim.mitre_technique_id && `${sim.mitre_technique_id} — `}
-            {sim.mitre_technique_name || sim.simulation_type}
-          </p>
-        </div>
-      </TableCell>
-      <TableCell>
-        <Badge variant="outline" className="text-xs">
-          {sim.mitre_tactic || sim.simulation_type}
-        </Badge>
-      </TableCell>
-      <TableCell className="text-muted-foreground text-sm">
-        {sim.last_run_at ? new Date(sim.last_run_at).toLocaleDateString() : 'Never'}
-      </TableCell>
-      <TableCell>
-        <div className="flex flex-wrap items-center gap-2">
-          <Progress value={sim.detection_rate} className="h-2 w-16" />
-          <span className="text-sm">{Math.round(sim.detection_rate)}%</span>
-        </div>
-      </TableCell>
-      <TableCell>
-        {sim.last_result ? (
-          <Badge className={`${result} border-0`}>{sim.last_result}</Badge>
-        ) : (
-          <span className="text-muted-foreground text-xs">-</span>
-        )}
-      </TableCell>
-      <TableCell>
-        <Badge className={`${status.bgColor} ${status.color} border-0`}>
-          {status.icon}
-          <span className="ms-1 capitalize">{sim.status}</span>
-        </Badge>
-      </TableCell>
-      <TableCell>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-7 gap-1"
-          disabled={sim.status !== 'active'}
-          onClick={(e) => {
-            e.stopPropagation()
-            onRun(sim.id)
-          }}
-        >
-          <Play className="h-3.5 w-3.5" />
-          Run
-        </Button>
-      </TableCell>
-    </TableRow>
-  )
-}
-
 function EmptyState() {
   return (
     <div className="flex flex-col items-center justify-center py-16">
@@ -162,15 +100,18 @@ export default function AttackSimulationPage() {
   const { data, isLoading, mutate } = useSimulations()
   const { trigger: runSimulation } = useRunSimulation()
 
-  const handleRun = async (simId: string) => {
-    try {
-      const result = await runSimulation(simId)
-      toast.success(`Simulation completed: ${result?.result ?? 'done'}`)
-      mutate()
-    } catch {
-      toast.error('Failed to run simulation')
-    }
-  }
+  const handleRun = useCallback(
+    async (simId: string) => {
+      try {
+        const result = await runSimulation(simId)
+        toast.success(`Simulation completed: ${result?.result ?? 'done'}`)
+        mutate()
+      } catch {
+        toast.error('Failed to run simulation')
+      }
+    },
+    [runSimulation, mutate]
+  )
 
   const stats = useMemo(() => {
     const sims = data?.data ?? []
@@ -184,6 +125,106 @@ export default function AttackSimulationPage() {
 
     return { total, completed, failed, active, avgDetection }
   }, [data])
+
+  const columns = useMemo<ColumnDef<Simulation>[]>(
+    () => [
+      {
+        accessorKey: 'name',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Technique" />,
+        cell: ({ row }) => {
+          const sim = row.original
+          return (
+            <StackedCell
+              primary={sim.name}
+              secondary={
+                <>
+                  {sim.mitre_technique_id && `${sim.mitre_technique_id} — `}
+                  {sim.mitre_technique_name || sim.simulation_type}
+                </>
+              }
+            />
+          )
+        },
+      },
+      {
+        accessorKey: 'mitre_tactic',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Tactic" />,
+        cell: ({ row }) => (
+          <Badge variant="outline" className="text-xs">
+            {row.original.mitre_tactic || row.original.simulation_type}
+          </Badge>
+        ),
+      },
+      {
+        accessorKey: 'last_run_at',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Last Run" />,
+        cell: ({ row }) => (
+          <span className="text-muted-foreground text-sm">
+            {row.original.last_run_at
+              ? new Date(row.original.last_run_at).toLocaleDateString()
+              : 'Never'}
+          </span>
+        ),
+      },
+      {
+        accessorKey: 'detection_rate',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Detection Rate" />,
+        cell: ({ row }) => (
+          <div className="flex flex-wrap items-center gap-2">
+            <Progress value={row.original.detection_rate} className="h-2 w-16" />
+            <span className="text-sm">{Math.round(row.original.detection_rate)}%</span>
+          </div>
+        ),
+      },
+      {
+        accessorKey: 'last_result',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Result" />,
+        cell: ({ row }) => {
+          const result = resultConfig[row.original.last_result] ?? ''
+          return row.original.last_result ? (
+            <Badge className={`${result} border-0`}>{row.original.last_result}</Badge>
+          ) : (
+            <span className="text-muted-foreground text-xs">-</span>
+          )
+        },
+      },
+      {
+        accessorKey: 'status',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
+        cell: ({ row }) => {
+          const status = statusConfig[row.original.status] ?? statusConfig.draft
+          return (
+            <Badge className={`${status.bgColor} ${status.color} border-0`}>
+              {status.icon}
+              <span className="ms-1 capitalize">{row.original.status}</span>
+            </Badge>
+          )
+        },
+      },
+      {
+        id: 'actions',
+        header: 'Actions',
+        enableSorting: false,
+        enableHiding: false,
+        cell: ({ row }) => (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 gap-1"
+            disabled={row.original.status !== 'active'}
+            onClick={(e) => {
+              e.stopPropagation()
+              handleRun(row.original.id)
+            }}
+          >
+            <Play className="h-3.5 w-3.5" />
+            Run
+          </Button>
+        ),
+      },
+    ],
+    [handleRun]
+  )
 
   if (isLoading) return <LoadingSkeleton />
 
@@ -240,24 +281,11 @@ export default function AttackSimulationPage() {
           {simulations.length === 0 ? (
             <EmptyState />
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Technique</TableHead>
-                  <TableHead>Tactic</TableHead>
-                  <TableHead>Last Run</TableHead>
-                  <TableHead>Detection Rate</TableHead>
-                  <TableHead>Result</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {simulations.map((sim) => (
-                  <SimulationRow key={sim.id} sim={sim} onRun={handleRun} />
-                ))}
-              </TableBody>
-            </Table>
+            <DataTable
+              columns={columns}
+              data={simulations}
+              searchPlaceholder="Search simulations..."
+            />
           )}
         </CardContent>
       </Card>
