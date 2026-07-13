@@ -198,7 +198,7 @@ export function TeamSwitcher() {
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
               disabled={isTransitioning}
             >
-              <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
+              <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 shrink-0 items-center justify-center rounded-lg">
                 {isTransitioning ? (
                   <Loader2 className="size-4 animate-spin" />
                 ) : (
@@ -208,11 +208,11 @@ export function TeamSwitcher() {
                 )}
               </div>
 
-              <div className="grid flex-1 text-start text-sm leading-tight">
+              <div className="grid flex-1 text-start text-sm leading-tight group-data-[collapsible=icon]:hidden">
                 <span className="truncate font-semibold">{currentTeamName}</span>
               </div>
 
-              <ChevronsUpDown className="ms-auto size-4" />
+              <ChevronsUpDown className="ms-auto size-4 group-data-[collapsible=icon]:hidden" />
             </SidebarMenuButton>
           </DropdownMenuTrigger>
 
