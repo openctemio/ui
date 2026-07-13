@@ -105,6 +105,12 @@ export function useDynamicBadges(): DynamicBadges {
   const badges = useMemo(() => {
     const result: DynamicBadges = {}
 
+    // Respect the feature flag on the RESULT, not just the fetch. isPaused only
+    // stops this hook from fetching — it still reads any SWR cache another page
+    // (e.g. /credentials) populated under the same key, which made the badge
+    // reappear only on that page. Gate here so off means off everywhere.
+    if (!badgesEnabled) return result
+
     // Findings badge - show open findings count (exclude resolved/closed)
     if (dashboardStats?.findings) {
       const { by_status, total } = dashboardStats.findings
@@ -128,7 +134,7 @@ export function useDynamicBadges(): DynamicBadges {
     }
 
     return result
-  }, [dashboardStats, credentialStats])
+  }, [badgesEnabled, dashboardStats, credentialStats])
 
   return badges
 }
