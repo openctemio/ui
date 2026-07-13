@@ -76,7 +76,9 @@ function useDashboardStatsForBadges(shouldFetch: boolean = true) {
  * // badges = { '/asset-groups': '12', '/findings': '24', ... }
  */
 export function useDynamicBadges(): DynamicBadges {
-  // Check if sidebar badges feature is enabled
+  // Sidebar count badges (Findings / Credential Leaks) are gated by the
+  // NEXT_PUBLIC_ENABLE_SIDEBAR_BADGES env flag (off by default) so the feature
+  // stays available but can be toggled per-deployment without a code change.
   const badgesEnabled = env.features.sidebarBadges
 
   // Check user permissions to determine which APIs to call
@@ -103,6 +105,12 @@ export function useDynamicBadges(): DynamicBadges {
   const badges = useMemo(() => {
     const result: DynamicBadges = {}
 
+    // Respect the feature flag on the RESULT, not just the fetch. isPaused only
+    // stops this hook from fetching — it still reads any SWR cache another page
+    // (e.g. /credentials) populated under the same key, which made the badge
+    // reappear only on that page. Gate here so off means off everywhere.
+    if (!badgesEnabled) return result
+
     // Findings badge - show open findings count (exclude resolved/closed)
     if (dashboardStats?.findings) {
       const { by_status, total } = dashboardStats.findings
@@ -126,7 +134,7 @@ export function useDynamicBadges(): DynamicBadges {
     }
 
     return result
-  }, [dashboardStats, credentialStats])
+  }, [badgesEnabled, dashboardStats, credentialStats])
 
   return badges
 }
