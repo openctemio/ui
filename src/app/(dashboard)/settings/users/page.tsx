@@ -12,7 +12,7 @@ import {
   useReactTable,
 } from '@tanstack/react-table'
 import { Main } from '@/components/layout'
-import { PageHeader, DataTablePagination } from '@/features/shared'
+import { PageHeader, DataTablePagination, EmptyState } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -1286,13 +1286,12 @@ export default function UsersPage() {
               </CardHeader>
               <CardContent className="space-y-3">
                 {invitations.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Mail className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
-                    <p className="text-sm text-muted-foreground">No pending invitations</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Invite someone to join your team
-                    </p>
-                  </div>
+                  <EmptyState
+                    card={false}
+                    icon={Mail}
+                    title="No pending invitations"
+                    description="Invite someone to join your team"
+                  />
                 ) : (
                   invitations.map((invitation) => {
                     // Get role names from role_ids

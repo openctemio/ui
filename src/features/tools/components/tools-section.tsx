@@ -53,6 +53,7 @@ import { customToolEndpoints } from '@/lib/api/endpoints'
 import { post } from '@/lib/api/client'
 import type { Tool, ToolListFilters } from '@/lib/api/tool-types'
 import { getErrorMessage } from '@/lib/api/error-handler'
+import { EmptyState } from '@/features/shared'
 
 type ViewMode = 'grid' | 'table'
 type MainTab = 'platform' | 'custom'
@@ -548,25 +549,28 @@ export function ToolsSection({ onToolSelect, selectedToolId }: ToolsSectionProps
                 />
               )
             ) : (
-              <div className="rounded-lg border border-dashed p-8 text-center">
-                <Wrench className="mx-auto mb-3 h-10 w-10 text-muted-foreground" />
-                <h3 className="mb-1 font-medium">No Tools Found</h3>
-                <p className="mb-4 text-sm text-muted-foreground">
-                  {searchQuery || categoryFilter !== 'all' || statsFilter
+              <EmptyState
+                icon={Wrench}
+                title="No Tools Found"
+                description={
+                  searchQuery || categoryFilter !== 'all' || statsFilter
                     ? 'No tools match your search criteria. Try adjusting your filters.'
                     : mainTab === 'platform'
                       ? 'No platform tools available yet.'
-                      : 'Add a custom tool to start scanning and collecting data.'}
-                </p>
-                {!searchQuery && categoryFilter === 'all' && !statsFilter && isCustomToolsMode && (
-                  <Can permission={Permission.ToolsWrite}>
-                    <Button onClick={() => setAddDialogOpen(true)}>
-                      <Plus className="me-2 h-4 w-4" />
-                      Add Your First Custom Tool
-                    </Button>
-                  </Can>
-                )}
-              </div>
+                      : 'Add a custom tool to start scanning and collecting data.'
+                }
+                card={false}
+                action={
+                  !searchQuery && categoryFilter === 'all' && !statsFilter && isCustomToolsMode ? (
+                    <Can permission={Permission.ToolsWrite}>
+                      <Button onClick={() => setAddDialogOpen(true)}>
+                        <Plus className="me-2 h-4 w-4" />
+                        Add Your First Custom Tool
+                      </Button>
+                    </Can>
+                  ) : undefined
+                }
+              />
             )}
           </CardContent>
         </Card>

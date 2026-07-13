@@ -19,7 +19,7 @@ import {
 import '@xyflow/react/dist/style.css'
 
 import { Main } from '@/components/layout'
-import { PageHeader } from '@/features/shared'
+import { EmptyState, PageHeader } from '@/features/shared'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -853,17 +853,18 @@ export default function WorkflowsPage() {
                     <p className="text-muted-foreground">Please try again later</p>
                   </div>
                 ) : !workflowsData?.items || workflowsData.items.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-12 text-center">
-                    <WorkflowIcon className="h-12 w-12 text-muted-foreground mb-4" />
-                    <p className="text-lg font-medium">No workflows yet</p>
-                    <p className="text-muted-foreground mb-4">
-                      Create your first automation workflow
-                    </p>
-                    <Button onClick={() => setIsCreateDialogOpen(true)}>
-                      <Plus className="me-2 h-4 w-4" />
-                      Create Workflow
-                    </Button>
-                  </div>
+                  <EmptyState
+                    card={false}
+                    icon={WorkflowIcon}
+                    title="No workflows yet"
+                    description="Create your first automation workflow"
+                    action={
+                      <Button onClick={() => setIsCreateDialogOpen(true)}>
+                        <Plus className="me-2 h-4 w-4" />
+                        Create Workflow
+                      </Button>
+                    }
+                  />
                 ) : (
                   <div className="space-y-4">
                     {workflowsData.items.map((workflow) => {
@@ -988,11 +989,12 @@ export default function WorkflowsPage() {
                     ))}
                   </div>
                 ) : !runsData?.items || runsData.items.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-12 text-center">
-                    <Clock className="h-12 w-12 text-muted-foreground mb-4" />
-                    <p className="text-lg font-medium">No executions yet</p>
-                    <p className="text-muted-foreground">Run a workflow to see execution history</p>
-                  </div>
+                  <EmptyState
+                    card={false}
+                    icon={Clock}
+                    title="No executions yet"
+                    description="Run a workflow to see execution history"
+                  />
                 ) : (
                   <div className="space-y-3">
                     {runsData.items.map((run: WorkflowRun) => {

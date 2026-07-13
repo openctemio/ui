@@ -27,6 +27,7 @@ import {
 } from 'lucide-react'
 import { formatRelative, formatDateSafe } from '@/lib/format-date'
 import { useUser } from '@/stores/auth-store'
+import { EmptyState } from '@/features/shared'
 import { useAccountActivity } from '@/features/account'
 import {
   getActionCategory,
@@ -129,10 +130,7 @@ export default function ActivityPage() {
               ))}
             </div>
           ) : paginatedActivities.length === 0 ? (
-            <div className="text-center py-12">
-              <History className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground">No activity found</p>
-            </div>
+            <EmptyState icon={History} title="No activity found" card={false} />
           ) : (
             <div className="space-y-4">
               {paginatedActivities.map((activity) => {

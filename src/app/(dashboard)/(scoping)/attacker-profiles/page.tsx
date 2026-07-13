@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import useSWR from 'swr'
 import { Main } from '@/components/layout'
-import { PageHeader } from '@/features/shared'
+import { PageHeader, EmptyState } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -35,7 +35,7 @@ import {
 } from '@/components/ui/select'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Plus, Trash2, Lock } from 'lucide-react'
+import { Plus, Trash2, Lock, Target } from 'lucide-react'
 import { get, post, del } from '@/lib/api/client'
 import { Can, Permission } from '@/lib/permissions'
 import { toast } from 'sonner'
@@ -169,9 +169,12 @@ export default function AttackerProfilesPage() {
                 ))}
               </div>
             ) : profiles.length === 0 ? (
-              <p className="text-muted-foreground text-center py-8 text-sm">
-                No attacker profiles yet. Create one to get started.
-              </p>
+              <EmptyState
+                icon={Target}
+                title="No attacker profiles yet."
+                description="Create one to get started."
+                card={false}
+              />
             ) : (
               <Table>
                 <TableHeader>

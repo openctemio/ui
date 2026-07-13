@@ -26,7 +26,7 @@ import {
   Search,
   AlertCircle,
 } from 'lucide-react'
-import { DataTableRowActions } from '@/features/shared'
+import { DataTableRowActions, EmptyState } from '@/features/shared'
 import { toast } from 'sonner'
 import {
   useScopeRules,
@@ -240,13 +240,12 @@ export function ScopeRulesTab({ groupId }: ScopeRulesTabProps) {
           </Button>
         </div>
       ) : scopeRules.length === 0 ? (
-        <div className="text-center py-8 text-muted-foreground">
-          <Zap className="h-8 w-8 mx-auto mb-2 opacity-50" />
-          <p>No scope rules configured</p>
-          <p className="text-xs mt-1">
-            Add rules to automatically assign assets based on tags or asset group membership.
-          </p>
-        </div>
+        <EmptyState
+          icon={Zap}
+          title="No scope rules configured"
+          description="Add rules to automatically assign assets based on tags or asset group membership."
+          card={false}
+        />
       ) : filteredRules.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground">
           <p>No rules found matching &quot;{searchQuery}&quot;</p>

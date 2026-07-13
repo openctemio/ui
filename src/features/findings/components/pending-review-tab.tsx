@@ -21,7 +21,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { toast } from 'sonner'
 import { post } from '@/lib/api/client'
 import { getErrorMessage } from '@/lib/api/error-handler'
-import { SeverityBadge } from '@/features/shared'
+import { EmptyState, SeverityBadge } from '@/features/shared'
 import { useFindingGroups, type FindingGroup } from '../api/use-finding-groups'
 import { usePermissions } from '@/context/permission-provider'
 
@@ -115,15 +115,11 @@ export function PendingReviewTab() {
 
   if (groups.length === 0) {
     return (
-      <Card>
-        <CardContent className="py-12 text-center">
-          <ShieldCheck className="h-12 w-12 text-green-500 mx-auto mb-4" />
-          <h3 className="text-lg font-medium mb-1">No findings pending review</h3>
-          <p className="text-muted-foreground text-sm">
-            All fix-applied findings have been verified or there are none awaiting review.
-          </p>
-        </CardContent>
-      </Card>
+      <EmptyState
+        icon={ShieldCheck}
+        title="No findings pending review"
+        description="All fix-applied findings have been verified or there are none awaiting review."
+      />
     )
   }
 

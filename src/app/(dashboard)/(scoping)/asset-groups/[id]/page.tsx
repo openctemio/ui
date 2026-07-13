@@ -4,7 +4,7 @@ import { use, useState, useMemo, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useUrlParams } from '@/hooks/use-url-param'
 import { Main } from '@/components/layout'
-import { RiskScoreBadge, StatsCard } from '@/features/shared'
+import { RiskScoreBadge, StatsCard, EmptyState } from '@/features/shared'
 import { copyToClipboard } from '@/lib/clipboard'
 import { Can, Permission } from '@/lib/permissions'
 import { Button } from '@/components/ui/button'
@@ -606,10 +606,7 @@ function AssetGroupDetailContent({ params }: PageProps) {
                 </CardHeader>
                 <CardContent>
                   {Object.keys(assetsByType).length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-8 text-center">
-                      <Package className="h-10 w-10 text-muted-foreground/50 mb-3" />
-                      <p className="text-sm text-muted-foreground">No assets in this group yet</p>
-                    </div>
+                    <EmptyState icon={Package} title="No assets in this group yet" card={false} />
                   ) : (
                     <div className="space-y-4">
                       {Object.entries(assetsByType).map(([type, count]) => (
@@ -835,30 +832,29 @@ function AssetGroupDetailContent({ params }: PageProps) {
 
                 {/* Table or Empty State */}
                 {filteredAssets.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-16 text-center">
-                    <div className="flex h-20 w-20 items-center justify-center rounded-full bg-muted mb-4">
-                      <Package className="h-10 w-10 text-muted-foreground" />
-                    </div>
-                    <h3 className="text-lg font-semibold mb-2">
-                      {assetSearch ? 'No assets found' : 'No assets in this group'}
-                    </h3>
-                    <p className="text-muted-foreground mb-4 max-w-sm">
-                      {assetSearch
+                  <EmptyState
+                    icon={Package}
+                    card={false}
+                    title={assetSearch ? 'No assets found' : 'No assets in this group'}
+                    description={
+                      assetSearch
                         ? `No assets matching "${assetSearch}". Try a different search term.`
-                        : 'Add assets to this group to start tracking and managing them together.'}
-                    </p>
-                    {assetSearch ? (
-                      <Button variant="outline" onClick={() => setAssetSearch('')}>
-                        <X className="me-2 h-4 w-4" />
-                        Clear Search
-                      </Button>
-                    ) : (
-                      <Button size="sm" onClick={() => setAddAssetsDialogOpen(true)}>
-                        <Plus className="me-2 h-4 w-4" />
-                        Add Assets
-                      </Button>
-                    )}
-                  </div>
+                        : 'Add assets to this group to start tracking and managing them together.'
+                    }
+                    action={
+                      assetSearch ? (
+                        <Button variant="outline" onClick={() => setAssetSearch('')}>
+                          <X className="me-2 h-4 w-4" />
+                          Clear Search
+                        </Button>
+                      ) : (
+                        <Button size="sm" onClick={() => setAddAssetsDialogOpen(true)}>
+                          <Plus className="me-2 h-4 w-4" />
+                          Add Assets
+                        </Button>
+                      )
+                    }
+                  />
                 ) : (
                   <div className="space-y-4">
                     <div className="rounded-md border">

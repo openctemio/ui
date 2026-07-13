@@ -3,7 +3,7 @@
 import { useMemo } from 'react'
 import useSWR from 'swr'
 import { Main } from '@/components/layout'
-import { PageHeader, StatsCard } from '@/features/shared'
+import { PageHeader, StatsCard, EmptyState } from '@/features/shared'
 import { useDashboardStats } from '@/features/dashboard/hooks/use-dashboard-stats'
 import { useTenant } from '@/context/tenant-provider'
 import {
@@ -302,14 +302,11 @@ export default function TrendingExposuresPage() {
           <RiskFactorsSkeleton />
         </>
       ) : isEmpty ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-16">
-            <TrendingUp className="text-muted-foreground mb-4 h-12 w-12" />
-            <p className="text-muted-foreground text-center text-sm">
-              No trend data available yet. Run scans to start tracking exposure trends.
-            </p>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={TrendingUp}
+          title="No trend data available yet"
+          description="Run scans to start tracking exposure trends."
+        />
       ) : (
         <>
           {/* Stats Row */}

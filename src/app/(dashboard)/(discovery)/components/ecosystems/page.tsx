@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { Main } from '@/components/layout'
-import { PageHeader } from '@/features/shared'
+import { PageHeader, EmptyState } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
@@ -484,30 +484,26 @@ export default function EcosystemsPage() {
             ))}
           </div>
         ) : processedEcosystems.length === 0 ? (
-          <Card className="mt-6">
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              {searchQuery ? (
-                <>
-                  <SearchIcon className="h-12 w-12 text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-medium">No Ecosystems Found</h3>
-                  <p className="text-muted-foreground">
-                    No ecosystems match &quot;{searchQuery}&quot;
-                  </p>
-                  <Button variant="outline" className="mt-4" onClick={() => setSearchQuery('')}>
-                    Clear Search
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Package className="h-12 w-12 text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-medium">No Components Found</h3>
-                  <p className="text-muted-foreground">
-                    Components will appear here once discovered from your assets.
-                  </p>
-                </>
-              )}
-            </CardContent>
-          </Card>
+          searchQuery ? (
+            <EmptyState
+              className="mt-6"
+              icon={SearchIcon}
+              title="No Ecosystems Found"
+              description={`No ecosystems match "${searchQuery}"`}
+              action={
+                <Button variant="outline" onClick={() => setSearchQuery('')}>
+                  Clear Search
+                </Button>
+              }
+            />
+          ) : (
+            <EmptyState
+              className="mt-6"
+              icon={Package}
+              title="No Components Found"
+              description="Components will appear here once discovered from your assets."
+            />
+          )
         ) : viewMode === 'table' ? (
           /* Table View */
           <Card className="mt-6">
@@ -791,38 +787,34 @@ export default function EcosystemsPage() {
                       </TableBody>
                     </Table>
                   ) : (
-                    <div className="flex flex-col items-center justify-center py-12 text-center">
-                      <div className="rounded-full bg-muted p-4 mb-4">
-                        {sheetSearchQuery || securityFilter !== 'all' ? (
-                          <SearchIcon className="h-8 w-8 text-muted-foreground" />
-                        ) : (
-                          <Package className="h-8 w-8 text-muted-foreground" />
-                        )}
-                      </div>
-                      <h3 className="text-lg font-medium">
-                        {sheetSearchQuery || securityFilter !== 'all'
+                    <EmptyState
+                      card={false}
+                      icon={sheetSearchQuery || securityFilter !== 'all' ? SearchIcon : Package}
+                      title={
+                        sheetSearchQuery || securityFilter !== 'all'
                           ? 'No Matches Found'
-                          : 'No Components Found'}
-                      </h3>
-                      <p className="text-sm text-muted-foreground mt-1 max-w-sm">
-                        {sheetSearchQuery || securityFilter !== 'all'
+                          : 'No Components Found'
+                      }
+                      description={
+                        sheetSearchQuery || securityFilter !== 'all'
                           ? 'Try adjusting your search or filter criteria.'
-                          : 'No components have been discovered for this ecosystem yet.'}
-                      </p>
-                      {(sheetSearchQuery || securityFilter !== 'all') && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="mt-4"
-                          onClick={() => {
-                            setSheetSearchQuery('')
-                            setSecurityFilter('all')
-                          }}
-                        >
-                          Clear Filters
-                        </Button>
-                      )}
-                    </div>
+                          : 'No components have been discovered for this ecosystem yet.'
+                      }
+                      action={
+                        sheetSearchQuery || securityFilter !== 'all' ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setSheetSearchQuery('')
+                              setSecurityFilter('all')
+                            }}
+                          >
+                            Clear Filters
+                          </Button>
+                        ) : undefined
+                      }
+                    />
                   )}
                 </div>
               </ScrollArea>

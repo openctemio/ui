@@ -39,7 +39,7 @@ import {
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
-import { DataTableRowActions } from '@/features/shared'
+import { DataTableRowActions, EmptyState } from '@/features/shared'
 import { AddTemplateSourceDialog } from './add-template-source-dialog'
 import { EditTemplateSourceDialog } from './edit-template-source-dialog'
 import { Can, Permission } from '@/lib/permissions'
@@ -404,23 +404,26 @@ export function TemplateSourcesSection() {
                 </TableBody>
               </Table>
             ) : (
-              <div className="rounded-lg border border-dashed p-8 text-center">
-                <FolderSync className="mx-auto mb-3 h-10 w-10 text-muted-foreground" />
-                <h3 className="mb-1 font-medium">No Template Sources Found</h3>
-                <p className="mb-4 text-sm text-muted-foreground">
-                  {searchQuery
+              <EmptyState
+                card={false}
+                icon={FolderSync}
+                title="No Template Sources Found"
+                description={
+                  searchQuery
                     ? 'No sources match your search criteria.'
-                    : 'Add a source to sync custom templates from Git, S3, or HTTP.'}
-                </p>
-                {!searchQuery && (
-                  <Can permission={Permission.CredentialsWrite}>
-                    <Button onClick={() => setAddDialogOpen(true)}>
-                      <Plus className="me-2 h-4 w-4" />
-                      Add Your First Source
-                    </Button>
-                  </Can>
-                )}
-              </div>
+                    : 'Add a source to sync custom templates from Git, S3, or HTTP.'
+                }
+                action={
+                  !searchQuery ? (
+                    <Can permission={Permission.CredentialsWrite}>
+                      <Button onClick={() => setAddDialogOpen(true)}>
+                        <Plus className="me-2 h-4 w-4" />
+                        Add Your First Source
+                      </Button>
+                    </Can>
+                  ) : undefined
+                }
+              />
             )}
           </CardContent>
         </Card>

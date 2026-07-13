@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Skeleton } from '@/components/ui/skeleton'
+import { EmptyState } from '@/features/shared'
 
 import { AddConnectionDialog } from './add-connection-dialog'
 import { SCMConnectionCard } from './scm-connection-card'
@@ -142,17 +143,18 @@ export function SCMConnectionsSection({
               ))}
             </div>
           ) : (
-            <div className="rounded-lg border border-dashed p-8 text-center">
-              <Link2 className="mx-auto h-10 w-10 text-muted-foreground mb-3" />
-              <h3 className="font-medium mb-1">No SCM Connections</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                Connect your GitHub, GitLab, or Bitbucket account to import repositories
-              </p>
-              <Button onClick={() => setAddDialogOpen(true)}>
-                <Plus className="me-2 h-4 w-4" />
-                Add Your First Connection
-              </Button>
-            </div>
+            <EmptyState
+              card={false}
+              icon={Link2}
+              title="No SCM Connections"
+              description="Connect your GitHub, GitLab, or Bitbucket account to import repositories"
+              action={
+                <Button onClick={() => setAddDialogOpen(true)}>
+                  <Plus className="me-2 h-4 w-4" />
+                  Add Your First Connection
+                </Button>
+              }
+            />
           )}
         </CollapsibleContent>
       </Collapsible>

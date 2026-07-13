@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
-import { DataTableRowActions } from '@/features/shared'
+import { DataTableRowActions, EmptyState } from '@/features/shared'
 import {
   Check,
   X,
@@ -209,11 +209,12 @@ export function ExposureTable({
 
   if (exposures.length === 0) {
     return (
-      <div className={cn('rounded-md border p-8 text-center', className)}>
-        <ShieldCheck className="mx-auto h-12 w-12 text-muted-foreground" />
-        <h3 className="mt-4 text-lg font-semibold">No exposures found</h3>
-        <p className="text-sm text-muted-foreground">Your attack surface is looking clean!</p>
-      </div>
+      <EmptyState
+        icon={ShieldCheck}
+        title="No exposures found"
+        description="Your attack surface is looking clean!"
+        className={className}
+      />
     )
   }
 

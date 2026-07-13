@@ -20,6 +20,7 @@ import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
+import { EmptyState } from '@/features/shared'
 
 import type { AssetFinding } from '../types/asset.types'
 import { useAssetFindingsApi } from '@/features/findings/api/use-findings-api'
@@ -203,11 +204,13 @@ export function AssetFindings({ assetId, className }: AssetFindingsProps) {
 
   if (findings.length === 0) {
     return (
-      <div className={cn('flex flex-col items-center justify-center py-8 text-center', className)}>
-        <Shield className="h-12 w-12 text-green-500 mb-3" />
-        <h3 className="font-medium">No Findings</h3>
-        <p className="text-sm text-muted-foreground mt-1">This asset has no security findings.</p>
-      </div>
+      <EmptyState
+        card={false}
+        icon={Shield}
+        title="No Findings"
+        description="This asset has no security findings."
+        className={className}
+      />
     )
   }
 
