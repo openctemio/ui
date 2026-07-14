@@ -137,6 +137,15 @@ const emptyFormData: TaskFormData = {
   estimatedHours: '',
 }
 
+// A campaign is scoped by its finding_filter. "Link to Finding" pins the task to
+// one finding via the finding_ids key (backend: FindingFilter.FindingIDs), so it
+// actually counts + resolves. Returns undefined when nothing is linked so the
+// caller can decide: create seeds an empty scope, edit leaves the existing
+// filter untouched (never silently wipes a cve/asset-scoped campaign).
+function findingFilterFromForm(findingId: string): Record<string, unknown> | undefined {
+  return findingId && findingId !== 'none' ? { finding_ids: [findingId] } : undefined
+}
+
 const priorityColors: Record<TaskPriority, string> = {
   urgent: 'bg-red-500 text-white',
   high: 'bg-orange-500 text-white',
@@ -597,6 +606,9 @@ export default function RemediationPage() {
         due_date: formData.dueDate?.toISOString() || null,
         assigned_team: formData.assigneeName || null,
         tags: [],
+        // Scope the task to the linked finding so it actually counts + resolves;
+        // empty scope when nothing is linked.
+        finding_filter: findingFilterFromForm(formData.findingId) ?? {},
       })
       await refreshCampaigns()
       setFormData(emptyFormData)
@@ -619,6 +631,7 @@ export default function RemediationPage() {
         priority: formData.priority,
         due_date: formData.dueDate?.toISOString() || null,
         assigned_team: formData.assigneeName || null,
+        finding_filter: findingFilterFromForm(formData.findingId),
       })
       await refreshCampaigns()
       setFormData(emptyFormData)
