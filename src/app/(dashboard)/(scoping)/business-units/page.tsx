@@ -718,7 +718,7 @@ export default function BusinessUnitsPage() {
                 </div>
               </SheetHeader>
 
-              <Tabs defaultValue="overview" className="mt-6">
+              <Tabs defaultValue="overview" className="mt-2 px-4 pb-4">
                 <TabsList className="grid w-full grid-cols-2">
                   <TabsTrigger value="overview">Overview</TabsTrigger>
                   <TabsTrigger value="hierarchy">Hierarchy</TabsTrigger>
