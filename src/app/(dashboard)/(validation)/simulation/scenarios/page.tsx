@@ -5,6 +5,7 @@ import { Main } from '@/components/layout'
 import { PageHeader } from '@/features/shared'
 import { StatsCard } from '@/features/shared/components/stats-card'
 import { useDashboardStats } from '@/features/dashboard/hooks/use-dashboard-stats'
+import { useSimulations } from '@/features/simulation/api/use-simulation-api'
 import { useTenant } from '@/context/tenant-provider'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -37,6 +38,14 @@ const SEVERITY_COLORS: Record<string, string> = {
 export default function SimulationScenariosPage() {
   const { currentTenant } = useTenant()
   const { stats, isLoading } = useDashboardStats(currentTenant?.id || null)
+  const { data: simulationData } = useSimulations()
+
+  // Count of simulations that have actually been executed (real run records),
+  // used to frame the derived planning estimates below honestly.
+  const executedRuns = useMemo(
+    () => (simulationData?.data ?? []).reduce((sum, s) => sum + (s.total_runs ?? 0), 0),
+    [simulationData]
+  )
 
   const scenarioCoverage = useMemo(() => {
     const totalTypes = Object.keys(stats.assets.byType).length
@@ -135,13 +144,22 @@ export default function SimulationScenariosPage() {
         description="Configure and manage attack simulation scenarios"
       />
 
+      <div className="mt-4 flex items-start gap-2 rounded-lg border border-dashed bg-muted/40 p-3">
+        <Info className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+        <p className="text-xs text-muted-foreground">
+          {executedRuns > 0
+            ? 'The figures below are derived from your current findings and asset inventory to guide scenario planning. They are estimates, not aggregated results of executed simulation runs.'
+            : 'No simulations have been executed yet. The figures below are derived from your current findings and asset inventory as planning estimates — they do not reflect the results of any executed simulation.'}
+        </p>
+      </div>
+
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatsCard
-          title="Scenario Coverage"
+          title="Scenario Coverage (Est.)"
           value={`${scenarioCoverage}%`}
           icon={Route}
           changeType={scenarioCoverage > 60 ? 'positive' : 'negative'}
-          description="Asset types covered"
+          description="Derived from asset-type diversity"
         />
         <StatsCard
           title="Asset Types"
@@ -159,7 +177,7 @@ export default function SimulationScenariosPage() {
           title="Target Assets"
           value={stats.assets.total}
           icon={Server}
-          description="In simulation scope"
+          description="Candidate targets in inventory"
         />
       </div>
 
@@ -245,10 +263,14 @@ export default function SimulationScenariosPage() {
                 </div>
               ))}
               <div className="rounded-lg bg-muted/50 p-4">
-                <p className="text-sm font-medium">Scenario Coverage</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-medium">Scenario Coverage</p>
+                  <Badge variant="outline">Estimated</Badge>
+                </div>
                 <Progress value={scenarioCoverage} className="mt-2 h-2" />
                 <p className="mt-1 text-xs text-muted-foreground">
-                  {scenarioCoverage}% of asset types have associated simulation scenarios
+                  Estimated {scenarioCoverage}% coverage, derived from asset-type diversity — not
+                  measured from executed simulations.
                 </p>
               </div>
             </div>

@@ -126,29 +126,29 @@ export default function DiscussionThreadPage() {
       {/* Stats Row */}
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatsCard
-          title="Total Discussions"
+          title="Recent Activity"
           value={activityCount}
           icon={MessageSquare}
-          description="Active discussion threads"
+          description="Latest events in this thread"
         />
         <StatsCard
-          title="Finding Discussions"
+          title="Finding Activity"
           value={findingDiscussions}
           icon={AlertTriangle}
-          description="Related to findings"
+          description="Recent finding-related events"
         />
         <StatsCard
           title="Total Findings"
           value={stats.findings.total}
           icon={FileText}
-          description="Across all categories"
+          description="All findings in scope"
         />
         <StatsCard
-          title="Overdue Items"
+          title="Overdue Findings"
           value={stats.findings.overdue}
           icon={Clock}
           changeType={stats.findings.overdue > 0 ? 'negative' : 'positive'}
-          description="Needing discussion"
+          description="Past their due date"
         />
       </div>
 
@@ -262,7 +262,7 @@ export default function DiscussionThreadPage() {
                     color: 'text-blue-500',
                   },
                   {
-                    label: 'Finding Coverage',
+                    label: 'Finding-Related',
                     value: findingDiscussions,
                     pct:
                       activityCount > 0
