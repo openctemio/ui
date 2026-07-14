@@ -1326,6 +1326,7 @@ export default function RemediationPage() {
         }}
         onAction={handleTaskAction}
         onPatch={handleInlinePatch}
+        findings={findings}
         onCopyId={handleCopyId}
         onCopyLink={handleCopyLink}
         onOpenCampaign={(task) => router.push(`/remediation/${task.id}`)}
@@ -1387,6 +1388,7 @@ interface TaskDetailSheetProps {
   onDelete: (task: RemediationTask) => void
   onAction: (action: string, task: RemediationTask) => void
   onPatch: (task: RemediationTask, body: Record<string, unknown>) => void | Promise<void>
+  findings: Array<{ id: string; title?: string; message?: string; severity?: Severity }>
   onCopyId: (id: string) => void
   onCopyLink: (id: string) => void
   onOpenCampaign: (task: RemediationTask) => void
@@ -1398,6 +1400,7 @@ function TaskDetailSheet({
   onDelete,
   onAction,
   onPatch,
+  findings,
   onCopyId,
   onCopyLink,
   onOpenCampaign,
@@ -1686,6 +1689,83 @@ function TaskDetailSheet({
                   <span className="text-muted-foreground">Add a description…</span>
                 )}
               </p>
+            )}
+          </div>
+
+          {/* Linked Findings — a task can cover many; view + manage inline */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-medium text-muted-foreground">
+                Linked Findings ({task.findingIds?.length ?? 0})
+              </p>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="ghost" size="sm" className="h-6 text-xs">
+                    <Plus className="me-1 h-3 w-3" /> Manage
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-72 p-1" align="end">
+                  <div className="max-h-64 overflow-y-auto">
+                    {findings.length === 0 ? (
+                      <p className="p-2 text-xs text-muted-foreground">No findings available</p>
+                    ) : (
+                      findings.map((f) => {
+                        const linked = (task.findingIds ?? []).includes(f.id)
+                        return (
+                          <button
+                            key={f.id}
+                            type="button"
+                            className="flex w-full items-start gap-2 rounded px-2 py-1.5 text-start text-sm hover:bg-muted"
+                            onClick={() =>
+                              onPatch(task, {
+                                finding_filter: {
+                                  finding_ids: linked
+                                    ? (task.findingIds ?? []).filter((id) => id !== f.id)
+                                    : [...(task.findingIds ?? []), f.id],
+                                },
+                              })
+                            }
+                          >
+                            <Checkbox checked={linked} className="mt-0.5 pointer-events-none" />
+                            <span className="line-clamp-2">{f.title || f.message || f.id}</span>
+                          </button>
+                        )
+                      })
+                    )}
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </div>
+            {(task.findingIds?.length ?? 0) === 0 ? (
+              <p className="text-xs text-muted-foreground">No findings linked yet.</p>
+            ) : (
+              <div className="space-y-1">
+                {(task.findingIds ?? []).map((id) => {
+                  const f = findings.find((x) => x.id === id)
+                  return (
+                    <div
+                      key={id}
+                      className="flex items-center gap-2 rounded bg-muted/30 px-2 py-1 text-xs"
+                    >
+                      <span className="flex-1 truncate">{f ? f.title || f.message : id}</span>
+                      <button
+                        type="button"
+                        className="text-muted-foreground hover:text-foreground"
+                        aria-label="Unlink finding"
+                        onClick={() =>
+                          onPatch(task, {
+                            finding_filter: {
+                              finding_ids: (task.findingIds ?? []).filter((x) => x !== id),
+                            },
+                          })
+                        }
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  )
+                })}
+              </div>
             )}
           </div>
 
