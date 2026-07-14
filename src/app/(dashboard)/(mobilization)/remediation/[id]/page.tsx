@@ -1,8 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useSWRConfig } from 'swr'
+import { useMembers } from '@/features/organization/api/use-members'
+import { useTenant } from '@/context/tenant-provider'
 import { Main } from '@/components/layout'
 import { Button } from '@/components/ui/button'
 import { Can, Permission } from '@/lib/permissions'
@@ -33,6 +35,7 @@ import {
   Pencil,
   Save,
   X,
+  User,
   Users,
   Tag,
   Target,
@@ -109,12 +112,12 @@ const STATUS_ACTIONS: Record<string, { label: string; status: string; icon: Reac
   ],
   validating: [
     { label: 'Complete', status: 'completed', icon: <CheckCircle className="me-2 h-4 w-4" /> },
-    { label: 'Back to Active', status: 'active', icon: <Play className="me-2 h-4 w-4" /> },
+    // No validating→active transition exists in the domain (Campaign.Activate only
+    // permits draft/paused); pause first if you need to go back.
   ],
   completed: [],
-  canceled: [
-    { label: 'Reopen as Draft', status: 'draft', icon: <Play className="me-2 h-4 w-4" /> },
-  ],
+  // Canceled is terminal — the domain has no reopen/ToDraft path, so offer no actions.
+  canceled: [],
 }
 
 function formatDate(dateStr: string | null | undefined): string {
@@ -171,6 +174,16 @@ export default function CampaignDetailPage() {
   const { mutate: globalMutate } = useSWRConfig()
   const id = params.id as string
 
+  const { currentTenant } = useTenant()
+  const { members } = useMembers(currentTenant?.id)
+  const memberNameById = useMemo(() => {
+    const m = new Map<string, string>()
+    for (const mem of members) {
+      if (mem.user_id) m.set(mem.user_id, mem.name || mem.email || mem.user_id)
+    }
+    return m
+  }, [members])
+
   const { data: campaign, error, isLoading, mutate: mutateCampaign } = useRemediationCampaign(id)
   const { trigger: updateCampaign, isMutating: isUpdating } = useUpdateRemediationCampaign(id)
   const { trigger: updateStatus, isMutating: isStatusUpdating } = useUpdateCampaignStatus(id)
@@ -179,7 +192,11 @@ export default function CampaignDetailPage() {
   // pass a finding_ids filter (a nil-UUID sentinel when none) so the hook never
   // degrades to fetching every finding in the tenant.
   const linkedFindingIds = (campaign?.finding_filter?.finding_ids as string[] | undefined) ?? []
-  const { data: linkedFindingsData, mutate: mutateFindings } = useFindingsApi({
+  const {
+    data: linkedFindingsData,
+    isLoading: findingsLoading,
+    mutate: mutateFindings,
+  } = useFindingsApi({
     finding_ids:
       linkedFindingIds.length > 0 ? linkedFindingIds : ['00000000-0000-0000-0000-000000000000'],
     per_page: 100,
@@ -199,8 +216,13 @@ export default function CampaignDetailPage() {
   }
   const handleUnlinkFinding = async (findingId: string) => {
     try {
+      // Merge into the existing filter so any dynamic scope (cve_ids, asset_id,
+      // remediation_key, …) survives — only the explicit finding_ids list changes.
       await updateCampaign({
-        finding_filter: { finding_ids: linkedFindingIds.filter((x) => x !== findingId) },
+        finding_filter: {
+          ...(campaign?.finding_filter ?? {}),
+          finding_ids: linkedFindingIds.filter((x) => x !== findingId),
+        },
       })
       await mutateCampaign()
       toast.success('Finding unlinked')
@@ -425,8 +447,12 @@ export default function CampaignDetailPage() {
                 No findings linked yet. Link findings from the task list (Edit → Link Findings) so
                 this campaign resolves them together.
               </p>
-            ) : linkedFindings.length === 0 ? (
+            ) : findingsLoading ? (
               <p className="text-muted-foreground text-sm">Loading linked findings…</p>
+            ) : linkedFindings.length === 0 ? (
+              <p className="text-muted-foreground text-sm">
+                The linked findings are no longer available (they may have been deleted or merged).
+              </p>
             ) : (
               <div className="divide-y">
                 {linkedFindings.map((f) => (
@@ -450,6 +476,20 @@ export default function CampaignDetailPage() {
                         </span>
                       )}
                     </button>
+                    {/* Who owns this finding (finding-level assignee, resolved to a
+                        name). Distinct from the campaign owner. */}
+                    {f.assigned_to ? (
+                      <span className="text-muted-foreground hidden items-center gap-1 text-xs sm:flex">
+                        <User className="h-3 w-3" />
+                        {memberNameById.get(f.assigned_to) ||
+                          f.assigned_to_user?.name ||
+                          'Assigned'}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground/60 hidden text-xs sm:inline">
+                        Unassigned
+                      </span>
+                    )}
                     {/* Inline status change (reuses the finding status endpoint). */}
                     <StatusSelect
                       value={f.status as FindingStatus}
@@ -540,10 +580,28 @@ export default function CampaignDetailPage() {
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Users className="h-4 w-4" />
-                Assigned Team
+                <User className="h-4 w-4" />
+                Owner
               </div>
-              <p className="mt-1 text-lg font-medium">{campaign.assigned_team || '--'}</p>
+              <p className="mt-1 truncate text-lg font-medium">
+                {campaign.assigned_to
+                  ? memberNameById.get(campaign.assigned_to) || campaign.assigned_to
+                  : '--'}
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Users className="h-4 w-4" />
+                Validator
+              </div>
+              <p className="mt-1 truncate text-lg font-medium">
+                {campaign.assigned_team
+                  ? memberNameById.get(campaign.assigned_team) || campaign.assigned_team
+                  : '--'}
+              </p>
             </CardContent>
           </Card>
 

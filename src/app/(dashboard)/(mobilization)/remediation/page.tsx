@@ -46,7 +46,6 @@ import {
   CalendarIcon,
   Save,
   Ban,
-  RotateCcw,
   ExternalLink,
   Clock,
   Hash,
@@ -281,6 +280,7 @@ function campaignToTask(c: RemediationCampaign): RemediationTask {
     assigneeName: '', // resolved from the member list in the page (assigned_to is a UUID)
     validatorId: c.assigned_team || '',
     validatorName: '', // resolved from the member list in the page
+    startDate: c.start_date || '',
     dueDate: c.due_date || '',
     completedAt: c.completed_at || undefined,
     createdAt: c.created_at,
@@ -334,10 +334,9 @@ function getAvailableActions(status: TaskStatus) {
         },
         { action: 'block', label: 'Block', icon: Ban, variant: 'outline' as const },
       ]
-    case 'review': // validating → completed | active
+    case 'review': // validating → completed (no validating→active path in the domain)
       return [
         { action: 'complete', label: 'Complete', icon: CheckCircle, variant: 'default' as const },
-        { action: 'reopen', label: 'Back to Active', icon: RotateCcw, variant: 'outline' as const },
       ]
     case 'blocked': // paused → active
       return [{ action: 'start', label: 'Unblock', icon: Play, variant: 'default' as const }]
@@ -355,7 +354,7 @@ export default function RemediationPage() {
 
   // API data
   const { data: findingsData } = useFindingsApi({
-    per_page: 20,
+    per_page: 100,
     statuses: ['new', 'confirmed', 'in_progress'],
   })
   const findings = findingsData?.data ?? []
@@ -441,14 +440,26 @@ export default function RemediationPage() {
   const handleInlinePatch = useCallback(
     async (task: RemediationTask, body: Record<string, unknown>) => {
       try {
-        await patch(`/api/v1/remediation/campaigns/${task.id}`, body)
+        // A finding_filter patch from the drawer only carries finding_ids. Merge it
+        // into the campaign's existing filter so any dynamic scope (cve_ids, asset_id,
+        // remediation_key, …) isn't silently wiped — which would corrupt a keyed
+        // (Solution-Family) campaign into a plain finding-ids one.
+        let payload = body
+        if (body.finding_filter && typeof body.finding_filter === 'object') {
+          const original = campaignData?.data?.find((c) => c.id === task.id)?.finding_filter ?? {}
+          payload = {
+            ...body,
+            finding_filter: { ...original, ...(body.finding_filter as Record<string, unknown>) },
+          }
+        }
+        await patch(`/api/v1/remediation/campaigns/${task.id}`, payload)
         await refreshCampaigns()
         toast.success('Task updated')
       } catch (err) {
         toast.error(getErrorMessage(err, 'Failed to update task'))
       }
     },
-    [refreshCampaigns]
+    [refreshCampaigns, campaignData]
   )
 
   const assignees = useMemo(
@@ -484,8 +495,16 @@ export default function RemediationPage() {
           ),
       }
     )
-    return applyTaskFilters(campaigns.map(campaignToTask), quickFilter, filters)
-  }, [quickFilter, filters])
+    // Resolve assignee/validator UUIDs → names (same as the on-screen list) so the
+    // export isn't blank and an active assignee filter (which matches on name) works.
+    const rows = campaigns.map((c) => {
+      const t = campaignToTask(c)
+      if (t.assigneeId) t.assigneeName = memberNameById.get(t.assigneeId) || t.assigneeId
+      if (t.validatorId) t.validatorName = memberNameById.get(t.validatorId) || t.validatorId
+      return t
+    })
+    return applyTaskFilters(rows, quickFilter, filters)
+  }, [quickFilter, filters, memberNameById])
 
   const handleExportCsv = useCallback(async () => {
     if (isExporting) return
@@ -567,7 +586,6 @@ export default function RemediationPage() {
         review: 'validating',
         complete: 'completed',
         block: 'paused',
-        reopen: 'active',
       }
       const apiStatus = statusMap[action]
       if (apiStatus) {
@@ -604,16 +622,26 @@ export default function RemediationPage() {
         }
         const apiStatus = statusMap[value]
         if (apiStatus) {
+          // Some selected tasks may be in a state where this transition is illegal
+          // (e.g. an already-active task → "In Progress"). Don't let one rejection
+          // abort the batch or skip the refresh — settle all, then report the split.
           try {
-            await Promise.all(
+            const results = await Promise.allSettled(
               selectedIds.map((id) =>
                 patch(`/api/v1/remediation/campaigns/${id}/status`, { status: apiStatus })
               )
             )
+            const ok = results.filter((r) => r.status === 'fulfilled').length
+            const failed = results.length - ok
+            if (ok > 0 && failed === 0) {
+              toast.success(`Moved ${ok} task${ok === 1 ? '' : 's'} to ${value}`)
+            } else if (ok > 0) {
+              toast.warning(`Moved ${ok}; ${failed} couldn't move to ${value} from their state`)
+            } else {
+              toast.error(`None could move to ${value} from their current state`)
+            }
+          } finally {
             await refreshCampaigns()
-            toast.success(`Moved ${selectedIds.length} tasks to ${value}`)
-          } catch (err) {
-            toast.error(getErrorMessage(err, 'Failed to update tasks'))
           }
         }
         setSelectedIds([])
@@ -1327,6 +1355,7 @@ export default function RemediationPage() {
         onAction={handleTaskAction}
         onPatch={handleInlinePatch}
         findings={findings}
+        memberNameById={memberNameById}
         onCopyId={handleCopyId}
         onCopyLink={handleCopyLink}
         onOpenCampaign={(task) => router.push(`/remediation/${task.id}`)}
@@ -1394,7 +1423,11 @@ interface TaskDetailSheetProps {
     message?: string
     severity?: Severity
     asset?: { name: string; type: string }
+    assigned_to?: string
+    assigned_to_user?: { name: string }
   }>
+  /** UUID → display-name map so finding assignees render as names, not UUIDs. */
+  memberNameById: Map<string, string>
   onCopyId: (id: string) => void
   onCopyLink: (id: string) => void
   onOpenCampaign: (task: RemediationTask) => void
@@ -1407,6 +1440,7 @@ function TaskDetailSheet({
   onAction,
   onPatch,
   findings,
+  memberNameById,
   onCopyId,
   onCopyLink,
   onOpenCampaign,
@@ -1418,6 +1452,7 @@ function TaskDetailSheet({
   const [editingDesc, setEditingDesc] = useState(false)
   const [descDraft, setDescDraft] = useState(task?.description ?? '')
   const [dueOpen, setDueOpen] = useState(false)
+  const [startOpen, setStartOpen] = useState(false)
 
   if (!task) {
     return (
@@ -1612,6 +1647,38 @@ function TaskDetailSheet({
             </InfoCard>
 
             <InfoCard
+              icon={<Play className="h-3.5 w-3.5 text-muted-foreground" />}
+              label="Start Date"
+            >
+              <Popover open={startOpen} onOpenChange={setStartOpen}>
+                <PopoverTrigger asChild>
+                  <button className="text-start rounded px-1 -mx-1 hover:bg-muted/50">
+                    <span className="text-sm font-medium">
+                      {safeFormatDate(task.startDate, { month: 'short', day: 'numeric' }) ??
+                        'Auto on start'}
+                    </span>
+                    {!task.startDate && (
+                      <span className="text-[11px] text-muted-foreground block">
+                        set when work begins
+                      </span>
+                    )}
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <CalendarComponent
+                    mode="single"
+                    selected={task.startDate ? new Date(task.startDate) : undefined}
+                    onSelect={(date) => {
+                      setStartOpen(false)
+                      if (date) onPatch(task, { start_date: date.toISOString() })
+                    }}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </InfoCard>
+
+            <InfoCard
               icon={
                 <Calendar
                   className={`h-3.5 w-3.5 ${overdue ? 'text-red-500' : 'text-muted-foreground'}`}
@@ -1755,11 +1822,17 @@ function TaskDetailSheet({
                     >
                       <div className="min-w-0 flex-1">
                         <span className="block truncate">{f ? f.title || f.message : id}</span>
-                        {f?.asset?.name && (
-                          <span className="text-muted-foreground block truncate text-[10px]">
-                            {f.asset.name}
-                          </span>
-                        )}
+                        <span className="text-muted-foreground flex items-center gap-2 truncate text-[10px]">
+                          {f?.asset?.name && <span className="truncate">{f.asset.name}</span>}
+                          {f?.assigned_to ? (
+                            <span className="flex shrink-0 items-center gap-0.5">
+                              <UserPlus className="h-2.5 w-2.5" />
+                              {memberNameById.get(f.assigned_to) ||
+                                f.assigned_to_user?.name ||
+                                'Assigned'}
+                            </span>
+                          ) : null}
+                        </span>
                       </div>
                       <button
                         type="button"
