@@ -520,7 +520,6 @@ export default function RemediationPage() {
         complete: 'completed',
         block: 'paused',
         reopen: 'active',
-        reassign: '',
       }
       const apiStatus = statusMap[action]
       if (apiStatus) {
@@ -541,8 +540,6 @@ export default function RemediationPage() {
         } catch (err) {
           toast.error(getErrorMessage(err, `Failed to ${action} task`))
         }
-      } else if (action === 'reassign') {
-        toast.info('Reassign feature coming soon')
       }
     },
     [router, refreshCampaigns, viewTask, campaignData]
@@ -572,13 +569,6 @@ export default function RemediationPage() {
           }
         }
         setSelectedIds([])
-        return
-      }
-
-      // Reassign isn't wired to a backend yet (same as the single-task action).
-      // Be honest and keep the selection rather than silently clearing it.
-      if (action === 'Reassigned') {
-        toast.info('Bulk reassign is coming soon')
         return
       }
 
@@ -830,11 +820,6 @@ export default function RemediationPage() {
               onClick: () => handleTaskAction('edit', task),
               permission: Permission.RemediationWrite,
             },
-            {
-              label: 'Reassign',
-              icon: UserPlus,
-              onClick: () => handleTaskAction('reassign', task),
-            },
           ]
           if (task.ticketUrl) {
             rowActions.push({
@@ -1081,15 +1066,6 @@ export default function RemediationPage() {
                 <CardContent className="flex items-center justify-between py-2.5 px-4">
                   <span className="text-sm font-medium">{selectedIds.length} selected</span>
                   <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-7"
-                      onClick={() => handleBulkAction('Reassigned')}
-                    >
-                      <UserPlus className="me-1.5 h-3.5 w-3.5" />
-                      Reassign
-                    </Button>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="outline" size="sm" className="h-7">
@@ -1602,15 +1578,6 @@ function TaskDetailSheet({
                   {label}
                 </Button>
               ))}
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8"
-                onClick={() => onAction('reassign', task)}
-              >
-                <UserPlus className="me-1.5 h-3.5 w-3.5" />
-                Reassign
-              </Button>
             </div>
           </div>
 
