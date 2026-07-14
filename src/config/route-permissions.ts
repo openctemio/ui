@@ -322,19 +322,43 @@ export const routePermissions: Record<string, RoutePermissionConfig> = {
   // ========================================
   '/remediation': {
     permission: Permission.RemediationRead,
-    module: Module.RemediationTasks,
+    module: Module.Remediation,
   },
   '/remediation/**': {
     permission: Permission.RemediationRead,
-    module: Module.RemediationTasks,
+    module: Module.Remediation,
   },
   '/remediations': {
     permission: Permission.RemediationRead,
-    module: Module.RemediationTasks,
+    module: Module.Remediation,
   },
   '/remediations/**': {
     permission: Permission.RemediationRead,
-    module: Module.RemediationTasks,
+    module: Module.Remediation,
+  },
+  // Orphan/legacy routes for gated modules — not in the sidebar, but reachable
+  // by direct URL. Gate them so a disabled module never renders via a stale link.
+  // Mirror the canonical routes: /simulation* ← /attack-simulation, /threats* &
+  // /trending ← /threat-intel.
+  '/simulation': {
+    permission: Permission.PentestRead,
+    module: Module.AttackSimulation,
+  },
+  '/simulation/**': {
+    permission: Permission.PentestRead,
+    module: Module.AttackSimulation,
+  },
+  '/threats': {
+    permission: Permission.VulnerabilitiesRead,
+    module: Module.ThreatIntel,
+  },
+  '/threats/**': {
+    permission: Permission.VulnerabilitiesRead,
+    module: Module.ThreatIntel,
+  },
+  '/trending': {
+    permission: Permission.VulnerabilitiesRead,
+    module: Module.ThreatIntel,
   },
   '/pipelines': {
     permission: Permission.PipelinesRead,
