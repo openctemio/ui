@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react'
 import { Main } from '@/components/layout'
-import { PageHeader, EmptyState } from '@/features/shared'
+import { PageHeader, EmptyState, formatRiskScore, getRiskScoreChangeType } from '@/features/shared'
 import { StatsCard } from '@/features/shared/components/stats-card'
 import { useDashboardStats } from '@/features/dashboard/hooks/use-dashboard-stats'
 import { useTenant } from '@/context/tenant-provider'
@@ -145,9 +145,9 @@ export default function ShadowITPage() {
         />
         <StatsCard
           title="Risk Score"
-          value={stats.assets.riskScore}
+          value={formatRiskScore(stats.assets.riskScore)}
           icon={AlertTriangle}
-          changeType={stats.assets.riskScore > 50 ? 'negative' : 'positive'}
+          changeType={getRiskScoreChangeType(stats.assets.riskScore)}
           description="Shadow IT risk index"
         />
       </div>

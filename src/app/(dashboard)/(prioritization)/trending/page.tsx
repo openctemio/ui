@@ -1,9 +1,16 @@
 'use client'
 
 import { useMemo } from 'react'
+import { formatChartDate } from '@/lib/format-chart-date'
 import useSWR from 'swr'
 import { Main } from '@/components/layout'
-import { PageHeader, StatsCard, EmptyState } from '@/features/shared'
+import {
+  PageHeader,
+  StatsCard,
+  EmptyState,
+  formatRiskScore,
+  getRiskScoreChangeType,
+} from '@/features/shared'
 import { useDashboardStats } from '@/features/dashboard/hooks/use-dashboard-stats'
 import { useTenant } from '@/context/tenant-provider'
 import {
@@ -328,14 +335,8 @@ export default function TrendingExposuresPage() {
             />
             <StatsCard
               title="Risk Score"
-              value={`${stats.assets.riskScore.toFixed(1)} / 10`}
-              changeType={
-                stats.assets.riskScore >= 7
-                  ? 'negative'
-                  : stats.assets.riskScore >= 4
-                    ? 'neutral'
-                    : 'positive'
-              }
+              value={formatRiskScore(stats.assets.riskScore)}
+              changeType={getRiskScoreChangeType(stats.assets.riskScore)}
               icon={Clock}
             />
           </section>
@@ -363,6 +364,7 @@ export default function TrendingExposuresPage() {
                     <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                     <XAxis
                       dataKey="date"
+                      tickFormatter={formatChartDate}
                       tick={{ fontSize: 12 }}
                       tickLine={false}
                       axisLine={false}

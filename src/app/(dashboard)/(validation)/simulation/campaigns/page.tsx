@@ -1,8 +1,9 @@
 'use client'
 
 import { useMemo } from 'react'
+import { formatChartDate } from '@/lib/format-chart-date'
 import { Main } from '@/components/layout'
-import { PageHeader } from '@/features/shared'
+import { PageHeader, formatRiskScore, getRiskScoreChangeType } from '@/features/shared'
 import { StatsCard } from '@/features/shared/components/stats-card'
 import { useDashboardStats } from '@/features/dashboard/hooks/use-dashboard-stats'
 import { useTenant } from '@/context/tenant-provider'
@@ -52,10 +53,7 @@ export default function SimulationCampaignsPage() {
 
   const trendData = useMemo(() => {
     return stats.findingTrend.slice(-7).map((point) => ({
-      date: new Date(point.date).toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-      }),
+      date: formatChartDate(point.date),
       critical: point.critical,
       high: point.high,
       medium: point.medium,
@@ -113,9 +111,9 @@ export default function SimulationCampaignsPage() {
         />
         <StatsCard
           title="Risk Score"
-          value={stats.assets.riskScore}
+          value={formatRiskScore(stats.assets.riskScore)}
           icon={Play}
-          changeType={stats.assets.riskScore > 70 ? 'negative' : 'positive'}
+          changeType={getRiskScoreChangeType(stats.assets.riskScore)}
           description="Overall risk"
         />
       </div>

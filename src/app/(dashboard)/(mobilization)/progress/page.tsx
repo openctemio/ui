@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo } from 'react'
+import { formatChartDate } from '@/lib/format-chart-date'
 import { Main } from '@/components/layout'
 import { PageHeader, StatsCard } from '@/features/shared'
 import { useDashboardStats } from '@/features/dashboard/hooks/use-dashboard-stats'
@@ -173,7 +174,7 @@ export default function ProgressTrackingPage() {
   // Finding trend area chart data
   const trendChartData = useMemo(() => {
     return stats.findingTrend.map((point) => ({
-      date: point.date,
+      date: formatChartDate(point.date),
       critical: point.critical,
       high: point.high,
       medium: point.medium,
