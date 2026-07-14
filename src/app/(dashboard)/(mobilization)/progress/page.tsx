@@ -6,6 +6,7 @@ import { Main } from '@/components/layout'
 import { PageHeader, StatsCard } from '@/features/shared'
 import { useDashboardStats } from '@/features/dashboard/hooks/use-dashboard-stats'
 import { useTenant } from '@/context/tenant-provider'
+import { FINDING_STATUS_CONFIG, type FindingStatus } from '@/features/findings/types/finding.types'
 import {
   AreaChart,
   Area,
@@ -26,22 +27,47 @@ import { Progress } from '@/components/ui/progress'
 import { cn } from '@/lib/utils'
 import { CheckCircle, Clock, AlertTriangle, Target, TrendingUp, BarChart3 } from 'lucide-react'
 
+// Cover every FindingStatus the backend can emit — otherwise the status chart
+// silently drops findings in statuses not listed here (new/confirmed/fix_applied/
+// retest/…), so its bars wouldn't sum to the totals shown above it.
 const STATUS_COLORS: Record<string, string> = {
-  open: '#ef4444',
+  new: '#3b82f6',
+  confirmed: '#f97316',
   in_progress: '#f59e0b',
+  fix_applied: '#eab308',
+  remediation: '#f59e0b',
+  in_review: '#06b6d4',
+  retest: '#14b8a6',
   resolved: '#22c55e',
-  closed: '#6b7280',
+  verified: '#10b981',
   accepted: '#8b5cf6',
+  accepted_risk: '#8b5cf6',
   false_positive: '#a3a3a3',
+  duplicate: '#6b7280',
+  draft: '#9ca3af',
+  // legacy/compat statuses
+  open: '#ef4444',
+  closed: '#6b7280',
 }
 
 const STATUS_LABELS: Record<string, string> = {
-  open: 'Open',
+  new: 'New',
+  confirmed: 'Confirmed',
   in_progress: 'In Progress',
+  fix_applied: 'Fix Applied',
+  remediation: 'Remediation',
+  in_review: 'In Review',
+  retest: 'Retest',
   resolved: 'Resolved',
-  closed: 'Closed',
+  verified: 'Verified',
   accepted: 'Accepted',
+  accepted_risk: 'Accepted Risk',
   false_positive: 'False Positive',
+  duplicate: 'Duplicate',
+  draft: 'Draft',
+  // legacy/compat statuses
+  open: 'Open',
+  closed: 'Closed',
 }
 
 const SEVERITY_COLORS: Record<string, string> = {
@@ -138,8 +164,16 @@ export default function ProgressTrackingPage() {
     return (findingsByStatus.resolved || 0) + (findingsByStatus.closed || 0)
   }, [findingsByStatus])
 
+  // "Awaiting remediation" = every finding whose status is NOT in a closed
+  // category (resolved/false_positive/accepted/duplicate/verified). This spans
+  // new, confirmed, in_progress, fix_applied, retest, in_review, remediation —
+  // counting only status==='open' here understated the backlog to 0 whenever
+  // findings had progressed to in_progress/confirmed.
   const openCount = useMemo(() => {
-    return findingsByStatus.open || 0
+    return Object.entries(findingsByStatus).reduce((sum, [status, count]) => {
+      const category = FINDING_STATUS_CONFIG[status as FindingStatus]?.category
+      return category === 'open' || category === 'in_progress' ? sum + (count || 0) : sum
+    }, 0)
   }, [findingsByStatus])
 
   const resolutionRate = useMemo(() => {
