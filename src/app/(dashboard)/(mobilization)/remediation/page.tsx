@@ -137,6 +137,15 @@ const emptyFormData: TaskFormData = {
   estimatedHours: '',
 }
 
+// A campaign is scoped by its finding_filter. "Link to Finding" pins the task to
+// one finding via the finding_ids key (backend: FindingFilter.FindingIDs), so it
+// actually counts + resolves. Returns undefined when nothing is linked so the
+// caller can decide: create seeds an empty scope, edit leaves the existing
+// filter untouched (never silently wipes a cve/asset-scoped campaign).
+function findingFilterFromForm(findingId: string): Record<string, unknown> | undefined {
+  return findingId && findingId !== 'none' ? { finding_ids: [findingId] } : undefined
+}
+
 const priorityColors: Record<TaskPriority, string> = {
   urgent: 'bg-red-500 text-white',
   high: 'bg-orange-500 text-white',
@@ -249,13 +258,16 @@ function checkOverdue(task: RemediationTask): boolean {
 
 /** Map a remediation campaign (API) to the UI task row. */
 function campaignToTask(c: RemediationCampaign): RemediationTask {
+  // Recover the single linked finding (if any) from the campaign's finding_filter
+  // so the Edit form pre-selects it instead of defaulting to "None".
+  const linkedFindingIds = (c.finding_filter?.finding_ids as string[] | undefined) ?? []
   return {
     id: c.id,
     title: c.name,
     description: c.description || '',
     status: normalizeStatus(c.status),
     priority: normalizePriority(c.priority),
-    findingId: '',
+    findingId: linkedFindingIds[0] ?? '',
     findingTitle: `${c.finding_count} finding${c.finding_count !== 1 ? 's' : ''} linked`,
     severity: (c.priority === 'critical' ? 'critical' : c.priority) as Severity,
     assigneeId: c.assigned_to || '',
@@ -292,28 +304,33 @@ function applyTaskFilters(tasks: RemediationTask[], quickFilter: string, filters
   return data
 }
 
-/** Context-aware status actions */
+/** Context-aware status actions — only the transitions the campaign state
+ * machine allows (draft→active→validating→completed; completed is terminal).
+ * Offering illegal moves (Block on Open, Complete from In Progress, Reopen on
+ * Completed) just produced backend rejection toasts. */
 function getAvailableActions(status: TaskStatus) {
   switch (status) {
-    case 'open':
+    case 'open': // draft → active
+      return [{ action: 'start', label: 'Start Task', icon: Play, variant: 'default' as const }]
+    case 'in_progress': // active → validating | paused
       return [
-        { action: 'start', label: 'Start Task', icon: Play, variant: 'default' as const },
+        {
+          action: 'review',
+          label: 'Send to Review',
+          icon: CheckCircle,
+          variant: 'default' as const,
+        },
         { action: 'block', label: 'Block', icon: Ban, variant: 'outline' as const },
       ]
-    case 'in_progress':
+    case 'review': // validating → completed | active
       return [
         { action: 'complete', label: 'Complete', icon: CheckCircle, variant: 'default' as const },
-        { action: 'block', label: 'Block', icon: Ban, variant: 'outline' as const },
+        { action: 'reopen', label: 'Back to Active', icon: RotateCcw, variant: 'outline' as const },
       ]
-    case 'review':
-      return [
-        { action: 'complete', label: 'Approve', icon: CheckCircle, variant: 'default' as const },
-        { action: 'reopen', label: 'Reopen', icon: RotateCcw, variant: 'outline' as const },
-      ]
-    case 'blocked':
+    case 'blocked': // paused → active
       return [{ action: 'start', label: 'Unblock', icon: Play, variant: 'default' as const }]
-    case 'completed':
-      return [{ action: 'reopen', label: 'Reopen', icon: RotateCcw, variant: 'outline' as const }]
+    case 'completed': // terminal
+      return []
     default:
       return []
   }
@@ -499,10 +516,10 @@ export default function RemediationPage() {
       // Status transition actions → call API
       const statusMap: Record<string, string> = {
         start: 'active',
+        review: 'validating',
         complete: 'completed',
         block: 'paused',
         reopen: 'active',
-        reassign: '',
       }
       const apiStatus = statusMap[action]
       if (apiStatus) {
@@ -519,14 +536,10 @@ export default function RemediationPage() {
               })
             }
           }
-          toast.success(
-            `Task ${action === 'start' ? 'started' : action === 'complete' ? 'completed' : action === 'block' ? 'blocked' : 'reopened'}`
-          )
+          toast.success('Task updated')
         } catch (err) {
           toast.error(getErrorMessage(err, `Failed to ${action} task`))
         }
-      } else if (action === 'reassign') {
-        toast.info('Reassign feature coming soon')
       }
     },
     [router, refreshCampaigns, viewTask, campaignData]
@@ -556,13 +569,6 @@ export default function RemediationPage() {
           }
         }
         setSelectedIds([])
-        return
-      }
-
-      // Reassign isn't wired to a backend yet (same as the single-task action).
-      // Be honest and keep the selection rather than silently clearing it.
-      if (action === 'Reassigned') {
-        toast.info('Bulk reassign is coming soon')
         return
       }
 
@@ -597,6 +603,9 @@ export default function RemediationPage() {
         due_date: formData.dueDate?.toISOString() || null,
         assigned_team: formData.assigneeName || null,
         tags: [],
+        // Scope the task to the linked finding so it actually counts + resolves;
+        // empty scope when nothing is linked.
+        finding_filter: findingFilterFromForm(formData.findingId) ?? {},
       })
       await refreshCampaigns()
       setFormData(emptyFormData)
@@ -619,6 +628,7 @@ export default function RemediationPage() {
         priority: formData.priority,
         due_date: formData.dueDate?.toISOString() || null,
         assigned_team: formData.assigneeName || null,
+        finding_filter: findingFilterFromForm(formData.findingId),
       })
       await refreshCampaigns()
       setFormData(emptyFormData)
@@ -809,11 +819,6 @@ export default function RemediationPage() {
               icon: Pencil,
               onClick: () => handleTaskAction('edit', task),
               permission: Permission.RemediationWrite,
-            },
-            {
-              label: 'Reassign',
-              icon: UserPlus,
-              onClick: () => handleTaskAction('reassign', task),
             },
           ]
           if (task.ticketUrl) {
@@ -1061,15 +1066,6 @@ export default function RemediationPage() {
                 <CardContent className="flex items-center justify-between py-2.5 px-4">
                   <span className="text-sm font-medium">{selectedIds.length} selected</span>
                   <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-7"
-                      onClick={() => handleBulkAction('Reassigned')}
-                    >
-                      <UserPlus className="me-1.5 h-3.5 w-3.5" />
-                      Reassign
-                    </Button>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="outline" size="sm" className="h-7">
@@ -1310,7 +1306,6 @@ export default function RemediationPage() {
         setFormData={setFormData}
         dueDateOpen={dueDateOpen}
         setDueDateOpen={setDueDateOpen}
-        assignees={assignees}
         findings={findings}
         onSubmit={editTask ? handleEditTask : handleCreateTask}
         onCancel={() => {
@@ -1583,15 +1578,6 @@ function TaskDetailSheet({
                   {label}
                 </Button>
               ))}
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8"
-                onClick={() => onAction('reassign', task)}
-              >
-                <UserPlus className="me-1.5 h-3.5 w-3.5" />
-                Reassign
-              </Button>
             </div>
           </div>
 
@@ -1671,7 +1657,6 @@ interface TaskFormDialogProps {
   setFormData: (data: TaskFormData) => void
   dueDateOpen: boolean
   setDueDateOpen: (open: boolean) => void
-  assignees: string[]
   findings: Array<{ id: string; title?: string; message?: string; severity?: Severity }>
   onSubmit: () => void
   onCancel: () => void
@@ -1685,7 +1670,6 @@ function TaskFormDialog({
   setFormData,
   dueDateOpen,
   setDueDateOpen,
-  assignees,
   findings,
   onSubmit,
   onCancel,
@@ -1728,6 +1712,10 @@ function TaskFormDialog({
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
             />
           </div>
+          {/* Only fields the backend actually persists are shown. Severity
+              (derived from priority), Estimated Hours (no column), and the free-
+              text Assignee (broken end-to-end — empty picker, dropped on save,
+              never returned) were removed; a real assignee picker is a follow-up. */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label className="text-xs">Priority</Label>
@@ -1747,45 +1735,7 @@ function TaskFormDialog({
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">Severity</Label>
-              <Select
-                value={formData.severity}
-                onValueChange={(v) => setFormData({ ...formData, severity: v as Severity })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="critical">Critical</SelectItem>
-                  <SelectItem value="high">High</SelectItem>
-                  <SelectItem value="medium">Medium</SelectItem>
-                  <SelectItem value="low">Low</SelectItem>
-                  <SelectItem value="info">Info</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label className="text-xs">Assignee *</Label>
-              <Select
-                value={formData.assigneeName}
-                onValueChange={(v) => setFormData({ ...formData, assigneeName: v })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select assignee" />
-                </SelectTrigger>
-                <SelectContent>
-                  {assignees.map((name) => (
-                    <SelectItem key={name} value={name}>
-                      {name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Due Date *</Label>
+              <Label className="text-xs">Due Date</Label>
               <Popover open={dueDateOpen} onOpenChange={setDueDateOpen}>
                 <PopoverTrigger asChild>
                   <Button
@@ -1810,35 +1760,24 @@ function TaskFormDialog({
               </Popover>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label className="text-xs">Link to Finding</Label>
-              <Select
-                value={formData.findingId}
-                onValueChange={(v) => setFormData({ ...formData, findingId: v })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select finding" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">None</SelectItem>
-                  {findings.map((f) => (
-                    <SelectItem key={f.id} value={f.id}>
-                      {(f.title || f.message || f.id).substring(0, 50)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Estimated Hours</Label>
-              <Input
-                type="number"
-                placeholder="e.g., 8"
-                value={formData.estimatedHours}
-                onChange={(e) => setFormData({ ...formData, estimatedHours: e.target.value })}
-              />
-            </div>
+          <div className="space-y-1.5 min-w-0">
+            <Label className="text-xs">Link to Finding</Label>
+            <Select
+              value={formData.findingId}
+              onValueChange={(v) => setFormData({ ...formData, findingId: v })}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select finding" className="truncate" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">None</SelectItem>
+                {findings.map((f) => (
+                  <SelectItem key={f.id} value={f.id}>
+                    {(f.title || f.message || f.id).substring(0, 50)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
         <DialogFooter>
