@@ -635,8 +635,13 @@ function FindingsContent() {
   )
 
   // Define columns for DataTable
-  const columns: ColumnDef<Finding>[] = useMemo(
-    () => [
+  // Priority is the RFC-004 P0–P3 class; it's only populated once the
+  // classifier has run. When nothing in view has one, we drop the column
+  // instead of rendering a full column of "—" (it returns once data exists).
+  const hasAnyPriority = useMemo(() => findings.some((f) => f.priorityClass), [findings])
+
+  const columns: ColumnDef<Finding>[] = useMemo(() => {
+    const cols: ColumnDef<Finding>[] = [
       {
         id: 'select',
         header: ({ table }) => (
@@ -777,11 +782,37 @@ function FindingsContent() {
         id: 'asset',
         accessorFn: (row) => row.assets[0]?.name || '-',
         header: ({ column }) => <DataTableColumnHeader column={column} title="Location" />,
-        cell: ({ row }) => (
-          <span className="text-sm font-mono text-muted-foreground truncate max-w-[200px] block">
-            {row.getValue('asset')}
-          </span>
-        ),
+        cell: ({ row }) => {
+          const asset = row.original.assets[0]
+          const name = asset?.name
+          if (!name || name === '-') {
+            return <span className="text-muted-foreground text-sm">—</span>
+          }
+          // The transform falls back to the raw asset_id (a UUID) when the API
+          // response carries no asset name or file path — showing that verbatim
+          // reads as broken data. Detect it (name === the asset id) and render a
+          // compact, clickable asset reference instead of the bare UUID.
+          if (asset?.id && name === asset.id) {
+            return (
+              <Link
+                href={`/assets/${asset.id}`}
+                title={asset.id}
+                className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-sm hover:underline"
+              >
+                <ExternalLink className="h-3 w-3 shrink-0" />
+                <span className="font-mono">{asset.id.slice(0, 8)}…</span>
+              </Link>
+            )
+          }
+          return (
+            <span
+              className="text-muted-foreground block max-w-[200px] truncate font-mono text-sm"
+              title={name}
+            >
+              {name}
+            </span>
+          )
+        },
       },
       {
         accessorKey: 'status',
@@ -860,9 +891,11 @@ function FindingsContent() {
           )
         },
       },
-    ],
-    [handleRowAction, handleRowClick, hasPermission]
-  )
+    ]
+    return hasAnyPriority
+      ? cols
+      : cols.filter((c) => !('accessorKey' in c) || c.accessorKey !== 'priorityClass')
+  }, [handleRowAction, handleRowClick, hasPermission, hasAnyPriority])
 
   // Error state
   if (error) {
@@ -1220,7 +1253,7 @@ function FindingsContent() {
                           <DataTable
                             columns={columns}
                             data={findings}
-                            searchPlaceholder="Search findings..."
+                            showSearch={false}
                             emptyMessage="No findings found"
                             emptyDescription={
                               findings.length === 0
