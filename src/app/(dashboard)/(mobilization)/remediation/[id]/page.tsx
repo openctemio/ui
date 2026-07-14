@@ -31,6 +31,7 @@ import {
   CheckCircle,
   CirclePause,
   Play,
+  RotateCcw,
   XCircle,
   Pencil,
   Save,
@@ -112,10 +113,16 @@ const STATUS_ACTIONS: Record<string, { label: string; status: string; icon: Reac
   ],
   validating: [
     { label: 'Complete', status: 'completed', icon: <CheckCircle className="me-2 h-4 w-4" /> },
-    // No validating→active transition exists in the domain (Campaign.Activate only
-    // permits draft/paused); pause first if you need to go back.
+    // Validation failed (the fix didn't hold) → back to active remediation.
+    {
+      label: 'Validation failed — back to work',
+      status: 'active',
+      icon: <RotateCcw className="me-2 h-4 w-4" />,
+    },
   ],
-  completed: [],
+  // A completed campaign can be reopened (backend routes active→Reopen) when a
+  // resolved finding regresses.
+  completed: [{ label: 'Reopen', status: 'active', icon: <RotateCcw className="me-2 h-4 w-4" /> }],
   // Canceled is terminal — the domain has no reopen/ToDraft path, so offer no actions.
   canceled: [],
 }
