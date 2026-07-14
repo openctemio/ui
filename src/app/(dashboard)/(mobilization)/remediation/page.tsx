@@ -1824,14 +1824,14 @@ function TaskFormDialog({
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 min-w-0">
               <Label className="text-xs">Link to Finding</Label>
               <Select
                 value={formData.findingId}
                 onValueChange={(v) => setFormData({ ...formData, findingId: v })}
               >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select finding" />
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select finding" className="truncate" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">None</SelectItem>
@@ -1843,7 +1843,7 @@ function TaskFormDialog({
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 min-w-0">
               <Label className="text-xs">Estimated Hours</Label>
               <Input
                 type="number"
