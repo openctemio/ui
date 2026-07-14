@@ -2,7 +2,13 @@
 
 import { useState, useMemo } from 'react'
 import { Main } from '@/components/layout'
-import { PageHeader, DataTableRowActions, StatsCard, EmptyState } from '@/features/shared'
+import {
+  PageHeader,
+  DataTableRowActions,
+  StatsCard,
+  EmptyState,
+  SheetBody,
+} from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -556,108 +562,110 @@ export default function CompliancePage() {
                 </div>
               </SheetHeader>
 
-              <div className="mt-6 space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <p className="text-sm text-muted-foreground">Status</p>
-                    <Badge variant="outline" className={statusColors[viewRequirement.status]}>
-                      {statusLabels[viewRequirement.status]}
-                    </Badge>
+              <SheetBody>
+                <div className="mt-6 space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <p className="text-sm text-muted-foreground">Status</p>
+                      <Badge variant="outline" className={statusColors[viewRequirement.status]}>
+                        {statusLabels[viewRequirement.status]}
+                      </Badge>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-sm text-muted-foreground">Priority</p>
+                      <Badge variant="outline" className={priorityColors[viewRequirement.priority]}>
+                        {viewRequirement.priority}
+                      </Badge>
+                    </div>
                   </div>
-                  <div className="space-y-1">
-                    <p className="text-sm text-muted-foreground">Priority</p>
-                    <Badge variant="outline" className={priorityColors[viewRequirement.priority]}>
-                      {viewRequirement.priority}
-                    </Badge>
+
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm">Description</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm">{viewRequirement.description}</p>
+                    </CardContent>
+                  </Card>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">Evidence</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-2xl font-bold">{viewRequirement.evidenceCount}</div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">Findings</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div
+                          className={`text-2xl font-bold ${viewRequirement.findingCount > 0 ? 'text-red-500' : ''}`}
+                        >
+                          {viewRequirement.findingCount}
+                        </div>
+                      </CardContent>
+                    </Card>
                   </div>
+
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm">Owner</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="font-medium">{viewRequirement.owner}</p>
+                    </CardContent>
+                  </Card>
+
+                  {viewRequirement.dueDate && (
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">Due Date</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4" />
+                          {new Date(viewRequirement.dueDate).toLocaleDateString()}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {viewRequirement.notes && (
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">Notes</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-sm">{viewRequirement.notes}</p>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {viewRequirement.lastAssessed && (
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">Last Assessed</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-sm">
+                          {new Date(viewRequirement.lastAssessed).toLocaleDateString()}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  )}
                 </div>
 
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">Description</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm">{viewRequirement.description}</p>
-                  </CardContent>
-                </Card>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Evidence</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold">{viewRequirement.evidenceCount}</div>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Findings</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div
-                        className={`text-2xl font-bold ${viewRequirement.findingCount > 0 ? 'text-red-500' : ''}`}
-                      >
-                        {viewRequirement.findingCount}
-                      </div>
-                    </CardContent>
-                  </Card>
+                <div className="mt-6">
+                  <Button className="w-full" onClick={() => openEdit(viewRequirement)}>
+                    <Pencil className="me-2 h-4 w-4" />
+                    Update Status
+                  </Button>
                 </div>
-
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">Owner</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="font-medium">{viewRequirement.owner}</p>
-                  </CardContent>
-                </Card>
-
-                {viewRequirement.dueDate && (
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Due Date</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4" />
-                        {new Date(viewRequirement.dueDate).toLocaleDateString()}
-                      </p>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {viewRequirement.notes && (
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Notes</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm">{viewRequirement.notes}</p>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {viewRequirement.lastAssessed && (
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Last Assessed</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm">
-                        {new Date(viewRequirement.lastAssessed).toLocaleDateString()}
-                      </p>
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
-
-              <div className="mt-6">
-                <Button className="w-full" onClick={() => openEdit(viewRequirement)}>
-                  <Pencil className="me-2 h-4 w-4" />
-                  Update Status
-                </Button>
-              </div>
+              </SheetBody>
             </>
           )}
         </SheetContent>

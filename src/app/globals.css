@@ -13,9 +13,16 @@
   html {
     @apply overflow-x-hidden;
     scrollbar-gutter: stable;
+    /* Kill the document-level rubber-band bounce. On iOS Safari that bounce
+       lets the body "scroll" and intermittently steal touch-scroll from the
+       app-shell's inner scrollers (the sidebar nav). Additive + safe: pages
+       that legitimately scroll (auth/onboarding) still scroll, just without the
+       overscroll chaining. No layout/height changes. */
+    overscroll-behavior: none;
   }
   body {
     @apply bg-background text-foreground has-[div[data-variant='inset']]:bg-sidebar min-h-svh w-full;
+    overscroll-behavior: none;
   }
 
   /* Override Radix scroll locking for sticky headers */

@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useAssets } from '@/features/assets'
 import { Main } from '@/components/layout'
-import { PageHeader, DataTableRowActions, StatsCard } from '@/features/shared'
+import { PageHeader, DataTableRowActions, StatsCard, SheetBody } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -793,170 +793,172 @@ export default function InternalSurfacePage() {
                 </div>
               </SheetHeader>
 
-              <div className="mt-6 space-y-4">
-                <div className="grid grid-cols-3 gap-4">
+              <SheetBody>
+                <div className="mt-6 space-y-4">
+                  <div className="grid grid-cols-3 gap-4">
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">Status</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <Badge variant="outline" className={statusColors[viewAsset.status]}>
+                          {viewAsset.status}
+                        </Badge>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">Risk Level</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <Badge variant="outline" className={riskColors[viewAsset.riskLevel]}>
+                          {viewAsset.riskLevel}
+                        </Badge>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">Zone</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <Badge variant="outline" className={zoneColors[viewAsset.networkZone]}>
+                          {viewAsset.networkZone.toUpperCase()}
+                        </Badge>
+                      </CardContent>
+                    </Card>
+                  </div>
+
                   <Card>
                     <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Status</CardTitle>
+                      <CardTitle className="text-sm">Network Details</CardTitle>
                     </CardHeader>
-                    <CardContent>
-                      <Badge variant="outline" className={statusColors[viewAsset.status]}>
-                        {viewAsset.status}
-                      </Badge>
+                    <CardContent className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">IP Address</span>
+                        <code>{viewAsset.ipAddress}</code>
+                      </div>
+                      {viewAsset.macAddress && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">MAC Address</span>
+                          <code>{viewAsset.macAddress}</code>
+                        </div>
+                      )}
+                      {viewAsset.vlan && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">VLAN</span>
+                          <span>{viewAsset.vlan}</span>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
+
+                  {viewAsset.operatingSystem && (
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">Operating System</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-sm">{viewAsset.operatingSystem}</p>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {viewAsset.openPorts && viewAsset.openPorts.length > 0 && (
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">Open Ports</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex flex-wrap gap-2">
+                          {viewAsset.openPorts.map((port) => (
+                            <Badge key={port} variant="secondary">
+                              {port}
+                            </Badge>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {viewAsset.services && viewAsset.services.length > 0 && (
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">Services</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex flex-wrap gap-2">
+                          {viewAsset.services.map((service) => (
+                            <Badge key={service} variant="outline">
+                              {service}
+                            </Badge>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">Findings</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div
+                          className={`text-2xl font-bold ${viewAsset.findingsCount > 0 ? 'text-orange-500' : ''}`}
+                        >
+                          {viewAsset.findingsCount}
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">Owner</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-sm">{viewAsset.owner || 'Unassigned'}</p>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {viewAsset.notes && (
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">Notes</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-sm text-muted-foreground">{viewAsset.notes}</p>
+                      </CardContent>
+                    </Card>
+                  )}
+
                   <Card>
                     <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Risk Level</CardTitle>
+                      <CardTitle className="text-sm">Timeline</CardTitle>
                     </CardHeader>
-                    <CardContent>
-                      <Badge variant="outline" className={riskColors[viewAsset.riskLevel]}>
-                        {viewAsset.riskLevel}
-                      </Badge>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Zone</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <Badge variant="outline" className={zoneColors[viewAsset.networkZone]}>
-                        {viewAsset.networkZone.toUpperCase()}
-                      </Badge>
+                    <CardContent className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Discovered</span>
+                        <span>{new Date(viewAsset.discoveredAt).toLocaleDateString()}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Last Seen</span>
+                        <span>{new Date(viewAsset.lastSeen).toLocaleDateString()}</span>
+                      </div>
                     </CardContent>
                   </Card>
                 </div>
 
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">Network Details</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">IP Address</span>
-                      <code>{viewAsset.ipAddress}</code>
-                    </div>
-                    {viewAsset.macAddress && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">MAC Address</span>
-                        <code>{viewAsset.macAddress}</code>
-                      </div>
-                    )}
-                    {viewAsset.vlan && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">VLAN</span>
-                        <span>{viewAsset.vlan}</span>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-
-                {viewAsset.operatingSystem && (
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Operating System</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm">{viewAsset.operatingSystem}</p>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {viewAsset.openPorts && viewAsset.openPorts.length > 0 && (
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Open Ports</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex flex-wrap gap-2">
-                        {viewAsset.openPorts.map((port) => (
-                          <Badge key={port} variant="secondary">
-                            {port}
-                          </Badge>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {viewAsset.services && viewAsset.services.length > 0 && (
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Services</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex flex-wrap gap-2">
-                        {viewAsset.services.map((service) => (
-                          <Badge key={service} variant="outline">
-                            {service}
-                          </Badge>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-
-                <div className="grid grid-cols-2 gap-4">
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Findings</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div
-                        className={`text-2xl font-bold ${viewAsset.findingsCount > 0 ? 'text-orange-500' : ''}`}
-                      >
-                        {viewAsset.findingsCount}
-                      </div>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Owner</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm">{viewAsset.owner || 'Unassigned'}</p>
-                    </CardContent>
-                  </Card>
+                <div className="mt-6 flex gap-2">
+                  <Button className="flex-1" variant="outline" onClick={() => openEdit(viewAsset)}>
+                    <Pencil className="me-2 h-4 w-4" />
+                    Edit
+                  </Button>
+                  <Button className="flex-1">
+                    <Wifi className="me-2 h-4 w-4" />
+                    Scan Asset
+                  </Button>
                 </div>
-
-                {viewAsset.notes && (
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Notes</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-muted-foreground">{viewAsset.notes}</p>
-                    </CardContent>
-                  </Card>
-                )}
-
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">Timeline</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Discovered</span>
-                      <span>{new Date(viewAsset.discoveredAt).toLocaleDateString()}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Last Seen</span>
-                      <span>{new Date(viewAsset.lastSeen).toLocaleDateString()}</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              <div className="mt-6 flex gap-2">
-                <Button className="flex-1" variant="outline" onClick={() => openEdit(viewAsset)}>
-                  <Pencil className="me-2 h-4 w-4" />
-                  Edit
-                </Button>
-                <Button className="flex-1">
-                  <Wifi className="me-2 h-4 w-4" />
-                  Scan Asset
-                </Button>
-              </div>
+              </SheetBody>
             </>
           )}
         </SheetContent>
