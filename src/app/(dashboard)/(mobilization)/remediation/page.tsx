@@ -258,13 +258,16 @@ function checkOverdue(task: RemediationTask): boolean {
 
 /** Map a remediation campaign (API) to the UI task row. */
 function campaignToTask(c: RemediationCampaign): RemediationTask {
+  // Recover the single linked finding (if any) from the campaign's finding_filter
+  // so the Edit form pre-selects it instead of defaulting to "None".
+  const linkedFindingIds = (c.finding_filter?.finding_ids as string[] | undefined) ?? []
   return {
     id: c.id,
     title: c.name,
     description: c.description || '',
     status: normalizeStatus(c.status),
     priority: normalizePriority(c.priority),
-    findingId: '',
+    findingId: linkedFindingIds[0] ?? '',
     findingTitle: `${c.finding_count} finding${c.finding_count !== 1 ? 's' : ''} linked`,
     severity: (c.priority === 'critical' ? 'critical' : c.priority) as Severity,
     assigneeId: c.assigned_to || '',
@@ -301,28 +304,33 @@ function applyTaskFilters(tasks: RemediationTask[], quickFilter: string, filters
   return data
 }
 
-/** Context-aware status actions */
+/** Context-aware status actions — only the transitions the campaign state
+ * machine allows (draft→active→validating→completed; completed is terminal).
+ * Offering illegal moves (Block on Open, Complete from In Progress, Reopen on
+ * Completed) just produced backend rejection toasts. */
 function getAvailableActions(status: TaskStatus) {
   switch (status) {
-    case 'open':
+    case 'open': // draft → active
+      return [{ action: 'start', label: 'Start Task', icon: Play, variant: 'default' as const }]
+    case 'in_progress': // active → validating | paused
       return [
-        { action: 'start', label: 'Start Task', icon: Play, variant: 'default' as const },
+        {
+          action: 'review',
+          label: 'Send to Review',
+          icon: CheckCircle,
+          variant: 'default' as const,
+        },
         { action: 'block', label: 'Block', icon: Ban, variant: 'outline' as const },
       ]
-    case 'in_progress':
+    case 'review': // validating → completed | active
       return [
         { action: 'complete', label: 'Complete', icon: CheckCircle, variant: 'default' as const },
-        { action: 'block', label: 'Block', icon: Ban, variant: 'outline' as const },
+        { action: 'reopen', label: 'Back to Active', icon: RotateCcw, variant: 'outline' as const },
       ]
-    case 'review':
-      return [
-        { action: 'complete', label: 'Approve', icon: CheckCircle, variant: 'default' as const },
-        { action: 'reopen', label: 'Reopen', icon: RotateCcw, variant: 'outline' as const },
-      ]
-    case 'blocked':
+    case 'blocked': // paused → active
       return [{ action: 'start', label: 'Unblock', icon: Play, variant: 'default' as const }]
-    case 'completed':
-      return [{ action: 'reopen', label: 'Reopen', icon: RotateCcw, variant: 'outline' as const }]
+    case 'completed': // terminal
+      return []
     default:
       return []
   }
@@ -508,6 +516,7 @@ export default function RemediationPage() {
       // Status transition actions → call API
       const statusMap: Record<string, string> = {
         start: 'active',
+        review: 'validating',
         complete: 'completed',
         block: 'paused',
         reopen: 'active',
@@ -528,9 +537,7 @@ export default function RemediationPage() {
               })
             }
           }
-          toast.success(
-            `Task ${action === 'start' ? 'started' : action === 'complete' ? 'completed' : action === 'block' ? 'blocked' : 'reopened'}`
-          )
+          toast.success('Task updated')
         } catch (err) {
           toast.error(getErrorMessage(err, `Failed to ${action} task`))
         }
