@@ -97,7 +97,7 @@ import { CreateJiraEpicDialog } from '@/features/remediation/components/create-j
 import { getErrorMessage } from '@/lib/api/error-handler'
 import { patch, del } from '@/lib/api/client'
 import { useFindingsApi } from '@/features/findings/api/use-findings-api'
-import { AssigneeSelect, type AssigneeUser } from '@/features/findings/components/assignee-select'
+import { AssigneeSelect } from '@/features/findings/components/assignee-select'
 import { useMembers } from '@/features/organization/api/use-members'
 import { useTenant } from '@/context/tenant-provider'
 import type { TaskStatus, TaskPriority, RemediationTask } from '@/features/remediation/types'
