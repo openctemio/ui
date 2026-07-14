@@ -126,7 +126,7 @@ interface TaskFormData {
   assigneeName: string
   assignedTo: string
   dueDate: Date | undefined
-  findingId: string
+  findingIds: string[]
   estimatedHours: string
 }
 
@@ -138,7 +138,7 @@ const emptyFormData: TaskFormData = {
   assigneeName: '',
   assignedTo: '',
   dueDate: undefined,
-  findingId: '',
+  findingIds: [],
   estimatedHours: '',
 }
 
@@ -147,8 +147,9 @@ const emptyFormData: TaskFormData = {
 // actually counts + resolves. Returns undefined when nothing is linked so the
 // caller can decide: create seeds an empty scope, edit leaves the existing
 // filter untouched (never silently wipes a cve/asset-scoped campaign).
-function findingFilterFromForm(findingId: string): Record<string, unknown> | undefined {
-  return findingId && findingId !== 'none' ? { finding_ids: [findingId] } : undefined
+function findingFilterFromForm(findingIds: string[]): Record<string, unknown> | undefined {
+  const ids = findingIds.filter((id) => id && id !== 'none')
+  return ids.length > 0 ? { finding_ids: ids } : undefined
 }
 
 const priorityColors: Record<TaskPriority, string> = {
@@ -273,6 +274,7 @@ function campaignToTask(c: RemediationCampaign): RemediationTask {
     status: normalizeStatus(c.status),
     priority: normalizePriority(c.priority),
     findingId: linkedFindingIds[0] ?? '',
+    findingIds: linkedFindingIds,
     findingTitle: `${c.finding_count} finding${c.finding_count !== 1 ? 's' : ''} linked`,
     severity: (c.priority === 'critical' ? 'critical' : c.priority) as Severity,
     assigneeId: c.assigned_to || '',
@@ -544,7 +546,7 @@ export default function RemediationPage() {
           assigneeName: task.assigneeName,
           assignedTo: task.assigneeId || '',
           dueDate: dueDate && !isNaN(dueDate.getTime()) ? dueDate : undefined,
-          findingId: task.findingId || 'none',
+          findingIds: task.findingIds ?? [],
           estimatedHours: task.estimatedHours?.toString() || '',
         })
         setEditTask(task)
@@ -651,7 +653,7 @@ export default function RemediationPage() {
         tags: [],
         // Scope the task to the linked finding so it actually counts + resolves;
         // empty scope when nothing is linked.
-        finding_filter: findingFilterFromForm(formData.findingId) ?? {},
+        finding_filter: findingFilterFromForm(formData.findingIds) ?? {},
       })
       await refreshCampaigns()
       setFormData(emptyFormData)
@@ -674,7 +676,7 @@ export default function RemediationPage() {
         priority: formData.priority,
         due_date: formData.dueDate?.toISOString() || null,
         assigned_to: formData.assignedTo || '',
-        finding_filter: findingFilterFromForm(formData.findingId),
+        finding_filter: findingFilterFromForm(formData.findingIds),
       })
       await refreshCampaigns()
       setFormData(emptyFormData)
@@ -1919,23 +1921,57 @@ function TaskFormDialog({
             </div>
           </div>
           <div className="space-y-1.5 min-w-0">
-            <Label className="text-xs">Link to Finding</Label>
-            <Select
-              value={formData.findingId}
-              onValueChange={(v) => setFormData({ ...formData, findingId: v })}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select finding" className="truncate" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">None</SelectItem>
-                {findings.map((f) => (
-                  <SelectItem key={f.id} value={f.id}>
-                    {(f.title || f.message || f.id).substring(0, 50)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label className="text-xs">
+              Link Findings
+              {formData.findingIds.length > 0 ? ` (${formData.findingIds.length})` : ''}
+            </Label>
+            {/* A remediation task can cover MANY findings (one fix → many). Multi-
+                select → finding_filter.finding_ids (backend counts + resolves all). */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="h-9 w-full justify-between font-normal"
+                  type="button"
+                >
+                  <span className="truncate">
+                    {formData.findingIds.length === 0
+                      ? 'Select findings…'
+                      : `${formData.findingIds.length} finding${formData.findingIds.length > 1 ? 's' : ''} selected`}
+                  </span>
+                  <ChevronRight className="h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[--radix-popover-trigger-width] p-1" align="start">
+                <div className="max-h-64 overflow-y-auto">
+                  {findings.length === 0 ? (
+                    <p className="p-2 text-xs text-muted-foreground">No findings available</p>
+                  ) : (
+                    findings.map((f) => {
+                      const checked = formData.findingIds.includes(f.id)
+                      return (
+                        <button
+                          key={f.id}
+                          type="button"
+                          className="flex w-full items-start gap-2 rounded px-2 py-1.5 text-start text-sm hover:bg-muted"
+                          onClick={() =>
+                            setFormData({
+                              ...formData,
+                              findingIds: checked
+                                ? formData.findingIds.filter((id) => id !== f.id)
+                                : [...formData.findingIds, f.id],
+                            })
+                          }
+                        >
+                          <Checkbox checked={checked} className="mt-0.5 pointer-events-none" />
+                          <span className="line-clamp-2">{f.title || f.message || f.id}</span>
+                        </button>
+                      )
+                    })
+                  )}
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
         </div>
         <DialogFooter>
