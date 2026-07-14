@@ -860,12 +860,6 @@ export default function RemediationPage() {
               icon: ExternalLink,
               onClick: () => handleTaskAction('open_campaign', task),
             },
-            {
-              label: 'Edit',
-              icon: Pencil,
-              onClick: () => handleTaskAction('edit', task),
-              permission: Permission.RemediationWrite,
-            },
           ]
           if (task.ticketUrl) {
             rowActions.push({
@@ -1324,10 +1318,6 @@ export default function RemediationPage() {
       <TaskDetailSheet
         task={viewTask}
         onClose={() => setViewTask(null)}
-        onEdit={(task) => {
-          setViewTask(null)
-          handleTaskAction('edit', task)
-        }}
         onDelete={(task) => {
           setViewTask(null)
           setDeleteTask(task)
@@ -1392,7 +1382,6 @@ export default function RemediationPage() {
 interface TaskDetailSheetProps {
   task: RemediationTask | null
   onClose: () => void
-  onEdit: (task: RemediationTask) => void
   onDelete: (task: RemediationTask) => void
   onAction: (action: string, task: RemediationTask) => void
   onPatch: (task: RemediationTask, body: Record<string, unknown>) => void | Promise<void>
@@ -1404,7 +1393,6 @@ interface TaskDetailSheetProps {
 function TaskDetailSheet({
   task,
   onClose,
-  onEdit,
   onDelete,
   onAction,
   onPatch,
@@ -1412,6 +1400,14 @@ function TaskDetailSheet({
   onCopyLink,
   onOpenCampaign,
 }: TaskDetailSheetProps) {
+  // Inline title/description editing state — hooks must run unconditionally,
+  // before the early null-return below.
+  const [editingTitle, setEditingTitle] = useState(false)
+  const [titleDraft, setTitleDraft] = useState(task?.title ?? '')
+  const [editingDesc, setEditingDesc] = useState(false)
+  const [descDraft, setDescDraft] = useState(task?.description ?? '')
+  const [dueOpen, setDueOpen] = useState(false)
+
   if (!task) {
     return (
       <Sheet open={false}>
@@ -1427,6 +1423,17 @@ function TaskDetailSheet({
   const overdue = checkOverdue(task)
   const due = daysUntil(task.dueDate)
   const actions = getAvailableActions(task.status)
+
+  const saveTitle = () => {
+    setEditingTitle(false)
+    const v = titleDraft.trim()
+    if (v && v !== task.title) onPatch(task, { name: v })
+    else setTitleDraft(task.title)
+  }
+  const saveDesc = () => {
+    setEditingDesc(false)
+    if (descDraft !== (task.description || '')) onPatch(task, { description: descDraft })
+  }
 
   // Get progress from API data or estimate from status
   const taskProgress =
@@ -1503,21 +1510,6 @@ function TaskDetailSheet({
                 </TooltipTrigger>
                 <TooltipContent side="bottom">Open campaign</TooltipContent>
               </Tooltip>
-              <Can permission={Permission.RemediationWrite}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7"
-                      onClick={() => onEdit(task)}
-                    >
-                      <Pencil className="h-3.5 w-3.5" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom">Edit</TooltipContent>
-                </Tooltip>
-              </Can>
               <Separator orientation="vertical" className="h-4 mx-1" />
               <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onClose}>
                 <X className="h-3.5 w-3.5" />
@@ -1525,15 +1517,54 @@ function TaskDetailSheet({
             </div>
           </div>
 
-          {/* Title */}
-          <h2 className="text-base font-semibold leading-tight">{task.title}</h2>
+          {/* Title (click to edit inline) */}
+          {editingTitle ? (
+            <Input
+              autoFocus
+              value={titleDraft}
+              onChange={(e) => setTitleDraft(e.target.value)}
+              onBlur={saveTitle}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') saveTitle()
+                if (e.key === 'Escape') {
+                  setTitleDraft(task.title)
+                  setEditingTitle(false)
+                }
+              }}
+              className="h-7 text-base font-semibold"
+            />
+          ) : (
+            <h2
+              className="text-base font-semibold leading-tight cursor-text rounded px-1 -mx-1 hover:bg-muted/50"
+              onClick={() => {
+                setTitleDraft(task.title)
+                setEditingTitle(true)
+              }}
+            >
+              {task.title}
+            </h2>
+          )}
           <p className="text-xs text-muted-foreground mt-1">{task.findingTitle}</p>
 
           {/* Badges */}
           <div className="flex flex-wrap items-center gap-1.5 mt-3">
-            <Badge className={`${priorityColors[task.priority]} text-xs h-5`}>
-              {TASK_PRIORITY_LABELS[task.priority]}
-            </Badge>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Badge
+                  className={`${priorityColors[task.priority]} text-xs h-5 cursor-pointer`}
+                  title="Change priority"
+                >
+                  {TASK_PRIORITY_LABELS[task.priority]}
+                </Badge>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                {(['urgent', 'high', 'medium', 'low'] as TaskPriority[]).map((p) => (
+                  <DropdownMenuItem key={p} onClick={() => onPatch(task, { priority: p })}>
+                    {TASK_PRIORITY_LABELS[p]}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Badge className={`${statusColors[task.status]} text-xs h-5`}>
               {TASK_STATUS_LABELS[task.status]}
             </Badge>
@@ -1577,16 +1608,34 @@ function TaskDetailSheet({
               }
               label="Due Date"
             >
-              <span className={`text-sm font-medium ${overdue ? 'text-red-500' : ''}`}>
-                {safeFormatDate(task.dueDate, { month: 'short', day: 'numeric' }) ?? 'Not set'}
-              </span>
-              {due && task.status !== 'completed' && (
-                <span
-                  className={`text-[11px] block ${due.overdue ? 'text-red-400' : 'text-muted-foreground'}`}
-                >
-                  {due.overdue ? `${due.days}d overdue` : `${due.days}d remaining`}
-                </span>
-              )}
+              <Popover open={dueOpen} onOpenChange={setDueOpen}>
+                <PopoverTrigger asChild>
+                  <button className="text-start rounded px-1 -mx-1 hover:bg-muted/50">
+                    <span className={`text-sm font-medium ${overdue ? 'text-red-500' : ''}`}>
+                      {safeFormatDate(task.dueDate, { month: 'short', day: 'numeric' }) ??
+                        'Set date'}
+                    </span>
+                    {due && task.status !== 'completed' && (
+                      <span
+                        className={`text-[11px] block ${due.overdue ? 'text-red-400' : 'text-muted-foreground'}`}
+                      >
+                        {due.overdue ? `${due.days}d overdue` : `${due.days}d remaining`}
+                      </span>
+                    )}
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <CalendarComponent
+                    mode="single"
+                    selected={task.dueDate ? new Date(task.dueDate) : undefined}
+                    onSelect={(date) => {
+                      setDueOpen(false)
+                      onPatch(task, { due_date: date ? date.toISOString() : null })
+                    }}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
             </InfoCard>
 
             {/* Validator (assigned_team) — the person who verifies the fix. Shown
@@ -1612,15 +1661,31 @@ function TaskDetailSheet({
             )}
           </div>
 
-          {/* Description */}
-          {task.description && (
-            <div className="space-y-1.5">
-              <p className="text-xs font-medium text-muted-foreground">Description</p>
-              <p className="text-sm leading-relaxed bg-muted/30 rounded-lg p-3">
-                {task.description}
+          {/* Description (click to edit inline) */}
+          <div className="space-y-1.5">
+            <p className="text-xs font-medium text-muted-foreground">Description</p>
+            {editingDesc ? (
+              <Textarea
+                autoFocus
+                value={descDraft}
+                onChange={(e) => setDescDraft(e.target.value)}
+                onBlur={saveDesc}
+                className="min-h-[80px] text-sm"
+              />
+            ) : (
+              <p
+                className="text-sm leading-relaxed bg-muted/30 rounded-lg p-3 cursor-text hover:bg-muted/50"
+                onClick={() => {
+                  setDescDraft(task.description || '')
+                  setEditingDesc(true)
+                }}
+              >
+                {task.description || (
+                  <span className="text-muted-foreground">Add a description…</span>
+                )}
               </p>
-            </div>
-          )}
+            )}
+          </div>
 
           {/* Progress */}
           <div className="space-y-2">
