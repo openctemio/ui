@@ -35,6 +35,8 @@ export interface RemediationTask {
   status: TaskStatus
   priority: TaskPriority
   findingId: string
+  /** All explicitly-linked findings (a task can cover many — one fix, many findings). */
+  findingIds?: string[]
   findingTitle: string
   severity: Severity
   assetId?: string
