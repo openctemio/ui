@@ -1323,7 +1323,6 @@ export default function RemediationPage() {
         setFormData={setFormData}
         dueDateOpen={dueDateOpen}
         setDueDateOpen={setDueDateOpen}
-        assignees={assignees}
         findings={findings}
         onSubmit={editTask ? handleEditTask : handleCreateTask}
         onCancel={() => {
@@ -1684,7 +1683,6 @@ interface TaskFormDialogProps {
   setFormData: (data: TaskFormData) => void
   dueDateOpen: boolean
   setDueDateOpen: (open: boolean) => void
-  assignees: string[]
   findings: Array<{ id: string; title?: string; message?: string; severity?: Severity }>
   onSubmit: () => void
   onCancel: () => void
@@ -1698,7 +1696,6 @@ function TaskFormDialog({
   setFormData,
   dueDateOpen,
   setDueDateOpen,
-  assignees,
   findings,
   onSubmit,
   onCancel,
@@ -1741,6 +1738,10 @@ function TaskFormDialog({
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
             />
           </div>
+          {/* Only fields the backend actually persists are shown. Severity
+              (derived from priority), Estimated Hours (no column), and the free-
+              text Assignee (broken end-to-end — empty picker, dropped on save,
+              never returned) were removed; a real assignee picker is a follow-up. */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label className="text-xs">Priority</Label>
@@ -1760,45 +1761,7 @@ function TaskFormDialog({
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">Severity</Label>
-              <Select
-                value={formData.severity}
-                onValueChange={(v) => setFormData({ ...formData, severity: v as Severity })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="critical">Critical</SelectItem>
-                  <SelectItem value="high">High</SelectItem>
-                  <SelectItem value="medium">Medium</SelectItem>
-                  <SelectItem value="low">Low</SelectItem>
-                  <SelectItem value="info">Info</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label className="text-xs">Assignee *</Label>
-              <Select
-                value={formData.assigneeName}
-                onValueChange={(v) => setFormData({ ...formData, assigneeName: v })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select assignee" />
-                </SelectTrigger>
-                <SelectContent>
-                  {assignees.map((name) => (
-                    <SelectItem key={name} value={name}>
-                      {name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Due Date *</Label>
+              <Label className="text-xs">Due Date</Label>
               <Popover open={dueDateOpen} onOpenChange={setDueDateOpen}>
                 <PopoverTrigger asChild>
                   <Button
@@ -1823,35 +1786,24 @@ function TaskFormDialog({
               </Popover>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5 min-w-0">
-              <Label className="text-xs">Link to Finding</Label>
-              <Select
-                value={formData.findingId}
-                onValueChange={(v) => setFormData({ ...formData, findingId: v })}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select finding" className="truncate" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">None</SelectItem>
-                  {findings.map((f) => (
-                    <SelectItem key={f.id} value={f.id}>
-                      {(f.title || f.message || f.id).substring(0, 50)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5 min-w-0">
-              <Label className="text-xs">Estimated Hours</Label>
-              <Input
-                type="number"
-                placeholder="e.g., 8"
-                value={formData.estimatedHours}
-                onChange={(e) => setFormData({ ...formData, estimatedHours: e.target.value })}
-              />
-            </div>
+          <div className="space-y-1.5 min-w-0">
+            <Label className="text-xs">Link to Finding</Label>
+            <Select
+              value={formData.findingId}
+              onValueChange={(v) => setFormData({ ...formData, findingId: v })}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select finding" className="truncate" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">None</SelectItem>
+                {findings.map((f) => (
+                  <SelectItem key={f.id} value={f.id}>
+                    {(f.title || f.message || f.id).substring(0, 50)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
         <DialogFooter>
