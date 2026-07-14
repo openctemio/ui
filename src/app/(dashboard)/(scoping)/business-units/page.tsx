@@ -10,6 +10,7 @@ import {
   DataTableRowActions,
   RiskScoreBadge,
   StatsCard,
+  SheetBody,
 } from '@/features/shared'
 import { Can, Permission } from '@/lib/permissions'
 import { useCsvExport, type ExportFieldConfig } from '@/hooks/use-csv-export'
@@ -718,168 +719,173 @@ export default function BusinessUnitsPage() {
                 </div>
               </SheetHeader>
 
-              <Tabs defaultValue="overview" className="mt-6">
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="overview">Overview</TabsTrigger>
-                  <TabsTrigger value="hierarchy">Hierarchy</TabsTrigger>
-                </TabsList>
+              <SheetBody>
+                <Tabs defaultValue="overview" className="mt-2">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="overview">Overview</TabsTrigger>
+                    <TabsTrigger value="hierarchy">Hierarchy</TabsTrigger>
+                  </TabsList>
 
-                <TabsContent value="overview" className="space-y-4 mt-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <p className="text-sm text-muted-foreground">Criticality</p>
-                      <Badge variant="outline" className={criticalityColors[viewUnit.criticality]}>
-                        {viewUnit.criticality}
-                      </Badge>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-sm text-muted-foreground">Risk Tolerance</p>
-                      <Badge
-                        variant="outline"
-                        className={riskToleranceColors[viewUnit.riskTolerance]}
-                      >
-                        {riskToleranceLabels[viewUnit.riskTolerance]}
-                      </Badge>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm">Assets</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-2xl font-bold">{viewUnit.assetCount}</div>
-                      </CardContent>
-                    </Card>
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm">Employees</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-2xl font-bold">{viewUnit.employeeCount}</div>
-                      </CardContent>
-                    </Card>
-                  </div>
-
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Risk Score</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex items-center gap-4">
-                        <RiskScoreBadge score={viewUnit.riskScore} />
-                        <Progress value={viewUnit.riskScore} className="flex-1" />
+                  <TabsContent value="overview" className="space-y-4 mt-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">Criticality</p>
+                        <Badge
+                          variant="outline"
+                          className={criticalityColors[viewUnit.criticality]}
+                        >
+                          {viewUnit.criticality}
+                        </Badge>
                       </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Compliance Score</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex items-center gap-4">
-                        <span className="text-2xl font-bold">{viewUnit.complianceScore}%</span>
-                        <Progress value={viewUnit.complianceScore} className="flex-1" />
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Owner</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
-                          <Users className="h-5 w-5" />
-                        </div>
-                        <div>
-                          <p className="font-medium">{viewUnit.owner}</p>
-                          <p className="text-sm text-muted-foreground flex items-center gap-1">
-                            <Mail className="h-3 w-3" />
-                            {viewUnit.ownerEmail}
-                          </p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {viewUnit.tags.length > 0 && (
-                    <div className="space-y-2">
-                      <p className="text-sm text-muted-foreground">Tags</p>
-                      <div className="flex flex-wrap gap-2">
-                        {viewUnit.tags.map((tag) => (
-                          <Badge key={tag} variant="secondary">
-                            {tag}
-                          </Badge>
-                        ))}
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">Risk Tolerance</p>
+                        <Badge
+                          variant="outline"
+                          className={riskToleranceColors[viewUnit.riskTolerance]}
+                        >
+                          {riskToleranceLabels[viewUnit.riskTolerance]}
+                        </Badge>
                       </div>
                     </div>
-                  )}
-                </TabsContent>
 
-                <TabsContent value="hierarchy" className="mt-4">
-                  {viewUnit.parentId && (
-                    <div className="mb-4">
-                      <p className="text-sm text-muted-foreground mb-2">Parent Unit</p>
-                      <Card className="p-3">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                          <span className="font-medium">
-                            {businessUnits.find((u) => u.id === viewUnit.parentId)?.name}
-                          </span>
-                        </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <Card>
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-sm">Assets</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="text-2xl font-bold">{viewUnit.assetCount}</div>
+                        </CardContent>
+                      </Card>
+                      <Card>
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-sm">Employees</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="text-2xl font-bold">{viewUnit.employeeCount}</div>
+                        </CardContent>
                       </Card>
                     </div>
-                  )}
 
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-2">Sub-units</p>
-                    {getChildUnits(businessUnits, viewUnit.id).length > 0 ? (
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">Risk Score</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex items-center gap-4">
+                          <RiskScoreBadge score={viewUnit.riskScore} />
+                          <Progress value={viewUnit.riskScore} className="flex-1" />
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">Compliance Score</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex items-center gap-4">
+                          <span className="text-2xl font-bold">{viewUnit.complianceScore}%</span>
+                          <Progress value={viewUnit.complianceScore} className="flex-1" />
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">Owner</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
+                            <Users className="h-5 w-5" />
+                          </div>
+                          <div>
+                            <p className="font-medium">{viewUnit.owner}</p>
+                            <p className="text-sm text-muted-foreground flex items-center gap-1">
+                              <Mail className="h-3 w-3" />
+                              {viewUnit.ownerEmail}
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {viewUnit.tags.length > 0 && (
                       <div className="space-y-2">
-                        {getChildUnits(businessUnits, viewUnit.id).map((child) => (
-                          <Card key={child.id} className="p-3">
-                            <div className="flex items-center justify-between">
-                              <div className="flex flex-wrap items-center gap-2">
-                                <Building2 className="h-4 w-4 text-muted-foreground" />
-                                <span className="font-medium">{child.name}</span>
-                              </div>
-                              <Badge
-                                variant="outline"
-                                className={criticalityColors[child.criticality]}
-                              >
-                                {child.criticality}
-                              </Badge>
-                            </div>
-                          </Card>
-                        ))}
+                        <p className="text-sm text-muted-foreground">Tags</p>
+                        <div className="flex flex-wrap gap-2">
+                          {viewUnit.tags.map((tag) => (
+                            <Badge key={tag} variant="secondary">
+                              {tag}
+                            </Badge>
+                          ))}
+                        </div>
                       </div>
-                    ) : (
-                      <p className="text-sm text-muted-foreground">No sub-units</p>
                     )}
-                  </div>
-                </TabsContent>
-              </Tabs>
+                  </TabsContent>
 
-              <div className="mt-6 flex gap-2">
-                <Button variant="outline" className="flex-1" onClick={() => openEdit(viewUnit)}>
-                  <Pencil className="me-2 h-4 w-4" />
-                  Edit
-                </Button>
-                <Button
-                  variant="destructive"
-                  className="flex-1"
-                  onClick={() => {
-                    setViewUnit(null)
-                    setDeleteUnit(viewUnit)
-                  }}
-                >
-                  <Trash2 className="me-2 h-4 w-4" />
-                  Delete
-                </Button>
-              </div>
+                  <TabsContent value="hierarchy" className="mt-4">
+                    {viewUnit.parentId && (
+                      <div className="mb-4">
+                        <p className="text-sm text-muted-foreground mb-2">Parent Unit</p>
+                        <Card className="p-3">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                            <span className="font-medium">
+                              {businessUnits.find((u) => u.id === viewUnit.parentId)?.name}
+                            </span>
+                          </div>
+                        </Card>
+                      </div>
+                    )}
+
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-2">Sub-units</p>
+                      {getChildUnits(businessUnits, viewUnit.id).length > 0 ? (
+                        <div className="space-y-2">
+                          {getChildUnits(businessUnits, viewUnit.id).map((child) => (
+                            <Card key={child.id} className="p-3">
+                              <div className="flex items-center justify-between">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <Building2 className="h-4 w-4 text-muted-foreground" />
+                                  <span className="font-medium">{child.name}</span>
+                                </div>
+                                <Badge
+                                  variant="outline"
+                                  className={criticalityColors[child.criticality]}
+                                >
+                                  {child.criticality}
+                                </Badge>
+                              </div>
+                            </Card>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">No sub-units</p>
+                      )}
+                    </div>
+                  </TabsContent>
+                </Tabs>
+
+                <div className="mt-6 flex gap-2">
+                  <Button variant="outline" className="flex-1" onClick={() => openEdit(viewUnit)}>
+                    <Pencil className="me-2 h-4 w-4" />
+                    Edit
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    className="flex-1"
+                    onClick={() => {
+                      setViewUnit(null)
+                      setDeleteUnit(viewUnit)
+                    }}
+                  >
+                    <Trash2 className="me-2 h-4 w-4" />
+                    Delete
+                  </Button>
+                </div>
+              </SheetBody>
             </>
           )}
         </SheetContent>

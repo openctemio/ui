@@ -9,6 +9,7 @@ import {
   DataTableColumnHeader,
   DataTableRowActions,
   StatsCard,
+  SheetBody,
 } from '@/features/shared'
 import { Can, Permission } from '@/lib/permissions'
 import { useCsvExport, type ExportFieldConfig } from '@/hooks/use-csv-export'
@@ -741,266 +742,270 @@ export default function CrownJewelsPage() {
                 </div>
               </SheetHeader>
 
-              <Tabs defaultValue="overview" className="mt-6 px-4">
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="overview">Overview</TabsTrigger>
-                  <TabsTrigger value="dependencies">Dependencies</TabsTrigger>
-                </TabsList>
+              <SheetBody>
+                <Tabs defaultValue="overview" className="mt-6">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="overview">Overview</TabsTrigger>
+                    <TabsTrigger value="dependencies">Dependencies</TabsTrigger>
+                  </TabsList>
 
-                <TabsContent value="overview" className="space-y-4 mt-4">
-                  {/* The three things that actually matter for a crown jewel. */}
-                  <div className="grid grid-cols-3 gap-2">
-                    <div className="rounded-lg border p-3 text-center">
-                      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                        Risk
-                      </p>
-                      <p
-                        className={`mt-1 text-2xl font-bold tabular-nums ${riskBand(viewJewel.riskScore).text}`}
-                      >
-                        {viewJewel.riskScore}
-                      </p>
-                      <p className={`text-xs font-semibold ${riskBand(viewJewel.riskScore).text}`}>
-                        {riskBand(viewJewel.riskScore).label}
-                      </p>
-                    </div>
-                    <div className="rounded-lg border border-amber-200 bg-amber-500/5 p-3 text-center">
-                      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                        Business impact
-                      </p>
-                      <p className="mt-1 text-2xl font-bold tabular-nums text-amber-600">
-                        {viewJewel.businessImpactScore ?? 0}
-                      </p>
-                      <p className="text-xs font-semibold text-amber-600">
-                        {(viewJewel.businessImpactScore ?? 0) >= 67
-                          ? 'High'
-                          : (viewJewel.businessImpactScore ?? 0) >= 34
-                            ? 'Medium'
-                            : 'Low'}
-                      </p>
-                    </div>
-                    <div className="rounded-lg border p-3 text-center">
-                      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                        Exposure
-                      </p>
-                      <p
-                        className={`mt-1 flex justify-center ${isExposed(viewJewel) ? 'text-red-600' : 'text-green-600'}`}
-                      >
-                        {isExposed(viewJewel) ? (
-                          <ShieldX className="h-7 w-7" />
-                        ) : (
-                          <ShieldCheck className="h-7 w-7" />
-                        )}
-                      </p>
-                      <p
-                        className={`text-xs font-semibold ${isExposed(viewJewel) ? 'text-red-600' : 'text-green-600'}`}
-                      >
-                        {isExposed(viewJewel) ? 'Exposed' : 'Not exposed'}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Why it's a crown jewel — one honest sentence. */}
-                  <div className="rounded-lg border border-amber-200 bg-amber-500/5 p-3 text-sm leading-relaxed">
-                    <span className="font-medium">Why it&apos;s critical: </span>
-                    compromise would have{' '}
-                    {(viewJewel.businessImpactScore ?? 0) >= 67
-                      ? 'high'
-                      : (viewJewel.businessImpactScore ?? 0) >= 34
-                        ? 'moderate'
-                        : 'limited'}{' '}
-                    business impact ({viewJewel.businessImpactScore ?? 0}/100)
-                    {viewJewel.piiExposed ? ' and it handles PII' : ''}.{' '}
-                    {isExposed(viewJewel)
-                      ? 'It is reachable from the internet — reducing its exposure is the priority.'
-                      : 'It is not internet-reachable, which keeps its risk contained.'}
-                  </div>
-
-                  {/* Open findings by severity — real signal, not an empty card. */}
-                  <div>
-                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      Open findings
-                    </p>
-                    {(viewJewel.findingCount ?? 0) > 0 ? (
-                      <div className="flex items-center gap-3">
-                        <SeverityChips sev={viewJewel.findingSeverity} />
-                        <span className="text-sm text-muted-foreground">
-                          {viewJewel.findingCount} total
-                        </span>
+                  <TabsContent value="overview" className="space-y-4 mt-4">
+                    {/* The three things that actually matter for a crown jewel. */}
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="rounded-lg border p-3 text-center">
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                          Risk
+                        </p>
+                        <p
+                          className={`mt-1 text-2xl font-bold tabular-nums ${riskBand(viewJewel.riskScore).text}`}
+                        >
+                          {viewJewel.riskScore}
+                        </p>
+                        <p
+                          className={`text-xs font-semibold ${riskBand(viewJewel.riskScore).text}`}
+                        >
+                          {riskBand(viewJewel.riskScore).label}
+                        </p>
                       </div>
-                    ) : (
-                      <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-500/5 px-3 py-2 text-sm text-green-700">
-                        <ShieldCheck className="h-4 w-4" /> No open findings on this asset.
+                      <div className="rounded-lg border border-amber-200 bg-amber-500/5 p-3 text-center">
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                          Business impact
+                        </p>
+                        <p className="mt-1 text-2xl font-bold tabular-nums text-amber-600">
+                          {viewJewel.businessImpactScore ?? 0}
+                        </p>
+                        <p className="text-xs font-semibold text-amber-600">
+                          {(viewJewel.businessImpactScore ?? 0) >= 67
+                            ? 'High'
+                            : (viewJewel.businessImpactScore ?? 0) >= 34
+                              ? 'Medium'
+                              : 'Low'}
+                        </p>
                       </div>
-                    )}
-                  </div>
-
-                  {/* Reachability — honest empty/real state. */}
-                  <div>
-                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      Reachability
-                    </p>
-                    {isExposed(viewJewel) ? (
-                      <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-500/5 px-3 py-2 text-sm text-red-700">
-                        <ShieldX className="mt-0.5 h-4 w-4 shrink-0" />
-                        <span>
-                          Reachable from the internet ({viewJewel.exposure}). This drives its risk —
-                          review attack paths in Exposure Chains.
-                        </span>
-                      </div>
-                    ) : (
-                      <div className="flex items-start gap-2 rounded-lg border border-green-200 bg-green-500/5 px-3 py-2 text-sm text-green-700">
-                        <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
-                        <span>
-                          Not reachable from the internet — no public attack path reaches this
-                          asset.
-                        </span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Details — only real, populated fields. */}
-                  <div>
-                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      Details
-                    </p>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Type</span>
-                        <span className="font-medium capitalize">
-                          {viewJewel.assetType ?? 'asset'}
-                        </span>
-                      </div>
-                      {viewJewel.criticality && (
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Criticality</span>
-                          <span className="font-medium capitalize">{viewJewel.criticality}</span>
-                        </div>
-                      )}
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Data classification</span>
-                        <span className="font-medium capitalize">
-                          {viewJewel.dataClassification.replace('_', ' ')}
-                        </span>
-                      </div>
-                      {(viewJewel.piiExposed || viewJewel.phiExposed) && (
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Sensitive data</span>
-                          <span className="font-medium text-amber-600">
-                            {[viewJewel.piiExposed && 'PII', viewJewel.phiExposed && 'PHI']
-                              .filter(Boolean)
-                              .join(', ')}
-                          </span>
-                        </div>
-                      )}
-                      {viewJewel.lastAssessed && (
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Last assessed</span>
-                          <span className="font-medium">
-                            {new Date(viewJewel.lastAssessed).toLocaleDateString()}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Owner */}
-                  <div>
-                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      Owner
-                    </p>
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-muted">
-                        <Users className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                      <div>
-                        <p className="font-medium">{viewJewel.owner}</p>
-                        {viewJewel.ownerEmail ? (
-                          <p className="flex items-center gap-1 text-sm text-muted-foreground">
-                            <Mail className="h-3 w-3" />
-                            {viewJewel.ownerEmail}
-                          </p>
-                        ) : (
-                          <p className="text-xs text-muted-foreground">
-                            Assign an owner so alerts route correctly
-                          </p>
-                        )}
+                      <div className="rounded-lg border p-3 text-center">
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                          Exposure
+                        </p>
+                        <p
+                          className={`mt-1 flex justify-center ${isExposed(viewJewel) ? 'text-red-600' : 'text-green-600'}`}
+                        >
+                          {isExposed(viewJewel) ? (
+                            <ShieldX className="h-7 w-7" />
+                          ) : (
+                            <ShieldCheck className="h-7 w-7" />
+                          )}
+                        </p>
+                        <p
+                          className={`text-xs font-semibold ${isExposed(viewJewel) ? 'text-red-600' : 'text-green-600'}`}
+                        >
+                          {isExposed(viewJewel) ? 'Exposed' : 'Not exposed'}
+                        </p>
                       </div>
                     </div>
-                  </div>
 
-                  {viewJewel.tags.length > 0 && (
+                    {/* Why it's a crown jewel — one honest sentence. */}
+                    <div className="rounded-lg border border-amber-200 bg-amber-500/5 p-3 text-sm leading-relaxed">
+                      <span className="font-medium">Why it&apos;s critical: </span>
+                      compromise would have{' '}
+                      {(viewJewel.businessImpactScore ?? 0) >= 67
+                        ? 'high'
+                        : (viewJewel.businessImpactScore ?? 0) >= 34
+                          ? 'moderate'
+                          : 'limited'}{' '}
+                      business impact ({viewJewel.businessImpactScore ?? 0}/100)
+                      {viewJewel.piiExposed ? ' and it handles PII' : ''}.{' '}
+                      {isExposed(viewJewel)
+                        ? 'It is reachable from the internet — reducing its exposure is the priority.'
+                        : 'It is not internet-reachable, which keeps its risk contained.'}
+                    </div>
+
+                    {/* Open findings by severity — real signal, not an empty card. */}
                     <div>
                       <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                        Tags
+                        Open findings
                       </p>
-                      <div className="flex flex-wrap gap-2">
-                        {viewJewel.tags.map((tag) => (
-                          <Badge key={tag} variant="secondary">
-                            {tag}
-                          </Badge>
-                        ))}
+                      {(viewJewel.findingCount ?? 0) > 0 ? (
+                        <div className="flex items-center gap-3">
+                          <SeverityChips sev={viewJewel.findingSeverity} />
+                          <span className="text-sm text-muted-foreground">
+                            {viewJewel.findingCount} total
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-500/5 px-3 py-2 text-sm text-green-700">
+                          <ShieldCheck className="h-4 w-4" /> No open findings on this asset.
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Reachability — honest empty/real state. */}
+                    <div>
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        Reachability
+                      </p>
+                      {isExposed(viewJewel) ? (
+                        <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-500/5 px-3 py-2 text-sm text-red-700">
+                          <ShieldX className="mt-0.5 h-4 w-4 shrink-0" />
+                          <span>
+                            Reachable from the internet ({viewJewel.exposure}). This drives its risk
+                            — review attack paths in Exposure Chains.
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="flex items-start gap-2 rounded-lg border border-green-200 bg-green-500/5 px-3 py-2 text-sm text-green-700">
+                          <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
+                          <span>
+                            Not reachable from the internet — no public attack path reaches this
+                            asset.
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Details — only real, populated fields. */}
+                    <div>
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        Details
+                      </p>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Type</span>
+                          <span className="font-medium capitalize">
+                            {viewJewel.assetType ?? 'asset'}
+                          </span>
+                        </div>
+                        {viewJewel.criticality && (
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Criticality</span>
+                            <span className="font-medium capitalize">{viewJewel.criticality}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Data classification</span>
+                          <span className="font-medium capitalize">
+                            {viewJewel.dataClassification.replace('_', ' ')}
+                          </span>
+                        </div>
+                        {(viewJewel.piiExposed || viewJewel.phiExposed) && (
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Sensitive data</span>
+                            <span className="font-medium text-amber-600">
+                              {[viewJewel.piiExposed && 'PII', viewJewel.phiExposed && 'PHI']
+                                .filter(Boolean)
+                                .join(', ')}
+                            </span>
+                          </div>
+                        )}
+                        {viewJewel.lastAssessed && (
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Last assessed</span>
+                            <span className="font-medium">
+                              {new Date(viewJewel.lastAssessed).toLocaleDateString()}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
-                  )}
-                </TabsContent>
 
-                <TabsContent value="dependencies" className="mt-4">
-                  <div className="space-y-4">
-                    <p className="text-sm text-muted-foreground">
-                      Assets that this crown jewel depends on or is connected to.
-                    </p>
-                    {getDependencies(viewJewel.id).length > 0 ? (
-                      <div className="space-y-2">
-                        {getDependencies(viewJewel.id).map((dep) => (
-                          <Card key={dep.id} className="p-3">
-                            <div className="flex items-center justify-between">
-                              <div className="flex flex-wrap items-center gap-2">
-                                <Link2 className="h-4 w-4 text-muted-foreground" />
-                                <span className="font-medium">{dep.dependsOnName}</span>
-                              </div>
-                              <div className="flex flex-wrap items-center gap-2">
-                                <Badge variant="outline">{dep.dependencyType}</Badge>
-                                <Badge
-                                  variant="outline"
-                                  className={
-                                    dep.criticality === 'critical'
-                                      ? 'bg-red-500/10 text-red-500'
-                                      : dep.criticality === 'high'
-                                        ? 'bg-orange-500/10 text-orange-500'
-                                        : ''
-                                  }
-                                >
-                                  {dep.criticality}
-                                </Badge>
-                              </div>
-                            </div>
-                          </Card>
-                        ))}
+                    {/* Owner */}
+                    <div>
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        Owner
+                      </p>
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-muted">
+                          <Users className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                        <div>
+                          <p className="font-medium">{viewJewel.owner}</p>
+                          {viewJewel.ownerEmail ? (
+                            <p className="flex items-center gap-1 text-sm text-muted-foreground">
+                              <Mail className="h-3 w-3" />
+                              {viewJewel.ownerEmail}
+                            </p>
+                          ) : (
+                            <p className="text-xs text-muted-foreground">
+                              Assign an owner so alerts route correctly
+                            </p>
+                          )}
+                        </div>
                       </div>
-                    ) : (
-                      <p className="text-sm text-muted-foreground">No dependencies mapped yet.</p>
-                    )}
-                  </div>
-                </TabsContent>
-              </Tabs>
+                    </div>
 
-              <div className="mt-6 flex gap-2 px-4 pb-4">
-                <Button variant="outline" className="flex-1" onClick={() => openEdit(viewJewel)}>
-                  <Pencil className="me-2 h-4 w-4" />
-                  Edit
-                </Button>
-                <Button
-                  variant="destructive"
-                  className="flex-1"
-                  onClick={() => {
-                    setViewJewel(null)
-                    setDeleteJewel(viewJewel)
-                  }}
-                >
-                  <Trash2 className="me-2 h-4 w-4" />
-                  Remove
-                </Button>
-              </div>
+                    {viewJewel.tags.length > 0 && (
+                      <div>
+                        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                          Tags
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {viewJewel.tags.map((tag) => (
+                            <Badge key={tag} variant="secondary">
+                              {tag}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </TabsContent>
+
+                  <TabsContent value="dependencies" className="mt-4">
+                    <div className="space-y-4">
+                      <p className="text-sm text-muted-foreground">
+                        Assets that this crown jewel depends on or is connected to.
+                      </p>
+                      {getDependencies(viewJewel.id).length > 0 ? (
+                        <div className="space-y-2">
+                          {getDependencies(viewJewel.id).map((dep) => (
+                            <Card key={dep.id} className="p-3">
+                              <div className="flex items-center justify-between">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <Link2 className="h-4 w-4 text-muted-foreground" />
+                                  <span className="font-medium">{dep.dependsOnName}</span>
+                                </div>
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <Badge variant="outline">{dep.dependencyType}</Badge>
+                                  <Badge
+                                    variant="outline"
+                                    className={
+                                      dep.criticality === 'critical'
+                                        ? 'bg-red-500/10 text-red-500'
+                                        : dep.criticality === 'high'
+                                          ? 'bg-orange-500/10 text-orange-500'
+                                          : ''
+                                    }
+                                  >
+                                    {dep.criticality}
+                                  </Badge>
+                                </div>
+                              </div>
+                            </Card>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">No dependencies mapped yet.</p>
+                      )}
+                    </div>
+                  </TabsContent>
+                </Tabs>
+
+                <div className="mt-6 flex gap-2 px-4 pb-4">
+                  <Button variant="outline" className="flex-1" onClick={() => openEdit(viewJewel)}>
+                    <Pencil className="me-2 h-4 w-4" />
+                    Edit
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    className="flex-1"
+                    onClick={() => {
+                      setViewJewel(null)
+                      setDeleteJewel(viewJewel)
+                    }}
+                  >
+                    <Trash2 className="me-2 h-4 w-4" />
+                    Remove
+                  </Button>
+                </div>
+              </SheetBody>
             </>
           )}
         </SheetContent>

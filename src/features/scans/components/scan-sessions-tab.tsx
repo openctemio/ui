@@ -31,6 +31,7 @@ import {
   SheetHeader,
   SheetDescription,
 } from '@/components/ui/sheet'
+import { SheetBody } from '@/features/shared'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   SearchIcon,
@@ -528,7 +529,9 @@ export function ScanSessionsTab() {
               {selectedSession?.scanner_name} - {selectedSession?.asset_value}
             </SheetDescription>
           </SheetHeader>
-          {selectedSession && <SessionDetailView session={selectedSession} />}
+          <SheetBody>
+            {selectedSession && <SessionDetailView session={selectedSession} />}
+          </SheetBody>
         </SheetContent>
       </Sheet>
     </>
