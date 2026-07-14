@@ -201,6 +201,23 @@ export function TenantGate({ children }: TenantGateProps) {
     return () => clearTimeout(timer)
   }, [hasInitiallyLoaded, isBootstrapped, timedOut])
 
+  // ─── Resume recovery: iOS Safari freezes in-flight requests while a tab is
+  // backgrounded. When the user returns, the bootstrap fetch that was pending
+  // may never resolve, leaving the gate stuck on "Loading..." indefinitely.
+  // On becoming visible again while still on the first-load path, fall through
+  // to the children immediately (same safe fallback as the timeout — backend
+  // validates auth per-request and children refetch their own data). If the
+  // bootstrap does eventually complete, the effect above clears timedOut.
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible' && !hasInitiallyLoaded && !isBootstrapped) {
+        setTimedOut(true)
+      }
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
+  }, [hasInitiallyLoaded, isBootstrapped])
+
   // ════════════════════════════════════════════
   // RENDER LOGIC
   // ════════════════════════════════════════════
