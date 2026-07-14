@@ -1388,7 +1388,13 @@ interface TaskDetailSheetProps {
   onDelete: (task: RemediationTask) => void
   onAction: (action: string, task: RemediationTask) => void
   onPatch: (task: RemediationTask, body: Record<string, unknown>) => void | Promise<void>
-  findings: Array<{ id: string; title?: string; message?: string; severity?: Severity }>
+  findings: Array<{
+    id: string
+    title?: string
+    message?: string
+    severity?: Severity
+    asset?: { name: string; type: string }
+  }>
   onCopyId: (id: string) => void
   onCopyLink: (id: string) => void
   onOpenCampaign: (task: RemediationTask) => void
@@ -1747,7 +1753,14 @@ function TaskDetailSheet({
                       key={id}
                       className="flex items-center gap-2 rounded bg-muted/30 px-2 py-1 text-xs"
                     >
-                      <span className="flex-1 truncate">{f ? f.title || f.message : id}</span>
+                      <div className="min-w-0 flex-1">
+                        <span className="block truncate">{f ? f.title || f.message : id}</span>
+                        {f?.asset?.name && (
+                          <span className="text-muted-foreground block truncate text-[10px]">
+                            {f.asset.name}
+                          </span>
+                        )}
+                      </div>
                       <button
                         type="button"
                         className="text-muted-foreground hover:text-foreground"

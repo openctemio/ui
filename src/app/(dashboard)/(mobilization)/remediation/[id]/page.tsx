@@ -436,10 +436,19 @@ export default function CampaignDetailPage() {
                   >
                     <SeverityBadge severity={f.severity as Severity} />
                     <button
-                      className="flex-1 truncate text-start text-sm hover:underline"
+                      className="min-w-0 flex-1 text-start"
                       onClick={() => router.push(`/findings/${f.id}`)}
                     >
-                      {f.title || f.message}
+                      <span className="block truncate text-sm hover:underline">
+                        {f.title || f.message}
+                      </span>
+                      {f.asset?.name && (
+                        <span className="text-muted-foreground block truncate text-xs">
+                          <Target className="me-1 inline h-3 w-3" />
+                          {f.asset.name}
+                          {f.asset.type ? ` · ${f.asset.type}` : ''}
+                        </span>
+                      )}
                     </button>
                     {/* Inline status change (reuses the finding status endpoint). */}
                     <StatusSelect
