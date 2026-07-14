@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useAssets } from '@/features/assets'
 import { Main } from '@/components/layout'
-import { PageHeader, DataTableRowActions, StatsCard } from '@/features/shared'
+import { PageHeader, DataTableRowActions, StatsCard, SheetBody } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -846,152 +846,158 @@ export default function CloudSurfacePage() {
                 </div>
               </SheetHeader>
 
-              <div className="mt-6 space-y-4">
-                <div className="grid grid-cols-3 gap-4">
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Provider</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <Badge variant="outline" className={providerColors[viewResource.provider]}>
-                        {providerLabels[viewResource.provider]}
-                      </Badge>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Exposure</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <Badge variant="outline" className={exposureColors[viewResource.exposure]}>
-                        {viewResource.exposure}
-                      </Badge>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Risk Level</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <Badge variant="outline" className={riskColors[viewResource.riskLevel]}>
-                        {viewResource.riskLevel}
-                      </Badge>
-                    </CardContent>
-                  </Card>
-                </div>
+              <SheetBody>
+                <div className="mt-6 space-y-4">
+                  <div className="grid grid-cols-3 gap-4">
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">Provider</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <Badge variant="outline" className={providerColors[viewResource.provider]}>
+                          {providerLabels[viewResource.provider]}
+                        </Badge>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">Exposure</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <Badge variant="outline" className={exposureColors[viewResource.exposure]}>
+                          {viewResource.exposure}
+                        </Badge>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">Risk Level</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <Badge variant="outline" className={riskColors[viewResource.riskLevel]}>
+                          {viewResource.riskLevel}
+                        </Badge>
+                      </CardContent>
+                    </Card>
+                  </div>
 
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">Resource Details</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Type</span>
-                      <span className="capitalize">{viewResource.resourceType}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Region</span>
-                      <span>{viewResource.region}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Account ID</span>
-                      <code className="text-xs">{viewResource.accountId}</code>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Status</span>
-                      <Badge variant="outline" className={statusColors[viewResource.status]}>
-                        {viewResource.status}
-                      </Badge>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {(viewResource.publicIp || viewResource.privateIp) && (
                   <Card>
                     <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Network</CardTitle>
+                      <CardTitle className="text-sm">Resource Details</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-2 text-sm">
-                      {viewResource.publicIp && (
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Public IP</span>
-                          <code>{viewResource.publicIp}</code>
-                        </div>
-                      )}
-                      {viewResource.privateIp && (
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Private IP</span>
-                          <code>{viewResource.privateIp}</code>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                )}
-
-                {viewResource.tags && Object.keys(viewResource.tags).length > 0 && (
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Tags</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex flex-wrap gap-2">
-                        {Object.entries(viewResource.tags).map(([key, value]) => (
-                          <Badge key={key} variant="secondary">
-                            {key}: {value}
-                          </Badge>
-                        ))}
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Type</span>
+                        <span className="capitalize">{viewResource.resourceType}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Region</span>
+                        <span>{viewResource.region}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Account ID</span>
+                        <code className="text-xs">{viewResource.accountId}</code>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Status</span>
+                        <Badge variant="outline" className={statusColors[viewResource.status]}>
+                          {viewResource.status}
+                        </Badge>
                       </div>
                     </CardContent>
                   </Card>
-                )}
 
-                <div className="grid grid-cols-2 gap-4">
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Findings</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div
-                        className={`text-2xl font-bold ${viewResource.findingsCount > 0 ? 'text-orange-500' : ''}`}
-                      >
-                        {viewResource.findingsCount}
-                      </div>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Last Seen</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm">
-                        {new Date(viewResource.lastSeen).toLocaleDateString()}
-                      </p>
-                    </CardContent>
-                  </Card>
+                  {(viewResource.publicIp || viewResource.privateIp) && (
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">Network</CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-2 text-sm">
+                        {viewResource.publicIp && (
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Public IP</span>
+                            <code>{viewResource.publicIp}</code>
+                          </div>
+                        )}
+                        {viewResource.privateIp && (
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Private IP</span>
+                            <code>{viewResource.privateIp}</code>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {viewResource.tags && Object.keys(viewResource.tags).length > 0 && (
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">Tags</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex flex-wrap gap-2">
+                          {Object.entries(viewResource.tags).map(([key, value]) => (
+                            <Badge key={key} variant="secondary">
+                              {key}: {value}
+                            </Badge>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">Findings</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div
+                          className={`text-2xl font-bold ${viewResource.findingsCount > 0 ? 'text-orange-500' : ''}`}
+                        >
+                          {viewResource.findingsCount}
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">Last Seen</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-sm">
+                          {new Date(viewResource.lastSeen).toLocaleDateString()}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {viewResource.notes && (
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">Notes</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-sm text-muted-foreground">{viewResource.notes}</p>
+                      </CardContent>
+                    </Card>
+                  )}
                 </div>
 
-                {viewResource.notes && (
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Notes</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-muted-foreground">{viewResource.notes}</p>
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
-
-              <div className="mt-6 flex gap-2">
-                <Button className="flex-1" variant="outline" onClick={() => openEdit(viewResource)}>
-                  <Pencil className="me-2 h-4 w-4" />
-                  Edit
-                </Button>
-                <Button className="flex-1">
-                  <Lock className="me-2 h-4 w-4" />
-                  View Findings
-                </Button>
-              </div>
+                <div className="mt-6 flex gap-2">
+                  <Button
+                    className="flex-1"
+                    variant="outline"
+                    onClick={() => openEdit(viewResource)}
+                  >
+                    <Pencil className="me-2 h-4 w-4" />
+                    Edit
+                  </Button>
+                  <Button className="flex-1">
+                    <Lock className="me-2 h-4 w-4" />
+                    View Findings
+                  </Button>
+                </div>
+              </SheetBody>
             </>
           )}
         </SheetContent>
