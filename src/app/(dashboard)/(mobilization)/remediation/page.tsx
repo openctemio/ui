@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { ColumnDef } from '@tanstack/react-table'
 import { Main } from '@/components/layout'
@@ -36,6 +36,9 @@ import {
   Pencil,
   Trash2,
   UserPlus,
+  Search,
+  Target,
+  Link2,
   CheckCircle,
   ArrowRight,
   X,
@@ -46,7 +49,6 @@ import {
   CalendarIcon,
   Save,
   Ban,
-  RotateCcw,
   ExternalLink,
   Clock,
   Hash,
@@ -97,6 +99,11 @@ import { CreateJiraEpicDialog } from '@/features/remediation/components/create-j
 import { getErrorMessage } from '@/lib/api/error-handler'
 import { patch, del } from '@/lib/api/client'
 import { useFindingsApi } from '@/features/findings/api/use-findings-api'
+import { AssigneeSelect } from '@/features/findings/components/assignee-select'
+import { FindingStatusBadge } from '@/features/findings/components/finding-status-badge'
+import type { FindingStatus } from '@/features/findings'
+import { useMembers } from '@/features/organization/api/use-members'
+import { useTenant } from '@/context/tenant-provider'
 import type { TaskStatus, TaskPriority, RemediationTask } from '@/features/remediation/types'
 import type { Severity } from '@/features/shared/types'
 import { exportToCsv, type ExportFieldConfig } from '@/hooks/use-csv-export'
@@ -121,8 +128,9 @@ interface TaskFormData {
   priority: TaskPriority
   severity: Severity
   assigneeName: string
+  assignedTo: string
   dueDate: Date | undefined
-  findingId: string
+  findingIds: string[]
   estimatedHours: string
 }
 
@@ -132,8 +140,9 @@ const emptyFormData: TaskFormData = {
   priority: 'medium',
   severity: 'medium',
   assigneeName: '',
+  assignedTo: '',
   dueDate: undefined,
-  findingId: '',
+  findingIds: [],
   estimatedHours: '',
 }
 
@@ -142,8 +151,9 @@ const emptyFormData: TaskFormData = {
 // actually counts + resolves. Returns undefined when nothing is linked so the
 // caller can decide: create seeds an empty scope, edit leaves the existing
 // filter untouched (never silently wipes a cve/asset-scoped campaign).
-function findingFilterFromForm(findingId: string): Record<string, unknown> | undefined {
-  return findingId && findingId !== 'none' ? { finding_ids: [findingId] } : undefined
+function findingFilterFromForm(findingIds: string[]): Record<string, unknown> | undefined {
+  const ids = findingIds.filter((id) => id && id !== 'none')
+  return ids.length > 0 ? { finding_ids: ids } : undefined
 }
 
 const priorityColors: Record<TaskPriority, string> = {
@@ -268,10 +278,14 @@ function campaignToTask(c: RemediationCampaign): RemediationTask {
     status: normalizeStatus(c.status),
     priority: normalizePriority(c.priority),
     findingId: linkedFindingIds[0] ?? '',
+    findingIds: linkedFindingIds,
     findingTitle: `${c.finding_count} finding${c.finding_count !== 1 ? 's' : ''} linked`,
     severity: (c.priority === 'critical' ? 'critical' : c.priority) as Severity,
     assigneeId: c.assigned_to || '',
-    assigneeName: c.assigned_team || '',
+    assigneeName: '', // resolved from the member list in the page (assigned_to is a UUID)
+    validatorId: c.assigned_team || '',
+    validatorName: '', // resolved from the member list in the page
+    startDate: c.start_date || '',
     dueDate: c.due_date || '',
     completedAt: c.completed_at || undefined,
     createdAt: c.created_at,
@@ -313,19 +327,21 @@ function getAvailableActions(status: TaskStatus) {
     case 'open': // draft → active
       return [{ action: 'start', label: 'Start Task', icon: Play, variant: 'default' as const }]
     case 'in_progress': // active → validating | paused
+      // 'validating' is the CTEM verify step (fix applied, confirm it worked) —
+      // NOT a hand-off to a reviewer. There is no reviewer role; the owner stays
+      // the assignee. Label it as a state change, not "send to someone".
       return [
         {
           action: 'review',
-          label: 'Send to Review',
+          label: 'Submit for Validation',
           icon: CheckCircle,
           variant: 'default' as const,
         },
         { action: 'block', label: 'Block', icon: Ban, variant: 'outline' as const },
       ]
-    case 'review': // validating → completed | active
+    case 'review': // validating → completed (no validating→active path in the domain)
       return [
         { action: 'complete', label: 'Complete', icon: CheckCircle, variant: 'default' as const },
-        { action: 'reopen', label: 'Back to Active', icon: RotateCcw, variant: 'outline' as const },
       ]
     case 'blocked': // paused → active
       return [{ action: 'start', label: 'Unblock', icon: Play, variant: 'default' as const }]
@@ -343,7 +359,7 @@ export default function RemediationPage() {
 
   // API data
   const { data: findingsData } = useFindingsApi({
-    per_page: 20,
+    per_page: 100,
     statuses: ['new', 'confirmed', 'in_progress'],
   })
   const findings = findingsData?.data ?? []
@@ -356,9 +372,42 @@ export default function RemediationPage() {
   } = useRemediationCampaigns()
   const { trigger: createCampaign } = useCreateRemediationCampaign()
 
+  // Resolve assignee UUIDs → display names via the tenant member list.
+  const { currentTenant } = useTenant()
+  const { members } = useMembers(currentTenant?.id)
+  const memberNameById = useMemo(() => {
+    const m = new Map<string, string>()
+    for (const mem of members) {
+      if (mem.user_id) m.set(mem.user_id, mem.name || mem.email || mem.user_id)
+    }
+    return m
+  }, [members])
+
   const tasks: RemediationTask[] = useMemo(() => {
     if (!campaignData?.data?.length) return []
-    return campaignData.data.map(campaignToTask)
+    return campaignData.data.map((c) => {
+      const t = campaignToTask(c)
+      if (t.assigneeId) t.assigneeName = memberNameById.get(t.assigneeId) || t.assigneeId
+      if (t.validatorId) t.validatorName = memberNameById.get(t.validatorId) || t.validatorId
+      return t
+    })
+  }, [campaignData, memberNameById])
+
+  // Which campaigns each finding is linked to. A finding CAN belong to more than
+  // one campaign (a finding_id may appear in several campaigns' filters — there's
+  // no uniqueness), so we surface the overlap in the picker rather than silently
+  // splitting ownership. Maps finding_id → the campaigns that reference it.
+  const findingCampaigns = useMemo(() => {
+    const m = new Map<string, Array<{ id: string; name: string }>>()
+    for (const c of campaignData?.data ?? []) {
+      const ids = (c.finding_filter?.finding_ids as string[] | undefined) ?? []
+      for (const fid of ids) {
+        const arr = m.get(fid) ?? []
+        arr.push({ id: c.id, name: c.name })
+        m.set(fid, arr)
+      }
+    }
+    return m
   }, [campaignData])
 
   // ─── Computed ────────────────────────────────────────────────────
@@ -404,6 +453,37 @@ export default function RemediationPage() {
   const [formData, setFormData] = useState<TaskFormData>(emptyFormData)
   const [dueDateOpen, setDueDateOpen] = useState(false)
 
+  // Keep the open drawer in sync with the latest task data (after inline edits).
+  useEffect(() => {
+    setViewTask((prev) => (prev ? (tasks.find((t) => t.id === prev.id) ?? prev) : prev))
+  }, [tasks])
+
+  // Inline field edit from the drawer (Jira-style): PATCH one field, refresh.
+  const handleInlinePatch = useCallback(
+    async (task: RemediationTask, body: Record<string, unknown>) => {
+      try {
+        // A finding_filter patch from the drawer only carries finding_ids. Merge it
+        // into the campaign's existing filter so any dynamic scope (cve_ids, asset_id,
+        // remediation_key, …) isn't silently wiped — which would corrupt a keyed
+        // (Solution-Family) campaign into a plain finding-ids one.
+        let payload = body
+        if (body.finding_filter && typeof body.finding_filter === 'object') {
+          const original = campaignData?.data?.find((c) => c.id === task.id)?.finding_filter ?? {}
+          payload = {
+            ...body,
+            finding_filter: { ...original, ...(body.finding_filter as Record<string, unknown>) },
+          }
+        }
+        await patch(`/api/v1/remediation/campaigns/${task.id}`, payload)
+        await refreshCampaigns()
+        toast.success('Task updated')
+      } catch (err) {
+        toast.error(getErrorMessage(err, 'Failed to update task'))
+      }
+    },
+    [refreshCampaigns, campaignData]
+  )
+
   const assignees = useMemo(
     () => [...new Set(tasks.map((t) => t.assigneeName).filter(Boolean))],
     [tasks]
@@ -437,8 +517,16 @@ export default function RemediationPage() {
           ),
       }
     )
-    return applyTaskFilters(campaigns.map(campaignToTask), quickFilter, filters)
-  }, [quickFilter, filters])
+    // Resolve assignee/validator UUIDs → names (same as the on-screen list) so the
+    // export isn't blank and an active assignee filter (which matches on name) works.
+    const rows = campaigns.map((c) => {
+      const t = campaignToTask(c)
+      if (t.assigneeId) t.assigneeName = memberNameById.get(t.assigneeId) || t.assigneeId
+      if (t.validatorId) t.validatorName = memberNameById.get(t.validatorId) || t.validatorId
+      return t
+    })
+    return applyTaskFilters(rows, quickFilter, filters)
+  }, [quickFilter, filters, memberNameById])
 
   const handleExportCsv = useCallback(async () => {
     if (isExporting) return
@@ -497,8 +585,9 @@ export default function RemediationPage() {
           priority: task.priority,
           severity: task.severity,
           assigneeName: task.assigneeName,
+          assignedTo: task.assigneeId || '',
           dueDate: dueDate && !isNaN(dueDate.getTime()) ? dueDate : undefined,
-          findingId: task.findingId || 'none',
+          findingIds: task.findingIds ?? [],
           estimatedHours: task.estimatedHours?.toString() || '',
         })
         setEditTask(task)
@@ -519,7 +608,6 @@ export default function RemediationPage() {
         review: 'validating',
         complete: 'completed',
         block: 'paused',
-        reopen: 'active',
       }
       const apiStatus = statusMap[action]
       if (apiStatus) {
@@ -556,16 +644,26 @@ export default function RemediationPage() {
         }
         const apiStatus = statusMap[value]
         if (apiStatus) {
+          // Some selected tasks may be in a state where this transition is illegal
+          // (e.g. an already-active task → "In Progress"). Don't let one rejection
+          // abort the batch or skip the refresh — settle all, then report the split.
           try {
-            await Promise.all(
+            const results = await Promise.allSettled(
               selectedIds.map((id) =>
                 patch(`/api/v1/remediation/campaigns/${id}/status`, { status: apiStatus })
               )
             )
+            const ok = results.filter((r) => r.status === 'fulfilled').length
+            const failed = results.length - ok
+            if (ok > 0 && failed === 0) {
+              toast.success(`Moved ${ok} task${ok === 1 ? '' : 's'} to ${value}`)
+            } else if (ok > 0) {
+              toast.warning(`Moved ${ok}; ${failed} couldn't move to ${value} from their state`)
+            } else {
+              toast.error(`None could move to ${value} from their current state`)
+            }
+          } finally {
             await refreshCampaigns()
-            toast.success(`Moved ${selectedIds.length} tasks to ${value}`)
-          } catch (err) {
-            toast.error(getErrorMessage(err, 'Failed to update tasks'))
           }
         }
         setSelectedIds([])
@@ -601,11 +699,11 @@ export default function RemediationPage() {
         priority: formData.priority,
         status: 'draft',
         due_date: formData.dueDate?.toISOString() || null,
-        assigned_team: formData.assigneeName || null,
+        assigned_to: formData.assignedTo || undefined,
         tags: [],
         // Scope the task to the linked finding so it actually counts + resolves;
         // empty scope when nothing is linked.
-        finding_filter: findingFilterFromForm(formData.findingId) ?? {},
+        finding_filter: findingFilterFromForm(formData.findingIds) ?? {},
       })
       await refreshCampaigns()
       setFormData(emptyFormData)
@@ -627,8 +725,8 @@ export default function RemediationPage() {
         description: formData.description,
         priority: formData.priority,
         due_date: formData.dueDate?.toISOString() || null,
-        assigned_team: formData.assigneeName || null,
-        finding_filter: findingFilterFromForm(formData.findingId),
+        assigned_to: formData.assignedTo || '',
+        finding_filter: findingFilterFromForm(formData.findingIds),
       })
       await refreshCampaigns()
       setFormData(emptyFormData)
@@ -813,12 +911,6 @@ export default function RemediationPage() {
               label: 'Open Campaign',
               icon: ExternalLink,
               onClick: () => handleTaskAction('open_campaign', task),
-            },
-            {
-              label: 'Edit',
-              icon: Pencil,
-              onClick: () => handleTaskAction('edit', task),
-              permission: Permission.RemediationWrite,
             },
           ]
           if (task.ticketUrl) {
@@ -1278,15 +1370,15 @@ export default function RemediationPage() {
       <TaskDetailSheet
         task={viewTask}
         onClose={() => setViewTask(null)}
-        onEdit={(task) => {
-          setViewTask(null)
-          handleTaskAction('edit', task)
-        }}
         onDelete={(task) => {
           setViewTask(null)
           setDeleteTask(task)
         }}
         onAction={handleTaskAction}
+        onPatch={handleInlinePatch}
+        findings={findings}
+        memberNameById={memberNameById}
+        findingCampaigns={findingCampaigns}
         onCopyId={handleCopyId}
         onCopyLink={handleCopyLink}
         onOpenCampaign={(task) => router.push(`/remediation/${task.id}`)}
@@ -1345,9 +1437,23 @@ export default function RemediationPage() {
 interface TaskDetailSheetProps {
   task: RemediationTask | null
   onClose: () => void
-  onEdit: (task: RemediationTask) => void
   onDelete: (task: RemediationTask) => void
   onAction: (action: string, task: RemediationTask) => void
+  onPatch: (task: RemediationTask, body: Record<string, unknown>) => void | Promise<void>
+  findings: Array<{
+    id: string
+    title?: string
+    message?: string
+    severity?: Severity
+    status?: string
+    asset?: { name: string; type: string }
+    assigned_to?: string
+    assigned_to_user?: { name: string }
+  }>
+  /** UUID → display-name map so finding assignees render as names, not UUIDs. */
+  memberNameById: Map<string, string>
+  /** finding_id → campaigns that already reference it (to flag cross-linking). */
+  findingCampaigns: Map<string, Array<{ id: string; name: string }>>
   onCopyId: (id: string) => void
   onCopyLink: (id: string) => void
   onOpenCampaign: (task: RemediationTask) => void
@@ -1356,13 +1462,26 @@ interface TaskDetailSheetProps {
 function TaskDetailSheet({
   task,
   onClose,
-  onEdit,
   onDelete,
   onAction,
+  onPatch,
+  findings,
+  memberNameById,
+  findingCampaigns,
   onCopyId,
   onCopyLink,
   onOpenCampaign,
 }: TaskDetailSheetProps) {
+  // Inline title/description editing state — hooks must run unconditionally,
+  // before the early null-return below.
+  const [editingTitle, setEditingTitle] = useState(false)
+  const [titleDraft, setTitleDraft] = useState(task?.title ?? '')
+  const [editingDesc, setEditingDesc] = useState(false)
+  const [descDraft, setDescDraft] = useState(task?.description ?? '')
+  const [dueOpen, setDueOpen] = useState(false)
+  const [startOpen, setStartOpen] = useState(false)
+  const [pickerQuery, setPickerQuery] = useState('')
+
   if (!task) {
     return (
       <Sheet open={false}>
@@ -1378,6 +1497,17 @@ function TaskDetailSheet({
   const overdue = checkOverdue(task)
   const due = daysUntil(task.dueDate)
   const actions = getAvailableActions(task.status)
+
+  const saveTitle = () => {
+    setEditingTitle(false)
+    const v = titleDraft.trim()
+    if (v && v !== task.title) onPatch(task, { name: v })
+    else setTitleDraft(task.title)
+  }
+  const saveDesc = () => {
+    setEditingDesc(false)
+    if (descDraft !== (task.description || '')) onPatch(task, { description: descDraft })
+  }
 
   // Get progress from API data or estimate from status
   const taskProgress =
@@ -1454,21 +1584,6 @@ function TaskDetailSheet({
                 </TooltipTrigger>
                 <TooltipContent side="bottom">Open campaign</TooltipContent>
               </Tooltip>
-              <Can permission={Permission.RemediationWrite}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7"
-                      onClick={() => onEdit(task)}
-                    >
-                      <Pencil className="h-3.5 w-3.5" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom">Edit</TooltipContent>
-                </Tooltip>
-              </Can>
               <Separator orientation="vertical" className="h-4 mx-1" />
               <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onClose}>
                 <X className="h-3.5 w-3.5" />
@@ -1476,15 +1591,54 @@ function TaskDetailSheet({
             </div>
           </div>
 
-          {/* Title */}
-          <h2 className="text-base font-semibold leading-tight">{task.title}</h2>
+          {/* Title (click to edit inline) */}
+          {editingTitle ? (
+            <Input
+              autoFocus
+              value={titleDraft}
+              onChange={(e) => setTitleDraft(e.target.value)}
+              onBlur={saveTitle}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') saveTitle()
+                if (e.key === 'Escape') {
+                  setTitleDraft(task.title)
+                  setEditingTitle(false)
+                }
+              }}
+              className="h-7 text-base font-semibold"
+            />
+          ) : (
+            <h2
+              className="text-base font-semibold leading-tight cursor-text rounded px-1 -mx-1 hover:bg-muted/50"
+              onClick={() => {
+                setTitleDraft(task.title)
+                setEditingTitle(true)
+              }}
+            >
+              {task.title}
+            </h2>
+          )}
           <p className="text-xs text-muted-foreground mt-1">{task.findingTitle}</p>
 
           {/* Badges */}
           <div className="flex flex-wrap items-center gap-1.5 mt-3">
-            <Badge className={`${priorityColors[task.priority]} text-xs h-5`}>
-              {TASK_PRIORITY_LABELS[task.priority]}
-            </Badge>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Badge
+                  className={`${priorityColors[task.priority]} text-xs h-5 cursor-pointer`}
+                  title="Change priority"
+                >
+                  {TASK_PRIORITY_LABELS[task.priority]}
+                </Badge>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                {(['urgent', 'high', 'medium', 'low'] as TaskPriority[]).map((p) => (
+                  <DropdownMenuItem key={p} onClick={() => onPatch(task, { priority: p })}>
+                    {TASK_PRIORITY_LABELS[p]}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Badge className={`${statusColors[task.status]} text-xs h-5`}>
               {TASK_STATUS_LABELS[task.status]}
             </Badge>
@@ -1506,18 +1660,50 @@ function TaskDetailSheet({
               icon={<UserPlus className="h-3.5 w-3.5 text-muted-foreground" />}
               label="Assignee"
             >
-              {task.assigneeName ? (
-                <div className="flex items-center gap-1.5">
-                  <Avatar className="h-5 w-5">
-                    <AvatarFallback className="text-[9px]">
-                      {getInitials(task.assigneeName)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="text-sm font-medium truncate">{task.assigneeName}</span>
-                </div>
-              ) : (
-                <span className="text-sm text-muted-foreground">Unassigned</span>
-              )}
+              {/* Inline edit (Jira-style): pick a member → PATCH assigned_to. */}
+              <AssigneeSelect
+                variant="ghost"
+                showFullName
+                placeholder="Assign"
+                value={
+                  task.assigneeId
+                    ? { id: task.assigneeId, name: task.assigneeName || 'Assigned' }
+                    : null
+                }
+                onChange={(user) => onPatch(task, { assigned_to: user?.id ?? '' })}
+              />
+            </InfoCard>
+
+            <InfoCard
+              icon={<Play className="h-3.5 w-3.5 text-muted-foreground" />}
+              label="Start Date"
+            >
+              <Popover open={startOpen} onOpenChange={setStartOpen}>
+                <PopoverTrigger asChild>
+                  <button className="text-start rounded px-1 -mx-1 hover:bg-muted/50">
+                    <span className="text-sm font-medium">
+                      {safeFormatDate(task.startDate, { month: 'short', day: 'numeric' }) ??
+                        'Auto on start'}
+                    </span>
+                    {!task.startDate && (
+                      <span className="text-[11px] text-muted-foreground block">
+                        set when work begins
+                      </span>
+                    )}
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <CalendarComponent
+                    mode="single"
+                    selected={task.startDate ? new Date(task.startDate) : undefined}
+                    onSelect={(date) => {
+                      setStartOpen(false)
+                      if (date) onPatch(task, { start_date: date.toISOString() })
+                    }}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
             </InfoCard>
 
             <InfoCard
@@ -1528,28 +1714,261 @@ function TaskDetailSheet({
               }
               label="Due Date"
             >
-              <span className={`text-sm font-medium ${overdue ? 'text-red-500' : ''}`}>
-                {safeFormatDate(task.dueDate, { month: 'short', day: 'numeric' }) ?? 'Not set'}
-              </span>
-              {due && task.status !== 'completed' && (
-                <span
-                  className={`text-[11px] block ${due.overdue ? 'text-red-400' : 'text-muted-foreground'}`}
-                >
-                  {due.overdue ? `${due.days}d overdue` : `${due.days}d remaining`}
-                </span>
-              )}
+              <Popover open={dueOpen} onOpenChange={setDueOpen}>
+                <PopoverTrigger asChild>
+                  <button className="text-start rounded px-1 -mx-1 hover:bg-muted/50">
+                    <span className={`text-sm font-medium ${overdue ? 'text-red-500' : ''}`}>
+                      {safeFormatDate(task.dueDate, { month: 'short', day: 'numeric' }) ??
+                        'Set date'}
+                    </span>
+                    {due && task.status !== 'completed' && (
+                      <span
+                        className={`text-[11px] block ${due.overdue ? 'text-red-400' : 'text-muted-foreground'}`}
+                      >
+                        {due.overdue ? `${due.days}d overdue` : `${due.days}d remaining`}
+                      </span>
+                    )}
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <CalendarComponent
+                    mode="single"
+                    selected={task.dueDate ? new Date(task.dueDate) : undefined}
+                    onSelect={(date) => {
+                      setDueOpen(false)
+                      onPatch(task, { due_date: date ? date.toISOString() : null })
+                    }}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
             </InfoCard>
+
+            {/* Validator (assigned_team) — the person who verifies the fix. Shown
+                once the task is in validation, so the fixer and the verifier are
+                explicitly different people (segregation of duties). */}
+            {task.status === 'review' && (
+              <InfoCard
+                icon={<CheckCircle className="h-3.5 w-3.5 text-muted-foreground" />}
+                label="Validator"
+              >
+                <AssigneeSelect
+                  variant="ghost"
+                  showFullName
+                  placeholder="Assign validator"
+                  value={
+                    task.validatorId
+                      ? { id: task.validatorId, name: task.validatorName || 'Assigned' }
+                      : null
+                  }
+                  onChange={(user) => onPatch(task, { assigned_team: user?.id ?? '' })}
+                />
+              </InfoCard>
+            )}
           </div>
 
-          {/* Description */}
-          {task.description && (
-            <div className="space-y-1.5">
-              <p className="text-xs font-medium text-muted-foreground">Description</p>
-              <p className="text-sm leading-relaxed bg-muted/30 rounded-lg p-3">
-                {task.description}
+          {/* Description (click to edit inline) */}
+          <div className="space-y-1.5">
+            <p className="text-xs font-medium text-muted-foreground">Description</p>
+            {editingDesc ? (
+              <Textarea
+                autoFocus
+                value={descDraft}
+                onChange={(e) => setDescDraft(e.target.value)}
+                onBlur={saveDesc}
+                className="min-h-[80px] text-sm"
+              />
+            ) : (
+              <p
+                className="text-sm leading-relaxed bg-muted/30 rounded-lg p-3 cursor-text hover:bg-muted/50"
+                onClick={() => {
+                  setDescDraft(task.description || '')
+                  setEditingDesc(true)
+                }}
+              >
+                {task.description || (
+                  <span className="text-muted-foreground">Add a description…</span>
+                )}
               </p>
+            )}
+          </div>
+
+          {/* Linked Findings — a task can cover many; view + manage inline */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-medium text-muted-foreground">
+                Linked Findings ({task.findingIds?.length ?? 0})
+              </p>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="ghost" size="sm" className="h-6 text-xs">
+                    <Plus className="me-1 h-3 w-3" /> Manage
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent
+                  className="flex w-[22rem] max-w-[calc(100vw-2rem)] flex-col p-0"
+                  align="end"
+                >
+                  {/* Search — the open-findings list can be long (up to 100). */}
+                  <div className="border-b p-2">
+                    <div className="relative">
+                      <Search className="text-muted-foreground absolute start-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2" />
+                      <Input
+                        value={pickerQuery}
+                        onChange={(e) => setPickerQuery(e.target.value)}
+                        placeholder="Search title or asset…"
+                        className="h-8 ps-7 text-sm"
+                      />
+                    </div>
+                  </div>
+                  {/* Scrollable, info-rich rows so you can choose what to link with
+                      severity + asset + status in view (not title alone). */}
+                  <div className="max-h-[min(60vh,20rem)] overflow-y-auto overscroll-contain p-1">
+                    {(() => {
+                      const q = pickerQuery.trim().toLowerCase()
+                      const list = q
+                        ? findings.filter(
+                            (f) =>
+                              (f.title || f.message || '').toLowerCase().includes(q) ||
+                              (f.asset?.name || '').toLowerCase().includes(q)
+                          )
+                        : findings
+                      if (findings.length === 0)
+                        return (
+                          <p className="text-muted-foreground p-3 text-center text-xs">
+                            No open findings available to link.
+                          </p>
+                        )
+                      if (list.length === 0)
+                        return (
+                          <p className="text-muted-foreground p-3 text-center text-xs">
+                            No findings match “{pickerQuery}”.
+                          </p>
+                        )
+                      return list.map((f) => {
+                        const linked = (task.findingIds ?? []).includes(f.id)
+                        return (
+                          <button
+                            key={f.id}
+                            type="button"
+                            className="hover:bg-muted flex w-full items-start gap-2 rounded px-2 py-2 text-start"
+                            onClick={() =>
+                              onPatch(task, {
+                                finding_filter: {
+                                  finding_ids: linked
+                                    ? (task.findingIds ?? []).filter((id) => id !== f.id)
+                                    : [...(task.findingIds ?? []), f.id],
+                                },
+                              })
+                            }
+                          >
+                            <Checkbox checked={linked} className="pointer-events-none mt-0.5" />
+                            <div className="min-w-0 flex-1 space-y-1">
+                              <div className="flex items-center gap-1.5">
+                                {f.severity && (
+                                  <SeverityBadge severity={f.severity} className="shrink-0" />
+                                )}
+                                <span className="line-clamp-2 text-sm">
+                                  {f.title || f.message || f.id}
+                                </span>
+                              </div>
+                              <div className="text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px]">
+                                {f.status && (
+                                  <FindingStatusBadge
+                                    status={f.status as FindingStatus}
+                                    variant="outline"
+                                  />
+                                )}
+                                {f.asset?.name && (
+                                  <span className="inline-flex items-center gap-0.5 truncate">
+                                    <Target className="h-2.5 w-2.5 shrink-0" />
+                                    {f.asset.name}
+                                  </span>
+                                )}
+                                {f.assigned_to && (
+                                  <span className="inline-flex items-center gap-0.5 truncate">
+                                    <UserPlus className="h-2.5 w-2.5 shrink-0" />
+                                    {memberNameById.get(f.assigned_to) ||
+                                      f.assigned_to_user?.name ||
+                                      'Assigned'}
+                                  </span>
+                                )}
+                                {(() => {
+                                  // Flag if this finding is already handled by another
+                                  // campaign, so the user doesn't unknowingly split
+                                  // ownership across two remediation efforts.
+                                  const others = (findingCampaigns.get(f.id) ?? []).filter(
+                                    (c) => c.id !== task.id
+                                  )
+                                  if (others.length === 0) return null
+                                  return (
+                                    <span
+                                      className="inline-flex items-center gap-0.5 truncate text-amber-600 dark:text-amber-500"
+                                      title={others.map((c) => c.name).join(', ')}
+                                    >
+                                      <Link2 className="h-2.5 w-2.5 shrink-0" />
+                                      also in {others.length}
+                                    </span>
+                                  )
+                                })()}
+                              </div>
+                            </div>
+                          </button>
+                        )
+                      })
+                    })()}
+                  </div>
+                  <div className="text-muted-foreground border-t px-3 py-1.5 text-[11px]">
+                    {task.findingIds?.length ?? 0} linked
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
-          )}
+            {(task.findingIds?.length ?? 0) === 0 ? (
+              <p className="text-xs text-muted-foreground">No findings linked yet.</p>
+            ) : (
+              <div className="space-y-1">
+                {(task.findingIds ?? []).map((id) => {
+                  const f = findings.find((x) => x.id === id)
+                  return (
+                    <div
+                      key={id}
+                      className="flex items-center gap-2 rounded bg-muted/30 px-2 py-1 text-xs"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <span className="block truncate">{f ? f.title || f.message : id}</span>
+                        <span className="text-muted-foreground flex items-center gap-2 truncate text-[10px]">
+                          {f?.asset?.name && <span className="truncate">{f.asset.name}</span>}
+                          {f?.assigned_to ? (
+                            <span className="flex shrink-0 items-center gap-0.5">
+                              <UserPlus className="h-2.5 w-2.5" />
+                              {memberNameById.get(f.assigned_to) ||
+                                f.assigned_to_user?.name ||
+                                'Assigned'}
+                            </span>
+                          ) : null}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        className="text-muted-foreground hover:text-foreground"
+                        aria-label="Unlink finding"
+                        onClick={() =>
+                          onPatch(task, {
+                            finding_filter: {
+                              finding_ids: (task.findingIds ?? []).filter((x) => x !== id),
+                            },
+                          })
+                        }
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
 
           {/* Progress */}
           <div className="space-y-2">
@@ -1760,24 +2179,80 @@ function TaskFormDialog({
               </Popover>
             </div>
           </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Assignee</Label>
+            <div>
+              <AssigneeSelect
+                variant="outline"
+                showFullName
+                placeholder="Assign to…"
+                value={
+                  formData.assignedTo
+                    ? { id: formData.assignedTo, name: formData.assigneeName || 'Assigned' }
+                    : null
+                }
+                onChange={(user) =>
+                  setFormData({
+                    ...formData,
+                    assignedTo: user?.id ?? '',
+                    assigneeName: user?.name ?? '',
+                  })
+                }
+              />
+            </div>
+          </div>
           <div className="space-y-1.5 min-w-0">
-            <Label className="text-xs">Link to Finding</Label>
-            <Select
-              value={formData.findingId}
-              onValueChange={(v) => setFormData({ ...formData, findingId: v })}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select finding" className="truncate" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">None</SelectItem>
-                {findings.map((f) => (
-                  <SelectItem key={f.id} value={f.id}>
-                    {(f.title || f.message || f.id).substring(0, 50)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label className="text-xs">
+              Link Findings
+              {formData.findingIds.length > 0 ? ` (${formData.findingIds.length})` : ''}
+            </Label>
+            {/* A remediation task can cover MANY findings (one fix → many). Multi-
+                select → finding_filter.finding_ids (backend counts + resolves all). */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="h-9 w-full justify-between font-normal"
+                  type="button"
+                >
+                  <span className="truncate">
+                    {formData.findingIds.length === 0
+                      ? 'Select findings…'
+                      : `${formData.findingIds.length} finding${formData.findingIds.length > 1 ? 's' : ''} selected`}
+                  </span>
+                  <ChevronRight className="h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[--radix-popover-trigger-width] p-1" align="start">
+                <div className="max-h-64 overflow-y-auto">
+                  {findings.length === 0 ? (
+                    <p className="p-2 text-xs text-muted-foreground">No findings available</p>
+                  ) : (
+                    findings.map((f) => {
+                      const checked = formData.findingIds.includes(f.id)
+                      return (
+                        <button
+                          key={f.id}
+                          type="button"
+                          className="flex w-full items-start gap-2 rounded px-2 py-1.5 text-start text-sm hover:bg-muted"
+                          onClick={() =>
+                            setFormData({
+                              ...formData,
+                              findingIds: checked
+                                ? formData.findingIds.filter((id) => id !== f.id)
+                                : [...formData.findingIds, f.id],
+                            })
+                          }
+                        >
+                          <Checkbox checked={checked} className="mt-0.5 pointer-events-none" />
+                          <span className="line-clamp-2">{f.title || f.message || f.id}</span>
+                        </button>
+                      )
+                    })
+                  )}
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
         </div>
         <DialogFooter>

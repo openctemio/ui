@@ -41,6 +41,7 @@ import {
   ClipboardList,
   AlertOctagon,
   Ticket,
+  Wrench,
 } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import {
@@ -55,6 +56,7 @@ import { AssigneeSelect } from '@/features/findings/components/assignee-select'
 import { FindingGroupsTab } from '@/features/findings/components/finding-groups-tab'
 import { MarkFixedDialog } from '@/features/findings/components/mark-fixed-dialog'
 import { CreateTicketDialog } from '@/features/findings/components/create-ticket-dialog'
+import { LinkFindingsToRemediationDialog } from '@/features/remediation/components/link-findings-dialog'
 import { PendingReviewTab } from '@/features/findings/components/pending-review-tab'
 import {
   usePendingVerificationCount,
@@ -292,6 +294,12 @@ function FindingsContent() {
   const [mainTab, setMainTab] = useState<'findings' | 'groups' | 'pending'>('findings')
   const [markFixedGroup, setMarkFixedGroup] = useState<FindingGroup | null>(null)
   const [ticketFinding, setTicketFinding] = useState<Finding | null>(null)
+  // Findings selected to spin up (or join) a remediation task. Non-null = dialog open.
+  const [remedContext, setRemedContext] = useState<{
+    ids: string[]
+    name?: string
+    priority?: string
+  } | null>(null)
   const { hasPermission } = usePermissions()
   const pendingCount = usePendingVerificationCount()
 
@@ -418,6 +426,14 @@ function FindingsContent() {
   }, [findingStats])
 
   const selectedCount = Object.keys(rowSelection).filter((k) => rowSelection[k]).length
+  const selectedFindings = useMemo(
+    () =>
+      Object.keys(rowSelection)
+        .filter((k) => rowSelection[k])
+        .map((idx) => findings[parseInt(idx)])
+        .filter(Boolean),
+    [rowSelection, findings]
+  )
 
   const clearFilters = () => {
     router.push('/findings')
@@ -609,11 +625,29 @@ function FindingsContent() {
     }
   }
 
+  // Open the "remediate findings" dialog, pre-filled from the selection: the name
+  // is derived from the finding(s) and the priority from the highest severity, so
+  // the mobilise step is one click from where a finding lives.
+  const openRemediationFor = useCallback((selected: Finding[]) => {
+    if (selected.length === 0) return
+    const order = ['critical', 'high', 'medium', 'low']
+    const top = [...selected]
+      .map((f) => String(f.severity))
+      .sort((a, b) => order.indexOf(a) - order.indexOf(b))[0]
+    const priority = top === 'critical' ? 'urgent' : order.includes(top) ? top : 'medium'
+    const name =
+      selected.length === 1 ? `Fix: ${selected[0].title}` : `Remediate ${selected.length} findings`
+    setRemedContext({ ids: selected.map((f) => f.id), name, priority })
+  }, [])
+
   const handleRowAction = useCallback(
     (action: string, finding: Finding) => {
       switch (action) {
         case 'view':
           handleRowClick(finding)
+          break
+        case 'remediate':
+          openRemediationFor([finding])
           break
         case 'copy_id':
           copyToClipboard(finding.id)
@@ -641,7 +675,7 @@ function FindingsContent() {
           toast.info(`Action: ${action}`, { description: finding.title })
       }
     },
-    [handleRowClick]
+    [handleRowClick, openRemediationFor]
   )
 
   // Define columns for DataTable
@@ -870,6 +904,12 @@ function FindingsContent() {
                   <Ticket className="me-2 h-4 w-4" />
                   Create Jira Ticket
                 </DropdownMenuItem>
+                {hasPermission('findings:remediation:write') && (
+                  <DropdownMenuItem onClick={() => handleRowAction('remediate', finding)}>
+                    <Wrench className="me-2 h-4 w-4" />
+                    Add to remediation
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => handleRowAction('copy_id', finding)}>
                   <Copy className="me-2 h-4 w-4" />
@@ -1212,6 +1252,16 @@ function FindingsContent() {
                         if (user) void handleBulkAssign(user.id)
                       }}
                     />
+                    {hasPermission('findings:remediation:write') && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openRemediationFor(selectedFindings)}
+                      >
+                        <Wrench className="me-2 h-4 w-4" />
+                        Create remediation task
+                      </Button>
+                    )}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="outline" size="sm">
@@ -1350,6 +1400,17 @@ function FindingsContent() {
           }}
         />
       )}
+
+      <LinkFindingsToRemediationDialog
+        open={!!remedContext}
+        onOpenChange={(open) => {
+          if (!open) setRemedContext(null)
+        }}
+        findingIds={remedContext?.ids ?? []}
+        suggestedName={remedContext?.name}
+        suggestedPriority={remedContext?.priority}
+        onDone={() => setRowSelection({})}
+      />
 
       {/* Finding Quick View Drawer */}
       <FindingDetailDrawer
