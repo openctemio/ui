@@ -43,6 +43,12 @@ import {
   useUpdateRemediationCampaign,
   useUpdateCampaignStatus,
 } from '@/features/remediation/api/use-remediation-campaigns'
+import { useFindingsApi } from '@/features/findings/api/use-findings-api'
+import { SeverityBadge } from '@/features/shared'
+import { FindingStatusBadge } from '@/features/findings'
+import type { Severity } from '@/features/shared/types'
+import type { FindingStatus } from '@/features/findings'
+import { ExternalLink } from 'lucide-react'
 
 // --- Status / Priority display helpers ---
 
@@ -160,6 +166,17 @@ export default function CampaignDetailPage() {
   const { data: campaign, error, isLoading, mutate: mutateCampaign } = useRemediationCampaign(id)
   const { trigger: updateCampaign, isMutating: isUpdating } = useUpdateRemediationCampaign(id)
   const { trigger: updateStatus, isMutating: isStatusUpdating } = useUpdateCampaignStatus(id)
+
+  // The campaign's explicitly-linked findings (one fix → many findings). Always
+  // pass a finding_ids filter (a nil-UUID sentinel when none) so the hook never
+  // degrades to fetching every finding in the tenant.
+  const linkedFindingIds = (campaign?.finding_filter?.finding_ids as string[] | undefined) ?? []
+  const { data: linkedFindingsData } = useFindingsApi({
+    finding_ids:
+      linkedFindingIds.length > 0 ? linkedFindingIds : ['00000000-0000-0000-0000-000000000000'],
+    per_page: 100,
+  })
+  const linkedFindings = linkedFindingIds.length > 0 ? (linkedFindingsData?.data ?? []) : []
 
   // Inline edit state
   const [resolveOpen, setResolveOpen] = useState(false)
@@ -360,6 +377,41 @@ export default function CampaignDetailPage() {
                 </div>
               </Can>
             ) : null}
+          </CardContent>
+        </Card>
+
+        {/* Linked Findings — what this task actually covers (one fix → many) */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Target className="h-4 w-4" />
+              Findings ({linkedFindingIds.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {linkedFindingIds.length === 0 ? (
+              <p className="text-muted-foreground text-sm">
+                No findings linked yet. Link findings from the task list (Edit → Link Findings) so
+                this campaign resolves them together.
+              </p>
+            ) : linkedFindings.length === 0 ? (
+              <p className="text-muted-foreground text-sm">Loading linked findings…</p>
+            ) : (
+              <div className="divide-y">
+                {linkedFindings.map((f) => (
+                  <button
+                    key={f.id}
+                    className="flex w-full items-center gap-3 rounded px-2 py-2 text-start hover:bg-muted/50"
+                    onClick={() => router.push(`/findings/${f.id}`)}
+                  >
+                    <SeverityBadge severity={f.severity as Severity} />
+                    <span className="flex-1 truncate text-sm">{f.title || f.message}</span>
+                    <FindingStatusBadge status={f.status as FindingStatus} />
+                    <ExternalLink className="text-muted-foreground h-3.5 w-3.5 shrink-0" />
+                  </button>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
 
