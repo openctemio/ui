@@ -36,6 +36,7 @@ import {
   Check,
   X,
 } from 'lucide-react'
+import { usePermissions } from '@/context/permission-provider'
 import type { Activity, ActivityType } from '../../types'
 import { ACTIVITY_TYPE_CONFIG, FINDING_STATUS_CONFIG, SEVERITY_CONFIG } from '../../types'
 import type { Severity } from '@/features/shared/types'
@@ -82,6 +83,11 @@ export function ActivityPanel({
   isLoadingMore,
   onLoadMore,
 }: ActivityPanelProps) {
+  // Posting a comment hits POST /findings/{id}/comments, which requires
+  // findings:write. Hide the composer for users who lack it instead of letting
+  // them type and hit a 403 on Send.
+  const { hasPermission } = usePermissions()
+  const canComment = hasPermission('findings:write')
   const [comment, setComment] = useState('')
   const [isInternal, setIsInternal] = useState(false)
   const [expandedReplies, setExpandedReplies] = useState<Set<string>>(new Set())
@@ -615,49 +621,51 @@ export function ActivityPanel({
         </div>
       </div>
 
-      {/* Comment Input - Fixed at bottom */}
-      <div className="flex-shrink-0 border-t p-2">
-        <Textarea
-          placeholder="Add a comment..."
-          value={comment}
-          onChange={(e) => setComment(e.target.value)}
-          maxLength={MAX_COMMENT_LENGTH}
-          className="min-h-[60px] max-h-[120px] resize-none text-sm mb-1.5"
-        />
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1">
-            <Button variant="ghost" size="sm" className="h-5 w-5 p-0">
-              <Paperclip className="h-3 w-3" />
-            </Button>
-            <Button
-              variant={isInternal ? 'secondary' : 'ghost'}
-              size="sm"
-              className="h-5 gap-0.5 px-1 text-[10px]"
-              onClick={() => setIsInternal(!isInternal)}
-            >
-              <Lock className="h-2.5 w-2.5" />
-              Internal
-            </Button>
-            {/* Character counter - show when approaching limit */}
-            {comment.length > MAX_COMMENT_LENGTH * 0.8 && (
-              <span
-                className={`text-[10px] ${comment.length >= MAX_COMMENT_LENGTH ? 'text-destructive' : 'text-muted-foreground'}`}
+      {/* Comment Input - Fixed at bottom (only when the user can post) */}
+      {canComment && (
+        <div className="flex-shrink-0 border-t p-2">
+          <Textarea
+            placeholder="Add a comment..."
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            maxLength={MAX_COMMENT_LENGTH}
+            className="min-h-[60px] max-h-[120px] resize-none text-sm mb-1.5"
+          />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1">
+              <Button variant="ghost" size="sm" className="h-5 w-5 p-0">
+                <Paperclip className="h-3 w-3" />
+              </Button>
+              <Button
+                variant={isInternal ? 'secondary' : 'ghost'}
+                size="sm"
+                className="h-5 gap-0.5 px-1 text-[10px]"
+                onClick={() => setIsInternal(!isInternal)}
               >
-                {comment.length}/{MAX_COMMENT_LENGTH}
-              </span>
-            )}
+                <Lock className="h-2.5 w-2.5" />
+                Internal
+              </Button>
+              {/* Character counter - show when approaching limit */}
+              {comment.length > MAX_COMMENT_LENGTH * 0.8 && (
+                <span
+                  className={`text-[10px] ${comment.length >= MAX_COMMENT_LENGTH ? 'text-destructive' : 'text-muted-foreground'}`}
+                >
+                  {comment.length}/{MAX_COMMENT_LENGTH}
+                </span>
+              )}
+            </div>
+            <Button
+              size="sm"
+              className="h-6 text-xs"
+              onClick={handleSubmitComment}
+              disabled={!comment.trim() || comment.length > MAX_COMMENT_LENGTH}
+            >
+              <Send className="me-1 h-3 w-3" />
+              Send
+            </Button>
           </div>
-          <Button
-            size="sm"
-            className="h-6 text-xs"
-            onClick={handleSubmitComment}
-            disabled={!comment.trim() || comment.length > MAX_COMMENT_LENGTH}
-          >
-            <Send className="me-1 h-3 w-3" />
-            Send
-          </Button>
         </div>
-      </div>
+      )}
 
       <ConfirmDialog
         open={!!deletingCommentId}

@@ -536,7 +536,7 @@ export function OverviewTab({ finding, activities = [] }: OverviewTabProps) {
           <div>
             <h3 className="mb-3 flex items-center gap-2 font-semibold">
               <Shield className="h-4 w-4" />
-              Vulnerability Classification
+              Identifiers &amp; Scores
             </h3>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-4 md:grid-cols-3">
               {finding.cvss !== undefined && (
