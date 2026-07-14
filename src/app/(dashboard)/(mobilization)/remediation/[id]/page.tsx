@@ -45,10 +45,18 @@ import {
 } from '@/features/remediation/api/use-remediation-campaigns'
 import { useFindingsApi } from '@/features/findings/api/use-findings-api'
 import { SeverityBadge } from '@/features/shared'
-import { FindingStatusBadge } from '@/features/findings'
+import { StatusSelect } from '@/features/findings/components/status-select'
+import { CreateTicketDialog } from '@/features/findings/components/create-ticket-dialog'
 import type { Severity } from '@/features/shared/types'
 import type { FindingStatus } from '@/features/findings'
-import { ExternalLink } from 'lucide-react'
+import { patch } from '@/lib/api/client'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { ExternalLink, MoreHorizontal, Ticket, Link2Off } from 'lucide-react'
 
 // --- Status / Priority display helpers ---
 
@@ -171,12 +179,35 @@ export default function CampaignDetailPage() {
   // pass a finding_ids filter (a nil-UUID sentinel when none) so the hook never
   // degrades to fetching every finding in the tenant.
   const linkedFindingIds = (campaign?.finding_filter?.finding_ids as string[] | undefined) ?? []
-  const { data: linkedFindingsData } = useFindingsApi({
+  const { data: linkedFindingsData, mutate: mutateFindings } = useFindingsApi({
     finding_ids:
       linkedFindingIds.length > 0 ? linkedFindingIds : ['00000000-0000-0000-0000-000000000000'],
     per_page: 100,
   })
   const linkedFindings = linkedFindingIds.length > 0 ? (linkedFindingsData?.data ?? []) : []
+  const [ticketFinding, setTicketFinding] = useState<{ id: string; title: string } | null>(null)
+
+  // Inline finding actions on the campaign (reuse the finding endpoints).
+  const handleFindingStatus = async (findingId: string, status: FindingStatus) => {
+    try {
+      await patch(`/api/v1/findings/${findingId}/status`, { status })
+      await Promise.all([mutateFindings(), mutateCampaign()])
+      toast.success('Finding status updated')
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to update finding'))
+    }
+  }
+  const handleUnlinkFinding = async (findingId: string) => {
+    try {
+      await updateCampaign({
+        finding_filter: { finding_ids: linkedFindingIds.filter((x) => x !== findingId) },
+      })
+      await mutateCampaign()
+      toast.success('Finding unlinked')
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to unlink finding'))
+    }
+  }
 
   // Inline edit state
   const [resolveOpen, setResolveOpen] = useState(false)
@@ -399,16 +430,51 @@ export default function CampaignDetailPage() {
             ) : (
               <div className="divide-y">
                 {linkedFindings.map((f) => (
-                  <button
+                  <div
                     key={f.id}
-                    className="flex w-full items-center gap-3 rounded px-2 py-2 text-start hover:bg-muted/50"
-                    onClick={() => router.push(`/findings/${f.id}`)}
+                    className="flex items-center gap-3 rounded px-2 py-2 hover:bg-muted/50"
                   >
                     <SeverityBadge severity={f.severity as Severity} />
-                    <span className="flex-1 truncate text-sm">{f.title || f.message}</span>
-                    <FindingStatusBadge status={f.status as FindingStatus} />
-                    <ExternalLink className="text-muted-foreground h-3.5 w-3.5 shrink-0" />
-                  </button>
+                    <button
+                      className="flex-1 truncate text-start text-sm hover:underline"
+                      onClick={() => router.push(`/findings/${f.id}`)}
+                    >
+                      {f.title || f.message}
+                    </button>
+                    {/* Inline status change (reuses the finding status endpoint). */}
+                    <StatusSelect
+                      value={f.status as FindingStatus}
+                      onChange={(s) => handleFindingStatus(f.id, s)}
+                      source={f.source}
+                    />
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => router.push(`/findings/${f.id}`)}>
+                          <ExternalLink className="me-2 h-4 w-4" /> Open finding
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() =>
+                            setTicketFinding({ id: f.id, title: f.title || f.message || f.id })
+                          }
+                        >
+                          <Ticket className="me-2 h-4 w-4" /> Create ticket
+                        </DropdownMenuItem>
+                        <Can permission={Permission.RemediationWrite}>
+                          <DropdownMenuItem
+                            className="text-red-500"
+                            onClick={() => handleUnlinkFinding(f.id)}
+                          >
+                            <Link2Off className="me-2 h-4 w-4" /> Unlink from campaign
+                          </DropdownMenuItem>
+                        </Can>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 ))}
               </div>
             )}
@@ -423,6 +489,17 @@ export default function CampaignDetailPage() {
           openCount={campaign.finding_count - campaign.resolved_count}
           onSuccess={() => mutateCampaign()}
         />
+
+        {ticketFinding && (
+          <CreateTicketDialog
+            findingId={ticketFinding.id}
+            findingTitle={ticketFinding.title}
+            open={!!ticketFinding}
+            onOpenChange={(open) => {
+              if (!open) setTicketFinding(null)
+            }}
+          />
+        )}
 
         {/* Info cards */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
