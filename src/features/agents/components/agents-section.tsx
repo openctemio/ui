@@ -126,15 +126,19 @@ function calculateStats(agents: Agent[]): AgentStats {
     .filter(isAgentOnline)
     .reduce((sum, a) => sum + getAgentMetrics(a).activeJobs, 0)
 
+  const total = agents.length
+  const online = onlineAgents.length
+  const error = agents.filter((w) => w.health === 'error').length
+
   return {
-    total: agents.length,
-    online: onlineAgents.length,
-    // Offline includes: health='offline' or health='unknown', or disabled agents
-    offline: agents.filter(
-      (a) => a.health === 'offline' || a.health === 'unknown' || a.status === 'disabled'
-    ).length,
-    // Error count from health field
-    error: agents.filter((w) => w.health === 'error').length,
+    total,
+    online,
+    // Offline is everything that is neither online nor errored (offline/unknown
+    // health, disabled/revoked status, ...). Deriving it as the remainder keeps
+    // the KPI buckets reconciling to Total (online + offline + error === total)
+    // instead of double-counting e.g. a disabled agent whose health is offline.
+    offline: Math.max(total - online - error, 0),
+    error,
     activeJobs: totalActiveJobs,
     byMode: {
       daemon: daemonAgents.length,
@@ -198,14 +202,19 @@ export function AgentsSection({ typeFilter }: AgentsSectionProps) {
   // resolved yet (or for the type-filtered case where we filter client-side).
   const stats = useMemo(() => {
     if (tenantAgentStats && !typeFilter) {
+      // Single source of truth: derive every status bucket from the tenant
+      // total so Total === Online + Offline + Error. `online_active` counts
+      // agents that are both active AND health='online'; Offline is the
+      // remainder (offline/unknown health + disabled/revoked status), which
+      // avoids double-counting an agent across by_health and by_status.
+      const total = tenantAgentStats.total
+      const online = tenantAgentStats.online_active ?? tenantAgentStats.by_health?.online ?? 0
+      const error = tenantAgentStats.by_health?.error ?? 0
       return {
-        total: tenantAgentStats.total,
-        online: tenantAgentStats.by_health?.online ?? 0,
-        offline:
-          (tenantAgentStats.by_health?.offline ?? 0) +
-          (tenantAgentStats.by_health?.unknown ?? 0) +
-          (tenantAgentStats.by_status?.disabled ?? 0),
-        error: tenantAgentStats.by_health?.error ?? 0,
+        total,
+        online,
+        offline: Math.max(total - online - error, 0),
+        error,
         activeJobs: tenantAgentStats.active_jobs,
         byMode: {
           daemon: tenantAgentStats.by_execution_mode?.daemon ?? 0,

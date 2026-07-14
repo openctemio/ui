@@ -87,6 +87,12 @@ type SeverityKey = 'critical' | 'high' | 'medium' | 'low' | 'info'
 
 const SEVERITY_ORDER: SeverityKey[] = ['critical', 'high', 'medium', 'low', 'info']
 
+// Coerce a possibly-missing API number to a safe value before arithmetic /
+// formatting. Optional fields, partial payloads and divide-by-zero NaN all
+// arrive here as null/undefined and would otherwise throw on `.toFixed`.
+const num = (v: number | undefined | null): number => v ?? 0
+const fmt = (v: number | undefined | null, d = 1): string => num(v).toFixed(d)
+
 function getSeverityBadgeClass(severity: string) {
   switch (severity) {
     case 'critical':
@@ -175,7 +181,7 @@ function RiskFactorsSkeleton() {
 
 export default function TrendingExposuresPage() {
   const { currentTenant } = useTenant()
-  const { stats, isLoading } = useDashboardStats(currentTenant?.id || null)
+  const { stats, isLoading, error: statsError } = useDashboardStats(currentTenant?.id || null)
 
   // RFC-005: Risk trend data
   const { data: riskTrendData } = useSWR<RiskTrendPoint[]>(
@@ -201,8 +207,10 @@ export default function TrendingExposuresPage() {
     if (!hasTwoPoints) return { value: 0, type: 'neutral' as const, label: 'N/A' }
     const prev = trendData[trendData.length - 2]
     const curr = trendData[trendData.length - 1]
-    const prevTotal = prev.critical + prev.high + prev.medium + prev.low + prev.info
-    const currTotal = curr.critical + curr.high + curr.medium + curr.low + curr.info
+    const prevTotal =
+      num(prev.critical) + num(prev.high) + num(prev.medium) + num(prev.low) + num(prev.info)
+    const currTotal =
+      num(curr.critical) + num(curr.high) + num(curr.medium) + num(curr.low) + num(curr.info)
     if (prevTotal === 0) return { value: 0, type: 'neutral' as const, label: 'N/A' }
     const pctChange = ((currTotal - prevTotal) / prevTotal) * 100
     const type = pctChange > 0 ? 'negative' : pctChange < 0 ? 'positive' : 'neutral'
@@ -210,14 +218,14 @@ export default function TrendingExposuresPage() {
     return {
       value: pctChange,
       type: type as 'positive' | 'negative' | 'neutral',
-      label: `${sign}${pctChange.toFixed(1)}%`,
+      label: `${sign}${fmt(pctChange, 1)}%`,
     }
   }, [trendData, hasTwoPoints])
 
   // Latest month critical count
   const latestCritical = useMemo(() => {
     if (!hasData) return 0
-    return trendData[trendData.length - 1].critical
+    return num(trendData[trendData.length - 1].critical)
   }, [trendData, hasData])
 
   // Severity momentum: compare last 2 data points for each severity
@@ -226,8 +234,8 @@ export default function TrendingExposuresPage() {
     const prev = trendData[trendData.length - 2]
     const curr = trendData[trendData.length - 1]
     return SEVERITY_ORDER.map((key) => {
-      const prevVal = prev[key]
-      const currVal = curr[key]
+      const prevVal = num(prev[key])
+      const currVal = num(curr[key])
       const diff = currVal - prevVal
       let direction: 'up' | 'down' | 'flat'
       if (diff > 0) direction = 'up'
@@ -251,14 +259,18 @@ export default function TrendingExposuresPage() {
     if (hasTwoPoints) {
       const prev = trendData[trendData.length - 2]
       const curr = trendData[trendData.length - 1]
-      if (curr.critical > prev.critical) {
+      const prevCritical = num(prev.critical)
+      const currCritical = num(curr.critical)
+      if (currCritical > prevCritical) {
         factors.push({
-          message: `Critical findings are trending upward (${prev.critical} to ${curr.critical})`,
+          message: `Critical findings are trending upward (${prevCritical} to ${currCritical})`,
           severity: 'critical',
         })
       }
-      const prevTotal = prev.critical + prev.high + prev.medium + prev.low + prev.info
-      const currTotal = curr.critical + curr.high + curr.medium + curr.low + curr.info
+      const prevTotal =
+        num(prev.critical) + num(prev.high) + num(prev.medium) + num(prev.low) + num(prev.info)
+      const currTotal =
+        num(curr.critical) + num(curr.high) + num(curr.medium) + num(curr.low) + num(curr.info)
       if (currTotal < prevTotal) {
         factors.push({
           message: `Overall finding count is decreasing (${prevTotal} to ${currTotal})`,
@@ -276,7 +288,7 @@ export default function TrendingExposuresPage() {
 
     if (latestCritical > 0 && hasTwoPoints) {
       const prev = trendData[trendData.length - 2]
-      if (latestCritical <= prev.critical && latestCritical > 0) {
+      if (latestCritical <= num(prev.critical) && latestCritical > 0) {
         factors.push({
           message: `${latestCritical} critical finding${latestCritical !== 1 ? 's remain' : ' remains'} in the latest period`,
           severity: 'critical',
@@ -288,6 +300,9 @@ export default function TrendingExposuresPage() {
   }, [hasTwoPoints, trendData, stats.findings.overdue, latestCritical])
 
   const isEmpty = !isLoading && stats.findings.total === 0 && stats.findingTrend.length === 0
+  // Degrade gracefully when the primary stats request fails outright (no data
+  // to fall back on) instead of letting a downstream render throw.
+  const hasError = !isLoading && !!statsError && stats.findings.total === 0
 
   return (
     <Main>
@@ -308,6 +323,12 @@ export default function TrendingExposuresPage() {
           </div>
           <RiskFactorsSkeleton />
         </>
+      ) : hasError ? (
+        <EmptyState
+          icon={AlertTriangle}
+          title="Could not load trend data"
+          description="There was a problem fetching exposure trends. Please try again later."
+        />
       ) : isEmpty ? (
         <EmptyState
           icon={TrendingUp}
@@ -522,25 +543,25 @@ export default function TrendingExposuresPage() {
             <section className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
               <StatsCard
                 title="Ownership"
-                value={`${dataQuality.ownership_pct.toFixed(1)}%`}
+                value={`${fmt(dataQuality.ownership_pct, 1)}%`}
                 icon={Users}
                 description="Assets with assigned owners"
               />
               <StatsCard
                 title="Evidence"
-                value={`${dataQuality.evidence_pct.toFixed(1)}%`}
+                value={`${fmt(dataQuality.evidence_pct, 1)}%`}
                 icon={FileSearch}
                 description="Findings with evidence attached"
               />
               <StatsCard
                 title="Freshness"
-                value={`${dataQuality.avg_last_seen_days.toFixed(0)}d`}
+                value={`${fmt(dataQuality.avg_last_seen_days, 0)}d`}
                 icon={CalendarClock}
                 description="Avg days since last seen"
               />
               <StatsCard
                 title="Total Assets"
-                value={dataQuality.total_assets.toLocaleString()}
+                value={num(dataQuality.total_assets).toLocaleString()}
                 icon={Database}
                 description="In current inventory"
               />
@@ -577,23 +598,27 @@ export default function TrendingExposuresPage() {
                             {new Date(point.date).toLocaleDateString()}
                           </TableCell>
                           <TableCell className="text-end font-mono">
-                            {point.risk_score.toFixed(1)}
+                            {fmt(point.risk_score, 1)}
                           </TableCell>
-                          <TableCell className="text-end">{point.findings_open}</TableCell>
+                          <TableCell className="text-end">{num(point.findings_open)}</TableCell>
                           <TableCell className="text-end">
-                            <span className={cn(point.p0_count > 0 && 'text-red-500 font-medium')}>
-                              {point.p0_count}
+                            <span
+                              className={cn(num(point.p0_count) > 0 && 'text-red-500 font-medium')}
+                            >
+                              {num(point.p0_count)}
                             </span>
                           </TableCell>
                           <TableCell className="text-end">
                             <span
-                              className={cn(point.p1_count > 0 && 'text-orange-500 font-medium')}
+                              className={cn(
+                                num(point.p1_count) > 0 && 'text-orange-500 font-medium'
+                              )}
                             >
-                              {point.p1_count}
+                              {num(point.p1_count)}
                             </span>
                           </TableCell>
-                          <TableCell className="text-end">{point.p2_count}</TableCell>
-                          <TableCell className="text-end">{point.p3_count}</TableCell>
+                          <TableCell className="text-end">{num(point.p2_count)}</TableCell>
+                          <TableCell className="text-end">{num(point.p3_count)}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>

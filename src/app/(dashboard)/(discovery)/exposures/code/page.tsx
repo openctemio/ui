@@ -4,6 +4,7 @@ import { useMemo } from 'react'
 import { Main } from '@/components/layout'
 import { PageHeader, StatsCard, EmptyState } from '@/features/shared'
 import { useDashboardStats } from '@/features/dashboard/hooks/use-dashboard-stats'
+import { useFindingTypeStats } from '@/features/exposures/hooks'
 import { useTenant } from '@/context/tenant-provider'
 import {
   PieChart,
@@ -91,18 +92,24 @@ function LoadingSkeleton() {
 
 export default function CodeVulnerabilitiesPage() {
   const { currentTenant } = useTenant()
-  const { stats, isLoading } = useDashboardStats(currentTenant?.id || null)
+  const tenantId = currentTenant?.id || null
+  // Org-wide context (repositories scanned, asset-type mix, finding trend) —
+  // the backend exposes no per-type variant of these.
+  const { stats, isLoading: dashboardLoading } = useDashboardStats(tenantId)
+  // Type-scoped finding stats: code findings come from static analysis (SAST).
+  const { stats: typeStats, isLoading: typeLoading } = useFindingTypeStats(tenantId, ['sast'])
+  const isLoading = dashboardLoading || typeLoading
 
-  const criticalCount = stats.findings.bySeverity.critical || 0
-  const highCount = stats.findings.bySeverity.high || 0
+  const criticalCount = typeStats.bySeverity.critical || 0
+  const highCount = typeStats.bySeverity.high || 0
 
   const severityPieData = useMemo(() => {
     return SEVERITY_ORDER.map((severity) => ({
       name: SEVERITY_LABELS[severity],
-      value: stats.findings.bySeverity[severity] || 0,
+      value: typeStats.bySeverity[severity] || 0,
       color: SEVERITY_COLORS[severity],
     })).filter((d) => d.value > 0)
-  }, [stats.findings.bySeverity])
+  }, [typeStats.bySeverity])
 
   const topRepos = useMemo(() => {
     const byType = stats.assets.byType || {}
@@ -115,7 +122,7 @@ export default function CodeVulnerabilitiesPage() {
       .slice(0, 10)
   }, [stats.assets.byType])
 
-  const hasData = stats.findings.total > 0
+  const hasData = typeStats.total > 0
   const hasTrendData = stats.findingTrend.length > 0
 
   return (
@@ -138,7 +145,7 @@ export default function CodeVulnerabilitiesPage() {
         <>
           {/* Stats Row */}
           <section className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-            <StatsCard title="Total Code Findings" value={stats.findings.total} icon={FileCode} />
+            <StatsCard title="Total Code Findings" value={typeStats.total} icon={FileCode} />
             <StatsCard
               title="Critical"
               value={criticalCount}
@@ -151,8 +158,8 @@ export default function CodeVulnerabilitiesPage() {
               value={highCount}
               changeType={highCount > 0 ? 'negative' : 'positive'}
               change={
-                stats.findings.total > 0
-                  ? `${((highCount / stats.findings.total) * 100).toFixed(0)}% of total`
+                typeStats.total > 0
+                  ? `${((highCount / typeStats.total) * 100).toFixed(0)}% of total`
                   : undefined
               }
               icon={Flame}
@@ -175,7 +182,7 @@ export default function CodeVulnerabilitiesPage() {
               <CardHeader>
                 <CardTitle>Severity Distribution</CardTitle>
                 <CardDescription>
-                  Code findings across {stats.findings.total} total issues
+                  Code findings across {typeStats.total} total issues
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -211,9 +218,9 @@ export default function CodeVulnerabilitiesPage() {
             {/* Code Finding Trend */}
             <Card>
               <CardHeader>
-                <CardTitle>Code Finding Trend</CardTitle>
+                <CardTitle>Finding Trend</CardTitle>
                 <CardDescription>
-                  Severity counts over time from static analysis scans
+                  Severity counts over time across all findings (per-type trend not yet available)
                 </CardDescription>
               </CardHeader>
               <CardContent>
