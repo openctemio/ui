@@ -285,6 +285,7 @@ function FindingsContent() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [sourceFilter, setSourceFilter] = useState<string>('all')
+  const [priorityFilter, setPriorityFilter] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState('')
   // Debounce so typing doesn't fire a backend list request per keystroke.
   const debouncedSearch = useDebounce(searchQuery, 300)
@@ -324,6 +325,14 @@ function FindingsContent() {
     if (debouncedSearch.trim()) {
       filters.search = debouncedSearch.trim()
     }
+    // CTEM priority filter (RFC-017)
+    if (priorityFilter === 'kev') {
+      filters.is_in_kev = true
+    } else if (priorityFilter === 'reachable') {
+      filters.is_reachable = true
+    } else if (priorityFilter !== 'all') {
+      filters.priority_classes = [priorityFilter]
+    }
     return filters
   }, [
     assetIdFilter,
@@ -332,6 +341,7 @@ function FindingsContent() {
     severityTab,
     statusFilter,
     sourceFilter,
+    priorityFilter,
     debouncedSearch,
     HIDDEN_STATUSES,
   ])
@@ -1148,6 +1158,44 @@ function FindingsContent() {
                     Manual
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setSourceFilter('easm')}>EASM</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <Filter className="me-2 h-4 w-4" />
+                    Priority:{' '}
+                    {priorityFilter === 'all'
+                      ? 'All'
+                      : priorityFilter === 'kev'
+                        ? 'KEV'
+                        : priorityFilter === 'reachable'
+                          ? 'Reachable'
+                          : priorityFilter.toUpperCase()}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem onClick={() => setPriorityFilter('all')}>All</DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => setPriorityFilter('P0')}>
+                    P0 — Critical / Act now
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setPriorityFilter('P1')}>
+                    P1 — High
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setPriorityFilter('P2')}>
+                    P2 — Medium
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setPriorityFilter('P3')}>
+                    P3 — Low
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => setPriorityFilter('kev')}>
+                    In CISA KEV
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setPriorityFilter('reachable')}>
+                    Reachable
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
