@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react'
 import { Main } from '@/components/layout'
-import { PageHeader, EmptyState } from '@/features/shared'
+import { PageHeader, EmptyState, formatRiskScore, getRiskScoreChangeType } from '@/features/shared'
 import { StatsCard } from '@/features/shared/components/stats-card'
 import { useDashboardStats } from '@/features/dashboard/hooks/use-dashboard-stats'
 import { useTenant } from '@/context/tenant-provider'
@@ -173,15 +173,9 @@ export default function ExecutiveReportsPage() {
       <div className="mt-6 grid gap-4 md:grid-cols-4">
         <StatsCard
           title="Risk Score"
-          value={stats.assets.riskScore}
+          value={formatRiskScore(stats.assets.riskScore)}
           icon={Gauge}
-          changeType={
-            stats.assets.riskScore > 70
-              ? 'negative'
-              : stats.assets.riskScore > 40
-                ? 'neutral'
-                : 'positive'
-          }
+          changeType={getRiskScoreChangeType(stats.assets.riskScore)}
           description="Portfolio risk level"
         />
         <StatsCard

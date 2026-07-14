@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import useSWR from 'swr'
 import { Main } from '@/components/layout'
-import { PageHeader, StatsCard, EmptyState } from '@/features/shared'
+import { PageHeader, StatsCard, EmptyState, formatRiskScore } from '@/features/shared'
 import { useTenant } from '@/context/tenant-provider'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -264,7 +264,7 @@ export default function ExecutiveSummaryPage() {
         <section className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
           <StatsCard
             title="Risk Score"
-            value={summary ? `${summary.risk_score_current.toFixed(1)} / 10` : 'N/A'}
+            value={summary ? formatRiskScore(summary.risk_score_current) : 'N/A'}
             change={
               summary && summary.risk_score_change !== 0
                 ? `${summary.risk_score_change > 0 ? '+' : ''}${summary.risk_score_change.toFixed(1)}`

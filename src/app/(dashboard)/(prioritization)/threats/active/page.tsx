@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo } from 'react'
+import { formatChartDate } from '@/lib/format-chart-date'
 import { Main } from '@/components/layout'
 import { PageHeader, StatsCard } from '@/features/shared'
 import { useDashboardStats } from '@/features/dashboard/hooks/use-dashboard-stats'
@@ -191,7 +192,7 @@ export default function ActiveThreatsPage() {
   const trendData = useMemo(() => {
     return (stats.findingTrend || []).map((point) => ({
       ...point,
-      date: new Date(point.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      date: formatChartDate(point.date),
     }))
   }, [stats.findingTrend])
 
