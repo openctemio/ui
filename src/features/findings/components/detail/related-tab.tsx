@@ -12,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Link2, Copy, Eye, ExternalLink, Plus, Repeat, Fingerprint } from 'lucide-react'
+import { Link2, Copy, Eye, ExternalLink, Repeat, Fingerprint } from 'lucide-react'
 import type { FindingDetail, RelatedFinding } from '../../types'
 import { FINDING_STATUS_CONFIG } from '../../types'
 import { EmptyState, SeverityBadge } from '@/features/shared'
@@ -120,18 +120,6 @@ export function RelatedTab({ finding }: RelatedTabProps) {
         title="No Related Findings"
         description="No similar or linked findings have been identified yet."
         card={false}
-        action={
-          <div className="flex gap-2">
-            <Button size="sm" variant="outline">
-              <Eye className="me-2 h-4 w-4" />
-              Find Similar
-            </Button>
-            <Button size="sm">
-              <Plus className="me-2 h-4 w-4" />
-              Link Finding
-            </Button>
-          </div>
-        }
       />
     )
   }
@@ -221,20 +209,14 @@ export function RelatedTab({ finding }: RelatedTabProps) {
       {/* Similar Findings - only show section if has data */}
       {similarFindings.length > 0 && (
         <div>
-          <div className="mb-3 flex items-center justify-between">
-            <div>
-              <h3 className="flex items-center gap-2 font-semibold">
-                <Eye className="h-4 w-4 text-blue-400" />
-                Similar Findings
-              </h3>
-              <p className="text-muted-foreground text-sm">
-                Findings with similar characteristics detected by AI
-              </p>
-            </div>
-            <Button size="sm" variant="outline">
-              <Plus className="me-2 h-3 w-3" />
-              Find Similar
-            </Button>
+          <div className="mb-3">
+            <h3 className="flex items-center gap-2 font-semibold">
+              <Eye className="h-4 w-4 text-blue-400" />
+              Similar Findings
+            </h3>
+            <p className="text-muted-foreground text-sm">
+              Findings with similar characteristics detected by AI
+            </p>
           </div>
           <RelatedFindingsTable
             findings={similarFindings}
@@ -249,18 +231,12 @@ export function RelatedTab({ finding }: RelatedTabProps) {
         <>
           {similarFindings.length > 0 && <Separator />}
           <div>
-            <div className="mb-3 flex items-center justify-between">
-              <div>
-                <h3 className="flex items-center gap-2 font-semibold">
-                  <Link2 className="h-4 w-4 text-purple-400" />
-                  Linked Findings
-                </h3>
-                <p className="text-muted-foreground text-sm">Manually linked related findings</p>
-              </div>
-              <Button size="sm" variant="outline">
-                <Plus className="me-2 h-3 w-3" />
-                Link Finding
-              </Button>
+            <div className="mb-3">
+              <h3 className="flex items-center gap-2 font-semibold">
+                <Link2 className="h-4 w-4 text-purple-400" />
+                Linked Findings
+              </h3>
+              <p className="text-muted-foreground text-sm">Manually linked related findings</p>
             </div>
             <RelatedFindingsTable findings={linkedFindings} emptyMessage="No linked findings" />
           </div>
