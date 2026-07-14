@@ -584,7 +584,9 @@ export const sidebarData: SidebarData = {
           url: '/remediation',
           icon: Wrench,
           permission: Permission.RemediationRead,
-          module: 'remediation_tasks',
+          // Backend gates /remediation with RequireModule(remediation); keep the
+          // nav bound to the same module so it hides exactly when the route 403s.
+          module: 'remediation',
         },
         {
           title: 'Workflows',

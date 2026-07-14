@@ -27,6 +27,7 @@ import { toast } from 'sonner'
 import { getErrorMessage } from '@/lib/api/error-handler'
 import { sanitizeExternalUrl } from '@/lib/utils'
 import { useTenant } from '@/context/tenant-provider'
+import { useTenantModules } from '@/features/integrations/api/use-tenant-modules'
 import { useCVEEnrichment } from '@/features/threat-intel/hooks'
 import { EPSSScoreBadge } from '@/features/shared/components/epss-score-badge'
 import { KEVIndicatorBadge } from '@/features/shared/components/kev-indicator-badge'
@@ -138,8 +139,17 @@ export function FindingHeader({
     setAssigneeState(newAssignee)
   }
 
-  // Fetch EPSS/KEV data if finding has CVE
-  const { epss, kev } = useCVEEnrichment(currentTenant?.id || null, finding.cve || null)
+  // Fetch EPSS/KEV data if finding has CVE — but only when the threat_intel
+  // module is enabled, since /threat-intel/enrich is RequireModule(threat_intel)
+  // gated. Passing a null cve skips the fetch, so a tenant without threat_intel
+  // doesn't fire a doomed 403 on the core finding page. Empty moduleIds = OSS/
+  // all-on → treated as enabled.
+  const { moduleIds } = useTenantModules()
+  const threatIntelEnabled = moduleIds.length === 0 || moduleIds.includes('threat_intel')
+  const { epss, kev } = useCVEEnrichment(
+    currentTenant?.id || null,
+    threatIntelEnabled ? finding.cve || null : null
+  )
 
   const handleStatusChange = async (newStatus: FindingStatus, skipUndo = false) => {
     // Skip if selecting the same status
