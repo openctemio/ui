@@ -30,6 +30,8 @@ import {
 } from 'lucide-react'
 import { EmptyState } from '@/features/shared'
 import { copyToClipboard } from '@/lib/clipboard'
+import { usePermissions } from '@/context/permission-provider'
+import { useTenantModules } from '@/features/integrations/api/use-tenant-modules'
 import type { Evidence, EvidenceType, FindingDetail } from '../../types'
 import { EVIDENCE_TYPE_CONFIG } from '../../types'
 import { CodeHighlighter } from './code-highlighter'
@@ -108,6 +110,18 @@ function RepositoryLink({
 
 export function EvidenceTab({ evidence, finding }: EvidenceTabProps) {
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set())
+
+  // Only surface the Compliance Controls card when the tenant can actually use
+  // it. Its GET is gated by BOTH the compliance module and compliance:mappings:
+  // read, so rendering it unconditionally makes a doomed request that 403s and
+  // toasts "This module is not enabled for your team" / "no permission" on a
+  // page that has nothing to do with the failure. An empty moduleIds set means
+  // no subscription is configured (OSS / all-on), so treat that as enabled.
+  const { moduleIds } = useTenantModules()
+  const { hasPermission } = usePermissions()
+  const showComplianceCard =
+    (moduleIds.length === 0 || moduleIds.includes('compliance')) &&
+    hasPermission('compliance:mappings:read')
   const [expandedStacks, setExpandedStacks] = useState<Set<number>>(new Set())
   const [apiAttachments, setApiAttachments] = useState<
     Array<{
@@ -342,7 +356,7 @@ export function EvidenceTab({ evidence, finding }: EvidenceTabProps) {
       {finding?.id && (
         <>
           <ValidationEvidencePanel findingId={finding.id} />
-          <ComplianceMappingCard findingId={finding.id} />
+          {showComplianceCard && <ComplianceMappingCard findingId={finding.id} />}
           <Separator />
         </>
       )}
