@@ -47,6 +47,9 @@ export interface RemediationTask {
   /** Validator (assigned_team) — who verifies the fix, separate from the fixer. */
   validatorId?: string
   validatorName?: string
+  /** When work started. Auto-stamped when the task first moves to in-progress if
+   *  not set explicitly. */
+  startDate?: string
   dueDate: string
   completedAt?: string
   estimatedHours?: number
