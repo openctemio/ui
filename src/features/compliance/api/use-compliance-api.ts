@@ -22,7 +22,12 @@ const defaultConfig: SWRConfiguration = {
   errorRetryCount: 3,
   dedupingInterval: 2000,
   onError: (error) => {
-    handleApiError(error, { showToast: true, logError: true })
+    // A background read that 403s means the compliance module is off for this
+    // tenant, or the role lacks the compliance permission. That is a "feature
+    // unavailable" state the UI degrades by hiding the section — not a user
+    // error worth a toast on an unrelated page. Log it, but stay silent.
+    const isForbidden = error?.statusCode === 403
+    handleApiError(error, { showToast: !isForbidden, logError: true })
   },
 }
 
