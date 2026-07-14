@@ -130,11 +130,15 @@ export function RemediationTab({ remediation, finding }: RemediationTabProps) {
           <div>
             <h3 className="font-semibold">Remediation Progress</h3>
             <p className="text-muted-foreground text-sm">
-              {completedSteps} of {totalSteps} steps completed
+              {totalSteps > 0
+                ? `${completedSteps} of ${totalSteps} steps completed`
+                : 'No tracked remediation steps'}
             </p>
           </div>
           <div className="text-end">
-            <p className="text-2xl font-bold">{remediation.progress}%</p>
+            <p className="text-2xl font-bold">
+              {totalSteps > 0 ? `${remediation.progress}%` : '—'}
+            </p>
             {remediation.deadline && (
               <div
                 className={`flex items-center justify-end gap-1 text-xs ${isOverdue ? 'text-red-400' : 'text-muted-foreground'}`}
@@ -149,7 +153,7 @@ export function RemediationTab({ remediation, finding }: RemediationTabProps) {
             )}
           </div>
         </div>
-        <Progress value={remediation.progress} className="h-2" />
+        {totalSteps > 0 && <Progress value={remediation.progress} className="h-2" />}
       </div>
 
       {/* Remediation Context - from finding extended data and apiRemediation JSONB */}
