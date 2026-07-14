@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { Main } from '@/components/layout'
-import { PageHeader } from '@/features/shared'
+import { PageHeader, EmptyState } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
@@ -52,6 +52,16 @@ export default function ComponentsOverviewPage() {
 
   // License risks
   const licenseRiskHigh = (stats?.license_risks?.high ?? 0) + (stats?.license_risks?.critical ?? 0)
+
+  // License distribution for the compliance card. `license_risks` is always
+  // returned as an object, so emptiness must be derived from the values, not
+  // the object's presence: there is nothing worth showing when every bucket is
+  // 0, or when the only populated bucket is "unknown" (a 100%-unknown breakdown
+  // conveys no compliance signal — show the empty state instead).
+  const licenseRiskEntries = Object.entries(stats?.license_risks ?? {}).filter(
+    ([, count]) => count > 0
+  )
+  const hasMeaningfulLicenseData = licenseRiskEntries.some(([risk]) => risk !== 'unknown')
 
   return (
     <>
@@ -315,10 +325,9 @@ export default function ComponentsOverviewPage() {
                     <Skeleton key={i} className="h-8 w-full" />
                   ))}
                 </div>
-              ) : stats?.license_risks ? (
+              ) : hasMeaningfulLicenseData ? (
                 <div className="space-y-3">
-                  {Object.entries(stats.license_risks)
-                    .filter(([_, count]) => count > 0)
+                  {licenseRiskEntries
                     .sort(([a], [b]) => {
                       const order = ['critical', 'high', 'medium', 'low', 'unknown']
                       return order.indexOf(a) - order.indexOf(b)
@@ -351,9 +360,12 @@ export default function ComponentsOverviewPage() {
                     ))}
                 </div>
               ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  <p>No license data available</p>
-                </div>
+                <EmptyState
+                  card={false}
+                  icon={Scale}
+                  title="No license data yet"
+                  description="License compliance populates once SBOM ingestion captures component licenses."
+                />
               )}
             </CardContent>
           </Card>

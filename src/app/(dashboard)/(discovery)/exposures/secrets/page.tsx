@@ -116,24 +116,26 @@ export default function SecretsExposurePage() {
   const isLoading = dashboardLoading || typeLoading
 
   const criticalCount = typeStats.bySeverity.critical || 0
-  const scannedRepos = stats.repositories.withFindings
-  const unscannedRepos = Math.max(0, stats.repositories.total - stats.repositories.withFindings)
 
-  const repoCoverageData = useMemo(() => {
-    const data = [
-      { name: 'With Findings', value: scannedRepos, color: '#ef4444' },
-      { name: 'Clean', value: unscannedRepos, color: '#22c55e' },
-    ]
-    return data.filter((d) => d.value > 0)
-  }, [scannedRepos, unscannedRepos])
-
-  const severityBarData = useMemo(() => {
+  // Severity distribution donut — mirrors the vulnerabilities/code exposure pages
+  // so the four sub-pages share one canonical severity chart.
+  const severityPieData = useMemo(() => {
     return SEVERITY_ORDER.map((severity) => ({
       name: SEVERITY_LABELS[severity],
-      count: typeStats.bySeverity[severity] || 0,
-      fill: SEVERITY_COLORS[severity],
-    })).filter((d) => d.count > 0)
+      value: typeStats.bySeverity[severity] || 0,
+      color: SEVERITY_COLORS[severity],
+    })).filter((d) => d.value > 0)
   }, [typeStats.bySeverity])
+
+  // Remediation status breakdown — complements severity (matches vulnerabilities page).
+  const statusBarData = useMemo(() => {
+    return Object.entries(typeStats.byStatus)
+      .map(([status, count]) => ({
+        name: status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, ' '),
+        count,
+      }))
+      .sort((a, b) => b.count - a.count)
+  }, [typeStats.byStatus])
 
   const remediationPriority = useMemo(() => {
     const total = typeStats.total
@@ -202,20 +204,20 @@ export default function SecretsExposurePage() {
 
           {/* Charts Row */}
           <section className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
-            {/* Repository Coverage Pie */}
+            {/* Severity Distribution */}
             <Card>
               <CardHeader>
-                <CardTitle>Repository Coverage</CardTitle>
+                <CardTitle>Severity Distribution</CardTitle>
                 <CardDescription>
-                  Scan coverage across {stats.repositories.total} repositories
+                  Breakdown of {typeStats.total} secret findings by severity
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {repoCoverageData.length > 0 ? (
+                {severityPieData.length > 0 ? (
                   <ResponsiveContainer width="100%" height={300}>
                     <PieChart>
                       <Pie
-                        data={repoCoverageData}
+                        data={severityPieData}
                         cx="50%"
                         cy="50%"
                         innerRadius={60}
@@ -224,7 +226,7 @@ export default function SecretsExposurePage() {
                         dataKey="value"
                         label={({ name, value }) => `${name}: ${value}`}
                       >
-                        {repoCoverageData.map((entry, index) => (
+                        {severityPieData.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={entry.color} />
                         ))}
                       </Pie>
@@ -234,43 +236,42 @@ export default function SecretsExposurePage() {
                   </ResponsiveContainer>
                 ) : (
                   <div className="flex h-[300px] items-center justify-center">
-                    <p className="text-muted-foreground">No repository data available</p>
+                    <p className="text-muted-foreground">No severity data available</p>
                   </div>
                 )}
               </CardContent>
             </Card>
 
-            {/* Findings by Severity Bar */}
+            {/* Status Breakdown */}
             <Card>
               <CardHeader>
-                <CardTitle>Findings by Severity</CardTitle>
-                <CardDescription>
-                  Secret findings distributed across severity levels
-                </CardDescription>
+                <CardTitle>Status Breakdown</CardTitle>
+                <CardDescription>Current remediation status of exposed secrets</CardDescription>
               </CardHeader>
               <CardContent>
-                {severityBarData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={severityBarData} barCategoryGap="20%">
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                      <XAxis
+                {statusBarData.length > 0 ? (
+                  <ResponsiveContainer
+                    width="100%"
+                    height={Math.max(300, statusBarData.length * 40)}
+                  >
+                    <BarChart data={statusBarData} layout="vertical" barCategoryGap="20%">
+                      <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                      <XAxis type="number" hide />
+                      <YAxis
                         dataKey="name"
+                        type="category"
                         tick={{ fontSize: 12 }}
                         tickLine={false}
                         axisLine={false}
+                        width={100}
                       />
-                      <YAxis tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
                       <Tooltip />
-                      <Bar dataKey="count" radius={[4, 4, 0, 0]} barSize={40}>
-                        {severityBarData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.fill} />
-                        ))}
-                      </Bar>
+                      <Bar dataKey="count" fill="#8b5cf6" radius={[0, 4, 4, 0]} barSize={20} />
                     </BarChart>
                   </ResponsiveContainer>
                 ) : (
                   <div className="flex h-[300px] items-center justify-center">
-                    <p className="text-muted-foreground">No severity data available</p>
+                    <p className="text-muted-foreground">No status data available</p>
                   </div>
                 )}
               </CardContent>
