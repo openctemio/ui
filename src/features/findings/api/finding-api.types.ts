@@ -487,6 +487,13 @@ export interface FindingApiFilters {
   file_path?: string
   exclude_statuses?: string[]
   search?: string
+  /** CTEM prioritization filters (RFC-017). */
+  priority_classes?: string[] // e.g. ['P0','P1']
+  is_in_kev?: boolean
+  is_reachable?: boolean
+  epss_min?: number
+  /** Sort spec, e.g. 'priority_class,severity,-created_at'. */
+  sort?: string
   page?: number
   per_page?: number
 }
