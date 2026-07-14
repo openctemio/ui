@@ -36,6 +36,9 @@ import {
   Pencil,
   Trash2,
   UserPlus,
+  Search,
+  Target,
+  Link2,
   CheckCircle,
   ArrowRight,
   X,
@@ -97,6 +100,8 @@ import { getErrorMessage } from '@/lib/api/error-handler'
 import { patch, del } from '@/lib/api/client'
 import { useFindingsApi } from '@/features/findings/api/use-findings-api'
 import { AssigneeSelect } from '@/features/findings/components/assignee-select'
+import { FindingStatusBadge } from '@/features/findings/components/finding-status-badge'
+import type { FindingStatus } from '@/features/findings'
 import { useMembers } from '@/features/organization/api/use-members'
 import { useTenant } from '@/context/tenant-provider'
 import type { TaskStatus, TaskPriority, RemediationTask } from '@/features/remediation/types'
@@ -387,6 +392,23 @@ export default function RemediationPage() {
       return t
     })
   }, [campaignData, memberNameById])
+
+  // Which campaigns each finding is linked to. A finding CAN belong to more than
+  // one campaign (a finding_id may appear in several campaigns' filters — there's
+  // no uniqueness), so we surface the overlap in the picker rather than silently
+  // splitting ownership. Maps finding_id → the campaigns that reference it.
+  const findingCampaigns = useMemo(() => {
+    const m = new Map<string, Array<{ id: string; name: string }>>()
+    for (const c of campaignData?.data ?? []) {
+      const ids = (c.finding_filter?.finding_ids as string[] | undefined) ?? []
+      for (const fid of ids) {
+        const arr = m.get(fid) ?? []
+        arr.push({ id: c.id, name: c.name })
+        m.set(fid, arr)
+      }
+    }
+    return m
+  }, [campaignData])
 
   // ─── Computed ────────────────────────────────────────────────────
 
@@ -1356,6 +1378,7 @@ export default function RemediationPage() {
         onPatch={handleInlinePatch}
         findings={findings}
         memberNameById={memberNameById}
+        findingCampaigns={findingCampaigns}
         onCopyId={handleCopyId}
         onCopyLink={handleCopyLink}
         onOpenCampaign={(task) => router.push(`/remediation/${task.id}`)}
@@ -1422,12 +1445,15 @@ interface TaskDetailSheetProps {
     title?: string
     message?: string
     severity?: Severity
+    status?: string
     asset?: { name: string; type: string }
     assigned_to?: string
     assigned_to_user?: { name: string }
   }>
   /** UUID → display-name map so finding assignees render as names, not UUIDs. */
   memberNameById: Map<string, string>
+  /** finding_id → campaigns that already reference it (to flag cross-linking). */
+  findingCampaigns: Map<string, Array<{ id: string; name: string }>>
   onCopyId: (id: string) => void
   onCopyLink: (id: string) => void
   onOpenCampaign: (task: RemediationTask) => void
@@ -1441,6 +1467,7 @@ function TaskDetailSheet({
   onPatch,
   findings,
   memberNameById,
+  findingCampaigns,
   onCopyId,
   onCopyLink,
   onOpenCampaign,
@@ -1453,6 +1480,7 @@ function TaskDetailSheet({
   const [descDraft, setDescDraft] = useState(task?.description ?? '')
   const [dueOpen, setDueOpen] = useState(false)
   const [startOpen, setStartOpen] = useState(false)
+  const [pickerQuery, setPickerQuery] = useState('')
 
   if (!task) {
     return (
@@ -1777,18 +1805,53 @@ function TaskDetailSheet({
                     <Plus className="me-1 h-3 w-3" /> Manage
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-72 p-1" align="end">
-                  <div className="max-h-64 overflow-y-auto">
-                    {findings.length === 0 ? (
-                      <p className="p-2 text-xs text-muted-foreground">No findings available</p>
-                    ) : (
-                      findings.map((f) => {
+                <PopoverContent
+                  className="flex w-[22rem] max-w-[calc(100vw-2rem)] flex-col p-0"
+                  align="end"
+                >
+                  {/* Search — the open-findings list can be long (up to 100). */}
+                  <div className="border-b p-2">
+                    <div className="relative">
+                      <Search className="text-muted-foreground absolute start-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2" />
+                      <Input
+                        value={pickerQuery}
+                        onChange={(e) => setPickerQuery(e.target.value)}
+                        placeholder="Search title or asset…"
+                        className="h-8 ps-7 text-sm"
+                      />
+                    </div>
+                  </div>
+                  {/* Scrollable, info-rich rows so you can choose what to link with
+                      severity + asset + status in view (not title alone). */}
+                  <div className="max-h-[min(60vh,20rem)] overflow-y-auto overscroll-contain p-1">
+                    {(() => {
+                      const q = pickerQuery.trim().toLowerCase()
+                      const list = q
+                        ? findings.filter(
+                            (f) =>
+                              (f.title || f.message || '').toLowerCase().includes(q) ||
+                              (f.asset?.name || '').toLowerCase().includes(q)
+                          )
+                        : findings
+                      if (findings.length === 0)
+                        return (
+                          <p className="text-muted-foreground p-3 text-center text-xs">
+                            No open findings available to link.
+                          </p>
+                        )
+                      if (list.length === 0)
+                        return (
+                          <p className="text-muted-foreground p-3 text-center text-xs">
+                            No findings match “{pickerQuery}”.
+                          </p>
+                        )
+                      return list.map((f) => {
                         const linked = (task.findingIds ?? []).includes(f.id)
                         return (
                           <button
                             key={f.id}
                             type="button"
-                            className="flex w-full items-start gap-2 rounded px-2 py-1.5 text-start text-sm hover:bg-muted"
+                            className="hover:bg-muted flex w-full items-start gap-2 rounded px-2 py-2 text-start"
                             onClick={() =>
                               onPatch(task, {
                                 finding_filter: {
@@ -1799,12 +1862,64 @@ function TaskDetailSheet({
                               })
                             }
                           >
-                            <Checkbox checked={linked} className="mt-0.5 pointer-events-none" />
-                            <span className="line-clamp-2">{f.title || f.message || f.id}</span>
+                            <Checkbox checked={linked} className="pointer-events-none mt-0.5" />
+                            <div className="min-w-0 flex-1 space-y-1">
+                              <div className="flex items-center gap-1.5">
+                                {f.severity && (
+                                  <SeverityBadge severity={f.severity} className="shrink-0" />
+                                )}
+                                <span className="line-clamp-2 text-sm">
+                                  {f.title || f.message || f.id}
+                                </span>
+                              </div>
+                              <div className="text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px]">
+                                {f.status && (
+                                  <FindingStatusBadge
+                                    status={f.status as FindingStatus}
+                                    variant="outline"
+                                  />
+                                )}
+                                {f.asset?.name && (
+                                  <span className="inline-flex items-center gap-0.5 truncate">
+                                    <Target className="h-2.5 w-2.5 shrink-0" />
+                                    {f.asset.name}
+                                  </span>
+                                )}
+                                {f.assigned_to && (
+                                  <span className="inline-flex items-center gap-0.5 truncate">
+                                    <UserPlus className="h-2.5 w-2.5 shrink-0" />
+                                    {memberNameById.get(f.assigned_to) ||
+                                      f.assigned_to_user?.name ||
+                                      'Assigned'}
+                                  </span>
+                                )}
+                                {(() => {
+                                  // Flag if this finding is already handled by another
+                                  // campaign, so the user doesn't unknowingly split
+                                  // ownership across two remediation efforts.
+                                  const others = (findingCampaigns.get(f.id) ?? []).filter(
+                                    (c) => c.id !== task.id
+                                  )
+                                  if (others.length === 0) return null
+                                  return (
+                                    <span
+                                      className="inline-flex items-center gap-0.5 truncate text-amber-600 dark:text-amber-500"
+                                      title={others.map((c) => c.name).join(', ')}
+                                    >
+                                      <Link2 className="h-2.5 w-2.5 shrink-0" />
+                                      also in {others.length}
+                                    </span>
+                                  )
+                                })()}
+                              </div>
+                            </div>
                           </button>
                         )
                       })
-                    )}
+                    })()}
+                  </div>
+                  <div className="text-muted-foreground border-t px-3 py-1.5 text-[11px]">
+                    {task.findingIds?.length ?? 0} linked
                   </div>
                 </PopoverContent>
               </Popover>
