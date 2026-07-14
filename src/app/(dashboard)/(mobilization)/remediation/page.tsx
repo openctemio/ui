@@ -318,10 +318,13 @@ function getAvailableActions(status: TaskStatus) {
     case 'open': // draft → active
       return [{ action: 'start', label: 'Start Task', icon: Play, variant: 'default' as const }]
     case 'in_progress': // active → validating | paused
+      // 'validating' is the CTEM verify step (fix applied, confirm it worked) —
+      // NOT a hand-off to a reviewer. There is no reviewer role; the owner stays
+      // the assignee. Label it as a state change, not "send to someone".
       return [
         {
           action: 'review',
-          label: 'Send to Review',
+          label: 'Submit for Validation',
           icon: CheckCircle,
           variant: 'default' as const,
         },
