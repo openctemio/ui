@@ -97,6 +97,9 @@ import { CreateJiraEpicDialog } from '@/features/remediation/components/create-j
 import { getErrorMessage } from '@/lib/api/error-handler'
 import { patch, del } from '@/lib/api/client'
 import { useFindingsApi } from '@/features/findings/api/use-findings-api'
+import { AssigneeSelect, type AssigneeUser } from '@/features/findings/components/assignee-select'
+import { useMembers } from '@/features/organization/api/use-members'
+import { useTenant } from '@/context/tenant-provider'
 import type { TaskStatus, TaskPriority, RemediationTask } from '@/features/remediation/types'
 import type { Severity } from '@/features/shared/types'
 import { exportToCsv, type ExportFieldConfig } from '@/hooks/use-csv-export'
@@ -121,6 +124,7 @@ interface TaskFormData {
   priority: TaskPriority
   severity: Severity
   assigneeName: string
+  assignedTo: string
   dueDate: Date | undefined
   findingId: string
   estimatedHours: string
@@ -132,6 +136,7 @@ const emptyFormData: TaskFormData = {
   priority: 'medium',
   severity: 'medium',
   assigneeName: '',
+  assignedTo: '',
   dueDate: undefined,
   findingId: '',
   estimatedHours: '',
@@ -271,7 +276,7 @@ function campaignToTask(c: RemediationCampaign): RemediationTask {
     findingTitle: `${c.finding_count} finding${c.finding_count !== 1 ? 's' : ''} linked`,
     severity: (c.priority === 'critical' ? 'critical' : c.priority) as Severity,
     assigneeId: c.assigned_to || '',
-    assigneeName: c.assigned_team || '',
+    assigneeName: '', // resolved from the member list in the page (assigned_to is a UUID)
     dueDate: c.due_date || '',
     completedAt: c.completed_at || undefined,
     createdAt: c.created_at,
@@ -356,10 +361,25 @@ export default function RemediationPage() {
   } = useRemediationCampaigns()
   const { trigger: createCampaign } = useCreateRemediationCampaign()
 
+  // Resolve assignee UUIDs → display names via the tenant member list.
+  const { currentTenant } = useTenant()
+  const { members } = useMembers(currentTenant?.id)
+  const memberNameById = useMemo(() => {
+    const m = new Map<string, string>()
+    for (const mem of members) {
+      if (mem.user_id) m.set(mem.user_id, mem.name || mem.email || mem.user_id)
+    }
+    return m
+  }, [members])
+
   const tasks: RemediationTask[] = useMemo(() => {
     if (!campaignData?.data?.length) return []
-    return campaignData.data.map(campaignToTask)
-  }, [campaignData])
+    return campaignData.data.map((c) => {
+      const t = campaignToTask(c)
+      if (t.assigneeId) t.assigneeName = memberNameById.get(t.assigneeId) || t.assigneeId
+      return t
+    })
+  }, [campaignData, memberNameById])
 
   // ─── Computed ────────────────────────────────────────────────────
 
@@ -497,6 +517,7 @@ export default function RemediationPage() {
           priority: task.priority,
           severity: task.severity,
           assigneeName: task.assigneeName,
+          assignedTo: task.assigneeId || '',
           dueDate: dueDate && !isNaN(dueDate.getTime()) ? dueDate : undefined,
           findingId: task.findingId || 'none',
           estimatedHours: task.estimatedHours?.toString() || '',
@@ -601,7 +622,7 @@ export default function RemediationPage() {
         priority: formData.priority,
         status: 'draft',
         due_date: formData.dueDate?.toISOString() || null,
-        assigned_team: formData.assigneeName || null,
+        assigned_to: formData.assignedTo || undefined,
         tags: [],
         // Scope the task to the linked finding so it actually counts + resolves;
         // empty scope when nothing is linked.
@@ -627,7 +648,7 @@ export default function RemediationPage() {
         description: formData.description,
         priority: formData.priority,
         due_date: formData.dueDate?.toISOString() || null,
-        assigned_team: formData.assigneeName || null,
+        assigned_to: formData.assignedTo || '',
         finding_filter: findingFilterFromForm(formData.findingId),
       })
       await refreshCampaigns()
@@ -1758,6 +1779,28 @@ function TaskFormDialog({
                   />
                 </PopoverContent>
               </Popover>
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Assignee</Label>
+            <div>
+              <AssigneeSelect
+                variant="outline"
+                showFullName
+                placeholder="Assign to…"
+                value={
+                  formData.assignedTo
+                    ? { id: formData.assignedTo, name: formData.assigneeName || 'Assigned' }
+                    : null
+                }
+                onChange={(user) =>
+                  setFormData({
+                    ...formData,
+                    assignedTo: user?.id ?? '',
+                    assigneeName: user?.name ?? '',
+                  })
+                }
+              />
             </div>
           </div>
           <div className="space-y-1.5 min-w-0">
