@@ -13,9 +13,12 @@ export type TaskPriority = 'urgent' | 'high' | 'medium' | 'low'
 export const TASK_STATUS_LABELS: Record<TaskStatus, string> = {
   open: 'Open',
   in_progress: 'In Progress',
-  review: 'In Review',
+  // The campaign's "validating" state = re-scanning to verify the fix held. It
+  // is a verification step, not a peer review — label it as such.
+  review: 'Validating',
   completed: 'Completed',
-  blocked: 'Blocked',
+  // Maps the campaign's "paused" state: an intentional hold, not a dependency block.
+  blocked: 'On Hold',
 }
 
 export const TASK_PRIORITY_LABELS: Record<TaskPriority, string> = {
@@ -47,6 +50,9 @@ export interface RemediationTask {
   /** Validator (assigned_team) — who verifies the fix, separate from the fixer. */
   validatorId?: string
   validatorName?: string
+  /** True when the underlying campaign was canceled (folded into the 'completed'
+   *  vocab for the board, but shown/handled distinctly — a cancel is not a win). */
+  canceled?: boolean
   /** When work started. Auto-stamped when the task first moves to in-progress if
    *  not set explicitly. */
   startDate?: string

@@ -49,6 +49,7 @@ import {
   CalendarIcon,
   Save,
   Ban,
+  RotateCcw,
   ExternalLink,
   Clock,
   Hash,
@@ -276,6 +277,7 @@ function campaignToTask(c: RemediationCampaign): RemediationTask {
     title: c.name,
     description: c.description || '',
     status: normalizeStatus(c.status),
+    canceled: c.status === 'canceled',
     priority: normalizePriority(c.priority),
     findingId: linkedFindingIds[0] ?? '',
     findingIds: linkedFindingIds,
@@ -319,10 +321,11 @@ function applyTaskFilters(tasks: RemediationTask[], quickFilter: string, filters
 }
 
 /** Context-aware status actions — only the transitions the campaign state
- * machine allows (draft→active→validating→completed; completed is terminal).
- * Offering illegal moves (Block on Open, Complete from In Progress, Reopen on
- * Completed) just produced backend rejection toasts. */
-function getAvailableActions(status: TaskStatus) {
+ * machine allows. The full loop:
+ *   open→in_progress→validating→completed, with on-hold as a side state,
+ *   validation-fail looping back to in_progress, and a manual reopen of a
+ *   completed task (regression). Canceled is terminal (no actions). */
+function getAvailableActions(status: TaskStatus, isCanceled = false) {
   switch (status) {
     case 'open': // draft → active
       return [{ action: 'start', label: 'Start Task', icon: Play, variant: 'default' as const }]
@@ -337,16 +340,26 @@ function getAvailableActions(status: TaskStatus) {
           icon: CheckCircle,
           variant: 'default' as const,
         },
-        { action: 'block', label: 'Block', icon: Ban, variant: 'outline' as const },
+        { action: 'block', label: 'Put on hold', icon: Ban, variant: 'outline' as const },
       ]
-    case 'review': // validating → completed (no validating→active path in the domain)
+    case 'review': // validating → completed | active (validation failed → rework)
       return [
         { action: 'complete', label: 'Complete', icon: CheckCircle, variant: 'default' as const },
+        {
+          action: 'fail',
+          label: 'Validation failed — back to work',
+          icon: RotateCcw,
+          variant: 'outline' as const,
+        },
       ]
     case 'blocked': // paused → active
-      return [{ action: 'start', label: 'Unblock', icon: Play, variant: 'default' as const }]
-    case 'completed': // terminal
-      return []
+      return [{ action: 'start', label: 'Resume', icon: Play, variant: 'default' as const }]
+    case 'completed':
+      // A canceled task is terminal; a genuinely completed one can be reopened
+      // (e.g. a resolved finding regressed).
+      return isCanceled
+        ? []
+        : [{ action: 'reopen', label: 'Reopen', icon: RotateCcw, variant: 'outline' as const }]
     default:
       return []
   }
@@ -608,6 +621,10 @@ export default function RemediationPage() {
         review: 'validating',
         complete: 'completed',
         block: 'paused',
+        // validation failed → back to active work; reopen a completed campaign →
+        // active. The backend routes active-from-completed to Reopen().
+        fail: 'active',
+        reopen: 'active',
       }
       const apiStatus = statusMap[action]
       if (apiStatus) {
@@ -840,11 +857,14 @@ export default function RemediationPage() {
       {
         accessorKey: 'status',
         header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
-        cell: ({ row }) => (
-          <Badge className={`${statusColors[row.original.status]} text-xs`}>
-            {TASK_STATUS_LABELS[row.original.status]}
-          </Badge>
-        ),
+        cell: ({ row }) =>
+          row.original.canceled ? (
+            <Badge className="bg-muted text-muted-foreground text-xs">Canceled</Badge>
+          ) : (
+            <Badge className={`${statusColors[row.original.status]} text-xs`}>
+              {TASK_STATUS_LABELS[row.original.status]}
+            </Badge>
+          ),
       },
       {
         accessorKey: 'severity',
@@ -900,7 +920,7 @@ export default function RemediationPage() {
         id: 'actions',
         cell: ({ row }) => {
           const task = row.original
-          const statusActions = getAvailableActions(task.status)
+          const statusActions = getAvailableActions(task.status, task.canceled)
           const rowActions: RowAction[] = [
             {
               label: 'View Details',
@@ -1496,7 +1516,7 @@ function TaskDetailSheet({
 
   const overdue = checkOverdue(task)
   const due = daysUntil(task.dueDate)
-  const actions = getAvailableActions(task.status)
+  const actions = getAvailableActions(task.status, task.canceled)
 
   const saveTitle = () => {
     setEditingTitle(false)
@@ -1639,9 +1659,13 @@ function TaskDetailSheet({
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
-            <Badge className={`${statusColors[task.status]} text-xs h-5`}>
-              {TASK_STATUS_LABELS[task.status]}
-            </Badge>
+            {task.canceled ? (
+              <Badge className="bg-muted text-muted-foreground h-5 text-xs">Canceled</Badge>
+            ) : (
+              <Badge className={`${statusColors[task.status]} text-xs h-5`}>
+                {TASK_STATUS_LABELS[task.status]}
+              </Badge>
+            )}
             <SeverityBadge severity={task.severity} />
             {overdue && (
               <Badge variant="outline" className="border-red-500/50 text-red-500 text-xs h-5">
