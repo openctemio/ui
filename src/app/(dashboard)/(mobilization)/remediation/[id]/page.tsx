@@ -429,13 +429,18 @@ export default function CampaignDetailPage() {
             </div>
             <Progress value={campaign.progress} className="h-2" />
             {campaign.finding_count > campaign.resolved_count ? (
-              <Can permission={Permission.RemediationWrite}>
-                <div className="flex justify-end pt-1">
-                  <Button size="sm" onClick={() => setResolveOpen(true)}>
+              <div className="flex items-center justify-between gap-2 pt-1">
+                {(campaign.status === 'active' || campaign.status === 'validating') && (
+                  <span className="text-muted-foreground text-xs">
+                    Auto-completes when all findings are resolved.
+                  </span>
+                )}
+                <Can permission={Permission.RemediationWrite}>
+                  <Button size="sm" className="ms-auto" onClick={() => setResolveOpen(true)}>
                     Resolve open findings
                   </Button>
-                </div>
-              </Can>
+                </Can>
+              </div>
             ) : null}
           </CardContent>
         </Card>
