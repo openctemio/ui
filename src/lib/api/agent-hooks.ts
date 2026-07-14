@@ -57,6 +57,15 @@ const defaultConfig: SWRConfiguration = {
   },
 }
 
+// For endpoints where a 404 means "no data yet" (a fresh or idle agent has no
+// sessions/stats/analytics). Surfacing that as a "Not Found" toast is wrong —
+// it's a normal empty state the UI already renders. Toast only non-404 errors.
+const suppress404OnError: SWRConfiguration['onError'] = (error) => {
+  if (error?.statusCode !== 404) {
+    handleApiError(error, { showToast: true, logError: true })
+  }
+}
+
 // ============================================
 // CACHE KEYS
 // ============================================
@@ -239,12 +248,7 @@ export function useActiveAgentSession(agentId: string | null, config?: SWRConfig
 
   return useSWR<AgentSession | null>(key, fetchActiveSession, {
     ...defaultConfig,
-    // Don't show error toast for 404 (no active session)
-    onError: (error) => {
-      if (error?.statusCode !== 404) {
-        handleApiError(error, { showToast: true, logError: true })
-      }
-    },
+    onError: suppress404OnError, // no active session (404) is a normal state
     ...config,
   })
 }
@@ -263,6 +267,7 @@ export function useAgentSessionStats(
 
   return useSWR<AgentSessionStats>(key, fetchSessionStats, {
     ...defaultConfig,
+    onError: suppress404OnError, // a fresh/idle agent has no stats yet (404)
     ...config,
   })
 }
@@ -281,6 +286,7 @@ export function useAgentDailyStats(
 
   return useSWR<AgentDailyStatsListResponse>(key, fetchDailyStats, {
     ...defaultConfig,
+    onError: suppress404OnError, // a fresh/idle agent has no daily stats yet (404)
     ...config,
   })
 }
