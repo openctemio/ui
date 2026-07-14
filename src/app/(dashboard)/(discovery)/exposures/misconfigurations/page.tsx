@@ -11,6 +11,7 @@ import {
   getRiskLevel,
 } from '@/features/shared'
 import { useDashboardStats } from '@/features/dashboard/hooks/use-dashboard-stats'
+import { useFindingTypeStats } from '@/features/exposures/hooks'
 import { useTenant } from '@/context/tenant-provider'
 import {
   BarChart,
@@ -109,17 +110,22 @@ function LoadingSkeleton() {
 
 export default function MisconfigurationsPage() {
   const { currentTenant } = useTenant()
-  const { stats, isLoading } = useDashboardStats(currentTenant?.id || null)
+  const tenantId = currentTenant?.id || null
+  // Org-wide context (asset coverage + asset-type mix) has no per-type variant.
+  const { stats, isLoading: dashboardLoading } = useDashboardStats(tenantId)
+  // Type-scoped finding stats: misconfigurations come from IaC scanning.
+  const { stats: typeStats, isLoading: typeLoading } = useFindingTypeStats(tenantId, ['iac'])
+  const isLoading = dashboardLoading || typeLoading
 
-  const criticalCount = stats.findings.bySeverity.critical || 0
+  const criticalCount = typeStats.bySeverity.critical || 0
 
   const severityBarData = useMemo(() => {
     return SEVERITY_ORDER.map((severity) => ({
       name: SEVERITY_LABELS[severity],
-      count: stats.findings.bySeverity[severity] || 0,
+      count: typeStats.bySeverity[severity] || 0,
       fill: SEVERITY_COLORS[severity],
     })).filter((d) => d.count > 0)
-  }, [stats.findings.bySeverity])
+  }, [typeStats.bySeverity])
 
   const assetTypeData = useMemo(() => {
     const byType = stats.assets.byType || {}
@@ -134,9 +140,9 @@ export default function MisconfigurationsPage() {
   }, [stats.assets.byType])
 
   const priorityFixes = useMemo(() => {
-    const total = stats.findings.total
+    const total = typeStats.total
     return SEVERITY_ORDER.map((severity) => {
-      const count = stats.findings.bySeverity[severity] || 0
+      const count = typeStats.bySeverity[severity] || 0
       const percentage = total > 0 ? (count / total) * 100 : 0
       return {
         severity,
@@ -146,9 +152,9 @@ export default function MisconfigurationsPage() {
         color: SEVERITY_COLORS[severity],
       }
     }).filter((item) => item.count > 0)
-  }, [stats.findings.bySeverity, stats.findings.total])
+  }, [typeStats.bySeverity, typeStats.total])
 
-  const hasData = stats.findings.total > 0
+  const hasData = typeStats.total > 0
 
   return (
     <Main>
@@ -170,7 +176,7 @@ export default function MisconfigurationsPage() {
         <>
           {/* Stats Row */}
           <section className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-            <StatsCard title="Total Findings" value={stats.findings.total} icon={Settings2} />
+            <StatsCard title="Total Findings" value={typeStats.total} icon={Settings2} />
             <StatsCard
               title="Critical Misconfigs"
               value={criticalCount}
@@ -187,9 +193,9 @@ export default function MisconfigurationsPage() {
             />
             <StatsCard
               title="Risk Score"
-              value={formatRiskScore(stats.assets.riskScore)}
-              changeType={getRiskScoreChangeType(stats.assets.riskScore)}
-              change={`${getRiskLevel(stats.assets.riskScore).label} risk`}
+              value={formatRiskScore(typeStats.riskScore)}
+              changeType={getRiskScoreChangeType(typeStats.riskScore)}
+              change={`${getRiskLevel(typeStats.riskScore).label} risk`}
               icon={Shield}
             />
           </section>

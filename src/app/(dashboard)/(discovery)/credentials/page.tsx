@@ -99,12 +99,10 @@ import { AssetGroupSelect } from '@/features/asset-groups'
 import type { Status } from '@/features/shared/types'
 import {
   useCredentialsApi,
-  useCredentialStatsApi,
   useCredentialIdentitiesApi,
   useRelatedCredentialsApi,
   useIdentityExposuresApi,
   mapCredentialsToAssets,
-  extractCredentialStats,
   invalidateCredentialsCache,
 } from '@/features/credentials'
 import { getErrorMessage } from '@/lib/api/error-handler'
@@ -204,8 +202,17 @@ export default function CredentialsPage() {
     search: globalFilter || undefined,
   })
 
-  // Fetch stats from API
-  const { data: apiStats, isLoading: statsLoading } = useCredentialStatsApi()
+  // Fetch the full credential set (all states, unfiltered) to derive the KPI
+  // stat cards and the status-filter counts. These MUST be derived from the
+  // same credentials list that feeds the table — a separate /stats aggregate
+  // endpoint can drift out of sync with the list, showing phantom counts (e.g.
+  // "3 active leaks") while the table itself renders zero rows. Deriving the
+  // counts here from the list endpoint (the source of truth) guarantees the
+  // cards and the table can never contradict each other.
+  const { data: allCredentialsResponse, isLoading: statsLoading } = useCredentialsApi({
+    page: 1,
+    page_size: 1000,
+  })
 
   // Fetch identities (grouped by username/email) for identity view
   const { data: identitiesResponse, isLoading: identitiesLoading } = useCredentialIdentitiesApi({
@@ -221,8 +228,34 @@ export default function CredentialsPage() {
     return mapCredentialsToAssets(apiResponse.items)
   }, [apiResponse])
 
-  // Extract stats
-  const stats = useMemo(() => extractCredentialStats(apiStats), [apiStats])
+  // Derive stats from the full credentials list (source of truth) so the KPI
+  // cards always agree with the table below.
+  const stats = useMemo(() => {
+    const items = allCredentialsResponse?.items ?? []
+    const derived = {
+      total: allCredentialsResponse?.total ?? items.length,
+      active: 0,
+      resolved: 0,
+      accepted: 0,
+      falsePositive: 0,
+      critical: 0,
+      high: 0,
+      medium: 0,
+      low: 0,
+    }
+    for (const c of items) {
+      if (c.state === 'active') derived.active += 1
+      else if (c.state === 'resolved') derived.resolved += 1
+      else if (c.state === 'accepted') derived.accepted += 1
+      else if (c.state === 'false_positive') derived.falsePositive += 1
+
+      if (c.severity === 'critical') derived.critical += 1
+      else if (c.severity === 'high') derived.high += 1
+      else if (c.severity === 'medium') derived.medium += 1
+      else if (c.severity === 'low') derived.low += 1
+    }
+    return derived
+  }, [allCredentialsResponse])
 
   const [selectedCredential, setSelectedCredential] = useState<Asset | null>(null)
   const [sorting, setSorting] = useState<SortingState>([])
