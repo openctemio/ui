@@ -99,6 +99,7 @@ function buildFindingsEndpoint(filters?: FindingApiFilters): string {
   if (filters.is_in_kev) params.set('is_in_kev', 'true')
   if (filters.is_reachable) params.set('is_reachable', 'true')
   if (filters.epss_min != null) params.set('epss_min', String(filters.epss_min))
+  if (filters.finding_ids?.length) params.set('finding_ids', filters.finding_ids.join(','))
   if (filters.sort) params.set('sort', filters.sort)
 
   const queryString = params.toString()
