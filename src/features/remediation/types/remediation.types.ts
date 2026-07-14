@@ -35,6 +35,8 @@ export interface RemediationTask {
   status: TaskStatus
   priority: TaskPriority
   findingId: string
+  /** All explicitly-linked findings (a task can cover many — one fix, many findings). */
+  findingIds?: string[]
   findingTitle: string
   severity: Severity
   assetId?: string
@@ -42,6 +44,12 @@ export interface RemediationTask {
   assigneeId: string
   assigneeName: string
   assigneeAvatar?: string
+  /** Validator (assigned_team) — who verifies the fix, separate from the fixer. */
+  validatorId?: string
+  validatorName?: string
+  /** When work started. Auto-stamped when the task first moves to in-progress if
+   *  not set explicitly. */
+  startDate?: string
   dueDate: string
   completedAt?: string
   estimatedHours?: number
