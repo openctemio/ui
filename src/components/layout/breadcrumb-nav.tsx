@@ -37,6 +37,10 @@ const routeLabels: Record<string, string> = {
   cloud: 'Cloud Assets',
   credentials: 'Credential Leaks',
 
+  // Identities (roadmap)
+  'api-keys': 'API Keys',
+  'oauth-apps': 'OAuth Apps',
+
   // Prioritization
   prioritization: 'Prioritization',
   'risk-analysis': 'Risk Analysis',
@@ -56,6 +60,8 @@ const routeLabels: Record<string, string> = {
   settings: 'Settings',
   users: 'Users',
   integrations: 'Integrations',
+  siem: 'SIEM',
+  cicd: 'CI/CD',
   runners: 'Runners',
   tenant: 'Tenant',
 }
