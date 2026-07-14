@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { ColumnDef } from '@tanstack/react-table'
 import { Main } from '@/components/layout'
@@ -277,6 +277,8 @@ function campaignToTask(c: RemediationCampaign): RemediationTask {
     severity: (c.priority === 'critical' ? 'critical' : c.priority) as Severity,
     assigneeId: c.assigned_to || '',
     assigneeName: '', // resolved from the member list in the page (assigned_to is a UUID)
+    validatorId: c.assigned_team || '',
+    validatorName: '', // resolved from the member list in the page
     dueDate: c.due_date || '',
     completedAt: c.completed_at || undefined,
     createdAt: c.created_at,
@@ -380,6 +382,7 @@ export default function RemediationPage() {
     return campaignData.data.map((c) => {
       const t = campaignToTask(c)
       if (t.assigneeId) t.assigneeName = memberNameById.get(t.assigneeId) || t.assigneeId
+      if (t.validatorId) t.validatorName = memberNameById.get(t.validatorId) || t.validatorId
       return t
     })
   }, [campaignData, memberNameById])
@@ -426,6 +429,25 @@ export default function RemediationPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [formData, setFormData] = useState<TaskFormData>(emptyFormData)
   const [dueDateOpen, setDueDateOpen] = useState(false)
+
+  // Keep the open drawer in sync with the latest task data (after inline edits).
+  useEffect(() => {
+    setViewTask((prev) => (prev ? (tasks.find((t) => t.id === prev.id) ?? prev) : prev))
+  }, [tasks])
+
+  // Inline field edit from the drawer (Jira-style): PATCH one field, refresh.
+  const handleInlinePatch = useCallback(
+    async (task: RemediationTask, body: Record<string, unknown>) => {
+      try {
+        await patch(`/api/v1/remediation/campaigns/${task.id}`, body)
+        await refreshCampaigns()
+        toast.success('Task updated')
+      } catch (err) {
+        toast.error(getErrorMessage(err, 'Failed to update task'))
+      }
+    },
+    [refreshCampaigns]
+  )
 
   const assignees = useMemo(
     () => [...new Set(tasks.map((t) => t.assigneeName).filter(Boolean))],
@@ -1311,6 +1333,7 @@ export default function RemediationPage() {
           setDeleteTask(task)
         }}
         onAction={handleTaskAction}
+        onPatch={handleInlinePatch}
         onCopyId={handleCopyId}
         onCopyLink={handleCopyLink}
         onOpenCampaign={(task) => router.push(`/remediation/${task.id}`)}
@@ -1372,6 +1395,7 @@ interface TaskDetailSheetProps {
   onEdit: (task: RemediationTask) => void
   onDelete: (task: RemediationTask) => void
   onAction: (action: string, task: RemediationTask) => void
+  onPatch: (task: RemediationTask, body: Record<string, unknown>) => void | Promise<void>
   onCopyId: (id: string) => void
   onCopyLink: (id: string) => void
   onOpenCampaign: (task: RemediationTask) => void
@@ -1383,6 +1407,7 @@ function TaskDetailSheet({
   onEdit,
   onDelete,
   onAction,
+  onPatch,
   onCopyId,
   onCopyLink,
   onOpenCampaign,
@@ -1530,18 +1555,18 @@ function TaskDetailSheet({
               icon={<UserPlus className="h-3.5 w-3.5 text-muted-foreground" />}
               label="Assignee"
             >
-              {task.assigneeName ? (
-                <div className="flex items-center gap-1.5">
-                  <Avatar className="h-5 w-5">
-                    <AvatarFallback className="text-[9px]">
-                      {getInitials(task.assigneeName)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="text-sm font-medium truncate">{task.assigneeName}</span>
-                </div>
-              ) : (
-                <span className="text-sm text-muted-foreground">Unassigned</span>
-              )}
+              {/* Inline edit (Jira-style): pick a member → PATCH assigned_to. */}
+              <AssigneeSelect
+                variant="ghost"
+                showFullName
+                placeholder="Assign"
+                value={
+                  task.assigneeId
+                    ? { id: task.assigneeId, name: task.assigneeName || 'Assigned' }
+                    : null
+                }
+                onChange={(user) => onPatch(task, { assigned_to: user?.id ?? '' })}
+              />
             </InfoCard>
 
             <InfoCard
@@ -1563,6 +1588,28 @@ function TaskDetailSheet({
                 </span>
               )}
             </InfoCard>
+
+            {/* Validator (assigned_team) — the person who verifies the fix. Shown
+                once the task is in validation, so the fixer and the verifier are
+                explicitly different people (segregation of duties). */}
+            {task.status === 'review' && (
+              <InfoCard
+                icon={<CheckCircle className="h-3.5 w-3.5 text-muted-foreground" />}
+                label="Validator"
+              >
+                <AssigneeSelect
+                  variant="ghost"
+                  showFullName
+                  placeholder="Assign validator"
+                  value={
+                    task.validatorId
+                      ? { id: task.validatorId, name: task.validatorName || 'Assigned' }
+                      : null
+                  }
+                  onChange={(user) => onPatch(task, { assigned_team: user?.id ?? '' })}
+                />
+              </InfoCard>
+            )}
           </div>
 
           {/* Description */}

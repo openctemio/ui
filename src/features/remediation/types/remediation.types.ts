@@ -42,6 +42,9 @@ export interface RemediationTask {
   assigneeId: string
   assigneeName: string
   assigneeAvatar?: string
+  /** Validator (assigned_team) — who verifies the fix, separate from the fixer. */
+  validatorId?: string
+  validatorName?: string
   dueDate: string
   completedAt?: string
   estimatedHours?: number
