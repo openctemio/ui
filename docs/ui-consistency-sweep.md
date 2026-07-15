@@ -28,7 +28,16 @@ Plan (batched — colors change → verify on device between batches):
 - [ ] **Batch 2 (colors change):** collapse the 2 `SeverityBadge` dups → the shared
       one; migrate the 4 other exported maps (finding.types, lib/api/finding-types,
       lib/api/exposure-types, notifications/outbox) to the matching variant.
-- [ ] **Batch 3 (needs per-site triage — NOT a blind sweep):** the inventory's
+- [~] **Batch 3 (mostly DONE — #283):** migrated 22 severity maps across 18 files
+  to the source (SOLID/SOFT/LIGHT/TEXT/DOT/CHART per site); fixed another
+  low green→blue (overview-tab). SKIPPED 13 correctly: criticality maps
+  (exposure-chains/attack-paths/assets[id]/component+vuln CRITICALITY_BADGE),
+  priority, audit-domain (audit-types 4-level), and shapes with no matching
+  variant (bg-only maps, gradient/ring, icon+color split-configs). Residual
+  tail (deferred, low value): `activity-panel.tsx` low still green (no matching
+  variant); a few bg-only + split-config maps. Colors CHANGED on ~18 pages —
+  verify on device.
+- [x] **Batch 3 (original triage note):** the inventory's
       "31 inline severity maps" grepped `critical: bg-…` and so INCLUDES maps that
       are actually **Criticality** (business importance) or **Priority**, not finding
       severity — e.g. the scoping pages' `criticalityColors` (business-services,

@@ -36,6 +36,7 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
 import { copyToClipboard } from '@/lib/clipboard'
 import { cn, sanitizeExternalUrl } from '@/lib/utils'
+import { SEVERITY_DOT_COLORS, type SeverityLevel } from '@/lib/severity-colors'
 import { toast } from 'sonner'
 import { EcosystemBadge } from './ecosystem-badge'
 import { SeverityBadge } from './severity-badge'
@@ -565,13 +566,7 @@ export function ComponentDetailSheet({ component, open, onOpenChange }: Componen
                       }
                     >
                       <div
-                        className={cn(
-                          'h-1',
-                          v.severity === 'critical' && 'bg-red-500',
-                          v.severity === 'high' && 'bg-orange-500',
-                          v.severity === 'medium' && 'bg-yellow-500',
-                          v.severity === 'low' && 'bg-blue-500'
-                        )}
+                        className={cn('h-1', SEVERITY_DOT_COLORS[v.severity as SeverityLevel])}
                       />
                       <CardContent className="pt-4">
                         <div className="flex items-start justify-between gap-2 mb-2">
