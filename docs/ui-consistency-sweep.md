@@ -28,8 +28,16 @@ Plan (batched — colors change → verify on device between batches):
 - [ ] **Batch 2 (colors change):** collapse the 2 `SeverityBadge` dups → the shared
       one; migrate the 4 other exported maps (finding.types, lib/api/finding-types,
       lib/api/exposure-types, notifications/outbox) to the matching variant.
-- [ ] **Batch 3:** migrate the 31 inline object-literals + 11 `switch(severity)` +
-      5 `getSeverityColor` + 7 JSX ternaries. (Full path:line list in the inventory.)
+- [ ] **Batch 3 (needs per-site triage — NOT a blind sweep):** the inventory's
+      "31 inline severity maps" grepped `critical: bg-…` and so INCLUDES maps that
+      are actually **Criticality** (business importance) or **Priority**, not finding
+      severity — e.g. the scoping pages' `criticalityColors` (business-services,
+      business-units, asset-groups, attack-surface/*). Those intentionally use
+      **green for low** (low criticality = good) and must NOT be folded into the
+      severity source (which is blue-for-low). Batch 3 = migrate ONLY genuine
+      finding/vuln **severity** sites; leave criticality/priority maps (or give
+      them their own `criticality-colors.ts` source in a later pass). Triage each
+      site against what it renders before migrating.
 
 Competing sources to retire (Batch 2):
 
