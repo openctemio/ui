@@ -7,6 +7,7 @@ import { Main } from '@/components/layout'
 import { RiskScoreBadge, StatsCard, EmptyState } from '@/features/shared'
 import { copyToClipboard } from '@/lib/clipboard'
 import { Can, Permission } from '@/lib/permissions'
+import { CRITICALITY_BADGE_SOFT } from '@/lib/criticality-colors'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
@@ -78,12 +79,7 @@ import {
 } from '@/features/asset-groups'
 import { useCsvExport, type ExportFieldConfig } from '@/hooks/use-csv-export'
 
-const criticalityColors: Record<string, string> = {
-  critical: 'bg-red-500 text-white',
-  high: 'bg-orange-500 text-white',
-  medium: 'bg-yellow-500 text-black',
-  low: 'bg-blue-500 text-white',
-}
+const criticalityColors: Record<string, string> = CRITICALITY_BADGE_SOFT
 
 const environmentColors: Record<string, string> = {
   production: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100',
@@ -517,7 +513,9 @@ function AssetGroupDetailContent({ params }: PageProps) {
             <Badge variant="outline" className={environmentColors[group.environment]}>
               {group.environment}
             </Badge>
-            <Badge className={criticalityColors[group.criticality]}>{group.criticality}</Badge>
+            <Badge variant="outline" className={criticalityColors[group.criticality]}>
+              {group.criticality}
+            </Badge>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={handleCopyId}>
@@ -715,7 +713,7 @@ function AssetGroupDetailContent({ params }: PageProps) {
                     <Separator />
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Criticality</span>
-                      <Badge className={criticalityColors[group.criticality]}>
+                      <Badge variant="outline" className={criticalityColors[group.criticality]}>
                         {group.criticality}
                       </Badge>
                     </div>
