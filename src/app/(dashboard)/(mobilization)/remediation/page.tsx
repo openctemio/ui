@@ -39,6 +39,7 @@ import {
   Search,
   Target,
   Link2,
+  Check,
   CheckCircle,
   ArrowRight,
   X,
@@ -1862,7 +1863,18 @@ function TaskDetailSheet({
                               })
                             }
                           >
-                            <Checkbox checked={linked} className="pointer-events-none mt-0.5" />
+                            {/* Visual-only check box — a real <Checkbox> renders a
+                                <button>, which can't nest inside this row button. */}
+                            <span
+                              aria-hidden="true"
+                              className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-[4px] border ${
+                                linked
+                                  ? 'border-primary bg-primary text-primary-foreground'
+                                  : 'border-input'
+                              }`}
+                            >
+                              {linked && <Check className="h-3 w-3" />}
+                            </span>
                             <div className="min-w-0 flex-1 space-y-1">
                               <div className="flex items-center gap-1.5">
                                 {f.severity && (
@@ -2244,7 +2256,16 @@ function TaskFormDialog({
                             })
                           }
                         >
-                          <Checkbox checked={checked} className="mt-0.5 pointer-events-none" />
+                          <span
+                            aria-hidden="true"
+                            className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-[4px] border ${
+                              checked
+                                ? 'border-primary bg-primary text-primary-foreground'
+                                : 'border-input'
+                            }`}
+                          >
+                            {checked && <Check className="h-3 w-3" />}
+                          </span>
                           <span className="line-clamp-2">{f.title || f.message || f.id}</span>
                         </button>
                       )
