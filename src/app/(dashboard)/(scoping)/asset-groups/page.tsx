@@ -75,6 +75,7 @@ import type { AssetGroup, CreateAssetGroupInput } from '@/features/asset-groups/
 import type { AssetGroupApiFilters } from '@/features/asset-groups/api'
 import { copyToClipboard } from '@/lib/clipboard'
 import { Can, Permission } from '@/lib/permissions'
+import { CRITICALITY_BADGE_SOFT } from '@/lib/criticality-colors'
 import { useCsvExport, type ExportFieldConfig } from '@/hooks/use-csv-export'
 
 // ============================================
@@ -84,12 +85,7 @@ import { useCsvExport, type ExportFieldConfig } from '@/hooks/use-csv-export'
 type Environment = 'production' | 'staging' | 'development' | 'testing'
 type Criticality = 'critical' | 'high' | 'medium' | 'low'
 
-const CRITICALITY_BADGE: Record<string, string> = {
-  critical: 'bg-red-500 text-white',
-  high: 'bg-orange-500 text-white',
-  medium: 'bg-yellow-500 text-black',
-  low: 'bg-blue-500 text-white',
-}
+const CRITICALITY_BADGE: Record<string, string> = CRITICALITY_BADGE_SOFT
 
 const ENVIRONMENT_BADGE: Record<string, string> = {
   production: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100',
@@ -473,7 +469,7 @@ export default function AssetGroupsPage() {
       accessorKey: 'criticality',
       header: ({ column }) => <DataTableColumnHeader column={column} title="Criticality" />,
       cell: ({ row }) => (
-        <Badge className={CRITICALITY_BADGE[row.original.criticality]}>
+        <Badge variant="outline" className={CRITICALITY_BADGE[row.original.criticality]}>
           {row.original.criticality}
         </Badge>
       ),
@@ -637,7 +633,7 @@ export default function AssetGroupsPage() {
                       {(['critical', 'high', 'medium', 'low'] as Criticality[]).map((crit) => (
                         <Badge
                           key={crit}
-                          variant={filters.criticalities.includes(crit) ? 'default' : 'outline'}
+                          variant="outline"
                           className={`cursor-pointer ${
                             filters.criticalities.includes(crit)
                               ? CRITICALITY_BADGE[crit]
@@ -791,7 +787,9 @@ export default function AssetGroupsPage() {
                         key={crit}
                         onClick={() => handleBulkAction('change-criticality', crit)}
                       >
-                        <Badge className={`me-2 ${CRITICALITY_BADGE[crit]}`}>{crit}</Badge>
+                        <Badge variant="outline" className={`me-2 ${CRITICALITY_BADGE[crit]}`}>
+                          {crit}
+                        </Badge>
                       </DropdownMenuItem>
                     ))}
                   </DropdownMenuContent>
