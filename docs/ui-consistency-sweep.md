@@ -64,9 +64,16 @@ Nav source: `src/config/sidebar-data.ts`. 167 dashboard pages, ~93 linked.
   linked in the sidebar (coming-soon integration pages). `settings/integrations/apps`
   left in place (settings-hub reachable; harmless).
 
-### B2 — Surface in sidebar (real, built-out subtrees) — status: [ ]
+### B2 — Surface in sidebar (real, built-out subtrees) — status: [x] DONE
 
-Sidebar currently links only the parent; children are real but orphaned:
+Converted bare parents into collapsibles + added children in `sidebar-data.ts`
+(Scoping/Discovery/Prioritization/Validation/Mobilization/Insights). Module gating:
+guarded routes inherit/set the exact module their route-guard enforces; guard-less
+routes get a permission but no module (fail-open, stays visible). Insights reports
+group named "Report Center" to avoid clashing with the existing "Reports" link.
+Verified: tsc + eslint clean, `sidebar-route-consistency` 90/90.
+
+Original list (all surfaced):
 
 - Validation: `/controls/{list,gaps,effectiveness}`, `/response/{detection,playbooks,time}`,
   `/simulation/{campaigns,scenarios,results}`
