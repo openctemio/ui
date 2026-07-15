@@ -222,7 +222,10 @@ export function LinkFindingsToRemediationDialog({
                 className="ps-7"
               />
             </div>
-            <div className="max-h-72 space-y-1 overflow-y-auto overscroll-contain">
+            <div
+              className="max-h-72 space-y-1 overflow-y-auto overscroll-contain"
+              style={{ touchAction: 'pan-y', WebkitOverflowScrolling: 'touch' }}
+            >
               {campaignsLoading ? (
                 <div className="text-muted-foreground flex items-center justify-center gap-2 py-6 text-sm">
                   <Loader2 className="h-4 w-4 animate-spin" /> Loading tasks…
