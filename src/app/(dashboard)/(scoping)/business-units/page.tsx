@@ -69,14 +69,9 @@ import {
   useUpdateBusinessUnit,
 } from '@/features/business-units/api/use-business-units'
 import { del } from '@/lib/api/client'
+import { CRITICALITY_BADGE_SOFT } from '@/lib/criticality-colors'
 
-const criticalityColors: Record<Criticality, string> = {
-  critical: 'bg-red-500/10 text-red-500 border-red-500/20 dark:bg-red-900/30 dark:text-red-400',
-  high: 'bg-orange-500/10 text-orange-500 border-orange-500/20 dark:bg-orange-900/30 dark:text-orange-400',
-  medium:
-    'bg-yellow-500/10 text-yellow-500 border-yellow-500/20 dark:bg-yellow-900/30 dark:text-yellow-400',
-  low: 'bg-green-500/10 text-green-500 border-green-500/20 dark:bg-green-900/30 dark:text-green-400',
-}
+const criticalityColors: Record<Criticality, string> = CRITICALITY_BADGE_SOFT
 
 const riskToleranceLabels: Record<RiskTolerance, string> = {
   very_low: 'Very Low',

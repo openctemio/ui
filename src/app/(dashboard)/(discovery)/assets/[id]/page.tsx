@@ -25,13 +25,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { PageHeader } from '@/features/shared'
 import { useAsset } from '@/features/assets'
 import { cn } from '@/lib/utils'
+import { CRITICALITY_TEXT_COLORS } from '@/lib/criticality-colors'
 
-const CRITICALITY_COLOR: Record<string, string> = {
-  critical: 'text-red-600',
-  high: 'text-orange-600',
-  medium: 'text-yellow-600',
-  low: 'text-blue-600',
-}
+const CRITICALITY_COLOR: Record<string, string> = CRITICALITY_TEXT_COLORS
 
 // Map asset_type → category route slug used in /assets/<slug>/ listings.
 // Matches the directory structure in app/(dashboard)/(discovery)/assets/.

@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Progress } from '@/components/ui/progress'
 import { cn } from '@/lib/utils'
+import { CRITICALITY_BADGE_SOFT, type CriticalityLevel } from '@/lib/criticality-colors'
 import {
   Route,
   ShieldAlert,
@@ -34,18 +35,7 @@ function capitalize(s: string): string {
 }
 
 function getCriticalityClass(criticality: string) {
-  switch (criticality) {
-    case 'critical':
-      return 'bg-red-500/10 text-red-500 border-red-500/20'
-    case 'high':
-      return 'bg-orange-500/10 text-orange-500 border-orange-500/20'
-    case 'medium':
-      return 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
-    case 'low':
-      return 'bg-blue-500/10 text-blue-500 border-blue-500/20'
-    default:
-      return 'bg-muted text-muted-foreground'
-  }
+  return CRITICALITY_BADGE_SOFT[criticality as CriticalityLevel] ?? 'bg-muted text-muted-foreground'
 }
 
 function getAssetTypeIcon(assetType: string) {
