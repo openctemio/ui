@@ -73,14 +73,23 @@ interface PaginatedResponse<T> {
 // Simulation Hooks
 // ============================================
 
-export function useSimulations(filters?: { type?: string; status?: string; search?: string }) {
+export function useSimulations(filters?: {
+  type?: string
+  status?: string
+  search?: string
+  /** When false, skip the request entirely (e.g. attack_simulation module disabled). Defaults true. */
+  enabled?: boolean
+}) {
   const params = new URLSearchParams()
   if (filters?.type) params.set('type', filters.type)
   if (filters?.status) params.set('status', filters.status)
   if (filters?.search) params.set('search', filters.search)
   params.set('per_page', '50')
   const url = `/api/v1/simulations?${params.toString()}`
-  return useSWR<PaginatedResponse<Simulation>>(url, get, { revalidateOnFocus: false })
+  // A null key tells SWR not to fetch — avoids a guaranteed 403 (and its console
+  // noise) on tenants without the attack_simulation module.
+  const key = filters?.enabled === false ? null : url
+  return useSWR<PaginatedResponse<Simulation>>(key, get, { revalidateOnFocus: false })
 }
 
 export function useSimulation(id: string) {
