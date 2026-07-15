@@ -36,6 +36,9 @@ import {
   Pencil,
   Trash2,
   UserPlus,
+  Search,
+  Target,
+  Link2,
   Check,
   CheckCircle,
   ArrowRight,
@@ -94,13 +97,15 @@ import {
 } from '@/features/remediation/api/use-remediation-campaigns'
 import { fetchAllPages } from '@/lib/api/fetch-all-pages'
 import { CreateJiraEpicDialog } from '@/features/remediation/components/create-jira-epic-dialog'
-import { FindingPickerPanel } from '@/features/remediation/components/finding-picker-dialog'
 import { getErrorMessage } from '@/lib/api/error-handler'
 import { patch, del } from '@/lib/api/client'
 import { useFindingsApi } from '@/features/findings/api/use-findings-api'
 import { AssigneeSelect } from '@/features/findings/components/assignee-select'
+import { FindingStatusBadge } from '@/features/findings/components/finding-status-badge'
+import type { FindingStatus } from '@/features/findings'
 import { useMembers } from '@/features/organization/api/use-members'
 import { useTenant } from '@/context/tenant-provider'
+import { useHashTab } from '@/hooks/use-hash-tab'
 import type { TaskStatus, TaskPriority, RemediationTask } from '@/features/remediation/types'
 import type { Severity } from '@/features/shared/types'
 import { exportToCsv, type ExportFieldConfig } from '@/hooks/use-csv-export'
@@ -440,6 +445,8 @@ export default function RemediationPage() {
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [quickFilter, setQuickFilter] = useState('all')
+  // Table/Kanban view persisted in the URL hash (survives reload, shareable).
+  const [viewTab, setViewTab] = useHashTab('table')
   const [filters, setFilters] = useState<Filters>(defaultFilters)
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [viewTask, setViewTask] = useState<RemediationTask | null>(null)
@@ -1240,8 +1247,8 @@ export default function RemediationPage() {
               ))}
             </div>
 
-            {/* Table / Kanban */}
-            <Tabs defaultValue="table" className="mt-4">
+            {/* Table / Kanban — persisted in the URL hash so a reload keeps the view. */}
+            <Tabs value={viewTab} onValueChange={setViewTab} className="mt-4">
               <TabsList>
                 <TabsTrigger value="table">Table View</TabsTrigger>
                 <TabsTrigger value="kanban">Kanban View</TabsTrigger>
@@ -1477,7 +1484,7 @@ function TaskDetailSheet({
   const [descDraft, setDescDraft] = useState(task?.description ?? '')
   const [dueOpen, setDueOpen] = useState(false)
   const [startOpen, setStartOpen] = useState(false)
-  const [manageOpen, setManageOpen] = useState(false)
+  const [pickerQuery, setPickerQuery] = useState('')
 
   if (!task) {
     return (
@@ -1796,33 +1803,141 @@ function TaskDetailSheet({
               <p className="text-xs font-medium text-muted-foreground">
                 Linked Findings ({task.findingIds?.length ?? 0})
               </p>
-              {/* A standalone modal (not a Popover nested in the drawer Sheet) so the
-                  list scrolls reliably on touch — nested Radix portals broke iOS scroll. */}
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-6 text-xs"
-                onClick={() => setManageOpen(true)}
-              >
-                <Plus className="me-1 h-3 w-3" /> Manage
-              </Button>
-              <FindingPickerPanel
-                open={manageOpen}
-                onClose={() => setManageOpen(false)}
-                selectedIds={task.findingIds ?? []}
-                onToggle={(findingId, next) =>
-                  onPatch(task, {
-                    finding_filter: {
-                      finding_ids: next
-                        ? [...(task.findingIds ?? []), findingId]
-                        : (task.findingIds ?? []).filter((id) => id !== findingId),
-                    },
-                  })
-                }
-                findingCampaigns={findingCampaigns}
-                currentCampaignId={task.id}
-                memberNameById={memberNameById}
-              />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="ghost" size="sm" className="h-6 text-xs">
+                    <Plus className="me-1 h-3 w-3" /> Manage
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent
+                  className="flex w-[22rem] max-w-[calc(100vw-2rem)] flex-col p-0"
+                  align="end"
+                >
+                  {/* Search — the open-findings list can be long (up to 100). */}
+                  <div className="border-b p-2">
+                    <div className="relative">
+                      <Search className="text-muted-foreground absolute start-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2" />
+                      <Input
+                        value={pickerQuery}
+                        onChange={(e) => setPickerQuery(e.target.value)}
+                        placeholder="Search title or asset…"
+                        className="h-8 ps-7 text-sm"
+                      />
+                    </div>
+                  </div>
+                  {/* Scrollable, info-rich rows so you can choose what to link with
+                      severity + asset + status in view (not title alone). */}
+                  <div className="max-h-80 overflow-y-auto overscroll-contain p-1">
+                    {(() => {
+                      const q = pickerQuery.trim().toLowerCase()
+                      const list = q
+                        ? findings.filter(
+                            (f) =>
+                              (f.title || f.message || '').toLowerCase().includes(q) ||
+                              (f.asset?.name || '').toLowerCase().includes(q)
+                          )
+                        : findings
+                      if (findings.length === 0)
+                        return (
+                          <p className="text-muted-foreground p-3 text-center text-xs">
+                            No open findings available to link.
+                          </p>
+                        )
+                      if (list.length === 0)
+                        return (
+                          <p className="text-muted-foreground p-3 text-center text-xs">
+                            No findings match “{pickerQuery}”.
+                          </p>
+                        )
+                      return list.map((f) => {
+                        const linked = (task.findingIds ?? []).includes(f.id)
+                        return (
+                          <button
+                            key={f.id}
+                            type="button"
+                            className="hover:bg-muted flex w-full items-start gap-2 rounded px-2 py-2 text-start"
+                            onClick={() =>
+                              onPatch(task, {
+                                finding_filter: {
+                                  finding_ids: linked
+                                    ? (task.findingIds ?? []).filter((id) => id !== f.id)
+                                    : [...(task.findingIds ?? []), f.id],
+                                },
+                              })
+                            }
+                          >
+                            {/* Visual-only check box — a real <Checkbox> renders a
+                                <button>, which can't nest inside this row button. */}
+                            <span
+                              aria-hidden="true"
+                              className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-[4px] border ${
+                                linked
+                                  ? 'border-primary bg-primary text-primary-foreground'
+                                  : 'border-input'
+                              }`}
+                            >
+                              {linked && <Check className="h-3 w-3" />}
+                            </span>
+                            <div className="min-w-0 flex-1 space-y-1">
+                              <div className="flex items-center gap-1.5">
+                                {f.severity && (
+                                  <SeverityBadge severity={f.severity} className="shrink-0" />
+                                )}
+                                <span className="line-clamp-2 text-sm">
+                                  {f.title || f.message || f.id}
+                                </span>
+                              </div>
+                              <div className="text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px]">
+                                {f.status && (
+                                  <FindingStatusBadge
+                                    status={f.status as FindingStatus}
+                                    variant="outline"
+                                  />
+                                )}
+                                {f.asset?.name && (
+                                  <span className="inline-flex items-center gap-0.5 truncate">
+                                    <Target className="h-2.5 w-2.5 shrink-0" />
+                                    {f.asset.name}
+                                  </span>
+                                )}
+                                {f.assigned_to && (
+                                  <span className="inline-flex items-center gap-0.5 truncate">
+                                    <UserPlus className="h-2.5 w-2.5 shrink-0" />
+                                    {memberNameById.get(f.assigned_to) ||
+                                      f.assigned_to_user?.name ||
+                                      'Assigned'}
+                                  </span>
+                                )}
+                                {(() => {
+                                  // Flag if this finding is already handled by another
+                                  // campaign, so the user doesn't unknowingly split
+                                  // ownership across two remediation efforts.
+                                  const others = (findingCampaigns.get(f.id) ?? []).filter(
+                                    (c) => c.id !== task.id
+                                  )
+                                  if (others.length === 0) return null
+                                  return (
+                                    <span
+                                      className="inline-flex items-center gap-0.5 truncate text-amber-600 dark:text-amber-500"
+                                      title={others.map((c) => c.name).join(', ')}
+                                    >
+                                      <Link2 className="h-2.5 w-2.5 shrink-0" />
+                                      also in {others.length}
+                                    </span>
+                                  )
+                                })()}
+                              </div>
+                            </div>
+                          </button>
+                        )
+                      })
+                    })()}
+                  </div>
+                  <div className="text-muted-foreground border-t px-3 py-1.5 text-[11px]">
+                    {task.findingIds?.length ?? 0} linked
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
             {(task.findingIds?.length ?? 0) === 0 ? (
               <p className="text-xs text-muted-foreground">No findings linked yet.</p>
