@@ -54,6 +54,7 @@ import {
   type NotificationEventCategory,
 } from '@/features/integrations/types/integration.types'
 import { cn } from '@/lib/utils'
+import { SEVERITY_BADGE_SOFT, type SeverityLevel } from '@/lib/severity-colors'
 import { AddNotificationDialog } from '@/features/notifications/components/add-notification-dialog'
 import { EditNotificationDialog } from '@/features/notifications/components/edit-notification-dialog'
 
@@ -299,14 +300,9 @@ export default function NotificationIntegrationsPage() {
                         <>
                           {shown.map((sev) => {
                             const colorClass =
-                              {
-                                critical: 'bg-red-500/10 text-red-600 border-red-200',
-                                high: 'bg-orange-500/10 text-orange-600 border-orange-200',
-                                medium: 'bg-yellow-500/10 text-yellow-600 border-yellow-200',
-                                low: 'bg-blue-500/10 text-blue-600 border-blue-200',
-                                info: 'bg-gray-500/10 text-gray-600 border-gray-200',
-                                none: 'bg-gray-200/10 text-gray-400 border-gray-200',
-                              }[sev] || 'bg-gray-500/10 text-gray-600 border-gray-200'
+                              SEVERITY_BADGE_SOFT[
+                                (sev === 'none' ? 'info' : sev) as SeverityLevel
+                              ] || 'bg-gray-500/10 text-gray-600 border-gray-200'
                             const config = ALL_NOTIFICATION_SEVERITIES.find((s) => s.value === sev)
                             return (
                               <Badge

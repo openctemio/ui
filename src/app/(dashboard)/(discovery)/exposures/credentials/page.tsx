@@ -22,15 +22,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
+import { SEVERITY_CHART_COLORS } from '@/lib/severity-colors'
 import { KeyRound, AlertTriangle, GitBranch, Clock } from 'lucide-react'
 
-const SEVERITY_COLORS: Record<string, string> = {
-  critical: '#ef4444',
-  high: '#f97316',
-  medium: '#eab308',
-  low: '#3b82f6',
-  info: '#6b7280',
-}
+const SEVERITY_COLORS: Record<string, string> = { ...SEVERITY_CHART_COLORS }
 
 const SEVERITY_LABELS: Record<string, string> = {
   critical: 'Critical',

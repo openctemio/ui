@@ -36,6 +36,11 @@ import {
 } from '@/components/ui/table'
 import { cn } from '@/lib/utils'
 import {
+  SEVERITY_CHART_COLORS,
+  SEVERITY_BADGE_SOFT,
+  type SeverityLevel,
+} from '@/lib/severity-colors'
+import {
   TrendingUp,
   TrendingDown,
   Minus,
@@ -67,13 +72,7 @@ interface DataQuality {
   total_assets: number
 }
 
-const SEVERITY_COLORS: Record<string, string> = {
-  critical: '#ef4444',
-  high: '#f97316',
-  medium: '#eab308',
-  low: '#3b82f6',
-  info: '#6b7280',
-}
+const SEVERITY_COLORS: Record<string, string> = { ...SEVERITY_CHART_COLORS }
 
 const SEVERITY_LABELS: Record<string, string> = {
   critical: 'Critical',
@@ -94,20 +93,9 @@ const num = (v: number | undefined | null): number => v ?? 0
 const fmt = (v: number | undefined | null, d = 1): string => num(v).toFixed(d)
 
 function getSeverityBadgeClass(severity: string) {
-  switch (severity) {
-    case 'critical':
-      return 'bg-red-500/10 text-red-500 border-red-500/20'
-    case 'high':
-      return 'bg-orange-500/10 text-orange-500 border-orange-500/20'
-    case 'medium':
-      return 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
-    case 'low':
-      return 'bg-blue-500/10 text-blue-500 border-blue-500/20'
-    case 'positive':
-      return 'bg-green-500/10 text-green-500 border-green-500/20'
-    default:
-      return 'bg-muted text-muted-foreground'
-  }
+  // "positive" is a good-news risk factor (not a severity level) — keep green.
+  if (severity === 'positive') return 'bg-green-500/10 text-green-500 border-green-500/20'
+  return SEVERITY_BADGE_SOFT[severity as SeverityLevel] ?? 'bg-muted text-muted-foreground'
 }
 
 function StatsRowSkeleton() {

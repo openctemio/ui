@@ -619,6 +619,7 @@ function transformToRepositoryView(asset: ApiAssetResponse): RepositoryView {
 }
 
 import { cn, sanitizeExternalUrl } from '@/lib/utils'
+import { SEVERITY_DOT_COLORS } from '@/lib/severity-colors'
 import { copyToClipboard } from '@/lib/clipboard'
 import { Can, Permission } from '@/lib/permissions'
 import { getErrorMessage } from '@/lib/api/error-handler'
@@ -940,13 +941,7 @@ function OverviewTab({
                         const count = defaultBranch.findings_summary.by_severity[severity]
                         const total = defaultBranch.findings_summary.total || 1
                         const width = (count / total) * 100
-                        const colors: Record<Severity, string> = {
-                          critical: 'bg-red-500',
-                          high: 'bg-orange-500',
-                          medium: 'bg-yellow-500',
-                          low: 'bg-blue-500',
-                          info: 'bg-gray-400',
-                        }
+                        const colors: Record<Severity, string> = SEVERITY_DOT_COLORS
                         if (count === 0) return null
                         return (
                           <TooltipProvider key={severity}>
@@ -1017,13 +1012,7 @@ function OverviewTab({
                       (severity) => {
                         const count = sevCounts[severity]
                         if (count === 0) return null
-                        const colors: Record<Severity, string> = {
-                          critical: 'bg-red-500',
-                          high: 'bg-orange-500',
-                          medium: 'bg-yellow-500',
-                          low: 'bg-blue-500',
-                          info: 'bg-gray-400',
-                        }
+                        const colors: Record<Severity, string> = SEVERITY_DOT_COLORS
                         return (
                           <div
                             key={severity}
@@ -1054,13 +1043,7 @@ function OverviewTab({
                 {topFindings.length > 0 && (
                   <div className="divide-y rounded-lg border">
                     {topFindings.map((f) => {
-                      const dot: Record<Severity, string> = {
-                        critical: 'bg-red-500',
-                        high: 'bg-orange-500',
-                        medium: 'bg-yellow-500',
-                        low: 'bg-blue-500',
-                        info: 'bg-gray-400',
-                      }
+                      const dot: Record<Severity, string> = SEVERITY_DOT_COLORS
                       return (
                         <button
                           key={f.id}

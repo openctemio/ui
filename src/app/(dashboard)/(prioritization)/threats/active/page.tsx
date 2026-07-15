@@ -25,6 +25,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
+import { SEVERITY_TEXT_COLORS, type SeverityLevel } from '@/lib/severity-colors'
 import {
   Flame,
   AlertTriangle,
@@ -131,10 +132,7 @@ function PriorityActionItem({ action }: { action: PriorityAction }) {
         <CircleAlert
           className={cn(
             'mt-0.5 h-4 w-4 shrink-0',
-            action.severity === 'critical' && 'text-red-500',
-            action.severity === 'high' && 'text-orange-500',
-            action.severity === 'medium' && 'text-yellow-500',
-            action.severity === 'low' && 'text-blue-500'
+            SEVERITY_TEXT_COLORS[action.severity as SeverityLevel]
           )}
         />
         <div className="min-w-0">

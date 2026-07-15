@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
+import { SEVERITY_BADGE_SOLID } from '@/lib/severity-colors'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Calculator, RotateCcw } from 'lucide-react'
@@ -218,11 +219,11 @@ function getSeverityLabel(score: number): string {
 }
 
 function getSeverityColor(score: number): string {
-  if (score === 0) return 'bg-gray-400 text-white'
-  if (score <= 3.9) return 'bg-blue-500 text-white'
-  if (score <= 6.9) return 'bg-yellow-500 text-white'
-  if (score <= 8.9) return 'bg-orange-500 text-white'
-  return 'bg-red-500 text-white'
+  if (score === 0) return SEVERITY_BADGE_SOLID.info
+  if (score <= 3.9) return SEVERITY_BADGE_SOLID.low
+  if (score <= 6.9) return SEVERITY_BADGE_SOLID.medium
+  if (score <= 8.9) return SEVERITY_BADGE_SOLID.high
+  return SEVERITY_BADGE_SOLID.critical
 }
 
 function getSeverityRingColor(score: number): string {

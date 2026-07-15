@@ -32,6 +32,7 @@ import { Copy, Check } from 'lucide-react'
 import { useState, useCallback, useMemo } from 'react'
 import { copyToClipboard } from '@/lib/clipboard'
 import { cn, sanitizeExternalUrl } from '@/lib/utils'
+import { SEVERITY_BADGE_SOFT, type SeverityLevel } from '@/lib/severity-colors'
 
 interface OverviewTabProps {
   finding: FindingDetail
@@ -740,12 +741,10 @@ function AITriageSummaryCard({ data }: { data: AITriageActivityData }) {
   }
 
   const getSeverityColor = (severity: string) => {
-    const lower = severity?.toLowerCase()
-    if (lower === 'critical') return 'bg-red-500/20 text-red-400 border-red-500/30'
-    if (lower === 'high') return 'bg-orange-500/20 text-orange-400 border-orange-500/30'
-    if (lower === 'medium') return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'
-    if (lower === 'low') return 'bg-green-500/20 text-green-400 border-green-500/30'
-    return 'bg-slate-500/20 text-slate-400 border-slate-500/30'
+    return (
+      SEVERITY_BADGE_SOFT[severity?.toLowerCase() as SeverityLevel] ??
+      'bg-slate-500/20 text-slate-400 border-slate-500/30'
+    )
   }
 
   const getConfidenceColor = (confidence: string) => {

@@ -46,6 +46,7 @@ import {
 } from '@/features/integrations/types/integration.types'
 import { useTenantEventTypes } from '@/features/integrations/api/use-event-types'
 import { cn } from '@/lib/utils'
+import { SEVERITY_TEXT_COLORS, type SeverityLevel } from '@/lib/severity-colors'
 import { getErrorMessage } from '@/lib/api/error-handler'
 
 // Template presets for different use cases
@@ -567,14 +568,10 @@ export function EditNotificationDialog({
                 {ALL_NOTIFICATION_SEVERITIES.map((severity) => {
                   const enabledSeverities = watch('enabled_severities')
                   const isChecked = enabledSeverities.includes(severity.value)
-                  const colorClass = {
-                    critical: 'text-red-600',
-                    high: 'text-orange-600',
-                    medium: 'text-yellow-600',
-                    low: 'text-blue-600',
-                    info: 'text-gray-600',
-                    none: 'text-gray-400',
-                  }[severity.value]
+                  const colorClass =
+                    SEVERITY_TEXT_COLORS[
+                      (severity.value === 'none' ? 'info' : severity.value) as SeverityLevel
+                    ]
                   return (
                     <div key={severity.value} className="flex items-center space-x-2">
                       <Checkbox
