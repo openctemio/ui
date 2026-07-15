@@ -6,6 +6,7 @@ import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import { DashboardHeader, DashboardProviders, AppSidebar, TenantGate } from '@/components/layout'
 import { SkipToMain } from '@/components/skip-to-main'
 import { RouteGuard } from '@/components/route-guard'
+import { CommandMenu } from '@/components/command-menu'
 
 type SiteLayoutProps = {
   children?: React.ReactNode
@@ -27,6 +28,8 @@ export default async function SiteLayout({ children }: SiteLayoutProps) {
             <SidebarProvider defaultOpen={defaultOpen}>
               <SkipToMain />
               <AppSidebar />
+              {/* Global ⌘K / Ctrl-K command palette (SearchProvider wires the key). */}
+              <CommandMenu />
               <SidebarInset
                 className={cn(
                   // Set content container, so we can use container queries

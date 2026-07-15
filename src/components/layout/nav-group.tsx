@@ -1,6 +1,6 @@
 'use client'
 
-import { type ReactNode, useMemo, memo } from 'react'
+import { type ReactNode, useMemo, memo, useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { ChevronRight } from 'lucide-react'
@@ -71,26 +71,84 @@ function NavGroupComponent({ title, items }: NavGroupProps) {
   const { state, isMobile } = useSidebar()
   const dynamicBadges = useDynamicBadges()
   const { t } = useTranslation()
+  const iconOnly = state === 'collapsed' && !isMobile
+
+  const menu = (
+    <SidebarMenu>
+      {items.map((item) => {
+        const key = 'items' in item ? item.title : `${item.title}-${String(item.url)}`
+
+        if (!('items' in item))
+          return <SidebarMenuLink key={key} item={item} dynamicBadges={dynamicBadges} />
+
+        if (iconOnly)
+          return (
+            <SidebarMenuCollapsedDropdown key={key} item={item} dynamicBadges={dynamicBadges} />
+          )
+
+        return <SidebarMenuCollapsible key={key} item={item} dynamicBadges={dynamicBadges} />
+      })}
+    </SidebarMenu>
+  )
+
+  // Untitled group (Dashboard) or icon-only sidebar → no section collapse.
+  if (!title || iconOnly) {
+    return (
+      <SidebarGroup>
+        {title && <SidebarGroupLabel>{t(groupTitleKey(title), title)}</SidebarGroupLabel>}
+        {menu}
+      </SidebarGroup>
+    )
+  }
 
   return (
-    <SidebarGroup>
-      {title && <SidebarGroupLabel>{t(groupTitleKey(title), title)}</SidebarGroupLabel>}
-      <SidebarMenu>
-        {items.map((item) => {
-          const key = 'items' in item ? item.title : `${item.title}-${String(item.url)}`
+    <CollapsibleNavSection title={title} label={t(groupTitleKey(title), title)}>
+      {menu}
+    </CollapsibleNavSection>
+  )
+}
 
-          if (!('items' in item))
-            return <SidebarMenuLink key={key} item={item} dynamicBadges={dynamicBadges} />
+/**
+ * A sidebar section whose whole group of items collapses under its label, with the
+ * open/closed state remembered per-section (localStorage) across reloads — the
+ * modern pattern for taming a long nav. Defaults to open.
+ */
+function CollapsibleNavSection({
+  title,
+  label,
+  children,
+}: {
+  title: string
+  label: string
+  children: ReactNode
+}) {
+  const storageKey = `sidebar-section:${title}`
+  const [open, setOpen] = useState(true)
 
-          if (state === 'collapsed' && !isMobile)
-            return (
-              <SidebarMenuCollapsedDropdown key={key} item={item} dynamicBadges={dynamicBadges} />
-            )
+  useEffect(() => {
+    setOpen(window.localStorage.getItem(storageKey) !== 'closed')
+  }, [storageKey])
 
-          return <SidebarMenuCollapsible key={key} item={item} dynamicBadges={dynamicBadges} />
-        })}
-      </SidebarMenu>
-    </SidebarGroup>
+  const onChange = useCallback(
+    (next: boolean) => {
+      setOpen(next)
+      window.localStorage.setItem(storageKey, next ? 'open' : 'closed')
+    },
+    [storageKey]
+  )
+
+  return (
+    <Collapsible open={open} onOpenChange={onChange} className="group/section">
+      <SidebarGroup>
+        <CollapsibleTrigger asChild>
+          <SidebarGroupLabel className="hover:text-foreground cursor-pointer transition-colors">
+            {label}
+            <ChevronRight className="ms-auto h-3.5 w-3.5 transition-transform group-data-[state=open]/section:rotate-90" />
+          </SidebarGroupLabel>
+        </CollapsibleTrigger>
+        <CollapsibleContent>{children}</CollapsibleContent>
+      </SidebarGroup>
+    </Collapsible>
   )
 }
 
