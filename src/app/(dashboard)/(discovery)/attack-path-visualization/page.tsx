@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { Fragment, useMemo } from 'react'
 import { Main } from '@/components/layout'
 import { PageHeader, EmptyState, formatRiskScore, getRiskScoreChangeType } from '@/features/shared'
 import { StatsCard } from '@/features/shared/components/stats-card'
@@ -265,13 +265,8 @@ export default function AttackPathVisualizationPage() {
                   <div className="text-center text-xs font-medium">High</div>
 
                   {(['Critical', 'High', 'Medium'] as const).map((impact) => (
-                    <>
-                      <div
-                        key={`label-${impact}`}
-                        className="flex items-center text-xs font-medium"
-                      >
-                        {impact}
-                      </div>
+                    <Fragment key={`row-${impact}`}>
+                      <div className="flex items-center text-xs font-medium">{impact}</div>
                       {(['Low', 'Medium', 'High'] as const).map((likelihood) => {
                         const cell = riskMatrixData.find(
                           (r) => r.impact === impact && r.likelihood === likelihood
@@ -288,7 +283,7 @@ export default function AttackPathVisualizationPage() {
                           </div>
                         )
                       })}
-                    </>
+                    </Fragment>
                   ))}
                 </div>
                 <div className="text-muted-foreground mt-4 flex justify-center gap-4 text-xs">
