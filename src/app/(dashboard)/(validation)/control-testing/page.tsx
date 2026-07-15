@@ -6,6 +6,7 @@ import { PageHeader, StatsCard } from '@/features/shared'
 import { ValidationCoverageCard } from '@/features/validation/components/validation-coverage-card'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { SEVERITY_BADGE_SOFT } from '@/lib/severity-colors'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -87,12 +88,7 @@ const statusConfig: Record<string, { icon: React.ReactNode; color: string; bgCol
   },
 }
 
-const riskColors: Record<string, string> = {
-  critical: 'bg-red-500/20 text-red-600 dark:text-red-400',
-  high: 'bg-orange-500/20 text-orange-600 dark:text-orange-400',
-  medium: 'bg-yellow-500/20 text-yellow-600 dark:text-yellow-400',
-  low: 'bg-blue-500/20 text-blue-600 dark:text-blue-400',
-}
+const riskColors: Record<string, string> = { ...SEVERITY_BADGE_SOFT }
 
 // ─────────────────────────────────────────────────────────
 // Framework card
