@@ -1482,6 +1482,7 @@ function TaskDetailSheet({
   const [dueOpen, setDueOpen] = useState(false)
   const [startOpen, setStartOpen] = useState(false)
   const [pickerQuery, setPickerQuery] = useState('')
+  const [manageOpen, setManageOpen] = useState(false)
 
   if (!task) {
     return (
@@ -1800,14 +1801,22 @@ function TaskDetailSheet({
               <p className="text-xs font-medium text-muted-foreground">
                 Linked Findings ({task.findingIds?.length ?? 0})
               </p>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="ghost" size="sm" className="h-6 text-xs">
-                    <Plus className="me-1 h-3 w-3" /> Manage
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[22rem] max-w-[calc(100vw-2rem)] p-0" align="end">
-                  {/* Search — the open-findings list can be long (up to 100). */}
+              {/* A standalone modal (not a Popover nested in the drawer Sheet) so the
+                  list scrolls reliably on touch — nested Radix portals broke iOS scroll. */}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 text-xs"
+                onClick={() => setManageOpen(true)}
+              >
+                <Plus className="me-1 h-3 w-3" /> Manage
+              </Button>
+              <Dialog open={manageOpen} onOpenChange={setManageOpen}>
+                <DialogContent className="flex max-h-[85vh] flex-col gap-0 p-0 sm:max-w-md">
+                  <DialogHeader className="space-y-0 border-b p-3">
+                    <DialogTitle className="text-sm">Link findings to this task</DialogTitle>
+                  </DialogHeader>
+                  {/* Search — the open-findings list can be long. */}
                   <div className="border-b p-2">
                     <div className="relative">
                       <Search className="text-muted-foreground absolute start-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2" />
@@ -1822,7 +1831,7 @@ function TaskDetailSheet({
                   {/* Scrollable, info-rich rows so you can choose what to link with
                       severity + asset + status in view (not title alone). */}
                   <div
-                    className="max-h-80 overflow-y-auto overscroll-contain p-1"
+                    className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-1"
                     style={{ touchAction: 'pan-y', WebkitOverflowScrolling: 'touch' }}
                   >
                     {(() => {
@@ -1933,8 +1942,8 @@ function TaskDetailSheet({
                   <div className="text-muted-foreground border-t px-3 py-1.5 text-[11px]">
                     {task.findingIds?.length ?? 0} linked
                   </div>
-                </PopoverContent>
-              </Popover>
+                </DialogContent>
+              </Dialog>
             </div>
             {(task.findingIds?.length ?? 0) === 0 ? (
               <p className="text-xs text-muted-foreground">No findings linked yet.</p>
