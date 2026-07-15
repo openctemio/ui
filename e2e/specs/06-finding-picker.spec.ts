@@ -51,6 +51,12 @@ test.describe('Remediation — findings picker', () => {
     await expect(search).toHaveValue('a')
     await search.fill('')
 
+    // Wait for the findings list to finish loading before measuring scroll —
+    // otherwise the skeleton hasn't overflowed yet and the check is racy.
+    const findingRows = drawer.locator('button:has(> span[aria-hidden="true"])')
+    await expect(findingRows.first()).toBeVisible({ timeout: 15_000 })
+    await expect.poll(async () => findingRows.count(), { timeout: 15_000 }).toBeGreaterThan(10)
+
     // Scrollability: the Sheet's SheetContent (= the dialog element, which has
     // overflow-y-auto) is the scroll host. It must overflow when the tenant has
     // many findings, and scrolling it must move scrollTop — this is the exact
@@ -76,10 +82,6 @@ test.describe('Remediation — findings picker', () => {
     expect(metrics.scrollTop, 'scrolling the host must move scrollTop').toBeGreaterThan(0)
 
     // Toggle a finding row and confirm its checkbox flips (Check icon appears).
-    const findingRows = drawer.locator('button:has(> span[aria-hidden="true"])')
-    await expect(findingRows.first()).toBeVisible()
-    const rowCount = await findingRows.count()
-    expect(rowCount, 'picker should list many open findings').toBeGreaterThan(10)
     const firstFinding = findingRows.first()
     const wasChecked = (await firstFinding.locator('svg.lucide-check').count()) > 0
     await firstFinding.click()

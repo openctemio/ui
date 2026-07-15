@@ -15,7 +15,7 @@ import { test, expect } from '../fixtures/authenticated-page'
 
 test.describe('Asset relationship multi-select', () => {
   test('asset list page loads', async ({ page }) => {
-    await page.goto('/assets')
+    await page.goto('/assets/hosts')
     await page.waitForLoadState('networkidle')
     // The page must reach a state where rows or an empty-state are visible.
     // We give it a generous timeout because asset queries can be slow on
@@ -28,7 +28,7 @@ test.describe('Asset relationship multi-select', () => {
   })
 
   test('opening an asset detail exposes a relationships section', async ({ page }) => {
-    await page.goto('/assets')
+    await page.goto('/assets/hosts')
     await page.waitForLoadState('networkidle')
 
     // Try to open the first row. If there are no rows, skip with a clear
@@ -42,20 +42,22 @@ test.describe('Asset relationship multi-select', () => {
 
     await firstRow.click()
 
-    // Look for a "Relationships" tab or section. We accept either a tab
-    // pattern or a heading pattern, since the layout has historically
-    // toggled between the two.
+    // Look for the "Relations" tab (labelled "Relations" in the asset detail
+    // sheet) or a relationships heading. /relations/i matches both "Relations"
+    // and "Relationships".
     const relsLocator = page
-      .getByRole('tab', { name: /relationships/i })
-      .or(page.getByRole('heading', { name: /relationships/i }))
+      .getByRole('tab', { name: /relations/i })
+      .or(page.getByRole('heading', { name: /relations/i }))
     await expect(relsLocator.first()).toBeVisible({ timeout: 15_000 })
   })
 
-  test('add-relationship dialog supports multi-select', async ({ page }) => {
-    // This test asserts the multi-select capability of the add-relationship
-    // dialog. It requires at least 2 assets in the tenant. We pre-flight
-    // by counting visible rows on the assets page; if fewer than 2, skip.
-    await page.goto('/assets')
+  test('add-relationship dialog renders its type + target form', async ({ page }) => {
+    // The add-relationship dialog is a "relationship type → target asset" form
+    // (pick a type, then the target-asset picker enables) — not the old
+    // checkbox multi-select list. This test opens the dialog and asserts its
+    // real controls. It requires at least 2 assets in the tenant; we pre-flight
+    // by counting visible rows and skip otherwise.
+    await page.goto('/assets/hosts')
     await page.waitForLoadState('networkidle')
 
     const dataRows = page.getByRole('row').filter({ hasNot: page.getByRole('columnheader') })
@@ -67,35 +69,46 @@ test.describe('Asset relationship multi-select', () => {
 
     await dataRows.first().click()
 
-    const relsTab = page.getByRole('tab', { name: /relationships/i }).first()
-    if (await relsTab.isVisible().catch(() => false)) {
-      await relsTab.click()
-    }
+    // The detail sheet is itself a role=dialog; scope to it so we don't collide
+    // with the add-relationship dialog opened later.
+    const sheet = page.getByRole('dialog').first()
+    const relsTab = sheet.getByRole('tab', { name: /relations/i }).first()
+    await expect(relsTab).toBeVisible({ timeout: 15_000 })
+    await relsTab.click()
 
     // Open the add-relationship dialog. The button label has been
     // "Add Relationship" / "Add" / "+" historically — match generously.
-    const addBtn = page.getByRole('button', { name: /add relationship|add/i }).first()
+    const addBtn = sheet
+      .getByRole('button', { name: /add relationship|add relation|^add$|link asset/i })
+      .first()
     await addBtn.click()
 
-    const dialog = page.getByRole('dialog')
+    // The add dialog is a second overlay on top of the sheet.
+    const dialog = page.getByRole('dialog').last()
     await expect(dialog).toBeVisible({ timeout: 10_000 })
 
-    // The picker for related assets should support selecting multiple items.
-    // We don't actually save (to keep the test side-effect free); we just
-    // assert that the dialog renders a combobox/listbox AND that at least
-    // two checkboxes are reachable inside it.
-    const checkboxes = dialog.getByRole('checkbox')
-    expect(await checkboxes.count()).toBeGreaterThanOrEqual(1)
+    // The dialog is a two-step form: a "Relationship Type" selector and a
+    // target-asset picker (disabled until a type is chosen), plus a Create
+    // action. Assert these controls render — the actual create is skipped to
+    // keep the test side-effect free.
+    await expect(dialog.getByText(/relationship type/i).first()).toBeVisible()
+    await expect(dialog.getByText(/target asset/i).first()).toBeVisible()
+    await expect(
+      dialog.getByRole('button', { name: /create relationship|create/i }).first()
+    ).toBeVisible()
 
-    // Cleanup: close the dialog without saving.
-    await page.keyboard.press('Escape')
-    await expect(dialog).not.toBeVisible({ timeout: 5_000 })
+    // Cleanup: close the add-relationship dialog without saving. Cancel closes
+    // only the add dialog (the detail sheet stays open), so assert the overlay
+    // count drops back to 1 rather than probing the dynamic .last() locator.
+    await dialog
+      .getByRole('button', { name: /cancel/i })
+      .first()
+      .click()
+    await expect.poll(async () => page.getByRole('dialog').count(), { timeout: 5_000 }).toBe(1)
   })
 
-  // TODO: Add a "happy path" test that
-  //   1. Selects 3+ assets in the picker
-  //   2. Clicks Save
-  //   3. Asserts the relationships table shows all 3 new rows
-  //   4. Inspects the network request to confirm a SINGLE batch POST
-  //      (not 3 parallel POSTs) was issued.
+  // TODO: happy-path — pick a relationship type, select a target asset, click
+  // Create, and assert the Relations tab shows the new row. (The picker is now
+  // a single type→target form, not a multi-select list; revisit whether batch
+  // multi-target is still a product requirement before asserting it.)
 })

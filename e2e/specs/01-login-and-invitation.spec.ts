@@ -75,14 +75,14 @@ authedTest('admin can see pending invitations on the users page', async ({ page 
   await page.goto('/settings/users')
   await page.waitForLoadState('networkidle')
 
-  // The users page should render the status filter tabs (active/pending/...).
-  // Existence of the "Pending" tab proves the page loaded with the right
-  // permissions. We don't assert a specific count — empty pending lists
-  // are valid for fresh tenants.
-  const pendingTab = page
-    .getByRole('tab', { name: /pending/i })
-    .or(page.getByRole('button', { name: /pending/i }))
-  await expect(pendingTab.first()).toBeVisible({ timeout: 15_000 })
+  // The users page surfaces pending invitations as a "Pending Invites" stat
+  // card (the status filter tabs are Active/Suspended, not Pending). Its
+  // presence proves the page loaded with the right permissions. We don't
+  // assert a specific count — empty pending lists are valid for fresh tenants.
+  const pendingInvites = page
+    .getByText(/pending invites/i)
+    .or(page.getByText(/pending invitations/i))
+  await expect(pendingInvites.first()).toBeVisible({ timeout: 15_000 })
 
   // TODO: Once an API helper exists for seeding an invitation, this test
   // should:
