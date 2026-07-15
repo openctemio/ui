@@ -94,7 +94,7 @@ import {
 } from '@/features/remediation/api/use-remediation-campaigns'
 import { fetchAllPages } from '@/lib/api/fetch-all-pages'
 import { CreateJiraEpicDialog } from '@/features/remediation/components/create-jira-epic-dialog'
-import { FindingPickerDialog } from '@/features/remediation/components/finding-picker-dialog'
+import { FindingPickerPanel } from '@/features/remediation/components/finding-picker-dialog'
 import { getErrorMessage } from '@/lib/api/error-handler'
 import { patch, del } from '@/lib/api/client'
 import { useFindingsApi } from '@/features/findings/api/use-findings-api'
@@ -1806,9 +1806,9 @@ function TaskDetailSheet({
               >
                 <Plus className="me-1 h-3 w-3" /> Manage
               </Button>
-              <FindingPickerDialog
+              <FindingPickerPanel
                 open={manageOpen}
-                onOpenChange={setManageOpen}
+                onClose={() => setManageOpen(false)}
                 selectedIds={task.findingIds ?? []}
                 onToggle={(findingId, next) =>
                   onPatch(task, {
