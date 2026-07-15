@@ -4,6 +4,13 @@
  * Shared type definitions used across features
  */
 
+import {
+  SEVERITY_DOT_COLORS,
+  SEVERITY_SOLID_TEXT,
+  SEVERITY_BORDER_COLORS,
+  type SeverityLevel as SeverityColorLevel,
+} from '@/lib/severity-colors'
+
 export type Severity = 'critical' | 'high' | 'medium' | 'low' | 'info' | 'none'
 
 export type Status =
@@ -37,44 +44,24 @@ export const SECURITY_PROCESS_STEPS: {
   { id: 'mobilization', label: 'Mobilization', description: 'Remediate' },
 ]
 
-// Severity configuration for UI
+// Severity configuration for UI. Colors are DERIVED from the single source of
+// truth (src/lib/severity-colors.ts) so this map can never drift from it — the
+// values are identical to the previous hard-coded ones (no visual change).
+const sevEntry = (label: string, level: SeverityColorLevel) => ({
+  label,
+  color: SEVERITY_DOT_COLORS[level],
+  textColor: SEVERITY_SOLID_TEXT[level],
+  borderColor: SEVERITY_BORDER_COLORS[level],
+})
+
 export const SEVERITY_CONFIG = {
-  critical: {
-    label: 'Critical',
-    color: 'bg-red-500',
-    textColor: 'text-white',
-    borderColor: 'border-red-500',
-  },
-  high: {
-    label: 'High',
-    color: 'bg-orange-500',
-    textColor: 'text-white',
-    borderColor: 'border-orange-500',
-  },
-  medium: {
-    label: 'Medium',
-    color: 'bg-yellow-500',
-    textColor: 'text-black',
-    borderColor: 'border-yellow-500',
-  },
-  low: {
-    label: 'Low',
-    color: 'bg-blue-500',
-    textColor: 'text-white',
-    borderColor: 'border-blue-500',
-  },
-  info: {
-    label: 'Info',
-    color: 'bg-gray-500',
-    textColor: 'text-white',
-    borderColor: 'border-gray-500',
-  },
-  none: {
-    label: 'None',
-    color: 'bg-gray-500',
-    textColor: 'text-white',
-    borderColor: 'border-gray-500',
-  },
+  critical: sevEntry('Critical', 'critical'),
+  high: sevEntry('High', 'high'),
+  medium: sevEntry('Medium', 'medium'),
+  low: sevEntry('Low', 'low'),
+  info: sevEntry('Info', 'info'),
+  // "none" reuses the neutral info palette.
+  none: sevEntry('None', 'info'),
 } as const
 
 // Risk level thresholds interface
