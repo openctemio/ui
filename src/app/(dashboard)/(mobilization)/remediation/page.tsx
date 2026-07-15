@@ -1806,10 +1806,7 @@ function TaskDetailSheet({
                     <Plus className="me-1 h-3 w-3" /> Manage
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent
-                  className="flex w-[22rem] max-w-[calc(100vw-2rem)] flex-col p-0"
-                  align="end"
-                >
+                <PopoverContent className="w-[22rem] max-w-[calc(100vw-2rem)] p-0" align="end">
                   {/* Search — the open-findings list can be long (up to 100). */}
                   <div className="border-b p-2">
                     <div className="relative">
@@ -1824,7 +1821,10 @@ function TaskDetailSheet({
                   </div>
                   {/* Scrollable, info-rich rows so you can choose what to link with
                       severity + asset + status in view (not title alone). */}
-                  <div className="max-h-80 overflow-y-auto overscroll-contain p-1">
+                  <div
+                    className="max-h-80 overflow-y-auto overscroll-contain p-1"
+                    style={{ touchAction: 'pan-y', WebkitOverflowScrolling: 'touch' }}
+                  >
                     {(() => {
                       const q = pickerQuery.trim().toLowerCase()
                       const list = q
