@@ -69,109 +69,104 @@ export function FindingPickerPanel({
   if (!open) return null
 
   return (
-    <>
-      {/* Full-screen backdrop (covers the whole viewport, not just the drawer half). */}
-      <div className="fixed inset-0 z-50 bg-black/60" aria-hidden="true" onClick={onClose} />
-      {/* Centered modal card — a DOM child of the Sheet (so react-remove-scroll
-          allows its scroll), sized to the viewport not the drawer. */}
-      <div className="bg-background fixed inset-x-3 top-[4vh] bottom-[4vh] z-50 mx-auto flex max-w-2xl flex-col overflow-hidden rounded-xl border shadow-2xl">
-        <header className="flex items-center gap-2 border-b p-3">
-          <div className="min-w-0 flex-1">
-            <h3 className="text-sm font-semibold">Link findings</h3>
-            <p className="text-muted-foreground text-xs">
-              {selectedIds.length} linked{total ? ` · ${total} open findings` : ''}
-            </p>
-          </div>
-          <Button size="sm" onClick={onClose}>
-            Done
-          </Button>
-        </header>
+    // Fills the whole task drawer (the Sheet is the containing block for `fixed`,
+    // so inset-0 covers the drawer, not the viewport). Being a DOM child of the
+    // Sheet keeps react-remove-scroll happy so the list scrolls on touch.
+    <div className="bg-background fixed inset-0 z-30 flex flex-col">
+      <header className="flex items-center gap-2 border-b p-3">
+        <div className="min-w-0 flex-1">
+          <h3 className="text-sm font-semibold">Link findings</h3>
+          <p className="text-muted-foreground text-xs">
+            {selectedIds.length} linked{total ? ` · ${total} open findings` : ''}
+          </p>
+        </div>
+        <Button size="sm" onClick={onClose}>
+          Done
+        </Button>
+      </header>
 
-        <Command shouldFilter={false} className="flex min-h-0 flex-1 flex-col rounded-none">
-          <CommandInput
-            placeholder="Search findings by title or asset…"
-            value={query}
-            onValueChange={setQuery}
-          />
-          <CommandList className="max-h-none min-h-0 flex-1">
-            {isLoading ? (
-              <div className="text-muted-foreground flex items-center justify-center gap-2 py-10 text-sm">
-                <Loader2 className="h-4 w-4 animate-spin" /> Loading findings…
-              </div>
-            ) : (
-              <>
-                <CommandEmpty>No open findings match your search.</CommandEmpty>
-                {findings.map((f) => {
-                  const linked = selectedIds.includes(f.id)
-                  const others = (findingCampaigns?.get(f.id) ?? []).filter(
-                    (c) => c.id !== currentCampaignId
-                  )
-                  return (
-                    <CommandItem
-                      key={f.id}
-                      value={f.id}
-                      onSelect={() => onToggle(f.id, !linked)}
-                      className="items-start gap-3 py-2.5"
+      <Command shouldFilter={false} className="flex min-h-0 flex-1 flex-col rounded-none">
+        <CommandInput
+          placeholder="Search findings by title or asset…"
+          value={query}
+          onValueChange={setQuery}
+        />
+        <CommandList className="max-h-none min-h-0 flex-1">
+          {isLoading ? (
+            <div className="text-muted-foreground flex items-center justify-center gap-2 py-10 text-sm">
+              <Loader2 className="h-4 w-4 animate-spin" /> Loading findings…
+            </div>
+          ) : (
+            <>
+              <CommandEmpty>No open findings match your search.</CommandEmpty>
+              {findings.map((f) => {
+                const linked = selectedIds.includes(f.id)
+                const others = (findingCampaigns?.get(f.id) ?? []).filter(
+                  (c) => c.id !== currentCampaignId
+                )
+                return (
+                  <CommandItem
+                    key={f.id}
+                    value={f.id}
+                    onSelect={() => onToggle(f.id, !linked)}
+                    className="items-start gap-3 py-2.5"
+                  >
+                    <span
+                      aria-hidden="true"
+                      className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-[4px] border ${
+                        linked
+                          ? 'border-primary bg-primary text-primary-foreground'
+                          : 'border-input'
+                      }`}
                     >
-                      <span
-                        aria-hidden="true"
-                        className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-[4px] border ${
-                          linked
-                            ? 'border-primary bg-primary text-primary-foreground'
-                            : 'border-input'
-                        }`}
-                      >
-                        {linked && <Check className="h-3 w-3" />}
-                      </span>
-                      <div className="min-w-0 flex-1 space-y-1">
-                        <div className="flex items-center gap-1.5">
-                          {f.severity && (
-                            <SeverityBadge severity={f.severity as Severity} className="shrink-0" />
-                          )}
-                          <span className="line-clamp-2 text-sm">
-                            {f.title || f.message || f.id}
-                          </span>
-                        </div>
-                        <div className="text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px]">
-                          {f.status && (
-                            <FindingStatusBadge
-                              status={f.status as FindingStatus}
-                              variant="outline"
-                            />
-                          )}
-                          {f.asset?.name && (
-                            <span className="inline-flex min-w-0 items-center gap-0.5">
-                              <Target className="h-2.5 w-2.5 shrink-0" />
-                              <span className="truncate">{f.asset.name}</span>
-                            </span>
-                          )}
-                          {f.assigned_to && (
-                            <span className="inline-flex items-center gap-0.5">
-                              <UserPlus className="h-2.5 w-2.5 shrink-0" />
-                              {memberNameById?.get(f.assigned_to) ||
-                                f.assigned_to_user?.name ||
-                                'Assigned'}
-                            </span>
-                          )}
-                          {others.length > 0 && (
-                            <span
-                              className="inline-flex items-center gap-0.5 text-amber-600 dark:text-amber-500"
-                              title={others.map((c) => c.name).join(', ')}
-                            >
-                              <Link2 className="h-2.5 w-2.5 shrink-0" />
-                              also in {others.length}
-                            </span>
-                          )}
-                        </div>
+                      {linked && <Check className="h-3 w-3" />}
+                    </span>
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <div className="flex items-center gap-1.5">
+                        {f.severity && (
+                          <SeverityBadge severity={f.severity as Severity} className="shrink-0" />
+                        )}
+                        <span className="line-clamp-2 text-sm">{f.title || f.message || f.id}</span>
                       </div>
-                    </CommandItem>
-                  )
-                })}
-              </>
-            )}
-          </CommandList>
-        </Command>
-      </div>
-    </>
+                      <div className="text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px]">
+                        {f.status && (
+                          <FindingStatusBadge
+                            status={f.status as FindingStatus}
+                            variant="outline"
+                          />
+                        )}
+                        {f.asset?.name && (
+                          <span className="inline-flex min-w-0 items-center gap-0.5">
+                            <Target className="h-2.5 w-2.5 shrink-0" />
+                            <span className="truncate">{f.asset.name}</span>
+                          </span>
+                        )}
+                        {f.assigned_to && (
+                          <span className="inline-flex items-center gap-0.5">
+                            <UserPlus className="h-2.5 w-2.5 shrink-0" />
+                            {memberNameById?.get(f.assigned_to) ||
+                              f.assigned_to_user?.name ||
+                              'Assigned'}
+                          </span>
+                        )}
+                        {others.length > 0 && (
+                          <span
+                            className="inline-flex items-center gap-0.5 text-amber-600 dark:text-amber-500"
+                            title={others.map((c) => c.name).join(', ')}
+                          >
+                            <Link2 className="h-2.5 w-2.5 shrink-0" />
+                            also in {others.length}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </CommandItem>
+                )
+              })}
+            </>
+          )}
+        </CommandList>
+      </Command>
+    </div>
   )
 }
