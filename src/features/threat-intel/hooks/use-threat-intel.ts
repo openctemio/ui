@@ -1,7 +1,7 @@
 'use client'
 
 import useSWR from 'swr'
-import { get, post, put } from '@/lib/api/client'
+import { get, post, patch } from '@/lib/api/client'
 import { threatIntelEndpoints } from '@/lib/api/endpoints'
 import { usePermissions, Permission } from '@/lib/permissions'
 import type {
@@ -146,7 +146,8 @@ export function useSyncStatus(tenantId: string | null, source: ThreatIntelSource
  * Trigger sync for a source
  */
 export async function triggerSync(source: ThreatIntelSource): Promise<SyncStatus> {
-  return post<SyncStatus>(threatIntelEndpoints.triggerSync(source), {})
+  // Source travels in the body; the API is POST /sync (no per-source path).
+  return post<SyncStatus>(threatIntelEndpoints.triggerSync(), { source })
 }
 
 /**
@@ -156,7 +157,7 @@ export async function setSyncEnabled(
   source: ThreatIntelSource,
   enabled: boolean
 ): Promise<SyncStatus> {
-  return put<SyncStatus>(threatIntelEndpoints.setSyncEnabled(source), {
+  return patch<SyncStatus>(threatIntelEndpoints.setSyncEnabled(source), {
     enabled,
   } as SetSyncEnabledRequest)
 }
