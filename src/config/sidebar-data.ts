@@ -393,18 +393,11 @@ export const sidebarData: SidebarData = {
           // One nav item; the two related views (Tasks / Solution Families) are
           // presented as in-page <SectionTabs> rather than two near-identical
           // sidebar entries.
+          // "Solution Families" (/remediations) is reachable as an in-page
+          // SectionTabs tab on this page — not a separate sidebar entry.
           title: 'Remediation',
           url: '/remediation',
           icon: Wrench,
-          permission: Permission.RemediationRead,
-          module: 'remediation_tasks',
-        },
-        {
-          // Solution Families — bulk-resolve a remediation group;
-          // distinct from /remediation (task board).
-          title: 'Remediation Groups',
-          url: '/remediations',
-          icon: Boxes,
           permission: Permission.RemediationRead,
           module: 'remediation_tasks',
         },

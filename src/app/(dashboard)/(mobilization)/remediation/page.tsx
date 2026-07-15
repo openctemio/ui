@@ -101,6 +101,7 @@ import { useFindingsApi } from '@/features/findings/api/use-findings-api'
 import { AssigneeSelect } from '@/features/findings/components/assignee-select'
 import { useMembers } from '@/features/organization/api/use-members'
 import { useTenant } from '@/context/tenant-provider'
+import { useHashTab } from '@/hooks/use-hash-tab'
 import type { TaskStatus, TaskPriority, RemediationTask } from '@/features/remediation/types'
 import type { Severity } from '@/features/shared/types'
 import { exportToCsv, type ExportFieldConfig } from '@/hooks/use-csv-export'
@@ -440,6 +441,8 @@ export default function RemediationPage() {
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [quickFilter, setQuickFilter] = useState('all')
+  // Table/Kanban view persisted in the URL hash (survives reload).
+  const [viewTab, setViewTab] = useHashTab('table')
   const [filters, setFilters] = useState<Filters>(defaultFilters)
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [viewTask, setViewTask] = useState<RemediationTask | null>(null)
@@ -1241,7 +1244,7 @@ export default function RemediationPage() {
             </div>
 
             {/* Table / Kanban */}
-            <Tabs defaultValue="table" className="mt-4">
+            <Tabs value={viewTab} onValueChange={setViewTab} className="mt-4">
               <TabsList>
                 <TabsTrigger value="table">Table View</TabsTrigger>
                 <TabsTrigger value="kanban">Kanban View</TabsTrigger>
