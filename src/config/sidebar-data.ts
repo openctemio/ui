@@ -20,11 +20,8 @@ import {
   Target,
   Settings2,
   Radar,
-  Globe,
-  MonitorSmartphone,
   Container,
   GitBranch,
-  Cloud,
   KeyRound,
   Building2,
   Crown,
@@ -40,10 +37,7 @@ import {
   AudioWaveform,
   Building,
   Zap,
-  Server,
   Boxes,
-  Database,
-  Smartphone,
   Crosshair,
   ClipboardList,
   Bug,
@@ -56,10 +50,8 @@ import {
   Wrench,
   // New icons for CTEM architecture
   LayoutGrid,
-  ShieldAlert,
   Package,
   Scale,
-  Download,
   // CTEM Phase 1 icons
   TrendingUp,
   AlertTriangle,
@@ -70,7 +62,6 @@ import {
   // Integration icons
   Shield,
   Bell,
-  MessageSquare,
   // Pipeline icons
   GitMerge,
   // Template & Secret Store icons
@@ -131,31 +122,10 @@ export const sidebarData: SidebarData = {
       items: [
         {
           title: 'Attack Surface',
+          url: '/attack-surface',
           icon: Target,
           permission: Permission.AssetsRead,
           module: 'attack_surface',
-          items: [
-            {
-              title: 'Overview',
-              url: '/attack-surface',
-              icon: Target,
-            },
-            {
-              title: 'External',
-              url: '/attack-surface/external',
-              icon: Globe,
-            },
-            {
-              title: 'Internal',
-              url: '/attack-surface/internal',
-              icon: Server,
-            },
-            {
-              title: 'Cloud',
-              url: '/attack-surface/cloud',
-              icon: Cloud,
-            },
-          ],
         },
         {
           title: 'Asset Groups',
@@ -245,118 +215,10 @@ export const sidebarData: SidebarData = {
         // ----------------------------------------
         {
           title: 'Asset Inventory',
+          url: '/assets',
           icon: Container,
           permission: Permission.AssetsRead,
           module: 'assets',
-          items: [
-            // Overview - Entry point with asset statistics (always shown)
-            {
-              title: 'Overview',
-              url: '/assets',
-              icon: Container,
-            },
-            // Duplicate review is surfaced as a card on the Overview page
-            // (/assets) rather than a standing nav item — it's an occasional
-            // workflow, not a top-level asset category. Route still lives at
-            // /assets/duplicates.
-            // External Attack Surface
-            {
-              title: 'Domains',
-              url: '/assets/domains',
-              icon: Globe,
-              subModuleKey: 'domains',
-            },
-            {
-              title: 'Certificates',
-              url: '/assets/certificates',
-              icon: ShieldCheck,
-              subModuleKey: 'certificates',
-            },
-            {
-              title: 'IP Addresses',
-              url: '/assets/ip-addresses',
-              icon: Target,
-              subModuleKey: 'ip-addresses',
-            },
-            // Applications
-            {
-              title: 'Websites',
-              url: '/assets/websites',
-              icon: MonitorSmartphone,
-              subModuleKey: 'websites',
-            },
-            {
-              title: 'APIs',
-              url: '/assets/apis',
-              icon: Zap,
-              subModuleKey: 'apis',
-            },
-            {
-              title: 'Mobile Apps',
-              url: '/assets/mobile',
-              icon: Smartphone,
-              subModuleKey: 'mobile',
-            },
-            {
-              title: 'Services',
-              url: '/assets/services',
-              icon: Zap,
-              subModuleKey: 'services',
-            },
-            // Infrastructure
-            {
-              title: 'Hosts',
-              url: '/assets/hosts',
-              icon: Server,
-              subModuleKey: 'hosts',
-            },
-            {
-              title: 'Containers & K8s',
-              url: '/assets/containers',
-              icon: Boxes,
-              subModuleKey: 'containers',
-            },
-            {
-              title: 'Network Devices',
-              url: '/assets/networks',
-              icon: Target,
-              subModuleKey: 'networks',
-            },
-            // Data
-            {
-              title: 'Databases',
-              url: '/assets/databases',
-              icon: Database,
-              subModuleKey: 'databases',
-            },
-            {
-              title: 'Storage',
-              url: '/assets/storage',
-              icon: Database,
-              subModuleKey: 'storage',
-            },
-            // Cloud
-            {
-              title: 'Cloud Accounts',
-              url: '/assets/cloud-accounts',
-              icon: Cloud,
-              subModuleKey: 'cloud-accounts',
-            },
-            // Identity
-            {
-              title: 'Identity & Access',
-              url: '/assets/identity',
-              icon: KeyRound,
-              subModuleKey: 'identity',
-            },
-            // Code & CI/CD
-            {
-              title: 'Repositories',
-              url: '/assets/repositories',
-              icon: GitBranch,
-              subModuleKey: 'repositories',
-            },
-          ],
         },
         // ----------------------------------------
         // EXPOSURES (CVEs + non-CVE security issues)
@@ -366,51 +228,11 @@ export const sidebarData: SidebarData = {
         // but no route enforces it, so binding sidebar to it caused a divergence.
         {
           title: 'Exposures',
+          url: '/exposures',
           icon: AlertTriangle,
           // Group is visible if user has EITHER findings:read OR vulnerabilities:read.
-          // Sub-items self-gate by their own permission.
           permission: [Permission.FindingsRead, Permission.VulnerabilitiesRead],
           module: 'findings',
-          items: [
-            {
-              title: 'Overview',
-              url: '/exposures',
-              icon: AlertTriangle,
-            },
-            {
-              // The CTEM "Active CVEs" view lives at /exposures/vulnerabilities.
-              // It is the default tab — distinct from /exposures (event-style
-              // exposures) and from the global CVE catalog browser.
-              title: 'Vulnerabilities',
-              url: '/exposures/vulnerabilities',
-              icon: ShieldAlert,
-              permission: Permission.VulnerabilitiesRead,
-            },
-            {
-              title: 'Misconfigurations',
-              url: '/exposures/misconfigurations',
-              icon: Settings2,
-              permission: Permission.FindingsRead,
-            },
-            {
-              title: 'Secrets',
-              url: '/exposures/secrets',
-              icon: KeyRound,
-              permission: Permission.FindingsRead,
-            },
-            {
-              title: 'Code',
-              url: '/exposures/code',
-              icon: FileCode2,
-              permission: Permission.FindingsRead,
-            },
-            {
-              title: 'Credentials',
-              url: '/exposures/credentials',
-              icon: KeyRound,
-              permission: Permission.FindingsRead,
-            },
-          ],
         },
         // ----------------------------------------
         // CREDENTIAL LEAKS
@@ -430,74 +252,10 @@ export const sidebarData: SidebarData = {
         // ----------------------------------------
         {
           title: 'Components',
+          url: '/components',
           icon: Package,
           permission: Permission.ComponentsRead,
           module: 'components',
-          items: [
-            {
-              title: 'Overview',
-              url: '/components',
-              icon: Package,
-            },
-            {
-              title: 'All Components',
-              url: '/components/all',
-              icon: Package,
-            },
-            {
-              title: 'Vulnerable',
-              url: '/components/vulnerable',
-              icon: ShieldAlert,
-            },
-            {
-              title: 'Ecosystems',
-              url: '/components/ecosystems',
-              icon: Boxes,
-            },
-            {
-              title: 'Licenses',
-              url: '/components/licenses',
-              icon: Scale,
-            },
-            {
-              title: 'SBOM Export',
-              url: '/components/sbom-export',
-              icon: Download,
-              // Same pattern as MITRE Coverage — own module post-000161.
-              module: 'sbom_export',
-            },
-          ],
-        },
-        // ----------------------------------------
-        // IDENTITY DISCOVERY
-        // ----------------------------------------
-        {
-          title: 'Identity',
-          icon: KeyRound,
-          permission: Permission.AssetsRead,
-          items: [
-            {
-              title: 'Privileged Access',
-              url: '/identity/privileged',
-              icon: Crown,
-            },
-            {
-              title: 'Identity Risks',
-              url: '/identity/risks',
-              icon: AlertTriangle,
-            },
-            {
-              title: 'Shadow IT',
-              url: '/identity/shadow-it',
-              icon: Radar,
-            },
-          ],
-        },
-        {
-          title: 'CI/CD Runners',
-          url: '/runners',
-          icon: Server,
-          permission: Permission.ScansRead,
         },
       ],
     },
@@ -510,12 +268,6 @@ export const sidebarData: SidebarData = {
     {
       title: 'Prioritization',
       items: [
-        {
-          title: 'Risk Overview',
-          url: '/overview',
-          icon: LayoutGrid,
-          permission: Permission.VulnerabilitiesRead,
-        },
         {
           title: 'Exposure Chains',
           url: '/exposure-chains',
@@ -531,50 +283,11 @@ export const sidebarData: SidebarData = {
           module: 'attack_surface',
         },
         {
-          title: 'Attack Path Visualization',
-          url: '/attack-path-visualization',
-          icon: Waypoints,
-          permission: Permission.AssetsRead,
-        },
-        {
           title: 'Threat Intel',
+          url: '/threat-intel',
           icon: TrendingUp,
           permission: Permission.VulnerabilitiesRead,
           module: 'threat_intel',
-          items: [
-            {
-              title: 'Overview',
-              url: '/threat-intel',
-              icon: TrendingUp,
-            },
-            {
-              title: 'Active Threats',
-              url: '/threats/active',
-              icon: AlertTriangle,
-            },
-            {
-              title: 'Exploitability',
-              url: '/threats/exploitability',
-              icon: ShieldAlert,
-            },
-            {
-              title: 'Feeds',
-              url: '/threats/feeds',
-              icon: Radar,
-            },
-          ],
-        },
-        {
-          title: 'Trending',
-          url: '/trending',
-          icon: TrendingUp,
-          permission: Permission.VulnerabilitiesRead,
-        },
-        {
-          title: 'Scoring',
-          url: '/scoring',
-          icon: Scale,
-          permission: Permission.VulnerabilitiesRead,
         },
         {
           title: 'Business Impact',
@@ -660,75 +373,10 @@ export const sidebarData: SidebarData = {
         },
         {
           title: 'Compensating Controls',
+          url: '/controls',
           icon: Shield,
           permission: Permission.CompensatingControlsRead,
           module: 'compensating_controls',
-          items: [
-            {
-              title: 'Overview',
-              url: '/controls',
-              icon: Shield,
-            },
-            {
-              title: 'Controls',
-              url: '/controls/list',
-              icon: ListChecks,
-            },
-            {
-              title: 'Gaps',
-              url: '/controls/gaps',
-              icon: AlertTriangle,
-            },
-            {
-              title: 'Effectiveness',
-              url: '/controls/effectiveness',
-              icon: ShieldCheck,
-            },
-          ],
-        },
-        {
-          title: 'Response',
-          icon: ShieldAlert,
-          permission: Permission.PentestRead,
-          items: [
-            {
-              title: 'Detection Rules',
-              url: '/response/detection',
-              icon: Radar,
-            },
-            {
-              title: 'Playbooks',
-              url: '/response/playbooks',
-              icon: BookTemplate,
-            },
-            {
-              title: 'Response Time',
-              url: '/response/time',
-              icon: Clock,
-            },
-          ],
-        },
-        {
-          title: 'Simulation',
-          icon: Swords,
-          permission: Permission.PentestRead,
-          items: [
-            {
-              title: 'Campaigns',
-              url: '/simulation/campaigns',
-              icon: ClipboardList,
-            },
-            {
-              title: 'Scenarios',
-              url: '/simulation/scenarios',
-              icon: FileSliders,
-            },
-            {
-              title: 'Results',
-              url: '/simulation/results',
-              icon: FileText,
-            },
-          ],
         },
       ],
     },
@@ -761,88 +409,11 @@ export const sidebarData: SidebarData = {
           module: 'remediation_tasks',
         },
         {
-          title: 'Collaboration',
-          icon: Users,
-          permission: Permission.RemediationRead,
-          items: [
-            {
-              title: 'Assignments',
-              url: '/collaboration/assignments',
-              icon: Users,
-            },
-            {
-              title: 'Comments',
-              url: '/collaboration/comments',
-              icon: MessageSquare,
-            },
-            {
-              title: 'Tickets',
-              url: '/collaboration/tickets',
-              icon: ListChecks,
-            },
-          ],
-        },
-        {
-          title: 'Exceptions',
-          icon: FileWarning,
-          permission: Permission.RemediationRead,
-          items: [
-            {
-              title: 'Pending',
-              url: '/exceptions/pending',
-              icon: Clock,
-            },
-            {
-              title: 'Accepted',
-              url: '/exceptions/accepted',
-              icon: ShieldCheck,
-            },
-            {
-              title: 'False Positives',
-              url: '/exceptions/false-positives',
-              icon: Bug,
-            },
-          ],
-        },
-        {
           title: 'Workflows',
+          url: '/workflows',
           icon: Workflow,
           permission: Permission.WorkflowsRead,
           module: 'workflows',
-          items: [
-            {
-              title: 'Overview',
-              url: '/workflows',
-              icon: Workflow,
-            },
-            {
-              title: 'Active',
-              url: '/workflows/active',
-              icon: Zap,
-            },
-            {
-              title: 'Automations',
-              url: '/workflows/automations',
-              icon: Bot,
-            },
-            {
-              title: 'Templates',
-              url: '/workflows/templates',
-              icon: BookTemplate,
-            },
-          ],
-        },
-        {
-          title: 'Progress',
-          url: '/progress',
-          icon: TrendingUp,
-          permission: Permission.RemediationRead,
-        },
-        {
-          title: 'SLA',
-          url: '/sla',
-          icon: Clock,
-          permission: Permission.SLARead,
         },
         {
           title: 'Scan Pipelines',
@@ -889,68 +460,6 @@ export const sidebarData: SidebarData = {
           icon: FileText,
           permission: Permission.ReportsRead,
           module: 'reports',
-        },
-        {
-          title: 'Finding Insights',
-          url: '/insights/findings',
-          icon: FileWarning,
-          permission: Permission.FindingsRead,
-        },
-        {
-          title: 'Analytics',
-          icon: LayoutGrid,
-          permission: Permission.DashboardRead,
-          items: [
-            {
-              title: 'Coverage',
-              url: '/insights/analytics/coverage',
-              icon: LayoutGrid,
-            },
-            {
-              title: 'MTTR',
-              url: '/insights/analytics/mttr',
-              icon: Clock,
-            },
-            {
-              title: 'Performance',
-              url: '/insights/analytics/performance',
-              icon: Zap,
-            },
-            {
-              title: 'Trends',
-              url: '/insights/analytics/trends',
-              icon: TrendingUp,
-            },
-          ],
-        },
-        {
-          title: 'Report Center',
-          icon: FileText,
-          permission: Permission.ReportsRead,
-          items: [
-            {
-              title: 'Executive',
-              url: '/insights/reports/executive',
-              icon: FileText,
-            },
-            {
-              title: 'Technical',
-              url: '/insights/reports/technical',
-              icon: FileCode2,
-            },
-            {
-              title: 'Compliance',
-              url: '/insights/reports/compliance',
-              icon: ClipboardCheck,
-              permission: Permission.ComplianceReportsRead,
-              module: 'compliance',
-            },
-            {
-              title: 'Scheduled',
-              url: '/insights/reports/scheduled',
-              icon: Clock,
-            },
-          ],
         },
       ],
     },
