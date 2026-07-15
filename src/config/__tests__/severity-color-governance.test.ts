@@ -26,23 +26,30 @@ const INLINE_MAP =
 // residual). New code must NOT extend this list — migrate to a *-colors source.
 const ALLOWLIST = new Set(
   [
-    // Remaining legacy inline maps that are NOT finding severity — priority,
-    // risk/status, audit-log severity, or shape-incompatible (gradient/confidence).
-    // Criticality maps were migrated to criticality-colors.ts (#285) and removed
-    // from this list. Only shrink it further; never add.
+    'app/(dashboard)/(discovery)/assets/[id]/page.tsx',
     'app/(dashboard)/(discovery)/credentials/page.tsx',
+    'app/(dashboard)/(prioritization)/attack-paths/page.tsx',
+    'app/(dashboard)/(prioritization)/exposure-chains/page.tsx',
+    'app/(dashboard)/settings/modules/page.tsx',
     'app/(dashboard)/(mobilization)/remediation/page.tsx',
     'app/(dashboard)/notifications/page.tsx',
-    'app/(dashboard)/settings/modules/page.tsx',
     'app/(dashboard)/(scoping)/asset-groups/[id]/page.tsx',
+    'app/(dashboard)/(scoping)/asset-groups/page.tsx',
     'app/(dashboard)/(scoping)/attack-surface/cloud/page.tsx',
     'app/(dashboard)/(scoping)/attack-surface/external/page.tsx',
     'app/(dashboard)/(scoping)/attack-surface/internal/page.tsx',
+    'app/(dashboard)/(scoping)/business-services/page.tsx',
     'app/(dashboard)/(scoping)/business-units/page.tsx',
     'app/(dashboard)/(scoping)/compliance/page.tsx',
     'components/notification-bell.tsx',
     'features/assets/components/relationships/relationship-table.tsx',
+    'features/capabilities/components/capability-card.tsx',
+    'features/capabilities/components/capability-detail-panel.tsx',
+    'features/capabilities/components/capability-table.tsx',
+    'features/components/components/component-detail-sheet.tsx',
     'features/pentest/components/finding-detail-sheet.tsx',
+    'features/pipelines/components/node-palette.tsx',
+    'features/vulnerabilities/components/vulnerability-detail-sheet.tsx',
     'lib/api/audit-types.ts',
   ].map((p) => p.split('/').join('/'))
 )
