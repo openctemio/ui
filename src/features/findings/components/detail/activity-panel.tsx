@@ -40,6 +40,7 @@ import { usePermissions } from '@/context/permission-provider'
 import type { Activity, ActivityType } from '../../types'
 import { ACTIVITY_TYPE_CONFIG, FINDING_STATUS_CONFIG, SEVERITY_CONFIG } from '../../types'
 import type { Severity } from '@/features/shared/types'
+import { SEVERITY_BADGE_SOFT, type SeverityLevel } from '@/lib/severity-colors'
 
 interface ActivityPanelProps {
   activities: Activity[]
@@ -262,13 +263,9 @@ export function ActivityPanel({
         const priorityRank = aiMeta?.priority_rank as number | undefined
         const recommendation = aiMeta?.ai_recommendation as string | undefined
 
-        const getSeverityColor = (sev: string) => {
-          const lower = sev?.toLowerCase()
-          if (lower === 'critical') return 'border-red-500/50 text-red-400'
-          if (lower === 'high') return 'border-orange-500/50 text-orange-400'
-          if (lower === 'medium') return 'border-yellow-500/50 text-yellow-400'
-          return 'border-green-500/50 text-green-400'
-        }
+        const getSeverityColor = (sev: string) =>
+          SEVERITY_BADGE_SOFT[sev?.toLowerCase() as SeverityLevel] ??
+          'border-muted text-muted-foreground'
 
         return (
           <div className="bg-purple-500/10 space-y-3 rounded-lg border border-purple-500/20 p-3">

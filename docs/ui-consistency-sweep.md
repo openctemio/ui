@@ -115,6 +115,21 @@ Original list (all surfaced):
 
 ---
 
+## Governance & follow-up (post-Batch-3)
+
+- [x] **Drift guard** — `src/config/__tests__/severity-color-governance.test.ts`
+      fails if a NEW file hard-codes an inline severity→color map. Allowlists the
+      current legacy sites (criticality/priority/other-domain/residual); the
+      ratchet only tightens. New code must import from `severity-colors.ts`.
+- [x] **Residual:** `activity-panel.tsx` migrated to SOFT (low green→blue).
+- [x] **Cleanup:** deleted merged branches chore/severity-batch2, -batch3,
+      ui-consistency-sweep.
+- [ ] **P2 — criticality single-source:** ~14 files still hold inline
+      `criticalityColors`/`CRITICALITY_BADGE` maps (green-for-low intentional).
+      Next PR: add `src/lib/criticality-colors.ts` + migrate them + drop them from
+      the guard allowlist. (audit-log severity + capabilities/pipelines are their
+      own domains — keep separate palettes.)
+
 ## Log
 
 - 2026-07: inventory complete; status doc created; `/remediations` reclassified as
