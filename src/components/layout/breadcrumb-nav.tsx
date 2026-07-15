@@ -43,7 +43,6 @@ const routeLabels: Record<string, string> = {
 
   // Prioritization
   prioritization: 'Prioritization',
-  'risk-analysis': 'Risk Analysis',
   'business-impact': 'Business Impact',
 
   // Validation

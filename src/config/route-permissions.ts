@@ -258,10 +258,6 @@ export const routePermissions: Record<string, RoutePermissionConfig> = {
     permission: Permission.VulnerabilitiesRead,
     module: Module.ThreatIntel,
   },
-  '/risk-analysis': {
-    permission: Permission.VulnerabilitiesRead,
-    module: Module.RiskAnalysis,
-  },
   '/business-impact': {
     permission: Permission.VulnerabilitiesRead,
     module: Module.BusinessImpact,
