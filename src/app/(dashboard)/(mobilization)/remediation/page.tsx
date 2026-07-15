@@ -1824,7 +1824,7 @@ function TaskDetailSheet({
                   </div>
                   {/* Scrollable, info-rich rows so you can choose what to link with
                       severity + asset + status in view (not title alone). */}
-                  <div className="max-h-[min(60vh,20rem)] overflow-y-auto overscroll-contain p-1">
+                  <div className="max-h-80 overflow-y-auto overscroll-contain p-1">
                     {(() => {
                       const q = pickerQuery.trim().toLowerCase()
                       const list = q
