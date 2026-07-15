@@ -223,7 +223,19 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
   const sortDesc = searchParams.get('sort')
     ? searchParams.get('dir') === 'desc'
     : config.defaultSort?.direction === 'desc'
-  const sortParam = sortFieldParam ? `${sortDesc ? '-' : ''}${sortFieldParam}` : undefined
+  // Column accessorKeys (and the URL sort value) are camelCase (findingCount,
+  // riskScore, updatedAt) but the API only accepts snake_case sort fields and
+  // silently ignores unknown ones — so sorting only ever reordered the current
+  // page. Convert to snake_case so the server sorts the whole dataset.
+  const toSnakeCase = (s: string) => s.replace(/[A-Z]/g, (m) => `_${m.toLowerCase()}`)
+  const sortParam = sortFieldParam
+    ? `${sortDesc ? '-' : ''}${toSnakeCase(sortFieldParam)}`
+    : undefined
+
+  // Status is kept in sync with the URL `status` param (see the sync effect
+  // below); read it here so the fetch runs before the statusFilter state is
+  // declared, and so status filters server-side across the whole dataset.
+  const statusParam = searchParams.get('status')
 
   // Data fetching with server-side pagination, search, tag, and properties filter.
   const { assets, total, totalPages, isLoading, mutate } = useAssets({
@@ -234,6 +246,13 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
     pageSize,
     search: debouncedSearch || undefined,
     tags: tagFilters.length > 0 ? tagFilters : undefined,
+    // Status is filtered server-side (like search/tags) so it spans the whole
+    // dataset — filtering client-side only touched the current page while the
+    // count badges and pagination total stayed dataset-wide (misleading).
+    statuses:
+      statusParam && statusParam !== 'all'
+        ? ([statusParam] as ('active' | 'inactive' | 'archived')[])
+        : undefined,
     sort: sortParam,
   })
 
@@ -472,14 +491,10 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
     [config.statusFilters]
   )
 
-  // Filter data — status is client-side, properties are server-side (via useAssets)
-  const filteredData = useMemo(() => {
-    let data = [...(transformedAssets ?? [])]
-    if (statusFilter !== 'all') {
-      data = data.filter((a) => a.status === statusFilter)
-    }
-    return data
-  }, [transformedAssets, statusFilter])
+  // Status, search, tags, and properties are all filtered server-side now, so
+  // the rows returned are already the filtered set — no client-side re-filter
+  // (which previously only touched the current page).
+  const filteredData = transformedAssets ?? []
 
   // Status counts — derived from the tenant-wide stats endpoint so the tab
   // badges reflect the entire dataset (e.g. 1427 hosts) instead of only the
@@ -597,6 +612,9 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
         exposure: (data.exposure as string | undefined) || 'unknown',
         ownerRef,
         tags,
+        // Per-type fields collected by the form live in `metadata` (→ backend
+        // `properties`). The update path passes this; create silently dropped it.
+        ...(Object.keys(metadata).length > 0 ? { metadata } : {}),
         ...topLevel,
       } as never)
     },
@@ -1169,7 +1187,10 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
 
                 <Select
                   value={statusFilter}
-                  onValueChange={(v) => setStatusFilter(v as StatusFilter)}
+                  onValueChange={(v) => {
+                    setStatusFilter(v as StatusFilter)
+                    setCurrentPage(1)
+                  }}
                 >
                   <SelectTrigger className="w-[130px] h-9">
                     <SelectValue>
