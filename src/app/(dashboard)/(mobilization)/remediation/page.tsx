@@ -1257,6 +1257,7 @@ export default function RemediationPage() {
                   columns={columns}
                   data={filteredData}
                   onRowClick={(task) => setViewTask(task)}
+                  onSelectionChange={(rows) => setSelectedIds(rows.map((t) => t.id))}
                   searchPlaceholder="Search tasks..."
                   pageSize={10}
                   emptyMessage="No tasks found"

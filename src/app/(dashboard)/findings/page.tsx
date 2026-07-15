@@ -279,7 +279,10 @@ function FindingsContent() {
 
   const [selectedFinding, setSelectedFinding] = useState<Finding | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
-  const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({})
+  // Selected finding IDs, lifted from the DataTable via onSelectionChange. The
+  // table owns its checkbox state internally; previously nothing synced it out
+  // so selectedCount was always 0 and the bulk-action bar never appeared.
+  const [selectedFindingIds, setSelectedFindingIds] = useState<string[]>([])
   const [severityTab, setSeverityTab] = useState<string>('all')
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [findingToDelete, setFindingToDelete] = useState<Finding | null>(null)
@@ -425,14 +428,10 @@ function FindingsContent() {
     }
   }, [findingStats])
 
-  const selectedCount = Object.keys(rowSelection).filter((k) => rowSelection[k]).length
+  const selectedCount = selectedFindingIds.length
   const selectedFindings = useMemo(
-    () =>
-      Object.keys(rowSelection)
-        .filter((k) => rowSelection[k])
-        .map((idx) => findings[parseInt(idx)])
-        .filter(Boolean),
-    [rowSelection, findings]
+    () => findings.filter((f) => selectedFindingIds.includes(f.id)),
+    [selectedFindingIds, findings]
   )
 
   const clearFilters = () => {
@@ -497,8 +496,7 @@ function FindingsContent() {
   }
 
   const handleBulkAssign = async (userId: string) => {
-    const selectedIds = Object.keys(rowSelection).filter((k) => rowSelection[k])
-    const findingIds = selectedIds.map((idx) => findings[parseInt(idx)]?.id).filter(Boolean)
+    const findingIds = selectedFindingIds
     if (findingIds.length === 0 || !userId.trim()) return
 
     try {
@@ -510,7 +508,7 @@ function FindingsContent() {
       })
       if (!response.ok) throw new Error('Failed to assign findings')
       toast.success(`Assigned ${findingIds.length} findings`)
-      setRowSelection({})
+      setSelectedFindingIds([])
       mutateFindings()
     } catch (error) {
       toast.error(getErrorMessage(error, 'Failed to assign findings'))
@@ -518,8 +516,7 @@ function FindingsContent() {
   }
 
   const handleBulkStatusChange = async (status: string) => {
-    const selectedIds = Object.keys(rowSelection).filter((k) => rowSelection[k])
-    const findingIds = selectedIds.map((idx) => findings[parseInt(idx)]?.id).filter(Boolean)
+    const findingIds = selectedFindingIds
     if (findingIds.length === 0) return
 
     try {
@@ -531,7 +528,7 @@ function FindingsContent() {
       })
       if (!response.ok) throw new Error('Failed to update findings')
       toast.success(`Updated ${findingIds.length} findings to ${status}`)
-      setRowSelection({})
+      setSelectedFindingIds([])
       mutateFindings()
       mutateStats()
     } catch (error) {
@@ -1283,7 +1280,7 @@ function FindingsContent() {
                             intentionally not offered as a bulk action. */}
                       </DropdownMenuContent>
                     </DropdownMenu>
-                    <Button variant="outline" size="sm" onClick={() => setRowSelection({})}>
+                    <Button variant="outline" size="sm" onClick={() => setSelectedFindingIds([])}>
                       Clear Selection
                     </Button>
                   </div>
@@ -1352,6 +1349,9 @@ function FindingsContent() {
                             columns={columns}
                             data={findings}
                             showSearch={false}
+                            onSelectionChange={(rows) =>
+                              setSelectedFindingIds(rows.map((f) => f.id))
+                            }
                             emptyMessage="No findings found"
                             emptyDescription={
                               findings.length === 0
@@ -1409,7 +1409,7 @@ function FindingsContent() {
         findingIds={remedContext?.ids ?? []}
         suggestedName={remedContext?.name}
         suggestedPriority={remedContext?.priority}
-        onDone={() => setRowSelection({})}
+        onDone={() => setSelectedFindingIds([])}
       />
 
       {/* Finding Quick View Drawer */}
