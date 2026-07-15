@@ -1531,417 +1531,426 @@ function TaskDetailSheet({
           <SheetTitle>Task Details</SheetTitle>
         </VisuallyHidden>
 
-        {/* ── Header ── */}
-        <div
-          className={`p-5 border-b ${
-            task.status === 'completed'
-              ? 'bg-green-500/5'
-              : task.status === 'blocked' || overdue
-                ? 'bg-red-500/5'
-                : 'bg-muted/30'
-          }`}
-        >
-          {/* Toolbar: title left, actions right */}
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-sm font-medium text-muted-foreground">Task Details</p>
-            <div className="flex items-center gap-0.5 shrink-0">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7"
-                    onClick={() => onCopyId(task.id)}
+        {/* Findings picker takes over the drawer body (inline — scrolls via the
+            Sheet's own scroller). Back/Done returns to the task details. */}
+        {manageOpen && (
+          <FindingPickerPanel
+            onClose={() => setManageOpen(false)}
+            selectedIds={task.findingIds ?? []}
+            onToggle={(findingId, next) =>
+              onPatch(task, {
+                finding_filter: {
+                  finding_ids: next
+                    ? [...(task.findingIds ?? []), findingId]
+                    : (task.findingIds ?? []).filter((id) => id !== findingId),
+                },
+              })
+            }
+            findingCampaigns={findingCampaigns}
+            currentCampaignId={task.id}
+            memberNameById={memberNameById}
+          />
+        )}
+
+        <div className={manageOpen ? 'hidden' : undefined}>
+          {/* ── Header ── */}
+          <div
+            className={`p-5 border-b ${
+              task.status === 'completed'
+                ? 'bg-green-500/5'
+                : task.status === 'blocked' || overdue
+                  ? 'bg-red-500/5'
+                  : 'bg-muted/30'
+            }`}
+          >
+            {/* Toolbar: title left, actions right */}
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-sm font-medium text-muted-foreground">Task Details</p>
+              <div className="flex items-center gap-0.5 shrink-0">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={() => onCopyId(task.id)}
+                    >
+                      <Hash className="h-3.5 w-3.5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">Copy ID</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={() => onCopyLink(task.id)}
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">Copy link</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={() => onOpenCampaign(task)}
+                    >
+                      <ChevronRight className="h-3.5 w-3.5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">Open campaign</TooltipContent>
+                </Tooltip>
+                <Separator orientation="vertical" className="h-4 mx-1" />
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onClose}>
+                  <X className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Title (click to edit inline) */}
+            {editingTitle ? (
+              <Input
+                autoFocus
+                value={titleDraft}
+                onChange={(e) => setTitleDraft(e.target.value)}
+                onBlur={saveTitle}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') saveTitle()
+                  if (e.key === 'Escape') {
+                    setTitleDraft(task.title)
+                    setEditingTitle(false)
+                  }
+                }}
+                className="h-7 text-base font-semibold"
+              />
+            ) : (
+              <h2
+                className="text-base font-semibold leading-tight cursor-text rounded px-1 -mx-1 hover:bg-muted/50"
+                onClick={() => {
+                  setTitleDraft(task.title)
+                  setEditingTitle(true)
+                }}
+              >
+                {task.title}
+              </h2>
+            )}
+            <p className="text-xs text-muted-foreground mt-1">{task.findingTitle}</p>
+
+            {/* Badges */}
+            <div className="flex flex-wrap items-center gap-1.5 mt-3">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Badge
+                    className={`${priorityColors[task.priority]} text-xs h-5 cursor-pointer`}
+                    title="Change priority"
                   >
-                    <Hash className="h-3.5 w-3.5" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">Copy ID</TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7"
-                    onClick={() => onCopyLink(task.id)}
-                  >
-                    <ExternalLink className="h-3.5 w-3.5" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">Copy link</TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7"
-                    onClick={() => onOpenCampaign(task)}
-                  >
-                    <ChevronRight className="h-3.5 w-3.5" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">Open campaign</TooltipContent>
-              </Tooltip>
-              <Separator orientation="vertical" className="h-4 mx-1" />
-              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onClose}>
-                <X className="h-3.5 w-3.5" />
-              </Button>
+                    {TASK_PRIORITY_LABELS[task.priority]}
+                  </Badge>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start">
+                  {(['urgent', 'high', 'medium', 'low'] as TaskPriority[]).map((p) => (
+                    <DropdownMenuItem key={p} onClick={() => onPatch(task, { priority: p })}>
+                      {TASK_PRIORITY_LABELS[p]}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Badge className={`${statusColors[task.status]} text-xs h-5`}>
+                {TASK_STATUS_LABELS[task.status]}
+              </Badge>
+              <SeverityBadge severity={task.severity} />
+              {overdue && (
+                <Badge variant="outline" className="border-red-500/50 text-red-500 text-xs h-5">
+                  <AlertCircle className="me-1 h-3 w-3" />
+                  Overdue
+                </Badge>
+              )}
             </div>
           </div>
 
-          {/* Title (click to edit inline) */}
-          {editingTitle ? (
-            <Input
-              autoFocus
-              value={titleDraft}
-              onChange={(e) => setTitleDraft(e.target.value)}
-              onBlur={saveTitle}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') saveTitle()
-                if (e.key === 'Escape') {
-                  setTitleDraft(task.title)
-                  setEditingTitle(false)
-                }
-              }}
-              className="h-7 text-base font-semibold"
-            />
-          ) : (
-            <h2
-              className="text-base font-semibold leading-tight cursor-text rounded px-1 -mx-1 hover:bg-muted/50"
-              onClick={() => {
-                setTitleDraft(task.title)
-                setEditingTitle(true)
-              }}
-            >
-              {task.title}
-            </h2>
-          )}
-          <p className="text-xs text-muted-foreground mt-1">{task.findingTitle}</p>
-
-          {/* Badges */}
-          <div className="flex flex-wrap items-center gap-1.5 mt-3">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Badge
-                  className={`${priorityColors[task.priority]} text-xs h-5 cursor-pointer`}
-                  title="Change priority"
-                >
-                  {TASK_PRIORITY_LABELS[task.priority]}
-                </Badge>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start">
-                {(['urgent', 'high', 'medium', 'low'] as TaskPriority[]).map((p) => (
-                  <DropdownMenuItem key={p} onClick={() => onPatch(task, { priority: p })}>
-                    {TASK_PRIORITY_LABELS[p]}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <Badge className={`${statusColors[task.status]} text-xs h-5`}>
-              {TASK_STATUS_LABELS[task.status]}
-            </Badge>
-            <SeverityBadge severity={task.severity} />
-            {overdue && (
-              <Badge variant="outline" className="border-red-500/50 text-red-500 text-xs h-5">
-                <AlertCircle className="me-1 h-3 w-3" />
-                Overdue
-              </Badge>
-            )}
-          </div>
-        </div>
-
-        {/* ── Content ── */}
-        <div className="p-5 space-y-4">
-          {/* Key info grid */}
-          <div className="grid grid-cols-2 gap-3">
-            <InfoCard
-              icon={<UserPlus className="h-3.5 w-3.5 text-muted-foreground" />}
-              label="Assignee"
-            >
-              {/* Inline edit (Jira-style): pick a member → PATCH assigned_to. */}
-              <AssigneeSelect
-                variant="ghost"
-                showFullName
-                placeholder="Assign"
-                value={
-                  task.assigneeId
-                    ? { id: task.assigneeId, name: task.assigneeName || 'Assigned' }
-                    : null
-                }
-                onChange={(user) => onPatch(task, { assigned_to: user?.id ?? '' })}
-              />
-            </InfoCard>
-
-            <InfoCard
-              icon={<Play className="h-3.5 w-3.5 text-muted-foreground" />}
-              label="Start Date"
-            >
-              <Popover open={startOpen} onOpenChange={setStartOpen}>
-                <PopoverTrigger asChild>
-                  <button className="text-start rounded px-1 -mx-1 hover:bg-muted/50">
-                    <span className="text-sm font-medium">
-                      {safeFormatDate(task.startDate, { month: 'short', day: 'numeric' }) ??
-                        'Auto on start'}
-                    </span>
-                    {!task.startDate && (
-                      <span className="text-[11px] text-muted-foreground block">
-                        set when work begins
-                      </span>
-                    )}
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <CalendarComponent
-                    mode="single"
-                    selected={task.startDate ? new Date(task.startDate) : undefined}
-                    onSelect={(date) => {
-                      setStartOpen(false)
-                      if (date) onPatch(task, { start_date: date.toISOString() })
-                    }}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </InfoCard>
-
-            <InfoCard
-              icon={
-                <Calendar
-                  className={`h-3.5 w-3.5 ${overdue ? 'text-red-500' : 'text-muted-foreground'}`}
-                />
-              }
-              label="Due Date"
-            >
-              <Popover open={dueOpen} onOpenChange={setDueOpen}>
-                <PopoverTrigger asChild>
-                  <button className="text-start rounded px-1 -mx-1 hover:bg-muted/50">
-                    <span className={`text-sm font-medium ${overdue ? 'text-red-500' : ''}`}>
-                      {safeFormatDate(task.dueDate, { month: 'short', day: 'numeric' }) ??
-                        'Set date'}
-                    </span>
-                    {due && task.status !== 'completed' && (
-                      <span
-                        className={`text-[11px] block ${due.overdue ? 'text-red-400' : 'text-muted-foreground'}`}
-                      >
-                        {due.overdue ? `${due.days}d overdue` : `${due.days}d remaining`}
-                      </span>
-                    )}
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <CalendarComponent
-                    mode="single"
-                    selected={task.dueDate ? new Date(task.dueDate) : undefined}
-                    onSelect={(date) => {
-                      setDueOpen(false)
-                      onPatch(task, { due_date: date ? date.toISOString() : null })
-                    }}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </InfoCard>
-
-            {/* Validator (assigned_team) — the person who verifies the fix. Shown
-                once the task is in validation, so the fixer and the verifier are
-                explicitly different people (segregation of duties). */}
-            {task.status === 'review' && (
+          {/* ── Content ── */}
+          <div className="p-5 space-y-4">
+            {/* Key info grid */}
+            <div className="grid grid-cols-2 gap-3">
               <InfoCard
-                icon={<CheckCircle className="h-3.5 w-3.5 text-muted-foreground" />}
-                label="Validator"
+                icon={<UserPlus className="h-3.5 w-3.5 text-muted-foreground" />}
+                label="Assignee"
               >
+                {/* Inline edit (Jira-style): pick a member → PATCH assigned_to. */}
                 <AssigneeSelect
                   variant="ghost"
                   showFullName
-                  placeholder="Assign validator"
+                  placeholder="Assign"
                   value={
-                    task.validatorId
-                      ? { id: task.validatorId, name: task.validatorName || 'Assigned' }
+                    task.assigneeId
+                      ? { id: task.assigneeId, name: task.assigneeName || 'Assigned' }
                       : null
                   }
-                  onChange={(user) => onPatch(task, { assigned_team: user?.id ?? '' })}
+                  onChange={(user) => onPatch(task, { assigned_to: user?.id ?? '' })}
                 />
               </InfoCard>
-            )}
-          </div>
 
-          {/* Description (click to edit inline) */}
-          <div className="space-y-1.5">
-            <p className="text-xs font-medium text-muted-foreground">Description</p>
-            {editingDesc ? (
-              <Textarea
-                autoFocus
-                value={descDraft}
-                onChange={(e) => setDescDraft(e.target.value)}
-                onBlur={saveDesc}
-                className="min-h-[80px] text-sm"
-              />
-            ) : (
-              <p
-                className="text-sm leading-relaxed bg-muted/30 rounded-lg p-3 cursor-text hover:bg-muted/50"
-                onClick={() => {
-                  setDescDraft(task.description || '')
-                  setEditingDesc(true)
-                }}
+              <InfoCard
+                icon={<Play className="h-3.5 w-3.5 text-muted-foreground" />}
+                label="Start Date"
               >
-                {task.description || (
-                  <span className="text-muted-foreground">Add a description…</span>
-                )}
-              </p>
-            )}
-          </div>
-
-          {/* Linked Findings — a task can cover many; view + manage inline */}
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-medium text-muted-foreground">
-                Linked Findings ({task.findingIds?.length ?? 0})
-              </p>
-              {/* A standalone modal (not a Popover nested in the drawer Sheet) so the
-                  list scrolls reliably on touch — nested Radix portals broke iOS scroll. */}
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-6 text-xs"
-                onClick={() => setManageOpen(true)}
-              >
-                <Plus className="me-1 h-3 w-3" /> Manage
-              </Button>
-              <FindingPickerPanel
-                open={manageOpen}
-                onClose={() => setManageOpen(false)}
-                selectedIds={task.findingIds ?? []}
-                onToggle={(findingId, next) =>
-                  onPatch(task, {
-                    finding_filter: {
-                      finding_ids: next
-                        ? [...(task.findingIds ?? []), findingId]
-                        : (task.findingIds ?? []).filter((id) => id !== findingId),
-                    },
-                  })
-                }
-                findingCampaigns={findingCampaigns}
-                currentCampaignId={task.id}
-                memberNameById={memberNameById}
-              />
-            </div>
-            {(task.findingIds?.length ?? 0) === 0 ? (
-              <p className="text-xs text-muted-foreground">No findings linked yet.</p>
-            ) : (
-              <div className="space-y-1">
-                {(task.findingIds ?? []).map((id) => {
-                  const f = findings.find((x) => x.id === id)
-                  return (
-                    <div
-                      key={id}
-                      className="flex items-center gap-2 rounded bg-muted/30 px-2 py-1 text-xs"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <span className="block truncate">{f ? f.title || f.message : id}</span>
-                        <span className="text-muted-foreground flex items-center gap-2 truncate text-[10px]">
-                          {f?.asset?.name && <span className="truncate">{f.asset.name}</span>}
-                          {f?.assigned_to ? (
-                            <span className="flex shrink-0 items-center gap-0.5">
-                              <UserPlus className="h-2.5 w-2.5" />
-                              {memberNameById.get(f.assigned_to) ||
-                                f.assigned_to_user?.name ||
-                                'Assigned'}
-                            </span>
-                          ) : null}
+                <Popover open={startOpen} onOpenChange={setStartOpen}>
+                  <PopoverTrigger asChild>
+                    <button className="text-start rounded px-1 -mx-1 hover:bg-muted/50">
+                      <span className="text-sm font-medium">
+                        {safeFormatDate(task.startDate, { month: 'short', day: 'numeric' }) ??
+                          'Auto on start'}
+                      </span>
+                      {!task.startDate && (
+                        <span className="text-[11px] text-muted-foreground block">
+                          set when work begins
                         </span>
-                      </div>
-                      <button
-                        type="button"
-                        className="text-muted-foreground hover:text-foreground"
-                        aria-label="Unlink finding"
-                        onClick={() =>
-                          onPatch(task, {
-                            finding_filter: {
-                              finding_ids: (task.findingIds ?? []).filter((x) => x !== id),
-                            },
-                          })
-                        }
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </div>
+                      )}
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarComponent
+                      mode="single"
+                      selected={task.startDate ? new Date(task.startDate) : undefined}
+                      onSelect={(date) => {
+                        setStartOpen(false)
+                        if (date) onPatch(task, { start_date: date.toISOString() })
+                      }}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </InfoCard>
 
-          {/* Progress */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-medium text-muted-foreground">Progress</p>
-              <span className="text-xs font-medium tabular-nums">{taskProgress}%</span>
-            </div>
-            <Progress value={taskProgress} className="h-1.5" />
-          </div>
-
-          <Separator />
-
-          {/* Status Actions */}
-          <div className="space-y-2">
-            <p className="text-xs font-medium text-muted-foreground">Actions</p>
-            <div className="flex flex-wrap gap-2">
-              {actions.map(({ action, label, icon: Icon, variant }) => (
-                <Button
-                  key={action}
-                  variant={variant}
-                  size="sm"
-                  className="h-8"
-                  onClick={() => onAction(action, task)}
-                >
-                  <Icon className="me-1.5 h-3.5 w-3.5" />
-                  {label}
-                </Button>
-              ))}
-            </div>
-          </div>
-
-          <Separator />
-
-          {/* Metadata */}
-          <div className="grid grid-cols-2 gap-3">
-            <InfoCard icon={<Hash className="h-3.5 w-3.5 text-muted-foreground" />} label="Task ID">
-              <p className="font-mono text-[11px] truncate">{task.id}</p>
-            </InfoCard>
-            <InfoCard
-              icon={<Clock className="h-3.5 w-3.5 text-muted-foreground" />}
-              label="Created"
-            >
-              <p className="text-sm">
-                {safeFormatDate(task.createdAt, { month: 'short', day: 'numeric' }) ?? '--'}
-              </p>
-              {task.createdAt && (
-                <p className="text-[11px] text-muted-foreground">{timeAgo(task.createdAt)}</p>
-              )}
-            </InfoCard>
-          </div>
-
-          {/* Danger Zone */}
-          <Can permission={Permission.RemediationWrite}>
-            <Separator />
-            <div className="flex items-center justify-between rounded-lg border border-red-500/15 bg-red-500/5 p-3">
-              <div>
-                <p className="text-sm font-medium text-red-500">Delete task</p>
-                <p className="text-xs text-muted-foreground">Permanently remove this task</p>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-7 border-red-500/30 text-red-500 hover:bg-red-500/10"
-                onClick={() => onDelete(task)}
+              <InfoCard
+                icon={
+                  <Calendar
+                    className={`h-3.5 w-3.5 ${overdue ? 'text-red-500' : 'text-muted-foreground'}`}
+                  />
+                }
+                label="Due Date"
               >
-                <Trash2 className="me-1.5 h-3.5 w-3.5" />
-                Delete
-              </Button>
+                <Popover open={dueOpen} onOpenChange={setDueOpen}>
+                  <PopoverTrigger asChild>
+                    <button className="text-start rounded px-1 -mx-1 hover:bg-muted/50">
+                      <span className={`text-sm font-medium ${overdue ? 'text-red-500' : ''}`}>
+                        {safeFormatDate(task.dueDate, { month: 'short', day: 'numeric' }) ??
+                          'Set date'}
+                      </span>
+                      {due && task.status !== 'completed' && (
+                        <span
+                          className={`text-[11px] block ${due.overdue ? 'text-red-400' : 'text-muted-foreground'}`}
+                        >
+                          {due.overdue ? `${due.days}d overdue` : `${due.days}d remaining`}
+                        </span>
+                      )}
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarComponent
+                      mode="single"
+                      selected={task.dueDate ? new Date(task.dueDate) : undefined}
+                      onSelect={(date) => {
+                        setDueOpen(false)
+                        onPatch(task, { due_date: date ? date.toISOString() : null })
+                      }}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </InfoCard>
+
+              {/* Validator (assigned_team) — the person who verifies the fix. Shown
+                once the task is in validation, so the fixer and the verifier are
+                explicitly different people (segregation of duties). */}
+              {task.status === 'review' && (
+                <InfoCard
+                  icon={<CheckCircle className="h-3.5 w-3.5 text-muted-foreground" />}
+                  label="Validator"
+                >
+                  <AssigneeSelect
+                    variant="ghost"
+                    showFullName
+                    placeholder="Assign validator"
+                    value={
+                      task.validatorId
+                        ? { id: task.validatorId, name: task.validatorName || 'Assigned' }
+                        : null
+                    }
+                    onChange={(user) => onPatch(task, { assigned_team: user?.id ?? '' })}
+                  />
+                </InfoCard>
+              )}
             </div>
-          </Can>
+
+            {/* Description (click to edit inline) */}
+            <div className="space-y-1.5">
+              <p className="text-xs font-medium text-muted-foreground">Description</p>
+              {editingDesc ? (
+                <Textarea
+                  autoFocus
+                  value={descDraft}
+                  onChange={(e) => setDescDraft(e.target.value)}
+                  onBlur={saveDesc}
+                  className="min-h-[80px] text-sm"
+                />
+              ) : (
+                <p
+                  className="text-sm leading-relaxed bg-muted/30 rounded-lg p-3 cursor-text hover:bg-muted/50"
+                  onClick={() => {
+                    setDescDraft(task.description || '')
+                    setEditingDesc(true)
+                  }}
+                >
+                  {task.description || (
+                    <span className="text-muted-foreground">Add a description…</span>
+                  )}
+                </p>
+              )}
+            </div>
+
+            {/* Linked Findings — a task can cover many; view + manage inline */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-medium text-muted-foreground">
+                  Linked Findings ({task.findingIds?.length ?? 0})
+                </p>
+                {/* A standalone modal (not a Popover nested in the drawer Sheet) so the
+                  list scrolls reliably on touch — nested Radix portals broke iOS scroll. */}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 text-xs"
+                  onClick={() => setManageOpen(true)}
+                >
+                  <Plus className="me-1 h-3 w-3" /> Manage
+                </Button>
+              </div>
+              {(task.findingIds?.length ?? 0) === 0 ? (
+                <p className="text-xs text-muted-foreground">No findings linked yet.</p>
+              ) : (
+                <div className="space-y-1">
+                  {(task.findingIds ?? []).map((id) => {
+                    const f = findings.find((x) => x.id === id)
+                    return (
+                      <div
+                        key={id}
+                        className="flex items-center gap-2 rounded bg-muted/30 px-2 py-1 text-xs"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <span className="block truncate">{f ? f.title || f.message : id}</span>
+                          <span className="text-muted-foreground flex items-center gap-2 truncate text-[10px]">
+                            {f?.asset?.name && <span className="truncate">{f.asset.name}</span>}
+                            {f?.assigned_to ? (
+                              <span className="flex shrink-0 items-center gap-0.5">
+                                <UserPlus className="h-2.5 w-2.5" />
+                                {memberNameById.get(f.assigned_to) ||
+                                  f.assigned_to_user?.name ||
+                                  'Assigned'}
+                              </span>
+                            ) : null}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          className="text-muted-foreground hover:text-foreground"
+                          aria-label="Unlink finding"
+                          onClick={() =>
+                            onPatch(task, {
+                              finding_filter: {
+                                finding_ids: (task.findingIds ?? []).filter((x) => x !== id),
+                              },
+                            })
+                          }
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Progress */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-medium text-muted-foreground">Progress</p>
+                <span className="text-xs font-medium tabular-nums">{taskProgress}%</span>
+              </div>
+              <Progress value={taskProgress} className="h-1.5" />
+            </div>
+
+            <Separator />
+
+            {/* Status Actions */}
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-muted-foreground">Actions</p>
+              <div className="flex flex-wrap gap-2">
+                {actions.map(({ action, label, icon: Icon, variant }) => (
+                  <Button
+                    key={action}
+                    variant={variant}
+                    size="sm"
+                    className="h-8"
+                    onClick={() => onAction(action, task)}
+                  >
+                    <Icon className="me-1.5 h-3.5 w-3.5" />
+                    {label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Metadata */}
+            <div className="grid grid-cols-2 gap-3">
+              <InfoCard
+                icon={<Hash className="h-3.5 w-3.5 text-muted-foreground" />}
+                label="Task ID"
+              >
+                <p className="font-mono text-[11px] truncate">{task.id}</p>
+              </InfoCard>
+              <InfoCard
+                icon={<Clock className="h-3.5 w-3.5 text-muted-foreground" />}
+                label="Created"
+              >
+                <p className="text-sm">
+                  {safeFormatDate(task.createdAt, { month: 'short', day: 'numeric' }) ?? '--'}
+                </p>
+                {task.createdAt && (
+                  <p className="text-[11px] text-muted-foreground">{timeAgo(task.createdAt)}</p>
+                )}
+              </InfoCard>
+            </div>
+
+            {/* Danger Zone */}
+            <Can permission={Permission.RemediationWrite}>
+              <Separator />
+              <div className="flex items-center justify-between rounded-lg border border-red-500/15 bg-red-500/5 p-3">
+                <div>
+                  <p className="text-sm font-medium text-red-500">Delete task</p>
+                  <p className="text-xs text-muted-foreground">Permanently remove this task</p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 border-red-500/30 text-red-500 hover:bg-red-500/10"
+                  onClick={() => onDelete(task)}
+                >
+                  <Trash2 className="me-1.5 h-3.5 w-3.5" />
+                  Delete
+                </Button>
+              </div>
+            </Can>
+          </div>
         </div>
       </SheetContent>
     </Sheet>
