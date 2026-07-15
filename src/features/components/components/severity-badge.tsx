@@ -3,39 +3,32 @@
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import type { Severity } from '@/features/shared/types'
+import { SEVERITY_BADGE_SOFT, type SeverityLevel } from '@/lib/severity-colors'
 
-// Soft-tint severity palette. Text colors are dark-paired so labels stay legible
-// in dark mode (600-weight text is too dark on the translucent tint there).
+// Soft-tint severity badge — colors sourced from the single source of truth
+// (severity-colors.ts SEVERITY_BADGE_SOFT) so they can't drift. "none" reuses the
+// neutral (info) tint.
+const SEVERITY_LABELS: Record<Severity, string> = {
+  critical: 'Critical',
+  high: 'High',
+  medium: 'Medium',
+  low: 'Low',
+  info: 'Info',
+  none: 'None',
+}
+
+function softClass(severity: Severity): string {
+  const key = (severity === 'none' ? 'info' : severity) as SeverityLevel
+  return SEVERITY_BADGE_SOFT[key]
+}
+
 const severityConfig: Record<Severity, { label: string; className: string }> = {
-  critical: {
-    label: 'Critical',
-    className: 'bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/30 hover:bg-red-500/25',
-  },
-  high: {
-    label: 'High',
-    className:
-      'bg-orange-500/15 text-orange-600 dark:text-orange-400 border-orange-500/30 hover:bg-orange-500/25',
-  },
-  medium: {
-    label: 'Medium',
-    className:
-      'bg-yellow-500/15 text-yellow-600 dark:text-yellow-400 border-yellow-500/30 hover:bg-yellow-500/25',
-  },
-  low: {
-    label: 'Low',
-    className:
-      'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30 hover:bg-blue-500/25',
-  },
-  info: {
-    label: 'Info',
-    className:
-      'bg-slate-500/15 text-slate-600 dark:text-slate-400 border-slate-500/30 hover:bg-slate-500/25',
-  },
-  none: {
-    label: 'None',
-    className:
-      'bg-slate-500/15 text-slate-600 dark:text-slate-400 border-slate-500/30 hover:bg-slate-500/25',
-  },
+  critical: { label: SEVERITY_LABELS.critical, className: softClass('critical') },
+  high: { label: SEVERITY_LABELS.high, className: softClass('high') },
+  medium: { label: SEVERITY_LABELS.medium, className: softClass('medium') },
+  low: { label: SEVERITY_LABELS.low, className: softClass('low') },
+  info: { label: SEVERITY_LABELS.info, className: softClass('info') },
+  none: { label: SEVERITY_LABELS.none, className: softClass('none') },
 }
 
 interface SeverityBadgeProps {

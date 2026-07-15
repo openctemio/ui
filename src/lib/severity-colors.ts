@@ -37,6 +37,16 @@ export const SEVERITY_BADGE_SOLID: Record<SeverityLevel, string> = {
   info: 'bg-gray-500 text-white hover:bg-gray-600',
 }
 
+/** Badge Tailwind classes — soft-tint variant (translucent fill, hued text; used
+ *  for count badges and dark-friendly list pills). */
+export const SEVERITY_BADGE_SOFT: Record<SeverityLevel, string> = {
+  critical: 'bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/30',
+  high: 'bg-orange-500/15 text-orange-600 dark:text-orange-400 border-orange-500/30',
+  medium: 'bg-yellow-500/15 text-yellow-700 dark:text-yellow-400 border-yellow-500/30',
+  low: 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30',
+  info: 'bg-gray-500/15 text-gray-600 dark:text-gray-400 border-gray-500/30',
+}
+
 /** Text colors for inline severity text */
 export const SEVERITY_TEXT_COLORS: Record<SeverityLevel, string> = {
   critical: 'text-red-600 dark:text-red-400',

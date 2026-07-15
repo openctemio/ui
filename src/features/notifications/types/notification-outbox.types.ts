@@ -5,6 +5,8 @@
  * Tenants can monitor and manage their notification delivery queue.
  */
 
+import { SEVERITY_BADGE_LIGHT } from '@/lib/severity-colors'
+
 /**
  * Outbox entry status
  */
@@ -116,6 +118,22 @@ export const OUTBOX_STATUS_CONFIG: Record<
 }
 
 /**
+ * Split a centralized light-pill palette entry into the `color` (text) and
+ * `bgColor` fields this config exposes, so severity colors stay sourced from
+ * `@/lib/severity-colors` (`OutboxSeverity` shares the palette's key set). This
+ * also gains dark-mode variants that the previous hard-coded map lacked.
+ */
+function lightSeverityStyles(level: OutboxSeverity): { color: string; bgColor: string } {
+  const tokens = SEVERITY_BADGE_LIGHT[level].split(' ')
+  const pick = (...prefixes: string[]): string =>
+    tokens.filter((t) => prefixes.some((p) => t.startsWith(p))).join(' ')
+  return {
+    color: pick('text-', 'dark:text-'),
+    bgColor: pick('bg-', 'dark:bg-'),
+  }
+}
+
+/**
  * Severity configuration for UI display
  */
 export const OUTBOX_SEVERITY_CONFIG: Record<
@@ -126,29 +144,9 @@ export const OUTBOX_SEVERITY_CONFIG: Record<
     bgColor: string
   }
 > = {
-  critical: {
-    label: 'Critical',
-    color: 'text-red-600',
-    bgColor: 'bg-red-100',
-  },
-  high: {
-    label: 'High',
-    color: 'text-orange-600',
-    bgColor: 'bg-orange-100',
-  },
-  medium: {
-    label: 'Medium',
-    color: 'text-yellow-600',
-    bgColor: 'bg-yellow-100',
-  },
-  low: {
-    label: 'Low',
-    color: 'text-blue-600',
-    bgColor: 'bg-blue-100',
-  },
-  info: {
-    label: 'Info',
-    color: 'text-gray-600',
-    bgColor: 'bg-gray-100',
-  },
+  critical: { label: 'Critical', ...lightSeverityStyles('critical') },
+  high: { label: 'High', ...lightSeverityStyles('high') },
+  medium: { label: 'Medium', ...lightSeverityStyles('medium') },
+  low: { label: 'Low', ...lightSeverityStyles('low') },
+  info: { label: 'Info', ...lightSeverityStyles('info') },
 }
