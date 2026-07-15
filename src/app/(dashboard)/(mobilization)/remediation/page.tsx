@@ -278,7 +278,9 @@ function campaignToTask(c: RemediationCampaign): RemediationTask {
     findingId: linkedFindingIds[0] ?? '',
     findingIds: linkedFindingIds,
     findingTitle: `${c.finding_count} finding${c.finding_count !== 1 ? 's' : ''} linked`,
-    severity: (c.priority === 'critical' ? 'critical' : c.priority) as Severity,
+    // Campaign priority is urgent|high|medium|low; Severity has no "urgent"
+    // (an unmapped value renders as an "Unknown" badge), so map urgent→critical.
+    severity: (c.priority === 'urgent' ? 'critical' : c.priority) as Severity,
     assigneeId: c.assigned_to || '',
     assigneeName: '', // resolved from the member list in the page (assigned_to is a UUID)
     validatorId: c.assigned_team || '',
