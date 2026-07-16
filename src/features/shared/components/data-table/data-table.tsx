@@ -60,6 +60,13 @@ interface DataTableProps<TData, TValue> {
   emptyMessage?: string
   emptyDescription?: string
   onRowClick?: (row: TData) => void
+  /**
+   * Notified whenever the row selection changes, with the selected row data.
+   * The table owns selection state internally (via the `select` column's
+   * checkboxes); this is the only way for a parent to observe it (e.g. to drive
+   * a bulk-action bar). Optional — existing callers are unaffected.
+   */
+  onSelectionChange?: (selectedRows: TData[]) => void
 }
 
 export function DataTable<TData, TValue>({
@@ -75,6 +82,7 @@ export function DataTable<TData, TValue>({
   emptyMessage = 'No results found',
   emptyDescription = 'Try adjusting your search or filters',
   onRowClick,
+  onSelectionChange,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
@@ -111,6 +119,16 @@ export function DataTable<TData, TValue>({
 
   const selectedCount = table.getFilteredSelectedRowModel().rows.length
   const totalCount = table.getFilteredRowModel().rows.length
+
+  // Lift the internally-owned selection up to an optional parent callback so a
+  // bulk-action bar can react. Ref keeps the effect from depending on an inline
+  // callback identity (which would refire every render).
+  const onSelectionChangeRef = React.useRef(onSelectionChange)
+  onSelectionChangeRef.current = onSelectionChange
+  React.useEffect(() => {
+    onSelectionChangeRef.current?.(table.getFilteredSelectedRowModel().rows.map((r) => r.original))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rowSelection])
 
   return (
     <div className="space-y-4">

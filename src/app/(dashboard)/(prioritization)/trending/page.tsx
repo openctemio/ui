@@ -57,18 +57,18 @@ import { get } from '@/lib/api/client'
 
 interface RiskTrendPoint {
   date: string
-  risk_score: number
+  risk_score_avg: number
   findings_open: number
-  p0_count: number
-  p1_count: number
-  p2_count: number
-  p3_count: number
+  p0_open: number
+  p1_open: number
+  p2_open: number
+  p3_open: number
 }
 
 interface DataQuality {
-  ownership_pct: number
-  evidence_pct: number
-  avg_last_seen_days: number
+  asset_ownership_pct: number
+  finding_evidence_pct: number
+  median_last_seen_days: number
   total_assets: number
 }
 
@@ -531,19 +531,19 @@ export default function TrendingExposuresPage() {
             <section className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
               <StatsCard
                 title="Ownership"
-                value={`${fmt(dataQuality.ownership_pct, 1)}%`}
+                value={`${fmt(dataQuality.asset_ownership_pct, 1)}%`}
                 icon={Users}
                 description="Assets with assigned owners"
               />
               <StatsCard
                 title="Evidence"
-                value={`${fmt(dataQuality.evidence_pct, 1)}%`}
+                value={`${fmt(dataQuality.finding_evidence_pct, 1)}%`}
                 icon={FileSearch}
                 description="Findings with evidence attached"
               />
               <StatsCard
                 title="Freshness"
-                value={`${fmt(dataQuality.avg_last_seen_days, 0)}d`}
+                value={`${fmt(dataQuality.median_last_seen_days, 0)}d`}
                 icon={CalendarClock}
                 description="Avg days since last seen"
               />
@@ -586,27 +586,27 @@ export default function TrendingExposuresPage() {
                             {new Date(point.date).toLocaleDateString()}
                           </TableCell>
                           <TableCell className="text-end font-mono">
-                            {fmt(point.risk_score, 1)}
+                            {fmt(point.risk_score_avg, 1)}
                           </TableCell>
                           <TableCell className="text-end">{num(point.findings_open)}</TableCell>
                           <TableCell className="text-end">
                             <span
-                              className={cn(num(point.p0_count) > 0 && 'text-red-500 font-medium')}
+                              className={cn(num(point.p0_open) > 0 && 'text-red-500 font-medium')}
                             >
-                              {num(point.p0_count)}
+                              {num(point.p0_open)}
                             </span>
                           </TableCell>
                           <TableCell className="text-end">
                             <span
                               className={cn(
-                                num(point.p1_count) > 0 && 'text-orange-500 font-medium'
+                                num(point.p1_open) > 0 && 'text-orange-500 font-medium'
                               )}
                             >
-                              {num(point.p1_count)}
+                              {num(point.p1_open)}
                             </span>
                           </TableCell>
-                          <TableCell className="text-end">{num(point.p2_count)}</TableCell>
-                          <TableCell className="text-end">{num(point.p3_count)}</TableCell>
+                          <TableCell className="text-end">{num(point.p2_open)}</TableCell>
+                          <TableCell className="text-end">{num(point.p3_open)}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>

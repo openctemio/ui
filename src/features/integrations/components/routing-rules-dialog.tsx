@@ -131,7 +131,11 @@ export function RoutingRulesDialog({
         },
       })
       toast.success('Routing rules saved')
-      await mutate('/api/v1/integrations?category=ticketing')
+      await mutate(
+        (key) => typeof key === 'string' && key.startsWith('/api/v1/integrations'),
+        undefined,
+        { revalidate: true }
+      )
       onOpenChange(false)
     } catch {
       toast.error('Failed to save routing rules')

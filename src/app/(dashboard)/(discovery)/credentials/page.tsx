@@ -162,10 +162,6 @@ const categorizeSource = (source: string): SourceFilter => {
 }
 
 export default function CredentialsPage() {
-  // API hooks
-  const [page, _setPage] = useState(1)
-  const pageSize = 20
-
   // Build API filters based on UI filters
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all')
@@ -196,8 +192,11 @@ export default function CredentialsPage() {
     isLoading,
     mutate,
   } = useCredentialsApi({
-    page,
-    page_size: pageSize,
+    // The table paginates client-side (DataTablePagination), so fetch a full
+    // working set rather than a frozen 20-row page — the server `page` state
+    // was never advanced, making rows 21+ permanently unreachable.
+    page: 1,
+    page_size: 500,
     state: apiStateFilter.length > 0 ? apiStateFilter : undefined,
     search: globalFilter || undefined,
   })
@@ -216,8 +215,10 @@ export default function CredentialsPage() {
 
   // Fetch identities (grouped by username/email) for identity view
   const { data: identitiesResponse, isLoading: identitiesLoading } = useCredentialIdentitiesApi({
-    page,
-    page_size: pageSize,
+    // Client-side paginated like the credentials table above — fetch the full
+    // working set so identities beyond the first page stay reachable.
+    page: 1,
+    page_size: 500,
     state: apiStateFilter.length > 0 ? apiStateFilter : undefined,
     search: globalFilter || undefined,
   })

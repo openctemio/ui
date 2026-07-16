@@ -1849,8 +1849,33 @@ export const exposureEndpoints = {
    * List exposures with optional filters
    */
   list: (filters?: ExposureListFilters) => {
-    const queryString = filters ? buildQueryString(filters as Record<string, unknown>) : ''
-    return `${API_BASE.EXPOSURES}${queryString}`
+    if (!filters) return API_BASE.EXPOSURES
+    // The API reads SINGULAR, repeated query params (url.Values: event_type,
+    // severity, state, source) — not the comma-joined plural keys that the
+    // generic buildQueryString produced, so filters were silently ignored and
+    // "Needs Attention" still showed resolved/accepted exposures.
+    const sp = new URLSearchParams()
+    filters.event_types?.forEach((v) => sp.append('event_type', v))
+    filters.severities?.forEach((v) => sp.append('severity', v))
+    filters.states?.forEach((v) => sp.append('state', v))
+    filters.sources?.forEach((v) => sp.append('source', v))
+    // The API filters by a single `asset_id`.
+    const assetId = filters.canonical_asset_id || filters.native_asset_id
+    if (assetId) sp.set('asset_id', assetId)
+    if (filters.search) sp.set('search', filters.search)
+    if (filters.first_seen_after != null)
+      sp.set('first_seen_after', String(filters.first_seen_after))
+    if (filters.first_seen_before != null)
+      sp.set('first_seen_before', String(filters.first_seen_before))
+    if (filters.last_seen_after != null) sp.set('last_seen_after', String(filters.last_seen_after))
+    if (filters.last_seen_before != null)
+      sp.set('last_seen_before', String(filters.last_seen_before))
+    if (filters.page != null) sp.set('page', String(filters.page))
+    if (filters.per_page != null) sp.set('per_page', String(filters.per_page))
+    if (filters.sort_by) sp.set('sort_by', filters.sort_by)
+    if (filters.sort_order) sp.set('sort_order', filters.sort_order)
+    const qs = sp.toString()
+    return qs ? `${API_BASE.EXPOSURES}?${qs}` : API_BASE.EXPOSURES
   },
 
   /**
@@ -1938,14 +1963,15 @@ export const threatIntelEndpoints = {
   syncStatus: (source: ThreatIntelSource) => `${API_BASE.THREAT_INTEL}/sync/${source}`,
 
   /**
-   * Trigger sync for a source
+   * Trigger sync. The API is POST /sync with the source in the body
+   * (empty/"all" = all sources); there is no per-source /trigger path.
    */
-  triggerSync: (source: ThreatIntelSource) => `${API_BASE.THREAT_INTEL}/sync/${source}/trigger`,
+  triggerSync: () => `${API_BASE.THREAT_INTEL}/sync`,
 
   /**
-   * Enable/disable sync for a source
+   * Enable/disable sync for a source: PATCH /sync/{source} with { enabled }.
    */
-  setSyncEnabled: (source: ThreatIntelSource) => `${API_BASE.THREAT_INTEL}/sync/${source}/enabled`,
+  setSyncEnabled: (source: ThreatIntelSource) => `${API_BASE.THREAT_INTEL}/sync/${source}`,
 
   // ============================================
   // CVE ENRICHMENT
