@@ -82,3 +82,12 @@ export const SEVERITY_BORDER_COLORS: Record<SeverityLevel, string> = {
   low: 'border-blue-500',
   info: 'border-gray-500',
 }
+
+/** Gradient stops (`from-*`/`to-*`) for hero/header surfaces tinted by severity. */
+export const SEVERITY_GRADIENT_COLORS: Record<SeverityLevel, string> = {
+  critical: 'from-red-500 to-red-600',
+  high: 'from-orange-500 to-orange-600',
+  medium: 'from-yellow-500 to-yellow-600',
+  low: 'from-blue-500 to-blue-600',
+  info: 'from-gray-500 to-gray-600',
+}
