@@ -132,7 +132,7 @@ function setTokenCookies(response: NextResponse, tokenData: RefreshResult): void
   // proxy keyed Secure off NODE_ENV instead, so the SAME cookie names got a
   // different Secure attribute depending on which path last wrote them —
   // a consistency bug that could intermittently drop cookies over HTTP.
-  const secure = process.env.SECURE_COOKIES === 'true'
+  const secure = process.env.SECURE_COOKIES !== 'false'
   devLog.log('[Proxy] Setting token cookies, expires_in:', tokenData.expiresIn)
 
   // Set new access token cookie
@@ -251,7 +251,8 @@ async function proxyRequest(
   const forwardHeaders = [
     'accept',
     'accept-language',
-    'x-tenant-id',
+    // NOTE: never forward a client-supplied 'x-tenant-id' — the Go API
+    // derives tenant solely from the JWT. Forwarding it is a footgun.
     'x-csrf-token',
     'x-agent-api-key', // For GET /agents/{id}/config-templates — keeps key out of query string
   ]
