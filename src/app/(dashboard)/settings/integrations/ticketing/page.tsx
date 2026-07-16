@@ -223,7 +223,11 @@ function ConfigureTicketingDialog({
         },
       })
       toast.success('Ticketing settings saved')
-      await mutate('/api/v1/integrations?category=ticketing')
+      await mutate(
+        (key) => typeof key === 'string' && key.startsWith('/api/v1/integrations'),
+        undefined,
+        { revalidate: true }
+      )
       onOpenChange(false)
     } catch {
       toast.error('Failed to save settings')
@@ -470,7 +474,11 @@ function TicketingIntegrationCard({ integration }: { integration: Integration })
     try {
       await syncNow()
       toast.success(`${integration.name} sync triggered`)
-      await mutate('/api/v1/integrations?category=ticketing')
+      await mutate(
+        (key) => typeof key === 'string' && key.startsWith('/api/v1/integrations'),
+        undefined,
+        { revalidate: true }
+      )
     } catch {
       toast.error('Failed to trigger sync')
     }
