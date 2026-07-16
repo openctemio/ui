@@ -161,6 +161,16 @@ export interface RiskLevelConfig {
   low_min: number
 }
 
+/**
+ * How the exposure multiplier composes with the weighted base score.
+ *   - "multiply"          = historical `raw × multiplier` (default; may pin at 100)
+ *   - "amplify_headroom"  = de-saturated `raw + (multiplier−1)·(100−raw)`; the
+ *                           exposure boost fills the remaining headroom instead of
+ *                           overflowing past 100, improving ranking at the top.
+ * Empty/absent is treated as "multiply".
+ */
+export type ScoreCompositionMode = 'multiply' | 'amplify_headroom'
+
 export interface RiskScoringSettings {
   preset?: string
   weights: ComponentWeights
@@ -170,6 +180,7 @@ export interface RiskScoringSettings {
   finding_impact: FindingImpactConfig
   ctem_points: CTEMPointsConfig
   risk_levels: RiskLevelConfig
+  score_composition_mode?: ScoreCompositionMode
 }
 
 export interface RiskScorePreviewItem {
