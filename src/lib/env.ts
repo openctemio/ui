@@ -110,7 +110,9 @@ export const env = {
 export const serverEnv = {
   // Security
   security: {
-    secureCookies: getEnvVar('SECURE_COOKIES', 'false') === 'true',
+    // Secure cookies are ON by default; production MUST be served over HTTPS.
+    // Disable explicitly (SECURE_COOKIES=false) only for local http development.
+    secureCookies: getEnvVar('SECURE_COOKIES', 'true') !== 'false',
     csrfSecret: getEnvVar('CSRF_SECRET', ''),
   },
 

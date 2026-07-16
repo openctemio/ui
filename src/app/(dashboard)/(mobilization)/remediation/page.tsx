@@ -85,6 +85,7 @@ import { Separator } from '@/components/ui/separator'
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
 import { toast } from 'sonner'
 import { copyToClipboard } from '@/lib/clipboard'
+import { sanitizeExternalUrl } from '@/lib/utils'
 import { Can, Permission } from '@/lib/permissions'
 import { TASK_STATUS_LABELS, TASK_PRIORITY_LABELS } from '@/features/remediation'
 import {
@@ -919,7 +920,12 @@ export default function RemediationPage() {
             rowActions.push({
               label: `View Jira Epic (${task.ticketKey})`,
               icon: ExternalLink,
-              onClick: () => window.open(task.ticketUrl, '_blank', 'noopener,noreferrer'),
+              onClick: () => {
+                const safeUrl = sanitizeExternalUrl(task.ticketUrl ?? '')
+                if (safeUrl && safeUrl !== '#') {
+                  window.open(safeUrl, '_blank', 'noopener,noreferrer')
+                }
+              },
             })
           } else {
             rowActions.push({

@@ -160,7 +160,7 @@ export const SECURITY_CONFIG = {
   /**
    * Secure cookies (HTTPS only)
    */
-  SECURE_COOKIES: process.env.SECURE_COOKIES === 'true',
+  SECURE_COOKIES: process.env.SECURE_COOKIES !== 'false',
 
   /**
    * SameSite cookie setting
