@@ -356,7 +356,7 @@ export function CvssCalculator({
 
       {/* Vector string */}
       {allSelected && (
-        <code className="block text-xs text-muted-foreground font-mono bg-muted px-3 py-1.5 rounded select-all">
+        <code className="block text-xs text-muted-foreground font-mono bg-muted px-3 py-1.5 rounded select-all break-all">
           {buildVector(metrics)}
         </code>
       )}
