@@ -14,7 +14,6 @@ export interface UserProfile {
   name: string
   avatar_url?: string
   phone?: string
-  bio?: string
   created_at: string
   updated_at: string
   email_verified: boolean
@@ -24,7 +23,6 @@ export interface UserProfile {
 export interface UpdateProfileInput {
   name?: string
   phone?: string
-  bio?: string
 }
 
 export interface UpdateAvatarInput {
