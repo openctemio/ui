@@ -5,7 +5,9 @@ import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
+  SidebarGroup,
   SidebarHeader,
+  SidebarMenu,
   SidebarRail,
 } from '@/components/ui/sidebar'
 // Use centralized sidebar data from features
@@ -44,7 +46,16 @@ export function AppSidebar() {
             ))}
           </div>
         ) : (
-          filteredSidebarData.navGroups.map((group) => <NavGroup key={group.title} {...group} />)
+          // One group + one menu hosts every section so the rows share a single
+          // compact `gap-1` rhythm (sidebar-07). Each section renders its own
+          // collapsible header via <NavGroup>.
+          <SidebarGroup>
+            <SidebarMenu>
+              {filteredSidebarData.navGroups.map((group) => (
+                <NavGroup key={group.title} {...group} />
+              ))}
+            </SidebarMenu>
+          </SidebarGroup>
         )}
       </SidebarContent>
 

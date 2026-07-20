@@ -71,6 +71,14 @@ import {
   // Attack path icons
   Route,
   Waypoints,
+  // CTEM section-header icons (sidebar-07 collapsible group headers)
+  Goal,
+  Telescope,
+  ListOrdered,
+  FlaskConical,
+  Rocket,
+  BarChart3,
+  Settings,
 } from 'lucide-react'
 import { type SidebarData } from '@/components/types'
 import { Permission, Role } from '@/lib/permissions'
@@ -119,6 +127,7 @@ export const sidebarData: SidebarData = {
     // ========================================
     {
       title: 'Scoping',
+      icon: Goal,
       items: [
         {
           title: 'Attack Surface',
@@ -200,6 +209,7 @@ export const sidebarData: SidebarData = {
     // ========================================
     {
       title: 'Discovery',
+      icon: Telescope,
       items: [
         {
           title: 'Scans',
@@ -267,6 +277,7 @@ export const sidebarData: SidebarData = {
     // ========================================
     {
       title: 'Prioritization',
+      icon: ListOrdered,
       items: [
         {
           title: 'Exposure Chains',
@@ -313,6 +324,7 @@ export const sidebarData: SidebarData = {
     // ========================================
     {
       title: 'Validation',
+      icon: FlaskConical,
       items: [
         {
           title: 'Penetration Testing',
@@ -388,6 +400,7 @@ export const sidebarData: SidebarData = {
     // ========================================
     {
       title: 'Mobilization',
+      icon: Rocket,
       items: [
         {
           // One nav item; the two related views (Tasks / Solution Families) are
@@ -423,6 +436,7 @@ export const sidebarData: SidebarData = {
     // ========================================
     {
       title: 'Insights',
+      icon: BarChart3,
       items: [
         {
           title: 'Executive Summary',
@@ -462,6 +476,7 @@ export const sidebarData: SidebarData = {
     // ========================================
     {
       title: 'Settings',
+      icon: Settings,
       items: [
         {
           title: 'Scanning',
