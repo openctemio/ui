@@ -449,8 +449,24 @@ export default function AssetsOverviewPage() {
                           if (unclassified <= 0) return null
                           const baseUrl =
                             category.types.length === 1
-                              ? ASSET_TYPE_URLS[category.types[0]] || '#'
-                              : '#'
+                              ? ASSET_TYPE_URLS[category.types[0]]
+                              : undefined
+                          // Multi-type categories (or types without a dedicated
+                          // route) have no valid "Other" destination — render a
+                          // non-clickable row instead of a dead href="#" link.
+                          if (!baseUrl) {
+                            return (
+                              <div className="flex items-center justify-between p-2 rounded-lg">
+                                <div className="flex items-center gap-2">
+                                  <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
+                                  <span className="text-sm text-muted-foreground">Other</span>
+                                </div>
+                                <span className="text-sm text-muted-foreground">
+                                  {unclassified.toLocaleString()}
+                                </span>
+                              </div>
+                            )
+                          }
                           return (
                             <Link
                               href={baseUrl}
