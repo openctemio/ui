@@ -845,6 +845,27 @@ export const dashboardEndpoints = {
    * Get tenant-scoped dashboard stats
    */
   stats: () => `${API_BASE.DASHBOARD}/stats`,
+  /**
+   * Executive summary metrics for the trailing `days` window (JSON).
+   */
+  executiveSummary: (days?: number) =>
+    `${API_BASE.DASHBOARD}/executive-summary${days ? buildQueryString({ days }) : ''}`,
+  /**
+   * Executive summary export (server-rendered). `format=csv` streams a CSV
+   * download; default is JSON.
+   */
+  executiveSummaryExport: (days: number, format: 'csv' | 'json' = 'csv') =>
+    `${API_BASE.DASHBOARD}/executive-summary/export${buildQueryString({ days, format })}`,
+} as const
+
+/**
+ * Report schedule endpoints. Schedules email a finding-summary digest to
+ * recipients on a cron cadence (there is no downloadable artifact store).
+ */
+export const reportsEndpoints = {
+  schedules: () => `/api/v1/reports/schedules`,
+  schedule: (id: string) => `/api/v1/reports/schedules/${id}`,
+  toggle: (id: string) => `/api/v1/reports/schedules/${id}/toggle`,
 } as const
 
 // ============================================
@@ -2132,6 +2153,7 @@ export const endpoints = {
   workflowRuns: workflowRunEndpoints,
   platform: platformEndpoints,
   notifications: notificationEndpoints,
+  reports: reportsEndpoints,
 } as const
 
 /**
@@ -2168,4 +2190,5 @@ export {
   workflowRunEndpoints as workflowRuns,
   platformEndpoints as platform,
   notificationEndpoints as notifications,
+  reportsEndpoints as reports,
 }

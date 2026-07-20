@@ -1,35 +1,32 @@
 'use client'
 
 import { Main } from '@/components/layout'
-import { PageHeader, EmptyState } from '@/features/shared'
-import { FileText } from 'lucide-react'
+import { PageHeader } from '@/features/shared'
+import { ReportSchedulesSection, ExecutiveSummarySection } from '@/features/reports'
 
 /**
  * Security Reports.
  *
- * The report generation / scheduling backend does not exist yet (no
- * `GET /api/v1/reports` or `/reports/stats` endpoint). Rather than render
- * fabricated zero-value stat cards and dead "New Template / Schedule /
- * Generate" buttons that mislead the user into thinking the feature works,
- * this page shows an honest empty state until the API ships.
+ * Two capabilities backed by endpoints that exist today:
+ *  - Scheduled reports (/api/v1/reports/schedules) — recurring finding-summary
+ *    digests emailed to recipients on a cron cadence.
+ *  - Executive summary export (/api/v1/dashboard/executive-summary/export) —
+ *    a program-level CSV for stakeholder decks.
  *
- * When the backend lands, replace this with the real templates + recent /
- * scheduled reports UI wired to the reports endpoints.
+ * There is deliberately no "generated reports" list: the platform has no
+ * artifact store, so we do not fabricate one.
  */
 export default function ReportsPage() {
   return (
     <Main>
       <PageHeader
         title="Security Reports"
-        description="Generate, schedule, and export security reports"
+        description="Schedule recurring digests and export the executive summary"
       />
 
-      <div className="mt-10">
-        <EmptyState
-          icon={FileText}
-          title="Reports are not available yet"
-          description="The report generation and scheduling service hasn't shipped yet. In the meantime, use the per-page Export buttons (Findings, Assets, Compliance, and others) to pull CSV data."
-        />
+      <div className="mt-6 space-y-6">
+        <ExecutiveSummarySection />
+        <ReportSchedulesSection />
       </div>
     </Main>
   )
