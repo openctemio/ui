@@ -64,6 +64,7 @@ import {
 } from '@/components/ui/table'
 import { toast } from 'sonner'
 import { Can, Permission } from '@/lib/permissions'
+import { exportToCsv } from '@/hooks/use-csv-export'
 
 type AssetStatus = 'online' | 'offline' | 'unknown'
 type RiskLevel = 'critical' | 'high' | 'medium' | 'low'
@@ -293,6 +294,25 @@ export default function InternalSurfacePage() {
     setDeleteAsset(null)
   }
 
+  const handleExport = () => {
+    exportToCsv(
+      filteredAssets,
+      [
+        { header: 'Hostname', accessor: (a) => a.hostname },
+        { header: 'Type', accessor: (a) => a.type },
+        { header: 'IP Address', accessor: (a) => a.ipAddress },
+        { header: 'Network Zone', accessor: (a) => a.networkZone },
+        { header: 'Operating System', accessor: (a) => a.operatingSystem ?? '' },
+        { header: 'Status', accessor: (a) => a.status },
+        { header: 'Risk Level', accessor: (a) => a.riskLevel },
+        { header: 'Findings', accessor: (a) => a.findingsCount },
+        { header: 'Owner', accessor: (a) => a.owner ?? '' },
+        { header: 'Last Seen', accessor: (a) => a.lastSeen },
+      ],
+      'internal-assets'
+    )
+  }
+
   const openEdit = (asset: InternalAsset) => {
     setFormData({
       hostname: asset.hostname,
@@ -455,11 +475,11 @@ export default function InternalSurfacePage() {
           description="Map and monitor internal network assets and their security posture"
         >
           <div className="flex gap-2">
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" disabled title="Coming soon">
               <RefreshCw className="me-2 h-4 w-4" />
               Scan Network
             </Button>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" onClick={handleExport}>
               <Download className="me-2 h-4 w-4" />
               Export
             </Button>
@@ -953,7 +973,7 @@ export default function InternalSurfacePage() {
                     <Pencil className="me-2 h-4 w-4" />
                     Edit
                   </Button>
-                  <Button className="flex-1">
+                  <Button className="flex-1" disabled title="Coming soon">
                     <Wifi className="me-2 h-4 w-4" />
                     Scan Asset
                   </Button>

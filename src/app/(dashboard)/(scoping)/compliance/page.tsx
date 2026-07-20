@@ -71,6 +71,7 @@ import {
   type ComplianceAssessmentApi,
 } from '@/features/compliance/api/use-compliance-api'
 import { mutate as swrMutate } from 'swr'
+import { exportToCsv } from '@/hooks/use-csv-export'
 
 // ── Local view types ──────────────────────────────────────────────────────────
 
@@ -324,6 +325,25 @@ export default function CompliancePage() {
     }
   }
 
+  const handleExport = () => {
+    exportToCsv(
+      filteredRows,
+      [
+        { header: 'Framework', accessor: (r) => r.frameworkName },
+        { header: 'Control ID', accessor: (r) => r.controlId },
+        { header: 'Title', accessor: (r) => r.title },
+        { header: 'Category', accessor: (r) => r.category },
+        { header: 'Status', accessor: (r) => statusLabels[r.status] },
+        { header: 'Priority', accessor: (r) => r.priority },
+        { header: 'Owner', accessor: (r) => r.owner },
+        { header: 'Due Date', accessor: (r) => r.dueDate ?? '' },
+        { header: 'Evidence', accessor: (r) => r.evidenceCount },
+        { header: 'Findings', accessor: (r) => r.findingCount },
+      ],
+      'compliance-controls'
+    )
+  }
+
   const openEdit = (req: ControlRow) => {
     setFormData({
       status: req.status,
@@ -342,7 +362,7 @@ export default function CompliancePage() {
           title="Compliance Requirements"
           description="Track compliance frameworks and regulatory requirements"
         >
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={handleExport}>
             <Download className="me-2 h-4 w-4" />
             Export Report
           </Button>

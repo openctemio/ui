@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { useAssets } from '@/features/assets'
 import { Main } from '@/components/layout'
 import { PageHeader, DataTableRowActions, StatsCard, SheetBody } from '@/features/shared'
@@ -63,6 +64,7 @@ import {
 } from '@/components/ui/table'
 import { toast } from 'sonner'
 import { Can, Permission } from '@/lib/permissions'
+import { exportToCsv } from '@/hooks/use-csv-export'
 
 type AssetStatus = 'active' | 'inactive' | 'monitoring'
 type RiskLevel = 'critical' | 'high' | 'medium' | 'low'
@@ -109,6 +111,7 @@ const typeIcons: Record<AssetType, React.ElementType> = {
 }
 
 export default function ExternalSurfacePage() {
+  const router = useRouter()
   // Fetch external assets from API
   const { assets: apiAssets } = useAssets({
     types: ['domain', 'subdomain', 'service', 'ip_address'],
@@ -264,6 +267,24 @@ export default function ExternalSurfacePage() {
     setDeleteAsset(null)
   }
 
+  const handleExport = () => {
+    exportToCsv(
+      filteredAssets,
+      [
+        { header: 'Name', accessor: (a) => a.name },
+        { header: 'Type', accessor: (a) => a.type },
+        { header: 'Parent Domain', accessor: (a) => a.parentDomain ?? '' },
+        { header: 'IP Address', accessor: (a) => a.ipAddress ?? '' },
+        { header: 'Port', accessor: (a) => a.port ?? '' },
+        { header: 'Status', accessor: (a) => a.status },
+        { header: 'Risk Level', accessor: (a) => a.riskLevel },
+        { header: 'Findings', accessor: (a) => a.findingsCount },
+        { header: 'Last Seen', accessor: (a) => a.lastSeen },
+      ],
+      'external-assets'
+    )
+  }
+
   const openEdit = (asset: ExternalAsset) => {
     setFormData({
       name: asset.name,
@@ -388,11 +409,11 @@ export default function ExternalSurfacePage() {
           description="Monitor and manage internet-facing assets and their exposure"
         >
           <div className="flex gap-2">
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" disabled title="Coming soon">
               <RefreshCw className="me-2 h-4 w-4" />
               Scan Now
             </Button>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" onClick={handleExport}>
               <Download className="me-2 h-4 w-4" />
               Export
             </Button>
@@ -818,7 +839,10 @@ export default function ExternalSurfacePage() {
                     <Pencil className="me-2 h-4 w-4" />
                     Edit
                   </Button>
-                  <Button className="flex-1">
+                  <Button
+                    className="flex-1"
+                    onClick={() => router.push(`/findings?assetId=${viewAsset.id}`)}
+                  >
                     <ExternalLink className="me-2 h-4 w-4" />
                     View Findings
                   </Button>
