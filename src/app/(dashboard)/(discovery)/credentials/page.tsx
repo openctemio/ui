@@ -112,6 +112,7 @@ import type {
 } from '@/features/credentials/api/credential-api.types'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { copyToClipboard } from '@/lib/clipboard'
+import { exportToCsv } from '@/hooks/use-csv-export'
 import { Permission } from '@/lib/permissions'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -544,6 +545,24 @@ export default function CredentialsPage() {
     toast.success('Credential name copied to clipboard')
   }
 
+  const handleExport = () => {
+    exportToCsv(
+      filteredData,
+      [
+        { header: 'Credential', accessor: (c) => c.name },
+        { header: 'Description', accessor: (c) => c.description ?? '' },
+        { header: 'Source', accessor: (c) => c.metadata.source ?? '' },
+        { header: 'Username', accessor: (c) => c.metadata.username ?? '' },
+        { header: 'Leak Date', accessor: (c) => c.metadata.leakDate ?? '' },
+        { header: 'Status', accessor: (c) => c.status },
+        { header: 'Scope', accessor: (c) => c.scope ?? '' },
+        { header: 'Exposure', accessor: (c) => c.exposure ?? '' },
+        { header: 'Risk Score', accessor: (c) => c.riskScore },
+      ],
+      'credential-leaks'
+    )
+  }
+
   const handleMarkResolved = async (credential: Asset) => {
     try {
       const response = await csrfFetch(`/api/v1/credentials/${credential.id}/resolve`, {
@@ -744,7 +763,7 @@ export default function CredentialsPage() {
                     </TabsTrigger>
                   </TabsList>
                 </Tabs>
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" onClick={handleExport}>
                   <Download className="me-2 h-4 w-4" />
                   Export
                 </Button>
