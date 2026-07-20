@@ -85,6 +85,13 @@ type NavItem = NavCollapsible | NavLink
 
 type NavGroup = {
   title: string
+  /**
+   * Icon for the section header row. Every CTEM section renders its header as a
+   * collapsible `icon + label + chevron` button (shadcn sidebar-07 pattern), so
+   * each titled group should carry an apt lucide icon. Ungrouped rows (empty
+   * title, e.g. Dashboard) render as plain top-level links and don't need one.
+   */
+  icon?: React.ElementType
   items: NavItem[]
 }
 
