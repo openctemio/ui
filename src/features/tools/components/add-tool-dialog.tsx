@@ -139,11 +139,19 @@ export function AddToolDialog({ open, onOpenChange, onSuccess, tool }: AddToolDi
 
   const handleSubmit = async (data: CreateToolFormData) => {
     try {
+      // The form works in category *names* (CATEGORY_OPTIONS values), but the
+      // backend Create/UpdateToolRequest only accepts `category_id` (a UUID FK).
+      // Previously we sent `category: <name>`, which has no DTO field and was
+      // silently dropped — every tool ended up with category_id=null. Resolve
+      // the selected name back to its id here.
+      const categoryId = data.category
+        ? categoriesData?.items?.find((c) => c.name === data.category)?.id
+        : undefined
       const payload = {
         name: data.name,
         display_name: data.display_name || data.name,
         description: data.description || undefined,
-        category: data.category,
+        category_id: categoryId,
         install_method: data.install_method,
         install_cmd: data.install_cmd || undefined,
         update_cmd: data.update_cmd || undefined,

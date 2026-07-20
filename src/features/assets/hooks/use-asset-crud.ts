@@ -4,7 +4,7 @@ import { useState, useCallback } from 'react'
 import { toast } from 'sonner'
 import { createAsset, updateAsset, deleteAsset, bulkDeleteAssets } from './use-assets'
 import { getErrorMessage } from '@/lib/api/error-handler'
-import type { AssetType, CreateAssetInput, UpdateAssetInput } from '../types'
+import type { Asset, AssetType, CreateAssetInput, UpdateAssetInput } from '../types'
 
 const MAX_BULK_DELETE = 100
 
@@ -21,10 +21,14 @@ export function useAssetCRUD(
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const handleCreate = useCallback(
-    async (data: CreateAssetInput) => {
+    async (data: CreateAssetInput, afterCreate?: (asset: Asset) => Promise<void>) => {
       setIsSubmitting(true)
       try {
-        await createAsset({ ...data, type: assetType })
+        const created = await createAsset({ ...data, type: assetType })
+        // Optional post-create side effect (e.g. adding the new asset to a
+        // group). Runs before the toast/mutate so a failure surfaces as the
+        // create failing rather than silently succeeding.
+        if (afterCreate) await afterCreate(created)
         await mutate()
         toast.success(`${label} created successfully`)
         return true

@@ -391,7 +391,12 @@ export function AssetFormDialogShared({
             </p>
           </div>
 
-          {includeGroupSelect && (
+          {/* Group is a create-time convenience only. On edit we have no way to
+              show/reconcile an asset's *current* group membership (it isn't part
+              of the asset record and is many-to-many), so showing the picker
+              there would imply a change that silently no-ops. Manage membership
+              of an existing asset from the Asset Groups page instead. */}
+          {includeGroupSelect && !asset && (
             <div>
               <Label className="text-sm font-medium">Group</Label>
               <div className="mt-1.5">

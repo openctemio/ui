@@ -8,7 +8,6 @@
 
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import { Checkbox } from '@/components/ui/checkbox'
 import {
   Select,
   SelectContent,
@@ -57,18 +56,6 @@ export function ScheduleStep({ data, onChange }: ScheduleStepProps) {
       schedule: {
         ...data.schedule,
         time,
-      },
-    })
-  }
-
-  const handleNotificationChange = (
-    field: 'notifyOnComplete' | 'autoCreateTasks',
-    checked: boolean
-  ) => {
-    onChange({
-      notifications: {
-        ...data.notifications,
-        [field]: checked,
       },
     })
   }
@@ -182,49 +169,9 @@ export function ScheduleStep({ data, onChange }: ScheduleStepProps) {
         </RadioGroup>
       </div>
 
-      {/* Notifications */}
-      <div className="space-y-3">
-        <Label>Notifications</Label>
-        <div className="space-y-2 rounded-lg border p-3">
-          <div className="flex items-start space-x-3 rounded-md p-2 hover:bg-muted/50">
-            <Checkbox
-              id="notify-complete"
-              checked={data.notifications.notifyOnComplete}
-              onCheckedChange={(checked) =>
-                handleNotificationChange('notifyOnComplete', checked as boolean)
-              }
-              className="mt-0.5"
-            />
-            <div className="flex-1">
-              <Label htmlFor="notify-complete" className="cursor-pointer font-medium">
-                Send notification when complete
-              </Label>
-              <p className="text-muted-foreground text-xs">
-                Receive an email notification when the scan finishes
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-start space-x-3 rounded-md p-2 hover:bg-muted/50">
-            <Checkbox
-              id="auto-tasks"
-              checked={data.notifications.autoCreateTasks}
-              onCheckedChange={(checked) =>
-                handleNotificationChange('autoCreateTasks', checked as boolean)
-              }
-              className="mt-0.5"
-            />
-            <div className="flex-1">
-              <Label htmlFor="auto-tasks" className="cursor-pointer font-medium">
-                Auto-create tasks for critical findings
-              </Label>
-              <p className="text-muted-foreground text-xs">
-                Automatically create remediation tasks for critical and high severity findings
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* Notification / auto-create-task controls were removed here: the scan
+          config API has no field for them, so the checkboxes never persisted
+          (write-only phantom). Re-add once the backend DTO supports them. */}
     </div>
   )
 }

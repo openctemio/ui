@@ -271,6 +271,9 @@ export default function PipelineBuilderPage({ params }: PageProps) {
           timeout_seconds: s.timeout_seconds,
           depends_on: s.depends_on || [],
           ui_position: s.ui_position,
+          // Carry per-step config through; the backend replaces each step
+          // entry on save, so omitting it wiped any existing step config.
+          ...(s.config ? { config: s.config } : {}),
         })),
         // Save Start/End node positions
         ui_start_position: startPosition,
