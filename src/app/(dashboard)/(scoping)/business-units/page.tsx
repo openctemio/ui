@@ -34,6 +34,8 @@ import {
   Building2,
   Mail,
   ChevronRight,
+  ChevronsUpDown,
+  Check,
   X,
 } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -59,6 +61,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command'
+import { cn } from '@/lib/utils'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from 'sonner'
@@ -69,7 +81,11 @@ import {
   useUpdateBusinessUnit,
 } from '@/features/business-units/api/use-business-units'
 import { del } from '@/lib/api/client'
-import { CRITICALITY_BADGE_SOFT } from '@/lib/criticality-colors'
+import {
+  CRITICALITY_BADGE_SOFT,
+  CRITICALITY_LABELS,
+  CRITICALITY_DOT_COLORS,
+} from '@/lib/criticality-colors'
 
 const criticalityColors: Record<Criticality, string> = CRITICALITY_BADGE_SOFT
 
@@ -94,6 +110,121 @@ const riskToleranceColors: Record<RiskTolerance, string> = {
 /** Filter children of a given parent from the full list */
 function getChildUnits(allUnits: BusinessUnit[], parentId: string): BusinessUnit[] {
   return allUnits.filter((bu) => bu.parentId === parentId)
+}
+
+/** Collect all transitive descendant ids of a unit (to prevent parent cycles). */
+function getDescendantIds(allUnits: BusinessUnit[], rootId: string): Set<string> {
+  const result = new Set<string>()
+  const stack = [rootId]
+  while (stack.length > 0) {
+    const current = stack.pop() as string
+    for (const bu of allUnits) {
+      if (bu.parentId === current && !result.has(bu.id)) {
+        result.add(bu.id)
+        stack.push(bu.id)
+      }
+    }
+  }
+  return result
+}
+
+/** Backend accepts only critical|high|medium|low for criticality. */
+const CRITICALITY_OPTIONS: Criticality[] = ['critical', 'high', 'medium', 'low']
+/** Backend accepts only low|medium|high for risk tolerance. */
+const RISK_TOLERANCE_OPTIONS: RiskTolerance[] = ['low', 'medium', 'high']
+
+/**
+ * Searchable parent-unit combobox. Excludes the unit being edited (`excludeId`)
+ * and all of its descendants so a cycle can't be created. The "None" option
+ * clears the parent (sends `""`).
+ */
+function ParentUnitSelect({
+  units,
+  value,
+  onChange,
+  excludeId,
+}: {
+  units: BusinessUnit[]
+  value: string
+  onChange: (id: string) => void
+  excludeId?: string
+}) {
+  const [open, setOpen] = useState(false)
+  const [search, setSearch] = useState('')
+
+  const candidates = useMemo(() => {
+    const excluded = new Set<string>()
+    if (excludeId) {
+      excluded.add(excludeId)
+      for (const id of getDescendantIds(units, excludeId)) excluded.add(id)
+    }
+    const q = search.trim().toLowerCase()
+    return units.filter((u) => !excluded.has(u.id) && (!q || u.name.toLowerCase().includes(q)))
+  }, [units, excludeId, search])
+
+  const selected = units.find((u) => u.id === value)
+
+  return (
+    <Popover
+      open={open}
+      onOpenChange={(isOpen) => {
+        setOpen(isOpen)
+        if (!isOpen) setSearch('')
+      }}
+    >
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="w-full justify-between font-normal"
+        >
+          <span className={selected ? '' : 'text-muted-foreground'}>
+            {selected ? selected.name : 'None (top-level)'}
+          </span>
+          <ChevronsUpDown className="ms-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+        <Command shouldFilter={false}>
+          <CommandInput placeholder="Filter units..." value={search} onValueChange={setSearch} />
+          <CommandList>
+            <CommandEmpty>No business units found.</CommandEmpty>
+            <CommandGroup>
+              <CommandItem
+                value="__none__"
+                onSelect={() => {
+                  onChange('')
+                  setOpen(false)
+                  setSearch('')
+                }}
+              >
+                <Check className={cn('me-2 h-4 w-4', !value ? 'opacity-100' : 'opacity-0')} />
+                None (top-level)
+              </CommandItem>
+              {candidates.map((u) => (
+                <CommandItem
+                  key={u.id}
+                  value={u.id}
+                  onSelect={() => {
+                    onChange(u.id)
+                    setOpen(false)
+                    setSearch('')
+                  }}
+                >
+                  <Check
+                    className={cn('me-2 h-4 w-4', value === u.id ? 'opacity-100' : 'opacity-0')}
+                  />
+                  {u.name}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  )
 }
 
 const BUSINESS_UNIT_EXPORT_FIELDS: ExportFieldConfig<BusinessUnit>[] = [
@@ -122,15 +253,15 @@ export default function BusinessUnitsPage() {
           description: bu.description || '',
           owner: bu.owner_name || 'Unassigned',
           ownerEmail: bu.owner_email || '',
-          criticality: 'medium' as Criticality,
-          riskTolerance: 'medium' as RiskTolerance,
+          criticality: (bu.criticality || 'medium') as Criticality,
+          riskTolerance: (bu.risk_tolerance || 'medium') as RiskTolerance,
           assetCount: bu.asset_count,
           findingCount: bu.finding_count,
           riskScore: bu.avg_risk_score,
           criticalFindingCount: bu.critical_finding_count,
           regulatoryFrameworks: [],
           tags: bu.tags || [],
-          parentId: undefined,
+          parentId: bu.parent_id ?? undefined,
           childCount: 0,
           createdAt: bu.created_at,
           updatedAt: bu.updated_at,
@@ -216,6 +347,9 @@ export default function BusinessUnitsPage() {
         description: formData.description || '',
         owner_name: formData.owner,
         owner_email: formData.ownerEmail,
+        criticality: formData.criticality,
+        risk_tolerance: formData.riskTolerance,
+        parent_id: formData.parentId, // '' = top-level (no parent)
         tags: formData.tags
           ? formData.tags
               .split(',')
@@ -244,6 +378,9 @@ export default function BusinessUnitsPage() {
         description: formData.description || '',
         owner_name: formData.owner,
         owner_email: formData.ownerEmail,
+        criticality: formData.criticality,
+        risk_tolerance: formData.riskTolerance,
+        parent_id: formData.parentId, // '' = clear parent
         tags: formData.tags
           ? formData.tags
               .split(',')
@@ -321,7 +458,7 @@ export default function BusinessUnitsPage() {
       header: ({ column }) => <DataTableColumnHeader column={column} title="Criticality" />,
       cell: ({ row }) => (
         <Badge variant="outline" className={criticalityColors[row.original.criticality]}>
-          {row.original.criticality}
+          {CRITICALITY_LABELS[row.original.criticality]}
         </Badge>
       ),
       filterFn: (row, id, value) => value.includes(row.getValue(id)),
@@ -401,11 +538,6 @@ export default function BusinessUnitsPage() {
 
   const formFields = (
     <div className="space-y-4">
-      {/* Parent Unit, Criticality and Risk Tolerance inputs were removed here:
-          the business-units backend has no parent_id / criticality /
-          risk_tolerance columns, so picking them never persisted (write-only
-          phantom — the list even reads them back as a hardcoded 'medium').
-          Re-add once the API stores them. */}
       <div className="space-y-2">
         <Label htmlFor="name">Name *</Label>
         <Input
@@ -425,6 +557,61 @@ export default function BusinessUnitsPage() {
           placeholder="Brief description of this business unit..."
           rows={3}
         />
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="criticality">Criticality</Label>
+          <Select
+            value={formData.criticality}
+            onValueChange={(v) => setFormData({ ...formData, criticality: v as Criticality })}
+          >
+            <SelectTrigger id="criticality">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {CRITICALITY_OPTIONS.map((level) => (
+                <SelectItem key={level} value={level}>
+                  <span className="flex items-center gap-2">
+                    <span className={cn('h-2 w-2 rounded-full', CRITICALITY_DOT_COLORS[level])} />
+                    {CRITICALITY_LABELS[level]}
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="riskTolerance">Risk Tolerance</Label>
+          <Select
+            value={formData.riskTolerance}
+            onValueChange={(v) => setFormData({ ...formData, riskTolerance: v as RiskTolerance })}
+          >
+            <SelectTrigger id="riskTolerance">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {RISK_TOLERANCE_OPTIONS.map((level) => (
+                <SelectItem key={level} value={level}>
+                  {riskToleranceLabels[level]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label>Parent Unit</Label>
+        <ParentUnitSelect
+          units={businessUnits}
+          value={formData.parentId}
+          onChange={(id) => setFormData({ ...formData, parentId: id })}
+          excludeId={editUnit?.id}
+        />
+        <p className="text-xs text-muted-foreground">
+          Optional. Nest this unit under a parent to build your org hierarchy.
+        </p>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
@@ -554,11 +741,9 @@ export default function BusinessUnitsPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All</SelectItem>
-                    <SelectItem value="very_low">Very Low</SelectItem>
                     <SelectItem value="low">Low</SelectItem>
                     <SelectItem value="medium">Medium</SelectItem>
                     <SelectItem value="high">High</SelectItem>
-                    <SelectItem value="very_high">Very High</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -667,7 +852,7 @@ export default function BusinessUnitsPage() {
                           variant="outline"
                           className={criticalityColors[viewUnit.criticality]}
                         >
-                          {viewUnit.criticality}
+                          {CRITICALITY_LABELS[viewUnit.criticality]}
                         </Badge>
                       </div>
                       <div className="space-y-1">
@@ -759,19 +944,26 @@ export default function BusinessUnitsPage() {
                   </TabsContent>
 
                   <TabsContent value="hierarchy" className="mt-4">
-                    {viewUnit.parentId && (
-                      <div className="mb-4">
-                        <p className="text-sm text-muted-foreground mb-2">Parent Unit</p>
-                        <Card className="p-3">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                            <span className="font-medium">
-                              {businessUnits.find((u) => u.id === viewUnit.parentId)?.name}
-                            </span>
+                    {viewUnit.parentId &&
+                      (() => {
+                        const parent = businessUnits.find((u) => u.id === viewUnit.parentId)
+                        return (
+                          <div className="mb-4">
+                            <p className="text-sm text-muted-foreground mb-2">Parent Unit</p>
+                            <Card
+                              className={cn('p-3', parent && 'cursor-pointer hover:bg-muted/50')}
+                              onClick={() => parent && setViewUnit(parent)}
+                            >
+                              <div className="flex flex-wrap items-center gap-2">
+                                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                                <span className="font-medium">
+                                  {parent?.name ?? 'Unknown unit'}
+                                </span>
+                              </div>
+                            </Card>
                           </div>
-                        </Card>
-                      </div>
-                    )}
+                        )
+                      })()}
 
                     <div>
                       <p className="text-sm text-muted-foreground mb-2">Sub-units</p>
@@ -788,7 +980,7 @@ export default function BusinessUnitsPage() {
                                   variant="outline"
                                   className={criticalityColors[child.criticality]}
                                 >
-                                  {child.criticality}
+                                  {CRITICALITY_LABELS[child.criticality]}
                                 </Badge>
                               </div>
                             </Card>
