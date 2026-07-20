@@ -196,6 +196,7 @@ export function FindingDetailDrawer({
   const [assignee, setAssignee] = useState<FindingUser | null | undefined>(undefined)
   const [comment, setComment] = useState('')
   const [showCommentInput, setShowCommentInput] = useState(false)
+  const [showAllAssets, setShowAllAssets] = useState(false)
   const [ticketOpen, setTicketOpen] = useState(false)
 
   // Check if we need to fetch assignee info (name is empty but id exists)
@@ -806,29 +807,38 @@ export function FindingDetailDrawer({
                       </Badge>
                     </div>
                     <div className="space-y-2">
-                      {finding.assets.slice(0, 3).map((asset) => (
-                        <div
-                          key={asset.id}
-                          className="flex items-center justify-between rounded-lg border p-2.5"
-                        >
-                          <div className="flex items-center gap-2 min-w-0">
-                            <Badge variant="outline" className="text-xs capitalize shrink-0">
-                              {asset.type}
-                            </Badge>
-                            <span className="text-sm truncate">{asset.name}</span>
+                      {(showAllAssets ? finding.assets : finding.assets.slice(0, 3)).map(
+                        (asset) => (
+                          <div
+                            key={asset.id}
+                            className="flex items-center justify-between rounded-lg border p-2.5"
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <Badge variant="outline" className="text-xs capitalize shrink-0">
+                                {asset.type}
+                              </Badge>
+                              <span className="text-sm truncate">{asset.name}</span>
+                            </div>
+                            {asset.criticality && (
+                              <Badge
+                                className={`text-xs shrink-0 ${SEVERITY_CONFIG[asset.criticality].bgColor} ${SEVERITY_CONFIG[asset.criticality].textColor} border-0`}
+                              >
+                                {asset.criticality}
+                              </Badge>
+                            )}
                           </div>
-                          {asset.criticality && (
-                            <Badge
-                              className={`text-xs shrink-0 ${SEVERITY_CONFIG[asset.criticality].bgColor} ${SEVERITY_CONFIG[asset.criticality].textColor} border-0`}
-                            >
-                              {asset.criticality}
-                            </Badge>
-                          )}
-                        </div>
-                      ))}
+                        )
+                      )}
                       {finding.assets.length > 3 && (
-                        <Button variant="ghost" size="sm" className="w-full text-xs h-7">
-                          +{finding.assets.length - 3} more assets
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="w-full text-xs h-7"
+                          onClick={() => setShowAllAssets((prev) => !prev)}
+                        >
+                          {showAllAssets
+                            ? 'Show less'
+                            : `+${finding.assets.length - 3} more assets`}
                         </Button>
                       )}
                     </div>
