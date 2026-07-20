@@ -1,5 +1,6 @@
 'use client'
 
+import { useRouter } from 'next/navigation'
 import { Main } from '@/components/layout'
 import { PageHeader } from '@/features/shared'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -90,6 +91,7 @@ function formatRelativeTime(timestamp: string): string {
 }
 
 export default function AttackSurfacePage() {
+  const router = useRouter()
   const { stats, isLoading, error } = useAttackSurfaceStats()
 
   // Render trend indicator
@@ -288,7 +290,11 @@ export default function AttackSurfacePage() {
                     Publicly accessible services requiring attention
                   </CardDescription>
                 </div>
-                <Button size="sm" variant="outline">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => router.push('/attack-surface/external')}
+                >
                   <Eye className="me-2 h-4 w-4" />
                   View All
                 </Button>
