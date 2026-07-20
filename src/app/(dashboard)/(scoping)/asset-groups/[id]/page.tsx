@@ -385,15 +385,21 @@ function AssetGroupDetailContent({ params }: PageProps) {
 
   const handleSaveEdit = async (formData: EditGroupFormData) => {
     try {
+      // The asset-groups PUT is a partial update: an omitted key keeps the old
+      // value. Send explicit empty string / empty array (not undefined) so
+      // clearing a field actually persists instead of silently reverting.
+      // owner_email is the exception — the backend 422s on an empty email, so
+      // it can't be cleared from here (send undefined to leave it unchanged;
+      // clearing it needs a backend change to accept "").
       await updateGroup({
         name: formData.name,
-        description: formData.description || undefined,
+        description: formData.description,
         environment: formData.environment,
         criticality: formData.criticality,
-        businessUnit: formData.businessUnit || undefined,
-        owner: formData.owner || undefined,
+        businessUnit: formData.businessUnit,
+        owner: formData.owner,
         ownerEmail: formData.ownerEmail || undefined,
-        tags: formData.tags.length > 0 ? formData.tags : undefined,
+        tags: formData.tags,
       })
       refreshGroup()
       setEditDialogOpen(false)
