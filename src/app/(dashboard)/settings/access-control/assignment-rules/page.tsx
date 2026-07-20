@@ -106,8 +106,11 @@ const CONDITION_OPTIONS: Record<string, string[]> = {
     'api_endpoint',
   ],
   finding_severity: ['critical', 'high', 'medium', 'low', 'info'],
-  asset_status: ['active', 'inactive', 'decommissioned'],
-  asset_criticality: ['critical', 'high', 'medium', 'low'],
+  // NOTE: asset_status / asset_criticality were phantom condition keys — the
+  // backend AssignmentConditions only accepts asset_type, file_path_pattern,
+  // finding_severity, finding_type, finding_source, asset_tags, and silently
+  // drops anything else (no DisallowUnknownFields). Rules built on them never
+  // matched. Removed until the backend supports them.
 }
 
 export default function AssignmentRulesPage() {

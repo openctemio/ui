@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
@@ -24,7 +23,6 @@ export default function ProfilePage() {
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
-    bio: '',
   })
   const [hasChanges, setHasChanges] = useState(false)
   const [pendingAvatar, setPendingAvatar] = useState<string | null>(null)
@@ -35,7 +33,6 @@ export default function ProfilePage() {
       setFormData({
         name: profile.name || '',
         phone: profile.phone || '',
-        bio: profile.bio || '',
       })
       setHasChanges(false)
     }
@@ -46,8 +43,7 @@ export default function ProfilePage() {
     setFormData((prev) => ({ ...prev, [field]: value }))
     const hasAnyChange =
       (field === 'name' ? value : formData.name) !== (profile?.name || '') ||
-      (field === 'phone' ? value : formData.phone) !== (profile?.phone || '') ||
-      (field === 'bio' ? value : formData.bio) !== (profile?.bio || '')
+      (field === 'phone' ? value : formData.phone) !== (profile?.phone || '')
     setHasChanges(hasAnyChange)
   }
 
@@ -307,21 +303,6 @@ export default function ProfilePage() {
                   onChange={(e) => handleChange('phone', e.target.value)}
                   placeholder="+84 xxx xxx xxx"
                 />
-              </div>
-
-              {/* Bio */}
-              <div className="space-y-2">
-                <Label htmlFor="bio">Bio</Label>
-                <Textarea
-                  id="bio"
-                  value={formData.bio}
-                  onChange={(e) => handleChange('bio', e.target.value)}
-                  placeholder="Tell us a little about yourself..."
-                  rows={3}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Brief description for your profile. Max 200 characters.
-                </p>
               </div>
             </div>
           </div>

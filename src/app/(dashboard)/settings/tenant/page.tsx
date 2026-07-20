@@ -805,7 +805,13 @@ export default function TenantPage() {
                               size="sm"
                               onClick={async () => {
                                 try {
+                                  // PATCH /settings/branding is a full-struct
+                                  // replace — omitted fields reset to "". Echo
+                                  // back primary_color/logo_dark_url so saving
+                                  // the logo doesn't wipe them.
                                   const result = await updateBrandingSettings({
+                                    primary_color: brandingForm.primary_color,
+                                    logo_dark_url: brandingForm.logo_dark_url,
                                     logo_data: brandingForm.logo_data,
                                   })
                                   if (result) {
@@ -851,7 +857,11 @@ export default function TenantPage() {
                               className="text-red-500 hover:text-red-600 hover:bg-red-500/10 h-7 text-xs"
                               onClick={async () => {
                                 try {
-                                  const result = await updateBrandingSettings({ logo_data: null })
+                                  const result = await updateBrandingSettings({
+                                    primary_color: brandingForm.primary_color,
+                                    logo_dark_url: brandingForm.logo_dark_url,
+                                    logo_data: null,
+                                  })
                                   if (result) {
                                     mutate(result)
                                     updateLogo(null)
