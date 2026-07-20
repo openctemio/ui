@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { useAssets } from '@/features/assets'
 import { Main } from '@/components/layout'
 import { PageHeader, DataTableRowActions, StatsCard, SheetBody } from '@/features/shared'
@@ -64,6 +65,7 @@ import {
 } from '@/components/ui/table'
 import { toast } from 'sonner'
 import { Can, Permission } from '@/lib/permissions'
+import { exportToCsv } from '@/hooks/use-csv-export'
 
 type CloudProvider = 'aws' | 'azure' | 'gcp' | 'other'
 type ResourceType = 'compute' | 'storage' | 'database' | 'network' | 'iam' | 'serverless'
@@ -140,6 +142,7 @@ const typeIcons: Record<ResourceType, React.ElementType> = {
 }
 
 export default function CloudSurfacePage() {
+  const router = useRouter()
   // Fetch real cloud assets from API, fallback to mock for demo
   const { assets: apiAssets } = useAssets({
     types: ['cloud_account'],
@@ -319,6 +322,25 @@ export default function CloudSurfacePage() {
     setResources((prev) => prev.filter((r) => r.id !== deleteResource.id))
     toast.success('Cloud resource deleted successfully')
     setDeleteResource(null)
+  }
+
+  const handleExport = () => {
+    exportToCsv(
+      filteredResources,
+      [
+        { header: 'Name', accessor: (r) => r.name },
+        { header: 'Provider', accessor: (r) => providerLabels[r.provider] },
+        { header: 'Resource Type', accessor: (r) => r.resourceType },
+        { header: 'Region', accessor: (r) => r.region },
+        { header: 'Account ID', accessor: (r) => r.accountId },
+        { header: 'Status', accessor: (r) => r.status },
+        { header: 'Exposure', accessor: (r) => r.exposure },
+        { header: 'Risk Level', accessor: (r) => r.riskLevel },
+        { header: 'Findings', accessor: (r) => r.findingsCount },
+        { header: 'Last Seen', accessor: (r) => r.lastSeen },
+      ],
+      'cloud-resources'
+    )
   }
 
   const openEdit = (resource: CloudResource) => {
@@ -504,11 +526,11 @@ export default function CloudSurfacePage() {
           description="Discover and monitor cloud resources across AWS, Azure, and GCP"
         >
           <div className="flex gap-2">
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" disabled title="Coming soon">
               <RefreshCw className="me-2 h-4 w-4" />
               Sync Resources
             </Button>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" onClick={handleExport}>
               <Download className="me-2 h-4 w-4" />
               Export
             </Button>
@@ -992,7 +1014,10 @@ export default function CloudSurfacePage() {
                     <Pencil className="me-2 h-4 w-4" />
                     Edit
                   </Button>
-                  <Button className="flex-1">
+                  <Button
+                    className="flex-1"
+                    onClick={() => router.push(`/findings?assetId=${viewResource.id}`)}
+                  >
                     <Lock className="me-2 h-4 w-4" />
                     View Findings
                   </Button>

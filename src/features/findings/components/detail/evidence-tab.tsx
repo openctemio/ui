@@ -338,7 +338,7 @@ export function EvidenceTab({ evidence, finding }: EvidenceTabProps) {
         description="No evidence has been attached to this finding yet."
         card={false}
         action={
-          <Button size="sm">
+          <Button size="sm" disabled title="Coming soon">
             <Plus className="me-2 h-4 w-4" />
             Add Evidence
           </Button>
@@ -470,7 +470,7 @@ export function EvidenceTab({ evidence, finding }: EvidenceTabProps) {
                 <Paperclip className="h-4 w-4" />
                 Evidence ({evidence.length})
               </h3>
-              <Button size="sm" variant="outline">
+              <Button size="sm" variant="outline" disabled title="Coming soon">
                 <Plus className="me-2 h-4 w-4" />
                 Add Evidence
               </Button>
