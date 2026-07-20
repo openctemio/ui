@@ -1,6 +1,6 @@
 'use client'
 
-import { type ReactNode, useMemo, memo } from 'react'
+import { type ReactNode, useCallback, useEffect, useMemo, useState, memo } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { ChevronRight } from 'lucide-react'
@@ -58,38 +58,131 @@ function NavLabel({ title }: { title: string }) {
   return <>{t(navItemKey(title), title)}</>
 }
 
+/** True when any item (or its sub-items) in a section matches the current path. */
+function groupContainsActiveRoute(pathname: string, items: NavItem[]): boolean {
+  return items.some((item) => checkIsActive(pathname, item))
+}
+
+const NAV_SECTION_STORAGE_PREFIX = 'octem:nav-section:'
+
+/**
+ * Collapse state for a top-level nav section.
+ *
+ * Default behaviour keeps the sidebar short on tall viewports (iPad): the
+ * section that owns the active route is expanded, the rest stay collapsed. A
+ * user's manual toggle is remembered per-section in localStorage and wins until
+ * they navigate into a different section (which always reveals itself).
+ */
+function useNavSectionOpen(title: string, hasActive: boolean) {
+  const storageKey = `${NAV_SECTION_STORAGE_PREFIX}${title}`
+  // Deterministic initial value avoids a hydration mismatch; the persisted
+  // preference is reconciled in the effect below.
+  const [open, setOpen] = useState(hasActive)
+
+  // Apply the persisted preference once on mount (runs before the hasActive
+  // effect, so navigating into a section still forces it open).
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem(storageKey)
+      if (stored === '1') setOpen(true)
+      else if (stored === '0') setOpen(false)
+    } catch {
+      /* localStorage unavailable — keep the active-driven default */
+    }
+  }, [storageKey])
+
+  // Navigating into this section always reveals it.
+  useEffect(() => {
+    if (hasActive) setOpen(true)
+  }, [hasActive])
+
+  const onOpenChange = useCallback(
+    (next: boolean) => {
+      setOpen(next)
+      try {
+        window.localStorage.setItem(storageKey, next ? '1' : '0')
+      } catch {
+        /* ignore persistence failures */
+      }
+    },
+    [storageKey]
+  )
+
+  return { open, onOpenChange }
+}
+
 /**
  * NavGroup Component
  *
  * Renders a group of navigation items in the sidebar.
- * Optimized to minimize re-renders:
- * - NavGroup itself doesn't use usePathname() directly
- * - Each item component manages its own active state
- * - Dynamic badges are fetched once and passed down
+ *
+ * Layout:
+ * - The unlabelled section (Dashboard) and the icon-only rail render items flat
+ *   so nothing hides behind a collapsed header.
+ * - In the expanded sidebar every labelled section is an accordion: its header
+ *   is a toggle, and the section owning the active route is open by default
+ *   while the others collapse to cut scroll.
+ *
+ * Re-render notes: NavGroup is memoized against pathname changes from its
+ * parent, but reads usePathname() internally to drive the active-section state,
+ * so it still updates on navigation (memo only blocks parent-driven renders).
+ * Each item component continues to manage its own active state.
  */
 function NavGroupComponent({ title, items }: NavGroupProps) {
   const { state, isMobile } = useSidebar()
   const dynamicBadges = useDynamicBadges()
   const { t } = useTranslation()
+  const pathname = usePathname()
 
+  const collapsedRail = state === 'collapsed' && !isMobile
+  const hasActive = useMemo(() => groupContainsActiveRoute(pathname, items), [pathname, items])
+  const { open, onOpenChange } = useNavSectionOpen(title, hasActive)
+
+  const menu = (
+    <SidebarMenu>
+      {items.map((item) => {
+        const key = 'items' in item ? item.title : `${item.title}-${String(item.url)}`
+
+        if (!('items' in item))
+          return <SidebarMenuLink key={key} item={item} dynamicBadges={dynamicBadges} />
+
+        if (collapsedRail)
+          return (
+            <SidebarMenuCollapsedDropdown key={key} item={item} dynamicBadges={dynamicBadges} />
+          )
+
+        return <SidebarMenuCollapsible key={key} item={item} dynamicBadges={dynamicBadges} />
+      })}
+    </SidebarMenu>
+  )
+
+  // Dashboard (no label) and the icon-only rail: render flat, never collapsed.
+  if (!title || collapsedRail) {
+    return (
+      <SidebarGroup>
+        {title && <SidebarGroupLabel>{t(groupTitleKey(title), title)}</SidebarGroupLabel>}
+        {menu}
+      </SidebarGroup>
+    )
+  }
+
+  // Expanded sidebar: section header doubles as an accordion trigger.
   return (
     <SidebarGroup>
-      {title && <SidebarGroupLabel>{t(groupTitleKey(title), title)}</SidebarGroupLabel>}
-      <SidebarMenu>
-        {items.map((item) => {
-          const key = 'items' in item ? item.title : `${item.title}-${String(item.url)}`
-
-          if (!('items' in item))
-            return <SidebarMenuLink key={key} item={item} dynamicBadges={dynamicBadges} />
-
-          if (state === 'collapsed' && !isMobile)
-            return (
-              <SidebarMenuCollapsedDropdown key={key} item={item} dynamicBadges={dynamicBadges} />
-            )
-
-          return <SidebarMenuCollapsible key={key} item={item} dynamicBadges={dynamicBadges} />
-        })}
-      </SidebarMenu>
+      <Collapsible open={open} onOpenChange={onOpenChange} className="group/nav-section">
+        <CollapsibleTrigger asChild>
+          <SidebarGroupLabel
+            asChild
+            className="cursor-pointer pe-1 hover:text-sidebar-foreground focus-visible:ring-2"
+          >
+            <button type="button" aria-label={`Toggle ${title} section`}>
+              <span>{t(groupTitleKey(title), title)}</span>
+              <ChevronRight className="ms-auto size-3.5 shrink-0 opacity-60 transition-transform duration-200 group-data-[state=open]/nav-section:rotate-90 rtl:rotate-180" />
+            </button>
+          </SidebarGroupLabel>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="CollapsibleContent">{menu}</CollapsibleContent>
+      </Collapsible>
     </SidebarGroup>
   )
 }
