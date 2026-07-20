@@ -214,6 +214,14 @@ export default function ScansPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [quickScanOpen, setQuickScanOpen] = useState(false)
 
+  // Deep-link support: `/scans?tab=runs` opens directly on the Runs tab.
+  // Read on the client after mount to stay SSR-safe (no Suspense boundary needed).
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('tab') === 'runs') {
+      setMainTab('runs')
+    }
+  }, [])
+
   return (
     <>
       <NewScanDialog open={dialogOpen} onOpenChange={setDialogOpen} />

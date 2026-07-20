@@ -65,6 +65,7 @@ import {
 import { toast } from 'sonner'
 import { Can, Permission } from '@/lib/permissions'
 import { exportToCsv } from '@/hooks/use-csv-export'
+import { ScanAssetsDialog, type ScanCandidate } from '@/features/scans/components'
 
 type AssetStatus = 'active' | 'inactive' | 'monitoring'
 type RiskLevel = 'critical' | 'high' | 'medium' | 'low'
@@ -154,6 +155,8 @@ export default function ExternalSurfacePage() {
   const [viewAsset, setViewAsset] = useState<ExternalAsset | null>(null)
   const [editAsset, setEditAsset] = useState<ExternalAsset | null>(null)
   const [deleteAsset, setDeleteAsset] = useState<ExternalAsset | null>(null)
+  const [scanCandidates, setScanCandidates] = useState<ScanCandidate[]>([])
+  const [scanDialogOpen, setScanDialogOpen] = useState(false)
 
   const [formData, setFormData] = useState({
     name: '',
@@ -265,6 +268,19 @@ export default function ExternalSurfacePage() {
     setAssets((prev) => prev.filter((a) => a.id !== deleteAsset.id))
     toast.success('External asset deleted successfully')
     setDeleteAsset(null)
+  }
+
+  // Derive a scan target from an external asset: prefer resolved IP, fall back
+  // to the asset name (domain / subdomain / service host is itself a target).
+  const toScanCandidate = (a: ExternalAsset): ScanCandidate => ({
+    id: a.id,
+    label: a.name || a.ipAddress || a.id,
+    target: (a.ipAddress || a.name || '').trim(),
+  })
+
+  const openScanDialog = (items: ExternalAsset[]) => {
+    setScanCandidates(items.map(toScanCandidate))
+    setScanDialogOpen(true)
   }
 
   const handleExport = () => {
@@ -409,10 +425,17 @@ export default function ExternalSurfacePage() {
           description="Monitor and manage internet-facing assets and their exposure"
         >
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" disabled title="Coming soon">
-              <RefreshCw className="me-2 h-4 w-4" />
-              Scan Now
-            </Button>
+            <Can permission={Permission.ScansExecute}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => openScanDialog(filteredAssets)}
+                disabled={filteredAssets.length === 0}
+              >
+                <RefreshCw className="me-2 h-4 w-4" />
+                Scan Now
+              </Button>
+            </Can>
             <Button variant="outline" size="sm" onClick={handleExport}>
               <Download className="me-2 h-4 w-4" />
               Export
@@ -852,6 +875,14 @@ export default function ExternalSurfacePage() {
           )}
         </SheetContent>
       </Sheet>
+
+      {/* Quick-scan flow */}
+      <ScanAssetsDialog
+        open={scanDialogOpen}
+        onOpenChange={setScanDialogOpen}
+        candidates={scanCandidates}
+        title="Scan external assets"
+      />
     </>
   )
 }
