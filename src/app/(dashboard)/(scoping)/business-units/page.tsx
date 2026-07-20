@@ -184,10 +184,6 @@ export default function BusinessUnitsPage() {
     }
   }, [businessUnits])
 
-  const rootUnits = useMemo(() => {
-    return businessUnits.filter((bu) => !bu.parentId)
-  }, [businessUnits])
-
   const filteredUnits = useMemo(() => {
     return businessUnits.filter((unit) => {
       if (filterCriticality !== 'all' && unit.criticality !== filterCriticality) return false
@@ -405,35 +401,19 @@ export default function BusinessUnitsPage() {
 
   const formFields = (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="name">Name *</Label>
-          <Input
-            id="name"
-            value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            placeholder="e.g., Technology & Engineering"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="parentId">Parent Unit</Label>
-          <Select
-            value={formData.parentId}
-            onValueChange={(value) => setFormData({ ...formData, parentId: value })}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="None (Root level)" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">None (Root level)</SelectItem>
-              {rootUnits.map((unit) => (
-                <SelectItem key={unit.id} value={unit.id}>
-                  {unit.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+      {/* Parent Unit, Criticality and Risk Tolerance inputs were removed here:
+          the business-units backend has no parent_id / criticality /
+          risk_tolerance columns, so picking them never persisted (write-only
+          phantom — the list even reads them back as a hardcoded 'medium').
+          Re-add once the API stores them. */}
+      <div className="space-y-2">
+        <Label htmlFor="name">Name *</Label>
+        <Input
+          id="name"
+          value={formData.name}
+          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+          placeholder="e.g., Technology & Engineering"
+        />
       </div>
 
       <div className="space-y-2">
@@ -445,48 +425,6 @@ export default function BusinessUnitsPage() {
           placeholder="Brief description of this business unit..."
           rows={3}
         />
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="criticality">Criticality *</Label>
-          <Select
-            value={formData.criticality}
-            onValueChange={(value) =>
-              setFormData({ ...formData, criticality: value as Criticality })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="critical">Critical</SelectItem>
-              <SelectItem value="high">High</SelectItem>
-              <SelectItem value="medium">Medium</SelectItem>
-              <SelectItem value="low">Low</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="riskTolerance">Risk Tolerance *</Label>
-          <Select
-            value={formData.riskTolerance}
-            onValueChange={(value) =>
-              setFormData({ ...formData, riskTolerance: value as RiskTolerance })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="very_low">Very Low</SelectItem>
-              <SelectItem value="low">Low</SelectItem>
-              <SelectItem value="medium">Medium</SelectItem>
-              <SelectItem value="high">High</SelectItem>
-              <SelectItem value="very_high">Very High</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">

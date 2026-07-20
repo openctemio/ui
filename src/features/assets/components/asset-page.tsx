@@ -70,6 +70,7 @@ import {
   TrendingUp,
 } from 'lucide-react'
 import Link from 'next/link'
+import { post } from '@/lib/api/client'
 import { useAssets, useAssetStats, type Asset } from '@/features/assets'
 import { TagFilter, TagFilterChips } from './tag-filter'
 import { PropertyFilter, PropertyFilterChips } from './property-filter'
@@ -585,6 +586,14 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
       const tags = (data.tags as string[] | undefined) ?? []
       delete data.tags
 
+      // Group is a create-time convenience field (only rendered on the create
+      // form). It is NOT part of the asset DTO — membership is a separate
+      // relation — so pull it out and apply it via the group-membership
+      // endpoint after the asset exists, instead of letting it get silently
+      // dropped into the create payload.
+      const groupId = (data.groupId as string | undefined)?.trim() || undefined
+      delete data.groupId
+
       // owner_ref is a universal field on every form, not in config.formFields
       const ownerRef = data.ownerRef as string | undefined
       delete data.ownerRef
@@ -603,20 +612,29 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
 
       // Classification is now set by the operator via the shared form (falls
       // back to sensible defaults only when absent) instead of being hardcoded.
-      return crud.handleCreate({
-        name: String(data.name ?? ''),
-        type: config.type as never,
-        criticality: (data.criticality as string | undefined) || 'medium',
-        description: String(data.description ?? ''),
-        scope: (data.scope as string | undefined) || 'internal',
-        exposure: (data.exposure as string | undefined) || 'unknown',
-        ownerRef,
-        tags,
-        // Per-type fields collected by the form live in `metadata` (→ backend
-        // `properties`). The update path passes this; create silently dropped it.
-        ...(Object.keys(metadata).length > 0 ? { metadata } : {}),
-        ...topLevel,
-      } as never)
+      return crud.handleCreate(
+        {
+          name: String(data.name ?? ''),
+          type: config.type as never,
+          criticality: (data.criticality as string | undefined) || 'medium',
+          description: String(data.description ?? ''),
+          scope: (data.scope as string | undefined) || 'internal',
+          exposure: (data.exposure as string | undefined) || 'unknown',
+          ownerRef,
+          tags,
+          // Per-type fields collected by the form live in `metadata` (→ backend
+          // `properties`). The update path passes this; create silently dropped it.
+          ...(Object.keys(metadata).length > 0 ? { metadata } : {}),
+          ...topLevel,
+        } as never,
+        groupId
+          ? async (created) => {
+              await post(`/api/v1/asset-groups/${groupId}/assets`, {
+                asset_ids: [created.id],
+              })
+            }
+          : undefined
+      )
     },
     [crud, config.formFields, config.type]
   )
@@ -629,7 +647,12 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
 
       // owner_ref + classification are universal fields on every form, not in
       // config.formFields — pull them out before the config loop.
-      const ownerRef = data.ownerRef as string | undefined
+      // On edit the field is prefilled with the current owner, so coerce an
+      // empty value to '' (not undefined) — the backend partial-update only
+      // touches owner_ref when the key is present, so sending '' is the only
+      // way to *clear* a previously-set owner. undefined would silently keep
+      // the old value.
+      const ownerRef = (data.ownerRef as string | undefined) ?? ''
       delete data.ownerRef
       const criticality = data.criticality as Criticality | undefined
       const scope = data.scope as AssetScope | undefined

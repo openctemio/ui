@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Dialog,
   DialogContent,
@@ -37,14 +38,14 @@ interface AttackerProfile {
   id: string
   name: string
   description: string
-  profile_type:
-    'nation_state' | 'cybercriminal' | 'hacktivist' | 'insider' | 'script_kiddie' | 'custom'
+  profile_type: string
   capabilities: {
     network_access?: string
     credential_level?: string
     persistence?: boolean
     tools?: string[]
   }
+  assumptions?: string
   is_default: boolean
   created_at: string
   updated_at: string
@@ -57,23 +58,28 @@ interface PaginatedResponse {
   per_page: number
 }
 
+// Profile-type values mirror the backend's attacker-profile taxonomy
+// (external_unauth, external_stolen_creds, malicious_insider,
+// supplier_compromise, custom). The UI previously used a different, invented
+// set (nation_state/…) that never matched what the API stored.
 const profileTypeColors: Record<string, string> = {
-  nation_state: 'bg-red-500/10 text-red-500 border-red-500/20',
-  cybercriminal: 'bg-orange-500/10 text-orange-500 border-orange-500/20',
-  hacktivist: 'bg-purple-500/10 text-purple-500 border-purple-500/20',
-  insider: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20',
-  script_kiddie: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
+  external_unauth: 'bg-red-500/10 text-red-500 border-red-500/20',
+  external_stolen_creds: 'bg-orange-500/10 text-orange-500 border-orange-500/20',
+  malicious_insider: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20',
+  supplier_compromise: 'bg-purple-500/10 text-purple-500 border-purple-500/20',
   custom: 'bg-muted text-muted-foreground',
 }
 
 const profileTypeLabels: Record<string, string> = {
-  nation_state: 'Nation State',
-  cybercriminal: 'Cybercriminal',
-  hacktivist: 'Hacktivist',
-  insider: 'Insider',
-  script_kiddie: 'Script Kiddie',
+  external_unauth: 'External (Unauthenticated)',
+  external_stolen_creds: 'External (Stolen Credentials)',
+  malicious_insider: 'Malicious Insider',
+  supplier_compromise: 'Supply Chain Compromise',
   custom: 'Custom',
 }
+
+const NETWORK_ACCESS_OPTIONS = ['external', 'internal', 'dmz'] as const
+const CREDENTIAL_LEVEL_OPTIONS = ['none', 'user', 'admin'] as const
 
 export default function AttackerProfilesPage() {
   const {
@@ -91,12 +97,25 @@ export default function AttackerProfilesPage() {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    profile_type: 'custom' as AttackerProfile['profile_type'],
-    capabilities: '',
+    profile_type: 'custom' as string,
+    networkAccess: 'external',
+    credentialLevel: 'none',
+    persistence: false,
+    tools: '',
+    assumptions: '',
   })
 
   const resetForm = () => {
-    setFormData({ name: '', description: '', profile_type: 'custom', capabilities: '' })
+    setFormData({
+      name: '',
+      description: '',
+      profile_type: 'custom',
+      networkAccess: 'external',
+      credentialLevel: 'none',
+      persistence: false,
+      tools: '',
+      assumptions: '',
+    })
   }
 
   const handleCreate = async () => {
@@ -105,14 +124,22 @@ export default function AttackerProfilesPage() {
       return
     }
     try {
+      // The backend requires `capabilities` as a structured object, not a
+      // string array — sending an array 400s and the create silently failed.
       await post('/api/v1/attacker-profiles', {
         name: formData.name,
         description: formData.description,
         profile_type: formData.profile_type,
-        capabilities: formData.capabilities
-          .split(',')
-          .map((c) => c.trim())
-          .filter(Boolean),
+        capabilities: {
+          network_access: formData.networkAccess,
+          credential_level: formData.credentialLevel,
+          persistence: formData.persistence,
+          tools: formData.tools
+            .split(',')
+            .map((c) => c.trim())
+            .filter(Boolean),
+        },
+        assumptions: formData.assumptions || undefined,
       })
       await mutate()
       toast.success('Attacker profile created')
@@ -314,22 +341,82 @@ export default function AttackerProfilesPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="nation_state">Nation State</SelectItem>
-                  <SelectItem value="cybercriminal">Cybercriminal</SelectItem>
-                  <SelectItem value="hacktivist">Hacktivist</SelectItem>
-                  <SelectItem value="insider">Insider</SelectItem>
-                  <SelectItem value="script_kiddie">Script Kiddie</SelectItem>
+                  <SelectItem value="external_unauth">External (Unauthenticated)</SelectItem>
+                  <SelectItem value="external_stolen_creds">
+                    External (Stolen Credentials)
+                  </SelectItem>
+                  <SelectItem value="malicious_insider">Malicious Insider</SelectItem>
+                  <SelectItem value="supplier_compromise">Supply Chain Compromise</SelectItem>
                   <SelectItem value="custom">Custom</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="network_access">Network Access</Label>
+                <Select
+                  value={formData.networkAccess}
+                  onValueChange={(value) => setFormData({ ...formData, networkAccess: value })}
+                >
+                  <SelectTrigger id="network_access">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {NETWORK_ACCESS_OPTIONS.map((o) => (
+                      <SelectItem key={o} value={o} className="capitalize">
+                        {o}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="credential_level">Credential Level</Label>
+                <Select
+                  value={formData.credentialLevel}
+                  onValueChange={(value) => setFormData({ ...formData, credentialLevel: value })}
+                >
+                  <SelectTrigger id="credential_level">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CREDENTIAL_LEVEL_OPTIONS.map((o) => (
+                      <SelectItem key={o} value={o} className="capitalize">
+                        {o}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="persistence"
+                checked={formData.persistence}
+                onCheckedChange={(checked) =>
+                  setFormData({ ...formData, persistence: checked as boolean })
+                }
+              />
+              <Label htmlFor="persistence" className="cursor-pointer">
+                Can establish persistence
+              </Label>
+            </div>
             <div className="space-y-2">
-              <Label htmlFor="capabilities">Capabilities</Label>
+              <Label htmlFor="tools">Tools</Label>
               <Input
-                id="capabilities"
-                value={formData.capabilities}
-                onChange={(e) => setFormData({ ...formData, capabilities: e.target.value })}
-                placeholder="Comma-separated, e.g., phishing, zero-day, lateral movement"
+                id="tools"
+                value={formData.tools}
+                onChange={(e) => setFormData({ ...formData, tools: e.target.value })}
+                placeholder="Comma-separated, e.g., nmap, metasploit, commodity"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="assumptions">Assumptions</Label>
+              <Textarea
+                id="assumptions"
+                value={formData.assumptions}
+                onChange={(e) => setFormData({ ...formData, assumptions: e.target.value })}
+                placeholder="What this threat actor is assumed to be able to do"
               />
             </div>
           </div>

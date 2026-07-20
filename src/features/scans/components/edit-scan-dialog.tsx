@@ -198,7 +198,11 @@ export function EditScanDialog({ scanConfig, open, onOpenChange, onSuccess }: Ed
       const { options, intensity, schedule } = formData
       // Send all scanner options explicitly (including false) so the API
       // knows which options to disable vs enable.
+      // The backend replaces the whole scanner_config map on save, so spread
+      // the existing config first to preserve keys the wizard doesn't model
+      // (e.g. `severity`) instead of wiping them.
       const scannerConfig: Record<string, unknown> = {
+        ...(scanConfig?.scanner_config ?? {}),
         port_scanning: options.portScanning,
         web_app_scanning: options.webAppScanning,
         ssl_analysis: options.sslAnalysis,
@@ -217,6 +221,12 @@ export function EditScanDialog({ scanConfig, open, onOpenChange, onSuccess }: Ed
         description: scanConfig?.description || undefined,
         scanner_config: scannerConfig,
         targets_per_job: formData.maxConcurrent || 10,
+        // Reliability options are editable in the Options step (and sent by the
+        // create path) but were previously omitted here, so edits to them
+        // silently reverted on save.
+        timeout_seconds: formData.timeoutSeconds,
+        max_retries: formData.maxRetries,
+        retry_backoff_seconds: formData.retryBackoffSeconds,
         schedule_type: scheduleType as ScheduleType,
         agent_preference: formData.agentPreference as AgentPreference,
       }
