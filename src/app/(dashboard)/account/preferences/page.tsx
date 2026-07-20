@@ -21,11 +21,22 @@ import { useTheme } from 'next-themes'
 import {
   usePreferences,
   useUpdatePreferences,
-  SUPPORTED_LANGUAGES,
+  getLocalPreferences,
+  setLocalPreferences,
   SUPPORTED_TIMEZONES,
   DATE_FORMATS,
 } from '@/features/account'
-import type { UpdatePreferencesInput } from '@/features/account'
+import type { UpdatePreferencesInput, UserPreferences } from '@/features/account'
+
+// The backend only persists user-preference `language` when it is one of
+// these (`oneof=en vi` in the API validator). Offering ja/ko/zh here made
+// the whole Save fail with a 422. Restrict the dropdown to what round-trips.
+// (The org-level general/tenant settings validate a wider set — that is a
+// separate endpoint and unaffected.)
+const PREF_LANGUAGES = [
+  { value: 'en', label: 'English' },
+  { value: 'vi', label: 'Tiếng Việt' },
+] as const
 
 export default function PreferencesPage() {
   const { theme, setTheme } = useTheme()
@@ -50,23 +61,29 @@ export default function PreferencesPage() {
   })
   const [hasChanges, setHasChanges] = useState(false)
 
-  // Populate form when preferences load
+  // Populate form when preferences load.
+  // The backend only stores `theme` + `language`. The remaining fields
+  // (timezone, date/time format, desktop + email notification toggles) have
+  // no backend column, so they are persisted in localStorage — otherwise a
+  // Save followed by a reload would silently lose them. This mirrors the
+  // browser-local Display Preferences on the General Settings page.
   useEffect(() => {
     if (preferences) {
+      const local = getLocalPreferences() || {}
       setFormData({
         theme: preferences.theme || 'system',
         language: preferences.language || 'en',
-        timezone: preferences.timezone || 'UTC',
-        date_format: preferences.date_format || 'DD/MM/YYYY',
-        time_format: preferences.time_format || '24h',
-        email_notifications: preferences.email_notifications || {
+        timezone: local.timezone || 'UTC',
+        date_format: local.date_format || 'DD/MM/YYYY',
+        time_format: local.time_format || '24h',
+        email_notifications: local.email_notifications || {
           security_alerts: true,
           weekly_digest: true,
           scan_completed: true,
           new_findings: true,
           team_updates: true,
         },
-        desktop_notifications: preferences.desktop_notifications || false,
+        desktop_notifications: local.desktop_notifications ?? false,
       })
       setHasChanges(false)
     }
@@ -108,15 +125,31 @@ export default function PreferencesPage() {
     setHasChanges(true)
   }
 
-  // Save preferences
+  // Save preferences.
+  // Split the write: theme + language go to the server (the only fields it
+  // persists); the display + notification preferences are browser-local, so
+  // they are written to localStorage. Sending the phantom fields to the API
+  // was a no-op (silently dropped), which is the bug this fixes.
   const handleSave = async () => {
     try {
-      const result = await updatePreferences(formData)
+      setLocalPreferences({
+        timezone: formData.timezone,
+        date_format: formData.date_format,
+        time_format: formData.time_format,
+        // formData is seeded with all notification keys, so this is always a
+        // full object at runtime — the input type just declares them Partial.
+        email_notifications: formData.email_notifications as UserPreferences['email_notifications'],
+        desktop_notifications: formData.desktop_notifications,
+      })
+      const result = await updatePreferences({
+        theme: formData.theme,
+        language: formData.language,
+      })
       if (result) {
         mutate(result)
-        setHasChanges(false)
-        toast.success('Preferences saved successfully')
       }
+      setHasChanges(false)
+      toast.success('Preferences saved successfully')
     } catch (error) {
       toast.error(getErrorMessage(error, 'Failed to save preferences'))
     }
@@ -214,7 +247,7 @@ export default function PreferencesPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {SUPPORTED_LANGUAGES.map((lang) => (
+                  {PREF_LANGUAGES.map((lang) => (
                     <SelectItem key={lang.value} value={lang.value}>
                       {lang.label}
                     </SelectItem>

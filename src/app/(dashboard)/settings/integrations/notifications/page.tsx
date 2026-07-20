@@ -217,7 +217,11 @@ export default function NotificationIntegrationsPage() {
         header: ({ column }) => <DataTableColumnHeader column={column} title="Channel" />,
         cell: ({ row }) => {
           const integration = row.original
-          const ext = integration.notification_extension
+          // Channel name / chat id live in integration.metadata now — the
+          // notification_extension.channel_name getter is hardcoded to "" on
+          // the API, so the old read here always rendered nothing.
+          const meta = integration.metadata as Record<string, unknown> | undefined
+          const channelName = (meta?.channel_name as string) || (meta?.chat_id as string) || ''
           return (
             <div className="flex items-center gap-3">
               <div
@@ -230,7 +234,7 @@ export default function NotificationIntegrationsPage() {
               </div>
               <StackedCell
                 primary={integration.name}
-                secondary={ext?.channel_name ? `#${ext.channel_name}` : undefined}
+                secondary={channelName ? `#${channelName}` : undefined}
               />
             </div>
           )
