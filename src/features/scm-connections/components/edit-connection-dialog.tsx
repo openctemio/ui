@@ -120,7 +120,10 @@ export function EditConnectionDialog({
         updateData.credentials = data.accessToken
       }
       if (data.scmOrganization !== currentScmOrganization) {
-        updateData.scm_organization = data.scmOrganization || undefined
+        // Send the literal value (including "") so clearing the org actually
+        // persists — `|| undefined` omitted it from the body and the backend
+        // treats a nil pointer as "no change", making the org un-clearable.
+        updateData.scm_organization = data.scmOrganization ?? ''
       }
 
       // Only call API if there are changes

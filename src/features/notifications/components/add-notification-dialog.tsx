@@ -108,7 +108,7 @@ const formSchema = z
     // Advanced settings
     message_template: z.string().max(2000).optional(),
     include_details: z.boolean(),
-    min_interval_minutes: z.number().min(0).max(60),
+    min_interval_minutes: z.number().min(5).max(60),
     // Email-specific fields
     smtp_host: z.string().optional(),
     smtp_port: z.number().optional(),
@@ -256,7 +256,7 @@ export function AddNotificationDialog({
       // Advanced settings defaults
       message_template: '',
       include_details: true,
-      min_interval_minutes: 0,
+      min_interval_minutes: 5,
       // Email defaults
       smtp_host: '',
       smtp_port: 587,
@@ -783,14 +783,12 @@ export function AddNotificationDialog({
                     <div className="flex items-center justify-between">
                       <Label htmlFor="min_interval">Rate Limiting</Label>
                       <span className="text-sm text-muted-foreground">
-                        {watch('min_interval_minutes') === 0
-                          ? 'No limit'
-                          : `${watch('min_interval_minutes')} min`}
+                        {`${watch('min_interval_minutes')} min`}
                       </span>
                     </div>
                     <Slider
                       id="min_interval"
-                      min={0}
+                      min={5}
                       max={60}
                       step={5}
                       value={[watch('min_interval_minutes')]}
@@ -798,7 +796,7 @@ export function AddNotificationDialog({
                       className="w-full"
                     />
                     <p className="text-xs text-muted-foreground">
-                      Minimum interval between notifications (0 = no limit). Prevents notification
+                      Minimum interval between notifications (minimum 5 min). Prevents notification
                       spam.
                     </p>
                   </div>
