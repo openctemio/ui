@@ -768,12 +768,34 @@ export default function ScopeConfigPage() {
     }
   }
 
+  // Reverse of mapFrequencyToSchedule: derive the form's frequency from the
+  // stored schedule so opening an existing schedule shows its real cadence.
+  // Previously this was hardcoded to 'daily', so editing (and re-saving) any
+  // weekly/monthly/… schedule silently overwrote its cron with the daily cron.
+  const mapScheduleToFrequency = (schedule: ApiScanSchedule): ScanFrequency => {
+    if (schedule.schedule_type === 'interval') {
+      return schedule.interval_hours === 0 ? 'continuous' : 'hourly'
+    }
+    switch (schedule.cron_expression) {
+      case '0 2 * * *':
+        return 'daily'
+      case '0 3 * * 0':
+        return 'weekly'
+      case '0 4 1 * *':
+        return 'monthly'
+      case '0 4 1 */3 *':
+        return 'quarterly'
+      default:
+        return 'daily'
+    }
+  }
+
   const openEditSchedule = (schedule: ApiScanSchedule) => {
     setScheduleForm({
       name: schedule.name,
       type: schedule.scan_type as ScanType,
       targets: schedule.target_tags?.join(', ') || '',
-      frequency: 'daily', // Default, backend doesn't store frequency directly
+      frequency: mapScheduleToFrequency(schedule),
       time: schedule.cron_expression || '',
     })
     setEditSchedule(schedule)
@@ -820,6 +842,7 @@ export default function ScopeConfigPage() {
         <Label>Type</Label>
         <Select
           value={targetForm.type}
+          disabled={!!editTarget}
           onValueChange={(v) => {
             setTargetForm({ ...targetForm, type: v as ScopeTargetType })
             setValidationError(null)
@@ -852,12 +875,17 @@ export default function ScopeConfigPage() {
         <Input
           placeholder={getTypeConfig(targetForm.type).placeholder}
           value={targetForm.pattern}
+          disabled={!!editTarget}
           onChange={(e) => {
             setTargetForm({ ...targetForm, pattern: e.target.value })
             setValidationError(null)
           }}
         />
-        <p className="text-muted-foreground text-xs">{getTypeConfig(targetForm.type).helpText}</p>
+        <p className="text-muted-foreground text-xs">
+          {editTarget
+            ? 'Type and pattern identify the target and cannot be changed after creation. Remove and re-add to change them.'
+            : getTypeConfig(targetForm.type).helpText}
+        </p>
       </div>
       <div className="space-y-2">
         <Label>Description</Label>
@@ -882,6 +910,7 @@ export default function ScopeConfigPage() {
         <Label>Type</Label>
         <Select
           value={exclusionForm.type}
+          disabled={!!editExclusion}
           onValueChange={(v) => {
             setExclusionForm({ ...exclusionForm, type: v as ScopeTargetType })
             setValidationError(null)
@@ -914,13 +943,16 @@ export default function ScopeConfigPage() {
         <Input
           placeholder={getTypeConfig(exclusionForm.type).placeholder}
           value={exclusionForm.pattern}
+          disabled={!!editExclusion}
           onChange={(e) => {
             setExclusionForm({ ...exclusionForm, pattern: e.target.value })
             setValidationError(null)
           }}
         />
         <p className="text-muted-foreground text-xs">
-          Pattern to exclude from security assessments
+          {editExclusion
+            ? 'Type and pattern identify the exclusion and cannot be changed after creation. Remove and re-add to change them.'
+            : 'Pattern to exclude from security assessments'}
         </p>
       </div>
       <div className="space-y-2">
@@ -949,6 +981,7 @@ export default function ScopeConfigPage() {
           <Label>Scan Type</Label>
           <Select
             value={scheduleForm.type}
+            disabled={!!editSchedule}
             onValueChange={(v) => setScheduleForm({ ...scheduleForm, type: v as ScanType })}
           >
             <SelectTrigger>
