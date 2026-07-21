@@ -14,7 +14,6 @@ import {
   ArrowDownLeft,
   Code,
   Paperclip,
-  Plus,
   ChevronDown,
   ChevronUp,
   Calendar,
@@ -38,6 +37,7 @@ import { CodeHighlighter } from './code-highlighter'
 import { ValidationEvidencePanel } from './validation-evidence-panel'
 import { ComplianceMappingCard } from './compliance-mapping-card'
 import { buildRepositoryCodeUrl } from '../../lib/repository-url'
+import { ManualEvidenceNotesSection } from './manual-evidence-notes'
 
 interface EvidenceTabProps {
   evidence: Evidence[]
@@ -332,22 +332,20 @@ export function EvidenceTab({ evidence, finding }: EvidenceTabProps) {
 
   if (!hasAnyContent) {
     return (
-      <EmptyState
-        icon={Paperclip}
-        title="No Evidence"
-        description="No evidence has been attached to this finding yet."
-        card={false}
-        action={
-          <Button
-            size="sm"
-            disabled
-            title="File evidence can currently be attached to pentest findings only"
-          >
-            <Plus className="me-2 h-4 w-4" />
-            Add Evidence
-          </Button>
-        }
-      />
+      <div className="space-y-6">
+        <EmptyState
+          icon={Paperclip}
+          title="No Evidence"
+          description="No evidence has been attached to this finding yet."
+          card={false}
+        />
+        {finding?.id && (
+          <>
+            <Separator />
+            <ManualEvidenceNotesSection findingId={finding.id} />
+          </>
+        )}
+      </div>
     )
   }
 
@@ -474,15 +472,6 @@ export function EvidenceTab({ evidence, finding }: EvidenceTabProps) {
                 <Paperclip className="h-4 w-4" />
                 Evidence ({evidence.length})
               </h3>
-              <Button
-                size="sm"
-                variant="outline"
-                disabled
-                title="File evidence can currently be attached to pentest findings only"
-              >
-                <Plus className="me-2 h-4 w-4" />
-                Add Evidence
-              </Button>
             </div>
 
             <div className="space-y-4">
@@ -818,6 +807,14 @@ export function EvidenceTab({ evidence, finding }: EvidenceTabProps) {
                 ))}
             </div>
           </div>
+        </>
+      )}
+
+      {/* Manual evidence notes (operator-authored) */}
+      {finding?.id && (
+        <>
+          <Separator />
+          <ManualEvidenceNotesSection findingId={finding.id} />
         </>
       )}
     </div>
