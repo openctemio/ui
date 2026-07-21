@@ -8,7 +8,6 @@ import { useDashboardStats } from '@/features/dashboard/hooks/use-dashboard-stat
 import { useTenant } from '@/context/tenant-provider'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Progress } from '@/components/ui/progress'
 import {
@@ -27,8 +26,6 @@ import {
 import { cn } from '@/lib/utils'
 import {
   Crown,
-  Download,
-  FileText,
   Shield,
   AlertTriangle,
   TrendingUp,
@@ -157,18 +154,7 @@ export default function ExecutiveReportsPage() {
       <PageHeader
         title="Executive Reports"
         description="High-level security posture reports for leadership"
-      >
-        <div className="flex items-center gap-2">
-          <Button size="sm" disabled title="PDF export is coming soon">
-            <FileText className="me-2 h-4 w-4" />
-            Generate PDF
-          </Button>
-          <Button variant="outline" size="sm" disabled title="Data export is coming soon">
-            <Download className="me-2 h-4 w-4" />
-            Export Data
-          </Button>
-        </div>
-      </PageHeader>
+      />
 
       <div className="mt-6 grid gap-4 md:grid-cols-4">
         <StatsCard
