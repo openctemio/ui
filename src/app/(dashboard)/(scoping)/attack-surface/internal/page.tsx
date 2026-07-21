@@ -65,6 +65,7 @@ import {
 import { toast } from 'sonner'
 import { Can, Permission } from '@/lib/permissions'
 import { exportToCsv } from '@/hooks/use-csv-export'
+import { ScanAssetsDialog, type ScanCandidate } from '@/features/scans/components'
 
 type AssetStatus = 'online' | 'offline' | 'unknown'
 type RiskLevel = 'critical' | 'high' | 'medium' | 'low'
@@ -166,6 +167,8 @@ export default function InternalSurfacePage() {
   const [viewAsset, setViewAsset] = useState<InternalAsset | null>(null)
   const [editAsset, setEditAsset] = useState<InternalAsset | null>(null)
   const [deleteAsset, setDeleteAsset] = useState<InternalAsset | null>(null)
+  const [scanCandidates, setScanCandidates] = useState<ScanCandidate[]>([])
+  const [scanDialogOpen, setScanDialogOpen] = useState(false)
 
   const [formData, setFormData] = useState({
     hostname: '',
@@ -292,6 +295,18 @@ export default function InternalSurfacePage() {
     setAssets((prev) => prev.filter((a) => a.id !== deleteAsset.id))
     toast.success('Internal asset deleted successfully')
     setDeleteAsset(null)
+  }
+
+  // Derive a scan target from an internal asset: prefer IP, fall back to hostname.
+  const toScanCandidate = (a: InternalAsset): ScanCandidate => ({
+    id: a.id,
+    label: a.hostname || a.ipAddress || a.id,
+    target: (a.ipAddress || a.hostname || '').trim(),
+  })
+
+  const openScanDialog = (items: InternalAsset[]) => {
+    setScanCandidates(items.map(toScanCandidate))
+    setScanDialogOpen(true)
   }
 
   const handleExport = () => {
@@ -475,10 +490,17 @@ export default function InternalSurfacePage() {
           description="Map and monitor internal network assets and their security posture"
         >
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" disabled title="Coming soon">
-              <RefreshCw className="me-2 h-4 w-4" />
-              Scan Network
-            </Button>
+            <Can permission={Permission.ScansExecute}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => openScanDialog(filteredAssets)}
+                disabled={filteredAssets.length === 0}
+              >
+                <RefreshCw className="me-2 h-4 w-4" />
+                Scan Network
+              </Button>
+            </Can>
             <Button variant="outline" size="sm" onClick={handleExport}>
               <Download className="me-2 h-4 w-4" />
               Export
@@ -973,16 +995,26 @@ export default function InternalSurfacePage() {
                     <Pencil className="me-2 h-4 w-4" />
                     Edit
                   </Button>
-                  <Button className="flex-1" disabled title="Coming soon">
-                    <Wifi className="me-2 h-4 w-4" />
-                    Scan Asset
-                  </Button>
+                  <Can permission={Permission.ScansExecute}>
+                    <Button className="flex-1" onClick={() => openScanDialog([viewAsset])}>
+                      <Wifi className="me-2 h-4 w-4" />
+                      Scan Asset
+                    </Button>
+                  </Can>
                 </div>
               </SheetBody>
             </>
           )}
         </SheetContent>
       </Sheet>
+
+      {/* Quick-scan flow */}
+      <ScanAssetsDialog
+        open={scanDialogOpen}
+        onOpenChange={setScanDialogOpen}
+        candidates={scanCandidates}
+        title="Scan network assets"
+      />
     </>
   )
 }
