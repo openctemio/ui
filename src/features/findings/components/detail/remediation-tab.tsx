@@ -401,7 +401,12 @@ export function RemediationTab({ remediation, finding }: RemediationTabProps) {
                 Remediation Steps
               </h3>
               {remediation.steps.length > 0 && (
-                <Button size="sm" variant="outline" disabled title="Coming soon">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled
+                  title="Remediation steps are provided by the scanner and can't be edited yet"
+                >
                   Add Step
                 </Button>
               )}
