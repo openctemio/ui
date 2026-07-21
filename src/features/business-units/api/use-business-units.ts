@@ -10,6 +10,12 @@ export interface BusinessUnit {
   description: string
   owner_name: string
   owner_email: string
+  // critical | high | medium | low (default medium)
+  criticality: string
+  // low | medium | high (default medium)
+  risk_tolerance: string
+  // Same-tenant business-unit id, or null when top-level. Send "" to clear.
+  parent_id: string | null
   asset_count: number
   finding_count: number
   avg_risk_score: number
