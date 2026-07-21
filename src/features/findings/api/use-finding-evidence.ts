@@ -17,7 +17,7 @@
 
 import useSWR, { type SWRConfiguration } from 'swr'
 import useSWRMutation from 'swr/mutation'
-import { get, post } from '@/lib/api/client'
+import { get, post, del } from '@/lib/api/client'
 import { useTenant } from '@/context/tenant-provider'
 
 // ============================================
@@ -33,6 +33,8 @@ export interface FindingEvidenceNote {
   url?: string
   created_at: string
   uploaded_by?: string
+  /** Display name (or email) of the uploader; may be empty. Prefer over `uploaded_by`. */
+  uploaded_by_name?: string
 }
 
 interface FindingEvidenceNotesResponse {
@@ -88,6 +90,24 @@ export function useAddFindingEvidence(findingId: string | null) {
     currentTenant && findingId ? `/api/v1/findings/${findingId}/evidence` : null,
     async (url: string, { arg }: { arg: AddFindingEvidenceInput }) => {
       return post<FindingEvidenceNote>(url, arg)
+    }
+  )
+}
+
+/**
+ * Delete a manual evidence note from a finding.
+ * DELETE /api/v1/findings/{id}/evidence/notes/{noteId}
+ *
+ * `trigger(noteId)` issues the delete; on success revalidate the notes list via
+ * the `mutate` returned by `useFindingEvidenceNotes`.
+ */
+export function useDeleteFindingEvidence(findingId: string | null) {
+  const { currentTenant } = useTenant()
+
+  return useSWRMutation(
+    currentTenant && findingId ? `/api/v1/findings/${findingId}/evidence/notes` : null,
+    async (baseUrl: string, { arg: noteId }: { arg: string }) => {
+      return del<void>(`${baseUrl}/${noteId}`)
     }
   )
 }
