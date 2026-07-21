@@ -14,6 +14,7 @@ import {
   CheckCircle2,
   Circle,
   Loader,
+  Loader2,
   Wrench,
   Link,
   ListChecks,
@@ -26,9 +27,17 @@ import {
   Check,
   Sparkles,
   Target,
+  Plus,
+  X,
 } from 'lucide-react'
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
+import { toast } from 'sonner'
+import { mutate as globalMutate } from 'swr'
 import { copyToClipboard } from '@/lib/clipboard'
+import { usePermissions } from '@/context/permission-provider'
+import { getErrorMessage } from '@/lib/api/error-handler'
+import { Input } from '@/components/ui/input'
+import { useAddRemediationStep } from '../../api/use-finding-evidence'
 import type { Remediation, RemediationStepStatus, FindingDetail } from '../../types'
 import { CodeHighlighter } from './code-highlighter'
 import { buildRepositoryCodeUrl } from '../../lib/repository-url'
@@ -55,11 +64,45 @@ const EFFORT_CONFIG: Record<string, { label: string; color: string }> = {
 export function RemediationTab({ remediation, finding }: RemediationTabProps) {
   const [copiedCode, setCopiedCode] = useState(false)
 
+  const { hasPermission } = usePermissions()
+  const canWrite = hasPermission('findings:write')
+  const findingId = finding?.id ?? null
+  const { trigger: addStep, isMutating: addingStep } = useAddRemediationStep(findingId)
+
+  // Steps are plain strings. Seed the display from the finding's remediation
+  // steps; once the operator appends one, the POST returns the full updated
+  // array which takes over (stepsOverride) so the list stays in sync without a
+  // dedicated GET endpoint.
+  const [stepsOverride, setStepsOverride] = useState<string[] | null>(null)
+  const [showStepForm, setShowStepForm] = useState(false)
+  const [newStep, setNewStep] = useState('')
+
   const handleCopyCode = async (code: string) => {
     await copyToClipboard(code)
     setCopiedCode(true)
     setTimeout(() => setCopiedCode(false), 2000)
   }
+
+  const handleAddStep = useCallback(async () => {
+    const trimmed = newStep.trim()
+    if (!trimmed) {
+      toast.error('Step text is required')
+      return
+    }
+    try {
+      const res = await addStep({ step: trimmed })
+      setStepsOverride(res.steps)
+      setNewStep('')
+      setShowStepForm(false)
+      toast.success('Remediation step added')
+      // Refresh the finding so a reload/other consumers pick up the new step.
+      if (findingId) {
+        void globalMutate(`/api/v1/findings/${findingId}`)
+      }
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Failed to add remediation step'))
+    }
+  }, [newStep, addStep, findingId])
 
   // Get data from apiRemediation JSONB (primary) or fallback to direct fields
   const apiRemed = finding?.apiRemediation
@@ -69,6 +112,7 @@ export function RemediationTab({ remediation, finding }: RemediationTabProps) {
   const isFixAvailable = apiRemed?.fix_available || isAutoFixable
   const effort = apiRemed?.effort
   const remediationSteps = apiRemed?.steps || []
+  const displaySteps = stepsOverride ?? remediationSteps
   const remediationReferences = apiRemed?.references || remediation.references || []
   const recommendation = apiRemed?.recommendation || remediation.description
 
@@ -390,7 +434,7 @@ export function RemediationTab({ remediation, finding }: RemediationTabProps) {
       )}
 
       {/* Remediation Steps - from apiRemediation JSONB or legacy UI */}
-      {(remediationSteps.length > 0 || remediation.steps.length > 0) && (
+      {(displaySteps.length > 0 || remediation.steps.length > 0 || canWrite) && (
         <>
           <Separator />
 
@@ -400,22 +444,56 @@ export function RemediationTab({ remediation, finding }: RemediationTabProps) {
                 <ListChecks className="h-4 w-4" />
                 Remediation Steps
               </h3>
-              {remediation.steps.length > 0 && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled
-                  title="Remediation steps are provided by the scanner and can't be edited yet"
-                >
+              {canWrite && !showStepForm && (
+                <Button size="sm" variant="outline" onClick={() => setShowStepForm(true)}>
+                  <Plus className="me-2 h-4 w-4" />
                   Add Step
                 </Button>
               )}
             </div>
 
-            {/* Steps from apiRemediation JSONB (simple list from scanner) */}
-            {remediationSteps.length > 0 && (
+            {/* Add-step inline form */}
+            {canWrite && showStepForm && (
+              <div className="mb-3 flex items-center gap-2">
+                <Input
+                  value={newStep}
+                  onChange={(e) => setNewStep(e.target.value)}
+                  placeholder="Describe a remediation step…"
+                  disabled={addingStep}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      void handleAddStep()
+                    }
+                  }}
+                  autoFocus
+                />
+                <Button size="sm" onClick={handleAddStep} disabled={addingStep || !newStep.trim()}>
+                  {addingStep ? (
+                    <Loader2 className="me-1.5 h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Plus className="me-1.5 h-3.5 w-3.5" />
+                  )}
+                  Add
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    setNewStep('')
+                    setShowStepForm(false)
+                  }}
+                  disabled={addingStep}
+                >
+                  <X className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            )}
+
+            {/* Steps from apiRemediation JSONB / manually added (plain strings) */}
+            {displaySteps.length > 0 && (
               <div className="space-y-2">
-                {remediationSteps.map((step, index) => (
+                {displaySteps.map((step, index) => (
                   <div
                     key={index}
                     className="flex items-start gap-3 rounded-lg border bg-muted/30 p-3"
@@ -429,8 +507,13 @@ export function RemediationTab({ remediation, finding }: RemediationTabProps) {
               </div>
             )}
 
+            {/* Empty hint when nothing tracked yet but the operator can add */}
+            {displaySteps.length === 0 && remediation.steps.length === 0 && canWrite && (
+              <p className="text-muted-foreground text-sm">No remediation steps added yet.</p>
+            )}
+
             {/* Legacy steps with status tracking (for manual tracking) */}
-            {remediationSteps.length === 0 && remediation.steps.length > 0 && (
+            {displaySteps.length === 0 && remediation.steps.length > 0 && (
               <div className="space-y-3">
                 {remediation.steps.map((step, index) => (
                   <div
