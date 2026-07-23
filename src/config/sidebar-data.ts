@@ -186,6 +186,13 @@ export const sidebarData: SidebarData = {
           module: 'attacker_profiles',
         },
         {
+          title: 'Threat Model',
+          url: '/threat-model',
+          icon: Crosshair,
+          permission: Permission.AssetsRead,
+          module: 'attack_surface',
+        },
+        {
           title: 'Relationships',
           url: '/relationships/suggestions',
           icon: Link2,
