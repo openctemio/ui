@@ -17,6 +17,7 @@ import {
   LayoutDashboard,
   FolderKanban,
   ClipboardCheck,
+  BadgeCheck,
   Target,
   Settings2,
   Radar,
@@ -672,6 +673,11 @@ export const sidebarData: SidebarData = {
               title: 'SAML SSO',
               url: '/settings/integrations/saml',
               icon: ShieldCheck,
+            },
+            {
+              title: 'Verified Domains',
+              url: '/settings/integrations/verified-domains',
+              icon: BadgeCheck,
             },
             {
               title: 'AI Access (MCP)',
