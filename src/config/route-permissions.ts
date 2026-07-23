@@ -178,6 +178,14 @@ export const routePermissions: Record<string, RoutePermissionConfig> = {
     permission: Permission.AttackerProfilesRead,
     module: Module.AttackerProfiles,
   },
+  '/threat-model': {
+    permission: Permission.AssetsRead,
+    module: Module.AttackSurface,
+  },
+  '/threat-model/**': {
+    permission: Permission.AssetsRead,
+    module: Module.AttackSurface,
+  },
   '/relationships/**': {
     permission: Permission.AssetsRead,
     module: Module.Relationships,
