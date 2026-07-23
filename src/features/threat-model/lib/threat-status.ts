@@ -45,6 +45,24 @@ export const THREAT_STATUS_STYLES: Record<ThreatStatus, ThreatStatusStyle> = {
   },
 }
 
+/**
+ * Concrete hex for each status, keyed to the same Tailwind color families used
+ * by the badge/dot classes above (red-500 / green-500 / blue-500 / gray-400 /
+ * slate-400). Used where a literal color is required and Tailwind classes
+ * cannot be — e.g. the ATT&CK Navigator layer export.
+ */
+export const THREAT_STATUS_HEX: Record<ThreatStatus, string> = {
+  open: '#ef4444', // red-500
+  mitigated: '#22c55e', // green-500
+  covered: '#3b82f6', // blue-500
+  accepted: '#9ca3af', // gray-400 (muted)
+  theoretical: '#94a3b8', // slate-400
+}
+
+export function getThreatStatusHex(status: ThreatStatus): string {
+  return THREAT_STATUS_HEX[status] ?? THREAT_STATUS_HEX.theoretical
+}
+
 /** All statuses in a sensible display/severity order. */
 export const THREAT_STATUS_ORDER: ThreatStatus[] = [
   'open',
