@@ -1,3 +1,4 @@
+export * from './coverage-heatmap'
 export * from './coverage-stats'
 export * from './existing-models'
 export * from './mitre-footer'

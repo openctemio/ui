@@ -64,3 +64,48 @@ export interface ThreatFilters {
   attacker: string
   technique: string
 }
+
+// ---- Coverage (ATT&CK matrix) — GET /threat-models/{id}/coverage ----
+
+/** Per-status threat tallies for a single technique. */
+export interface CoverageCounts {
+  open: number
+  mitigated: number
+  covered: number
+  accepted: number
+  theoretical: number
+}
+
+/** A single ATT&CK technique with its worst-case status + rollup counts. */
+export interface CoverageTechnique {
+  technique_id: string
+  technique_name: string
+  status: ThreatStatus
+  counts: CoverageCounts
+  max_score: number
+  mitigation_ids: string[]
+  threat_count: number
+}
+
+/** One kill-chain tactic column and its techniques (pre-ordered by backend). */
+export interface CoverageTactic {
+  tactic: string
+  techniques: CoverageTechnique[]
+}
+
+/** Coverage totals across the whole model. */
+export interface CoverageTotals extends CoverageCounts {
+  techniques: number
+  coverage_pct: number
+}
+
+/** Full coverage payload for a threat model. */
+export interface ThreatModelCoverage {
+  threat_model_id: string
+  scope_type: ThreatScopeType
+  scope_ref_id: string
+  dataset_version: string
+  generated_at: string
+  tactics: CoverageTactic[]
+  totals: CoverageTotals
+}
