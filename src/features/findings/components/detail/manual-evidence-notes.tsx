@@ -2,17 +2,28 @@
 
 import { useState, useCallback } from 'react'
 import { toast } from 'sonner'
-import { Plus, FileText, ExternalLink, Calendar, User, Loader2, X } from 'lucide-react'
+import { Plus, FileText, ExternalLink, Calendar, User, Loader2, X, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { usePermissions } from '@/context/permission-provider'
 import { getErrorMessage } from '@/lib/api/error-handler'
 import {
   useFindingEvidenceNotes,
   useAddFindingEvidence,
+  useDeleteFindingEvidence,
   type FindingEvidenceNote,
 } from '../../api/use-finding-evidence'
 
@@ -33,7 +44,25 @@ function formatDate(dateString: string): string {
       })
 }
 
-function NoteCard({ note }: { note: FindingEvidenceNote }) {
+/** Uploader display: prefer the resolved name, fall back to the UUID, then "Unknown". */
+function uploaderLabel(note: FindingEvidenceNote): string {
+  const name = note.uploaded_by_name?.trim()
+  if (name) return name
+  const id = note.uploaded_by?.trim()
+  return id || 'Unknown'
+}
+
+function NoteCard({
+  note,
+  canWrite,
+  onDelete,
+  isDeleting,
+}: {
+  note: FindingEvidenceNote
+  canWrite: boolean
+  onDelete: (note: FindingEvidenceNote) => void
+  isDeleting: boolean
+}) {
   const hasUrl = !!note.url
   return (
     <div className="rounded-lg border p-4">
@@ -64,14 +93,24 @@ function NoteCard({ note }: { note: FindingEvidenceNote }) {
               <Calendar className="h-3 w-3" />
               {formatDate(note.created_at)}
             </span>
-            {note.uploaded_by && (
-              <span className="flex items-center gap-1">
-                <User className="h-3 w-3" />
-                {note.uploaded_by}
-              </span>
-            )}
+            <span className="flex items-center gap-1">
+              <User className="h-3 w-3" />
+              {uploaderLabel(note)}
+            </span>
           </div>
         </div>
+        {canWrite && (
+          <Button
+            size="icon"
+            variant="ghost"
+            className="text-muted-foreground hover:text-red-500 h-8 w-8 shrink-0"
+            aria-label="Delete evidence note"
+            disabled={isDeleting}
+            onClick={() => onDelete(note)}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        )}
       </div>
     </div>
   )
@@ -88,11 +127,13 @@ export function ManualEvidenceNotesSection({ findingId }: ManualEvidenceNotesSec
 
   const { data, mutate } = useFindingEvidenceNotes(findingId)
   const { trigger: addEvidence, isMutating } = useAddFindingEvidence(findingId)
+  const { trigger: deleteEvidence, isMutating: isDeleting } = useDeleteFindingEvidence(findingId)
 
   const [showForm, setShowForm] = useState(false)
   const [description, setDescription] = useState('')
   const [type, setType] = useState('')
   const [url, setUrl] = useState('')
+  const [noteToDelete, setNoteToDelete] = useState<FindingEvidenceNote | null>(null)
 
   const notes = data?.data ?? []
 
@@ -122,6 +163,18 @@ export function ManualEvidenceNotesSection({ findingId }: ManualEvidenceNotesSec
       toast.error(getErrorMessage(error, 'Failed to add evidence'))
     }
   }, [description, type, url, addEvidence, resetForm, mutate])
+
+  const handleConfirmDelete = useCallback(async () => {
+    if (!noteToDelete) return
+    try {
+      await deleteEvidence(noteToDelete.id)
+      toast.success('Evidence deleted')
+      setNoteToDelete(null)
+      void mutate()
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Failed to delete evidence'))
+    }
+  }, [noteToDelete, deleteEvidence, mutate])
 
   return (
     <div className="space-y-4">
@@ -195,7 +248,13 @@ export function ManualEvidenceNotesSection({ findingId }: ManualEvidenceNotesSec
       {notes.length > 0 ? (
         <div className="space-y-3">
           {notes.map((note) => (
-            <NoteCard key={note.id} note={note} />
+            <NoteCard
+              key={note.id}
+              note={note}
+              canWrite={canWrite}
+              onDelete={setNoteToDelete}
+              isDeleting={isDeleting && noteToDelete?.id === note.id}
+            />
           ))}
         </div>
       ) : (
@@ -206,6 +265,43 @@ export function ManualEvidenceNotesSection({ findingId }: ManualEvidenceNotesSec
           </p>
         )
       )}
+
+      <AlertDialog
+        open={!!noteToDelete}
+        onOpenChange={(open) => {
+          if (!open && !isDeleting) setNoteToDelete(null)
+        }}
+      >
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-start">Delete evidence note?</AlertDialogTitle>
+            <AlertDialogDescription className="text-sm">
+              This will permanently remove this evidence note from the finding. This action cannot
+              be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="mt-2">
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault()
+                void handleConfirmDelete()
+              }}
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="me-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                'Delete'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
