@@ -6,10 +6,12 @@ import { PageHeader } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ArrowLeft, Loader2, RefreshCw } from 'lucide-react'
 import { Can, Permission } from '@/lib/permissions'
 import { toast } from 'sonner'
 import {
+  CoverageHeatmap,
   CoverageStats,
   ExistingModels,
   MitreFooter,
@@ -130,13 +132,24 @@ export default function ThreatModelPage() {
         ) : (
           <div className="space-y-6">
             <CoverageStats model={model} />
-            <ThreatModelTable
-              threats={model.threats ?? []}
-              filters={filters}
-              onFiltersChange={setFilters}
-              profileMap={profileMap}
-              nameFor={nameFor}
-            />
+            <Tabs defaultValue="threats">
+              <TabsList>
+                <TabsTrigger value="threats">Threats</TabsTrigger>
+                <TabsTrigger value="coverage">Coverage matrix</TabsTrigger>
+              </TabsList>
+              <TabsContent value="threats" className="mt-4">
+                <ThreatModelTable
+                  threats={model.threats ?? []}
+                  filters={filters}
+                  onFiltersChange={setFilters}
+                  profileMap={profileMap}
+                  nameFor={nameFor}
+                />
+              </TabsContent>
+              <TabsContent value="coverage" className="mt-4">
+                <CoverageHeatmap modelId={model.id} modelName={model.name} />
+              </TabsContent>
+            </Tabs>
             <MitreFooter />
           </div>
         )}
