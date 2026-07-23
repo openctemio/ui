@@ -59,7 +59,7 @@ export function ThreatModelTable({
         t.attacker_profile_id,
         profileMap.get(t.attacker_profile_id)?.name ?? 'Unknown'
       )
-      const techName = getMitreTechnique(t.technique_id)?.name
+      const techName = t.technique_name ?? getMitreTechnique(t.technique_id)?.name
       techniqueSet.set(
         t.technique_id,
         techName ? `${t.technique_id} · ${techName}` : t.technique_id
@@ -110,7 +110,7 @@ export function ThreatModelTable({
         header: ({ column }) => <DataTableColumnHeader column={column} title="Technique" />,
         cell: ({ row }) => {
           const id = row.original.technique_id
-          const name = getMitreTechnique(id)?.name
+          const name = row.original.technique_name ?? getMitreTechnique(id)?.name
           return (
             <a
               href={mitreTechniqueUrl(id)}
@@ -138,12 +138,36 @@ export function ThreatModelTable({
         accessorKey: 'mitigation_id',
         header: 'Mitigation',
         enableSorting: false,
-        cell: ({ row }) =>
-          row.original.mitigation_id ? (
-            <span className="font-mono text-xs">{row.original.mitigation_id}</span>
-          ) : (
-            <span className="text-muted-foreground text-xs">—</span>
-          ),
+        cell: ({ row }) => {
+          const id = row.original.mitigation_id
+          const name = row.original.mitigation_name
+          const summary = row.original.mitigation_summary
+          if (!id && !name) {
+            return <span className="text-muted-foreground text-xs">—</span>
+          }
+          // Prefer the human name; keep the Mxxxx id as a muted secondary label.
+          const primary = name ?? id
+          const label = (
+            <span className="flex flex-col leading-tight">
+              <span className="text-sm">{primary}</span>
+              {name && id && <span className="text-muted-foreground font-mono text-xs">{id}</span>}
+            </span>
+          )
+          if (!summary) return label
+          return (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="inline-flex cursor-help items-start gap-1">
+                    {label}
+                    <Info className="text-muted-foreground mt-0.5 h-3.5 w-3.5 shrink-0" />
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">{summary}</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )
+        },
       },
       {
         accessorKey: 'status',

@@ -20,8 +20,14 @@ export interface Threat {
   hop_index: number
   chain_fingerprint: string
   technique_id: string
+  /** ATT&CK technique name resolved by the API (preferred over the local dataset). */
+  technique_name?: string
   tactic: string
   mitigation_id?: string
+  /** ATT&CK mitigation name resolved by the API (e.g. "Restrict File and Directory Permissions"). */
+  mitigation_name?: string
+  /** Short human summary of the mitigation, surfaced as a tooltip. */
+  mitigation_summary?: string
   status: ThreatStatus
   status_reason?: string
   evidence_finding_id?: string
