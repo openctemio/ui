@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useUrlParams } from '@/hooks/use-url-param'
@@ -294,6 +294,10 @@ function FindingsContent() {
   const [searchQuery, setSearchQuery] = useState('')
   // Debounce so typing doesn't fire a backend list request per keystroke.
   const debouncedSearch = useDebounce(searchQuery, 300)
+  // Server-side pagination state. The list is fetched one page at a time from
+  // the API (was: fetch first 100 + client-paginate, which capped the table at
+  // 100 rows even when the tenant had thousands of findings).
+  const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 20 })
   const [mainTab, setMainTab] = useState<'findings' | 'groups' | 'pending'>('findings')
   const [markFixedGroup, setMarkFixedGroup] = useState<FindingGroup | null>(null)
   const [ticketFinding, setTicketFinding] = useState<Finding | null>(null)
@@ -312,7 +316,8 @@ function FindingsContent() {
   // Build API filters
   const apiFilters = useMemo((): FindingApiFilters => {
     const filters: FindingApiFilters = {
-      per_page: 100,
+      page: pagination.pageIndex + 1,
+      per_page: pagination.pageSize,
     }
     if (assetIdFilter) filters.asset_id = assetIdFilter
     if (sourceIdFilter) filters.source_id = sourceIdFilter
@@ -355,6 +360,22 @@ function FindingsContent() {
     priorityFilter,
     debouncedSearch,
     HIDDEN_STATUSES,
+    pagination,
+  ])
+
+  // Any filter change resets to the first page — otherwise a user on page 8 of
+  // "All" who picks a filter with only 2 pages would sit on an empty page.
+  useEffect(() => {
+    setPagination((p) => (p.pageIndex === 0 ? p : { ...p, pageIndex: 0 }))
+  }, [
+    assetIdFilter,
+    sourceIdFilter,
+    scanIdFilter,
+    severityTab,
+    statusFilter,
+    sourceFilter,
+    priorityFilter,
+    debouncedSearch,
   ])
 
   // Fetch finding stats. Pass `assetId` so the severity cards reflect
@@ -1349,6 +1370,11 @@ function FindingsContent() {
                             columns={columns}
                             data={findings}
                             showSearch={false}
+                            getRowId={(f) => f.id}
+                            manualPagination
+                            rowCount={findingsResponse?.total ?? 0}
+                            pagination={pagination}
+                            onPaginationChange={setPagination}
                             onSelectionChange={(rows) =>
                               setSelectedFindingIds(rows.map((f) => f.id))
                             }
