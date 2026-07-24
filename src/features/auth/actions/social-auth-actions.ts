@@ -230,8 +230,9 @@ export async function initiateSocialLogin(
   const result = await getOAuthAuthorizationUrl(provider, redirectTo)
 
   if (!result.success) {
-    // If we can't get the authorization URL, redirect to sign-in with error
-    redirect(`/sign-in?error=${encodeURIComponent(result.error)}`)
+    // If we can't get the authorization URL, redirect back to the login page
+    // with the error so the login form surfaces it via toast (?error= handler).
+    redirect(`/login?error=${encodeURIComponent(result.error)}`)
   }
 
   redirect(result.data.authorizationUrl)
