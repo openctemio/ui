@@ -38,6 +38,7 @@ import { loginAction } from '../actions/local-auth-actions'
 import { initiateSocialLogin, type SocialProvider } from '../actions/social-auth-actions'
 
 // SSO imports
+import { useAuthProviders } from '../api/use-auth-providers'
 import { useTenantSSOProviders } from '@/features/sso/api/use-sso-api'
 import { initiateSSOLogin } from '@/features/sso/actions/sso-auth-actions'
 import { getProviderLabel, type SSOProviderType } from '@/features/sso/types/sso.types'
@@ -102,6 +103,14 @@ export function LoginForm({
 
   // Fetch tenant-specific SSO providers when ?org= is present
   const { data: ssoProviders } = useTenantSSOProviders(orgSlug ?? null)
+
+  // Fetch which social providers the backend actually has configured, so we
+  // only render buttons that will work (no 404 dead-affordances). Buttons are
+  // hidden while loading (data undefined) and only shown for providers === true.
+  const { data: authProviders } = useAuthProviders()
+  const enabledSocialProviders = authProviders
+    ? socialProviders.filter((provider) => authProviders.social[provider.id])
+    : []
 
   // Check for error from OAuth/SSO callback
   const errorParam = searchParams.get('error')
@@ -273,8 +282,10 @@ export function LoginForm({
           Sign in
         </Button>
 
-        {/* Social Login Section */}
-        {showSocialLogin && (
+        {/* Social Login Section — only shown for providers the backend has
+            configured. If none are configured (or still loading), the whole
+            block including the "or continue with" divider is hidden. */}
+        {showSocialLogin && enabledSocialProviders.length > 0 && (
           <>
             <div className="relative my-2">
               <div className="absolute inset-0 flex items-center">
@@ -286,7 +297,7 @@ export function LoginForm({
             </div>
 
             <div className="grid grid-cols-3 gap-2">
-              {socialProviders.map((provider) => (
+              {enabledSocialProviders.map((provider) => (
                 <Button
                   key={provider.id}
                   variant="outline"
