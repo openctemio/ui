@@ -225,9 +225,24 @@ function SyncStatusBadge({ status }: { status: SyncStatus['last_sync_status'] })
       icon: Clock,
       className: 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400',
     },
+    running: {
+      label: 'Syncing',
+      icon: RefreshCw,
+      className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+    },
   }
 
-  const { label, icon: BadgeIcon, className } = config[status]
+  // Fall back rather than destructure undefined: a state the backend adds later
+  // would otherwise throw and blank the whole panel.
+  const {
+    label,
+    icon: BadgeIcon,
+    className,
+  } = config[status] ?? {
+    label: status || 'Unknown',
+    icon: Clock,
+    className: 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400',
+  }
 
   return (
     <Badge variant="outline" className={cn('gap-1', className)}>
