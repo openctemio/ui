@@ -4,6 +4,7 @@ import { ShieldAlert, ShieldCheck } from 'lucide-react'
 
 import { Main } from '@/components/layout/main'
 import { EmptyState } from '@/features/shared/components/empty-state'
+import { ErrorState } from '@/features/shared/components/error-state'
 import { PageHeader } from '@/features/shared/components/page-header'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Can, Permission } from '@/lib/permissions'
@@ -17,7 +18,7 @@ const DESCRIPTION =
   'Prove you own an email domain (via a DNS TXT record) so SSO auto-join can be safely limited to people at domains you control.'
 
 function VerifiedDomainsContent() {
-  const { data, isLoading, mutate } = useVerifiedDomains()
+  const { data, error, isLoading, mutate } = useVerifiedDomains()
   const refresh = () => void mutate()
 
   return (
@@ -26,7 +27,11 @@ function VerifiedDomainsContent() {
         <AddDomainDialog onAdded={refresh} />
       </PageHeader>
 
-      {isLoading ? (
+      {error ? (
+        // Verified domains gate SSO auto-join, so a false "none verified" invites a
+        // wrong conclusion about who can join this tenant. Show the failure instead.
+        <ErrorState title="verified domains" error={error} onRetry={refresh} />
+      ) : isLoading ? (
         <div className="space-y-3">
           <Skeleton className="h-20 w-full" />
           <Skeleton className="h-20 w-full" />

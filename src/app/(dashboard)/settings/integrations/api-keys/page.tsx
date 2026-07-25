@@ -10,6 +10,7 @@ import {
   DataTableColumnHeader,
   RelativeTime,
   StackedCell,
+  ErrorState,
 } from '@/features/shared'
 import { StatsCard } from '@/features/shared/components/stats-card'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -323,7 +324,7 @@ function LoadingSkeleton() {
 }
 
 export default function APIKeysPage() {
-  const { data, isLoading, mutate } = useApiKeys()
+  const { data, error, isLoading, mutate } = useApiKeys()
   const [genOpen, setGenOpen] = useState(false)
   const [newKey, setNewKey] = useState('')
 
@@ -406,6 +407,15 @@ export default function APIKeysPage() {
   }, [keys])
 
   if (isLoading) return <LoadingSkeleton />
+  // A failed read must not render as "No API keys yet" with all-zero stats —
+  // an admin could conclude none exist and mint a duplicate key.
+  if (error)
+    return (
+      <Main>
+        <PageHeader title="API Keys" description="Manage API keys for programmatic access" />
+        <ErrorState title="API keys" error={error} onRetry={() => void mutate()} />
+      </Main>
+    )
 
   return (
     <Main>
