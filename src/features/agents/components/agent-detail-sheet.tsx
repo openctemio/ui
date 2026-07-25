@@ -283,11 +283,11 @@ export function AgentDetailSheet({
             </div>
 
             {/* Tools */}
-            {agent.tools.length > 0 && (
+            {(agent.tools?.length ?? 0) > 0 && (
               <div className="rounded-xl border bg-card p-4">
                 <h4 className="mb-2 text-sm font-medium">Tools</h4>
                 <div className="flex flex-wrap gap-1">
-                  {agent.tools.map((tool) => (
+                  {(agent.tools ?? []).map((tool) => (
                     <Badge key={tool} variant="secondary">
                       {tool}
                     </Badge>
@@ -333,9 +333,9 @@ export function AgentDetailSheet({
             {/* Capabilities */}
             <div className="rounded-xl border bg-card p-4">
               <h4 className="mb-3 text-sm font-medium">Capabilities</h4>
-              {agent.capabilities.length > 0 ? (
+              {(agent.capabilities?.length ?? 0) > 0 ? (
                 <div className="grid grid-cols-2 gap-2">
-                  {agent.capabilities.map((cap) => (
+                  {(agent.capabilities ?? []).map((cap) => (
                     <div key={cap} className="flex items-center gap-2 rounded-lg bg-muted/50 p-2">
                       <CheckCircle className="h-4 w-4 text-green-500" />
                       <CapabilityBadge name={cap} showIcon />
