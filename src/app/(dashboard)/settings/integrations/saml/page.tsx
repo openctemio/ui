@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { ShieldCheck, Trash2, Copy, Check } from 'lucide-react'
 import { Main } from '@/components/layout'
-import { PageHeader } from '@/features/shared'
+import { PageHeader, ErrorState } from '@/features/shared'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -71,7 +71,7 @@ export default function SamlSettingsPage() {
   const { hasPermission } = usePermissions()
   const canManage = hasPermission('team:admin')
 
-  const { data, isLoading, mutate } = useSamlConfig()
+  const { data, error, isLoading, mutate } = useSamlConfig()
   const { trigger: save, isMutating: isSaving } = useSaveSamlConfig()
   const { trigger: remove, isMutating: isDeleting } = useDeleteSamlConfig()
 
@@ -135,7 +135,12 @@ export default function SamlSettingsPage() {
         description="Federate login through your SAML 2.0 identity provider (Okta, EntraID, ADFS)."
       />
 
-      {isLoading ? (
+      {error ? (
+        // A read failure must NOT fall through to the blank form: it reads as
+        // "SAML is not configured", and saving from there would PUT empty values
+        // over a live IdP config the admin never saw.
+        <ErrorState title="SAML configuration" error={error} onRetry={() => void mutate()} />
+      ) : isLoading ? (
         <div className="space-y-3">
           <Skeleton className="h-32 w-full" />
           <Skeleton className="h-64 w-full" />

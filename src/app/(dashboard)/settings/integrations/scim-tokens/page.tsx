@@ -3,7 +3,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { ColumnDef } from '@tanstack/react-table'
 import { Main } from '@/components/layout'
-import { PageHeader, EmptyState, DataTable, DataTableColumnHeader } from '@/features/shared'
+import {
+  PageHeader,
+  EmptyState,
+  DataTable,
+  DataTableColumnHeader,
+  ErrorState,
+} from '@/features/shared'
 import { StatsCard } from '@/features/shared/components/stats-card'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -253,7 +259,7 @@ function LoadingSkeleton() {
 }
 
 export default function ScimTokensPage() {
-  const { data, isLoading, mutate } = useScimTokens()
+  const { data, error, isLoading, mutate } = useScimTokens()
   const [genOpen, setGenOpen] = useState(false)
   const [newToken, setNewToken] = useState('')
 
@@ -315,6 +321,13 @@ export default function ScimTokensPage() {
   )
 
   if (isLoading) return <LoadingSkeleton />
+  // Don't render a failed read as "No SCIM tokens yet" with zeroed stats.
+  if (error)
+    return (
+      <Main>
+        <ErrorState title="SCIM tokens" error={error} onRetry={() => void mutate()} />
+      </Main>
+    )
 
   return (
     <Main>

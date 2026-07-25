@@ -22,7 +22,7 @@ import {
 import { toast } from 'sonner'
 
 import { Main } from '@/components/layout'
-import { EmptyState } from '@/features/shared'
+import { EmptyState, ErrorState } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -186,11 +186,13 @@ export default function NotificationOutboxPage() {
   // Fetch data
   const {
     data: statsData,
+    error: statsError,
     isLoading: statsLoading,
     mutate: mutateStats,
   } = useNotificationOutboxStatsApi()
   const {
     data: entriesData,
+    error: entriesError,
     isLoading: entriesLoading,
     mutate: mutateEntries,
   } = useNotificationOutboxApi({
@@ -273,6 +275,24 @@ export default function NotificationOutboxPage() {
       setSelectedEntry(null)
       setDeleteDialogOpen(false)
     }
+  }
+
+  // A failed read would otherwise render an all-zero (i.e. healthy, empty) queue
+  // while the real queue may be backed up with dead entries.
+  const loadError = statsError ?? entriesError
+  if (loadError) {
+    return (
+      <Main>
+        <ErrorState
+          title="notification queue"
+          error={loadError}
+          onRetry={() => {
+            void mutateStats()
+            void mutateEntries()
+          }}
+        />
+      </Main>
+    )
   }
 
   return (
