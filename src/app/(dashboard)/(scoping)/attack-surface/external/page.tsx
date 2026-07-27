@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
+import { getErrorMessage } from '@/lib/api/error-handler'
 import { useRouter } from 'next/navigation'
-import { useAssets } from '@/features/assets'
+import { createAsset, type CreateAssetInput, useAssets } from '@/features/assets'
 import { Main } from '@/components/layout'
 import { PageHeader, DataTableRowActions, StatsCard, SheetBody } from '@/features/shared'
 import { Button } from '@/components/ui/button'
@@ -114,7 +115,7 @@ const typeIcons: Record<AssetType, React.ElementType> = {
 export default function ExternalSurfacePage() {
   const router = useRouter()
   // Fetch external assets from API
-  const { assets: apiAssets } = useAssets({
+  const { assets: apiAssets, mutate: refetchAssets } = useAssets({
     types: ['domain', 'subdomain', 'service', 'ip_address'],
     scopes: ['external'],
     pageSize: 100,
@@ -211,29 +212,33 @@ export default function ExternalSurfacePage() {
     })
   }
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!formData.name) {
       toast.error('Please enter an asset name')
       return
     }
-    const newAsset: ExternalAsset = {
-      id: `ext-${Date.now()}`,
-      name: formData.name,
-      type: formData.type,
-      parentDomain: formData.parentDomain || undefined,
-      ipAddress: formData.ipAddress || undefined,
-      port: formData.port ? parseInt(formData.port) : undefined,
-      status: formData.status,
-      riskLevel: formData.riskLevel,
-      lastSeen: new Date().toISOString(),
-      discoveredAt: new Date().toISOString(),
-      findingsCount: 0,
-      notes: formData.notes || undefined,
+    // Persist through the real API. This previously only pushed onto local
+    // state and reported success, so the asset vanished on the next reload —
+    // the page reads from useAssets but the writes never reached it.
+    try {
+      await createAsset({
+        name: formData.name,
+        type: formData.type as CreateAssetInput['type'],
+        scope: 'external',
+        description: formData.notes || undefined,
+        metadata: {
+          ...(formData.ipAddress ? { ip_address: formData.ipAddress } : {}),
+          ...(formData.port ? { port: Number(formData.port) } : {}),
+          ...(formData.parentDomain ? { parent_domain: formData.parentDomain } : {}),
+        },
+      })
+      toast.success('External asset added')
+      setIsCreateOpen(false)
+      resetForm()
+      await refetchAssets()
+    } catch (e) {
+      toast.error(getErrorMessage(e, 'Failed to add external asset'))
     }
-    setAssets((prev) => [...prev, newAsset])
-    toast.success('External asset added successfully')
-    setIsCreateOpen(false)
-    resetForm()
   }
 
   const handleEdit = () => {
