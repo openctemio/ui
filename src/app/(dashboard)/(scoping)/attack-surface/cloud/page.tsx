@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
+import { getErrorMessage } from '@/lib/api/error-handler'
 import { useRouter } from 'next/navigation'
-import { useAssets } from '@/features/assets'
+import { createAsset, type CreateAssetInput, useAssets } from '@/features/assets'
 import { Main } from '@/components/layout'
 import { PageHeader, DataTableRowActions, StatsCard, SheetBody } from '@/features/shared'
 import { Button } from '@/components/ui/button'
@@ -144,7 +145,7 @@ const typeIcons: Record<ResourceType, React.ElementType> = {
 export default function CloudSurfacePage() {
   const router = useRouter()
   // Fetch real cloud assets from API, fallback to mock for demo
-  const { assets: apiAssets } = useAssets({
+  const { assets: apiAssets, mutate: refetchAssets } = useAssets({
     types: ['cloud_account'],
     pageSize: 100,
   })
@@ -257,33 +258,39 @@ export default function CloudSurfacePage() {
     })
   }
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!formData.name || !formData.accountId || !formData.region) {
       toast.error('Please fill in all required fields')
       return
     }
-    const newResource: CloudResource = {
-      id: `cloud-${Date.now()}`,
-      name: formData.name,
-      provider: formData.provider,
-      resourceType: formData.resourceType,
-      region: formData.region,
-      accountId: formData.accountId,
-      accountName: formData.accountName || undefined,
-      status: formData.status,
-      exposure: formData.exposure,
-      riskLevel: formData.riskLevel,
-      lastSeen: new Date().toISOString(),
-      discoveredAt: new Date().toISOString(),
-      findingsCount: 0,
-      publicIp: formData.publicIp || undefined,
-      privateIp: formData.privateIp || undefined,
-      notes: formData.notes || undefined,
+    // Persist through the real API. This previously only pushed onto local
+    // state and reported success, so the resource vanished on the next reload —
+    // the page reads from useAssets but the writes never reached it.
+    try {
+      await createAsset({
+        name: formData.name,
+        // The page lists types:['cloud_account'], so create must match or the new
+        // row would be invisible in the very list that just reported success.
+        type: 'cloud_account' as CreateAssetInput['type'],
+        scope: 'external',
+        description: formData.notes || undefined,
+        metadata: {
+          cloud_provider: formData.provider,
+          resource_type: formData.resourceType,
+          region: formData.region,
+          account_id: formData.accountId,
+          ...(formData.accountName ? { account_name: formData.accountName } : {}),
+          ...(formData.publicIp ? { public_ip: formData.publicIp } : {}),
+          ...(formData.privateIp ? { private_ip: formData.privateIp } : {}),
+        },
+      })
+      toast.success('Cloud resource added')
+      setIsCreateOpen(false)
+      resetForm()
+      await refetchAssets()
+    } catch (e) {
+      toast.error(getErrorMessage(e, 'Failed to add cloud resource'))
     }
-    setResources((prev) => [...prev, newResource])
-    toast.success('Cloud resource added successfully')
-    setIsCreateOpen(false)
-    resetForm()
   }
 
   const handleEdit = () => {
