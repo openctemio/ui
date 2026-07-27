@@ -55,6 +55,7 @@ import {
 } from '@/features/api-keys/api/use-api-keys'
 import type { APIKey } from '@/features/api-keys/types/api-key.types'
 import { toast } from 'sonner'
+import { copyToClipboard } from '@/lib/clipboard'
 
 const AVAILABLE_SCOPES = [
   'assets:read',
@@ -213,7 +214,7 @@ function GenerateKeyDialog({
 function RevealKeyDialog({ value, onClose }: { value: string; onClose: () => void }) {
   const [copied, setCopied] = useState(false)
   async function copy() {
-    await navigator.clipboard.writeText(value)
+    await copyToClipboard(value)
     setCopied(true)
     setTimeout(() => setCopied(false), 1500)
   }

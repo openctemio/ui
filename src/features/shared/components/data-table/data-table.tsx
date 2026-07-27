@@ -125,9 +125,18 @@ export function DataTable<TData, TValue>({
     getCoreRowModel: getCoreRowModel(),
     // In manual (server) pagination the parent already fetched exactly one page,
     // so the table must NOT slice the rows again — omit getPaginationRowModel.
-    ...(manualPagination ? {} : { getPaginationRowModel: getPaginationRowModel() }),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
+    // Under manual (server) pagination the parent fetched exactly one page, so
+    // the table must not slice, sort OR filter the rows again. It previously
+    // still did the latter two, which looked global but only ever touched the
+    // rows on screen — a sort that silently reorders 20 of 6000 findings is
+    // worse than no sort at all. Tell tanstack the server owns all three.
+    ...(manualPagination
+      ? { manualSorting: true, manualFiltering: true }
+      : {
+          getPaginationRowModel: getPaginationRowModel(),
+          getSortedRowModel: getSortedRowModel(),
+          getFilteredRowModel: getFilteredRowModel(),
+        }),
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
     onGlobalFilterChange: setGlobalFilter,
