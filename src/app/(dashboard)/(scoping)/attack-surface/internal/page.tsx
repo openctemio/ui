@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
-import { useAssets } from '@/features/assets'
+import { getErrorMessage } from '@/lib/api/error-handler'
+import { createAsset, type CreateAssetInput, useAssets } from '@/features/assets'
 import { Main } from '@/components/layout'
 import { PageHeader, DataTableRowActions, StatsCard, SheetBody } from '@/features/shared'
 import { Button } from '@/components/ui/button'
@@ -126,7 +127,7 @@ const typeIcons: Record<AssetType, React.ElementType> = {
 
 export default function InternalSurfacePage() {
   // Fetch internal assets from API
-  const { assets: apiAssets } = useAssets({
+  const { assets: apiAssets, mutate: refetchAssets } = useAssets({
     types: ['host', 'database', 'network', 'container'],
     scopes: ['internal'],
     pageSize: 100,
@@ -232,32 +233,35 @@ export default function InternalSurfacePage() {
     })
   }
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!formData.hostname || !formData.ipAddress) {
       toast.error('Please enter hostname and IP address')
       return
     }
-    const newAsset: InternalAsset = {
-      id: `int-${Date.now()}`,
-      hostname: formData.hostname,
-      type: formData.type,
-      ipAddress: formData.ipAddress,
-      macAddress: formData.macAddress || undefined,
-      networkZone: formData.networkZone,
-      vlan: formData.vlan || undefined,
-      operatingSystem: formData.operatingSystem || undefined,
-      status: formData.status,
-      riskLevel: formData.riskLevel,
-      lastSeen: new Date().toISOString(),
-      discoveredAt: new Date().toISOString(),
-      findingsCount: 0,
-      owner: formData.owner || undefined,
-      notes: formData.notes || undefined,
+    // Persist through the real API. This previously only pushed onto local
+    // state and reported success, so the asset vanished on the next reload —
+    // the page reads from useAssets but the writes never reached it.
+    try {
+      await createAsset({
+        name: formData.hostname,
+        type: formData.type as CreateAssetInput['type'],
+        scope: 'internal',
+        description: formData.notes || undefined,
+        metadata: {
+          ...(formData.ipAddress ? { ip_address: formData.ipAddress } : {}),
+          ...(formData.macAddress ? { mac_address: formData.macAddress } : {}),
+          ...(formData.operatingSystem ? { operating_system: formData.operatingSystem } : {}),
+          ...(formData.vlan ? { vlan: formData.vlan } : {}),
+          network_zone: formData.networkZone,
+        },
+      })
+      toast.success('Internal asset added')
+      setIsCreateOpen(false)
+      resetForm()
+      await refetchAssets()
+    } catch (e) {
+      toast.error(getErrorMessage(e, 'Failed to add internal asset'))
     }
-    setAssets((prev) => [...prev, newAsset])
-    toast.success('Internal asset added successfully')
-    setIsCreateOpen(false)
-    resetForm()
   }
 
   const handleEdit = () => {
