@@ -29,8 +29,13 @@ function subscribeToUrl(cb: () => void) {
  */
 function writeSearch(params: URLSearchParams) {
   const qs = params.toString()
-  const next = qs ? `${window.location.pathname}?${qs}` : window.location.pathname
-  if (next === window.location.pathname + window.location.search) return
+  // Keep the hash. Rebuilding the URL from pathname + query alone silently
+  // dropped it, so changing any filter threw away a deep link like
+  // /findings#evidence-3 — and the anchor is often the reason the link was
+  // shared in the first place.
+  const { pathname, search, hash } = window.location
+  const next = `${pathname}${qs ? `?${qs}` : ''}${hash}`
+  if (next === `${pathname}${search}${hash}`) return
   window.history.replaceState(window.history.state, '', next)
   window.dispatchEvent(new Event(URL_PARAMS_CHANGED))
 }
@@ -91,7 +96,9 @@ export function useUrlFilter(key: string, fallback: string): [string, (next: str
  * Comma rather than repeated keys because that is what the findings API already
  * accepts (`?sources=sast,secret`), so the address bar and the request agree.
  */
-export function useUrlFilterList(key: string): [string[], (next: string[]) => void] {
+export function useUrlFilterList(
+  key: string
+): [string[], (next: string[] | ((prev: string[]) => string[])) => void] {
   const raw = useUrlParam(key)
 
   const value = useMemo(
@@ -104,9 +111,17 @@ export function useUrlFilterList(key: string): [string[], (next: string[]) => vo
   )
 
   const setValue = useCallback(
-    (next: string[]) => {
+    (next: string[] | ((prev: string[]) => string[])) => {
       const params = new URLSearchParams(window.location.search)
-      const cleaned = next.map((v) => v.trim()).filter(Boolean)
+      // Accept an updater so callers can toggle without closing over a stale
+      // snapshot. Reading `prev` back out of the URL rather than from render
+      // scope means two changes in one tick compose instead of clobbering.
+      const prev = (params.get(key) ?? '')
+        .split(',')
+        .map((v) => v.trim())
+        .filter(Boolean)
+      const resolved = typeof next === 'function' ? next(prev) : next
+      const cleaned = resolved.map((v) => v.trim()).filter(Boolean)
       if (cleaned.length === 0) {
         params.delete(key)
       } else {
@@ -131,8 +146,12 @@ export function useUrlFilterNumber(
   fallback: number
 ): [number, (next: number) => void] {
   const raw = useUrlParam(key)
-  const parsed = raw === null ? NaN : Number(raw)
-  const value = Number.isFinite(parsed) && parsed > 0 ? parsed : fallback
+  // Plain decimal digits only, checked on the raw string rather than the parsed
+  // number. Number() accepts '2.5', '1e9' and '0x10' — and Number.isInteger is
+  // no defence against the last two, since 0x10 parses to a perfectly good 16.
+  // A hand-edited or truncated link should land on the default, not in an
+  // undefined state.
+  const value = raw !== null && /^\d+$/.test(raw) && Number(raw) > 0 ? Number(raw) : fallback
 
   const setValue = useCallback(
     (next: number) => {
