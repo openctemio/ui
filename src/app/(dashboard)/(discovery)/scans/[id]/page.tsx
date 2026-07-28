@@ -546,7 +546,13 @@ export default function ScanDetailPage() {
                           <TableCell>{formatDate(run.started_at)}</TableCell>
                           <TableCell className="text-end">
                             {isActive && (
-                              <Can permission={Permission.ScansWrite}>
+                              // PipelinesWrite, not ScansWrite. Cancel posts to
+                              // POST /pipeline-runs/{id}/cancel, and that route
+                              // requires pipelines:write. Gating on scans:write
+                              // showed an enabled button to users the API would
+                              // reject with a 403 — the button changed endpoint
+                              // in #335 and the permission gate did not follow.
+                              <Can permission={Permission.PipelinesWrite}>
                                 <Button
                                   size="sm"
                                   variant="ghost"
