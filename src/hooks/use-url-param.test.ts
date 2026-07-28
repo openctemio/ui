@@ -114,3 +114,59 @@ describe('URL-backed filters', () => {
     })
   })
 })
+
+// Regressions found by adversarially testing the original implementation.
+describe('URL filter regressions', () => {
+  beforeEach(() => window.history.replaceState(null, '', '/findings'))
+
+  // A deep link to a specific piece of evidence is often the reason a URL gets
+  // shared at all. Rebuilding the URL from pathname + query dropped it.
+  it('preserves the hash fragment when a filter changes', () => {
+    window.history.replaceState(null, '', '/findings#evidence-3')
+    const { result } = renderHook(() => useUrlFilter('severity', 'all'))
+    act(() => result.current[1]('critical'))
+    expect(window.location.hash).toBe('#evidence-3')
+    expect(window.location.search).toBe('?severity=critical')
+  })
+
+  it('preserves the hash when the last filter is cleared', () => {
+    window.history.replaceState(null, '', '/findings?severity=critical#evidence-3')
+    const { result } = renderHook(() => useUrlFilter('severity', 'all'))
+    act(() => result.current[1]('all'))
+    expect(window.location.hash).toBe('#evidence-3')
+    expect(window.location.search).toBe('')
+  })
+
+  // Two toggles in one tick, both resolved against the render-scope snapshot,
+  // used to lose the first selection.
+  it('composes two list updates in the same tick', () => {
+    const { result } = renderHook(() => useUrlFilterList('sources'))
+    act(() => {
+      result.current[1]((prev) => [...prev, 'sast'])
+      result.current[1]((prev) => [...prev, 'secret'])
+    })
+    expect(result.current[0]).toEqual(['sast', 'secret'])
+  })
+
+  it('still accepts a plain array', () => {
+    const { result } = renderHook(() => useUrlFilterList('sources'))
+    act(() => result.current[1](['iac']))
+    expect(result.current[0]).toEqual(['iac'])
+  })
+
+  // Number() accepts '2.5', '1e9' and '0x10'. A page number of 2.5 reaches the
+  // API as garbage.
+  it('rejects non-integer page numbers', () => {
+    for (const bad of ['2.5', '0x10', '1e9', 'Infinity']) {
+      window.history.replaceState(null, '', `/findings?page=${bad}`)
+      const { result } = renderHook(() => useUrlFilterNumber('page', 1))
+      expect(result.current[0]).toBe(1)
+    }
+  })
+
+  it('still accepts a real page number', () => {
+    window.history.replaceState(null, '', '/findings?page=7')
+    const { result } = renderHook(() => useUrlFilterNumber('page', 1))
+    expect(result.current[0]).toBe(7)
+  })
+})

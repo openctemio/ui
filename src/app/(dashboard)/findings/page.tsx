@@ -365,13 +365,13 @@ function FindingsContent() {
 
   const toggleSource = useCallback(
     (code: string) => {
-      setSourceFilter(
-        sourceFilter.includes(code)
-          ? sourceFilter.filter((c) => c !== code)
-          : [...sourceFilter, code]
+      // Functional update, not a read of `sourceFilter` from render scope: two
+      // toggles resolved against the same snapshot would lose the first.
+      setSourceFilter((prev) =>
+        prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code]
       )
     },
-    [sourceFilter, setSourceFilter]
+    [setSourceFilter]
   )
 
   const apiFilters = useMemo((): FindingApiFilters => {
