@@ -3,7 +3,11 @@
 import { useState, useMemo, useCallback, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useUrlParams } from '@/hooks/use-url-param'
+import { useUrlParams, useUrlFilter, useUrlFilterList } from '@/hooks/use-url-param'
+import {
+  useFindingSourcesApi,
+  groupFindingSourcesByCategory,
+} from '@/features/config/api/finding-source-api'
 import { useDebounce } from '@/hooks/use-debounce'
 import { ColumnDef } from '@tanstack/react-table'
 import { Main } from '@/components/layout'
@@ -15,8 +19,11 @@ import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
@@ -283,15 +290,20 @@ function FindingsContent() {
   // table owns its checkbox state internally; previously nothing synced it out
   // so selectedCount was always 0 and the bulk-action bar never appeared.
   const [selectedFindingIds, setSelectedFindingIds] = useState<string[]>([])
-  const [severityTab, setSeverityTab] = useState<string>('all')
+  // Filters live in the URL so a view can be linked to. "The criticals from our
+  // VA scanner" should be a link someone can paste, not a sequence of clicks to
+  // reproduce.
+  const [severityTab, setSeverityTab] = useUrlFilter('severity', 'all')
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [findingToDelete, setFindingToDelete] = useState<Finding | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
-  const [statusFilter, setStatusFilter] = useState<string>('all')
-  const [sourceFilter, setSourceFilter] = useState<string>('all')
-  const [priorityFilter, setPriorityFilter] = useState<string>('all')
-  const [searchQuery, setSearchQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useUrlFilter('status', 'all')
+  // Multiple sources at once: "everything from code scanning" is one question,
+  // and it spans sast and secret. Comma-separated, matching what the API takes.
+  const [sourceFilter, setSourceFilter] = useUrlFilterList('sources')
+  const [priorityFilter, setPriorityFilter] = useUrlFilter('priority', 'all')
+  const [searchQuery, setSearchQuery] = useUrlFilter('q', '')
   // Debounce so typing doesn't fire a backend list request per keystroke.
   const debouncedSearch = useDebounce(searchQuery, 300)
   // Server-side pagination state. The list is fetched one page at a time from
@@ -314,6 +326,54 @@ function FindingsContent() {
   const HIDDEN_STATUSES = useMemo(() => ['draft', 'in_review'], [])
 
   // Build API filters
+  // The source catalog is data, not a hardcoded list. The previous inline list
+  // had drifted: it omitted cspm, which live findings actually use, so those
+  // findings could not be filtered for at all.
+  const { data: sourceCatalog } = useFindingSourcesApi()
+
+  const sourceGroups = useMemo(() => {
+    const grouped = groupFindingSourcesByCategory(sourceCatalog?.data ?? [])
+    return Array.from(grouped.entries()).map(([code, group]) => ({
+      code,
+      label: group.label,
+      options: group.options,
+      codes: group.options.map((o) => o.value),
+    }))
+  }, [sourceCatalog?.data])
+
+  const sourceLabelByCode = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const g of sourceGroups) {
+      for (const o of g.options) map.set(o.value, o.label)
+    }
+    return map
+  }, [sourceGroups])
+
+  const sourceLabel = useMemo(() => {
+    if (sourceFilter.length === 0) return 'All'
+    // Name the group when the selection is exactly one, so "Code Scanning" reads
+    // better than "SAST +1".
+    const match = sourceGroups.find(
+      (g) =>
+        g.codes.length === sourceFilter.length && g.codes.every((c) => sourceFilter.includes(c))
+    )
+    if (match) return match.label
+    const [first, ...rest] = sourceFilter
+    const firstLabel = sourceLabelByCode.get(first) ?? first.toUpperCase()
+    return rest.length > 0 ? `${firstLabel} +${rest.length}` : firstLabel
+  }, [sourceFilter, sourceGroups, sourceLabelByCode])
+
+  const toggleSource = useCallback(
+    (code: string) => {
+      setSourceFilter(
+        sourceFilter.includes(code)
+          ? sourceFilter.filter((c) => c !== code)
+          : [...sourceFilter, code]
+      )
+    },
+    [sourceFilter, setSourceFilter]
+  )
+
   const apiFilters = useMemo((): FindingApiFilters => {
     const filters: FindingApiFilters = {
       page: pagination.pageIndex + 1,
@@ -333,10 +393,8 @@ function FindingsContent() {
       // Default: exclude draft/in_review (pentest WIP not ready for dashboard)
       filters.exclude_statuses = HIDDEN_STATUSES
     }
-    if (sourceFilter !== 'all') {
-      filters.sources = [
-        sourceFilter as FindingApiFilters['sources'] extends (infer U)[] ? U : never,
-      ]
+    if (sourceFilter.length > 0) {
+      filters.sources = sourceFilter as NonNullable<FindingApiFilters['sources']>
     }
     if (debouncedSearch.trim()) {
       filters.search = debouncedSearch.trim()
@@ -1193,29 +1251,38 @@ function FindingsContent() {
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="sm">
                     <Filter className="me-2 h-4 w-4" />
-                    Source: {sourceFilter === 'all' ? 'All' : sourceFilter.toUpperCase()}
+                    Source: {sourceLabel}
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuItem onClick={() => setSourceFilter('all')}>All</DropdownMenuItem>
+                <DropdownMenuContent className="max-h-96 overflow-y-auto">
+                  <DropdownMenuItem onClick={() => setSourceFilter([])}>
+                    All sources
+                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => setSourceFilter('pentest')}>
-                    Pentest
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setSourceFilter('sast')}>SAST</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setSourceFilter('dast')}>DAST</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setSourceFilter('sca')}>SCA</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setSourceFilter('secret')}>
-                    Secret
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setSourceFilter('iac')}>IaC</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setSourceFilter('container')}>
-                    Container
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setSourceFilter('manual')}>
-                    Manual
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setSourceFilter('easm')}>EASM</DropdownMenuItem>
+                  {sourceGroups.length === 0 ? (
+                    <DropdownMenuItem disabled>No sources available</DropdownMenuItem>
+                  ) : (
+                    sourceGroups.map((group) => (
+                      <DropdownMenuGroup key={group.code}>
+                        <DropdownMenuLabel
+                          className="cursor-pointer text-xs font-medium hover:underline"
+                          onClick={() => setSourceFilter(group.codes)}
+                        >
+                          {group.label}
+                        </DropdownMenuLabel>
+                        {group.options.map((opt) => (
+                          <DropdownMenuCheckboxItem
+                            key={opt.value}
+                            checked={sourceFilter.includes(opt.value)}
+                            onCheckedChange={() => toggleSource(opt.value)}
+                            onSelect={(e) => e.preventDefault()}
+                          >
+                            {opt.label}
+                          </DropdownMenuCheckboxItem>
+                        ))}
+                      </DropdownMenuGroup>
+                    ))
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
               <DropdownMenu>
