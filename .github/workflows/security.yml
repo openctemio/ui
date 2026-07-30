@@ -192,12 +192,21 @@ jobs:
           args: --severity-threshold=high
 
   # ============================================
-  # Docker Image Scan (on main branch)
+  # Docker Image Scan (main branch pushes + the weekly sweep)
   # ============================================
+  #
+  # The weekly cron is the only thing that catches a CVE disclosed against an
+  # already-shipped base image, since that needs no code change to appear. This
+  # job used to require `event_name == 'push'`, which excluded the cron — a
+  # scheduled run reported green having never built or scanned the image. Verified
+  # on run 30233333978: "Docker Image Scan: skipped".
+  #
+  # Still skipped on pull requests: building the image on every PR costs minutes
+  # and the filesystem Trivy scan already covers PR-introduced dependencies.
   docker-scan:
     name: Docker Image Scan
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'schedule' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
