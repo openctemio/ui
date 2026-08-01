@@ -26,6 +26,31 @@ set -euo pipefail
 
 BASE_REF="${1:-origin/develop}"
 
+# A release merge is not a place to gate added lines.
+#
+# The gate diffs against the PR's base. On a normal PR that base is `develop`,
+# so "added" means the handful of lines this branch wrote. On a release PR the
+# base is `main`, so "added" means every line merged since the last tag — for
+# the first release this gate ever saw, that was 140 commits and a month of
+# work. It reported ~5,000 lines of pre-existing styling as if the release
+# author had just written them, and it would do that on every release forever.
+#
+# Every one of those lines already passed this gate on its way into develop.
+# Re-checking them at release time is double jeopardy, and it is unactionable:
+# the person cutting the release cannot go fix another month of other people's
+# styling, so the only available move is to override the check — which is how a
+# gate stops meaning anything.
+#
+# This is not the "silently exits 0" failure the base-ref branch below guards
+# against. That one hides a broken gate; this one states a deliberate scope.
+case "${BASE_REF##*/}" in
+  main | master)
+    echo "check-palette-drift: base is '${BASE_REF}', so this is a release merge."
+    echo "Skipping: every commit in this range was already gated against develop."
+    exit 0
+    ;;
+esac
+
 # Tailwind's palette families. Semantic names (background, foreground, muted,
 # border, primary, destructive, …) are deliberately absent — those are the ones
 # this gate is steering people toward.
