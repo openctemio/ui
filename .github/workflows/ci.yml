@@ -19,6 +19,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
+        with:
+          # check-palette-drift needs the merge base; depth 1 would make it skip.
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v7
@@ -38,6 +41,13 @@ jobs:
 
       - name: Run Prettier check
         run: npm run format:check
+
+      # A pull request must not add new hardcoded Tailwind palette classes: the
+      # count grew 4,825 -> 5,323 in a month, so a cleanup without a gate regrows.
+      # Only lines this branch adds are checked, so it names your lines rather
+      # than a 5,000-line backlog.
+      - name: Check palette drift
+        run: bash scripts/check-palette-drift.sh "origin/${{ github.base_ref || 'develop' }}"
 
   # ============================================
   # Test
