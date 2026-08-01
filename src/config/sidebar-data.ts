@@ -648,6 +648,10 @@ export const sidebarData: SidebarData = {
             {
               title: 'CI/CD',
               url: '/settings/integrations/cicd',
+              // This route renders ComingSoonPage. The badge is what keeps the entry
+              // honest: without it the item looks like every other live integration
+              // and the click is a dead end.
+              badge: 'Soon',
               icon: Workflow,
               subModuleKey: 'pipelines_int',
             },
@@ -660,6 +664,10 @@ export const sidebarData: SidebarData = {
             {
               title: 'SIEM',
               url: '/settings/integrations/siem',
+              // This route renders ComingSoonPage. The badge is what keeps the entry
+              // honest: without it the item looks like every other live integration
+              // and the click is a dead end.
+              badge: 'Soon',
               icon: Shield,
               subModuleKey: 'siem',
             },
