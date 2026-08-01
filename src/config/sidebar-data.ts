@@ -246,11 +246,45 @@ export const sidebarData: SidebarData = {
         // but no route enforces it, so binding sidebar to it caused a divergence.
         {
           title: 'Exposures',
-          url: '/exposures',
           icon: AlertTriangle,
           // Group is visible if user has EITHER findings:read OR vulnerabilities:read.
           permission: [Permission.FindingsRead, Permission.VulnerabilitiesRead],
           module: 'findings',
+          // A collapsible cannot also carry a `url` (NavCollapsible has no url in
+          // src/components/types.ts), so the parent page is reached through an
+          // Overview child — the same shape Integrations uses below.
+          //
+          // Only the four children scoped to their own finding type are listed.
+          // /exposures/credentials is deliberately absent: it reads
+          // useDashboardStats and renders EVERY finding in the tenant under a
+          // "Credential Exposures" heading. See docs/nav-coverage.md.
+          items: [
+            {
+              title: 'Overview',
+              url: '/exposures',
+              icon: AlertTriangle,
+            },
+            {
+              title: 'Vulnerabilities',
+              url: '/exposures/vulnerabilities',
+              icon: Bug,
+            },
+            {
+              title: 'Secrets',
+              url: '/exposures/secrets',
+              icon: KeyRound,
+            },
+            {
+              title: 'Code',
+              url: '/exposures/code',
+              icon: FileWarning,
+            },
+            {
+              title: 'Misconfigurations',
+              url: '/exposures/misconfigurations',
+              icon: Wrench,
+            },
+          ],
         },
         // ----------------------------------------
         // CREDENTIAL LEAKS
