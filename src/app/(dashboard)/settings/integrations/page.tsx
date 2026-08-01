@@ -24,6 +24,7 @@ import {
   Workflow,
   TicketCheck,
   type LucideIcon,
+  KeyRound,
 } from 'lucide-react'
 import { Can, Permission } from '@/lib/permissions'
 import { useSCMConnections } from '@/features/repositories/hooks/use-repositories'
@@ -68,6 +69,14 @@ const integrationCategories = [
     icon: TicketCheck,
     href: '/settings/integrations/ticketing',
     color: 'bg-purple-500/10 text-purple-500',
+  },
+  {
+    id: 'api-keys',
+    title: 'API Keys',
+    description: 'Issue and revoke programmatic access keys',
+    icon: KeyRound,
+    href: '/settings/integrations/api-keys',
+    color: 'bg-amber-500/10 text-amber-500',
   },
   {
     id: 'security',
