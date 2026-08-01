@@ -1,105 +1,114 @@
-# Navigation coverage — what is built but not reachable
+# Navigation coverage — what is built, what is scaffolding
 
-Measured 2026-08-01 against `develop`. Reproduce with the commands at the bottom.
+Measured 2026-08-01 against `develop`. Commands to reproduce are at the bottom.
 
-**The sidebar exposes 64 of 171 static pages.** The other 107 are not all
-orphans — most are legitimate tabs, sub-pages and detail views. This document
-separates the three cases, because they need three different decisions.
+"Orphan routes" has been the top item in three consecutive UI reviews without the
+list ever being resolved. This document is an attempt to make it resolvable, and
+the finding that makes it resolvable is not the count — it is that **most of those
+pages have nothing of their own to show.**
 
-The headline is not "107 orphans". It is that roughly **20 clusters of built,
-data-wired functionality have no route into them**, and 11 of those pages sit
-under a nav section that already exists.
+**The sidebar exposes 64 of 171 static pages.** Of the 107 outside it:
+
+| | Pages | What it is |
+|---|---|---|
+| `/assets/*` wrappers | 26 | 12-line config-driven wrappers, reachable from asset detail. Fine. |
+| Own domain data | **34** | Real features. Decide: wire, or accept as sub-page-only. |
+| `useDashboardStats` only | **47** | **Scaffolds.** Cannot be wired — there is nothing behind them. |
 
 ---
 
-## 1. Fine as they are — 26 pages
+## The test that matters
 
-`/assets/*` — twelve-line wrappers around a shared `AssetPage` driven by a config
-object:
+An earlier draft of this document called 11 pages "easy wins, all data-wired" and
+recommended wiring them. That was wrong. **"Imports a data hook" is not the same
+as "shows its own data."**
 
-```tsx
-export default function HostsPage() {
-  return <AssetPage key={remountKey} config={hostsConfig} />
-}
+`/controls/list` is 515 lines, imports `useDashboardStats`, and renders a
+controls-looking dashboard — from `stats.assets.byType`. There is no controls data
+anywhere in it. `/exposures/credentials` shows *every* finding in the tenant under
+the heading "Credential Exposures".
+
+In a security product these are worse than an empty page. An empty page is honest;
+a chart labelled "Credential Exposures" showing unrelated numbers will be read as
+fact. **Wiring them would repeat exactly the defect ui#339 just fixed** — a nav
+entry that looks shipped and is not.
+
+The usable test: does the page call a hook scoped to its own domain?
+
+```
+useFindingTypeStats(tenantId, ['secret'])   -> real
+useDashboardStats()  and nothing else       -> scaffold
 ```
 
-Reached from an asset detail page via `router.push(`/assets/${listingSlug}`)`.
-Working, deliberate, config-driven. **No action.**
-
-`/components/*` — the parent `/components` page links to all five children.
-**No action.**
-
 ---
 
-## 2. Easy wins — 11 pages under a nav section that already exists
+## Ready to wire now — 4 pages
 
-These clusters have a parent **in the sidebar** whose children nothing links to.
-Adding sub-items is a config edit in `sidebar-data.ts`; the pages already work.
+`/exposures` is already a sidebar entry. These four are sub-items under it and are
+each scoped to their own finding type:
 
-| Cluster | Pages | LOC | Data-wired |
-|---|---|---|---|
-| `/exposures/*` | code, credentials, misconfigurations, secrets, vulnerabilities | 1,752 | 5 of 5 |
-| `/controls/*` | list, effectiveness, gaps | 1,200 | 3 of 3 |
-| `/workflows/*` | active, automations, templates | 714 | 3 of 3 |
+| Page | Source | LOC |
+|---|---|---|
+| `/exposures/secrets` | `useFindingTypeStats(tenantId, ['secret'])` | 332 |
+| `/exposures/code` | `useFindingTypeStats(tenantId, ['sast'])` | 354 |
+| `/exposures/misconfigurations` | `useFindingTypeStats(tenantId, ['iac'])` | 332 |
+| `/exposures/vulnerabilities` | `useFindingTypeStats(tenantId, VULNERABILITY_SOURCES)` | 375 |
 
-`/exposures`, `/controls` and `/workflows` are all already sidebar entries. Their
-children are simply not listed under them.
+## Real, and worth a decision — the other 30
 
-**Decision needed:** are these the intended shape of those sections? If yes this
-is one edit and 3,666 lines of finished work becomes reachable.
+Largest first. Several of the `settings/*` ones are reached as tabs from a parent
+already in the nav, so "not in the sidebar" does not mean unreachable for those.
 
----
+| Page | LOC |
+|---|---|
+| `/pentest/findings/new` | 1,267 |
+| `/scoring` (5 risk-scoring hooks) | 1,212 |
+| `/attack-surface/{cloud,internal,external}` | 2,956 |
+| `/components/ecosystems` | 880 |
+| `/settings/integrations/security` | 826 |
+| `/settings/access-control/permission-sets` | 723 |
+| `/findings/approvals` | 668 |
+| `/pentest/templates/new` | 629 |
+| `/settings/integrations/notifications/{outbox,history}` | 1,173 |
+| `/simulation/scenarios` (`useSimulations`) | — |
 
-## 3. Needs a product call — the rest
+## Scaffolds — 47 pages
 
-Whole clusters with no nav presence at any level. Every one is data-wired, so
-these are not abandoned prototypes; they were built and then never connected.
+Whole clusters where **every** page is dashboard-stats-only: `/controls/*`,
+`/workflows/*`, `/threats/*`, `/identity/*`, `/collaboration/*`, `/exceptions/*`,
+`/response/*`, plus `/sla`, `/trending`, `/progress`, `/overview`,
+`/exposures/credentials`.
 
-| Cluster | Pages | LOC | Notes |
-|---|---|---|---|
-| `/insights/*` | 9 | 2,715 | `/insights/executive` and `/insights/ctem-maturity` ARE in the sidebar; analytics + reports children are not |
-| `/pentest/*` | 2 | 1,896 | |
-| `/threats/*` | 3 | 1,414 | active, exploitability, feeds |
-| `/scoring` | 1 | 1,212 | |
-| `/collaboration/*` | 3 | 898 | assignments, comments, tickets |
-| `/exceptions/*` | 3 | 810 | pending, accepted, false-positives |
-| `/identity/*` | 3 | 809 | privileged, risks, shadow-it |
-| `/simulation/*` | 3 | 803 | sidebar has `/attack-simulation`, a different route |
-| `/response/*` | 3 | 724 | detection, playbooks, time |
-| `/trending`, `/progress`, `/sla`, `/overview` | 4 | 1,994 | single pages |
-| `/attack-path-visualization` | 1 | 301 | |
+These cannot be "connected" — the work left is not a nav entry, it is the feature.
+The realistic options are delete, or replace with `ComingSoonPage` (which the
+sidebar can already badge as `Soon`, see ui#339).
 
-**Decision needed per cluster:** does this belong in the product? Wire it, or
-delete it. Keeping a cluster unwired is the expensive option — it is maintained,
-type-checked and reviewed, and nobody sees it.
+### Why they drifted
 
-### A signal worth weighing
-
-The eight pages whose severity colours have drifted from
-`src/lib/severity-colors.ts` (`low` rendered green instead of blue, `info` blue
-instead of grey) are **all** in this section: `/attack-path-visualization`,
-`/identity/*`, `/collaboration/*`, `/exceptions/pending`.
-
-The drift and the unreachability are the same phenomenon. What nobody navigates
-to, nobody notices. That is an argument for settling this list before spending
-effort on consistency fixes inside it.
+The eight pages whose severity colours diverge from `src/lib/severity-colors.ts`
+(`low` green instead of blue, `info` blue instead of grey) are all in this group.
+They were copied from a template and edited; nobody noticed because there was
+never anything to look at. The colour drift is a symptom of the scaffolding, not a
+separate problem — fixing it before deciding this list would be wasted work.
 
 ---
 
 ## Reproducing this
 
 ```bash
+# routes and nav URLs
 find src/app -name page.tsx | sed -E 's#^src/app/##; s#/page\.tsx$##; s#\([^)]*\)/##g; s#^#/#' \
-  | sed 's#//*#/#g' | sort -u > /tmp/routes.txt          # 183 (12 dynamic)
-grep -oE "url: '[^']+'" src/config/sidebar-data.ts | sed "s/url: '//; s/'//" | sort -u  # 65
+  | sed 's#//*#/#g' | sort -u                                    # 183 (12 dynamic)
+grep -oE "url: '[^']+'" src/config/sidebar-data.ts | sed "s/url: '//; s/'//" | sort -u   # 65
+
+# real vs scaffold, per page
+grep -oE "use[A-Z][A-Za-z]+\(" "$page" | sort -u \
+  | grep -vE "useState|useEffect|useMemo|useRouter|useCallback|useSearchParams|useRef|useTenant|useDashboardStats|usePermissions|useToast|useForm"
+# no output => scaffold
 ```
 
-A page counts as data-wired if it imports from `@/features/*/hooks|api`,
-`@/hooks/use-*`, `@/lib/api/`, or calls `useSWR`.
-
-**Do not try to find orphans by grepping for hrefs.** Navigation here goes through
+**Do not try to find orphans by grepping for hrefs.** Navigation goes through
 config objects and template literals — `router.push(category.href)`,
 `` router.push(`/assets/${slug}`) `` — so no static pass answers "is this
-reachable". Four attempts produced four different wrong numbers before the method
-above was adopted; sidebar membership is the only figure that is exact without
-reading code.
+reachable". Four attempts gave four different wrong numbers. Sidebar membership is
+the only figure exact without reading code.
