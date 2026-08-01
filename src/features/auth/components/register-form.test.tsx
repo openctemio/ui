@@ -70,10 +70,9 @@ describe('RegisterForm social buttons', () => {
     } as unknown as ReturnType<typeof useAuthProviders>)
     render(<RegisterForm />)
 
-    expect(
-      socialButtonNames(),
-      'buttons must not flash in before we know which ones work'
-    ).toEqual([])
+    expect(socialButtonNames(), 'buttons must not flash in before we know which ones work').toEqual(
+      []
+    )
   })
 
   // The API contract says `social` is always present, but a proxy error page or
