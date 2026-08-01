@@ -12,8 +12,8 @@ pages have nothing of their own to show.**
 | | Pages | What it is |
 |---|---|---|
 | `/assets/*` wrappers | 26 | 12-line config-driven wrappers, reachable from asset detail. Fine. |
-| Own domain data | **34** | Real features. Decide: wire, or accept as sub-page-only. |
-| `useDashboardStats` only | **47** | **Scaffolds.** Cannot be wired — there is nothing behind them. |
+| Own domain data | **44** | Real features. Decide: wire, or accept as sub-page-only. |
+| `useDashboardStats` only | **37** | **Scaffolds.** Cannot be wired — there is nothing behind them. |
 
 ---
 
@@ -54,7 +54,7 @@ each scoped to their own finding type:
 | `/exposures/misconfigurations` | `useFindingTypeStats(tenantId, ['iac'])` | 332 |
 | `/exposures/vulnerabilities` | `useFindingTypeStats(tenantId, VULNERABILITY_SOURCES)` | 375 |
 
-## Real, and worth a decision — the other 30
+## Real, and worth a decision — the other 40
 
 Largest first. Several of the `settings/*` ones are reached as tabs from a parent
 already in the nav, so "not in the sidebar" does not mean unreachable for those.
@@ -72,16 +72,36 @@ already in the nav, so "not in the sidebar" does not mean unreachable for those.
 | `/settings/integrations/notifications/{outbox,history}` | 1,173 |
 | `/simulation/scenarios` (`useSimulations`) | — |
 
-## Scaffolds — 47 pages
+## Scaffolds — 37 pages
 
 Whole clusters where **every** page is dashboard-stats-only: `/controls/*`,
 `/workflows/*`, `/threats/*`, `/identity/*`, `/collaboration/*`, `/exceptions/*`,
-`/response/*`, plus `/sla`, `/trending`, `/progress`, `/overview`,
-`/exposures/credentials`.
+`/response/*`, plus `/sla`, `/progress`, `/overview`, `/exposures/credentials`.
+
+**Correction — this was 47 here, and 47 was too high.** 46 pages import
+`useDashboardStats`; 9 of them call a domain hook as well and are real, including
+the four `/exposures` children wired up in ui#342 and already listed above as
+ready. The earlier figure counted every importer. The scaffold set is the 37 where
+`useDashboardStats` is the *only* data source.
 
 These cannot be "connected" — the work left is not a nav entry, it is the feature.
 The realistic options are delete, or replace with `ComingSoonPage` (which the
 sidebar can already badge as `Soon`, see ui#339).
+
+### The third option — wiring them — is now blocked
+
+`src/config/__tests__/sidebar-no-scaffolds.test.ts` walks every sidebar leaf to
+the page file it resolves to and fails if that page's only data source is
+`useDashboardStats`, or if it renders `ComingSoonPage` without a badge. Green
+today: no sidebar entry points at a scaffold. It exists because the danger in a
+list this long is not that it stays unresolved — it is someone resolving it the
+fast way.
+
+The test keys on the `useDashboardStats` import rather than "has no domain hook",
+which is the check that produced the wrong 11-easy-wins list. The looser form is
+unreliable: most real pages delegate to a feature section (`<AgentsSection/>`) or
+call `useSWR<T>(` with a generic, and a first draft of the test flagged fifteen
+working pages including `/agents`, `/reports` and `/secret-store`.
 
 ### Why they drifted
 
@@ -102,9 +122,10 @@ find src/app -name page.tsx | sed -E 's#^src/app/##; s#/page\.tsx$##; s#\([^)]*\
 grep -oE "url: '[^']+'" src/config/sidebar-data.ts | sed "s/url: '//; s/'//" | sort -u   # 65
 
 # real vs scaffold, per page
-grep -oE "use[A-Z][A-Za-z]+\(" "$page" | sort -u \
-  | grep -vE "useState|useEffect|useMemo|useRouter|useCallback|useSearchParams|useRef|useTenant|useDashboardStats|usePermissions|useToast|useForm"
-# no output => scaffold
+grep -oE "\buse[A-Z][A-Za-z0-9]*[(<]" "$page" | sed 's/[(<]$//' | sort -u \
+  | grep -vE "useState|useEffect|useMemo|useRouter|useCallback|useSearchParams|useRef|useParams|usePathname|useTenant|useDashboardStats|usePermissions|useHasPermission|useToast|useForm"
+# imports useDashboardStats AND no output => scaffold
+# note the [(<] — useSWR<T>( is a real data source and a `\(`-only pattern misses it
 ```
 
 **Do not try to find orphans by grepping for hrefs.** Navigation goes through
