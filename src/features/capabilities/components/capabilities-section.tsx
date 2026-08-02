@@ -52,6 +52,7 @@ import {
   invalidateCapabilitiesCache,
 } from '@/lib/api/capability-hooks'
 import type { Capability, CapabilityListFilters } from '@/lib/api/capability-types'
+import { EmptyState } from '@/features/shared'
 
 type ViewMode = 'grid' | 'table'
 type MainTab = 'platform' | 'custom'
@@ -447,25 +448,28 @@ export function CapabilitiesSection() {
                 />
               )
             ) : (
-              <div className="rounded-lg border border-dashed p-8 text-center">
-                <Zap className="mx-auto mb-3 h-10 w-10 text-muted-foreground" />
-                <h3 className="mb-1 font-medium">No Capabilities Found</h3>
-                <p className="mb-4 text-sm text-muted-foreground">
-                  {searchQuery || categoryFilter !== 'all'
+              <EmptyState
+                icon={Zap}
+                title="No Capabilities Found"
+                description={
+                  searchQuery || categoryFilter !== 'all'
                     ? 'No capabilities match your search criteria. Try adjusting your filters.'
                     : mainTab === 'platform'
                       ? 'No platform capabilities available yet.'
-                      : 'Add a custom capability to extend your tool registry.'}
-                </p>
-                {!searchQuery && categoryFilter === 'all' && isCustomMode && (
-                  <Can permission={Permission.ToolsWrite}>
-                    <Button onClick={() => setCreateDialogOpen(true)}>
-                      <Plus className="me-2 h-4 w-4" />
-                      Add Your First Capability
-                    </Button>
-                  </Can>
-                )}
-              </div>
+                      : 'Add a custom capability to extend your tool registry.'
+                }
+                card={false}
+                action={
+                  !searchQuery && categoryFilter === 'all' && isCustomMode ? (
+                    <Can permission={Permission.ToolsWrite}>
+                      <Button onClick={() => setCreateDialogOpen(true)}>
+                        <Plus className="me-2 h-4 w-4" />
+                        Add Your First Capability
+                      </Button>
+                    </Can>
+                  ) : undefined
+                }
+              />
             )}
           </CardContent>
         </Card>

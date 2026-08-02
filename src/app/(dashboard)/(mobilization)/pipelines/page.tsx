@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic'
 import Link from 'next/link'
 
 import { Main } from '@/components/layout'
-import { PageHeader, RunStatusBadge } from '@/features/shared'
+import { EmptyState, PageHeader, RunStatusBadge } from '@/features/shared'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -396,22 +396,18 @@ export default function PipelinesPage() {
                   </CardHeader>
                   <CardContent>
                     {tenantPipelines.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
-                        <Workflow className="mb-2 h-8 w-8" />
-                        <p>No custom pipelines yet</p>
-                        <p className="text-sm mt-1">
-                          Create a new pipeline or use a system template below
-                        </p>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="mt-4"
-                          onClick={handleOpenCreateForm}
-                        >
-                          <Plus className="me-2 h-4 w-4" />
-                          Create Pipeline
-                        </Button>
-                      </div>
+                      <EmptyState
+                        card={false}
+                        icon={Workflow}
+                        title="No custom pipelines yet"
+                        description="Create a new pipeline or use a system template below"
+                        action={
+                          <Button variant="outline" size="sm" onClick={handleOpenCreateForm}>
+                            <Plus className="me-2 h-4 w-4" />
+                            Create Pipeline
+                          </Button>
+                        }
+                      />
                     ) : (
                       <div className="space-y-3">
                         {tenantPipelines.map((pipeline) => {
@@ -656,10 +652,7 @@ export default function PipelinesPage() {
                     ))}
                   </div>
                 ) : pipelineRuns?.items?.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
-                    <Play className="mb-2 h-8 w-8" />
-                    <p>No pipeline runs yet</p>
-                  </div>
+                  <EmptyState card={false} icon={Play} title="No pipeline runs yet" />
                 ) : (
                   <div className="space-y-3">
                     {pipelineRuns?.items?.map((run) => (

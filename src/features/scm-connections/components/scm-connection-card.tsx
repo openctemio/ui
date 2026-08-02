@@ -26,15 +26,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import {
-  AlertDialog,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn, sanitizeExternalUrl } from '@/lib/utils'
 import { getErrorMessage } from '@/lib/api/error-handler'
@@ -261,26 +253,23 @@ export function SCMConnectionCard({
         </CardContent>
       </Card>
 
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Connection</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete <strong>{connection.name}</strong>?
-              {repositoryCount > 0 && (
-                <> This will affect {repositoryCount} repositories that use this connection.</>
-              )}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-            <Button variant="destructive" onClick={handleDelete} disabled={isDeleting}>
-              {isDeleting && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
-              Delete
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        title="Delete Connection"
+        desc={
+          <>
+            Are you sure you want to delete <strong>{connection.name}</strong>?
+            {repositoryCount > 0 && (
+              <> This will affect {repositoryCount} repositories that use this connection.</>
+            )}
+          </>
+        }
+        confirmText="Delete"
+        destructive
+        isLoading={isDeleting}
+        handleConfirm={handleDelete}
+      />
 
       <SyncRepositoriesDialog
         open={syncDialogOpen}

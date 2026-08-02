@@ -49,6 +49,13 @@ export function validateRedirectUrl(
   try {
     // Rule 1: Simple internal path (starts with / but not //)
     if (trimmedUrl.startsWith('/') && !trimmedUrl.startsWith('//')) {
+      // Reject backslash / protocol-relative tricks: browsers normalise
+      // "\" to "/", so "/\evil.com" or "/\/evil.com" become external
+      // protocol-relative redirects. Block a leading "/" followed by "/" or "\".
+      if (/^\/[/\\]/.test(trimmedUrl)) {
+        return defaultUrl
+      }
+
       // Additional check: block javascript: and data: pseudo-URLs
       if (
         trimmedUrl.toLowerCase().startsWith('/javascript:') ||

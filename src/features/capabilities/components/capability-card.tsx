@@ -1,20 +1,13 @@
 'use client'
 
 import { memo } from 'react'
-import { MoreHorizontal, Pencil, Trash2, Globe, Sparkles, Wrench, Bot, Eye } from 'lucide-react'
+import { Pencil, Trash2, Globe, Sparkles, Wrench, Bot, Eye } from 'lucide-react'
 
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { DynamicIcon } from '@/components/dynamic-icon'
+import { DataTableRowActions } from '@/features/shared'
 
 import type { Capability, CapabilityUsageStats } from '@/lib/api/capability-types'
 
@@ -78,41 +71,40 @@ export const CapabilityCard = memo(function CapabilityCard({
             </div>
           </div>
           {(showActions || onViewDetails) && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100"
-                >
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {onViewDetails && (
-                  <DropdownMenuItem onClick={() => onViewDetails(capability)}>
-                    <Eye className="me-2 h-4 w-4" />
-                    View Details
-                  </DropdownMenuItem>
-                )}
-                {onViewDetails && (onEdit || onDelete) && <DropdownMenuSeparator />}
-                {onEdit && (
-                  <DropdownMenuItem onClick={() => onEdit(capability)}>
-                    <Pencil className="me-2 h-4 w-4" />
-                    Edit
-                  </DropdownMenuItem>
-                )}
-                {onDelete && (
-                  <DropdownMenuItem
-                    className="text-destructive focus:text-destructive"
-                    onClick={() => onDelete(capability)}
-                  >
-                    <Trash2 className="me-2 h-4 w-4" />
-                    Delete
-                  </DropdownMenuItem>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <DataTableRowActions
+              actions={[
+                ...(onViewDetails
+                  ? [
+                      {
+                        label: 'View Details',
+                        icon: Eye,
+                        onClick: () => onViewDetails(capability),
+                      },
+                    ]
+                  : []),
+                ...(onEdit
+                  ? [
+                      {
+                        label: 'Edit',
+                        icon: Pencil,
+                        onClick: () => onEdit(capability),
+                        separatorBefore: !!onViewDetails,
+                      },
+                    ]
+                  : []),
+                ...(onDelete
+                  ? [
+                      {
+                        label: 'Delete',
+                        icon: Trash2,
+                        onClick: () => onDelete(capability),
+                        destructive: true,
+                        separatorBefore: !!onViewDetails && !onEdit,
+                      },
+                    ]
+                  : []),
+              ]}
+            />
           )}
         </div>
       </CardHeader>

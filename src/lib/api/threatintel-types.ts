@@ -91,7 +91,10 @@ export interface SyncStatus {
   source: ThreatIntelSource
   enabled: boolean
   last_sync_at?: string
-  last_sync_status: 'success' | 'failed' | 'pending' | 'never'
+  // 'running' is persisted by the backend (MarkSyncStarted) BEFORE the slow
+  // external feed download begins, so it is the value the UI sees for the whole
+  // duration of a sync — the exact moment a user is watching this panel.
+  last_sync_status: 'success' | 'failed' | 'pending' | 'never' | 'running'
   last_error?: string
   records_synced: number
   next_sync_at?: string

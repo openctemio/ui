@@ -19,7 +19,7 @@ import {
 import '@xyflow/react/dist/style.css'
 
 import { Main } from '@/components/layout'
-import { PageHeader } from '@/features/shared'
+import { EmptyState, PageHeader, SheetBody } from '@/features/shared'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -853,17 +853,18 @@ export default function WorkflowsPage() {
                     <p className="text-muted-foreground">Please try again later</p>
                   </div>
                 ) : !workflowsData?.items || workflowsData.items.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-12 text-center">
-                    <WorkflowIcon className="h-12 w-12 text-muted-foreground mb-4" />
-                    <p className="text-lg font-medium">No workflows yet</p>
-                    <p className="text-muted-foreground mb-4">
-                      Create your first automation workflow
-                    </p>
-                    <Button onClick={() => setIsCreateDialogOpen(true)}>
-                      <Plus className="me-2 h-4 w-4" />
-                      Create Workflow
-                    </Button>
-                  </div>
+                  <EmptyState
+                    card={false}
+                    icon={WorkflowIcon}
+                    title="No workflows yet"
+                    description="Create your first automation workflow"
+                    action={
+                      <Button onClick={() => setIsCreateDialogOpen(true)}>
+                        <Plus className="me-2 h-4 w-4" />
+                        Create Workflow
+                      </Button>
+                    }
+                  />
                 ) : (
                   <div className="space-y-4">
                     {workflowsData.items.map((workflow) => {
@@ -988,11 +989,12 @@ export default function WorkflowsPage() {
                     ))}
                   </div>
                 ) : !runsData?.items || runsData.items.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-12 text-center">
-                    <Clock className="h-12 w-12 text-muted-foreground mb-4" />
-                    <p className="text-lg font-medium">No executions yet</p>
-                    <p className="text-muted-foreground">Run a workflow to see execution history</p>
-                  </div>
+                  <EmptyState
+                    card={false}
+                    icon={Clock}
+                    title="No executions yet"
+                    description="Run a workflow to see execution history"
+                  />
                 ) : (
                   <div className="space-y-3">
                     {runsData.items.map((run: WorkflowRun) => {
@@ -1191,93 +1193,95 @@ export default function WorkflowsPage() {
             </SheetTitle>
             <SheetDescription>{selectedWorkflow?.description || 'No description'}</SheetDescription>
           </SheetHeader>
-          {selectedWorkflow && (
-            <div className="mt-6 space-y-6">
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge
-                  className={`${selectedWorkflow.is_active ? statusConfig['active'].bgColor : statusConfig['inactive'].bgColor} ${selectedWorkflow.is_active ? statusConfig['active'].color : statusConfig['inactive'].color} border-0`}
-                >
-                  {selectedWorkflow.is_active ? 'Active' : 'Inactive'}
-                </Badge>
-                <Badge variant="outline">{selectedWorkflow.total_runs} runs</Badge>
-                <Badge variant="outline">
-                  {selectedWorkflow.total_runs > 0
-                    ? Math.round(
-                        (selectedWorkflow.successful_runs / selectedWorkflow.total_runs) * 100
-                      )
-                    : 0}
-                  % success
-                </Badge>
-              </div>
-
-              <Separator />
-
-              <div className="space-y-2">
-                <Label className="text-muted-foreground">Trigger</Label>
-                <div className="flex items-center gap-2 p-3 rounded-lg border">
-                  <Zap className="h-4 w-4 text-green-500" />
-                  <span>{getTriggerDisplay(selectedWorkflow)}</span>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-muted-foreground">Actions</Label>
-                <div className="space-y-2">
-                  {getActionNames(selectedWorkflow).length > 0 ? (
-                    getActionNames(selectedWorkflow).map((action, idx) => (
-                      <div key={idx} className="flex items-center gap-2 p-3 rounded-lg border">
-                        <Play className="h-4 w-4 text-blue-500" />
-                        <span>{action}</span>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-sm text-muted-foreground">No actions configured</p>
-                  )}
-                </div>
-              </div>
-
-              {selectedWorkflow.tags && selectedWorkflow.tags.length > 0 && (
-                <div className="space-y-2">
-                  <Label className="text-muted-foreground">Tags</Label>
-                  <div className="flex flex-wrap gap-1">
-                    {selectedWorkflow.tags.map((tag, idx) => (
-                      <Badge key={idx} variant="outline">
-                        {tag}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <Separator />
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="rounded-lg border p-4 text-center">
-                  <p className="text-2xl font-bold">{selectedWorkflow.total_runs}</p>
-                  <p className="text-xs text-muted-foreground">Total Runs</p>
-                </div>
-                <div className="rounded-lg border p-4 text-center">
-                  <p className="text-2xl font-bold text-green-500">
+          <SheetBody>
+            {selectedWorkflow && (
+              <div className="mt-6 space-y-6">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge
+                    className={`${selectedWorkflow.is_active ? statusConfig['active'].bgColor : statusConfig['inactive'].bgColor} ${selectedWorkflow.is_active ? statusConfig['active'].color : statusConfig['inactive'].color} border-0`}
+                  >
+                    {selectedWorkflow.is_active ? 'Active' : 'Inactive'}
+                  </Badge>
+                  <Badge variant="outline">{selectedWorkflow.total_runs} runs</Badge>
+                  <Badge variant="outline">
                     {selectedWorkflow.total_runs > 0
                       ? Math.round(
                           (selectedWorkflow.successful_runs / selectedWorkflow.total_runs) * 100
                         )
                       : 0}
-                    %
-                  </p>
-                  <p className="text-xs text-muted-foreground">Success Rate</p>
+                    % success
+                  </Badge>
+                </div>
+
+                <Separator />
+
+                <div className="space-y-2">
+                  <Label className="text-muted-foreground">Trigger</Label>
+                  <div className="flex items-center gap-2 p-3 rounded-lg border">
+                    <Zap className="h-4 w-4 text-green-500" />
+                    <span>{getTriggerDisplay(selectedWorkflow)}</span>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-muted-foreground">Actions</Label>
+                  <div className="space-y-2">
+                    {getActionNames(selectedWorkflow).length > 0 ? (
+                      getActionNames(selectedWorkflow).map((action, idx) => (
+                        <div key={idx} className="flex items-center gap-2 p-3 rounded-lg border">
+                          <Play className="h-4 w-4 text-blue-500" />
+                          <span>{action}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-sm text-muted-foreground">No actions configured</p>
+                    )}
+                  </div>
+                </div>
+
+                {selectedWorkflow.tags && selectedWorkflow.tags.length > 0 && (
+                  <div className="space-y-2">
+                    <Label className="text-muted-foreground">Tags</Label>
+                    <div className="flex flex-wrap gap-1">
+                      {selectedWorkflow.tags.map((tag, idx) => (
+                        <Badge key={idx} variant="outline">
+                          {tag}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <Separator />
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="rounded-lg border p-4 text-center">
+                    <p className="text-2xl font-bold">{selectedWorkflow.total_runs}</p>
+                    <p className="text-xs text-muted-foreground">Total Runs</p>
+                  </div>
+                  <div className="rounded-lg border p-4 text-center">
+                    <p className="text-2xl font-bold text-green-500">
+                      {selectedWorkflow.total_runs > 0
+                        ? Math.round(
+                            (selectedWorkflow.successful_runs / selectedWorkflow.total_runs) * 100
+                          )
+                        : 0}
+                      %
+                    </p>
+                    <p className="text-xs text-muted-foreground">Success Rate</p>
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  <WorkflowRunButton workflow={selectedWorkflow} className="flex-1" />
+                  <Button variant="outline" onClick={() => setSelectedWorkflow(null)}>
+                    <Pencil className="me-2 h-4 w-4" />
+                    Edit
+                  </Button>
                 </div>
               </div>
-
-              <div className="flex gap-2">
-                <WorkflowRunButton workflow={selectedWorkflow} className="flex-1" />
-                <Button variant="outline" onClick={() => setSelectedWorkflow(null)}>
-                  <Pencil className="me-2 h-4 w-4" />
-                  Edit
-                </Button>
-              </div>
-            </div>
-          )}
+            )}
+          </SheetBody>
         </SheetContent>
       </Sheet>
 

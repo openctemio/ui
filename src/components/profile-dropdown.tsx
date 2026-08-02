@@ -17,6 +17,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { SignOutDialog } from '@/components/sign-out-dialog'
+import { LanguageSwitcher } from '@/components/language-switcher'
 
 interface UserData {
   id: string
@@ -111,6 +112,11 @@ export function ProfileDropdown() {
               </Link>
             </DropdownMenuItem>
           </DropdownMenuGroup>
+
+          <DropdownMenuSeparator />
+
+          {/* Language */}
+          <LanguageSwitcher />
 
           <DropdownMenuSeparator />
 

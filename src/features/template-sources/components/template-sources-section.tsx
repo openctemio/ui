@@ -12,7 +12,6 @@ import {
   GitBranch,
   Database,
   Globe,
-  MoreHorizontal,
   Pencil,
   Trash2,
   Play,
@@ -28,13 +27,6 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Table,
@@ -44,17 +36,10 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import {
-  AlertDialog,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
+import { DataTableRowActions, EmptyState } from '@/features/shared'
 import { AddTemplateSourceDialog } from './add-template-source-dialog'
 import { EditTemplateSourceDialog } from './edit-template-source-dialog'
 import { Can, Permission } from '@/lib/permissions'
@@ -379,56 +364,38 @@ export function TemplateSourcesSection() {
                           <Can
                             permission={[Permission.CredentialsWrite, Permission.CredentialsWrite]}
                           >
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <Can permission={Permission.CredentialsWrite}>
-                                  <DropdownMenuItem
-                                    onClick={() => handleSync(source)}
-                                    disabled={isSyncing || !source.is_enabled}
-                                  >
-                                    <RefreshCw
-                                      className={`me-2 h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`}
-                                    />
-                                    Sync Now
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={() => handleToggleEnabled(source)}
-                                    disabled={isEnabling || isDisabling}
-                                  >
-                                    {source.is_enabled ? (
-                                      <>
-                                        <Pause className="me-2 h-4 w-4" />
-                                        Disable
-                                      </>
-                                    ) : (
-                                      <>
-                                        <Play className="me-2 h-4 w-4" />
-                                        Enable
-                                      </>
-                                    )}
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => handleEditSource(source)}>
-                                    <Pencil className="me-2 h-4 w-4" />
-                                    Edit
-                                  </DropdownMenuItem>
-                                </Can>
-                                <Can permission={Permission.CredentialsWrite}>
-                                  <DropdownMenuSeparator />
-                                  <DropdownMenuItem
-                                    className="text-red-500"
-                                    onClick={() => handleDeleteClick(source)}
-                                  >
-                                    <Trash2 className="me-2 h-4 w-4" />
-                                    Delete
-                                  </DropdownMenuItem>
-                                </Can>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                            <DataTableRowActions
+                              actions={[
+                                {
+                                  label: 'Sync Now',
+                                  icon: RefreshCw,
+                                  onClick: () => handleSync(source),
+                                  disabled: isSyncing || !source.is_enabled,
+                                  permission: Permission.CredentialsWrite,
+                                },
+                                {
+                                  label: source.is_enabled ? 'Disable' : 'Enable',
+                                  icon: source.is_enabled ? Pause : Play,
+                                  onClick: () => handleToggleEnabled(source),
+                                  disabled: isEnabling || isDisabling,
+                                  permission: Permission.CredentialsWrite,
+                                },
+                                {
+                                  label: 'Edit',
+                                  icon: Pencil,
+                                  onClick: () => handleEditSource(source),
+                                  permission: Permission.CredentialsWrite,
+                                },
+                                {
+                                  label: 'Delete',
+                                  icon: Trash2,
+                                  onClick: () => handleDeleteClick(source),
+                                  destructive: true,
+                                  separatorBefore: true,
+                                  permission: Permission.CredentialsWrite,
+                                },
+                              ]}
+                            />
                           </Can>
                         </TableCell>
                       </TableRow>
@@ -437,23 +404,26 @@ export function TemplateSourcesSection() {
                 </TableBody>
               </Table>
             ) : (
-              <div className="rounded-lg border border-dashed p-8 text-center">
-                <FolderSync className="mx-auto mb-3 h-10 w-10 text-muted-foreground" />
-                <h3 className="mb-1 font-medium">No Template Sources Found</h3>
-                <p className="mb-4 text-sm text-muted-foreground">
-                  {searchQuery
+              <EmptyState
+                card={false}
+                icon={FolderSync}
+                title="No Template Sources Found"
+                description={
+                  searchQuery
                     ? 'No sources match your search criteria.'
-                    : 'Add a source to sync custom templates from Git, S3, or HTTP.'}
-                </p>
-                {!searchQuery && (
-                  <Can permission={Permission.CredentialsWrite}>
-                    <Button onClick={() => setAddDialogOpen(true)}>
-                      <Plus className="me-2 h-4 w-4" />
-                      Add Your First Source
-                    </Button>
-                  </Can>
-                )}
-              </div>
+                    : 'Add a source to sync custom templates from Git, S3, or HTTP.'
+                }
+                action={
+                  !searchQuery ? (
+                    <Can permission={Permission.CredentialsWrite}>
+                      <Button onClick={() => setAddDialogOpen(true)}>
+                        <Plus className="me-2 h-4 w-4" />
+                        Add Your First Source
+                      </Button>
+                    </Can>
+                  ) : undefined
+                }
+              />
             )}
           </CardContent>
         </Card>
@@ -476,24 +446,21 @@ export function TemplateSourcesSection() {
       )}
 
       {/* Delete Confirmation */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Template Source</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete <strong>{selectedSource?.name}</strong>? This will
-              also remove all synced templates from this source. This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-            <Button variant="destructive" onClick={handleDeleteConfirm} disabled={isDeleting}>
-              {isDeleting && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
-              Delete
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        title="Delete Template Source"
+        desc={
+          <>
+            Are you sure you want to delete <strong>{selectedSource?.name}</strong>? This will also
+            remove all synced templates from this source. This action cannot be undone.
+          </>
+        }
+        confirmText="Delete"
+        destructive
+        isLoading={isDeleting}
+        handleConfirm={handleDeleteConfirm}
+      />
     </>
   )
 }

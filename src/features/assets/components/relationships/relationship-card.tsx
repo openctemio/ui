@@ -11,7 +11,6 @@ import {
   ArrowRight,
   ArrowLeft,
   Link2,
-  MoreHorizontal,
   Pencil,
   Trash2,
   ExternalLink,
@@ -20,14 +19,8 @@ import {
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { DataTableRowActions } from '@/features/shared'
 import { cn } from '@/lib/utils'
 import type { AssetRelationship, RelationshipDirection, ExtendedAssetType } from '../../types'
 import { RELATIONSHIP_LABELS, EXTENDED_ASSET_TYPE_LABELS } from '../../types'
@@ -278,34 +271,30 @@ export function RelationshipCard({
           </Badge>
           <ConfidenceBadge confidence={relationship.confidence} />
         </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => onEdit?.(relationship)}>
-              <Pencil className="me-2 h-4 w-4" />
-              Edit
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() =>
+        <DataTableRowActions
+          actions={[
+            {
+              label: 'Edit',
+              icon: Pencil,
+              onClick: () => onEdit?.(relationship),
+            },
+            {
+              label: `View ${isSource ? 'Target' : 'Source'} Asset`,
+              icon: ExternalLink,
+              onClick: () =>
                 isSource
                   ? onTargetClick?.(relationship.targetAssetId)
-                  : onSourceClick?.(relationship.sourceAssetId)
-              }
-            >
-              <ExternalLink className="me-2 h-4 w-4" />
-              View {isSource ? 'Target' : 'Source'} Asset
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => onDelete?.(relationship)} className="text-red-600">
-              <Trash2 className="me-2 h-4 w-4" />
-              Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+                  : onSourceClick?.(relationship.sourceAssetId),
+            },
+            {
+              label: 'Delete',
+              icon: Trash2,
+              onClick: () => onDelete?.(relationship),
+              separatorBefore: true,
+              destructive: true,
+            },
+          ]}
+        />
       </div>
 
       {/* Visual Relationship — justify-between + flex-1 nodes makes the

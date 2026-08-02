@@ -36,11 +36,14 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
 import { copyToClipboard } from '@/lib/clipboard'
 import { cn, sanitizeExternalUrl } from '@/lib/utils'
+import { SEVERITY_DOT_COLORS, type SeverityLevel } from '@/lib/severity-colors'
+import { CRITICALITY_BADGE_SOFT } from '@/lib/criticality-colors'
 import { toast } from 'sonner'
 import { EcosystemBadge } from './ecosystem-badge'
 import { SeverityBadge } from './severity-badge'
 import { LicenseRiskBadge, LicenseCategoryBadge } from './license-badge'
 import {
+  EmptyState,
   RiskScoreBadge,
   SheetDetailToolbar,
   SheetInfoRow as InfoRow,
@@ -103,12 +106,7 @@ function vulnFallbackFromRow(v: ApiComponentVulnerability): Vulnerability {
 // Component
 // ============================================
 
-const CRITICALITY_BADGE: Record<string, string> = {
-  critical: 'bg-red-500/15 text-red-700 dark:text-red-400 border-red-500/30',
-  high: 'bg-orange-500/15 text-orange-700 dark:text-orange-400 border-orange-500/30',
-  medium: 'bg-yellow-500/15 text-yellow-700 dark:text-yellow-400 border-yellow-500/30',
-  low: 'bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/30',
-}
+const CRITICALITY_BADGE: Record<string, string> = CRITICALITY_BADGE_SOFT
 
 const VULNS_PER_PAGE = 10
 const ASSETS_PER_PAGE = 10
@@ -528,17 +526,11 @@ export function ComponentDetailSheet({ component, open, onOpenChange }: Componen
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
             ) : distinctCveCount === 0 ? (
-              <Card>
-                <CardContent className="flex flex-col items-center justify-center py-12">
-                  <div className="h-12 w-12 rounded-full bg-green-500/20 flex items-center justify-center mb-4">
-                    <CheckCircle className="h-6 w-6 text-green-500" />
-                  </div>
-                  <h3 className="text-lg font-medium">No CVEs Detected</h3>
-                  <p className="text-muted-foreground text-sm text-center">
-                    No open findings link this component to any CVE in your tenant.
-                  </p>
-                </CardContent>
-              </Card>
+              <EmptyState
+                icon={CheckCircle}
+                title="No CVEs Detected"
+                description="No open findings link this component to any CVE in your tenant."
+              />
             ) : (
               <div className="space-y-3">
                 <Card>
@@ -570,13 +562,7 @@ export function ComponentDetailSheet({ component, open, onOpenChange }: Componen
                       }
                     >
                       <div
-                        className={cn(
-                          'h-1',
-                          v.severity === 'critical' && 'bg-red-500',
-                          v.severity === 'high' && 'bg-orange-500',
-                          v.severity === 'medium' && 'bg-yellow-500',
-                          v.severity === 'low' && 'bg-blue-500'
-                        )}
+                        className={cn('h-1', SEVERITY_DOT_COLORS[v.severity as SeverityLevel])}
                       />
                       <CardContent className="pt-4">
                         <div className="flex items-start justify-between gap-2 mb-2">
@@ -668,17 +654,11 @@ export function ComponentDetailSheet({ component, open, onOpenChange }: Componen
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
             ) : (assetsData?.data?.length ?? 0) === 0 ? (
-              <Card>
-                <CardContent className="flex flex-col items-center justify-center py-12">
-                  <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-4">
-                    <Server className="h-6 w-6 text-muted-foreground" />
-                  </div>
-                  <h3 className="text-lg font-medium">Not Used By Any Asset</h3>
-                  <p className="text-muted-foreground text-sm text-center">
-                    No asset in this tenant currently links to this component.
-                  </p>
-                </CardContent>
-              </Card>
+              <EmptyState
+                icon={Server}
+                title="Not Used By Any Asset"
+                description="No asset in this tenant currently links to this component."
+              />
             ) : (
               <div className="space-y-3">
                 <Card>

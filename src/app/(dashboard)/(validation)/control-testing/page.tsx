@@ -2,10 +2,11 @@
 
 import { useMemo, useState } from 'react'
 import { Main } from '@/components/layout'
-import { PageHeader } from '@/features/shared'
+import { PageHeader, StatsCard } from '@/features/shared'
 import { ValidationCoverageCard } from '@/features/validation/components/validation-coverage-card'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { SEVERITY_BADGE_SOFT } from '@/lib/severity-colors'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -87,12 +88,7 @@ const statusConfig: Record<string, { icon: React.ReactNode; color: string; bgCol
   },
 }
 
-const riskColors: Record<string, string> = {
-  critical: 'bg-red-500/20 text-red-600 dark:text-red-400',
-  high: 'bg-orange-500/20 text-orange-600 dark:text-orange-400',
-  medium: 'bg-yellow-500/20 text-yellow-600 dark:text-yellow-400',
-  low: 'bg-blue-500/20 text-blue-600 dark:text-blue-400',
-}
+const riskColors: Record<string, string> = { ...SEVERITY_BADGE_SOFT }
 
 // ─────────────────────────────────────────────────────────
 // Framework card
@@ -570,24 +566,9 @@ export default function ControlTestingPage() {
 
       {/* Summary Stats */}
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Total Controls</CardDescription>
-            <CardTitle className="text-3xl">{summaryStats.total}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Passed</CardDescription>
-            <CardTitle className="text-3xl text-green-500">{summaryStats.passed}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Failed</CardDescription>
-            <CardTitle className="text-3xl text-red-500">{summaryStats.failed}</CardTitle>
-          </CardHeader>
-        </Card>
+        <StatsCard title="Total Controls" value={summaryStats.total} />
+        <StatsCard title="Passed" value={summaryStats.passed} valueClassName="text-green-600" />
+        <StatsCard title="Failed" value={summaryStats.failed} valueClassName="text-red-600" />
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Coverage</CardDescription>

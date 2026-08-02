@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo } from 'react'
+import { formatChartDate } from '@/lib/format-chart-date'
 import { Main } from '@/components/layout'
 import { PageHeader } from '@/features/shared'
 import { StatsCard } from '@/features/shared/components/stats-card'
@@ -53,10 +54,7 @@ export default function ResponseTimePage() {
 
   const trendData = useMemo(() => {
     return stats.findingTrend.slice(-7).map((point) => ({
-      date: new Date(point.date).toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-      }),
+      date: formatChartDate(point.date),
       total: point.critical + point.high + point.medium + point.low + point.info,
       critical: point.critical,
       high: point.high,

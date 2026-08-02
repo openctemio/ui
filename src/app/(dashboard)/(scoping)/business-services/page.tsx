@@ -1,31 +1,24 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import type { ColumnDef } from '@tanstack/react-table'
 import useSWR from 'swr'
 import { Main } from '@/components/layout'
-import { PageHeader } from '@/features/shared'
+import {
+  PageHeader,
+  DataTable,
+  DataTableColumnHeader,
+  DataTableRowActions,
+  StackedCell,
+  StatsCard,
+} from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+import { Card, CardContent } from '@/components/ui/card'
 import {
   Dialog,
   DialogContent,
@@ -34,16 +27,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import {
   Select,
   SelectContent,
@@ -54,7 +38,6 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import {
   Plus,
-  MoreHorizontal,
   Pencil,
   Trash2,
   Briefcase,
@@ -65,6 +48,7 @@ import {
 import { toast } from 'sonner'
 import { get, post, put, del } from '@/lib/api/client'
 import { Can, Permission } from '@/lib/permissions'
+import { CRITICALITY_BADGE_SOFT } from '@/lib/criticality-colors'
 
 type Criticality = 'critical' | 'high' | 'medium' | 'low'
 
@@ -92,12 +76,7 @@ interface ListResponse {
 
 const COMPLIANCE_FRAMEWORKS = ['PCI-DSS', 'HIPAA', 'SOC2', 'GDPR', 'ISO27001', 'NIST'] as const
 
-const criticalityColors: Record<Criticality, string> = {
-  critical: 'bg-red-500/10 text-red-500 border-red-500/20',
-  high: 'bg-orange-500/10 text-orange-500 border-orange-500/20',
-  medium: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20',
-  low: 'bg-green-500/10 text-green-500 border-green-500/20',
-}
+const criticalityColors: Record<Criticality, string> = CRITICALITY_BADGE_SOFT
 
 interface FormState {
   name: string
@@ -177,6 +156,121 @@ export default function BusinessServicesPage() {
     })
     setIsDialogOpen(true)
   }
+
+  const columns = useMemo<ColumnDef<BusinessService>[]>(
+    () => [
+      {
+        accessorKey: 'name',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Name" />,
+        cell: ({ row }) => {
+          const service = row.original
+          return (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="cursor-help font-medium">{service.name}</span>
+                </TooltipTrigger>
+                {service.description && (
+                  <TooltipContent className="max-w-sm">{service.description}</TooltipContent>
+                )}
+              </Tooltip>
+            </TooltipProvider>
+          )
+        },
+      },
+      {
+        accessorKey: 'criticality',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Criticality" />,
+        cell: ({ row }) => (
+          <Badge variant="outline" className={criticalityColors[row.original.criticality]}>
+            {row.original.criticality}
+          </Badge>
+        ),
+      },
+      {
+        id: 'data_handling',
+        header: 'Data Handling',
+        enableSorting: false,
+        cell: ({ row }) => {
+          const service = row.original
+          return (
+            <div className="flex flex-wrap gap-1">
+              {service.handles_pii && (
+                <Badge variant="secondary" className="text-xs">
+                  PII
+                </Badge>
+              )}
+              {service.handles_phi && (
+                <Badge variant="secondary" className="text-xs">
+                  PHI
+                </Badge>
+              )}
+              {service.handles_financial && (
+                <Badge variant="secondary" className="text-xs">
+                  Financial
+                </Badge>
+              )}
+            </div>
+          )
+        },
+      },
+      {
+        id: 'compliance_scope',
+        header: 'Compliance Scope',
+        enableSorting: false,
+        cell: ({ row }) => (
+          <div className="flex flex-wrap gap-1">
+            {(row.original.compliance_scope ?? []).map((framework) => (
+              <Badge key={framework} variant="outline" className="text-xs">
+                {framework}
+              </Badge>
+            ))}
+          </div>
+        ),
+      },
+      {
+        accessorKey: 'owner_name',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Owner" />,
+        cell: ({ row }) => (
+          <StackedCell
+            primary={row.original.owner_name || '—'}
+            secondary={row.original.owner_email}
+          />
+        ),
+      },
+      {
+        accessorKey: 'availability_target',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Availability" />,
+        cell: ({ row }) =>
+          row.original.availability_target != null
+            ? `${row.original.availability_target.toFixed(2)}%`
+            : '—',
+      },
+      {
+        id: 'actions',
+        header: '',
+        enableSorting: false,
+        enableHiding: false,
+        cell: ({ row }) => (
+          <Can permission={Permission.BusinessServicesWrite}>
+            <DataTableRowActions
+              actions={[
+                { label: 'Edit', icon: Pencil, onClick: () => openEdit(row.original) },
+                {
+                  label: 'Delete',
+                  icon: Trash2,
+                  onClick: () => setDeletingService(row.original),
+                  destructive: true,
+                  separatorBefore: true,
+                },
+              ]}
+            />
+          </Can>
+        ),
+      },
+    ],
+    []
+  )
 
   function toggleCompliance(framework: string) {
     setForm((prev) => {
@@ -270,193 +364,51 @@ export default function BusinessServicesPage() {
       </PageHeader>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mt-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Services</CardTitle>
-            <Briefcase className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.total}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Critical Services</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-red-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.critical}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Handles PII</CardTitle>
-            <ShieldCheck className="h-4 w-4 text-blue-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.pii}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Handles Financial</CardTitle>
-            <DollarSign className="h-4 w-4 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.financial}</div>
-          </CardContent>
-        </Card>
+        <StatsCard title="Total Services" value={stats.total} icon={Briefcase} />
+        <StatsCard title="Critical Services" value={stats.critical} icon={AlertTriangle} />
+        <StatsCard title="Handles PII" value={stats.pii} icon={ShieldCheck} />
+        <StatsCard title="Handles Financial" value={stats.financial} icon={DollarSign} />
       </div>
 
-      <Card className="mt-6">
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Criticality</TableHead>
-                <TableHead>Data Handling</TableHead>
-                <TableHead>Compliance Scope</TableHead>
-                <TableHead>Owner</TableHead>
-                <TableHead>Availability</TableHead>
-                <TableHead className="w-[50px]" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                    Loading...
-                  </TableCell>
-                </TableRow>
-              ) : error ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="py-8">
-                    <div className="mx-auto flex max-w-md flex-col items-center gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-4 text-center">
-                      <p className="text-sm font-medium text-destructive">
-                        Failed to load business services
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {error instanceof Error ? error.message : 'Unknown error'}
-                      </p>
-                      <button
-                        type="button"
-                        className="mt-1 text-xs text-primary hover:underline"
-                        onClick={() => {
-                          void mutate()
-                        }}
-                      >
-                        Retry
-                      </button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ) : services.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                    No business services yet. Click &quot;Create Service&quot; to add one.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                services.map((service) => (
-                  <TableRow key={service.id}>
-                    <TableCell className="font-medium">
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span className="cursor-help">{service.name}</span>
-                          </TooltipTrigger>
-                          {service.description && (
-                            <TooltipContent className="max-w-sm">
-                              {service.description}
-                            </TooltipContent>
-                          )}
-                        </Tooltip>
-                      </TooltipProvider>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className={criticalityColors[service.criticality]}>
-                        {service.criticality}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {service.handles_pii && (
-                          <Badge variant="secondary" className="text-xs">
-                            PII
-                          </Badge>
-                        )}
-                        {service.handles_phi && (
-                          <Badge variant="secondary" className="text-xs">
-                            PHI
-                          </Badge>
-                        )}
-                        {service.handles_financial && (
-                          <Badge variant="secondary" className="text-xs">
-                            Financial
-                          </Badge>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {(service.compliance_scope ?? []).map((framework) => (
-                          <Badge key={framework} variant="outline" className="text-xs">
-                            {framework}
-                          </Badge>
-                        ))}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-col">
-                        <span className="text-sm">{service.owner_name || '—'}</span>
-                        {service.owner_email && (
-                          <span className="text-xs text-muted-foreground">
-                            {service.owner_email}
-                          </span>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {service.availability_target != null
-                        ? `${service.availability_target.toFixed(2)}%`
-                        : '—'}
-                    </TableCell>
-                    <TableCell>
-                      <Can permission={Permission.BusinessServicesWrite}>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => openEdit(service)}>
-                              <Pencil className="me-2 h-4 w-4" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              className="text-red-500"
-                              onClick={() => setDeletingService(service)}
-                            >
-                              <Trash2 className="me-2 h-4 w-4" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </Can>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+      {isLoading ? (
+        <Card className="mt-6">
+          <CardContent className="py-8 text-center text-sm text-muted-foreground">
+            Loading...
+          </CardContent>
+        </Card>
+      ) : error ? (
+        <Card className="mt-6">
+          <CardContent className="py-8">
+            <div className="mx-auto flex max-w-md flex-col items-center gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-4 text-center">
+              <p className="text-sm font-medium text-destructive">
+                Failed to load business services
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {error instanceof Error ? error.message : 'Unknown error'}
+              </p>
+              <button
+                type="button"
+                className="mt-1 text-xs text-primary hover:underline"
+                onClick={() => {
+                  void mutate()
+                }}
+              >
+                Retry
+              </button>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="mt-6">
+          <DataTable
+            columns={columns}
+            data={services}
+            searchPlaceholder="Search services..."
+            emptyMessage="No business services yet"
+            emptyDescription='Click "Create Service" to add one.'
+          />
+        </div>
+      )}
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -631,29 +583,20 @@ export default function BusinessServicesPage() {
         </DialogContent>
       </Dialog>
 
-      <AlertDialog
+      <ConfirmDialog
         open={!!deletingService}
         onOpenChange={(open) => !open && setDeletingService(null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete business service?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete &quot;{deletingService?.name}&quot;. This action cannot
-              be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              className="bg-red-500 text-white hover:bg-red-600"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        title="Delete business service?"
+        desc={
+          <>
+            This will permanently delete &quot;{deletingService?.name}&quot;. This action cannot be
+            undone.
+          </>
+        }
+        confirmText="Delete"
+        destructive
+        handleConfirm={handleDelete}
+      />
     </Main>
   )
 }

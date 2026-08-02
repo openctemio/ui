@@ -1,8 +1,15 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import type { ColumnDef } from '@tanstack/react-table'
 import { Main } from '@/components/layout'
-import { PageHeader, EmptyState } from '@/features/shared'
+import {
+  PageHeader,
+  EmptyState,
+  DataTable,
+  DataTableColumnHeader,
+  ErrorState,
+} from '@/features/shared'
 import { StatsCard } from '@/features/shared/components/stats-card'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -11,14 +18,6 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -26,16 +25,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import { KeyRound, Plus, ShieldCheck, Ban, Copy, Check, Link2 } from 'lucide-react'
 import {
   useScimTokens,
@@ -205,10 +195,10 @@ function ScimEndpointCard() {
 }
 
 // ─────────────────────────────────────────────────────────
-// Token row
+// Token actions cell (inline revoke button + confirm dialog)
 // ─────────────────────────────────────────────────────────
 
-function TokenRow({ t, onChanged }: { t: ScimToken; onChanged: () => void }) {
+function TokenActionsCell({ t, onChanged }: { t: ScimToken; onChanged: () => void }) {
   const [revokeOpen, setRevokeOpen] = useState(false)
   const { trigger: revoke, isMutating: revoking } = useRevokeScimToken()
 
@@ -224,58 +214,29 @@ function TokenRow({ t, onChanged }: { t: ScimToken; onChanged: () => void }) {
   }
 
   return (
-    <TableRow>
-      <TableCell>
-        <div className="font-medium">{t.name}</div>
-        <code className="text-muted-foreground text-xs">{t.prefix}…</code>
-      </TableCell>
-      <TableCell>
-        <StatusBadge t={t} />
-      </TableCell>
-      <TableCell className="text-muted-foreground text-xs">
-        {new Date(t.created_at).toLocaleDateString()}
-      </TableCell>
-      <TableCell className="text-muted-foreground text-xs">
-        {t.last_used_at ? new Date(t.last_used_at).toLocaleDateString() : 'Never'}
-      </TableCell>
-      <TableCell className="text-right">
-        {isActive(t) && (
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setRevokeOpen(true)}
-            title="Revoke"
-            className="text-red-500 hover:text-red-600"
-          >
-            <Ban className="h-4 w-4" />
-          </Button>
-        )}
-        <AlertDialog open={revokeOpen} onOpenChange={setRevokeOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Revoke {t.name}?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Your identity provider will immediately lose access to SCIM provisioning with this
-                token. This cannot be undone.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={(e) => {
-                  e.preventDefault()
-                  void handleRevoke()
-                }}
-                disabled={revoking}
-                className="bg-red-600 hover:bg-red-700"
-              >
-                {revoking ? 'Revoking...' : 'Revoke'}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </TableCell>
-    </TableRow>
+    <div className="text-right">
+      {isActive(t) && (
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setRevokeOpen(true)}
+          title="Revoke"
+          className="text-red-500 hover:text-red-600"
+        >
+          <Ban className="h-4 w-4" />
+        </Button>
+      )}
+      <ConfirmDialog
+        open={revokeOpen}
+        onOpenChange={setRevokeOpen}
+        title={`Revoke ${t.name}?`}
+        desc="Your identity provider will immediately lose access to SCIM provisioning with this token. This cannot be undone."
+        confirmText={revoking ? 'Revoking...' : 'Revoke'}
+        destructive
+        isLoading={revoking}
+        handleConfirm={() => void handleRevoke()}
+      />
+    </div>
   )
 }
 
@@ -298,7 +259,7 @@ function LoadingSkeleton() {
 }
 
 export default function ScimTokensPage() {
-  const { data, isLoading, mutate } = useScimTokens()
+  const { data, error, isLoading, mutate } = useScimTokens()
   const [genOpen, setGenOpen] = useState(false)
   const [newToken, setNewToken] = useState('')
 
@@ -308,7 +269,65 @@ export default function ScimTokensPage() {
     return { total: tokens.length, active, revoked: tokens.length - active }
   }, [tokens])
 
+  const columns = useMemo<ColumnDef<ScimToken>[]>(
+    () => [
+      {
+        accessorKey: 'name',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Name" />,
+        cell: ({ row }) => {
+          const t = row.original
+          return (
+            <>
+              <div className="font-medium">{t.name}</div>
+              <code className="text-muted-foreground text-xs">{t.prefix}…</code>
+            </>
+          )
+        },
+      },
+      {
+        accessorKey: 'status',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
+        cell: ({ row }) => <StatusBadge t={row.original} />,
+      },
+      {
+        accessorKey: 'created_at',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Created" />,
+        cell: ({ row }) => (
+          <span className="text-muted-foreground text-xs">
+            {new Date(row.original.created_at).toLocaleDateString()}
+          </span>
+        ),
+      },
+      {
+        accessorKey: 'last_used_at',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Last used" />,
+        cell: ({ row }) => (
+          <span className="text-muted-foreground text-xs">
+            {row.original.last_used_at
+              ? new Date(row.original.last_used_at).toLocaleDateString()
+              : 'Never'}
+          </span>
+        ),
+      },
+      {
+        id: 'actions',
+        header: 'Actions',
+        enableSorting: false,
+        enableHiding: false,
+        cell: ({ row }) => <TokenActionsCell t={row.original} onChanged={() => mutate()} />,
+      },
+    ],
+    [mutate]
+  )
+
   if (isLoading) return <LoadingSkeleton />
+  // Don't render a failed read as "No SCIM tokens yet" with zeroed stats.
+  if (error)
+    return (
+      <Main>
+        <ErrorState title="SCIM tokens" error={error} onRetry={() => void mutate()} />
+      </Main>
+    )
 
   return (
     <Main>
@@ -371,22 +390,7 @@ export default function ScimTokensPage() {
               }
             />
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Created</TableHead>
-                  <TableHead>Last used</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {tokens.map((t) => (
-                  <TokenRow key={t.id} t={t} onChanged={() => mutate()} />
-                ))}
-              </TableBody>
-            </Table>
+            <DataTable columns={columns} data={tokens} searchPlaceholder="Search tokens..." />
           )}
         </CardContent>
       </Card>

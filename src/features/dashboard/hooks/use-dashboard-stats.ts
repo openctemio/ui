@@ -4,6 +4,7 @@ import useSWR from 'swr'
 import { get } from '@/lib/api/client'
 import { endpoints } from '@/lib/api/endpoints'
 import { usePermissions, Permission } from '@/lib/permissions'
+import { useAssetStats } from '@/features/assets/hooks/use-assets'
 
 // Types matching backend response
 interface AssetStats {
@@ -155,8 +156,26 @@ export function useDashboardStats(tenantId: string | null) {
     }
   )
 
+  // The dashboard-stats endpoint does NOT compute an org risk score — its
+  // `assets.risk_score` is always 0. The canonical 0–100 org risk score lives
+  // in the asset-stats endpoint (`risk_score_avg`, the AVG of assets.risk_score,
+  // same value the executive summary reports). Source it here so every consumer
+  // of `stats.assets.riskScore` shows the real value on one consistent scale.
+  // SWR dedupes the 'asset-stats' key, so this adds no extra network round-trip
+  // for pages that already read asset stats.
+  const { stats: assetStats } = useAssetStats()
+
+  const stats = data ? transformStats(data) : emptyStats
+  const mergedStats: DashboardStats = {
+    ...stats,
+    assets: {
+      ...stats.assets,
+      riskScore: assetStats.averageRiskScore || stats.assets.riskScore,
+    },
+  }
+
   return {
-    stats: data ? transformStats(data) : emptyStats,
+    stats: mergedStats,
     isLoading: shouldFetch ? isLoading : false,
     error,
     mutate,

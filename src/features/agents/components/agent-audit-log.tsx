@@ -23,6 +23,7 @@ import {
   Lock,
 } from 'lucide-react'
 
+import { EmptyState } from '@/features/shared'
 import { useResourceAuditHistory } from '@/lib/api/audit-hooks'
 import { useHasModule } from '@/features/integrations/api/use-tenant-modules'
 import type { AuditLog, AuditAction, AuditResult } from '@/lib/api/audit-types'
@@ -226,13 +227,12 @@ export function AgentAuditLog({ agentId }: AgentAuditLogProps) {
 
   if (!data?.items?.length) {
     return (
-      <div className="flex flex-col items-center justify-center py-8 text-center">
-        <FileText className="h-8 w-8 text-muted-foreground/50 mb-2" />
-        <p className="text-sm text-muted-foreground">No audit logs yet</p>
-        <p className="text-xs text-muted-foreground/70 mt-1">
-          Activity will appear here when actions are performed
-        </p>
-      </div>
+      <EmptyState
+        icon={FileText}
+        title="No audit logs yet"
+        description="Activity will appear here when actions are performed"
+        card={false}
+      />
     )
   }
 

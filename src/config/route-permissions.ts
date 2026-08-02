@@ -110,6 +110,10 @@ export const routePermissions: Record<string, RoutePermissionConfig> = {
     permission: Permission.AssetsRead,
     module: Module.AttackSurface,
   },
+  '/attack-paths': {
+    permission: Permission.AssetsRead,
+    module: Module.AttackSurface,
+  },
   '/attack-surface/cloud': {
     permission: Permission.AssetsRead,
     module: Module.AttackSurface,
@@ -173,6 +177,14 @@ export const routePermissions: Record<string, RoutePermissionConfig> = {
   '/attacker-profiles/**': {
     permission: Permission.AttackerProfilesRead,
     module: Module.AttackerProfiles,
+  },
+  '/threat-model': {
+    permission: Permission.AssetsRead,
+    module: Module.AttackSurface,
+  },
+  '/threat-model/**': {
+    permission: Permission.AssetsRead,
+    module: Module.AttackSurface,
   },
   '/relationships/**': {
     permission: Permission.AssetsRead,
@@ -254,10 +266,6 @@ export const routePermissions: Record<string, RoutePermissionConfig> = {
     permission: Permission.VulnerabilitiesRead,
     module: Module.ThreatIntel,
   },
-  '/risk-analysis': {
-    permission: Permission.VulnerabilitiesRead,
-    module: Module.RiskAnalysis,
-  },
   '/business-impact': {
     permission: Permission.VulnerabilitiesRead,
     module: Module.BusinessImpact,
@@ -321,6 +329,14 @@ export const routePermissions: Record<string, RoutePermissionConfig> = {
     module: Module.RemediationTasks,
   },
   '/remediation/**': {
+    permission: Permission.RemediationRead,
+    module: Module.RemediationTasks,
+  },
+  '/remediations': {
+    permission: Permission.RemediationRead,
+    module: Module.RemediationTasks,
+  },
+  '/remediations/**': {
     permission: Permission.RemediationRead,
     module: Module.RemediationTasks,
   },

@@ -2,8 +2,16 @@
 
 import { useMemo } from 'react'
 import { Main } from '@/components/layout'
-import { PageHeader, StatsCard, EmptyState } from '@/features/shared'
+import {
+  PageHeader,
+  StatsCard,
+  EmptyState,
+  formatRiskScore,
+  getRiskScoreChangeType,
+  getRiskLevel,
+} from '@/features/shared'
 import { useDashboardStats } from '@/features/dashboard/hooks/use-dashboard-stats'
+import { useFindingTypeStats } from '@/features/exposures/hooks'
 import { useTenant } from '@/context/tenant-provider'
 import {
   BarChart,
@@ -100,32 +108,39 @@ function LoadingSkeleton() {
 
 export default function SecretsExposurePage() {
   const { currentTenant } = useTenant()
-  const { stats, isLoading } = useDashboardStats(currentTenant?.id || null)
+  const tenantId = currentTenant?.id || null
+  // Org-wide context (repository scan coverage) has no per-type variant.
+  const { stats, isLoading: dashboardLoading } = useDashboardStats(tenantId)
+  // Type-scoped finding stats: exposed secrets/credentials.
+  const { stats: typeStats, isLoading: typeLoading } = useFindingTypeStats(tenantId, ['secret'])
+  const isLoading = dashboardLoading || typeLoading
 
-  const criticalCount = stats.findings.bySeverity.critical || 0
-  const scannedRepos = stats.repositories.withFindings
-  const unscannedRepos = Math.max(0, stats.repositories.total - stats.repositories.withFindings)
+  const criticalCount = typeStats.bySeverity.critical || 0
 
-  const repoCoverageData = useMemo(() => {
-    const data = [
-      { name: 'With Findings', value: scannedRepos, color: '#ef4444' },
-      { name: 'Clean', value: unscannedRepos, color: '#22c55e' },
-    ]
-    return data.filter((d) => d.value > 0)
-  }, [scannedRepos, unscannedRepos])
-
-  const severityBarData = useMemo(() => {
+  // Severity distribution donut — mirrors the vulnerabilities/code exposure pages
+  // so the four sub-pages share one canonical severity chart.
+  const severityPieData = useMemo(() => {
     return SEVERITY_ORDER.map((severity) => ({
       name: SEVERITY_LABELS[severity],
-      count: stats.findings.bySeverity[severity] || 0,
-      fill: SEVERITY_COLORS[severity],
-    })).filter((d) => d.count > 0)
-  }, [stats.findings.bySeverity])
+      value: typeStats.bySeverity[severity] || 0,
+      color: SEVERITY_COLORS[severity],
+    })).filter((d) => d.value > 0)
+  }, [typeStats.bySeverity])
+
+  // Remediation status breakdown — complements severity (matches vulnerabilities page).
+  const statusBarData = useMemo(() => {
+    return Object.entries(typeStats.byStatus)
+      .map(([status, count]) => ({
+        name: status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, ' '),
+        count,
+      }))
+      .sort((a, b) => b.count - a.count)
+  }, [typeStats.byStatus])
 
   const remediationPriority = useMemo(() => {
-    const total = stats.findings.total
+    const total = typeStats.total
     return SEVERITY_ORDER.map((severity) => {
-      const count = stats.findings.bySeverity[severity] || 0
+      const count = typeStats.bySeverity[severity] || 0
       const percentage = total > 0 ? (count / total) * 100 : 0
       return {
         severity,
@@ -135,9 +150,9 @@ export default function SecretsExposurePage() {
         color: SEVERITY_COLORS[severity],
       }
     }).filter((item) => item.count > 0)
-  }, [stats.findings.bySeverity, stats.findings.total])
+  }, [typeStats.bySeverity, typeStats.total])
 
-  const hasData = stats.findings.total > 0
+  const hasData = typeStats.total > 0
 
   return (
     <Main>
@@ -159,7 +174,7 @@ export default function SecretsExposurePage() {
         <>
           {/* Stats Row */}
           <section className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-            <StatsCard title="Total Findings" value={stats.findings.total} icon={Lock} />
+            <StatsCard title="Total Findings" value={typeStats.total} icon={Lock} />
             <StatsCard
               title="Repositories Affected"
               value={stats.repositories.withFindings}
@@ -180,41 +195,29 @@ export default function SecretsExposurePage() {
             />
             <StatsCard
               title="Risk Score"
-              value={stats.assets.riskScore.toFixed(0)}
-              changeType={
-                stats.assets.riskScore > 70
-                  ? 'negative'
-                  : stats.assets.riskScore > 40
-                    ? 'neutral'
-                    : 'positive'
-              }
-              change={
-                stats.assets.riskScore > 70
-                  ? 'High risk'
-                  : stats.assets.riskScore > 40
-                    ? 'Medium risk'
-                    : 'Low risk'
-              }
+              value={formatRiskScore(typeStats.riskScore)}
+              changeType={getRiskScoreChangeType(typeStats.riskScore)}
+              change={`${getRiskLevel(typeStats.riskScore).label} risk`}
               icon={Shield}
             />
           </section>
 
           {/* Charts Row */}
           <section className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
-            {/* Repository Coverage Pie */}
+            {/* Severity Distribution */}
             <Card>
               <CardHeader>
-                <CardTitle>Repository Coverage</CardTitle>
+                <CardTitle>Severity Distribution</CardTitle>
                 <CardDescription>
-                  Scan coverage across {stats.repositories.total} repositories
+                  Breakdown of {typeStats.total} secret findings by severity
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {repoCoverageData.length > 0 ? (
+                {severityPieData.length > 0 ? (
                   <ResponsiveContainer width="100%" height={300}>
                     <PieChart>
                       <Pie
-                        data={repoCoverageData}
+                        data={severityPieData}
                         cx="50%"
                         cy="50%"
                         innerRadius={60}
@@ -223,7 +226,7 @@ export default function SecretsExposurePage() {
                         dataKey="value"
                         label={({ name, value }) => `${name}: ${value}`}
                       >
-                        {repoCoverageData.map((entry, index) => (
+                        {severityPieData.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={entry.color} />
                         ))}
                       </Pie>
@@ -233,43 +236,42 @@ export default function SecretsExposurePage() {
                   </ResponsiveContainer>
                 ) : (
                   <div className="flex h-[300px] items-center justify-center">
-                    <p className="text-muted-foreground">No repository data available</p>
+                    <p className="text-muted-foreground">No severity data available</p>
                   </div>
                 )}
               </CardContent>
             </Card>
 
-            {/* Findings by Severity Bar */}
+            {/* Status Breakdown */}
             <Card>
               <CardHeader>
-                <CardTitle>Findings by Severity</CardTitle>
-                <CardDescription>
-                  Secret findings distributed across severity levels
-                </CardDescription>
+                <CardTitle>Status Breakdown</CardTitle>
+                <CardDescription>Current remediation status of exposed secrets</CardDescription>
               </CardHeader>
               <CardContent>
-                {severityBarData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={severityBarData} barCategoryGap="20%">
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                      <XAxis
+                {statusBarData.length > 0 ? (
+                  <ResponsiveContainer
+                    width="100%"
+                    height={Math.max(300, statusBarData.length * 40)}
+                  >
+                    <BarChart data={statusBarData} layout="vertical" barCategoryGap="20%">
+                      <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                      <XAxis type="number" hide />
+                      <YAxis
                         dataKey="name"
+                        type="category"
                         tick={{ fontSize: 12 }}
                         tickLine={false}
                         axisLine={false}
+                        width={100}
                       />
-                      <YAxis tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
                       <Tooltip />
-                      <Bar dataKey="count" radius={[4, 4, 0, 0]} barSize={40}>
-                        {severityBarData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.fill} />
-                        ))}
-                      </Bar>
+                      <Bar dataKey="count" fill="#8b5cf6" radius={[0, 4, 4, 0]} barSize={20} />
                     </BarChart>
                   </ResponsiveContainer>
                 ) : (
                   <div className="flex h-[300px] items-center justify-center">
-                    <p className="text-muted-foreground">No severity data available</p>
+                    <p className="text-muted-foreground">No status data available</p>
                   </div>
                 )}
               </CardContent>

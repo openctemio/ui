@@ -23,13 +23,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import {
   ArrowUpDown,
@@ -39,13 +32,12 @@ import {
   ChevronsRight,
   ExternalLink,
   Eye,
-  MoreHorizontal,
   Package,
   ShieldAlert,
   GitBranch,
   Clock,
 } from 'lucide-react'
-import { RiskScoreBadge } from '@/features/shared'
+import { RiskScoreBadge, DataTableRowActions } from '@/features/shared'
 import { EcosystemBadge } from './ecosystem-badge'
 import { VulnerabilityCountBadge } from './severity-badge'
 import { LicenseRiskBadge } from './license-badge'
@@ -257,56 +249,53 @@ export function ComponentTable({ data, onViewDetails }: ComponentTableProps) {
         cell: ({ row }) => {
           const component = row.original
           return (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handleViewDetails(component)}>
-                  <Eye className="me-2 h-4 w-4" />
-                  View Details
-                </DropdownMenuItem>
-                {component.vulnerabilities.length > 0 && (
-                  <DropdownMenuItem onClick={() => handleViewDetails(component)}>
-                    <ShieldAlert className="me-2 h-4 w-4" />
-                    View Vulnerabilities
-                  </DropdownMenuItem>
-                )}
-                {component.homepage && (
-                  <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      onClick={() =>
-                        window.open(
-                          sanitizeExternalUrl(component.homepage!),
-                          '_blank',
-                          'noopener,noreferrer'
-                        )
-                      }
-                    >
-                      <ExternalLink className="me-2 h-4 w-4" />
-                      Open Homepage
-                    </DropdownMenuItem>
-                  </>
-                )}
-                {component.repositoryUrl && (
-                  <DropdownMenuItem
-                    onClick={() =>
-                      window.open(
-                        sanitizeExternalUrl(component.repositoryUrl!),
-                        '_blank',
-                        'noopener,noreferrer'
-                      )
-                    }
-                  >
-                    <ExternalLink className="me-2 h-4 w-4" />
-                    Open Repository
-                  </DropdownMenuItem>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <DataTableRowActions
+              actions={[
+                {
+                  label: 'View Details',
+                  icon: Eye,
+                  onClick: () => handleViewDetails(component),
+                },
+                ...(component.vulnerabilities.length > 0
+                  ? [
+                      {
+                        label: 'View Vulnerabilities',
+                        icon: ShieldAlert,
+                        onClick: () => handleViewDetails(component),
+                      },
+                    ]
+                  : []),
+                ...(component.homepage
+                  ? [
+                      {
+                        label: 'Open Homepage',
+                        icon: ExternalLink,
+                        onClick: () =>
+                          window.open(
+                            sanitizeExternalUrl(component.homepage!),
+                            '_blank',
+                            'noopener,noreferrer'
+                          ),
+                        separatorBefore: true,
+                      },
+                    ]
+                  : []),
+                ...(component.repositoryUrl
+                  ? [
+                      {
+                        label: 'Open Repository',
+                        icon: ExternalLink,
+                        onClick: () =>
+                          window.open(
+                            sanitizeExternalUrl(component.repositoryUrl!),
+                            '_blank',
+                            'noopener,noreferrer'
+                          ),
+                      },
+                    ]
+                  : []),
+              ]}
+            />
           )
         },
       },

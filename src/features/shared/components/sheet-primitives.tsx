@@ -13,6 +13,19 @@ import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
 // ============================================================================
+// SheetBody — consistent padding for a detail sheet's content area.
+//
+// `<SheetContent>` ships with NO body padding (only SheetHeader/SheetFooter are
+// p-4). Sheets that drop content straight into <SheetContent> therefore bled to
+// the panel edge. Wrap the scrolling body in <SheetBody> for an inset that
+// matches the header, so every detail sheet is consistent.
+// ============================================================================
+
+export function SheetBody({ className, ...props }: React.ComponentProps<'div'>) {
+  return <div className={cn('px-4 pb-4', className)} {...props} />
+}
+
+// ============================================================================
 // SheetStatCard — compact KPI tile for the sheet header / overview tab
 // ============================================================================
 

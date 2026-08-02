@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react'
 import { Main } from '@/components/layout'
-import { PageHeader } from '@/features/shared'
+import { EmptyState, PageHeader } from '@/features/shared'
 import { StatsCard } from '@/features/shared/components/stats-card'
 import { useDashboardStats } from '@/features/dashboard/hooks/use-dashboard-stats'
 import { useTenant } from '@/context/tenant-provider'
@@ -126,42 +126,39 @@ export default function DiscussionThreadPage() {
       {/* Stats Row */}
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatsCard
-          title="Total Discussions"
+          title="Recent Activity"
           value={activityCount}
           icon={MessageSquare}
-          description="Active discussion threads"
+          description="Latest events in this thread"
         />
         <StatsCard
-          title="Finding Discussions"
+          title="Finding Activity"
           value={findingDiscussions}
           icon={AlertTriangle}
-          description="Related to findings"
+          description="Recent finding-related events"
         />
         <StatsCard
           title="Total Findings"
           value={stats.findings.total}
           icon={FileText}
-          description="Across all categories"
+          description="All findings in scope"
         />
         <StatsCard
-          title="Overdue Items"
+          title="Overdue Findings"
           value={stats.findings.overdue}
           icon={Clock}
           changeType={stats.findings.overdue > 0 ? 'negative' : 'positive'}
-          description="Needing discussion"
+          description="Past their due date"
         />
       </div>
 
       {!hasData ? (
-        <Card className="mt-6">
-          <CardContent className="flex flex-col items-center justify-center py-16">
-            <MessageSquare className="text-muted-foreground mb-4 h-12 w-12" />
-            <h3 className="text-lg font-semibold">No Discussions Yet</h3>
-            <p className="text-muted-foreground mt-1 text-sm">
-              Discussions will appear here once team members start collaborating on findings.
-            </p>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={MessageSquare}
+          title="No Discussions Yet"
+          description="Discussions will appear here once team members start collaborating on findings."
+          className="mt-6"
+        />
       ) : (
         <>
           <div className="mt-6 grid gap-6 lg:grid-cols-2">
@@ -265,7 +262,7 @@ export default function DiscussionThreadPage() {
                     color: 'text-blue-500',
                   },
                   {
-                    label: 'Finding Coverage',
+                    label: 'Finding-Related',
                     value: findingDiscussions,
                     pct:
                       activityCount > 0

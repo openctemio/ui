@@ -43,4 +43,24 @@ describe('fetchAllPages', () => {
     await fetchAllPages<{ id: string }>((page) => `/x?p=${page}`, { maxPages: 3 })
     expect(get).toHaveBeenCalledTimes(3)
   })
+
+  it('invokes onTruncated when the cap cuts the result short', async () => {
+    ;(get as Mock).mockResolvedValue({ data: [{ id: 'x' }], total_pages: 9999 })
+    const onTruncated = vi.fn()
+    const all = await fetchAllPages<{ id: string }>((page) => `/x?p=${page}`, {
+      maxPages: 3,
+      perPage: 100,
+      onTruncated,
+    })
+    expect(all).toHaveLength(3)
+    expect(onTruncated).toHaveBeenCalledTimes(1)
+    expect(onTruncated).toHaveBeenCalledWith(3, 300) // loaded rows, cap
+  })
+
+  it('does NOT invoke onTruncated when all pages fit', async () => {
+    ;(get as Mock).mockResolvedValue({ data: [{ id: 'x' }], total_pages: 1 })
+    const onTruncated = vi.fn()
+    await fetchAllPages<{ id: string }>((page) => `/x?p=${page}`, { onTruncated })
+    expect(onTruncated).not.toHaveBeenCalled()
+  })
 })

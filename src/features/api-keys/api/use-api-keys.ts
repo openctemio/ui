@@ -24,8 +24,12 @@ interface APIKeyListResponse {
 export function useApiKeys() {
   const { currentTenant } = useTenant()
   return useSWR<APIKeyListResponse>(
-    currentTenant ? `${BASE_URL}?per_page=100` : null,
-    (url: string) => get<APIKeyListResponse>(url)
+    // Same key the mutation hooks bind to, so SWR's automatic post-mutation
+    // revalidation actually hits this subscription. A query string here (e.g.
+    // `?per_page=100`) silently breaks that match, leaving the list stale
+    // whenever a caller forgets an explicit mutate().
+    currentTenant ? BASE_URL : null,
+    (url: string) => get<APIKeyListResponse>(`${url}?per_page=100`)
   )
 }
 

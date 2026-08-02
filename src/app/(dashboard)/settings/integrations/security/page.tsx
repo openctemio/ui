@@ -16,16 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -649,30 +640,16 @@ function ScannerCard({
         onSuccess={onChanged}
       />
       <RunnerSetupDialog open={runnerOpen} onOpenChange={setRunnerOpen} />
-      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Remove {integration.name}?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This removes the scanner integration from OpenCTEM. Findings already ingested are
-              kept.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={(e) => {
-                e.preventDefault()
-                void handleDelete()
-              }}
-              disabled={deleting}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              {deleting ? 'Removing...' : 'Remove'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title={`Remove ${integration.name}?`}
+        desc="This removes the scanner integration from OpenCTEM. Findings already ingested are kept."
+        confirmText={deleting ? 'Removing...' : 'Remove'}
+        destructive
+        isLoading={deleting}
+        handleConfirm={() => void handleDelete()}
+      />
     </Card>
   )
 }

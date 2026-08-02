@@ -18,6 +18,7 @@ import { Search } from '@/components/search'
 import { ThemeSwitch } from '@/components/theme-switch'
 import { ProfileDropdown } from '@/components/profile-dropdown'
 import { NotificationBell } from '@/components/notification-bell'
+import { FullscreenToggle } from '@/components/fullscreen-toggle'
 
 interface HeaderActionsProps {
   /**
@@ -47,6 +48,7 @@ export function HeaderActions({
   return (
     <div className="ms-auto flex items-center gap-2 sm:gap-4">
       {!hideSearch && <Search />}
+      <FullscreenToggle />
       {!hideNotifications && <NotificationBell />}
       {!hideThemeSwitch && <ThemeSwitch />}
       {!hideProfile && <ProfileDropdown />}

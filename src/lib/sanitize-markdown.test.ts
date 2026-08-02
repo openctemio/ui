@@ -87,6 +87,35 @@ describe('sanitiseNode — dangerous elements', () => {
     expect(node.tagName).toBe('span')
   })
 
+  it('neutralises <svg> and drops its scriptable children', () => {
+    // <svg><animate attributeName="href" to="javascript:alert(1)"> is a
+    // real SVG XSS vector (SMIL animation of a URL attribute). The svg
+    // root is in DANGEROUS_TAGS, so it becomes an inert <span> and its
+    // <animate> child is dropped before it can reach the DOM.
+    const animate = element('animate', {
+      attributeName: 'href',
+      to: 'javascript:alert(1)',
+      from: 'javascript:alert(2)',
+      values: 'javascript:alert(3)',
+    })
+    const svg = element('svg')
+    svg.children = [animate]
+    sanitiseNode(svg)
+    expect(svg.tagName).toBe('span')
+    expect(svg.children).toEqual([])
+    expect(svg.properties).toEqual({})
+  })
+
+  it('neutralises <math> and <foreignObject>', () => {
+    for (const tag of ['math', 'foreignObject']) {
+      const node = element(tag)
+      node.children = [{ type: 'text' }]
+      sanitiseNode(node)
+      expect(node.tagName).toBe('span')
+      expect(node.children).toEqual([])
+    }
+  })
+
   it('leaves safe elements untouched', () => {
     const node = element('p', { className: 'prose' })
     sanitiseNode(node)

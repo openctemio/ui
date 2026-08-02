@@ -1,6 +1,6 @@
 'use client'
 
-import { type ReactNode, useMemo, memo } from 'react'
+import { type ReactNode, type ElementType, useMemo, memo } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { ChevronRight } from 'lucide-react'
@@ -22,7 +22,11 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuPortal,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
@@ -36,37 +40,91 @@ import {
   useTenantModules,
   type LicensingModule,
 } from '@/features/integrations/api/use-tenant-modules'
+import { useTranslation } from '@/context/i18n-provider'
+
+/** Maps a sidebar group title to its i18n key, e.g. "Scoping" → "nav.group.scoping". */
+function groupTitleKey(title: string): string {
+  return `nav.group.${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`
+}
+
+/** Maps a sidebar item title to its i18n key, e.g. "Attack Surface" → "nav.item.attack-surface". */
+function navItemKey(title: string): string {
+  return `nav.item.${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`
+}
 
 /**
- * NavGroup Component
- *
- * Renders a group of navigation items in the sidebar.
- * Optimized to minimize re-renders:
- * - NavGroup itself doesn't use usePathname() directly
- * - Each item component manages its own active state
- * - Dynamic badges are fetched once and passed down
+ * Translated sidebar item label. Centralises the t() call so the many memoized
+ * menu sub-components can render a localized label with the English title as the
+ * fallback (untranslated items degrade gracefully).
  */
-function NavGroupComponent({ title, items }: NavGroupProps) {
-  const { state, isMobile } = useSidebar()
+function NavLabel({ title }: { title: string }) {
+  const { t } = useTranslation()
+  return <>{t(navItemKey(title), title)}</>
+}
+
+/**
+ * NavGroup — one CTEM section in the sidebar.
+ *
+ * Every titled section renders as a collapsible header row (icon + label +
+ * rotating chevron) following shadcn's `sidebar-07` pattern, with its items
+ * nested underneath a rail. The ungrouped section (empty title, e.g. Dashboard)
+ * renders its items as plain top-level links.
+ *
+ * app-sidebar hosts a single <SidebarGroup><SidebarMenu> and maps every group
+ * through here, so the rows share one compact `gap-1` rhythm (no per-section
+ * padding / labels that would open big vertical gaps).
+ */
+function NavGroupComponent({ title, icon, items }: NavGroupProps) {
   const dynamicBadges = useDynamicBadges()
+  const { state, isMobile } = useSidebar()
+  const { t } = useTranslation()
 
-  return (
-    <SidebarGroup>
-      {title && <SidebarGroupLabel>{title}</SidebarGroupLabel>}
+  // Ungrouped rows (Dashboard) — plain top-level links, no group heading.
+  if (!title) {
+    return (
       <SidebarMenu>
-        {items.map((item) => {
-          const key = 'items' in item ? item.title : `${item.title}-${String(item.url)}`
+        {items.map((item) =>
+          'items' in item ? null : (
+            <SidebarMenuLink
+              key={`${item.title}-${String(item.url)}`}
+              item={item}
+              dynamicBadges={dynamicBadges}
+            />
+          )
+        )}
+      </SidebarMenu>
+    )
+  }
 
-          if (!('items' in item))
-            return <SidebarMenuLink key={key} item={item} dynamicBadges={dynamicBadges} />
+  // Collapsed icon-rail keeps the old behaviour: one icon per section that opens
+  // a dropdown of its items. A rail cannot show 60+ icons legibly, and a group
+  // heading has nothing to label when the labels are hidden.
+  if (state === 'collapsed' && !isMobile) {
+    return (
+      <SidebarMenu>
+        <NavSection title={title} icon={icon} items={items} dynamicBadges={dynamicBadges} />
+      </SidebarMenu>
+    )
+  }
 
-          if (state === 'collapsed' && !isMobile)
-            return (
-              <SidebarMenuCollapsedDropdown key={key} item={item} dynamicBadges={dynamicBadges} />
-            )
-
-          return <SidebarMenuCollapsible key={key} item={item} dynamicBadges={dynamicBadges} />
-        })}
+  // Expanded: the section name is a quiet heading, not a control, and every item
+  // is visible. Nothing is one click away behind an accordion the user has to
+  // discover and re-open, and the shape of the product is readable at a glance.
+  return (
+    <SidebarGroup className="py-0">
+      <SidebarGroupLabel>{t(groupTitleKey(title), title)}</SidebarGroupLabel>
+      <SidebarMenu>
+        {items.map((item) =>
+          'items' in item ? (
+            <NavSubCollapsible key={item.title} item={item} dynamicBadges={dynamicBadges} />
+          ) : (
+            <SidebarMenuLink
+              key={`${item.title}-${String(item.url)}`}
+              item={item}
+              dynamicBadges={dynamicBadges}
+            />
+          )
+        )}
       </SidebarMenu>
     </SidebarGroup>
   )
@@ -168,8 +226,8 @@ function useFilteredSubItems(
 }
 
 /**
- * SidebarMenuLink - Memoized to prevent re-renders
- * Uses its own usePathname() so it only re-renders when pathname changes
+ * SidebarMenuLink - top-level plain link (Dashboard). Memoized so it only
+ * re-renders when the pathname changes.
  */
 const SidebarMenuLink = memo(function SidebarMenuLink({
   item,
@@ -193,7 +251,9 @@ const SidebarMenuLink = memo(function SidebarMenuLink({
           className="cursor-not-allowed opacity-60"
         >
           {item.icon && <item.icon />}
-          <span>{item.title}</span>
+          <span>
+            <NavLabel title={item.title} />
+          </span>
           {releaseStatusBadge && (
             <NavBadge variant={releaseStatusBadge.variant}>{releaseStatusBadge.text}</NavBadge>
           )}
@@ -207,7 +267,9 @@ const SidebarMenuLink = memo(function SidebarMenuLink({
       <SidebarMenuButton asChild isActive={checkIsActive(pathname, item)} tooltip={item.title}>
         <Link href={item.url} prefetch={false} onClick={() => setOpenMobile(false)}>
           {item.icon && <item.icon />}
-          <span>{item.title}</span>
+          <span>
+            <NavLabel title={item.title} />
+          </span>
           {releaseStatusBadge ? (
             <NavBadge variant={releaseStatusBadge.variant}>{releaseStatusBadge.text}</NavBadge>
           ) : (
@@ -222,83 +284,65 @@ const SidebarMenuLink = memo(function SidebarMenuLink({
 SidebarMenuLink.displayName = 'SidebarMenuLink'
 
 /**
- * SidebarMenuCollapsible - Memoized to prevent re-renders
- * Uses its own usePathname() so it only re-renders when pathname changes
+ * NavSection - a top-level CTEM section rendered as a collapsible header
+ * (icon + label + chevron), sidebar-07 style. Auto-expands when it owns the
+ * active route; collapses otherwise. In the collapsed icon-rail it flips to a
+ * dropdown flyout so the whole tree stays reachable from the icon.
  */
-const SidebarMenuCollapsible = memo(function SidebarMenuCollapsible({
-  item,
-  dynamicBadges: _dynamicBadges,
+const NavSection = memo(function NavSection({
+  title,
+  icon: SectionIcon,
+  items,
+  dynamicBadges,
 }: {
-  item: NavCollapsible
+  title: string
+  icon?: ElementType
+  items: NavItem[]
   dynamicBadges: DynamicBadges
 }) {
+  const { state, isMobile } = useSidebar()
   const pathname = usePathname()
-  const { setOpenMobile } = useSidebar()
-  const { subModules } = useTenantModules()
-  const releaseStatusBadge = getReleaseStatusBadge(item.releaseStatus)
+  const { t } = useTranslation()
 
-  // Filter sub-items based on sub-modules from API
-  const filteredItems = useFilteredSubItems(item.items, item.module, subModules)
+  const sectionActive = useMemo(() => sectionHasActiveRoute(pathname, items), [pathname, items])
+
+  // Collapsed icon-rail (desktop): render as an icon that opens a dropdown of
+  // the section's items (with sub-menus for nested subsections).
+  if (state === 'collapsed' && !isMobile) {
+    return (
+      <NavSectionCollapsedDropdown
+        title={title}
+        icon={SectionIcon}
+        items={items}
+        sectionActive={sectionActive}
+        dynamicBadges={dynamicBadges}
+      />
+    )
+  }
 
   return (
-    <Collapsible
-      asChild
-      defaultOpen={checkIsActive(pathname, item, true)}
-      className="group/collapsible"
-    >
+    <Collapsible asChild defaultOpen={sectionActive} className="group/collapsible">
       <SidebarMenuItem>
         <CollapsibleTrigger asChild>
-          <SidebarMenuButton tooltip={item.title}>
-            {item.icon && <item.icon />}
-            <span>{item.title}</span>
-            {releaseStatusBadge ? (
-              <NavBadge variant={releaseStatusBadge.variant}>{releaseStatusBadge.text}</NavBadge>
-            ) : (
-              item.badge && <NavBadge>{item.badge}</NavBadge>
-            )}
+          <SidebarMenuButton tooltip={title}>
+            {SectionIcon && <SectionIcon />}
+            <span>{t(groupTitleKey(title), title)}</span>
             <ChevronRight className="ms-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90 rtl:rotate-180" />
           </SidebarMenuButton>
         </CollapsibleTrigger>
         <CollapsibleContent className="CollapsibleContent">
           <SidebarMenuSub>
-            {filteredItems.map((subItem) => {
-              const subReleaseStatusBadge = getReleaseStatusBadge(subItem.releaseStatus)
-              const isSubComingSoon = subItem.releaseStatus === 'coming_soon'
-
-              if (isSubComingSoon) {
-                return (
-                  <SidebarMenuSubItem key={subItem.title}>
-                    <SidebarMenuSubButton className="cursor-not-allowed opacity-60">
-                      {subItem.icon && <subItem.icon className="shrink-0" />}
-                      <span className="flex-1 truncate">{subItem.title}</span>
-                      {subReleaseStatusBadge && (
-                        <NavBadge variant={subReleaseStatusBadge.variant}>
-                          {subReleaseStatusBadge.text}
-                        </NavBadge>
-                      )}
-                    </SidebarMenuSubButton>
-                  </SidebarMenuSubItem>
-                )
-              }
-
-              return (
-                <SidebarMenuSubItem key={subItem.title}>
-                  <SidebarMenuSubButton asChild isActive={checkIsActive(pathname, subItem)}>
-                    <Link href={subItem.url} prefetch={false} onClick={() => setOpenMobile(false)}>
-                      {subItem.icon && <subItem.icon className="shrink-0" />}
-                      <span className="flex-1 truncate">{subItem.title}</span>
-                      {subReleaseStatusBadge ? (
-                        <NavBadge variant={subReleaseStatusBadge.variant}>
-                          {subReleaseStatusBadge.text}
-                        </NavBadge>
-                      ) : (
-                        subItem.badge && <NavBadge>{subItem.badge}</NavBadge>
-                      )}
-                    </Link>
-                  </SidebarMenuSubButton>
-                </SidebarMenuSubItem>
+            {items.map((item) =>
+              'items' in item ? (
+                <NavSubCollapsible key={item.title} item={item} dynamicBadges={dynamicBadges} />
+              ) : (
+                <NavSubLeaf
+                  key={`${item.title}-${String(item.url)}`}
+                  item={item}
+                  dynamicBadges={dynamicBadges}
+                />
               )
-            })}
+            )}
           </SidebarMenuSub>
         </CollapsibleContent>
       </SidebarMenuItem>
@@ -306,15 +350,71 @@ const SidebarMenuCollapsible = memo(function SidebarMenuCollapsible({
   )
 })
 
-SidebarMenuCollapsible.displayName = 'SidebarMenuCollapsible'
+NavSection.displayName = 'NavSection'
 
 /**
- * SidebarMenuCollapsedDropdown - Memoized to prevent re-renders
- * Uses its own usePathname() so it only re-renders when pathname changes
+ * NavSubLeaf - a leaf link inside a section's sub-menu. Shared by both a
+ * section's direct children and a nested subsection's children.
  */
-const SidebarMenuCollapsedDropdown = memo(function SidebarMenuCollapsedDropdown({
+const NavSubLeaf = memo(function NavSubLeaf({
   item,
-  dynamicBadges: _dynamicBadges,
+  dynamicBadges,
+}: {
+  item: NavLink
+  dynamicBadges: DynamicBadges
+}) {
+  const pathname = usePathname()
+  const { setOpenMobile } = useSidebar()
+  const badge = getBadgeValue(dynamicBadges, item.url as string, item.badge)
+  const releaseStatusBadge = getReleaseStatusBadge(item.releaseStatus)
+  const isComingSoon = item.releaseStatus === 'coming_soon'
+
+  if (isComingSoon) {
+    return (
+      <SidebarMenuSubItem>
+        <SidebarMenuSubButton className="cursor-not-allowed opacity-60">
+          {item.icon && <item.icon className="shrink-0" />}
+          <span className="flex-1 truncate">
+            <NavLabel title={item.title} />
+          </span>
+          {releaseStatusBadge && (
+            <NavBadge variant={releaseStatusBadge.variant}>{releaseStatusBadge.text}</NavBadge>
+          )}
+        </SidebarMenuSubButton>
+      </SidebarMenuSubItem>
+    )
+  }
+
+  return (
+    <SidebarMenuSubItem>
+      <SidebarMenuSubButton asChild isActive={checkIsActive(pathname, item)}>
+        <Link href={item.url} prefetch={false} onClick={() => setOpenMobile(false)}>
+          {item.icon && <item.icon className="shrink-0" />}
+          <span className="flex-1 truncate">
+            <NavLabel title={item.title} />
+          </span>
+          {releaseStatusBadge ? (
+            <NavBadge variant={releaseStatusBadge.variant}>{releaseStatusBadge.text}</NavBadge>
+          ) : (
+            badge && <NavBadge>{badge}</NavBadge>
+          )}
+        </Link>
+      </SidebarMenuSubButton>
+    </SidebarMenuSubItem>
+  )
+})
+
+NavSubLeaf.displayName = 'NavSubLeaf'
+
+/**
+ * NavSubCollapsible - a nested subsection inside a section (e.g. Penetration
+ * Testing under Validation, or Scanning/Organization/Integrations under
+ * Settings). Renders as a second-level collapsible on its own rail so a large
+ * settings tree stays organised without flattening into a 20-row wall.
+ */
+const NavSubCollapsible = memo(function NavSubCollapsible({
+  item,
+  dynamicBadges,
 }: {
   item: NavCollapsible
   dynamicBadges: DynamicBadges
@@ -323,92 +423,230 @@ const SidebarMenuCollapsedDropdown = memo(function SidebarMenuCollapsedDropdown(
   const { subModules } = useTenantModules()
   const releaseStatusBadge = getReleaseStatusBadge(item.releaseStatus)
 
-  // Filter sub-items based on sub-modules from API
   const filteredItems = useFilteredSubItems(item.items, item.module, subModules)
+  const activeSubUrl = useMemo(
+    () => activeSubItemUrl(pathname, filteredItems),
+    [pathname, filteredItems]
+  )
+
+  return (
+    <Collapsible asChild defaultOpen={activeSubUrl !== undefined} className="group/subcollapsible">
+      <SidebarMenuSubItem>
+        <CollapsibleTrigger asChild>
+          <SidebarMenuSubButton asChild className="cursor-pointer">
+            <button type="button">
+              {item.icon && <item.icon className="shrink-0" />}
+              <span className="flex-1 truncate">
+                <NavLabel title={item.title} />
+              </span>
+              {releaseStatusBadge && (
+                <NavBadge variant={releaseStatusBadge.variant}>{releaseStatusBadge.text}</NavBadge>
+              )}
+              <ChevronRight className="ms-auto size-3.5 shrink-0 transition-transform duration-200 group-data-[state=open]/subcollapsible:rotate-90 rtl:rotate-180" />
+            </button>
+          </SidebarMenuSubButton>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <SidebarMenuSub>
+            {filteredItems.map((sub) => (
+              <NavSubLeaf key={sub.title} item={sub} dynamicBadges={dynamicBadges} />
+            ))}
+          </SidebarMenuSub>
+        </CollapsibleContent>
+      </SidebarMenuSubItem>
+    </Collapsible>
+  )
+})
+
+NavSubCollapsible.displayName = 'NavSubCollapsible'
+
+/**
+ * NavSectionCollapsedDropdown - the icon-rail representation of a section.
+ * The section header becomes an icon button; its whole tree lives in a
+ * dropdown (nested subsections become dropdown sub-menus) so nothing is lost
+ * when the sidebar is collapsed.
+ */
+const NavSectionCollapsedDropdown = memo(function NavSectionCollapsedDropdown({
+  title,
+  icon: SectionIcon,
+  items,
+  sectionActive,
+  dynamicBadges,
+}: {
+  title: string
+  icon?: ElementType
+  items: NavItem[]
+  sectionActive: boolean
+  dynamicBadges: DynamicBadges
+}) {
+  const pathname = usePathname()
+  const { t } = useTranslation()
 
   return (
     <SidebarMenuItem>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <SidebarMenuButton tooltip={item.title} isActive={checkIsActive(pathname, item)}>
-            {item.icon && <item.icon />}
-            <span>{item.title}</span>
-            {releaseStatusBadge ? (
-              <NavBadge variant={releaseStatusBadge.variant}>{releaseStatusBadge.text}</NavBadge>
-            ) : (
-              item.badge && <NavBadge>{item.badge}</NavBadge>
-            )}
-            <ChevronRight className="ms-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+          <SidebarMenuButton tooltip={title} isActive={sectionActive}>
+            {SectionIcon && <SectionIcon />}
+            <span className="sr-only">{t(groupTitleKey(title), title)}</span>
           </SidebarMenuButton>
         </DropdownMenuTrigger>
-        <DropdownMenuContent side="right" align="start" sideOffset={4}>
-          <DropdownMenuLabel>
-            {item.title}{' '}
-            {releaseStatusBadge
-              ? `(${releaseStatusBadge.text})`
-              : item.badge
-                ? `(${item.badge})`
-                : ''}
-          </DropdownMenuLabel>
+        <DropdownMenuContent side="right" align="start" sideOffset={4} className="min-w-48">
+          <DropdownMenuLabel>{t(groupTitleKey(title), title)}</DropdownMenuLabel>
           <DropdownMenuSeparator />
-          {filteredItems.map((sub) => {
-            const subReleaseStatusBadge = getReleaseStatusBadge(sub.releaseStatus)
-            const isSubComingSoon = sub.releaseStatus === 'coming_soon'
-
-            if (isSubComingSoon) {
-              return (
-                <DropdownMenuItem
-                  key={`${sub.title}-${sub.url}`}
-                  disabled
-                  className="cursor-not-allowed opacity-60"
-                >
-                  {sub.icon && <sub.icon />}
-                  <span className="max-w-52 text-wrap">{sub.title}</span>
-                  {subReleaseStatusBadge && (
-                    <span className="ms-auto text-xs text-muted-foreground">
-                      {subReleaseStatusBadge.text}
-                    </span>
-                  )}
-                </DropdownMenuItem>
-              )
-            }
-
-            return (
-              <DropdownMenuItem key={`${sub.title}-${sub.url}`} asChild>
-                <Link
-                  href={sub.url}
-                  prefetch={false}
-                  className={`${checkIsActive(pathname, sub) ? 'bg-secondary' : ''}`}
-                >
-                  {sub.icon && <sub.icon />}
-                  <span className="max-w-52 text-wrap">{sub.title}</span>
-                  {subReleaseStatusBadge ? (
-                    <span className="ms-auto text-xs">{subReleaseStatusBadge.text}</span>
-                  ) : (
-                    sub.badge && <span className="ms-auto text-xs">{sub.badge}</span>
-                  )}
-                </Link>
-              </DropdownMenuItem>
+          {items.map((item) =>
+            'items' in item ? (
+              <CollapsedDropdownSubsection
+                key={item.title}
+                item={item}
+                pathname={pathname}
+                dynamicBadges={dynamicBadges}
+              />
+            ) : (
+              <CollapsedDropdownLeaf
+                key={`${item.title}-${String(item.url)}`}
+                item={item}
+                pathname={pathname}
+                dynamicBadges={dynamicBadges}
+              />
             )
-          })}
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
     </SidebarMenuItem>
   )
 })
 
-SidebarMenuCollapsedDropdown.displayName = 'SidebarMenuCollapsedDropdown'
+NavSectionCollapsedDropdown.displayName = 'NavSectionCollapsedDropdown'
+
+/** A section's nested subsection rendered as a dropdown sub-menu (rail mode). */
+function CollapsedDropdownSubsection({
+  item,
+  pathname,
+  dynamicBadges,
+}: {
+  item: NavCollapsible
+  pathname: string
+  dynamicBadges: DynamicBadges
+}) {
+  const { subModules } = useTenantModules()
+  const filteredItems = useFilteredSubItems(item.items, item.module, subModules)
+
+  return (
+    <DropdownMenuSub>
+      <DropdownMenuSubTrigger>
+        {item.icon && <item.icon />}
+        <span className="max-w-52 text-wrap">{item.title}</span>
+      </DropdownMenuSubTrigger>
+      <DropdownMenuPortal>
+        <DropdownMenuSubContent className="min-w-44">
+          {filteredItems.map((sub) => (
+            <CollapsedDropdownLeaf
+              key={`${sub.title}-${String(sub.url)}`}
+              item={sub}
+              pathname={pathname}
+              dynamicBadges={dynamicBadges}
+            />
+          ))}
+        </DropdownMenuSubContent>
+      </DropdownMenuPortal>
+    </DropdownMenuSub>
+  )
+}
+
+/** A leaf link rendered as a dropdown item (rail mode). */
+function CollapsedDropdownLeaf({
+  item,
+  pathname,
+  dynamicBadges,
+}: {
+  item: NavLink
+  pathname: string
+  dynamicBadges: DynamicBadges
+}) {
+  const badge = getBadgeValue(dynamicBadges, item.url as string, item.badge)
+  const releaseStatusBadge = getReleaseStatusBadge(item.releaseStatus)
+  const isComingSoon = item.releaseStatus === 'coming_soon'
+
+  if (isComingSoon) {
+    return (
+      <DropdownMenuItem disabled className="cursor-not-allowed opacity-60">
+        {item.icon && <item.icon />}
+        <span className="max-w-52 text-wrap">{item.title}</span>
+        {releaseStatusBadge && (
+          <span className="ms-auto text-xs text-muted-foreground">{releaseStatusBadge.text}</span>
+        )}
+      </DropdownMenuItem>
+    )
+  }
+
+  return (
+    <DropdownMenuItem asChild>
+      <Link
+        href={item.url}
+        prefetch={false}
+        className={checkIsActive(pathname, item) ? 'bg-secondary' : ''}
+      >
+        {item.icon && <item.icon />}
+        <span className="max-w-52 text-wrap">{item.title}</span>
+        {releaseStatusBadge ? (
+          <span className="ms-auto text-xs">{releaseStatusBadge.text}</span>
+        ) : (
+          badge && <span className="ms-auto text-xs">{badge}</span>
+        )}
+      </Link>
+    </DropdownMenuItem>
+  )
+}
+
+/**
+ * A nav url is active for the current path on an exact match OR a child route
+ * (`/assets/repositories` is active on `/assets/repositories/<id>`), but never
+ * on a mere string prefix (`/scans` is NOT active on `/scan-profiles`).
+ */
+function isUrlActive(pathname: string, url: unknown): boolean {
+  return typeof url === 'string' && (pathname === url || pathname.startsWith(`${url}/`))
+}
+
+/**
+ * Of a group's sub-items, the url that best matches the current path — the
+ * longest one that is active. Prevents a short "Overview" url (`/assets`) from
+ * lighting up alongside the deeper item (`/assets/repositories`) on a detail page.
+ */
+function activeSubItemUrl(
+  pathname: string,
+  items: readonly { url: NavLink['url'] }[]
+): string | undefined {
+  return items
+    .map((i) => i.url)
+    .filter((url): url is string => typeof url === 'string' && isUrlActive(pathname, url))
+    .sort((a, b) => b.length - a.length)[0]
+}
+
+/**
+ * Whether any leaf route within a section (including nested subsections) matches
+ * the current path. Drives the section's active highlight + auto-expand.
+ */
+function sectionHasActiveRoute(pathname: string, items: NavItem[]): boolean {
+  return items.some((item) => {
+    if ('items' in item) {
+      return item.items.some((child) => isUrlActive(pathname, child.url))
+    }
+    return isUrlActive(pathname, (item as NavLink).url)
+  })
+}
 
 function checkIsActive(pathname: string, item: NavItem, mainNav = false) {
-  // For collapsible items with sub-items, check if any sub-item is active
+  // For collapsible items with sub-items, active if any sub-item matches —
+  // including child/detail routes — so the group highlights + auto-opens.
   if ('items' in item) {
-    return item.items.some((i) => pathname === i.url)
+    return item.items.some((i) => isUrlActive(pathname, i.url))
   }
 
   // For leaf items with a url
   if ('url' in item && typeof item.url === 'string') {
-    // Exact match always counts
-    if (pathname === item.url) {
+    // Exact match or a child route (keeps the item active on its detail pages)
+    if (isUrlActive(pathname, item.url)) {
       return true
     }
 
@@ -431,7 +669,11 @@ function checkIsActive(pathname: string, item: NavItem, mainNav = false) {
 export const NavGroup = memo(NavGroupComponent, (prevProps, nextProps) => {
   // Only re-render if title or items array reference changes
   // This prevents re-render when only pathname changes (which is handled internally)
-  return prevProps.title === nextProps.title && prevProps.items === nextProps.items
+  return (
+    prevProps.title === nextProps.title &&
+    prevProps.items === nextProps.items &&
+    prevProps.icon === nextProps.icon
+  )
 })
 
 NavGroup.displayName = 'NavGroup'

@@ -39,16 +39,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Badge } from '@/components/ui/badge'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import { toast } from 'sonner'
 import { getErrorMessage } from '@/lib/api/error-handler'
 import { get, post, put, del, patch } from '@/lib/api/client'
@@ -814,7 +805,13 @@ export default function TenantPage() {
                               size="sm"
                               onClick={async () => {
                                 try {
+                                  // PATCH /settings/branding is a full-struct
+                                  // replace — omitted fields reset to "". Echo
+                                  // back primary_color/logo_dark_url so saving
+                                  // the logo doesn't wipe them.
                                   const result = await updateBrandingSettings({
+                                    primary_color: brandingForm.primary_color,
+                                    logo_dark_url: brandingForm.logo_dark_url,
                                     logo_data: brandingForm.logo_data,
                                   })
                                   if (result) {
@@ -860,7 +857,11 @@ export default function TenantPage() {
                               className="text-red-500 hover:text-red-600 hover:bg-red-500/10 h-7 text-xs"
                               onClick={async () => {
                                 try {
-                                  const result = await updateBrandingSettings({ logo_data: null })
+                                  const result = await updateBrandingSettings({
+                                    primary_color: brandingForm.primary_color,
+                                    logo_dark_url: brandingForm.logo_dark_url,
+                                    logo_data: null,
+                                  })
                                   if (result) {
                                     mutate(result)
                                     updateLogo(null)
@@ -1416,30 +1417,21 @@ export default function TenantPage() {
             </Card>
 
             {/* SSO Delete Confirmation */}
-            <AlertDialog
+            <ConfirmDialog
               open={!!ssoDeleteTarget}
               onOpenChange={(open) => !open && setSsoDeleteTarget(null)}
-            >
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Remove Identity Provider</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Are you sure you want to remove{' '}
-                    {ssoDeleteTarget ? getProviderLabel(ssoDeleteTarget.provider) : ''}? Users will
-                    no longer be able to sign in using this provider. This action cannot be undone.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={handleDeleteSSO}
-                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                  >
-                    Remove
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+              title="Remove Identity Provider"
+              desc={
+                <>
+                  Are you sure you want to remove{' '}
+                  {ssoDeleteTarget ? getProviderLabel(ssoDeleteTarget.provider) : ''}? Users will no
+                  longer be able to sign in using this provider. This action cannot be undone.
+                </>
+              }
+              confirmText="Remove"
+              destructive
+              handleConfirm={() => void handleDeleteSSO()}
+            />
 
             {/* IP Restrictions */}
             <Card>

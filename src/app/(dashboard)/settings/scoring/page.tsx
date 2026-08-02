@@ -648,6 +648,35 @@ export default function ScoringConfigurationPage() {
                 step={0.1}
               />
             </div>
+            <Separator className="my-4" />
+            <div className="space-y-1">
+              <Label className="flex items-center text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Score composition
+                <InfoTip text="Controls how the exposure multiplier combines with the weighted base score. Standard multiplies the whole score (can pin highly-exposed critical assets at 100). Amplify within headroom fills the remaining range instead, so top-risk assets keep a distinguishable ranking." />
+              </Label>
+              <Select
+                value={config.score_composition_mode ?? 'multiply'}
+                onValueChange={(v) =>
+                  updateConfig((c) => ({
+                    ...c,
+                    score_composition_mode: v as 'multiply' | 'amplify_headroom',
+                  }))
+                }
+              >
+                <SelectTrigger className="h-8">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="multiply">Standard (multiply)</SelectItem>
+                  <SelectItem value="amplify_headroom">Amplify within headroom</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-muted-foreground text-xs">
+                {(config.score_composition_mode ?? 'multiply') === 'amplify_headroom'
+                  ? 'Highly-exposed critical assets no longer all pin at 100 — the exposure boost fills the remaining range instead of overflowing. Improves ranking at the top.'
+                  : 'Exposure multiplier scales the whole score.'}
+              </p>
+            </div>
           </CardContent>
         </Card>
 

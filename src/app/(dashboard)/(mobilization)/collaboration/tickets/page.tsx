@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react'
 import { Main } from '@/components/layout'
-import { PageHeader } from '@/features/shared'
+import { EmptyState, PageHeader } from '@/features/shared'
 import { StatsCard } from '@/features/shared/components/stats-card'
 import { useDashboardStats } from '@/features/dashboard/hooks/use-dashboard-stats'
 import { useTenant } from '@/context/tenant-provider'
@@ -159,15 +159,12 @@ export default function TicketIntegrationPage() {
       </div>
 
       {!hasData ? (
-        <Card className="mt-6">
-          <CardContent className="flex flex-col items-center justify-center py-16">
-            <Ticket className="text-muted-foreground mb-4 h-12 w-12" />
-            <h3 className="text-lg font-semibold">No Tickets Synced</h3>
-            <p className="text-muted-foreground mt-1 text-sm">
-              Tickets will appear here once an external ticketing system is connected.
-            </p>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={Ticket}
+          title="No Tickets Synced"
+          description="Tickets will appear here once an external ticketing system is connected."
+          className="mt-6"
+        />
       ) : (
         <>
           <div className="mt-6 grid gap-6 lg:grid-cols-2">

@@ -106,9 +106,13 @@ export function EditScanProfileDialog({
     // Build tools config from enabled tools
     const tools_config: Record<string, ToolConfig> = {}
     Object.entries(enabledTools).forEach(([tool, enabled]) => {
-      // Preserve existing config or create new
+      // Preserve existing config or create new. The backend replaces the whole
+      // tools_config map on save, so spread the existing tool config first to
+      // carry through keys the dialog doesn't model (template_mode,
+      // custom_template_ids, …) instead of wiping them.
       const existingConfig = profile.tools_config?.[tool]
       tools_config[tool] = {
+        ...existingConfig,
         enabled,
         severity: existingConfig?.severity || 'medium',
         timeout: existingConfig?.timeout || 300,

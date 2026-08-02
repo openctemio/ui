@@ -4,9 +4,10 @@ import { use, useState, useMemo, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useUrlParams } from '@/hooks/use-url-param'
 import { Main } from '@/components/layout'
-import { RiskScoreBadge } from '@/features/shared'
+import { RiskScoreBadge, StatsCard, EmptyState } from '@/features/shared'
 import { copyToClipboard } from '@/lib/clipboard'
 import { Can, Permission } from '@/lib/permissions'
+import { CRITICALITY_BADGE_SOFT } from '@/lib/criticality-colors'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
@@ -22,16 +23,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -87,12 +79,7 @@ import {
 } from '@/features/asset-groups'
 import { useCsvExport, type ExportFieldConfig } from '@/hooks/use-csv-export'
 
-const criticalityColors: Record<string, string> = {
-  critical: 'bg-red-500 text-white',
-  high: 'bg-orange-500 text-white',
-  medium: 'bg-yellow-500 text-black',
-  low: 'bg-blue-500 text-white',
-}
+const criticalityColors: Record<string, string> = CRITICALITY_BADGE_SOFT
 
 const environmentColors: Record<string, string> = {
   production: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100',
@@ -398,15 +385,21 @@ function AssetGroupDetailContent({ params }: PageProps) {
 
   const handleSaveEdit = async (formData: EditGroupFormData) => {
     try {
+      // The asset-groups PUT is a partial update: an omitted key keeps the old
+      // value. Send explicit empty string / empty array (not undefined) so
+      // clearing a field actually persists instead of silently reverting.
+      // owner_email is the exception — the backend 422s on an empty email, so
+      // it can't be cleared from here (send undefined to leave it unchanged;
+      // clearing it needs a backend change to accept "").
       await updateGroup({
         name: formData.name,
-        description: formData.description || undefined,
+        description: formData.description,
         environment: formData.environment,
         criticality: formData.criticality,
-        businessUnit: formData.businessUnit || undefined,
-        owner: formData.owner || undefined,
+        businessUnit: formData.businessUnit,
+        owner: formData.owner,
         ownerEmail: formData.ownerEmail || undefined,
-        tags: formData.tags.length > 0 ? formData.tags : undefined,
+        tags: formData.tags,
       })
       refreshGroup()
       setEditDialogOpen(false)
@@ -526,7 +519,9 @@ function AssetGroupDetailContent({ params }: PageProps) {
             <Badge variant="outline" className={environmentColors[group.environment]}>
               {group.environment}
             </Badge>
-            <Badge className={criticalityColors[group.criticality]}>{group.criticality}</Badge>
+            <Badge variant="outline" className={criticalityColors[group.criticality]}>
+              {group.criticality}
+            </Badge>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={handleCopyId}>
@@ -576,18 +571,8 @@ function AssetGroupDetailContent({ params }: PageProps) {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>Total Assets</CardDescription>
-              <CardTitle className="text-3xl">{group.assetCount}</CardTitle>
-            </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>Findings</CardDescription>
-              <CardTitle className="text-3xl text-orange-500">{group.findingCount}</CardTitle>
-            </CardHeader>
-          </Card>
+          <StatsCard title="Total Assets" value={group.assetCount} />
+          <StatsCard title="Findings" value={group.findingCount} />
           <Card>
             <CardHeader className="pb-2">
               <CardDescription>Risk Score</CardDescription>
@@ -625,10 +610,7 @@ function AssetGroupDetailContent({ params }: PageProps) {
                 </CardHeader>
                 <CardContent>
                   {Object.keys(assetsByType).length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-8 text-center">
-                      <Package className="h-10 w-10 text-muted-foreground/50 mb-3" />
-                      <p className="text-sm text-muted-foreground">No assets in this group yet</p>
-                    </div>
+                    <EmptyState icon={Package} title="No assets in this group yet" card={false} />
                   ) : (
                     <div className="space-y-4">
                       {Object.entries(assetsByType).map(([type, count]) => (
@@ -737,7 +719,7 @@ function AssetGroupDetailContent({ params }: PageProps) {
                     <Separator />
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Criticality</span>
-                      <Badge className={criticalityColors[group.criticality]}>
+                      <Badge variant="outline" className={criticalityColors[group.criticality]}>
                         {group.criticality}
                       </Badge>
                     </div>
@@ -854,30 +836,29 @@ function AssetGroupDetailContent({ params }: PageProps) {
 
                 {/* Table or Empty State */}
                 {filteredAssets.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-16 text-center">
-                    <div className="flex h-20 w-20 items-center justify-center rounded-full bg-muted mb-4">
-                      <Package className="h-10 w-10 text-muted-foreground" />
-                    </div>
-                    <h3 className="text-lg font-semibold mb-2">
-                      {assetSearch ? 'No assets found' : 'No assets in this group'}
-                    </h3>
-                    <p className="text-muted-foreground mb-4 max-w-sm">
-                      {assetSearch
+                  <EmptyState
+                    icon={Package}
+                    card={false}
+                    title={assetSearch ? 'No assets found' : 'No assets in this group'}
+                    description={
+                      assetSearch
                         ? `No assets matching "${assetSearch}". Try a different search term.`
-                        : 'Add assets to this group to start tracking and managing them together.'}
-                    </p>
-                    {assetSearch ? (
-                      <Button variant="outline" onClick={() => setAssetSearch('')}>
-                        <X className="me-2 h-4 w-4" />
-                        Clear Search
-                      </Button>
-                    ) : (
-                      <Button size="sm" onClick={() => setAddAssetsDialogOpen(true)}>
-                        <Plus className="me-2 h-4 w-4" />
-                        Add Assets
-                      </Button>
-                    )}
-                  </div>
+                        : 'Add assets to this group to start tracking and managing them together.'
+                    }
+                    action={
+                      assetSearch ? (
+                        <Button variant="outline" onClick={() => setAssetSearch('')}>
+                          <X className="me-2 h-4 w-4" />
+                          Clear Search
+                        </Button>
+                      ) : (
+                        <Button size="sm" onClick={() => setAddAssetsDialogOpen(true)}>
+                          <Plus className="me-2 h-4 w-4" />
+                          Add Assets
+                        </Button>
+                      )
+                    }
+                  />
                 ) : (
                   <div className="space-y-4">
                     <div className="rounded-md border">
@@ -1144,46 +1125,37 @@ function AssetGroupDetailContent({ params }: PageProps) {
       />
 
       {/* Delete Dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Asset Group</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete &quot;{group.name}&quot;? This action cannot be
-              undone. All {group.assetCount} assets will be unassigned.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-red-500 hover:bg-red-600"
-              onClick={handleDelete}
-              disabled={isDeleting}
-            >
-              {isDeleting ? 'Deleting...' : 'Delete'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        title="Delete Asset Group"
+        desc={
+          <>
+            Are you sure you want to delete &quot;{group.name}&quot;? This action cannot be undone.
+            All {group.assetCount} assets will be unassigned.
+          </>
+        }
+        confirmText={isDeleting ? 'Deleting...' : 'Delete'}
+        destructive
+        isLoading={isDeleting}
+        handleConfirm={handleDelete}
+      />
 
       {/* Remove Assets Dialog */}
-      <AlertDialog open={removeAssetsDialogOpen} onOpenChange={setRemoveAssetsDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Remove Assets from Group</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to remove {selectedAssets.length} assets from this group? They
-              will become ungrouped assets.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isRemovingAssets}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleRemoveAssets} disabled={isRemovingAssets}>
-              {isRemovingAssets ? 'Removing...' : 'Remove Assets'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={removeAssetsDialogOpen}
+        onOpenChange={setRemoveAssetsDialogOpen}
+        title="Remove Assets from Group"
+        desc={
+          <>
+            Are you sure you want to remove {selectedAssets.length} assets from this group? They
+            will become ungrouped assets.
+          </>
+        }
+        confirmText={isRemovingAssets ? 'Removing...' : 'Remove Assets'}
+        isLoading={isRemovingAssets}
+        handleConfirm={handleRemoveAssets}
+      />
 
       {/* Add Assets Dialog */}
       <AddAssetsDialog

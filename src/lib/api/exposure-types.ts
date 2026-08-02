@@ -5,6 +5,8 @@
  * Exposures track non-CVE attack surface changes like port opens, misconfigs, etc.
  */
 
+import { SEVERITY_BADGE_LIGHT } from '@/lib/severity-colors'
+
 // Exposure event types - categories of attack surface changes
 export type ExposureEventType =
   | 'port_open'
@@ -268,37 +270,32 @@ export const EVENT_TYPE_CONFIG: Record<
 }
 
 /**
+ * Split a centralized light-pill palette entry into the `color` (text) and
+ * `bgColor` fields this config exposes, so severity colors stay sourced from
+ * `@/lib/severity-colors` (`ExposureSeverity` shares the palette's key set).
+ */
+function lightSeverityStyles(level: ExposureSeverity): { color: string; bgColor: string } {
+  const tokens = SEVERITY_BADGE_LIGHT[level].split(' ')
+  const pick = (...prefixes: string[]): string =>
+    tokens.filter((t) => prefixes.some((p) => t.startsWith(p))).join(' ')
+  return {
+    color: pick('text-', 'dark:text-'),
+    bgColor: pick('bg-', 'dark:bg-'),
+  }
+}
+
+/**
  * Severity configuration for UI display
  */
 export const EXPOSURE_SEVERITY_CONFIG: Record<
   ExposureSeverity,
   { label: string; color: string; bgColor: string }
 > = {
-  critical: {
-    label: 'Critical',
-    color: 'text-red-600',
-    bgColor: 'bg-red-100 dark:bg-red-900/30',
-  },
-  high: {
-    label: 'High',
-    color: 'text-orange-600',
-    bgColor: 'bg-orange-100 dark:bg-orange-900/30',
-  },
-  medium: {
-    label: 'Medium',
-    color: 'text-yellow-600',
-    bgColor: 'bg-yellow-100 dark:bg-yellow-900/30',
-  },
-  low: {
-    label: 'Low',
-    color: 'text-blue-600',
-    bgColor: 'bg-blue-100 dark:bg-blue-900/30',
-  },
-  info: {
-    label: 'Info',
-    color: 'text-gray-600',
-    bgColor: 'bg-gray-100 dark:bg-gray-900/30',
-  },
+  critical: { label: 'Critical', ...lightSeverityStyles('critical') },
+  high: { label: 'High', ...lightSeverityStyles('high') },
+  medium: { label: 'Medium', ...lightSeverityStyles('medium') },
+  low: { label: 'Low', ...lightSeverityStyles('low') },
+  info: { label: 'Info', ...lightSeverityStyles('info') },
 }
 
 /**

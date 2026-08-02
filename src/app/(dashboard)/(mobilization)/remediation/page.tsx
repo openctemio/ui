@@ -1,10 +1,23 @@
 'use client'
 
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { ColumnDef } from '@tanstack/react-table'
 import { Main } from '@/components/layout'
-import { PageHeader, SeverityBadge, DataTable, DataTableColumnHeader } from '@/features/shared'
+import {
+  PageHeader,
+  SeverityBadge,
+  DataTable,
+  DataTableColumnHeader,
+  DataTableRowActions,
+  SectionTabs,
+  type RowAction,
+} from '@/features/shared'
+
+const REMEDIATION_TABS = [
+  { label: 'Tasks', href: '/remediation' },
+  { label: 'Solution Families', href: '/remediations' },
+]
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -20,10 +33,10 @@ import {
   Download,
   Filter,
   RefreshCw,
-  MoreHorizontal,
   Pencil,
   Trash2,
   UserPlus,
+  Check,
   CheckCircle,
   ArrowRight,
   X,
@@ -34,7 +47,6 @@ import {
   CalendarIcon,
   Save,
   Ban,
-  RotateCcw,
   ExternalLink,
   Clock,
   Hash,
@@ -48,7 +60,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
@@ -67,22 +78,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
 import { toast } from 'sonner'
 import { copyToClipboard } from '@/lib/clipboard'
+import { sanitizeExternalUrl } from '@/lib/utils'
 import { Can, Permission } from '@/lib/permissions'
 import { TASK_STATUS_LABELS, TASK_PRIORITY_LABELS } from '@/features/remediation'
 import {
@@ -92,9 +95,14 @@ import {
 } from '@/features/remediation/api/use-remediation-campaigns'
 import { fetchAllPages } from '@/lib/api/fetch-all-pages'
 import { CreateJiraEpicDialog } from '@/features/remediation/components/create-jira-epic-dialog'
+import { FindingPickerPanel } from '@/features/remediation/components/finding-picker-dialog'
 import { getErrorMessage } from '@/lib/api/error-handler'
 import { patch, del } from '@/lib/api/client'
 import { useFindingsApi } from '@/features/findings/api/use-findings-api'
+import { AssigneeSelect } from '@/features/findings/components/assignee-select'
+import { useMembers } from '@/features/organization/api/use-members'
+import { useTenant } from '@/context/tenant-provider'
+import { useHashTab } from '@/hooks/use-hash-tab'
 import type { TaskStatus, TaskPriority, RemediationTask } from '@/features/remediation/types'
 import type { Severity } from '@/features/shared/types'
 import { exportToCsv, type ExportFieldConfig } from '@/hooks/use-csv-export'
@@ -119,8 +127,9 @@ interface TaskFormData {
   priority: TaskPriority
   severity: Severity
   assigneeName: string
+  assignedTo: string
   dueDate: Date | undefined
-  findingId: string
+  findingIds: string[]
   estimatedHours: string
 }
 
@@ -130,9 +139,20 @@ const emptyFormData: TaskFormData = {
   priority: 'medium',
   severity: 'medium',
   assigneeName: '',
+  assignedTo: '',
   dueDate: undefined,
-  findingId: '',
+  findingIds: [],
   estimatedHours: '',
+}
+
+// A campaign is scoped by its finding_filter. "Link to Finding" pins the task to
+// one finding via the finding_ids key (backend: FindingFilter.FindingIDs), so it
+// actually counts + resolves. Returns undefined when nothing is linked so the
+// caller can decide: create seeds an empty scope, edit leaves the existing
+// filter untouched (never silently wipes a cve/asset-scoped campaign).
+function findingFilterFromForm(findingIds: string[]): Record<string, unknown> | undefined {
+  const ids = findingIds.filter((id) => id && id !== 'none')
+  return ids.length > 0 ? { finding_ids: ids } : undefined
 }
 
 const priorityColors: Record<TaskPriority, string> = {
@@ -247,17 +267,26 @@ function checkOverdue(task: RemediationTask): boolean {
 
 /** Map a remediation campaign (API) to the UI task row. */
 function campaignToTask(c: RemediationCampaign): RemediationTask {
+  // Recover the single linked finding (if any) from the campaign's finding_filter
+  // so the Edit form pre-selects it instead of defaulting to "None".
+  const linkedFindingIds = (c.finding_filter?.finding_ids as string[] | undefined) ?? []
   return {
     id: c.id,
     title: c.name,
     description: c.description || '',
     status: normalizeStatus(c.status),
     priority: normalizePriority(c.priority),
-    findingId: '',
+    findingId: linkedFindingIds[0] ?? '',
+    findingIds: linkedFindingIds,
     findingTitle: `${c.finding_count} finding${c.finding_count !== 1 ? 's' : ''} linked`,
-    severity: (c.priority === 'critical' ? 'critical' : c.priority) as Severity,
+    // Campaign priority is urgent|high|medium|low; Severity has no "urgent"
+    // (an unmapped value renders as an "Unknown" badge), so map urgent→critical.
+    severity: (c.priority === 'urgent' ? 'critical' : c.priority) as Severity,
     assigneeId: c.assigned_to || '',
-    assigneeName: c.assigned_team || '',
+    assigneeName: '', // resolved from the member list in the page (assigned_to is a UUID)
+    validatorId: c.assigned_team || '',
+    validatorName: '', // resolved from the member list in the page
+    startDate: c.start_date || '',
     dueDate: c.due_date || '',
     completedAt: c.completed_at || undefined,
     createdAt: c.created_at,
@@ -290,28 +319,35 @@ function applyTaskFilters(tasks: RemediationTask[], quickFilter: string, filters
   return data
 }
 
-/** Context-aware status actions */
+/** Context-aware status actions — only the transitions the campaign state
+ * machine allows (draft→active→validating→completed; completed is terminal).
+ * Offering illegal moves (Block on Open, Complete from In Progress, Reopen on
+ * Completed) just produced backend rejection toasts. */
 function getAvailableActions(status: TaskStatus) {
   switch (status) {
-    case 'open':
+    case 'open': // draft → active
+      return [{ action: 'start', label: 'Start Task', icon: Play, variant: 'default' as const }]
+    case 'in_progress': // active → validating | paused
+      // 'validating' is the CTEM verify step (fix applied, confirm it worked) —
+      // NOT a hand-off to a reviewer. There is no reviewer role; the owner stays
+      // the assignee. Label it as a state change, not "send to someone".
       return [
-        { action: 'start', label: 'Start Task', icon: Play, variant: 'default' as const },
+        {
+          action: 'review',
+          label: 'Submit for Validation',
+          icon: CheckCircle,
+          variant: 'default' as const,
+        },
         { action: 'block', label: 'Block', icon: Ban, variant: 'outline' as const },
       ]
-    case 'in_progress':
+    case 'review': // validating → completed (no validating→active path in the domain)
       return [
         { action: 'complete', label: 'Complete', icon: CheckCircle, variant: 'default' as const },
-        { action: 'block', label: 'Block', icon: Ban, variant: 'outline' as const },
       ]
-    case 'review':
-      return [
-        { action: 'complete', label: 'Approve', icon: CheckCircle, variant: 'default' as const },
-        { action: 'reopen', label: 'Reopen', icon: RotateCcw, variant: 'outline' as const },
-      ]
-    case 'blocked':
+    case 'blocked': // paused → active
       return [{ action: 'start', label: 'Unblock', icon: Play, variant: 'default' as const }]
-    case 'completed':
-      return [{ action: 'reopen', label: 'Reopen', icon: RotateCcw, variant: 'outline' as const }]
+    case 'completed': // terminal
+      return []
     default:
       return []
   }
@@ -324,7 +360,7 @@ export default function RemediationPage() {
 
   // API data
   const { data: findingsData } = useFindingsApi({
-    per_page: 20,
+    per_page: 100,
     statuses: ['new', 'confirmed', 'in_progress'],
   })
   const findings = findingsData?.data ?? []
@@ -337,9 +373,42 @@ export default function RemediationPage() {
   } = useRemediationCampaigns()
   const { trigger: createCampaign } = useCreateRemediationCampaign()
 
+  // Resolve assignee UUIDs → display names via the tenant member list.
+  const { currentTenant } = useTenant()
+  const { members } = useMembers(currentTenant?.id)
+  const memberNameById = useMemo(() => {
+    const m = new Map<string, string>()
+    for (const mem of members) {
+      if (mem.user_id) m.set(mem.user_id, mem.name || mem.email || mem.user_id)
+    }
+    return m
+  }, [members])
+
   const tasks: RemediationTask[] = useMemo(() => {
     if (!campaignData?.data?.length) return []
-    return campaignData.data.map(campaignToTask)
+    return campaignData.data.map((c) => {
+      const t = campaignToTask(c)
+      if (t.assigneeId) t.assigneeName = memberNameById.get(t.assigneeId) || t.assigneeId
+      if (t.validatorId) t.validatorName = memberNameById.get(t.validatorId) || t.validatorId
+      return t
+    })
+  }, [campaignData, memberNameById])
+
+  // Which campaigns each finding is linked to. A finding CAN belong to more than
+  // one campaign (a finding_id may appear in several campaigns' filters — there's
+  // no uniqueness), so we surface the overlap in the picker rather than silently
+  // splitting ownership. Maps finding_id → the campaigns that reference it.
+  const findingCampaigns = useMemo(() => {
+    const m = new Map<string, Array<{ id: string; name: string }>>()
+    for (const c of campaignData?.data ?? []) {
+      const ids = (c.finding_filter?.finding_ids as string[] | undefined) ?? []
+      for (const fid of ids) {
+        const arr = m.get(fid) ?? []
+        arr.push({ id: c.id, name: c.name })
+        m.set(fid, arr)
+      }
+    }
+    return m
   }, [campaignData])
 
   // ─── Computed ────────────────────────────────────────────────────
@@ -375,6 +444,8 @@ export default function RemediationPage() {
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [quickFilter, setQuickFilter] = useState('all')
+  // Table/Kanban view persisted in the URL hash (survives reload).
+  const [viewTab, setViewTab] = useHashTab('table')
   const [filters, setFilters] = useState<Filters>(defaultFilters)
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [viewTask, setViewTask] = useState<RemediationTask | null>(null)
@@ -384,6 +455,37 @@ export default function RemediationPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [formData, setFormData] = useState<TaskFormData>(emptyFormData)
   const [dueDateOpen, setDueDateOpen] = useState(false)
+
+  // Keep the open drawer in sync with the latest task data (after inline edits).
+  useEffect(() => {
+    setViewTask((prev) => (prev ? (tasks.find((t) => t.id === prev.id) ?? prev) : prev))
+  }, [tasks])
+
+  // Inline field edit from the drawer (Jira-style): PATCH one field, refresh.
+  const handleInlinePatch = useCallback(
+    async (task: RemediationTask, body: Record<string, unknown>) => {
+      try {
+        // A finding_filter patch from the drawer only carries finding_ids. Merge it
+        // into the campaign's existing filter so any dynamic scope (cve_ids, asset_id,
+        // remediation_key, …) isn't silently wiped — which would corrupt a keyed
+        // (Solution-Family) campaign into a plain finding-ids one.
+        let payload = body
+        if (body.finding_filter && typeof body.finding_filter === 'object') {
+          const original = campaignData?.data?.find((c) => c.id === task.id)?.finding_filter ?? {}
+          payload = {
+            ...body,
+            finding_filter: { ...original, ...(body.finding_filter as Record<string, unknown>) },
+          }
+        }
+        await patch(`/api/v1/remediation/campaigns/${task.id}`, payload)
+        await refreshCampaigns()
+        toast.success('Task updated')
+      } catch (err) {
+        toast.error(getErrorMessage(err, 'Failed to update task'))
+      }
+    },
+    [refreshCampaigns, campaignData]
+  )
 
   const assignees = useMemo(
     () => [...new Set(tasks.map((t) => t.assigneeName).filter(Boolean))],
@@ -410,10 +512,24 @@ export default function RemediationPage() {
   const [isExporting, setIsExporting] = useState(false)
   const fetchAllFilteredTasks = useCallback(async (): Promise<RemediationTask[]> => {
     const campaigns = await fetchAllPages<RemediationCampaign>(
-      (page, per_page) => `/api/v1/remediation/campaigns?page=${page}&per_page=${per_page}`
+      (page, per_page) => `/api/v1/remediation/campaigns?page=${page}&per_page=${per_page}`,
+      {
+        onTruncated: (loaded) =>
+          toast.warning(
+            `Export limited to the first ${loaded.toLocaleString()} campaigns — refine filters to export the rest`
+          ),
+      }
     )
-    return applyTaskFilters(campaigns.map(campaignToTask), quickFilter, filters)
-  }, [quickFilter, filters])
+    // Resolve assignee/validator UUIDs → names (same as the on-screen list) so the
+    // export isn't blank and an active assignee filter (which matches on name) works.
+    const rows = campaigns.map((c) => {
+      const t = campaignToTask(c)
+      if (t.assigneeId) t.assigneeName = memberNameById.get(t.assigneeId) || t.assigneeId
+      if (t.validatorId) t.validatorName = memberNameById.get(t.validatorId) || t.validatorId
+      return t
+    })
+    return applyTaskFilters(rows, quickFilter, filters)
+  }, [quickFilter, filters, memberNameById])
 
   const handleExportCsv = useCallback(async () => {
     if (isExporting) return
@@ -472,8 +588,9 @@ export default function RemediationPage() {
           priority: task.priority,
           severity: task.severity,
           assigneeName: task.assigneeName,
+          assignedTo: task.assigneeId || '',
           dueDate: dueDate && !isNaN(dueDate.getTime()) ? dueDate : undefined,
-          findingId: task.findingId || 'none',
+          findingIds: task.findingIds ?? [],
           estimatedHours: task.estimatedHours?.toString() || '',
         })
         setEditTask(task)
@@ -491,10 +608,9 @@ export default function RemediationPage() {
       // Status transition actions → call API
       const statusMap: Record<string, string> = {
         start: 'active',
+        review: 'validating',
         complete: 'completed',
         block: 'paused',
-        reopen: 'active',
-        reassign: '',
       }
       const apiStatus = statusMap[action]
       if (apiStatus) {
@@ -511,14 +627,10 @@ export default function RemediationPage() {
               })
             }
           }
-          toast.success(
-            `Task ${action === 'start' ? 'started' : action === 'complete' ? 'completed' : action === 'block' ? 'blocked' : 'reopened'}`
-          )
+          toast.success('Task updated')
         } catch (err) {
           toast.error(getErrorMessage(err, `Failed to ${action} task`))
         }
-      } else if (action === 'reassign') {
-        toast.info('Reassign feature coming soon')
       }
     },
     [router, refreshCampaigns, viewTask, campaignData]
@@ -535,26 +647,29 @@ export default function RemediationPage() {
         }
         const apiStatus = statusMap[value]
         if (apiStatus) {
+          // Some selected tasks may be in a state where this transition is illegal
+          // (e.g. an already-active task → "In Progress"). Don't let one rejection
+          // abort the batch or skip the refresh — settle all, then report the split.
           try {
-            await Promise.all(
+            const results = await Promise.allSettled(
               selectedIds.map((id) =>
                 patch(`/api/v1/remediation/campaigns/${id}/status`, { status: apiStatus })
               )
             )
+            const ok = results.filter((r) => r.status === 'fulfilled').length
+            const failed = results.length - ok
+            if (ok > 0 && failed === 0) {
+              toast.success(`Moved ${ok} task${ok === 1 ? '' : 's'} to ${value}`)
+            } else if (ok > 0) {
+              toast.warning(`Moved ${ok}; ${failed} couldn't move to ${value} from their state`)
+            } else {
+              toast.error(`None could move to ${value} from their current state`)
+            }
+          } finally {
             await refreshCampaigns()
-            toast.success(`Moved ${selectedIds.length} tasks to ${value}`)
-          } catch (err) {
-            toast.error(getErrorMessage(err, 'Failed to update tasks'))
           }
         }
         setSelectedIds([])
-        return
-      }
-
-      // Reassign isn't wired to a backend yet (same as the single-task action).
-      // Be honest and keep the selection rather than silently clearing it.
-      if (action === 'Reassigned') {
-        toast.info('Bulk reassign is coming soon')
         return
       }
 
@@ -587,8 +702,11 @@ export default function RemediationPage() {
         priority: formData.priority,
         status: 'draft',
         due_date: formData.dueDate?.toISOString() || null,
-        assigned_team: formData.assigneeName || null,
+        assigned_to: formData.assignedTo || undefined,
         tags: [],
+        // Scope the task to the linked finding so it actually counts + resolves;
+        // empty scope when nothing is linked.
+        finding_filter: findingFilterFromForm(formData.findingIds) ?? {},
       })
       await refreshCampaigns()
       setFormData(emptyFormData)
@@ -610,7 +728,8 @@ export default function RemediationPage() {
         description: formData.description,
         priority: formData.priority,
         due_date: formData.dueDate?.toISOString() || null,
-        assigned_team: formData.assigneeName || null,
+        assigned_to: formData.assignedTo || '',
+        finding_filter: findingFilterFromForm(formData.findingIds),
       })
       await refreshCampaigns()
       setFormData(emptyFormData)
@@ -784,73 +903,61 @@ export default function RemediationPage() {
         id: 'actions',
         cell: ({ row }) => {
           const task = row.original
-          const actions = getAvailableActions(task.status)
-          return (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handleTaskAction('view', task)}>
-                  <ChevronRight className="me-2 h-4 w-4" />
-                  View Details
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleTaskAction('open_campaign', task)}>
-                  <ExternalLink className="me-2 h-4 w-4" />
-                  Open Campaign
-                </DropdownMenuItem>
-                <Can permission={Permission.RemediationWrite}>
-                  <DropdownMenuItem onClick={() => handleTaskAction('edit', task)}>
-                    <Pencil className="me-2 h-4 w-4" />
-                    Edit
-                  </DropdownMenuItem>
-                </Can>
-                <DropdownMenuItem onClick={() => handleTaskAction('reassign', task)}>
-                  <UserPlus className="me-2 h-4 w-4" />
-                  Reassign
-                </DropdownMenuItem>
-                {task.ticketUrl ? (
-                  <DropdownMenuItem
-                    onClick={() => window.open(task.ticketUrl, '_blank', 'noopener,noreferrer')}
-                  >
-                    <ExternalLink className="me-2 h-4 w-4" />
-                    View Jira Epic ({task.ticketKey})
-                  </DropdownMenuItem>
-                ) : (
-                  <Can permission={Permission.RemediationWrite}>
-                    <DropdownMenuItem onClick={() => setJiraTask(task)}>
-                      <ExternalLink className="me-2 h-4 w-4" />
-                      Create Jira Epic
-                    </DropdownMenuItem>
-                  </Can>
-                )}
-                {actions.length > 0 && <DropdownMenuSeparator />}
-                {actions.map(({ action, label, icon: Icon }) => (
-                  <DropdownMenuItem key={action} onClick={() => handleTaskAction(action, task)}>
-                    <Icon className="me-2 h-4 w-4" />
-                    {label}
-                  </DropdownMenuItem>
-                ))}
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => handleCopyId(task.id)}>
-                  <Copy className="me-2 h-4 w-4" />
-                  Copy ID
-                </DropdownMenuItem>
-                <Can permission={Permission.RemediationWrite}>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    className="text-red-400"
-                    onClick={() => handleTaskAction('delete', task)}
-                  >
-                    <Trash2 className="me-2 h-4 w-4" />
-                    Delete
-                  </DropdownMenuItem>
-                </Can>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )
+          const statusActions = getAvailableActions(task.status)
+          const rowActions: RowAction[] = [
+            {
+              label: 'View Details',
+              icon: ChevronRight,
+              onClick: () => handleTaskAction('view', task),
+            },
+            {
+              label: 'Open Campaign',
+              icon: ExternalLink,
+              onClick: () => handleTaskAction('open_campaign', task),
+            },
+          ]
+          if (task.ticketUrl) {
+            rowActions.push({
+              label: `View Jira Epic (${task.ticketKey})`,
+              icon: ExternalLink,
+              onClick: () => {
+                const safeUrl = sanitizeExternalUrl(task.ticketUrl ?? '')
+                if (safeUrl && safeUrl !== '#') {
+                  window.open(safeUrl, '_blank', 'noopener,noreferrer')
+                }
+              },
+            })
+          } else {
+            rowActions.push({
+              label: 'Create Jira Epic',
+              icon: ExternalLink,
+              onClick: () => setJiraTask(task),
+              permission: Permission.RemediationWrite,
+            })
+          }
+          statusActions.forEach(({ action, label, icon }, idx) => {
+            rowActions.push({
+              label,
+              icon,
+              onClick: () => handleTaskAction(action, task),
+              separatorBefore: idx === 0,
+            })
+          })
+          rowActions.push({
+            label: 'Copy ID',
+            icon: Copy,
+            onClick: () => handleCopyId(task.id),
+            separatorBefore: true,
+          })
+          rowActions.push({
+            label: 'Delete',
+            icon: Trash2,
+            onClick: () => handleTaskAction('delete', task),
+            separatorBefore: true,
+            destructive: true,
+            permission: Permission.RemediationWrite,
+          })
+          return <DataTableRowActions actions={rowActions} />
         },
       },
     ],
@@ -1017,6 +1124,8 @@ export default function RemediationPage() {
           </div>
         </PageHeader>
 
+        <SectionTabs tabs={REMEDIATION_TABS} />
+
         {/* Loading State */}
         {isLoading && (
           <div className="mt-6 space-y-4">
@@ -1057,15 +1166,6 @@ export default function RemediationPage() {
                 <CardContent className="flex items-center justify-between py-2.5 px-4">
                   <span className="text-sm font-medium">{selectedIds.length} selected</span>
                   <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-7"
-                      onClick={() => handleBulkAction('Reassigned')}
-                    >
-                      <UserPlus className="me-1.5 h-3.5 w-3.5" />
-                      Reassign
-                    </Button>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="outline" size="sm" className="h-7">
@@ -1152,7 +1252,7 @@ export default function RemediationPage() {
             </div>
 
             {/* Table / Kanban */}
-            <Tabs defaultValue="table" className="mt-4">
+            <Tabs value={viewTab} onValueChange={setViewTab} className="mt-4">
               <TabsList>
                 <TabsTrigger value="table">Table View</TabsTrigger>
                 <TabsTrigger value="kanban">Kanban View</TabsTrigger>
@@ -1163,6 +1263,7 @@ export default function RemediationPage() {
                   columns={columns}
                   data={filteredData}
                   onRowClick={(task) => setViewTask(task)}
+                  onSelectionChange={(rows) => setSelectedIds(rows.map((t) => t.id))}
                   searchPlaceholder="Search tasks..."
                   pageSize={10}
                   emptyMessage="No tasks found"
@@ -1278,15 +1379,15 @@ export default function RemediationPage() {
       <TaskDetailSheet
         task={viewTask}
         onClose={() => setViewTask(null)}
-        onEdit={(task) => {
-          setViewTask(null)
-          handleTaskAction('edit', task)
-        }}
         onDelete={(task) => {
           setViewTask(null)
           setDeleteTask(task)
         }}
         onAction={handleTaskAction}
+        onPatch={handleInlinePatch}
+        findings={findings}
+        memberNameById={memberNameById}
+        findingCampaigns={findingCampaigns}
         onCopyId={handleCopyId}
         onCopyLink={handleCopyLink}
         onOpenCampaign={(task) => router.push(`/remediation/${task.id}`)}
@@ -1306,7 +1407,6 @@ export default function RemediationPage() {
         setFormData={setFormData}
         dueDateOpen={dueDateOpen}
         setDueDateOpen={setDueDateOpen}
-        assignees={assignees}
         findings={findings}
         onSubmit={editTask ? handleEditTask : handleCreateTask}
         onCancel={() => {
@@ -1316,23 +1416,20 @@ export default function RemediationPage() {
       />
 
       {/* ─── Delete Confirmation ──────────────────────────────────────── */}
-      <AlertDialog open={!!deleteTask} onOpenChange={() => setDeleteTask(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Task</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete &quot;{deleteTask?.title}&quot;? This action cannot be
-              undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction className="bg-red-500 hover:bg-red-600" onClick={handleDelete}>
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={!!deleteTask}
+        onOpenChange={() => setDeleteTask(null)}
+        title="Delete Task"
+        desc={
+          <>
+            Are you sure you want to delete &quot;{deleteTask?.title}&quot;? This action cannot be
+            undone.
+          </>
+        }
+        confirmText="Delete"
+        destructive
+        handleConfirm={handleDelete}
+      />
 
       <CreateJiraEpicDialog
         campaign={jiraTask ? { id: jiraTask.id, name: jiraTask.title } : null}
@@ -1349,9 +1446,23 @@ export default function RemediationPage() {
 interface TaskDetailSheetProps {
   task: RemediationTask | null
   onClose: () => void
-  onEdit: (task: RemediationTask) => void
   onDelete: (task: RemediationTask) => void
   onAction: (action: string, task: RemediationTask) => void
+  onPatch: (task: RemediationTask, body: Record<string, unknown>) => void | Promise<void>
+  findings: Array<{
+    id: string
+    title?: string
+    message?: string
+    severity?: Severity
+    status?: string
+    asset?: { name: string; type: string }
+    assigned_to?: string
+    assigned_to_user?: { name: string }
+  }>
+  /** UUID → display-name map so finding assignees render as names, not UUIDs. */
+  memberNameById: Map<string, string>
+  /** finding_id → campaigns that already reference it (to flag cross-linking). */
+  findingCampaigns: Map<string, Array<{ id: string; name: string }>>
   onCopyId: (id: string) => void
   onCopyLink: (id: string) => void
   onOpenCampaign: (task: RemediationTask) => void
@@ -1360,13 +1471,26 @@ interface TaskDetailSheetProps {
 function TaskDetailSheet({
   task,
   onClose,
-  onEdit,
   onDelete,
   onAction,
+  onPatch,
+  findings,
+  memberNameById,
+  findingCampaigns,
   onCopyId,
   onCopyLink,
   onOpenCampaign,
 }: TaskDetailSheetProps) {
+  // Inline title/description editing state — hooks must run unconditionally,
+  // before the early null-return below.
+  const [editingTitle, setEditingTitle] = useState(false)
+  const [titleDraft, setTitleDraft] = useState(task?.title ?? '')
+  const [editingDesc, setEditingDesc] = useState(false)
+  const [descDraft, setDescDraft] = useState(task?.description ?? '')
+  const [dueOpen, setDueOpen] = useState(false)
+  const [startOpen, setStartOpen] = useState(false)
+  const [manageOpen, setManageOpen] = useState(false)
+
   if (!task) {
     return (
       <Sheet open={false}>
@@ -1382,6 +1506,17 @@ function TaskDetailSheet({
   const overdue = checkOverdue(task)
   const due = daysUntil(task.dueDate)
   const actions = getAvailableActions(task.status)
+
+  const saveTitle = () => {
+    setEditingTitle(false)
+    const v = titleDraft.trim()
+    if (v && v !== task.title) onPatch(task, { name: v })
+    else setTitleDraft(task.title)
+  }
+  const saveDesc = () => {
+    setEditingDesc(false)
+    if (descDraft !== (task.description || '')) onPatch(task, { description: descDraft })
+  }
 
   // Get progress from API data or estimate from status
   const taskProgress =
@@ -1405,234 +1540,427 @@ function TaskDetailSheet({
           <SheetTitle>Task Details</SheetTitle>
         </VisuallyHidden>
 
-        {/* ── Header ── */}
-        <div
-          className={`p-5 border-b ${
-            task.status === 'completed'
-              ? 'bg-green-500/5'
-              : task.status === 'blocked' || overdue
-                ? 'bg-red-500/5'
-                : 'bg-muted/30'
-          }`}
-        >
-          {/* Toolbar: title left, actions right */}
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-sm font-medium text-muted-foreground">Task Details</p>
-            <div className="flex items-center gap-0.5 shrink-0">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7"
-                    onClick={() => onCopyId(task.id)}
-                  >
-                    <Hash className="h-3.5 w-3.5" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">Copy ID</TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7"
-                    onClick={() => onCopyLink(task.id)}
-                  >
-                    <ExternalLink className="h-3.5 w-3.5" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">Copy link</TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7"
-                    onClick={() => onOpenCampaign(task)}
-                  >
-                    <ChevronRight className="h-3.5 w-3.5" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">Open campaign</TooltipContent>
-              </Tooltip>
-              <Can permission={Permission.RemediationWrite}>
+        {/* Findings picker: an INLINE view that replaces the drawer body (not an
+            overlay/portal/fixed panel) so it touch-scrolls via the Sheet's own
+            overflow-y-auto. The details below are hidden while it's open. */}
+        {manageOpen && (
+          <FindingPickerPanel
+            onClose={() => setManageOpen(false)}
+            selectedIds={task.findingIds ?? []}
+            onToggle={(findingId, next) =>
+              onPatch(task, {
+                finding_filter: {
+                  finding_ids: next
+                    ? [...(task.findingIds ?? []), findingId]
+                    : (task.findingIds ?? []).filter((id) => id !== findingId),
+                },
+              })
+            }
+            findingCampaigns={findingCampaigns}
+            currentCampaignId={task.id}
+            memberNameById={memberNameById}
+          />
+        )}
+
+        <div className={manageOpen ? 'hidden' : undefined}>
+          {/* ── Header ── */}
+          <div
+            className={`p-5 border-b ${
+              task.status === 'completed'
+                ? 'bg-green-500/5'
+                : task.status === 'blocked' || overdue
+                  ? 'bg-red-500/5'
+                  : 'bg-muted/30'
+            }`}
+          >
+            {/* Toolbar: title left, actions right */}
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-sm font-medium text-muted-foreground">Task Details</p>
+              <div className="flex items-center gap-0.5 shrink-0">
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
                       variant="ghost"
                       size="icon"
                       className="h-7 w-7"
-                      onClick={() => onEdit(task)}
+                      onClick={() => onCopyId(task.id)}
                     >
-                      <Pencil className="h-3.5 w-3.5" />
+                      <Hash className="h-3.5 w-3.5" />
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent side="bottom">Edit</TooltipContent>
+                  <TooltipContent side="bottom">Copy ID</TooltipContent>
                 </Tooltip>
-              </Can>
-              <Separator orientation="vertical" className="h-4 mx-1" />
-              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onClose}>
-                <X className="h-3.5 w-3.5" />
-              </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={() => onCopyLink(task.id)}
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">Copy link</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={() => onOpenCampaign(task)}
+                    >
+                      <ChevronRight className="h-3.5 w-3.5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">Open campaign</TooltipContent>
+                </Tooltip>
+                <Separator orientation="vertical" className="h-4 mx-1" />
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onClose}>
+                  <X className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Title (click to edit inline) */}
+            {editingTitle ? (
+              <Input
+                autoFocus
+                value={titleDraft}
+                onChange={(e) => setTitleDraft(e.target.value)}
+                onBlur={saveTitle}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') saveTitle()
+                  if (e.key === 'Escape') {
+                    setTitleDraft(task.title)
+                    setEditingTitle(false)
+                  }
+                }}
+                className="h-7 text-base font-semibold"
+              />
+            ) : (
+              <h2
+                className="text-base font-semibold leading-tight cursor-text rounded px-1 -mx-1 hover:bg-muted/50"
+                onClick={() => {
+                  setTitleDraft(task.title)
+                  setEditingTitle(true)
+                }}
+              >
+                {task.title}
+              </h2>
+            )}
+            <p className="text-xs text-muted-foreground mt-1">{task.findingTitle}</p>
+
+            {/* Badges */}
+            <div className="flex flex-wrap items-center gap-1.5 mt-3">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Badge
+                    className={`${priorityColors[task.priority]} text-xs h-5 cursor-pointer`}
+                    title="Change priority"
+                  >
+                    {TASK_PRIORITY_LABELS[task.priority]}
+                  </Badge>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start">
+                  {(['urgent', 'high', 'medium', 'low'] as TaskPriority[]).map((p) => (
+                    <DropdownMenuItem key={p} onClick={() => onPatch(task, { priority: p })}>
+                      {TASK_PRIORITY_LABELS[p]}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Badge className={`${statusColors[task.status]} text-xs h-5`}>
+                {TASK_STATUS_LABELS[task.status]}
+              </Badge>
+              <SeverityBadge severity={task.severity} />
+              {overdue && (
+                <Badge variant="outline" className="border-red-500/50 text-red-500 text-xs h-5">
+                  <AlertCircle className="me-1 h-3 w-3" />
+                  Overdue
+                </Badge>
+              )}
             </div>
           </div>
 
-          {/* Title */}
-          <h2 className="text-base font-semibold leading-tight">{task.title}</h2>
-          <p className="text-xs text-muted-foreground mt-1">{task.findingTitle}</p>
-
-          {/* Badges */}
-          <div className="flex flex-wrap items-center gap-1.5 mt-3">
-            <Badge className={`${priorityColors[task.priority]} text-xs h-5`}>
-              {TASK_PRIORITY_LABELS[task.priority]}
-            </Badge>
-            <Badge className={`${statusColors[task.status]} text-xs h-5`}>
-              {TASK_STATUS_LABELS[task.status]}
-            </Badge>
-            <SeverityBadge severity={task.severity} />
-            {overdue && (
-              <Badge variant="outline" className="border-red-500/50 text-red-500 text-xs h-5">
-                <AlertCircle className="me-1 h-3 w-3" />
-                Overdue
-              </Badge>
-            )}
-          </div>
-        </div>
-
-        {/* ── Content ── */}
-        <div className="p-5 space-y-4">
-          {/* Key info grid */}
-          <div className="grid grid-cols-2 gap-3">
-            <InfoCard
-              icon={<UserPlus className="h-3.5 w-3.5 text-muted-foreground" />}
-              label="Assignee"
-            >
-              {task.assigneeName ? (
-                <div className="flex items-center gap-1.5">
-                  <Avatar className="h-5 w-5">
-                    <AvatarFallback className="text-[9px]">
-                      {getInitials(task.assigneeName)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="text-sm font-medium truncate">{task.assigneeName}</span>
-                </div>
-              ) : (
-                <span className="text-sm text-muted-foreground">Unassigned</span>
-              )}
-            </InfoCard>
-
-            <InfoCard
-              icon={
-                <Calendar
-                  className={`h-3.5 w-3.5 ${overdue ? 'text-red-500' : 'text-muted-foreground'}`}
+          {/* ── Content ── */}
+          <div className="p-5 space-y-4">
+            {/* Key info grid */}
+            <div className="grid grid-cols-2 gap-3">
+              <InfoCard
+                icon={<UserPlus className="h-3.5 w-3.5 text-muted-foreground" />}
+                label="Assignee"
+              >
+                {/* Inline edit (Jira-style): pick a member → PATCH assigned_to. */}
+                <AssigneeSelect
+                  variant="ghost"
+                  showFullName
+                  placeholder="Assign"
+                  value={
+                    task.assigneeId
+                      ? { id: task.assigneeId, name: task.assigneeName || 'Assigned' }
+                      : null
+                  }
+                  onChange={(user) => onPatch(task, { assigned_to: user?.id ?? '' })}
                 />
-              }
-              label="Due Date"
-            >
-              <span className={`text-sm font-medium ${overdue ? 'text-red-500' : ''}`}>
-                {safeFormatDate(task.dueDate, { month: 'short', day: 'numeric' }) ?? 'Not set'}
-              </span>
-              {due && task.status !== 'completed' && (
-                <span
-                  className={`text-[11px] block ${due.overdue ? 'text-red-400' : 'text-muted-foreground'}`}
-                >
-                  {due.overdue ? `${due.days}d overdue` : `${due.days}d remaining`}
-                </span>
-              )}
-            </InfoCard>
-          </div>
+              </InfoCard>
 
-          {/* Description */}
-          {task.description && (
+              <InfoCard
+                icon={<Play className="h-3.5 w-3.5 text-muted-foreground" />}
+                label="Start Date"
+              >
+                <Popover open={startOpen} onOpenChange={setStartOpen}>
+                  <PopoverTrigger asChild>
+                    <button className="text-start rounded px-1 -mx-1 hover:bg-muted/50">
+                      <span className="text-sm font-medium">
+                        {safeFormatDate(task.startDate, { month: 'short', day: 'numeric' }) ??
+                          'Auto on start'}
+                      </span>
+                      {!task.startDate && (
+                        <span className="text-[11px] text-muted-foreground block">
+                          set when work begins
+                        </span>
+                      )}
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarComponent
+                      mode="single"
+                      selected={task.startDate ? new Date(task.startDate) : undefined}
+                      onSelect={(date) => {
+                        setStartOpen(false)
+                        if (date) onPatch(task, { start_date: date.toISOString() })
+                      }}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </InfoCard>
+
+              <InfoCard
+                icon={
+                  <Calendar
+                    className={`h-3.5 w-3.5 ${overdue ? 'text-red-500' : 'text-muted-foreground'}`}
+                  />
+                }
+                label="Due Date"
+              >
+                <Popover open={dueOpen} onOpenChange={setDueOpen}>
+                  <PopoverTrigger asChild>
+                    <button className="text-start rounded px-1 -mx-1 hover:bg-muted/50">
+                      <span className={`text-sm font-medium ${overdue ? 'text-red-500' : ''}`}>
+                        {safeFormatDate(task.dueDate, { month: 'short', day: 'numeric' }) ??
+                          'Set date'}
+                      </span>
+                      {due && task.status !== 'completed' && (
+                        <span
+                          className={`text-[11px] block ${due.overdue ? 'text-red-400' : 'text-muted-foreground'}`}
+                        >
+                          {due.overdue ? `${due.days}d overdue` : `${due.days}d remaining`}
+                        </span>
+                      )}
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarComponent
+                      mode="single"
+                      selected={task.dueDate ? new Date(task.dueDate) : undefined}
+                      onSelect={(date) => {
+                        setDueOpen(false)
+                        onPatch(task, { due_date: date ? date.toISOString() : null })
+                      }}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </InfoCard>
+
+              {/* Validator (assigned_team) — the person who verifies the fix. Shown
+                once the task is in validation, so the fixer and the verifier are
+                explicitly different people (segregation of duties). */}
+              {task.status === 'review' && (
+                <InfoCard
+                  icon={<CheckCircle className="h-3.5 w-3.5 text-muted-foreground" />}
+                  label="Validator"
+                >
+                  <AssigneeSelect
+                    variant="ghost"
+                    showFullName
+                    placeholder="Assign validator"
+                    value={
+                      task.validatorId
+                        ? { id: task.validatorId, name: task.validatorName || 'Assigned' }
+                        : null
+                    }
+                    onChange={(user) => onPatch(task, { assigned_team: user?.id ?? '' })}
+                  />
+                </InfoCard>
+              )}
+            </div>
+
+            {/* Description (click to edit inline) */}
             <div className="space-y-1.5">
               <p className="text-xs font-medium text-muted-foreground">Description</p>
-              <p className="text-sm leading-relaxed bg-muted/30 rounded-lg p-3">
-                {task.description}
-              </p>
-            </div>
-          )}
-
-          {/* Progress */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-medium text-muted-foreground">Progress</p>
-              <span className="text-xs font-medium tabular-nums">{taskProgress}%</span>
-            </div>
-            <Progress value={taskProgress} className="h-1.5" />
-          </div>
-
-          <Separator />
-
-          {/* Status Actions */}
-          <div className="space-y-2">
-            <p className="text-xs font-medium text-muted-foreground">Actions</p>
-            <div className="flex flex-wrap gap-2">
-              {actions.map(({ action, label, icon: Icon, variant }) => (
-                <Button
-                  key={action}
-                  variant={variant}
-                  size="sm"
-                  className="h-8"
-                  onClick={() => onAction(action, task)}
+              {editingDesc ? (
+                <Textarea
+                  autoFocus
+                  value={descDraft}
+                  onChange={(e) => setDescDraft(e.target.value)}
+                  onBlur={saveDesc}
+                  className="min-h-[80px] text-sm"
+                />
+              ) : (
+                <p
+                  className="text-sm leading-relaxed bg-muted/30 rounded-lg p-3 cursor-text hover:bg-muted/50"
+                  onClick={() => {
+                    setDescDraft(task.description || '')
+                    setEditingDesc(true)
+                  }}
                 >
-                  <Icon className="me-1.5 h-3.5 w-3.5" />
-                  {label}
-                </Button>
-              ))}
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8"
-                onClick={() => onAction('reassign', task)}
-              >
-                <UserPlus className="me-1.5 h-3.5 w-3.5" />
-                Reassign
-              </Button>
-            </div>
-          </div>
-
-          <Separator />
-
-          {/* Metadata */}
-          <div className="grid grid-cols-2 gap-3">
-            <InfoCard icon={<Hash className="h-3.5 w-3.5 text-muted-foreground" />} label="Task ID">
-              <p className="font-mono text-[11px] truncate">{task.id}</p>
-            </InfoCard>
-            <InfoCard
-              icon={<Clock className="h-3.5 w-3.5 text-muted-foreground" />}
-              label="Created"
-            >
-              <p className="text-sm">
-                {safeFormatDate(task.createdAt, { month: 'short', day: 'numeric' }) ?? '--'}
-              </p>
-              {task.createdAt && (
-                <p className="text-[11px] text-muted-foreground">{timeAgo(task.createdAt)}</p>
+                  {task.description || (
+                    <span className="text-muted-foreground">Add a description…</span>
+                  )}
+                </p>
               )}
-            </InfoCard>
-          </div>
-
-          {/* Danger Zone */}
-          <Can permission={Permission.RemediationWrite}>
-            <Separator />
-            <div className="flex items-center justify-between rounded-lg border border-red-500/15 bg-red-500/5 p-3">
-              <div>
-                <p className="text-sm font-medium text-red-500">Delete task</p>
-                <p className="text-xs text-muted-foreground">Permanently remove this task</p>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-7 border-red-500/30 text-red-500 hover:bg-red-500/10"
-                onClick={() => onDelete(task)}
-              >
-                <Trash2 className="me-1.5 h-3.5 w-3.5" />
-                Delete
-              </Button>
             </div>
-          </Can>
+
+            {/* Linked Findings — a task can cover many; view + manage inline */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-medium text-muted-foreground">
+                  Linked Findings ({task.findingIds?.length ?? 0})
+                </p>
+                {/* A standalone modal (not a Popover nested in the drawer Sheet) so the
+                  list scrolls reliably on touch — nested Radix portals broke iOS scroll. */}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 text-xs"
+                  onClick={() => setManageOpen(true)}
+                >
+                  <Plus className="me-1 h-3 w-3" /> Manage
+                </Button>
+              </div>
+              {(task.findingIds?.length ?? 0) === 0 ? (
+                <p className="text-xs text-muted-foreground">No findings linked yet.</p>
+              ) : (
+                <div className="space-y-1">
+                  {(task.findingIds ?? []).map((id) => {
+                    const f = findings.find((x) => x.id === id)
+                    return (
+                      <div
+                        key={id}
+                        className="flex items-center gap-2 rounded bg-muted/30 px-2 py-1 text-xs"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <span className="block truncate">{f ? f.title || f.message : id}</span>
+                          <span className="text-muted-foreground flex items-center gap-2 truncate text-[10px]">
+                            {f?.asset?.name && <span className="truncate">{f.asset.name}</span>}
+                            {f?.assigned_to ? (
+                              <span className="flex shrink-0 items-center gap-0.5">
+                                <UserPlus className="h-2.5 w-2.5" />
+                                {memberNameById.get(f.assigned_to) ||
+                                  f.assigned_to_user?.name ||
+                                  'Assigned'}
+                              </span>
+                            ) : null}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          className="text-muted-foreground hover:text-foreground"
+                          aria-label="Unlink finding"
+                          onClick={() =>
+                            onPatch(task, {
+                              finding_filter: {
+                                finding_ids: (task.findingIds ?? []).filter((x) => x !== id),
+                              },
+                            })
+                          }
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Progress */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-medium text-muted-foreground">Progress</p>
+                <span className="text-xs font-medium tabular-nums">{taskProgress}%</span>
+              </div>
+              <Progress value={taskProgress} className="h-1.5" />
+            </div>
+
+            <Separator />
+
+            {/* Status Actions */}
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-muted-foreground">Actions</p>
+              <div className="flex flex-wrap gap-2">
+                {actions.map(({ action, label, icon: Icon, variant }) => (
+                  <Button
+                    key={action}
+                    variant={variant}
+                    size="sm"
+                    className="h-8"
+                    onClick={() => onAction(action, task)}
+                  >
+                    <Icon className="me-1.5 h-3.5 w-3.5" />
+                    {label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Metadata */}
+            <div className="grid grid-cols-2 gap-3">
+              <InfoCard
+                icon={<Hash className="h-3.5 w-3.5 text-muted-foreground" />}
+                label="Task ID"
+              >
+                <p className="font-mono text-[11px] truncate">{task.id}</p>
+              </InfoCard>
+              <InfoCard
+                icon={<Clock className="h-3.5 w-3.5 text-muted-foreground" />}
+                label="Created"
+              >
+                <p className="text-sm">
+                  {safeFormatDate(task.createdAt, { month: 'short', day: 'numeric' }) ?? '--'}
+                </p>
+                {task.createdAt && (
+                  <p className="text-[11px] text-muted-foreground">{timeAgo(task.createdAt)}</p>
+                )}
+              </InfoCard>
+            </div>
+
+            {/* Danger Zone */}
+            <Can permission={Permission.RemediationWrite}>
+              <Separator />
+              <div className="flex items-center justify-between rounded-lg border border-red-500/15 bg-red-500/5 p-3">
+                <div>
+                  <p className="text-sm font-medium text-red-500">Delete task</p>
+                  <p className="text-xs text-muted-foreground">Permanently remove this task</p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 border-red-500/30 text-red-500 hover:bg-red-500/10"
+                  onClick={() => onDelete(task)}
+                >
+                  <Trash2 className="me-1.5 h-3.5 w-3.5" />
+                  Delete
+                </Button>
+              </div>
+            </Can>
+          </div>
         </div>
       </SheetContent>
     </Sheet>
@@ -1670,7 +1998,6 @@ interface TaskFormDialogProps {
   setFormData: (data: TaskFormData) => void
   dueDateOpen: boolean
   setDueDateOpen: (open: boolean) => void
-  assignees: string[]
   findings: Array<{ id: string; title?: string; message?: string; severity?: Severity }>
   onSubmit: () => void
   onCancel: () => void
@@ -1684,7 +2011,6 @@ function TaskFormDialog({
   setFormData,
   dueDateOpen,
   setDueDateOpen,
-  assignees,
   findings,
   onSubmit,
   onCancel,
@@ -1727,6 +2053,10 @@ function TaskFormDialog({
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
             />
           </div>
+          {/* Only fields the backend actually persists are shown. Severity
+              (derived from priority), Estimated Hours (no column), and the free-
+              text Assignee (broken end-to-end — empty picker, dropped on save,
+              never returned) were removed; a real assignee picker is a follow-up. */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label className="text-xs">Priority</Label>
@@ -1746,45 +2076,7 @@ function TaskFormDialog({
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">Severity</Label>
-              <Select
-                value={formData.severity}
-                onValueChange={(v) => setFormData({ ...formData, severity: v as Severity })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="critical">Critical</SelectItem>
-                  <SelectItem value="high">High</SelectItem>
-                  <SelectItem value="medium">Medium</SelectItem>
-                  <SelectItem value="low">Low</SelectItem>
-                  <SelectItem value="info">Info</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label className="text-xs">Assignee *</Label>
-              <Select
-                value={formData.assigneeName}
-                onValueChange={(v) => setFormData({ ...formData, assigneeName: v })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select assignee" />
-                </SelectTrigger>
-                <SelectContent>
-                  {assignees.map((name) => (
-                    <SelectItem key={name} value={name}>
-                      {name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Due Date *</Label>
+              <Label className="text-xs">Due Date</Label>
               <Popover open={dueDateOpen} onOpenChange={setDueDateOpen}>
                 <PopoverTrigger asChild>
                   <Button
@@ -1809,35 +2101,89 @@ function TaskFormDialog({
               </Popover>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label className="text-xs">Link to Finding</Label>
-              <Select
-                value={formData.findingId}
-                onValueChange={(v) => setFormData({ ...formData, findingId: v })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select finding" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">None</SelectItem>
-                  {findings.map((f) => (
-                    <SelectItem key={f.id} value={f.id}>
-                      {(f.title || f.message || f.id).substring(0, 50)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Estimated Hours</Label>
-              <Input
-                type="number"
-                placeholder="e.g., 8"
-                value={formData.estimatedHours}
-                onChange={(e) => setFormData({ ...formData, estimatedHours: e.target.value })}
+          <div className="space-y-1.5">
+            <Label className="text-xs">Assignee</Label>
+            <div>
+              <AssigneeSelect
+                variant="outline"
+                showFullName
+                placeholder="Assign to…"
+                value={
+                  formData.assignedTo
+                    ? { id: formData.assignedTo, name: formData.assigneeName || 'Assigned' }
+                    : null
+                }
+                onChange={(user) =>
+                  setFormData({
+                    ...formData,
+                    assignedTo: user?.id ?? '',
+                    assigneeName: user?.name ?? '',
+                  })
+                }
               />
             </div>
+          </div>
+          <div className="space-y-1.5 min-w-0">
+            <Label className="text-xs">
+              Link Findings
+              {formData.findingIds.length > 0 ? ` (${formData.findingIds.length})` : ''}
+            </Label>
+            {/* A remediation task can cover MANY findings (one fix → many). Multi-
+                select → finding_filter.finding_ids (backend counts + resolves all). */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="h-9 w-full justify-between font-normal"
+                  type="button"
+                >
+                  <span className="truncate">
+                    {formData.findingIds.length === 0
+                      ? 'Select findings…'
+                      : `${formData.findingIds.length} finding${formData.findingIds.length > 1 ? 's' : ''} selected`}
+                  </span>
+                  <ChevronRight className="h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[--radix-popover-trigger-width] p-1" align="start">
+                <div className="max-h-64 overflow-y-auto">
+                  {findings.length === 0 ? (
+                    <p className="p-2 text-xs text-muted-foreground">No findings available</p>
+                  ) : (
+                    findings.map((f) => {
+                      const checked = formData.findingIds.includes(f.id)
+                      return (
+                        <button
+                          key={f.id}
+                          type="button"
+                          className="flex w-full items-start gap-2 rounded px-2 py-1.5 text-start text-sm hover:bg-muted"
+                          onClick={() =>
+                            setFormData({
+                              ...formData,
+                              findingIds: checked
+                                ? formData.findingIds.filter((id) => id !== f.id)
+                                : [...formData.findingIds, f.id],
+                            })
+                          }
+                        >
+                          <span
+                            aria-hidden="true"
+                            className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-[4px] border ${
+                              checked
+                                ? 'border-primary bg-primary text-primary-foreground'
+                                : 'border-input'
+                            }`}
+                          >
+                            {checked && <Check className="h-3 w-3" />}
+                          </span>
+                          <span className="line-clamp-2">{f.title || f.message || f.id}</span>
+                        </button>
+                      )
+                    })
+                  )}
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
         </div>
         <DialogFooter>

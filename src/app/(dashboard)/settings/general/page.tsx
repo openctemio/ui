@@ -101,11 +101,18 @@ export default function GeneralSettingsPage() {
     // Save display settings to localStorage
     saveDisplaySettings(display)
 
-    // Save tenant settings to server
+    // Save tenant settings to server.
+    // NOTE: the backend PATCH /settings/general is a full-struct replace, not a
+    // merge — any GeneralSettings field omitted from the body is reset to "".
+    // This page only edits timezone/language, so we must echo back the current
+    // industry/website (edited on the Organization page) or Save would silently
+    // wipe them.
     try {
       await updateGeneralSettings({
         timezone,
         language,
+        industry: settings?.general.industry ?? '',
+        website: settings?.general.website ?? '',
       })
       toast.success('Settings saved successfully')
     } catch (err) {

@@ -4,22 +4,16 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Input } from '@/components/ui/input'
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import {
   Users,
   UserPlus,
   Trash2,
-  MoreHorizontal,
   Crown,
   User,
   Search,
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react'
+import { DataTableRowActions, EmptyState } from '@/features/shared'
 import { MemberRoleConfig, getInitials, type GroupMember } from '@/features/access-control'
 import { useState, useEffect } from 'react'
 
@@ -94,10 +88,7 @@ export function MembersTab({
           ))}
         </div>
       ) : totalCount === 0 ? (
-        <div className="text-center py-8 text-muted-foreground">
-          <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
-          <p>No members in this group yet</p>
-        </div>
+        <EmptyState icon={Users} title="No members in this group yet" card={false} />
       ) : filteredMembers.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground">
           <p>No members found matching &quot;{searchQuery}&quot;</p>
@@ -139,24 +130,17 @@ export function MembersTab({
                     {member.role === 'member' && <User className="h-3 w-3 me-1" />}
                     {roleConfig.label}
                   </Badge>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem
-                        className="text-red-400"
-                        onClick={() =>
-                          onRemoveMember(member.user_id || member.user?.id || '', name)
-                        }
-                      >
-                        <Trash2 className="me-2 h-4 w-4" />
-                        Remove
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <DataTableRowActions
+                    actions={[
+                      {
+                        label: 'Remove',
+                        icon: Trash2,
+                        destructive: true,
+                        onClick: () =>
+                          onRemoveMember(member.user_id || member.user?.id || '', name),
+                      },
+                    ]}
+                  />
                 </div>
               </div>
             )

@@ -367,6 +367,58 @@ export function useApplyPreset(tenantIdOrSlug: string | undefined, presetId: str
 }
 
 // ============================================
+// PRODUCT-BUNDLE SUBSCRIPTION
+// ============================================
+//
+// A tenant subscribes to one or more product bundles (ASM, ASPM, VM, …).
+// The enabled-module set is resolved LIVE as the union of the subscribed
+// bundles (+core+deps), with per-module toggles layered on top. An empty
+// subscription = every module on (the default). Source of truth for the
+// catalog is the same static Go presets.
+
+export interface ModuleBundlesResponse {
+  /** Currently-subscribed bundle IDs (empty = every module on). */
+  subscribed: string[]
+  /** The bundle catalog (same shape as presets). */
+  available: ModulePreset[]
+}
+
+/** Fetches the tenant's current bundle subscription + the bundle catalog. */
+export function useModuleBundles(tenantIdOrSlug: string | undefined) {
+  const { data, error, isLoading, mutate } = useSWR<ModuleBundlesResponse>(
+    tenantIdOrSlug ? tenantEndpoints.modulesBundles(tenantIdOrSlug) : null,
+    fetcher,
+    { revalidateOnFocus: false }
+  )
+  return {
+    subscribed: data?.subscribed ?? [],
+    available: data?.available ?? [],
+    isLoading,
+    isError: !!error,
+    mutate,
+  }
+}
+
+async function subscribeBundles(url: string, { arg }: { arg: { bundle_ids: string[] } }) {
+  return fetcherWithOptions<TenantModuleListResponse>(url, {
+    method: 'POST',
+    body: JSON.stringify(arg),
+  })
+}
+
+/**
+ * Replaces the tenant's bundle subscription. Passing [] clears it (every
+ * module on). Returns the fresh module config so the caller can refresh.
+ */
+export function useSubscribeBundles(tenantIdOrSlug: string | undefined) {
+  const { trigger, isMutating, error } = useSWRMutation(
+    tenantIdOrSlug ? tenantEndpoints.modulesBundles(tenantIdOrSlug) : null,
+    subscribeBundles
+  )
+  return { subscribeBundles: trigger, isSubscribing: isMutating, error }
+}
+
+// ============================================
 // REAL-TIME MODULE INVALIDATION (WebSocket)
 // ============================================
 //

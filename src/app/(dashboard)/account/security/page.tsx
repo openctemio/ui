@@ -13,16 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -39,6 +30,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { getErrorMessage } from '@/lib/api/error-handler'
+import { EmptyState } from '@/features/shared'
 import { useProfile } from '@/features/account'
 import {
   useChangePassword,
@@ -249,9 +241,7 @@ export default function SecurityPage() {
               <Skeleton className="h-20 w-full" />
             </div>
           ) : sessions.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-8">
-              No active sessions found
-            </p>
+            <EmptyState icon={Monitor} title="No active sessions found" card={false} />
           ) : (
             <div className="space-y-4">
               {/* Current Session */}
@@ -387,53 +377,38 @@ export default function SecurityPage() {
       </Dialog>
 
       {/* Revoke Session Dialog */}
-      <AlertDialog
+      <ConfirmDialog
         open={!!sessionToRevoke}
         onOpenChange={(open) => !open && setSessionToRevoke(null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Revoke Session</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will sign out the device. You will need to sign in again on that device.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleRevokeSession}
-              disabled={isRevoking}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {isRevoking && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
-              Revoke
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        title="Revoke Session"
+        desc="This will sign out the device. You will need to sign in again on that device."
+        confirmText={
+          <>
+            {isRevoking && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
+            Revoke
+          </>
+        }
+        destructive
+        isLoading={isRevoking}
+        handleConfirm={handleRevokeSession}
+      />
 
       {/* Revoke All Sessions Dialog */}
-      <AlertDialog open={showRevokeAllDialog} onOpenChange={setShowRevokeAllDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Sign Out All Other Devices</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will sign out all devices except this one. They will need to sign in again.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleRevokeAllSessions}
-              disabled={isRevokingAll}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {isRevokingAll && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
-              Sign Out All
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={showRevokeAllDialog}
+        onOpenChange={setShowRevokeAllDialog}
+        title="Sign Out All Other Devices"
+        desc="This will sign out all devices except this one. They will need to sign in again."
+        confirmText={
+          <>
+            {isRevokingAll && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
+            Sign Out All
+          </>
+        }
+        destructive
+        isLoading={isRevokingAll}
+        handleConfirm={handleRevokeAllSessions}
+      />
     </div>
   )
 }

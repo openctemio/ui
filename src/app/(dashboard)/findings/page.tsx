@@ -1,22 +1,29 @@
 'use client'
 
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useUrlParams } from '@/hooks/use-url-param'
+import { useUrlParams, useUrlFilter, useUrlFilterList } from '@/hooks/use-url-param'
+import {
+  useFindingSourcesApi,
+  groupFindingSourcesByCategory,
+} from '@/features/config/api/finding-source-api'
 import { useDebounce } from '@/hooks/use-debounce'
 import { ColumnDef } from '@tanstack/react-table'
 import { Main } from '@/components/layout'
 import { PageHeader, SeverityBadge, DataTable, DataTableColumnHeader } from '@/features/shared'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
@@ -41,6 +48,7 @@ import {
   ClipboardList,
   AlertOctagon,
   Ticket,
+  Wrench,
 } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import {
@@ -55,6 +63,7 @@ import { AssigneeSelect } from '@/features/findings/components/assignee-select'
 import { FindingGroupsTab } from '@/features/findings/components/finding-groups-tab'
 import { MarkFixedDialog } from '@/features/findings/components/mark-fixed-dialog'
 import { CreateTicketDialog } from '@/features/findings/components/create-ticket-dialog'
+import { LinkFindingsToRemediationDialog } from '@/features/remediation/components/link-findings-dialog'
 import { PendingReviewTab } from '@/features/findings/components/pending-review-tab'
 import {
   usePendingVerificationCount,
@@ -65,16 +74,7 @@ import {
   useFindingStatsApi,
   invalidateFindingsCache,
 } from '@/features/findings/api/use-findings-api'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import type {
   ApiFinding,
   FindingApiFilters,
@@ -286,20 +286,39 @@ function FindingsContent() {
 
   const [selectedFinding, setSelectedFinding] = useState<Finding | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
-  const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({})
-  const [severityTab, setSeverityTab] = useState<string>('all')
+  // Selected finding IDs, lifted from the DataTable via onSelectionChange. The
+  // table owns its checkbox state internally; previously nothing synced it out
+  // so selectedCount was always 0 and the bulk-action bar never appeared.
+  const [selectedFindingIds, setSelectedFindingIds] = useState<string[]>([])
+  // Filters live in the URL so a view can be linked to. "The criticals from our
+  // VA scanner" should be a link someone can paste, not a sequence of clicks to
+  // reproduce.
+  const [severityTab, setSeverityTab] = useUrlFilter('severity', 'all')
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [findingToDelete, setFindingToDelete] = useState<Finding | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
-  const [statusFilter, setStatusFilter] = useState<string>('all')
-  const [sourceFilter, setSourceFilter] = useState<string>('all')
-  const [searchQuery, setSearchQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useUrlFilter('status', 'all')
+  // Multiple sources at once: "everything from code scanning" is one question,
+  // and it spans sast and secret. Comma-separated, matching what the API takes.
+  const [sourceFilter, setSourceFilter] = useUrlFilterList('sources')
+  const [priorityFilter, setPriorityFilter] = useUrlFilter('priority', 'all')
+  const [searchQuery, setSearchQuery] = useUrlFilter('q', '')
   // Debounce so typing doesn't fire a backend list request per keystroke.
   const debouncedSearch = useDebounce(searchQuery, 300)
+  // Server-side pagination state. The list is fetched one page at a time from
+  // the API (was: fetch first 100 + client-paginate, which capped the table at
+  // 100 rows even when the tenant had thousands of findings).
+  const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 20 })
   const [mainTab, setMainTab] = useState<'findings' | 'groups' | 'pending'>('findings')
   const [markFixedGroup, setMarkFixedGroup] = useState<FindingGroup | null>(null)
   const [ticketFinding, setTicketFinding] = useState<Finding | null>(null)
+  // Findings selected to spin up (or join) a remediation task. Non-null = dialog open.
+  const [remedContext, setRemedContext] = useState<{
+    ids: string[]
+    name?: string
+    priority?: string
+  } | null>(null)
   const { hasPermission } = usePermissions()
   const pendingCount = usePendingVerificationCount()
 
@@ -307,9 +326,58 @@ function FindingsContent() {
   const HIDDEN_STATUSES = useMemo(() => ['draft', 'in_review'], [])
 
   // Build API filters
+  // The source catalog is data, not a hardcoded list. The previous inline list
+  // had drifted: it omitted cspm, which live findings actually use, so those
+  // findings could not be filtered for at all.
+  const { data: sourceCatalog } = useFindingSourcesApi()
+
+  const sourceGroups = useMemo(() => {
+    const grouped = groupFindingSourcesByCategory(sourceCatalog?.data ?? [])
+    return Array.from(grouped.entries()).map(([code, group]) => ({
+      code,
+      label: group.label,
+      options: group.options,
+      codes: group.options.map((o) => o.value),
+    }))
+  }, [sourceCatalog?.data])
+
+  const sourceLabelByCode = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const g of sourceGroups) {
+      for (const o of g.options) map.set(o.value, o.label)
+    }
+    return map
+  }, [sourceGroups])
+
+  const sourceLabel = useMemo(() => {
+    if (sourceFilter.length === 0) return 'All'
+    // Name the group when the selection is exactly one, so "Code Scanning" reads
+    // better than "SAST +1".
+    const match = sourceGroups.find(
+      (g) =>
+        g.codes.length === sourceFilter.length && g.codes.every((c) => sourceFilter.includes(c))
+    )
+    if (match) return match.label
+    const [first, ...rest] = sourceFilter
+    const firstLabel = sourceLabelByCode.get(first) ?? first.toUpperCase()
+    return rest.length > 0 ? `${firstLabel} +${rest.length}` : firstLabel
+  }, [sourceFilter, sourceGroups, sourceLabelByCode])
+
+  const toggleSource = useCallback(
+    (code: string) => {
+      // Functional update, not a read of `sourceFilter` from render scope: two
+      // toggles resolved against the same snapshot would lose the first.
+      setSourceFilter((prev) =>
+        prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code]
+      )
+    },
+    [setSourceFilter]
+  )
+
   const apiFilters = useMemo((): FindingApiFilters => {
     const filters: FindingApiFilters = {
-      per_page: 100,
+      page: pagination.pageIndex + 1,
+      per_page: pagination.pageSize,
     }
     if (assetIdFilter) filters.asset_id = assetIdFilter
     if (sourceIdFilter) filters.source_id = sourceIdFilter
@@ -325,13 +393,19 @@ function FindingsContent() {
       // Default: exclude draft/in_review (pentest WIP not ready for dashboard)
       filters.exclude_statuses = HIDDEN_STATUSES
     }
-    if (sourceFilter !== 'all') {
-      filters.sources = [
-        sourceFilter as FindingApiFilters['sources'] extends (infer U)[] ? U : never,
-      ]
+    if (sourceFilter.length > 0) {
+      filters.sources = sourceFilter as NonNullable<FindingApiFilters['sources']>
     }
     if (debouncedSearch.trim()) {
       filters.search = debouncedSearch.trim()
+    }
+    // CTEM priority filter (RFC-017)
+    if (priorityFilter === 'kev') {
+      filters.is_in_kev = true
+    } else if (priorityFilter === 'reachable') {
+      filters.is_reachable = true
+    } else if (priorityFilter !== 'all') {
+      filters.priority_classes = [priorityFilter]
     }
     return filters
   }, [
@@ -341,8 +415,25 @@ function FindingsContent() {
     severityTab,
     statusFilter,
     sourceFilter,
+    priorityFilter,
     debouncedSearch,
     HIDDEN_STATUSES,
+    pagination,
+  ])
+
+  // Any filter change resets to the first page — otherwise a user on page 8 of
+  // "All" who picks a filter with only 2 pages would sit on an empty page.
+  useEffect(() => {
+    setPagination((p) => (p.pageIndex === 0 ? p : { ...p, pageIndex: 0 }))
+  }, [
+    assetIdFilter,
+    sourceIdFilter,
+    scanIdFilter,
+    severityTab,
+    statusFilter,
+    sourceFilter,
+    priorityFilter,
+    debouncedSearch,
   ])
 
   // Fetch finding stats. Pass `assetId` so the severity cards reflect
@@ -416,7 +507,11 @@ function FindingsContent() {
     }
   }, [findingStats])
 
-  const selectedCount = Object.keys(rowSelection).filter((k) => rowSelection[k]).length
+  const selectedCount = selectedFindingIds.length
+  const selectedFindings = useMemo(
+    () => findings.filter((f) => selectedFindingIds.includes(f.id)),
+    [selectedFindingIds, findings]
+  )
 
   const clearFilters = () => {
     router.push('/findings')
@@ -480,8 +575,7 @@ function FindingsContent() {
   }
 
   const handleBulkAssign = async (userId: string) => {
-    const selectedIds = Object.keys(rowSelection).filter((k) => rowSelection[k])
-    const findingIds = selectedIds.map((idx) => findings[parseInt(idx)]?.id).filter(Boolean)
+    const findingIds = selectedFindingIds
     if (findingIds.length === 0 || !userId.trim()) return
 
     try {
@@ -493,7 +587,7 @@ function FindingsContent() {
       })
       if (!response.ok) throw new Error('Failed to assign findings')
       toast.success(`Assigned ${findingIds.length} findings`)
-      setRowSelection({})
+      setSelectedFindingIds([])
       mutateFindings()
     } catch (error) {
       toast.error(getErrorMessage(error, 'Failed to assign findings'))
@@ -501,8 +595,7 @@ function FindingsContent() {
   }
 
   const handleBulkStatusChange = async (status: string) => {
-    const selectedIds = Object.keys(rowSelection).filter((k) => rowSelection[k])
-    const findingIds = selectedIds.map((idx) => findings[parseInt(idx)]?.id).filter(Boolean)
+    const findingIds = selectedFindingIds
     if (findingIds.length === 0) return
 
     try {
@@ -514,7 +607,7 @@ function FindingsContent() {
       })
       if (!response.ok) throw new Error('Failed to update findings')
       toast.success(`Updated ${findingIds.length} findings to ${status}`)
-      setRowSelection({})
+      setSelectedFindingIds([])
       mutateFindings()
       mutateStats()
     } catch (error) {
@@ -608,11 +701,29 @@ function FindingsContent() {
     }
   }
 
+  // Open the "remediate findings" dialog, pre-filled from the selection: the name
+  // is derived from the finding(s) and the priority from the highest severity, so
+  // the mobilise step is one click from where a finding lives.
+  const openRemediationFor = useCallback((selected: Finding[]) => {
+    if (selected.length === 0) return
+    const order = ['critical', 'high', 'medium', 'low']
+    const top = [...selected]
+      .map((f) => String(f.severity))
+      .sort((a, b) => order.indexOf(a) - order.indexOf(b))[0]
+    const priority = top === 'critical' ? 'urgent' : order.includes(top) ? top : 'medium'
+    const name =
+      selected.length === 1 ? `Fix: ${selected[0].title}` : `Remediate ${selected.length} findings`
+    setRemedContext({ ids: selected.map((f) => f.id), name, priority })
+  }, [])
+
   const handleRowAction = useCallback(
     (action: string, finding: Finding) => {
       switch (action) {
         case 'view':
           handleRowClick(finding)
+          break
+        case 'remediate':
+          openRemediationFor([finding])
           break
         case 'copy_id':
           copyToClipboard(finding.id)
@@ -640,12 +751,17 @@ function FindingsContent() {
           toast.info(`Action: ${action}`, { description: finding.title })
       }
     },
-    [handleRowClick]
+    [handleRowClick, openRemediationFor]
   )
 
   // Define columns for DataTable
-  const columns: ColumnDef<Finding>[] = useMemo(
-    () => [
+  // Priority is the RFC-004 P0–P3 class; it's only populated once the
+  // classifier has run. When nothing in view has one, we drop the column
+  // instead of rendering a full column of "—" (it returns once data exists).
+  const hasAnyPriority = useMemo(() => findings.some((f) => f.priorityClass), [findings])
+
+  const columns: ColumnDef<Finding>[] = useMemo(() => {
+    const cols: ColumnDef<Finding>[] = [
       {
         id: 'select',
         header: ({ table }) => (
@@ -786,11 +902,37 @@ function FindingsContent() {
         id: 'asset',
         accessorFn: (row) => row.assets[0]?.name || '-',
         header: ({ column }) => <DataTableColumnHeader column={column} title="Location" />,
-        cell: ({ row }) => (
-          <span className="text-sm font-mono text-muted-foreground truncate max-w-[200px] block">
-            {row.getValue('asset')}
-          </span>
-        ),
+        cell: ({ row }) => {
+          const asset = row.original.assets[0]
+          const name = asset?.name
+          if (!name || name === '-') {
+            return <span className="text-muted-foreground text-sm">—</span>
+          }
+          // The transform falls back to the raw asset_id (a UUID) when the API
+          // response carries no asset name or file path — showing that verbatim
+          // reads as broken data. Detect it (name === the asset id) and render a
+          // compact, clickable asset reference instead of the bare UUID.
+          if (asset?.id && name === asset.id) {
+            return (
+              <Link
+                href={`/assets/${asset.id}`}
+                title={asset.id}
+                className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-sm hover:underline"
+              >
+                <ExternalLink className="h-3 w-3 shrink-0" />
+                <span className="font-mono">{asset.id.slice(0, 8)}…</span>
+              </Link>
+            )
+          }
+          return (
+            <span
+              className="text-muted-foreground block max-w-[200px] truncate font-mono text-sm"
+              title={name}
+            >
+              {name}
+            </span>
+          )
+        },
       },
       {
         accessorKey: 'status',
@@ -838,6 +980,12 @@ function FindingsContent() {
                   <Ticket className="me-2 h-4 w-4" />
                   Create Jira Ticket
                 </DropdownMenuItem>
+                {hasPermission('findings:remediation:write') && (
+                  <DropdownMenuItem onClick={() => handleRowAction('remediate', finding)}>
+                    <Wrench className="me-2 h-4 w-4" />
+                    Add to remediation
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => handleRowAction('copy_id', finding)}>
                   <Copy className="me-2 h-4 w-4" />
@@ -869,9 +1017,11 @@ function FindingsContent() {
           )
         },
       },
-    ],
-    [handleRowAction, handleRowClick, hasPermission]
-  )
+    ]
+    return hasAnyPriority
+      ? cols
+      : cols.filter((c) => !('accessorKey' in c) || c.accessorKey !== 'priorityClass')
+  }, [handleRowAction, handleRowClick, hasPermission, hasAnyPriority])
 
   // Error state
   if (error) {
@@ -1101,29 +1251,76 @@ function FindingsContent() {
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="sm">
                     <Filter className="me-2 h-4 w-4" />
-                    Source: {sourceFilter === 'all' ? 'All' : sourceFilter.toUpperCase()}
+                    Source: {sourceLabel}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="max-h-96 overflow-y-auto">
+                  <DropdownMenuItem onClick={() => setSourceFilter([])}>
+                    All sources
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  {sourceGroups.length === 0 ? (
+                    <DropdownMenuItem disabled>No sources available</DropdownMenuItem>
+                  ) : (
+                    sourceGroups.map((group) => (
+                      <DropdownMenuGroup key={group.code}>
+                        <DropdownMenuLabel
+                          className="cursor-pointer text-xs font-medium hover:underline"
+                          onClick={() => setSourceFilter(group.codes)}
+                        >
+                          {group.label}
+                        </DropdownMenuLabel>
+                        {group.options.map((opt) => (
+                          <DropdownMenuCheckboxItem
+                            key={opt.value}
+                            checked={sourceFilter.includes(opt.value)}
+                            onCheckedChange={() => toggleSource(opt.value)}
+                            onSelect={(e) => e.preventDefault()}
+                          >
+                            {opt.label}
+                          </DropdownMenuCheckboxItem>
+                        ))}
+                      </DropdownMenuGroup>
+                    ))
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <Filter className="me-2 h-4 w-4" />
+                    Priority:{' '}
+                    {priorityFilter === 'all'
+                      ? 'All'
+                      : priorityFilter === 'kev'
+                        ? 'KEV'
+                        : priorityFilter === 'reachable'
+                          ? 'Reachable'
+                          : priorityFilter.toUpperCase()}
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
-                  <DropdownMenuItem onClick={() => setSourceFilter('all')}>All</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setPriorityFilter('all')}>All</DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => setSourceFilter('pentest')}>
-                    Pentest
+                  <DropdownMenuItem onClick={() => setPriorityFilter('P0')}>
+                    P0 — Critical / Act now
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setSourceFilter('sast')}>SAST</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setSourceFilter('dast')}>DAST</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setSourceFilter('sca')}>SCA</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setSourceFilter('secret')}>
-                    Secret
+                  <DropdownMenuItem onClick={() => setPriorityFilter('P1')}>
+                    P1 — High
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setSourceFilter('iac')}>IaC</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setSourceFilter('container')}>
-                    Container
+                  <DropdownMenuItem onClick={() => setPriorityFilter('P2')}>
+                    P2 — Medium
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setSourceFilter('manual')}>
-                    Manual
+                  <DropdownMenuItem onClick={() => setPriorityFilter('P3')}>
+                    P3 — Low
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setSourceFilter('easm')}>EASM</DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => setPriorityFilter('kev')}>
+                    In CISA KEV
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setPriorityFilter('reachable')}>
+                    Reachable
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -1140,6 +1337,16 @@ function FindingsContent() {
                         if (user) void handleBulkAssign(user.id)
                       }}
                     />
+                    {hasPermission('findings:remediation:write') && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openRemediationFor(selectedFindings)}
+                      >
+                        <Wrench className="me-2 h-4 w-4" />
+                        Create remediation task
+                      </Button>
+                    )}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="outline" size="sm">
@@ -1161,7 +1368,7 @@ function FindingsContent() {
                             intentionally not offered as a bulk action. */}
                       </DropdownMenuContent>
                     </DropdownMenu>
-                    <Button variant="outline" size="sm" onClick={() => setRowSelection({})}>
+                    <Button variant="outline" size="sm" onClick={() => setSelectedFindingIds([])}>
                       Clear Selection
                     </Button>
                   </div>
@@ -1175,52 +1382,8 @@ function FindingsContent() {
               </div>
             ) : (
               <>
-                {/* Stats Cards - Always visible once loaded */}
-                {/* Mobile: 2x2 grid showing Critical, High, Medium, Low */}
-                {/* Desktop: 5 columns showing all severities */}
-                <div className="mt-6 grid gap-3 sm:gap-4 grid-cols-2 sm:grid-cols-4 lg:grid-cols-5">
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardDescription>Critical</CardDescription>
-                      <CardTitle className="text-2xl sm:text-3xl text-red-500">
-                        {stats.bySeverity.critical}
-                      </CardTitle>
-                    </CardHeader>
-                  </Card>
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardDescription>High</CardDescription>
-                      <CardTitle className="text-2xl sm:text-3xl text-orange-500">
-                        {stats.bySeverity.high}
-                      </CardTitle>
-                    </CardHeader>
-                  </Card>
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardDescription>Medium</CardDescription>
-                      <CardTitle className="text-2xl sm:text-3xl text-yellow-500">
-                        {stats.bySeverity.medium}
-                      </CardTitle>
-                    </CardHeader>
-                  </Card>
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardDescription>Low</CardDescription>
-                      <CardTitle className="text-2xl sm:text-3xl text-blue-500">
-                        {stats.bySeverity.low}
-                      </CardTitle>
-                    </CardHeader>
-                  </Card>
-                  {/* Info card - hidden on mobile to maintain 2x2 grid */}
-                  <Card className="hidden lg:block">
-                    <CardHeader className="pb-2">
-                      <CardDescription>Info</CardDescription>
-                      <CardTitle className="text-3xl text-gray-500">
-                        {stats.bySeverity.info}
-                      </CardTitle>
-                    </CardHeader>
-                  </Card>
-                </div>
+                {/* Severity stat-cards removed — the counts already live in the
+                    severity filter tabs below, so showing them twice was noise. */}
 
                 {/* Tabs with DataTable */}
                 <Tabs value={severityTab} onValueChange={setSeverityTab} className="mt-6">
@@ -1273,7 +1436,15 @@ function FindingsContent() {
                           <DataTable
                             columns={columns}
                             data={findings}
-                            searchPlaceholder="Search findings..."
+                            showSearch={false}
+                            getRowId={(f) => f.id}
+                            manualPagination
+                            rowCount={findingsResponse?.total ?? 0}
+                            pagination={pagination}
+                            onPaginationChange={setPagination}
+                            onSelectionChange={(rows) =>
+                              setSelectedFindingIds(rows.map((f) => f.id))
+                            }
                             emptyMessage="No findings found"
                             emptyDescription={
                               findings.length === 0
@@ -1323,6 +1494,17 @@ function FindingsContent() {
         />
       )}
 
+      <LinkFindingsToRemediationDialog
+        open={!!remedContext}
+        onOpenChange={(open) => {
+          if (!open) setRemedContext(null)
+        }}
+        findingIds={remedContext?.ids ?? []}
+        suggestedName={remedContext?.name}
+        suggestedPriority={remedContext?.priority}
+        onDone={() => setSelectedFindingIds([])}
+      />
+
       {/* Finding Quick View Drawer */}
       <FindingDetailDrawer
         finding={selectedFinding}
@@ -1345,45 +1527,35 @@ function FindingsContent() {
       />
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Finding?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete this finding. This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          {findingToDelete && (
-            <div className="rounded-lg border bg-muted/50 p-3 my-2">
-              <p className="font-medium truncate">{findingToDelete.title}</p>
-              <p className="text-sm text-muted-foreground">
-                {findingToDelete.severity.toUpperCase()} severity
-                {findingToDelete.scanner && ` · ${findingToDelete.scanner}`}
-              </p>
-            </div>
-          )}
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={(e) => {
-                e.preventDefault()
-                handleDeleteConfirm()
-              }}
-              disabled={isDeleting}
-              className="bg-red-600 hover:bg-red-700 text-white"
-            >
-              {isDeleting ? (
-                <>
-                  <Loader2 className="me-2 h-4 w-4 animate-spin" />
-                  Deleting...
-                </>
-              ) : (
-                'Delete'
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        title="Delete Finding?"
+        desc="This will permanently delete this finding. This action cannot be undone."
+        confirmText={
+          isDeleting ? (
+            <>
+              <Loader2 className="me-2 h-4 w-4 animate-spin" />
+              Deleting...
+            </>
+          ) : (
+            'Delete'
+          )
+        }
+        destructive
+        isLoading={isDeleting}
+        handleConfirm={handleDeleteConfirm}
+      >
+        {findingToDelete && (
+          <div className="rounded-lg border bg-muted/50 p-3 my-2">
+            <p className="font-medium truncate">{findingToDelete.title}</p>
+            <p className="text-sm text-muted-foreground">
+              {findingToDelete.severity.toUpperCase()} severity
+              {findingToDelete.scanner && ` · ${findingToDelete.scanner}`}
+            </p>
+          </div>
+        )}
+      </ConfirmDialog>
     </>
   )
 }

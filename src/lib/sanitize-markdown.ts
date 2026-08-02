@@ -27,6 +27,13 @@ export const DANGEROUS_TAGS: ReadonlySet<string> = new Set([
   'meta',
   'base',
   'form',
+  // SVG/MathML roots carry their own scriptable surface (animation
+  // URL attrs, foreignObject → arbitrary HTML). Not needed for markdown
+  // notes, so drop them wholesale. tagName is lower-cased before lookup,
+  // hence 'foreignobject'.
+  'svg',
+  'math',
+  'foreignobject',
 ])
 
 /** Attributes that hold a URL — need scheme validation. */

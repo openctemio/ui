@@ -93,6 +93,15 @@ function buildFindingsEndpoint(filters?: FindingApiFilters): string {
     params.set('exclude_statuses', filters.exclude_statuses.join(','))
   if (filters.sources?.length) params.set('sources', filters.sources.join(','))
 
+  // CTEM prioritization filters (RFC-017)
+  if (filters.priority_classes?.length)
+    params.set('priority_classes', filters.priority_classes.join(','))
+  if (filters.is_in_kev) params.set('is_in_kev', 'true')
+  if (filters.is_reachable) params.set('is_reachable', 'true')
+  if (filters.epss_min != null) params.set('epss_min', String(filters.epss_min))
+  if (filters.finding_ids?.length) params.set('finding_ids', filters.finding_ids.join(','))
+  if (filters.sort) params.set('sort', filters.sort)
+
   const queryString = params.toString()
   return queryString ? `${baseUrl}?${queryString}` : baseUrl
 }

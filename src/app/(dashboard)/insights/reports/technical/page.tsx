@@ -8,7 +8,6 @@ import { useDashboardStats } from '@/features/dashboard/hooks/use-dashboard-stat
 import { useTenant } from '@/context/tenant-provider'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Progress } from '@/components/ui/progress'
 import {
@@ -27,8 +26,6 @@ import {
 import { cn } from '@/lib/utils'
 import {
   Cpu,
-  Download,
-  FileText,
   AlertTriangle,
   Bug,
   Target,
@@ -36,7 +33,6 @@ import {
   Clock,
   Server,
   GitBranch,
-  Filter,
   BarChart3,
 } from 'lucide-react'
 import { SEVERITY_CHART_COLORS as SEVERITY_COLORS } from '@/lib/severity-colors'
@@ -153,22 +149,7 @@ export default function TechnicalReportsPage() {
       <PageHeader
         title="Technical Reports"
         description="Detailed technical vulnerability assessment reports"
-      >
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" disabled title="Filtering is coming soon">
-            <Filter className="me-2 h-4 w-4" />
-            Filter
-          </Button>
-          <Button size="sm" disabled title="Report generation is coming soon">
-            <FileText className="me-2 h-4 w-4" />
-            Generate Report
-          </Button>
-          <Button variant="outline" size="sm" disabled title="CSV export is coming soon">
-            <Download className="me-2 h-4 w-4" />
-            Export CSV
-          </Button>
-        </div>
-      </PageHeader>
+      />
 
       <div className="mt-6 grid gap-4 md:grid-cols-4">
         <StatsCard
@@ -329,54 +310,6 @@ export default function TechnicalReportsPage() {
           </CardContent>
         </Card>
       )}
-
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            Report Sections
-          </CardTitle>
-          <CardDescription>
-            Technical reports include the following sections. Customize what to include when
-            generating.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {[
-              {
-                name: 'Vulnerability Summary',
-                desc: 'Overview of all findings with severity distribution',
-              },
-              {
-                name: 'Remediation Guidance',
-                desc: 'Step-by-step fix instructions for each finding',
-              },
-              {
-                name: 'Affected Assets',
-                desc: 'Complete list of assets impacted by each vulnerability',
-              },
-              { name: 'CVSS Analysis', desc: 'Detailed CVSS scoring breakdown and attack vectors' },
-              {
-                name: 'Dependency Report',
-                desc: 'Third-party library vulnerabilities and upgrade paths',
-              },
-              {
-                name: 'Configuration Issues',
-                desc: 'Security misconfigurations and hardening recommendations',
-              },
-            ].map((section) => (
-              <div key={section.name} className="rounded-lg border p-3">
-                <div className="flex items-center gap-2">
-                  <Cpu className="text-muted-foreground h-4 w-4" />
-                  <span className="text-sm font-medium">{section.name}</span>
-                </div>
-                <p className="text-muted-foreground mt-1 text-xs">{section.desc}</p>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
     </Main>
   )
 }

@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react'
 import { Main } from '@/components/layout'
-import { PageHeader } from '@/features/shared'
+import { PageHeader, formatRiskScore, getRiskScoreChangeType } from '@/features/shared'
 import { StatsCard } from '@/features/shared/components/stats-card'
 import { useDashboardStats } from '@/features/dashboard/hooks/use-dashboard-stats'
 import { useTenant } from '@/context/tenant-provider'
@@ -146,9 +146,9 @@ export default function ControlGapsPage() {
         />
         <StatsCard
           title="Risk Score"
-          value={stats.assets.riskScore}
+          value={formatRiskScore(stats.assets.riskScore)}
           icon={Target}
-          changeType={stats.assets.riskScore > 70 ? 'negative' : 'positive'}
+          changeType={getRiskScoreChangeType(stats.assets.riskScore)}
           description="Overall risk"
         />
         <StatsCard

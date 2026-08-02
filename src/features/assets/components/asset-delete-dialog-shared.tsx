@@ -1,15 +1,6 @@
 'use client'
 
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 
 interface AssetDeleteDialogSharedProps {
   open: boolean
@@ -29,27 +20,21 @@ export function AssetDeleteDialogShared({
   isSubmitting,
 }: AssetDeleteDialogSharedProps) {
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Delete {typeName}</AlertDialogTitle>
-          <AlertDialogDescription>
-            Are you sure you want to delete{' '}
-            {assetName ? `"${assetName}"` : `this ${typeName.toLowerCase()}`}? This action cannot be
-            undone.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={isSubmitting}>Cancel</AlertDialogCancel>
-          <AlertDialogAction
-            onClick={onConfirm}
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? 'Deleting...' : 'Delete'}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    <ConfirmDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={`Delete ${typeName}`}
+      desc={
+        <>
+          Are you sure you want to delete{' '}
+          {assetName ? `"${assetName}"` : `this ${typeName.toLowerCase()}`}? This action cannot be
+          undone.
+        </>
+      }
+      confirmText={isSubmitting ? 'Deleting...' : 'Delete'}
+      destructive
+      isLoading={isSubmitting}
+      handleConfirm={onConfirm}
+    />
   )
 }

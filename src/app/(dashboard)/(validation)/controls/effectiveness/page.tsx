@@ -1,8 +1,9 @@
 'use client'
 
 import { useMemo } from 'react'
+import { formatChartDate } from '@/lib/format-chart-date'
 import { Main } from '@/components/layout'
-import { PageHeader, StatsCard } from '@/features/shared'
+import { PageHeader, StatsCard, EmptyState } from '@/features/shared'
 import { useDashboardStats } from '@/features/dashboard/hooks/use-dashboard-stats'
 import { useTenant } from '@/context/tenant-provider'
 import {
@@ -146,7 +147,7 @@ export default function ControlEffectivenessPage() {
 
   const trendChartData = useMemo(() => {
     return stats.findingTrend.map((point) => ({
-      date: point.date,
+      date: formatChartDate(point.date),
       total: point.critical + point.high + point.medium + point.low + point.info,
     }))
   }, [stats.findingTrend])
@@ -221,14 +222,11 @@ export default function ControlEffectivenessPage() {
       />
 
       {isEmptyState ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-16">
-            <Shield className="mb-4 h-12 w-12 text-muted-foreground" />
-            <p className="text-muted-foreground text-center">
-              No control data available yet. Run security scans to start measuring effectiveness.
-            </p>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={Shield}
+          title="No control data available yet."
+          description="Run security scans to start measuring effectiveness."
+        />
       ) : (
         <>
           {/* Stats Row */}

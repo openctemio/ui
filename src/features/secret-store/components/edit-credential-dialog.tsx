@@ -410,7 +410,7 @@ export function EditCredentialDialog({
                 <FormLabel>Service Account JSON Key</FormLabel>
                 <FormControl>
                   <Textarea
-                    placeholder='{"type": "service_account", ...}'
+                    placeholder="Paste the full service-account key JSON"
                     className="font-mono text-xs"
                     rows={6}
                     {...field}

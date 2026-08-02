@@ -50,25 +50,25 @@ export default async function OAuthCallbackPage({ params, searchParams }: OAuthC
 
   // Validate provider
   if (!isValidProvider(provider)) {
-    redirect(`/sign-in?error=${encodeURIComponent('Invalid OAuth provider')}`)
+    redirect(`/login?error=${encodeURIComponent('Invalid OAuth provider')}`)
   }
 
   // Handle OAuth error from provider
   if (error) {
     const errorMessage = error_description || error || 'OAuth authentication failed'
-    redirect(`/sign-in?error=${encodeURIComponent(errorMessage)}`)
+    redirect(`/login?error=${encodeURIComponent(errorMessage)}`)
   }
 
   // Validate required parameters
   if (!code || !state) {
-    redirect(`/sign-in?error=${encodeURIComponent('Missing OAuth parameters')}`)
+    redirect(`/login?error=${encodeURIComponent('Missing OAuth parameters')}`)
   }
 
   // Process the OAuth callback
   const result = await handleOAuthCallback(provider, code, state)
 
   if (!result.success) {
-    redirect(`/sign-in?error=${encodeURIComponent(result.error)}`)
+    redirect(`/login?error=${encodeURIComponent(result.error)}`)
   }
 
   // Get the stored redirect destination

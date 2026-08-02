@@ -129,7 +129,7 @@ function SidebarProvider({
             } as React.CSSProperties
           }
           className={cn(
-            'group/sidebar-wrapper has-data-[variant=inset]:bg-sidebar flex min-h-svh w-full',
+            'group/sidebar-wrapper has-data-[variant=inset]:bg-sidebar flex h-svh w-full overflow-hidden',
             className
           )}
           {...props}
@@ -219,7 +219,7 @@ function Sidebar({
       <div
         data-slot="sidebar-container"
         className={cn(
-          'fixed inset-y-0 z-10 hidden h-svh w-(--sidebar-width) transition-[inset-inline,width] duration-200 ease-linear md:flex',
+          'fixed top-0 z-10 hidden h-svh w-(--sidebar-width) transition-[inset-inline,width] duration-200 ease-linear md:flex',
           side === 'left'
             ? 'start-0 group-data-[collapsible=offcanvas]:-start-[calc(var(--sidebar-width))]'
             : 'end-0 group-data-[collapsible=offcanvas]:-end-[calc(var(--sidebar-width))]',
@@ -300,7 +300,7 @@ function SidebarInset({ className, ...props }: React.ComponentProps<'div'>) {
     <div
       data-slot="sidebar-inset"
       className={cn(
-        'bg-background relative flex w-full flex-1 flex-col',
+        'bg-background relative flex w-full min-h-0 flex-1 flex-col overflow-hidden',
         'md:peer-data-[variant=inset]:m-2 md:peer-data-[variant=inset]:ms-0 md:peer-data-[variant=inset]:rounded-xl md:peer-data-[variant=inset]:shadow-sm md:peer-data-[variant=inset]:peer-data-[state=collapsed]:ms-2',
         className
       )}
@@ -359,7 +359,16 @@ function SidebarContent({ className, ...props }: React.ComponentProps<'div'>) {
       data-slot="sidebar-content"
       data-sidebar="content"
       className={cn(
-        'flex min-h-0 flex-1 flex-col overflow-auto',
+        // Block (not flex) scroller: iOS Safari touch-scrolls a block overflow
+        // container reliably but is flaky on a flex one — the nav groups stack
+        // as blocks either way. flex-1 + min-h-0 keep it bounded inside the
+        // fixed sidebar so it scrolls instead of growing.
+        'min-h-0 flex-1 overflow-auto',
+        // Touch-scroll hardening: overscroll-contain stops rubber-band chaining;
+        // a stable scrollbar gutter prevents the content width from oscillating
+        // on scroll — which was animating the buttons' transition-[width] and
+        // making the collapsed icons "wobble".
+        'overscroll-contain [scrollbar-gutter:stable]',
         // Allow scrolling in collapsed icon mode but hide scrollbar for cleaner look
         'group-data-[collapsible=icon]:overflow-y-auto group-data-[collapsible=icon]:no-scrollbar',
         className
@@ -587,11 +596,22 @@ function SidebarMenuSkeleton({
 }: React.ComponentProps<'div'> & {
   showIcon?: boolean
 }) {
-  // Random width between 50 to 90%.
+  // Varied width between 50% and 90% so a column of skeletons reads as text
+  // rather than as identical bars.
+  //
+  // Derived from useId rather than Math.random(): randomness during render is
+  // impure, and it produced a different width on the server than on the
+  // client, which is a hydration mismatch on every page that renders this
+  // skeleton. useId is stable across render and across hydration, and still
+  // differs between siblings.
+  const id = React.useId()
   const width = React.useMemo(() => {
-    // eslint-disable-next-line react-hooks/purity
-    return `${Math.floor(Math.random() * 40) + 50}%`
-  }, [])
+    let hash = 0
+    for (let i = 0; i < id.length; i++) {
+      hash = (hash * 31 + id.charCodeAt(i)) | 0
+    }
+    return `${(Math.abs(hash) % 41) + 50}%`
+  }, [id])
 
   return (
     <div

@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
+import type { ColumnDef } from '@tanstack/react-table'
 import useSWR from 'swr'
 import { Main } from '@/components/layout'
-import { PageHeader } from '@/features/shared'
+import { PageHeader, DataTable, DataTableColumnHeader } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -18,30 +19,13 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Plus, Trash2, FlaskConical } from 'lucide-react'
 import { get, post, del, patch } from '@/lib/api/client'
@@ -69,22 +53,29 @@ interface PaginatedResponse {
 }
 
 const controlTypeColors: Record<string, string> = {
-  preventive: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
-  detective: 'bg-purple-500/10 text-purple-500 border-purple-500/20',
-  corrective: 'bg-orange-500/10 text-orange-500 border-orange-500/20',
-  compensating: 'bg-green-500/10 text-green-500 border-green-500/20',
+  preventive:
+    'bg-blue-500/10 text-blue-500 border-blue-500/20 dark:bg-blue-900/30 dark:text-blue-400',
+  detective:
+    'bg-purple-500/10 text-purple-500 border-purple-500/20 dark:bg-purple-900/30 dark:text-purple-400',
+  corrective:
+    'bg-orange-500/10 text-orange-500 border-orange-500/20 dark:bg-orange-900/30 dark:text-orange-400',
+  compensating:
+    'bg-green-500/10 text-green-500 border-green-500/20 dark:bg-green-900/30 dark:text-green-400',
 }
 
 const statusColors: Record<string, string> = {
-  active: 'bg-green-500/10 text-green-500 border-green-500/20',
+  active:
+    'bg-green-500/10 text-green-500 border-green-500/20 dark:bg-green-900/30 dark:text-green-400',
   inactive: 'bg-muted text-muted-foreground',
-  pending: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20',
+  pending:
+    'bg-yellow-500/10 text-yellow-500 border-yellow-500/20 dark:bg-yellow-900/30 dark:text-yellow-400',
 }
 
 const testResultColors: Record<string, string> = {
-  pass: 'bg-green-500/10 text-green-500 border-green-500/20',
-  fail: 'bg-red-500/10 text-red-500 border-red-500/20',
-  partial: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20',
+  pass: 'bg-green-500/10 text-green-500 border-green-500/20 dark:bg-green-900/30 dark:text-green-400',
+  fail: 'bg-red-500/10 text-red-500 border-red-500/20 dark:bg-red-900/30 dark:text-red-400',
+  partial:
+    'bg-yellow-500/10 text-yellow-500 border-yellow-500/20 dark:bg-yellow-900/30 dark:text-yellow-400',
 }
 
 function formatDate(dateStr: string | null): string {
@@ -165,6 +156,97 @@ export default function CompensatingControlsPage() {
     }
   }
 
+  const columns = useMemo<ColumnDef<CompensatingControl>[]>(
+    () => [
+      {
+        accessorKey: 'name',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Name" />,
+        cell: ({ row }) => <span className="font-medium">{row.original.name}</span>,
+      },
+      {
+        accessorKey: 'control_type',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Type" />,
+        cell: ({ row }) => (
+          <Badge variant="outline" className={controlTypeColors[row.original.control_type] || ''}>
+            {row.original.control_type}
+          </Badge>
+        ),
+      },
+      {
+        accessorKey: 'status',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
+        cell: ({ row }) => (
+          <Badge variant="outline" className={statusColors[row.original.status] || ''}>
+            {row.original.status}
+          </Badge>
+        ),
+      },
+      {
+        accessorKey: 'reduction_factor',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Reduction" />,
+        cell: ({ row }) => (
+          <span className="font-mono text-sm">{row.original.reduction_factor}%</span>
+        ),
+      },
+      {
+        accessorKey: 'last_tested_at',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Last Tested" />,
+        cell: ({ row }) => (
+          <span className="text-sm text-muted-foreground">
+            {formatDate(row.original.last_tested_at)}
+          </span>
+        ),
+      },
+      {
+        accessorKey: 'test_result',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Test Result" />,
+        cell: ({ row }) =>
+          row.original.test_result ? (
+            <Badge variant="outline" className={testResultColors[row.original.test_result] || ''}>
+              {row.original.test_result}
+            </Badge>
+          ) : (
+            <span className="text-muted-foreground text-sm">-</span>
+          ),
+      },
+      {
+        id: 'actions',
+        header: () => <div className="text-end">Actions</div>,
+        enableSorting: false,
+        enableHiding: false,
+        cell: ({ row }) => {
+          const control = row.original
+          return (
+            <Can permission={Permission.CompensatingControlsWrite}>
+              <div className="flex items-center justify-end gap-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setTestControlId(control.id)
+                    setTestResult('pass')
+                  }}
+                >
+                  <FlaskConical className="me-1 h-3 w-3" />
+                  Test
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setDeleteControl(control)}
+                  className="text-destructive"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            </Can>
+          )
+        },
+      },
+    ],
+    []
+  )
+
   return (
     <>
       <Main>
@@ -196,82 +278,7 @@ export default function CompensatingControlsPage() {
                 No compensating controls yet. Create one to get started.
               </p>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Reduction</TableHead>
-                    <TableHead>Last Tested</TableHead>
-                    <TableHead>Test Result</TableHead>
-                    <TableHead className="text-end">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {controls.map((control) => (
-                    <TableRow key={control.id}>
-                      <TableCell className="font-medium">{control.name}</TableCell>
-                      <TableCell>
-                        <Badge
-                          variant="outline"
-                          className={controlTypeColors[control.control_type] || ''}
-                        >
-                          {control.control_type}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={statusColors[control.status] || ''}>
-                          {control.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <span className="font-mono text-sm">{control.reduction_factor}%</span>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {formatDate(control.last_tested_at)}
-                      </TableCell>
-                      <TableCell>
-                        {control.test_result ? (
-                          <Badge
-                            variant="outline"
-                            className={testResultColors[control.test_result] || ''}
-                          >
-                            {control.test_result}
-                          </Badge>
-                        ) : (
-                          <span className="text-muted-foreground text-sm">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-end">
-                        <Can permission={Permission.CompensatingControlsWrite}>
-                          <div className="flex items-center justify-end gap-1">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                setTestControlId(control.id)
-                                setTestResult('pass')
-                              }}
-                            >
-                              <FlaskConical className="me-1 h-3 w-3" />
-                              Test
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setDeleteControl(control)}
-                              className="text-destructive"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </Can>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <DataTable columns={columns} data={controls} searchPlaceholder="Search controls..." />
             )}
           </CardContent>
         </Card>
@@ -383,26 +390,20 @@ export default function CompensatingControlsPage() {
       </Dialog>
 
       {/* Delete Confirmation */}
-      <AlertDialog open={!!deleteControl} onOpenChange={(open) => !open && setDeleteControl(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Control?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete &quot;{deleteControl?.name}&quot;? This action cannot
-              be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              className="bg-destructive text-destructive-foreground"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={!!deleteControl}
+        onOpenChange={(open) => !open && setDeleteControl(null)}
+        title="Delete Control?"
+        desc={
+          <>
+            Are you sure you want to delete &quot;{deleteControl?.name}&quot;? This action cannot be
+            undone.
+          </>
+        }
+        confirmText="Delete"
+        destructive
+        handleConfirm={handleDelete}
+      />
     </>
   )
 }

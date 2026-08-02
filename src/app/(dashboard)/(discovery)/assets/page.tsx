@@ -13,7 +13,7 @@
 
 import Link from 'next/link'
 import { Main } from '@/components/layout'
-import { PageHeader } from '@/features/shared'
+import { PageHeader, EmptyState } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -27,6 +27,7 @@ import {
   Boxes,
   Database,
   GitBranch,
+  GitMerge,
   Cloud,
   ShieldCheck,
   Network,
@@ -48,6 +49,7 @@ import {
   type AssetType,
 } from '@/features/assets/types/asset.types'
 import { useTenantModules } from '@/features/integrations/api/use-tenant-modules'
+import { useDedupReviews } from '@/features/assets/api/use-asset-dedup'
 
 // Category icons mapping
 const CATEGORY_ICONS: Record<AssetTypeCategory, LucideIcon> = {
@@ -139,6 +141,10 @@ export default function AssetsOverviewPage() {
   // Fetch sub-modules for filtering
   const { subModules } = useTenantModules()
 
+  // Pending duplicate reviews — surfaced as a card here instead of a nav item.
+  const { data: dedupData } = useDedupReviews()
+  const dedupCount = dedupData?.data?.length ?? 0
+
   // Filter all category types based on sub-module visibility
   const filteredCategoryTypes = useMemo(() => {
     // Get asset sub-modules inside useMemo to avoid stale dependency issues
@@ -222,6 +228,35 @@ export default function AssetsOverviewPage() {
           </Link>
         </PageHeader>
 
+        {/* Duplicate review — surfaced contextually (only when the correlator
+            has flagged something) instead of a permanent sidebar item. */}
+        {dedupCount > 0 && (
+          <Card className="mt-6 border-amber-500/40 bg-amber-500/5">
+            <CardContent className="flex flex-col items-start justify-between gap-3 py-4 sm:flex-row sm:items-center">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-amber-500/10">
+                  <GitMerge className="h-5 w-5 text-amber-600 dark:text-amber-500" />
+                </div>
+                <div className="min-w-0">
+                  <p className="font-medium">
+                    {dedupCount} duplicate {dedupCount === 1 ? 'set' : 'sets'} to review
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    The correlator flagged assets that look like the same thing — approve the merges
+                    or keep them separate.
+                  </p>
+                </div>
+              </div>
+              <Link href="/assets/duplicates" className="shrink-0">
+                <Button variant="outline">
+                  Review
+                  <ArrowRight className="ms-2 h-4 w-4" />
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Key Metrics */}
         <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
           <Card>
@@ -304,16 +339,12 @@ export default function AssetsOverviewPage() {
             "first-run" experience: clarifies the next step rather than
             leaving the user staring at an empty page. */}
         {!statsLoading && totalAssets === 0 && (
-          <Card className="mt-8 border-dashed">
-            <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-              <div className="rounded-full bg-muted p-4 mb-4">
-                <Container className="h-8 w-8 text-muted-foreground" />
-              </div>
-              <h3 className="text-lg font-semibold mb-1">No assets discovered yet</h3>
-              <p className="text-sm text-muted-foreground max-w-md mb-6">
-                Run a discovery scan, connect a cloud provider, or add assets manually to start
-                building your inventory.
-              </p>
+          <EmptyState
+            className="mt-8 border-dashed"
+            icon={Container}
+            title="No assets discovered yet"
+            description="Run a discovery scan, connect a cloud provider, or add assets manually to start building your inventory."
+            action={
               <div className="flex flex-wrap gap-2 justify-center">
                 <Link href="/scans">
                   <Button>
@@ -328,8 +359,8 @@ export default function AssetsOverviewPage() {
                   <Button variant="outline">Configure Scope</Button>
                 </Link>
               </div>
-            </CardContent>
-          </Card>
+            }
+          />
         )}
 
         {/* Asset Categories — hide empty categories once stats finish loading
@@ -418,8 +449,24 @@ export default function AssetsOverviewPage() {
                           if (unclassified <= 0) return null
                           const baseUrl =
                             category.types.length === 1
-                              ? ASSET_TYPE_URLS[category.types[0]] || '#'
-                              : '#'
+                              ? ASSET_TYPE_URLS[category.types[0]]
+                              : undefined
+                          // Multi-type categories (or types without a dedicated
+                          // route) have no valid "Other" destination — render a
+                          // non-clickable row instead of a dead href="#" link.
+                          if (!baseUrl) {
+                            return (
+                              <div className="flex items-center justify-between p-2 rounded-lg">
+                                <div className="flex items-center gap-2">
+                                  <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
+                                  <span className="text-sm text-muted-foreground">Other</span>
+                                </div>
+                                <span className="text-sm text-muted-foreground">
+                                  {unclassified.toLocaleString()}
+                                </span>
+                              </div>
+                            )
+                          }
                           return (
                             <Link
                               href={baseUrl}

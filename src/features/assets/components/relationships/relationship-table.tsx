@@ -15,7 +15,6 @@ import {
   Search,
   Link2,
   Plus,
-  MoreHorizontal,
   Pencil,
   Trash2,
   ExternalLink,
@@ -38,14 +37,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { DataTableRowActions } from '@/features/shared'
 import { cn } from '@/lib/utils'
 import type {
   AssetRelationship,
@@ -448,39 +441,32 @@ export function RelationshipTable({
                       <ImpactBars weight={relationship.impactWeight} />
                     </TableCell>
                     <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => onEdit?.(relationship)}>
-                            <Pencil className="me-2 h-4 w-4" />
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => onViewAsset?.(relationship.sourceAssetId)}
-                          >
-                            <ExternalLink className="me-2 h-4 w-4" />
-                            View Source
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => onViewAsset?.(relationship.targetAssetId)}
-                          >
-                            <ExternalLink className="me-2 h-4 w-4" />
-                            View Target
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            onClick={() => onDelete?.(relationship)}
-                            className="text-red-600"
-                          >
-                            <Trash2 className="me-2 h-4 w-4" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      <DataTableRowActions
+                        actions={[
+                          {
+                            label: 'Edit',
+                            icon: Pencil,
+                            onClick: () => onEdit?.(relationship),
+                          },
+                          {
+                            label: 'View Source',
+                            icon: ExternalLink,
+                            onClick: () => onViewAsset?.(relationship.sourceAssetId),
+                          },
+                          {
+                            label: 'View Target',
+                            icon: ExternalLink,
+                            onClick: () => onViewAsset?.(relationship.targetAssetId),
+                          },
+                          {
+                            label: 'Delete',
+                            icon: Trash2,
+                            onClick: () => onDelete?.(relationship),
+                            separatorBefore: true,
+                            destructive: true,
+                          },
+                        ]}
+                      />
                     </TableCell>
                   </TableRow>
                 )

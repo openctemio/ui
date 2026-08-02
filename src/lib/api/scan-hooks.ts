@@ -24,6 +24,7 @@ import type {
   CloneScanConfigRequest,
   BulkActionRequest,
   BulkActionResponse,
+  PipelineRun,
   PipelineRunWithFiltering,
   ScanSession,
   ScanSessionListResponse,
@@ -328,6 +329,32 @@ async function fetchScanSession(url: string): Promise<ScanSession> {
   return get<ScanSession>(url)
 }
 
+interface ScanRunsResponse {
+  data: PipelineRun[]
+  total: number
+  page: number
+  per_page: number
+  total_pages: number
+}
+
+/**
+ * Runs of one scan.
+ *
+ * Not to be confused with useScanSessions: a scan session is an agent's
+ * execution record and carries no scan_id, so it cannot be narrowed to a
+ * single scan. Pipeline runs do carry scan_id, which makes this the only
+ * hook that can answer "what has this scan done".
+ */
+export function useScanRuns(scanId: string | null, perPage = 10, config?: SWRConfiguration) {
+  const { currentTenant } = useTenant()
+  const key = currentTenant && scanId ? scanEndpoints.listRuns(scanId, 1, perPage) : null
+
+  return useSWR<ScanRunsResponse>(key, (url: string) => get<ScanRunsResponse>(url), {
+    ...defaultConfig,
+    ...config,
+  })
+}
+
 export interface ScanSessionListFilters {
   scanner_name?: string
   asset_type?: string
@@ -401,27 +428,17 @@ export function useScanSessionStats(since?: string, config?: SWRConfiguration) {
   })
 }
 
-// Legacy aliases for backward compatibility
-export const useScanRuns = useScanSessions
-export const useAllScanRuns = useScanSessions
+// The aliases useScanRuns/useAllScanRuns used to point at useScanSessions.
+// That naming is what made the scan-detail page list sessions and believe it
+// was listing runs. Both had zero callers; useScanRuns is now the real thing.
 
 // ============================================
 // SCAN SESSION ACTIONS
 // ============================================
 
-/**
- * Stop a running scan session
- */
-export function useStopScanSession(sessionId: string) {
-  const { currentTenant } = useTenant()
-
-  return useSWRMutation(
-    currentTenant && sessionId ? `/api/v1/scan-sessions/${sessionId}/stop` : null,
-    async (url: string) => {
-      return post<ScanSession>(url, {})
-    }
-  )
-}
+// useStopScanSession was removed: it posted to /scan-sessions/{id}/stop, and
+// the scan-sessions route group has no /stop — only GET stats/list/{id} and
+// DELETE. It had no callers. Cancel a run via pipelineRunEndpoints.cancel.
 
 /**
  * Retry a failed scan session

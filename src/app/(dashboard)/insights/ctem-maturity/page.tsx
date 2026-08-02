@@ -513,11 +513,37 @@ export default function CTEMMaturityPage() {
   // Audit chain verify runs on-demand at page load. Admin-only endpoint;
   // non-admins see 'unknown' status on the B5/O3 cards (server returns
   // 403 → SWR surfaces undefined data).
-  const { data: audit, isLoading: auditLoading } = useSWR<AuditVerifyResponse>(
-    tenantReady ? '/api/v1/audit-logs/verify' : null,
-    get,
-    { revalidateOnFocus: false, shouldRetryOnError: false }
-  )
+  const {
+    data: auditData,
+    error: auditError,
+    isLoading: auditLoading,
+  } = useSWR<AuditVerifyResponse>(tenantReady ? '/api/v1/audit-logs/verify' : null, get, {
+    revalidateOnFocus: false,
+    shouldRetryOnError: false,
+  })
+
+  // A BROKEN chain is a definitive answer, not an error. The endpoint returns
+  // HTTP 409 with the verify result (`ok:false` + break details) as the body;
+  // the api client surfaces that as an ApiClientError whose `details` carries
+  // the raw result. Map 409 → a chain-break result so the B5/O3 cards render
+  // 'Failing' (red) with the break, instead of falling through to 'unknown'.
+  // Any other error (403 for non-admins, network) leaves `audit` undefined so
+  // those cards stay 'unknown' as before.
+  const audit = useMemo<AuditVerifyResponse | undefined>(() => {
+    if (auditData) return auditData
+    const err = auditError as
+      { statusCode?: number; details?: Partial<AuditVerifyResponse> } | undefined
+    if (err?.statusCode === 409) {
+      const d = err.details ?? {}
+      return {
+        ok: false,
+        entries_verified: typeof d.entries_verified === 'number' ? d.entries_verified : 0,
+        break_at_entry_id: d.break_at_entry_id,
+        break_reason: d.break_reason,
+      }
+    }
+    return undefined
+  }, [auditData, auditError])
 
   const cards = useMemo(() => deriveInvariants(summary, audit), [summary, audit])
   const feedback = cards.filter((c) => c.category === 'feedback')

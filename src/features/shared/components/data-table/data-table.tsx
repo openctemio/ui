@@ -60,6 +60,33 @@ interface DataTableProps<TData, TValue> {
   emptyMessage?: string
   emptyDescription?: string
   onRowClick?: (row: TData) => void
+  /**
+   * Notified whenever the row selection changes, with the selected row data.
+   * The table owns selection state internally (via the `select` column's
+   * checkboxes); this is the only way for a parent to observe it (e.g. to drive
+   * a bulk-action bar). Optional — existing callers are unaffected.
+   */
+  onSelectionChange?: (selectedRows: TData[]) => void
+  /**
+   * Server-side (manual) pagination. When set, the table does NOT slice `data`
+   * itself — the parent fetches one page at a time and drives navigation:
+   *   - `data` holds only the current page's rows
+   *   - `pageCount`/`rowCount` come from the server response (total pages/rows)
+   *   - `pagination` is the controlled `{pageIndex, pageSize}` state
+   *   - `onPaginationChange` fires when the user pages or changes page size
+   * Omit it entirely and the table keeps its default client-side pagination
+   * over the full `data` array — existing callers are unaffected.
+   */
+  manualPagination?: boolean
+  pageCount?: number
+  rowCount?: number
+  pagination?: { pageIndex: number; pageSize: number }
+  onPaginationChange?: (pagination: { pageIndex: number; pageSize: number }) => void
+  /**
+   * Stable row identity. Required for correct selection under manual pagination
+   * (index-keyed selection would mis-mark rows when the page's data swaps).
+   */
+  getRowId?: (row: TData) => string
 }
 
 export function DataTable<TData, TValue>({
@@ -75,6 +102,13 @@ export function DataTable<TData, TValue>({
   emptyMessage = 'No results found',
   emptyDescription = 'Try adjusting your search or filters',
   onRowClick,
+  onSelectionChange,
+  manualPagination = false,
+  pageCount,
+  rowCount,
+  pagination,
+  onPaginationChange,
+  getRowId,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
@@ -85,22 +119,45 @@ export function DataTable<TData, TValue>({
   const table = useReactTable({
     data,
     columns,
+    ...(getRowId ? { getRowId } : {}),
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
+    // In manual (server) pagination the parent already fetched exactly one page,
+    // so the table must NOT slice the rows again — omit getPaginationRowModel.
+    // Under manual (server) pagination the parent fetched exactly one page, so
+    // the table must not slice, sort OR filter the rows again. It previously
+    // still did the latter two, which looked global but only ever touched the
+    // rows on screen — a sort that silently reorders 20 of 6000 findings is
+    // worse than no sort at all. Tell tanstack the server owns all three.
+    ...(manualPagination
+      ? { manualSorting: true, manualFiltering: true }
+      : {
+          getPaginationRowModel: getPaginationRowModel(),
+          getSortedRowModel: getSortedRowModel(),
+          getFilteredRowModel: getFilteredRowModel(),
+        }),
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
     onGlobalFilterChange: setGlobalFilter,
     globalFilterFn: 'includesString',
+    manualPagination,
+    // Prefer rowCount (tanstack derives pageCount); fall back to explicit pageCount.
+    ...(manualPagination ? (rowCount != null ? { rowCount } : { pageCount: pageCount ?? -1 }) : {}),
+    onPaginationChange: manualPagination
+      ? (updater) => {
+          const current = pagination ?? { pageIndex: 0, pageSize }
+          const next = typeof updater === 'function' ? updater(current) : updater
+          onPaginationChange?.(next)
+        }
+      : undefined,
     state: {
       sorting,
       columnFilters,
       columnVisibility,
       rowSelection,
       globalFilter,
+      ...(manualPagination && pagination ? { pagination } : {}),
     },
     initialState: {
       pagination: {
@@ -111,6 +168,16 @@ export function DataTable<TData, TValue>({
 
   const selectedCount = table.getFilteredSelectedRowModel().rows.length
   const totalCount = table.getFilteredRowModel().rows.length
+
+  // Lift the internally-owned selection up to an optional parent callback so a
+  // bulk-action bar can react. Ref keeps the effect from depending on an inline
+  // callback identity (which would refire every render).
+  const onSelectionChangeRef = React.useRef(onSelectionChange)
+  onSelectionChangeRef.current = onSelectionChange
+  React.useEffect(() => {
+    onSelectionChangeRef.current?.(table.getFilteredSelectedRowModel().rows.map((r) => r.original))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rowSelection])
 
   return (
     <div className="space-y-4">
@@ -259,23 +326,26 @@ export function DataTable<TData, TValue>({
       {/* Pagination */}
       {showPagination && (
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          {/* Row count info - centered on mobile */}
-          <div className="text-sm text-muted-foreground text-center sm:text-start">
-            Showing{' '}
-            <span className="font-medium">
-              {table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1}
-            </span>
-            {' - '}
-            <span className="font-medium">
-              {Math.min(
-                (table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize,
-                table.getFilteredRowModel().rows.length
-              )}
-            </span>
-            {' of '}
-            <span className="font-medium">{table.getFilteredRowModel().rows.length}</span>
-            {' results'}
-          </div>
+          {/* Row count info - centered on mobile. Under manual pagination the
+              total is the server row count, not the current page's length. */}
+          {(() => {
+            const { pageIndex, pageSize: ps } = table.getState().pagination
+            const total = manualPagination
+              ? (rowCount ?? data.length)
+              : table.getFilteredRowModel().rows.length
+            const start = total === 0 ? 0 : pageIndex * ps + 1
+            const end = Math.min((pageIndex + 1) * ps, total)
+            return (
+              <div className="text-sm text-muted-foreground text-center sm:text-start">
+                Showing <span className="font-medium">{start}</span>
+                {' - '}
+                <span className="font-medium">{end}</span>
+                {' of '}
+                <span className="font-medium">{total}</span>
+                {' results'}
+              </div>
+            )
+          })()}
 
           {/* Pagination controls - centered on mobile */}
           <div className="flex flex-wrap items-center justify-center sm:justify-end gap-2 sm:gap-4">

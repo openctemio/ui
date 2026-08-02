@@ -44,7 +44,7 @@ import {
   getPermissionInfo,
 } from '@/features/access-control'
 import { getErrorMessage } from '@/lib/api/error-handler'
-import { SheetDetailToolbar } from '@/features/shared'
+import { SheetDetailToolbar, EmptyState } from '@/features/shared'
 
 interface PermissionSetDetailSheetProps {
   permissionSetId: string | null
@@ -414,10 +414,7 @@ export function PermissionSetDetailSheet({
                     </div>
 
                     {!permissionSet.permissions || permissionSet.permissions.length === 0 ? (
-                      <div className="text-center py-8 text-muted-foreground">
-                        <Shield className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                        <p>No permissions in this set</p>
-                      </div>
+                      <EmptyState icon={Shield} title="No permissions in this set" card={false} />
                     ) : (
                       <div className="space-y-2">
                         {permissionSet.permissions.map((permission: string, index: number) => {
@@ -483,10 +480,11 @@ export function PermissionSetDetailSheet({
             </p>
 
             {availablePermissions.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <Shield className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p>All permissions are already in this set</p>
-              </div>
+              <EmptyState
+                icon={Shield}
+                title="All permissions are already in this set"
+                card={false}
+              />
             ) : (
               <div className="space-y-4 max-h-[400px] overflow-y-auto pe-2">
                 {availablePermissions.map((category) => (

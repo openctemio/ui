@@ -44,7 +44,14 @@ export function AppSidebar() {
             ))}
           </div>
         ) : (
-          filteredSidebarData.navGroups.map((group) => <NavGroup key={group.title} {...group} />)
+          // Each group owns its own <SidebarGroup> + heading so the section
+          // names read as quiet labels over always-visible items, rather than
+          // as rows the user must click to reveal what is inside.
+          <>
+            {filteredSidebarData.navGroups.map((group) => (
+              <NavGroup key={group.title} {...group} />
+            ))}
+          </>
         )}
       </SidebarContent>
 

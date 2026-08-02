@@ -14,7 +14,6 @@ import {
   ArrowDownLeft,
   Code,
   Paperclip,
-  Plus,
   ChevronDown,
   ChevronUp,
   Calendar,
@@ -28,13 +27,17 @@ import {
   Github,
   GitBranch,
 } from 'lucide-react'
+import { EmptyState } from '@/features/shared'
 import { copyToClipboard } from '@/lib/clipboard'
+import { usePermissions } from '@/context/permission-provider'
+import { useTenantModules } from '@/features/integrations/api/use-tenant-modules'
 import type { Evidence, EvidenceType, FindingDetail } from '../../types'
 import { EVIDENCE_TYPE_CONFIG } from '../../types'
 import { CodeHighlighter } from './code-highlighter'
 import { ValidationEvidencePanel } from './validation-evidence-panel'
 import { ComplianceMappingCard } from './compliance-mapping-card'
 import { buildRepositoryCodeUrl } from '../../lib/repository-url'
+import { ManualEvidenceNotesSection } from './manual-evidence-notes'
 
 interface EvidenceTabProps {
   evidence: Evidence[]
@@ -107,6 +110,18 @@ function RepositoryLink({
 
 export function EvidenceTab({ evidence, finding }: EvidenceTabProps) {
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set())
+
+  // Only surface the Compliance Controls card when the tenant can actually use
+  // it. Its GET is gated by BOTH the compliance module and compliance:mappings:
+  // read, so rendering it unconditionally makes a doomed request that 403s and
+  // toasts "This module is not enabled for your team" / "no permission" on a
+  // page that has nothing to do with the failure. An empty moduleIds set means
+  // no subscription is configured (OSS / all-on), so treat that as enabled.
+  const { moduleIds } = useTenantModules()
+  const { hasPermission } = usePermissions()
+  const showComplianceCard =
+    (moduleIds.length === 0 || moduleIds.includes('compliance')) &&
+    hasPermission('compliance:mappings:read')
   const [expandedStacks, setExpandedStacks] = useState<Set<number>>(new Set())
   const [apiAttachments, setApiAttachments] = useState<
     Array<{
@@ -317,16 +332,19 @@ export function EvidenceTab({ evidence, finding }: EvidenceTabProps) {
 
   if (!hasAnyContent) {
     return (
-      <div className="flex flex-col items-center justify-center py-12">
-        <Paperclip className="text-muted-foreground mb-4 h-12 w-12" />
-        <h3 className="mb-2 text-lg font-semibold">No Evidence</h3>
-        <p className="text-muted-foreground mb-4 text-center text-sm">
-          No evidence has been attached to this finding yet.
-        </p>
-        <Button size="sm">
-          <Plus className="me-2 h-4 w-4" />
-          Add Evidence
-        </Button>
+      <div className="space-y-6">
+        <EmptyState
+          icon={Paperclip}
+          title="No Evidence"
+          description="No evidence has been attached to this finding yet."
+          card={false}
+        />
+        {finding?.id && (
+          <>
+            <Separator />
+            <ManualEvidenceNotesSection findingId={finding.id} />
+          </>
+        )}
       </div>
     )
   }
@@ -340,7 +358,7 @@ export function EvidenceTab({ evidence, finding }: EvidenceTabProps) {
       {finding?.id && (
         <>
           <ValidationEvidencePanel findingId={finding.id} />
-          <ComplianceMappingCard findingId={finding.id} />
+          {showComplianceCard && <ComplianceMappingCard findingId={finding.id} />}
           <Separator />
         </>
       )}
@@ -454,10 +472,6 @@ export function EvidenceTab({ evidence, finding }: EvidenceTabProps) {
                 <Paperclip className="h-4 w-4" />
                 Evidence ({evidence.length})
               </h3>
-              <Button size="sm" variant="outline">
-                <Plus className="me-2 h-4 w-4" />
-                Add Evidence
-              </Button>
             </div>
 
             <div className="space-y-4">
@@ -793,6 +807,14 @@ export function EvidenceTab({ evidence, finding }: EvidenceTabProps) {
                 ))}
             </div>
           </div>
+        </>
+      )}
+
+      {/* Manual evidence notes (operator-authored) */}
+      {finding?.id && (
+        <>
+          <Separator />
+          <ManualEvidenceNotesSection findingId={finding.id} />
         </>
       )}
     </div>

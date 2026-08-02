@@ -1,3 +1,5 @@
+import { createRequire } from 'node:module'
+
 import type { NextConfig } from 'next'
 import { validateEnv } from './src/lib/env'
 
@@ -5,8 +7,10 @@ import { validateEnv } from './src/lib/env'
 let withBundleAnalyzer = (config: NextConfig) => config
 if (process.env.ANALYZE === 'true') {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const bundleAnalyzer = require('@next/bundle-analyzer')
+    // createRequire rather than a bare require(): this file is an ES module, and
+    // the analyzer is an optional devDependency that must stay behind a
+    // try/catch, so a static import is not an option either.
+    const bundleAnalyzer = createRequire(import.meta.url)('@next/bundle-analyzer')
     withBundleAnalyzer = bundleAnalyzer({ enabled: true })
   } catch {
     console.warn(

@@ -19,6 +19,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import {
   Lock,
   RotateCcw,
@@ -28,31 +29,17 @@ import {
   ArrowDownRight,
   ArrowUpRight,
   AlertTriangle,
-  Sparkles,
-  Check,
-  type LucideIcon,
-  Package,
-  Database,
-  ShieldAlert,
-  Globe,
-  Bug,
-  Crosshair,
-  Cloud,
-  ClipboardCheck,
-  Layers,
+  SlidersHorizontal,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useSWRConfig } from 'swr'
 import { ApiClientError, getErrorMessage } from '@/lib/api/error-handler'
-import { fetcherWithOptions } from '@/lib/api/client'
-import { tenantEndpoints } from '@/lib/api/endpoints'
 import { Can, Permission } from '@/lib/permissions'
 import {
   useTenantModules,
   useUpdateTenantModules,
   useResetTenantModules,
   useModuleDependencyGraph,
-  useModulePresets,
   useModuleRealtimeInvalidation,
 } from '@/features/organization/api/use-tenant-modules'
 import type {
@@ -60,9 +47,8 @@ import type {
   TenantSubModule,
   ModuleToggle,
   ToggleIssue,
-  ModulePreset,
-  PresetDiff,
 } from '@/features/organization/api/use-tenant-modules'
+import { BundleSubscriptionCard } from '@/features/organization/components/bundle-subscription-card'
 
 // Details payload nested under ApiClientError.details when the backend
 // rejects a toggle because of the dependency graph. Shape mirrors
@@ -88,6 +74,7 @@ type DependencyEdgeWithKind = {
 // Category display labels
 const CATEGORY_LABELS: Record<string, string> = {
   core: 'Core',
+  scoping: 'Scoping',
   discovery: 'Discovery',
   prioritization: 'Prioritization',
   validation: 'Validation',
@@ -99,20 +86,21 @@ const CATEGORY_LABELS: Record<string, string> = {
   platform: 'Platform',
 }
 
-// Map preset.icon (string from backend) → lucide component. Fallback
-// to Sparkles so unknown icons don't crash the render path.
-const PRESET_ICONS: Record<string, LucideIcon> = {
-  Package,
-  Database,
-  ShieldAlert,
-  Globe,
-  Bug,
-  Crosshair,
-  Cloud,
-  ClipboardCheck,
-  Layers,
-  Sparkles,
-}
+// Feature modules are grouped into these ordered sections on the fine-tune
+// panel — the five Gartner CTEM phases first, then the supporting groups.
+// Each entry folds one or more raw `category` values under a display label so
+// the flat 30-item list becomes a scannable, phase-aware layout. Any category
+// not listed here falls through to a trailing "Other" group.
+const PHASE_GROUPS: { key: string; label: string; categories: string[] }[] = [
+  { key: 'scoping', label: 'Scoping', categories: ['scoping'] },
+  { key: 'discovery', label: 'Discovery', categories: ['discovery'] },
+  { key: 'prioritization', label: 'Prioritization', categories: ['prioritization'] },
+  { key: 'validation', label: 'Validation', categories: ['validation'] },
+  { key: 'mobilization', label: 'Mobilization', categories: ['mobilization'] },
+  { key: 'insights', label: 'Insights & Reporting', categories: ['insights'] },
+  { key: 'operations', label: 'Operations & Data', categories: ['operations', 'data'] },
+  { key: 'settings', label: 'Settings & Integrations', categories: ['settings', 'platform'] },
+]
 
 export default function ModuleManagementPage() {
   const { currentTenant } = useTenant()
@@ -122,7 +110,6 @@ export default function ModuleManagementPage() {
   const { updateModules, isUpdating } = useUpdateTenantModules(tenantId)
   const { resetModules, isResetting } = useResetTenantModules(tenantId)
   const { edges: dependencyEdges } = useModuleDependencyGraph(tenantId)
-  const { presets } = useModulePresets(tenantId)
   const { mutate: globalMutate } = useSWRConfig()
   // Subscribe to "module.updated" WS events on the tenant channel so
   // an admin in another tab (or another admin) flipping a module
@@ -133,12 +120,8 @@ export default function ModuleManagementPage() {
   const [pendingChanges, setPendingChanges] = useState<Record<string, boolean>>({})
   const [showResetDialog, setShowResetDialog] = useState(false)
   const [coreExpanded, setCoreExpanded] = useState(false)
-  // Preset picker state. `selectedPreset` holds the preset the admin
-  // clicked (triggering the diff preview fetch). `presetDiff` holds
-  // the preview response; once populated, we show the confirm dialog.
-  const [selectedPreset, setSelectedPreset] = useState<ModulePreset | null>(null)
-  const [presetDiff, setPresetDiff] = useState<PresetDiff | null>(null)
-  const [isApplyingPreset, setIsApplyingPreset] = useState(false)
+  // Fine-tune phase groups that the admin has collapsed (default: all open).
+  const [collapsedPhases, setCollapsedPhases] = useState<Set<string>>(new Set())
   // Dependency-conflict dialog surfaced when the backend rejects a
   // save with code=module_dependency_violation. Stores the structured
   // ToggleError details so the modal can list blockers/required.
@@ -195,6 +178,28 @@ export default function ModuleManagementPage() {
       featureModules: features.sort((a, b) => a.display_order - b.display_order),
     }
   }, [modules])
+
+  // Bucket feature modules into the ordered CTEM phase groups. Anything whose
+  // category isn't mapped falls into a trailing "Other" group so no module is
+  // ever silently dropped from the list.
+  const groupedFeatures = useMemo(() => {
+    const catToGroup: Record<string, string> = {}
+    for (const g of PHASE_GROUPS) for (const c of g.categories) catToGroup[c] = g.key
+    const byKey: Record<string, TenantModule[]> = {}
+    const other: TenantModule[] = []
+    for (const mod of featureModules) {
+      const key = catToGroup[mod.category]
+      if (key) (byKey[key] ||= []).push(mod)
+      else other.push(mod)
+    }
+    const groups = PHASE_GROUPS.filter((g) => byKey[g.key]?.length).map((g) => ({
+      key: g.key,
+      label: g.label,
+      mods: byKey[g.key],
+    }))
+    if (other.length) groups.push({ key: 'other', label: 'Other', mods: other })
+    return groups
+  }, [featureModules])
 
   // Build a lookup for server state of all modules + sub-modules
   const serverStateMap = useMemo(() => {
@@ -300,63 +305,14 @@ export default function ModuleManagementPage() {
     setPendingChanges({})
   }, [])
 
-  // Preset picker — clicking a preset card fetches the dry-run diff
-  // from the backend and opens the confirm dialog. The diff tells the
-  // admin exactly which modules will flip so there are no surprises.
-  const handlePresetPreview = useCallback(
-    async (preset: ModulePreset) => {
-      if (!tenantId) return
-      setSelectedPreset(preset)
-      setPresetDiff(null)
-      try {
-        const diff = await fetcherWithOptions<PresetDiff>(
-          tenantEndpoints.modulesPresetPreview(tenantId, preset.id),
-          { method: 'POST' }
-        )
-        setPresetDiff(diff)
-      } catch (err) {
-        toast.error(getErrorMessage(err))
-        setSelectedPreset(null)
-      }
-    },
-    [tenantId]
-  )
-
-  const handlePresetApply = useCallback(async () => {
-    if (!tenantId || !selectedPreset) return
-    setIsApplyingPreset(true)
-    try {
-      await fetcherWithOptions(tenantEndpoints.modulesPresetApply(tenantId, selectedPreset.id), {
-        method: 'POST',
-      })
-      // Refresh the module list + sidebar so the page reflects the
-      // new state immediately (fresh fetch is safer than client-side
-      // re-computation for a bulk change that touched many modules).
-      await mutate()
-      await globalMutate('/api/v1/me/modules')
-      toast.success(`Applied preset: ${selectedPreset.name}`)
-      setPendingChanges({})
-      setSelectedPreset(null)
-      setPresetDiff(null)
-    } catch (err) {
-      // Dependency-violation handling: surface the structured error
-      // through the existing conflict dialog so the admin can cascade-
-      // resolve, same UX as manual toggles.
-      if (
-        err instanceof ApiClientError &&
-        err.code === 'module_dependency_violation' &&
-        err.details
-      ) {
-        setDepConflict(err.details as unknown as ModuleDependencyErrorDetails)
-        setSelectedPreset(null)
-        setPresetDiff(null)
-      } else {
-        toast.error(getErrorMessage(err))
-      }
-    } finally {
-      setIsApplyingPreset(false)
-    }
-  }, [tenantId, selectedPreset, mutate, globalMutate])
+  const togglePhase = useCallback((key: string) => {
+    setCollapsedPhases((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  }, [])
 
   const handleReset = useCallback(async () => {
     try {
@@ -395,17 +351,20 @@ export default function ModuleManagementPage() {
 
   return (
     <Main>
-      <div className="flex items-center justify-between">
-        <PageHeader
-          title="Module Management"
-          description="Enable or disable modules for your organization. Core modules required for platform operation cannot be disabled."
-        />
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0 flex-1">
+          <PageHeader
+            title="Modules"
+            description="Turn OpenCTEM into exactly the platform your team needs. Pick the products you run — everything else stays out of the way. Nothing here is destructive; change it anytime."
+          />
+        </div>
         <Can permission={Permission.TeamUpdate}>
           <Button
             variant="outline"
             size="sm"
             onClick={() => setShowResetDialog(true)}
             disabled={isResetting}
+            className="mt-1 shrink-0"
           >
             <RotateCcw className="me-2 h-4 w-4" />
             Reset to Defaults
@@ -431,57 +390,14 @@ export default function ModuleManagementPage() {
         </div>
       )}
 
-      {/* Preset picker — curated bundles for common use cases.
-          Renders above the manual toggle area so admins see the
-          "don't toggle 100 things, pick a bundle" affordance first. */}
-      {presets.length > 0 && (
-        <Can permission={Permission.TeamUpdate}>
-          <Card className="mt-6">
-            <CardHeader className="py-3">
-              <div className="flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-amber-500" />
-                <CardTitle className="text-base">Quick start with a preset</CardTitle>
-                <Badge variant="outline" className="text-xs">
-                  {presets.length}
-                </Badge>
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Curated module bundles for common use cases. Applying a preset overwrites your
-                current module configuration — review the diff before committing.
-              </p>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {presets.map((p) => {
-                  const Icon = PRESET_ICONS[p.icon] ?? Sparkles
-                  return (
-                    <button
-                      key={p.id}
-                      type="button"
-                      onClick={() => handlePresetPreview(p)}
-                      className="text-start rounded-lg border bg-card hover:bg-accent/50 hover:border-primary/50 transition-colors p-3 flex flex-col gap-1.5 focus:outline-none focus:ring-2 focus:ring-primary"
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <Icon className="h-4 w-4 text-primary shrink-0" />
-                          <span className="font-medium text-sm truncate">{p.name}</span>
-                        </div>
-                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0 shrink-0">
-                          {p.module_count}
-                        </Badge>
-                      </div>
-                      <p className="text-xs text-muted-foreground line-clamp-2">{p.description}</p>
-                      <p className="text-[10px] text-muted-foreground/70 mt-0.5">
-                        For: {p.target_persona}
-                      </p>
-                    </button>
-                  )
-                })}
-              </div>
-            </CardContent>
-          </Card>
-        </Can>
-      )}
+      {/* Products — the single control for module packaging. Pick the large
+          products this team runs; the enabled set resolves live from that
+          selection. This replaces the old one-shot "apply a preset" flow,
+          which overwrote the config and duplicated this exact catalog. The
+          manual toggles below layer on top as non-destructive overrides. */}
+      <Can permission={Permission.TeamUpdate}>
+        <BundleSubscriptionCard tenantId={tenantId} onChanged={() => mutate()} />
+      </Can>
 
       <div className={`mt-6 space-y-4 ${isDirty ? 'pb-20' : ''}`}>
         {/* Core Modules - Collapsed by default */}
@@ -532,39 +448,66 @@ export default function ModuleManagementPage() {
           </Card>
         )}
 
-        {/* Feature Modules - Expanded by default */}
+        {/* Fine-tune features — grouped by CTEM phase, collapsible. Layered on
+            top of the product selection as per-module overrides. */}
         {featureModules.length > 0 && (
           <Card>
             <CardHeader className="py-3">
               <div className="flex items-center gap-2">
-                <CardTitle className="text-base">Modules</CardTitle>
+                <SlidersHorizontal className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-base">Fine-tune features</CardTitle>
                 <Badge variant="outline" className="text-xs">
                   {featureModules.length}
                 </Badge>
               </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Individual feature toggles, grouped by CTEM phase and layered on top of your
+                products. Turn anything on or off — dependencies are checked when you save.
+              </p>
             </CardHeader>
-            <CardContent className="pt-0">
-              <div className="divide-y">
-                {featureModules.map((mod) => {
-                  const isEnabled = getEffectiveEnabled(mod)
-                  const hasPendingChange = mod.id in pendingChanges
-
-                  return (
-                    <ModuleRow
-                      key={mod.id}
-                      mod={mod}
-                      isEnabled={isEnabled}
-                      hasPendingChange={hasPendingChange}
-                      pendingChanges={pendingChanges}
-                      isUpdating={isUpdating}
-                      onToggle={toggleModule}
-                      requires={requires[mod.id]}
-                      requiredBy={requiredBy[mod.id]}
-                      moduleNames={moduleNames}
-                    />
-                  )
-                })}
-              </div>
+            <CardContent className="pt-0 space-y-2.5">
+              {groupedFeatures.map((group) => {
+                const collapsed = collapsedPhases.has(group.key)
+                const enabledCount = group.mods.filter((m) => getEffectiveEnabled(m)).length
+                return (
+                  <div key={group.key} className="rounded-lg border">
+                    <button
+                      type="button"
+                      onClick={() => togglePhase(group.key)}
+                      aria-expanded={!collapsed}
+                      className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-start hover:bg-muted/40"
+                    >
+                      {collapsed ? (
+                        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      ) : (
+                        <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      )}
+                      <span className="text-sm font-semibold">{group.label}</span>
+                      <span className="ms-auto text-xs tabular-nums text-muted-foreground">
+                        {enabledCount}/{group.mods.length} on
+                      </span>
+                    </button>
+                    {!collapsed && (
+                      <div className="divide-y border-t px-3">
+                        {group.mods.map((mod) => (
+                          <ModuleRow
+                            key={mod.id}
+                            mod={mod}
+                            isEnabled={getEffectiveEnabled(mod)}
+                            hasPendingChange={mod.id in pendingChanges}
+                            pendingChanges={pendingChanges}
+                            isUpdating={isUpdating}
+                            onToggle={toggleModule}
+                            requires={requires[mod.id]}
+                            requiredBy={requiredBy[mod.id]}
+                            moduleNames={moduleNames}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
             </CardContent>
           </Card>
         )}
@@ -678,146 +621,16 @@ export default function ModuleManagementPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Preset Confirm Dialog — shown after the diff preview resolves.
-          Lists every module that will flip so the admin isn't surprised
-          by a bulk change. Dependency violations (if any) fall through
-          to the shared depConflict dialog via handlePresetApply's catch. */}
-      <AlertDialog
-        open={!!selectedPreset}
-        onOpenChange={(open) => {
-          if (!open) {
-            setSelectedPreset(null)
-            setPresetDiff(null)
-          }
-        }}
-      >
-        <AlertDialogContent className="max-w-lg">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-amber-500" />
-              Apply preset: {selectedPreset?.name}
-            </AlertDialogTitle>
-            <AlertDialogDescription className="sr-only">
-              {selectedPreset?.description ?? ''}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="space-y-3 text-sm">
-            {selectedPreset && (
-              <div className="text-muted-foreground">{selectedPreset.description}</div>
-            )}
-            {selectedPreset && selectedPreset.key_outcomes.length > 0 && (
-              <div>
-                <div className="text-xs font-medium text-foreground mb-1">What you get</div>
-                <ul className="space-y-0.5">
-                  {selectedPreset.key_outcomes.map((k, i) => (
-                    <li key={i} className="text-xs text-muted-foreground flex gap-1.5">
-                      <Check className="h-3 w-3 text-green-600 shrink-0 mt-0.5" />
-                      <span>{k}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-            {!presetDiff && (
-              <div className="text-xs text-muted-foreground italic">Computing diff…</div>
-            )}
-            {presetDiff &&
-              (() => {
-                // Backend may serialise empty slices as null on older
-                // clients — fall back to [] so .length / .map are safe.
-                const toEnable = presetDiff.to_enable ?? []
-                const toDisable = presetDiff.to_disable ?? []
-                return (
-                  <div className="rounded border bg-muted/30 p-3 space-y-2">
-                    <div className="text-xs font-medium">Changes if applied</div>
-                    <div className="grid grid-cols-3 gap-2 text-xs">
-                      <div>
-                        <span className="text-green-600 font-medium">+{toEnable.length}</span>{' '}
-                        <span className="text-muted-foreground">enabling</span>
-                      </div>
-                      <div>
-                        <span className="text-red-600 font-medium">-{toDisable.length}</span>{' '}
-                        <span className="text-muted-foreground">disabling</span>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">
-                          {presetDiff.unchanged} unchanged
-                        </span>
-                      </div>
-                    </div>
-                    {toDisable.length > 0 && (
-                      <details className="text-xs">
-                        <summary className="cursor-pointer text-red-700 hover:underline">
-                          {toDisable.length} module(s) will be disabled
-                        </summary>
-                        <ul className="mt-1.5 ps-3 space-y-0.5 max-h-32 overflow-y-auto">
-                          {toDisable.map((m) => (
-                            <li key={m.module_id} className="text-muted-foreground">
-                              {m.name}{' '}
-                              <code className="text-[10px] text-muted-foreground/60">
-                                {m.module_id}
-                              </code>
-                            </li>
-                          ))}
-                        </ul>
-                      </details>
-                    )}
-                    {toEnable.length > 0 && (
-                      <details className="text-xs">
-                        <summary className="cursor-pointer text-green-700 hover:underline">
-                          {toEnable.length} module(s) will be enabled
-                        </summary>
-                        <ul className="mt-1.5 ps-3 space-y-0.5 max-h-32 overflow-y-auto">
-                          {toEnable.map((m) => (
-                            <li key={m.module_id} className="text-muted-foreground">
-                              {m.name}{' '}
-                              <code className="text-[10px] text-muted-foreground/60">
-                                {m.module_id}
-                              </code>
-                            </li>
-                          ))}
-                        </ul>
-                      </details>
-                    )}
-                  </div>
-                )
-              })()}
-            {isDirty && (
-              <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1.5">
-                You have unsaved manual changes. Applying a preset will discard them.
-              </div>
-            )}
-          </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handlePresetApply}
-              disabled={!presetDiff || isApplyingPreset}
-            >
-              {isApplyingPreset ? 'Applying…' : 'Apply preset'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
       {/* Reset Confirmation Dialog */}
-      <AlertDialog open={showResetDialog} onOpenChange={setShowResetDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Reset Modules to Defaults</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will enable all modules for your organization. Any modules you previously
-              disabled will be re-enabled. This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleReset} disabled={isResetting}>
-              {isResetting ? 'Resetting...' : 'Reset All'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={showResetDialog}
+        onOpenChange={setShowResetDialog}
+        title="Reset Modules to Defaults"
+        desc="This will enable all modules for your organization. Any modules you previously disabled will be re-enabled. This action cannot be undone."
+        confirmText={isResetting ? 'Resetting...' : 'Reset All'}
+        isLoading={isResetting}
+        handleConfirm={() => void handleReset()}
+      />
     </Main>
   )
 }

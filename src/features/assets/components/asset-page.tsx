@@ -70,6 +70,7 @@ import {
   TrendingUp,
 } from 'lucide-react'
 import Link from 'next/link'
+import { post } from '@/lib/api/client'
 import { useAssets, useAssetStats, type Asset } from '@/features/assets'
 import { TagFilter, TagFilterChips } from './tag-filter'
 import { PropertyFilter, PropertyFilterChips } from './property-filter'
@@ -90,7 +91,7 @@ import type { ApiScopeTarget, ApiScopeExclusion } from '@/features/scope/api/sco
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import { useDebounce } from '@/hooks/use-debounce'
 // Status filter is now string-based to support custom status values
-import type { AssetType } from '../types'
+import type { AssetType, Criticality, AssetScope, ExposureLevel } from '../types'
 import type { AssetPageConfig } from '../types/page-config.types'
 import { useAssetCRUD } from '../hooks/use-asset-crud'
 import { useAssetDialogs } from '../hooks/use-asset-dialogs'
@@ -223,7 +224,19 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
   const sortDesc = searchParams.get('sort')
     ? searchParams.get('dir') === 'desc'
     : config.defaultSort?.direction === 'desc'
-  const sortParam = sortFieldParam ? `${sortDesc ? '-' : ''}${sortFieldParam}` : undefined
+  // Column accessorKeys (and the URL sort value) are camelCase (findingCount,
+  // riskScore, updatedAt) but the API only accepts snake_case sort fields and
+  // silently ignores unknown ones — so sorting only ever reordered the current
+  // page. Convert to snake_case so the server sorts the whole dataset.
+  const toSnakeCase = (s: string) => s.replace(/[A-Z]/g, (m) => `_${m.toLowerCase()}`)
+  const sortParam = sortFieldParam
+    ? `${sortDesc ? '-' : ''}${toSnakeCase(sortFieldParam)}`
+    : undefined
+
+  // Status is kept in sync with the URL `status` param (see the sync effect
+  // below); read it here so the fetch runs before the statusFilter state is
+  // declared, and so status filters server-side across the whole dataset.
+  const statusParam = searchParams.get('status')
 
   // Data fetching with server-side pagination, search, tag, and properties filter.
   const { assets, total, totalPages, isLoading, mutate } = useAssets({
@@ -234,6 +247,13 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
     pageSize,
     search: debouncedSearch || undefined,
     tags: tagFilters.length > 0 ? tagFilters : undefined,
+    // Status is filtered server-side (like search/tags) so it spans the whole
+    // dataset — filtering client-side only touched the current page while the
+    // count badges and pagination total stayed dataset-wide (misleading).
+    statuses:
+      statusParam && statusParam !== 'all'
+        ? ([statusParam] as ('active' | 'inactive' | 'archived')[])
+        : undefined,
     sort: sortParam,
   })
 
@@ -325,14 +345,20 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
     if (isExporting) return
     setIsExporting(true)
     try {
-      const all = await fetchAllAssets({
-        types: typeFilter,
-        subType: subTypeFilter,
-        propertiesFilter: Object.keys(propertiesFilter).length > 0 ? propertiesFilter : undefined,
-        search: debouncedSearch || undefined,
-        tags: tagFilters.length > 0 ? tagFilters : undefined,
-        sort: sortParam,
-      })
+      const all = await fetchAllAssets(
+        {
+          types: typeFilter,
+          subType: subTypeFilter,
+          propertiesFilter: Object.keys(propertiesFilter).length > 0 ? propertiesFilter : undefined,
+          search: debouncedSearch || undefined,
+          tags: tagFilters.length > 0 ? tagFilters : undefined,
+          sort: sortParam,
+        },
+        (loaded) =>
+          toast.warning(
+            `Export limited to the first ${loaded.toLocaleString()} assets — refine filters to export the rest`
+          )
+      )
       const rows = config.dataTransform ? config.dataTransform(all) : all
       exportToCsv(rows, config.exportFields, config.type)
     } catch {
@@ -466,14 +492,10 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
     [config.statusFilters]
   )
 
-  // Filter data — status is client-side, properties are server-side (via useAssets)
-  const filteredData = useMemo(() => {
-    let data = [...(transformedAssets ?? [])]
-    if (statusFilter !== 'all') {
-      data = data.filter((a) => a.status === statusFilter)
-    }
-    return data
-  }, [transformedAssets, statusFilter])
+  // Status, search, tags, and properties are all filtered server-side now, so
+  // the rows returned are already the filtered set — no client-side re-filter
+  // (which previously only touched the current page).
+  const filteredData = transformedAssets ?? []
 
   // Status counts — derived from the tenant-wide stats endpoint so the tab
   // badges reflect the entire dataset (e.g. 1427 hosts) instead of only the
@@ -564,6 +586,14 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
       const tags = (data.tags as string[] | undefined) ?? []
       delete data.tags
 
+      // Group is a create-time convenience field (only rendered on the create
+      // form). It is NOT part of the asset DTO — membership is a separate
+      // relation — so pull it out and apply it via the group-membership
+      // endpoint after the asset exists, instead of letting it get silently
+      // dropped into the create payload.
+      const groupId = (data.groupId as string | undefined)?.trim() || undefined
+      delete data.groupId
+
       // owner_ref is a universal field on every form, not in config.formFields
       const ownerRef = data.ownerRef as string | undefined
       delete data.ownerRef
@@ -580,17 +610,31 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
         }
       }
 
-      return crud.handleCreate({
-        name: String(data.name ?? ''),
-        type: config.type as never,
-        criticality: 'medium',
-        description: String(data.description ?? ''),
-        scope: 'internal',
-        exposure: 'unknown',
-        ownerRef,
-        tags,
-        ...topLevel,
-      } as never)
+      // Classification is now set by the operator via the shared form (falls
+      // back to sensible defaults only when absent) instead of being hardcoded.
+      return crud.handleCreate(
+        {
+          name: String(data.name ?? ''),
+          type: config.type as never,
+          criticality: (data.criticality as string | undefined) || 'medium',
+          description: String(data.description ?? ''),
+          scope: (data.scope as string | undefined) || 'internal',
+          exposure: (data.exposure as string | undefined) || 'unknown',
+          ownerRef,
+          tags,
+          // Per-type fields collected by the form live in `metadata` (→ backend
+          // `properties`). The update path passes this; create silently dropped it.
+          ...(Object.keys(metadata).length > 0 ? { metadata } : {}),
+          ...topLevel,
+        } as never,
+        groupId
+          ? async (created) => {
+              await post(`/api/v1/asset-groups/${groupId}/assets`, {
+                asset_ids: [created.id],
+              })
+            }
+          : undefined
+      )
     },
     [crud, config.formFields, config.type]
   )
@@ -601,9 +645,21 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
       const tags = (data.tags as string[] | undefined) ?? []
       delete data.tags
 
-      // owner_ref is a universal field on every form, not in config.formFields
-      const ownerRef = data.ownerRef as string | undefined
+      // owner_ref + classification are universal fields on every form, not in
+      // config.formFields — pull them out before the config loop.
+      // On edit the field is prefilled with the current owner, so coerce an
+      // empty value to '' (not undefined) — the backend partial-update only
+      // touches owner_ref when the key is present, so sending '' is the only
+      // way to *clear* a previously-set owner. undefined would silently keep
+      // the old value.
+      const ownerRef = (data.ownerRef as string | undefined) ?? ''
       delete data.ownerRef
+      const criticality = data.criticality as Criticality | undefined
+      const scope = data.scope as AssetScope | undefined
+      const exposure = data.exposure as ExposureLevel | undefined
+      delete data.criticality
+      delete data.scope
+      delete data.exposure
 
       // Collect metadata and top-level fields (same logic as create)
       const metadata: Record<string, unknown> = {}
@@ -623,6 +679,9 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
         name: String(data.name ?? ''),
         description: String(data.description ?? ''),
         ownerRef,
+        ...(criticality ? { criticality } : {}),
+        ...(scope ? { scope } : {}),
+        ...(exposure ? { exposure } : {}),
         tags,
         ...(Object.keys(metadata).length > 0 ? { metadata } : {}),
         ...topLevel,
@@ -1151,7 +1210,10 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
 
                 <Select
                   value={statusFilter}
-                  onValueChange={(v) => setStatusFilter(v as StatusFilter)}
+                  onValueChange={(v) => {
+                    setStatusFilter(v as StatusFilter)
+                    setCurrentPage(1)
+                  }}
                 >
                   <SelectTrigger className="w-[130px] h-9">
                     <SelectValue>

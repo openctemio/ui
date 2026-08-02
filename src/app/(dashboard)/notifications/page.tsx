@@ -29,6 +29,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
+import { SEVERITY_TEXT_COLORS } from '@/lib/severity-colors'
 import {
   useNotificationsApi,
   useUnreadCountApi,
@@ -43,19 +44,13 @@ import {
   NOTIFICATION_TYPE_LABELS,
 } from '@/features/notifications/lib/notification-types'
 
-const severityColors: Record<string, string> = {
-  critical: 'text-red-500',
-  high: 'text-orange-500',
-  medium: 'text-yellow-500',
-  low: 'text-blue-500',
-  info: 'text-muted-foreground',
-}
+const severityColors: Record<string, string> = { ...SEVERITY_TEXT_COLORS }
 
 const severityBgColors: Record<string, string> = {
-  critical: 'bg-red-500/10 border-red-500/20',
-  high: 'bg-orange-500/10 border-orange-500/20',
-  medium: 'bg-yellow-500/10 border-yellow-500/20',
-  low: 'bg-blue-500/10 border-blue-500/20',
+  critical: 'bg-red-500/10 border-red-500/20 dark:bg-red-900/30',
+  high: 'bg-orange-500/10 border-orange-500/20 dark:bg-orange-900/30',
+  medium: 'bg-yellow-500/10 border-yellow-500/20 dark:bg-yellow-900/30',
+  low: 'bg-blue-500/10 border-blue-500/20 dark:bg-blue-900/30',
   info: 'bg-muted border-muted-foreground/10',
 }
 
