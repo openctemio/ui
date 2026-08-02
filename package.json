@@ -118,5 +118,9 @@
     "vitest": "^4.0.15"
   },
   "optionalDependencies": {},
-  "peerDependencies": {}
+  "peerDependencies": {},
+  "overrides": {
+    "postcss": "^8.5.20",
+    "sharp": "^0.35.3"
+  }
 }
