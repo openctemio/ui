@@ -141,6 +141,23 @@ RUN mkdir .next && chown nextjs:nodejs .next
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
+# Drop npm from the runtime image.
+#
+# The production stage runs `node server.js` — the Next standalone output — and
+# never invokes npm or npx. But the node base image ships npm, npm bundles its
+# own dependency tree, and that tree is scanned as part of the artifact we
+# publish. The first Trivy scan of a release-candidate image (ui#347 made that
+# run before the tag rather than after) reported five vulnerabilities, all of
+# them `tar 7.5.16` inside npm, none of them reachable from anything this image
+# actually executes.
+#
+# Removing npm clears those five and every future npm-bundled advisory, and it
+# is the correct posture regardless: a runtime image should not carry a package
+# manager.
+RUN rm -rf /usr/local/lib/node_modules/npm \
+  /usr/local/bin/npm \
+  /usr/local/bin/npx
+
 # Switch to non-root user
 USER nextjs
 
