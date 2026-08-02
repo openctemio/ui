@@ -34,6 +34,7 @@ import { IconGoogle, IconGithub, IconMicrosoft } from '@/assets/brand-icons'
 import { registerSchema, type RegisterInput } from '../schemas/auth.schema'
 import { registerAction } from '../actions/local-auth-actions'
 import { initiateSocialLogin, type SocialProvider } from '../actions/social-auth-actions'
+import { useAuthProviders } from '../api/use-auth-providers'
 
 // ============================================
 // TYPES
@@ -88,6 +89,16 @@ export function RegisterForm({
   const [loadingProvider, setLoadingProvider] = useState<SocialProvider | null>(null)
   const router = useRouter()
   const searchParams = useSearchParams()
+
+  // Only render buttons that lead somewhere. This form mapped over
+  // socialProviders unconditionally, so all three rendered on every
+  // deployment — including the ones with no OAuth credentials, where the
+  // button dead-ends. LoginForm has always asked the API which providers are
+  // live; this is the same question, asked here too.
+  const { data: authProviders } = useAuthProviders()
+  const enabledSocialProviders = authProviders
+    ? socialProviders.filter((provider) => authProviders.social?.[provider.id])
+    : []
 
   // Check for error from OAuth callback
   const errorParam = searchParams.get('error')
@@ -182,10 +193,15 @@ export function RegisterForm({
         {...props}
       >
         {/* Social Login Section - Show First for Better UX */}
-        {showSocialLogin && (
+        {showSocialLogin && enabledSocialProviders.length > 0 && (
           <>
-            <div className="grid grid-cols-3 gap-2">
-              {socialProviders.map((provider) => (
+            <div
+              className="grid gap-2"
+              style={{
+                gridTemplateColumns: `repeat(${enabledSocialProviders.length}, minmax(0, 1fr))`,
+              }}
+            >
+              {enabledSocialProviders.map((provider) => (
                 <Button
                   key={provider.id}
                   variant="outline"

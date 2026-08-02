@@ -109,7 +109,7 @@ export function LoginForm({
   // hidden while loading (data undefined) and only shown for providers === true.
   const { data: authProviders } = useAuthProviders()
   const enabledSocialProviders = authProviders
-    ? socialProviders.filter((provider) => authProviders.social[provider.id])
+    ? socialProviders.filter((provider) => authProviders.social?.[provider.id])
     : []
 
   // Check for error from OAuth/SSO callback
@@ -296,7 +296,12 @@ export function LoginForm({
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-2">
+            <div
+              className="grid gap-2"
+              style={{
+                gridTemplateColumns: `repeat(${enabledSocialProviders.length}, minmax(0, 1fr))`,
+              }}
+            >
               {enabledSocialProviders.map((provider) => (
                 <Button
                   key={provider.id}
