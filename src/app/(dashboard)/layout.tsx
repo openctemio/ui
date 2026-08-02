@@ -59,7 +59,7 @@ export default async function SiteLayout({ children }: SiteLayoutProps) {
                   */}
                   <main
                     id="content"
-                    className="flex flex-1 flex-col has-[[data-layout=fixed]]:overflow-hidden"
+                    className="min-h-0 flex-1 overflow-y-auto overscroll-contain has-[[data-layout=fixed]]:flex has-[[data-layout=fixed]]:flex-col has-[[data-layout=fixed]]:overflow-hidden"
                   >
                     {children}
                   </main>

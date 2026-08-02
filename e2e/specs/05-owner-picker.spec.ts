@@ -15,7 +15,7 @@ import { test, expect } from '../fixtures/authenticated-page'
 
 test.describe('Asset owner picker', () => {
   test('owner field is present on the asset detail sheet', async ({ page }) => {
-    await page.goto('/assets')
+    await page.goto('/assets/hosts')
     await page.waitForLoadState('networkidle')
 
     const firstRow = page.getByRole('row').nth(1)
@@ -30,7 +30,7 @@ test.describe('Asset owner picker', () => {
   })
 
   test('owner picker opens and shows at least one candidate', async ({ page, e2eConfig }) => {
-    await page.goto('/assets')
+    await page.goto('/assets/hosts')
     await page.waitForLoadState('networkidle')
 
     const firstRow = page.getByRole('row').nth(1)

@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import useSWR from 'swr'
 import { Main } from '@/components/layout'
-import { PageHeader, StatsCard } from '@/features/shared'
+import { PageHeader, StatsCard, EmptyState, formatRiskScore } from '@/features/shared'
 import { useTenant } from '@/context/tenant-provider'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -18,6 +18,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { cn } from '@/lib/utils'
+import { SEVERITY_BADGE_SOFT, type SeverityLevel } from '@/lib/severity-colors'
 import { get } from '@/lib/api/client'
 import {
   AlertTriangle,
@@ -94,20 +95,10 @@ const PERIOD_OPTIONS: { value: Period; label: string }[] = [
 // ============================================
 
 function getSeverityBadgeClass(severity: string): string {
-  switch (severity.toLowerCase()) {
-    case 'critical':
-      return 'bg-red-500/10 text-red-500 border-red-500/20'
-    case 'high':
-      return 'bg-orange-500/10 text-orange-500 border-orange-500/20'
-    case 'medium':
-      return 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
-    case 'low':
-      return 'bg-blue-500/10 text-blue-500 border-blue-500/20'
-    case 'info':
-      return 'bg-muted text-muted-foreground border-muted-foreground/20'
-    default:
-      return 'bg-muted text-muted-foreground border-muted-foreground/20'
-  }
+  return (
+    SEVERITY_BADGE_SOFT[severity.toLowerCase() as SeverityLevel] ??
+    'bg-muted text-muted-foreground border-muted-foreground/20'
+  )
 }
 
 function getPriorityClassBadgeClass(priorityClass: string): string {
@@ -264,7 +255,7 @@ export default function ExecutiveSummaryPage() {
         <section className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
           <StatsCard
             title="Risk Score"
-            value={summary ? `${summary.risk_score_current.toFixed(1)} / 10` : 'N/A'}
+            value={summary ? formatRiskScore(summary.risk_score_current) : 'N/A'}
             change={
               summary && summary.risk_score_change !== 0
                 ? `${summary.risk_score_change > 0 ? '+' : ''}${summary.risk_score_change.toFixed(1)}`
@@ -429,12 +420,11 @@ export default function ExecutiveSummaryPage() {
                 </TableBody>
               </Table>
             ) : (
-              <div className="flex flex-col items-center justify-center py-10">
-                <ShieldCheck className="mb-3 h-10 w-10 text-muted-foreground" />
-                <p className="text-sm text-muted-foreground">
-                  No top risks for the selected period.
-                </p>
-              </div>
+              <EmptyState
+                icon={ShieldCheck}
+                title="No top risks for the selected period."
+                card={false}
+              />
             )}
           </CardContent>
         </Card>

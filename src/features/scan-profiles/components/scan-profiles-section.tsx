@@ -13,7 +13,6 @@ import {
   Copy,
   Pencil,
   Trash2,
-  MoreHorizontal,
   Sparkles,
   ChevronDown,
 } from 'lucide-react'
@@ -28,7 +27,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -40,16 +38,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import {
-  AlertDialog,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 
+import { DataTableRowActions, EmptyState, type RowAction } from '@/features/shared'
 import { AddScanProfileDialog } from './add-scan-profile-dialog'
 import { EditScanProfileDialog } from './edit-scan-profile-dialog'
 import { CloneScanProfileDialog } from './clone-scan-profile-dialog'
@@ -311,48 +302,45 @@ export function ScanProfilesSection() {
                         <Can
                           permission={[Permission.ScanProfilesWrite, Permission.ScanProfilesDelete]}
                         >
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <Can permission={Permission.ScanProfilesWrite}>
-                                {!profile.is_default && (
-                                  <DropdownMenuItem
-                                    onClick={() => handleSetDefault(profile)}
-                                    disabled={isSettingDefault}
-                                  >
-                                    <Star className="me-2 h-4 w-4" />
-                                    Set as Default
-                                  </DropdownMenuItem>
-                                )}
-                                <DropdownMenuItem onClick={() => handleEditProfile(profile)}>
-                                  <Pencil className="me-2 h-4 w-4" />
-                                  Edit
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleCloneProfile(profile)}>
-                                  <Copy className="me-2 h-4 w-4" />
-                                  Clone
-                                </DropdownMenuItem>
-                              </Can>
-                              <Can permission={Permission.ScanProfilesDelete}>
-                                {!profile.is_system && (
-                                  <>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem
-                                      className="text-red-500"
-                                      onClick={() => handleDeleteClick(profile)}
-                                    >
-                                      <Trash2 className="me-2 h-4 w-4" />
-                                      Delete
-                                    </DropdownMenuItem>
-                                  </>
-                                )}
-                              </Can>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                          <DataTableRowActions
+                            actions={[
+                              ...(!profile.is_default
+                                ? ([
+                                    {
+                                      label: 'Set as Default',
+                                      icon: Star,
+                                      onClick: () => handleSetDefault(profile),
+                                      disabled: isSettingDefault,
+                                      permission: Permission.ScanProfilesWrite,
+                                    },
+                                  ] satisfies RowAction[])
+                                : []),
+                              {
+                                label: 'Edit',
+                                icon: Pencil,
+                                onClick: () => handleEditProfile(profile),
+                                permission: Permission.ScanProfilesWrite,
+                              },
+                              {
+                                label: 'Clone',
+                                icon: Copy,
+                                onClick: () => handleCloneProfile(profile),
+                                permission: Permission.ScanProfilesWrite,
+                              },
+                              ...(!profile.is_system
+                                ? ([
+                                    {
+                                      label: 'Delete',
+                                      icon: Trash2,
+                                      onClick: () => handleDeleteClick(profile),
+                                      destructive: true,
+                                      separatorBefore: true,
+                                      permission: Permission.ScanProfilesDelete,
+                                    },
+                                  ] satisfies RowAction[])
+                                : []),
+                            ]}
+                          />
                         </Can>
                       </TableCell>
                     </TableRow>
@@ -360,23 +348,26 @@ export function ScanProfilesSection() {
                 </TableBody>
               </Table>
             ) : (
-              <div className="rounded-lg border border-dashed p-8 text-center">
-                <Settings2 className="mx-auto mb-3 h-10 w-10 text-muted-foreground" />
-                <h3 className="mb-1 font-medium">No Scan Profiles Found</h3>
-                <p className="mb-4 text-sm text-muted-foreground">
-                  {searchQuery
+              <EmptyState
+                card={false}
+                icon={Settings2}
+                title="No Scan Profiles Found"
+                description={
+                  searchQuery
                     ? 'No profiles match your search criteria.'
-                    : 'Create a profile to define reusable scan configurations.'}
-                </p>
-                {!searchQuery && (
-                  <Can permission={Permission.ScanProfilesWrite}>
-                    <Button onClick={() => setAddDialogOpen(true)}>
-                      <Plus className="me-2 h-4 w-4" />
-                      Create Your First Profile
-                    </Button>
-                  </Can>
-                )}
-              </div>
+                    : 'Create a profile to define reusable scan configurations.'
+                }
+                action={
+                  !searchQuery ? (
+                    <Can permission={Permission.ScanProfilesWrite}>
+                      <Button onClick={() => setAddDialogOpen(true)}>
+                        <Plus className="me-2 h-4 w-4" />
+                        Create Your First Profile
+                      </Button>
+                    </Can>
+                  ) : undefined
+                }
+              />
             )}
           </CardContent>
         </Card>
@@ -410,24 +401,21 @@ export function ScanProfilesSection() {
       )}
 
       {/* Delete Confirmation */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Scan Profile</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete <strong>{selectedProfile?.name}</strong>? This action
-              cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-            <Button variant="destructive" onClick={handleDeleteConfirm} disabled={isDeleting}>
-              {isDeleting && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
-              Delete
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        title="Delete Scan Profile"
+        desc={
+          <>
+            Are you sure you want to delete <strong>{selectedProfile?.name}</strong>? This action
+            cannot be undone.
+          </>
+        }
+        confirmText="Delete"
+        destructive
+        isLoading={isDeleting}
+        handleConfirm={handleDeleteConfirm}
+      />
     </>
   )
 }

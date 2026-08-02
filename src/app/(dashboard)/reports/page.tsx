@@ -1,299 +1,78 @@
 'use client'
 
+import Link from 'next/link'
+import { Crown, Cpu, ChevronRight } from 'lucide-react'
 import { Main } from '@/components/layout'
 import { PageHeader } from '@/features/shared'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import {
-  FileText,
-  Download,
-  Calendar,
-  Clock,
-  Plus,
-  FileSpreadsheet,
-  FileBarChart,
-  FileCheck,
-  Send,
-  Eye,
-  MoreHorizontal,
-  TrendingUp,
-} from 'lucide-react'
+import { ReportSchedulesSection, ExecutiveSummarySection } from '@/features/reports'
 
-// Report stats — will be replaced with API when report backend is implemented
-// TODO: Wire to GET /api/v1/reports/stats when available
-const reportStats = {
-  totalReports: 0,
-  scheduled: 0,
-  generatedThisMonth: 0,
-  sharedExternal: 0,
-}
-
-const reportTemplates = [
+const REPORT_VIEWS = [
   {
-    id: 'tpl-001',
-    name: 'Executive Summary',
-    description: 'High-level security posture overview for leadership',
-    icon: FileBarChart,
+    href: '/insights/reports/executive',
+    icon: Crown,
+    title: 'Executive report view',
+    description: 'Leadership-oriented risk posture, severity mix and remediation status.',
   },
   {
-    id: 'tpl-002',
-    name: 'PCI-DSS Compliance',
-    description: 'Detailed compliance status for PCI-DSS requirements',
-    icon: FileCheck,
+    href: '/insights/reports/technical',
+    icon: Cpu,
+    title: 'Technical report view',
+    description: 'Detailed vulnerability breakdown, asset distribution and discovery trend.',
   },
-  {
-    id: 'tpl-003',
-    name: 'Technical Assessment',
-    description: 'Detailed technical findings with remediation guidance',
-    icon: FileText,
-  },
-  {
-    id: 'tpl-004',
-    name: 'Vulnerability Report',
-    description: 'Comprehensive vulnerability inventory and trends',
-    icon: FileSpreadsheet,
-  },
-]
+] as const
 
-// Recent reports — TODO: wire to GET /api/v1/reports when backend implements
-const recentReports: {
-  id: string
-  name: string
-  template: string
-  generatedBy: string
-  generatedAt: string
-  status: string
-  format: string
-  size: string
-}[] = []
-
-// Scheduled reports — TODO: wire to API
-const scheduledReports: {
-  name: string
-  schedule: string
-  recipients: number
-  nextRun: string
-}[] = []
-
-const statusConfig: Record<string, { color: string; bgColor: string }> = {
-  completed: { color: 'text-green-400', bgColor: 'bg-green-500/20' },
-  scheduled: { color: 'text-blue-400', bgColor: 'bg-blue-500/20' },
-  generating: { color: 'text-yellow-400', bgColor: 'bg-yellow-500/20' },
-  failed: { color: 'text-red-400', bgColor: 'bg-red-500/20' },
-}
-
+/**
+ * Security Reports.
+ *
+ * Two capabilities backed by endpoints that exist today:
+ *  - Scheduled reports (/api/v1/reports/schedules) — recurring finding-summary
+ *    digests emailed to recipients on a cron cadence.
+ *  - Executive summary export (/api/v1/dashboard/executive-summary/export) —
+ *    a program-level CSV for stakeholder decks.
+ *
+ * There is deliberately no "generated reports" list: the platform has no
+ * artifact store, so we do not fabricate one.
+ */
 export default function ReportsPage() {
   return (
-    <>
-      <Main>
-        <PageHeader
-          title="Security Reports"
-          description="Generate, schedule, and export security reports"
-        />
+    <Main>
+      <PageHeader
+        title="Security Reports"
+        description="Schedule recurring digests and export the executive summary"
+      />
 
-        {/* Stats */}
-        <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription className="flex items-center gap-2">
-                <FileText className="h-4 w-4" />
-                Total Reports
-              </CardDescription>
-              <CardTitle className="text-3xl">{reportStats.totalReports}</CardTitle>
-            </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription className="flex items-center gap-2">
-                <Calendar className="h-4 w-4" />
-                Scheduled
-              </CardDescription>
-              <CardTitle className="text-3xl text-blue-500">{reportStats.scheduled}</CardTitle>
-            </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription className="flex items-center gap-2">
-                <TrendingUp className="h-4 w-4" />
-                This Month
-              </CardDescription>
-              <CardTitle className="text-3xl text-green-500">
-                {reportStats.generatedThisMonth}
-              </CardTitle>
-            </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription className="flex items-center gap-2">
-                <Send className="h-4 w-4" />
-                Shared External
-              </CardDescription>
-              <CardTitle className="text-3xl">{reportStats.sharedExternal}</CardTitle>
-            </CardHeader>
-          </Card>
-        </div>
+      <div className="mt-6 space-y-6">
+        <ExecutiveSummarySection />
+        <ReportSchedulesSection />
 
-        <div className="mt-6 grid gap-6 lg:grid-cols-3">
-          {/* Report Templates */}
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-base">Report Templates</CardTitle>
-                  <CardDescription>Pre-configured report formats</CardDescription>
-                </div>
-                <Button size="sm">
-                  <Plus className="me-2 h-4 w-4" />
-                  New Template
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 sm:grid-cols-2">
-                {reportTemplates.map((template) => (
-                  <Card key={template.id} className="cursor-pointer hover:bg-muted/50">
-                    <CardContent className="flex items-start gap-4 p-4">
-                      <div className="bg-primary/10 flex h-10 w-10 items-center justify-center rounded-lg">
-                        <template.icon className="text-primary h-5 w-5" />
-                      </div>
-                      <div className="flex-1 space-y-1">
-                        <h4 className="text-sm font-medium">{template.name}</h4>
-                        <p className="text-muted-foreground text-xs">{template.description}</p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Scheduled Reports */}
-          <Card className="lg:col-span-1">
-            <CardHeader>
-              <CardTitle className="text-base">Scheduled Reports</CardTitle>
-              <CardDescription>Automated report generation</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {scheduledReports.map((report, idx) => (
-                <div key={idx} className="rounded-lg border p-3">
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium">{report.name}</p>
-                      <div className="text-muted-foreground flex items-center gap-1 text-xs">
-                        <Clock className="h-3 w-3" />
-                        <span>{report.schedule}</span>
-                      </div>
-                    </div>
-                    <Badge variant="outline" className="text-xs">
-                      {report.recipients} recipients
-                    </Badge>
-                  </div>
-                  <p className="text-muted-foreground mt-2 text-xs">Next: {report.nextRun}</p>
-                </div>
-              ))}
-              <Button variant="outline" className="w-full" size="sm">
-                <Calendar className="me-2 h-4 w-4" />
-                Schedule New
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Recent Reports Table */}
-        <Card className="mt-6">
+        <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-base">Recent Reports</CardTitle>
-                <CardDescription>Generated reports history</CardDescription>
-              </div>
-              <Button size="sm">
-                <Plus className="me-2 h-4 w-4" />
-                Generate Report
-              </Button>
-            </div>
+            <CardTitle>Report views</CardTitle>
+            <CardDescription>
+              Live, read-only dashboards built from your current findings and asset data.
+            </CardDescription>
           </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Report Name</TableHead>
-                  <TableHead>Template</TableHead>
-                  <TableHead>Generated By</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Format</TableHead>
-                  <TableHead>Size</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="w-[100px]" />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {recentReports.map((report) => {
-                  const status = statusConfig[report.status]
-                  return (
-                    <TableRow key={report.id} className="cursor-pointer hover:bg-muted/50">
-                      <TableCell>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <FileText className="text-muted-foreground h-4 w-4" />
-                          <span className="font-medium">{report.name}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="text-xs">
-                          {report.template}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground text-sm">
-                        {report.generatedBy}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground text-sm">
-                        {report.generatedAt}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary" className="text-xs">
-                          {report.format}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground text-sm">{report.size}</TableCell>
-                      <TableCell>
-                        <Badge className={`${status.bgColor} ${status.color} border-0`}>
-                          {report.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          {report.status === 'completed' && (
-                            <>
-                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                <Download className="h-4 w-4" />
-                              </Button>
-                            </>
-                          )}
-                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )
-                })}
-              </TableBody>
-            </Table>
+          <CardContent className="grid gap-3 sm:grid-cols-2">
+            {REPORT_VIEWS.map((view) => (
+              <Link
+                key={view.href}
+                href={view.href}
+                className="hover:bg-muted/50 flex items-start gap-3 rounded-lg border p-4 transition-colors"
+              >
+                <view.icon className="text-muted-foreground mt-0.5 h-5 w-5 shrink-0" />
+                <div className="flex-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">{view.title}</span>
+                    <ChevronRight className="text-muted-foreground h-4 w-4" />
+                  </div>
+                  <p className="text-muted-foreground mt-1 text-xs">{view.description}</p>
+                </div>
+              </Link>
+            ))}
           </CardContent>
         </Card>
-      </Main>
-    </>
+      </div>
+    </Main>
   )
 }

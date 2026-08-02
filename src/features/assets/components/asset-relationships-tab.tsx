@@ -19,16 +19,7 @@
 import { useCallback, useState } from 'react'
 import { ArrowRight } from 'lucide-react'
 import { toast } from 'sonner'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -435,32 +426,24 @@ export function AssetRelationshipsTab({
       </Dialog>
 
       {/* Remove confirmation */}
-      <AlertDialog
+      <ConfirmDialog
         open={!!removeTarget}
         onOpenChange={(open) => {
           if (!open) setRemoveTarget(null)
         }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Remove Relationship</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to remove this relationship between{' '}
-              <strong>{removeTarget?.sourceAssetName}</strong> and{' '}
-              <strong>{removeTarget?.targetAssetName}</strong>? This cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleRemove}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {isSubmitting ? 'Removing…' : 'Remove'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        title="Remove Relationship"
+        desc={
+          <>
+            Are you sure you want to remove this relationship between{' '}
+            <strong>{removeTarget?.sourceAssetName}</strong> and{' '}
+            <strong>{removeTarget?.targetAssetName}</strong>? This cannot be undone.
+          </>
+        }
+        confirmText={isSubmitting ? 'Removing…' : 'Remove'}
+        destructive
+        isLoading={isSubmitting}
+        handleConfirm={handleRemove}
+      />
     </div>
   )
 }

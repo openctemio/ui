@@ -58,6 +58,8 @@ import {
   PIPELINE_AGENT_PREFERENCE_DESCRIPTIONS,
   type PipelineTriggerType,
   type PipelineAgentPreference,
+  type UIPosition,
+  DEFAULT_PIPELINE_SETTINGS,
 } from '@/lib/api'
 import { useToolsWithConfig } from '@/lib/api/tool-hooks'
 import type { ToolWithConfig } from '@/lib/api/tool-types'
@@ -71,6 +73,11 @@ interface StepFormData {
   capabilities: string[]
   timeout_seconds: number
   depends_on: string[]
+  // Carried through (not editable in the wizard) so re-saving a pipeline
+  // doesn't wipe the Visual Builder layout / per-step config, which the
+  // backend replaces wholesale on each step in the steps array.
+  ui_position?: UIPosition
+  config?: Record<string, unknown>
 }
 
 interface TriggerFormData {
@@ -268,6 +275,8 @@ export function PipelineForm({ pipeline, onSubmit, onCancel, isSubmitting }: Pip
           capabilities: s.capabilities || ['scan'],
           timeout_seconds: s.timeout_seconds || 3600,
           depends_on: s.depends_on || [],
+          ui_position: s.ui_position,
+          config: s.config,
         }))
       : [
           {
@@ -434,9 +443,18 @@ export function PipelineForm({ pipeline, onSubmit, onCancel, isSubmitting }: Pip
         capabilities: s.capabilities,
         timeout_seconds: s.timeout_seconds,
         depends_on: s.depends_on,
+        // Preserve the visual-builder position + per-step config the wizard
+        // doesn't edit; the backend replaces each step entry on save, so
+        // omitting these reset every node to {0,150} and wiped step config.
+        ...(s.ui_position ? { ui_position: s.ui_position } : {}),
+        ...(s.config ? { config: s.config } : {}),
       })),
       tags,
+      // settings is full-replaced by the backend; the wizard only edits 4 of the
+      // keys, so spread the loaded settings (or defaults) first to avoid zeroing
+      // fail_fast / retry_failed_steps / notify_on_complete / notification_channels.
       settings: {
+        ...(pipeline?.settings ?? DEFAULT_PIPELINE_SETTINGS),
         timeout_seconds: timeoutSeconds,
         max_parallel_steps: maxParallelSteps,
         agent_preference: agentPreference,

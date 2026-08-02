@@ -19,12 +19,26 @@ import {
   UserPlus,
 } from 'lucide-react'
 import { AutoAssignDialog } from './auto-assign-dialog'
-import { SeverityBadge } from '@/features/shared'
+import { EmptyState, SeverityBadge } from '@/features/shared'
 import {
   useFindingGroups,
   type FindingGroup,
+  type FindingGroupStats,
   type GroupByDimension,
 } from '../api/use-finding-groups'
+
+// Some groups can come back from the API without a stats block; fall back to
+// zeros so the card renders instead of crashing on stats.fix_applied etc.
+const EMPTY_GROUP_STATS: FindingGroupStats = {
+  total: 0,
+  open: 0,
+  in_progress: 0,
+  fix_applied: 0,
+  resolved: 0,
+  affected_assets: 0,
+  resolved_assets: 0,
+  progress_pct: 0,
+}
 
 const DIMENSIONS: { value: GroupByDimension; label: string; icon: typeof BarChart3 }[] = [
   { value: 'cve_id', label: 'By CVE', icon: ShieldAlert },
@@ -113,20 +127,16 @@ export function FindingGroupsTab({ onViewFindings, onMarkFixed }: FindingGroupsT
           </CardContent>
         </Card>
       ) : groups.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <ShieldAlert className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-medium mb-1">No findings grouped yet</h3>
-            <p className="text-muted-foreground text-sm">
-              Run a scan to discover vulnerabilities, then come back to view groups.
-            </p>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={ShieldAlert}
+          title="No findings grouped yet"
+          description="Run a scan to discover vulnerabilities, then come back to view groups."
+        />
       ) : (
         <div className="space-y-3">
-          {groups.map((group) => (
+          {groups.map((group, i) => (
             <FindingGroupCard
-              key={group.group_key}
+              key={group.group_key || `${group.group_type}-${i}`}
               group={group}
               onViewFindings={onViewFindings}
               onMarkFixed={onMarkFixed}
@@ -173,7 +183,7 @@ interface FindingGroupCardProps {
 }
 
 function FindingGroupCard({ group, onViewFindings, onMarkFixed }: FindingGroupCardProps) {
-  const { stats } = group
+  const stats = group.stats ?? EMPTY_GROUP_STATS
   const hasFixApplied = stats.fix_applied > 0
 
   return (

@@ -11,3 +11,6 @@ export {
   markExposureFalsePositive,
   reactivateExposure,
 } from './use-exposures'
+
+export { useFindingTypeStats } from './use-finding-type-stats'
+export type { FindingTypeStats } from './use-finding-type-stats'

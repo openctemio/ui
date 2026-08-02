@@ -7,16 +7,7 @@ import { MarkdownPreview } from '@/components/ui/markdown-editor'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import {
   PlusCircle,
   MessageSquare,
@@ -45,9 +36,11 @@ import {
   Check,
   X,
 } from 'lucide-react'
+import { usePermissions } from '@/context/permission-provider'
 import type { Activity, ActivityType } from '../../types'
 import { ACTIVITY_TYPE_CONFIG, FINDING_STATUS_CONFIG, SEVERITY_CONFIG } from '../../types'
 import type { Severity } from '@/features/shared/types'
+import { SEVERITY_BADGE_SOFT, type SeverityLevel } from '@/lib/severity-colors'
 
 interface ActivityPanelProps {
   activities: Activity[]
@@ -91,6 +84,11 @@ export function ActivityPanel({
   isLoadingMore,
   onLoadMore,
 }: ActivityPanelProps) {
+  // Posting a comment hits POST /findings/{id}/comments, which requires
+  // findings:write. Hide the composer for users who lack it instead of letting
+  // them type and hit a 403 on Send.
+  const { hasPermission } = usePermissions()
+  const canComment = hasPermission('findings:write')
   const [comment, setComment] = useState('')
   const [isInternal, setIsInternal] = useState(false)
   const [expandedReplies, setExpandedReplies] = useState<Set<string>>(new Set())
@@ -265,13 +263,9 @@ export function ActivityPanel({
         const priorityRank = aiMeta?.priority_rank as number | undefined
         const recommendation = aiMeta?.ai_recommendation as string | undefined
 
-        const getSeverityColor = (sev: string) => {
-          const lower = sev?.toLowerCase()
-          if (lower === 'critical') return 'border-red-500/50 text-red-400'
-          if (lower === 'high') return 'border-orange-500/50 text-orange-400'
-          if (lower === 'medium') return 'border-yellow-500/50 text-yellow-400'
-          return 'border-green-500/50 text-green-400'
-        }
+        const getSeverityColor = (sev: string) =>
+          SEVERITY_BADGE_SOFT[sev?.toLowerCase() as SeverityLevel] ??
+          'border-muted text-muted-foreground'
 
         return (
           <div className="bg-purple-500/10 space-y-3 rounded-lg border border-purple-500/20 p-3">
@@ -624,77 +618,66 @@ export function ActivityPanel({
         </div>
       </div>
 
-      {/* Comment Input - Fixed at bottom */}
-      <div className="flex-shrink-0 border-t p-2">
-        <Textarea
-          placeholder="Add a comment..."
-          value={comment}
-          onChange={(e) => setComment(e.target.value)}
-          maxLength={MAX_COMMENT_LENGTH}
-          className="min-h-[60px] max-h-[120px] resize-none text-sm mb-1.5"
-        />
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1">
-            <Button variant="ghost" size="sm" className="h-5 w-5 p-0">
-              <Paperclip className="h-3 w-3" />
-            </Button>
-            <Button
-              variant={isInternal ? 'secondary' : 'ghost'}
-              size="sm"
-              className="h-5 gap-0.5 px-1 text-[10px]"
-              onClick={() => setIsInternal(!isInternal)}
-            >
-              <Lock className="h-2.5 w-2.5" />
-              Internal
-            </Button>
-            {/* Character counter - show when approaching limit */}
-            {comment.length > MAX_COMMENT_LENGTH * 0.8 && (
-              <span
-                className={`text-[10px] ${comment.length >= MAX_COMMENT_LENGTH ? 'text-destructive' : 'text-muted-foreground'}`}
+      {/* Comment Input - Fixed at bottom (only when the user can post) */}
+      {canComment && (
+        <div className="flex-shrink-0 border-t p-2">
+          <Textarea
+            placeholder="Add a comment..."
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            maxLength={MAX_COMMENT_LENGTH}
+            className="min-h-[60px] max-h-[120px] resize-none text-sm mb-1.5"
+          />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1">
+              <Button variant="ghost" size="sm" className="h-5 w-5 p-0">
+                <Paperclip className="h-3 w-3" />
+              </Button>
+              <Button
+                variant={isInternal ? 'secondary' : 'ghost'}
+                size="sm"
+                className="h-5 gap-0.5 px-1 text-[10px]"
+                onClick={() => setIsInternal(!isInternal)}
               >
-                {comment.length}/{MAX_COMMENT_LENGTH}
-              </span>
-            )}
+                <Lock className="h-2.5 w-2.5" />
+                Internal
+              </Button>
+              {/* Character counter - show when approaching limit */}
+              {comment.length > MAX_COMMENT_LENGTH * 0.8 && (
+                <span
+                  className={`text-[10px] ${comment.length >= MAX_COMMENT_LENGTH ? 'text-destructive' : 'text-muted-foreground'}`}
+                >
+                  {comment.length}/{MAX_COMMENT_LENGTH}
+                </span>
+              )}
+            </div>
+            <Button
+              size="sm"
+              className="h-6 text-xs"
+              onClick={handleSubmitComment}
+              disabled={!comment.trim() || comment.length > MAX_COMMENT_LENGTH}
+            >
+              <Send className="me-1 h-3 w-3" />
+              Send
+            </Button>
           </div>
-          <Button
-            size="sm"
-            className="h-6 text-xs"
-            onClick={handleSubmitComment}
-            disabled={!comment.trim() || comment.length > MAX_COMMENT_LENGTH}
-          >
-            <Send className="me-1 h-3 w-3" />
-            Send
-          </Button>
         </div>
-      </div>
+      )}
 
-      <AlertDialog
+      <ConfirmDialog
         open={!!deletingCommentId}
         onOpenChange={(open) => !open && setDeletingCommentId(null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete this comment?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete the comment. This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                if (deletingCommentId) {
-                  onDeleteComment?.(deletingCommentId)
-                }
-                setDeletingCommentId(null)
-              }}
-              className="bg-red-500 text-white hover:bg-red-600"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        title="Delete this comment?"
+        desc="This will permanently delete the comment. This action cannot be undone."
+        confirmText="Delete"
+        destructive
+        handleConfirm={() => {
+          if (deletingCommentId) {
+            onDeleteComment?.(deletingCommentId)
+          }
+          setDeletingCommentId(null)
+        }}
+      />
     </div>
   )
 }

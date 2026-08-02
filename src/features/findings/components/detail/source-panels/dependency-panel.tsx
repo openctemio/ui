@@ -1,8 +1,7 @@
 'use client'
 
-import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Package, ArrowUp, CheckCircle2 } from 'lucide-react'
+import { Package, ArrowRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { FindingDetail } from '../../../types'
 
@@ -10,6 +9,14 @@ interface DependencyPanelProps {
   finding: FindingDetail
 }
 
+/**
+ * DependencyPanel — the source-specific summary shown above the tabs for SCA
+ * findings. Deliberately a single, width-filling strip (label on the left,
+ * facts pushed to the right) rather than a tall card: SCA metadata is often
+ * sparse, and a big box with a couple of chips clustered top-left reads as
+ * empty. The strip stays tidy whether it has the full upgrade path or just a
+ * CVSS + dependency type.
+ */
 export function DependencyPanel({ finding }: DependencyPanelProps) {
   // SCA findings store package info in metadata
   const meta = finding.metadata || {}
@@ -26,43 +33,51 @@ export function DependencyPanel({ finding }: DependencyPanelProps) {
   // If no useful SCA data, don't render
   if (!packageName && !finding.cve) return null
 
+  const secondLine = purl || finding.filePath
+
   return (
-    <Card className="mx-6 mt-3 border-blue-500/30 bg-blue-500/5">
-      <CardContent className="p-4">
-        <div className="flex items-center gap-2 mb-3">
+    <div className="mx-6 mt-3 rounded-lg border border-blue-500/30 bg-blue-500/5 px-4 py-2.5">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        {/* Label */}
+        <div className="flex shrink-0 items-center gap-2">
           <Package className="h-4 w-4 text-blue-400" />
           <span className="text-sm font-medium text-blue-400">Dependency Vulnerability</span>
         </div>
 
-        {/* Package info */}
+        {/* Upgrade path — the actionable core of an SCA finding */}
         {packageName && (
-          <div className="mb-3">
-            <div className="flex items-baseline gap-2">
-              <span className="text-base font-semibold">{packageName}</span>
-              {packageVersion && (
-                <span className="text-sm text-muted-foreground">@ {packageVersion}</span>
-              )}
-              {ecosystem && (
-                <Badge variant="outline" className="text-xs capitalize">
-                  {ecosystem}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-sm font-semibold">{packageName}</span>
+            {packageVersion && (
+              <Badge variant="outline" className="font-mono text-xs">
+                {packageVersion}
+              </Badge>
+            )}
+            {fixedVersion && (
+              <>
+                <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
+                <Badge
+                  variant="outline"
+                  className="border-green-500/40 font-mono text-xs text-green-400"
+                >
+                  {fixedVersion}
                 </Badge>
-              )}
-            </div>
-            {purl && <div className="text-xs text-muted-foreground mt-0.5 font-mono">{purl}</div>}
+              </>
+            )}
+            {ecosystem && (
+              <Badge variant="outline" className="text-xs capitalize">
+                {ecosystem}
+              </Badge>
+            )}
           </div>
         )}
 
-        {/* CVE + CVSS row */}
-        <div className="flex flex-wrap items-center gap-3 mb-3">
-          {finding.cve && (
-            <Badge variant="outline" className="text-xs font-mono">
-              {finding.cve}
-            </Badge>
-          )}
+        {/* Facts — pushed to the right so the strip spans the full row */}
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground sm:ms-auto">
           {finding.cvss != null && (
             <span
               className={cn(
-                'text-xs font-medium',
+                'font-medium',
                 finding.cvss >= 9
                   ? 'text-red-400'
                   : finding.cvss >= 7
@@ -72,35 +87,24 @@ export function DependencyPanel({ finding }: DependencyPanelProps) {
                       : 'text-green-400'
               )}
             >
-              CVSS: {finding.cvss.toFixed(1)}
+              CVSS {finding.cvss.toFixed(1)}
+            </span>
+          )}
+          <span>{isDirect ? 'Direct dependency' : 'Transitive dependency'}</span>
+          {affectedRange && (
+            <span className="font-mono">
+              Affected <span className="text-foreground/80">{affectedRange}</span>
             </span>
           )}
         </div>
+      </div>
 
-        {/* Version info */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
-          {affectedRange && (
-            <div>
-              <span className="text-xs text-muted-foreground">Affected: </span>
-              <span className="text-xs font-mono">{affectedRange}</span>
-            </div>
-          )}
-          {fixedVersion && (
-            <div className="flex items-center gap-1">
-              <span className="text-xs text-muted-foreground">Fixed in: </span>
-              <span className="text-xs font-mono font-medium">{fixedVersion}</span>
-              <CheckCircle2 className="h-3 w-3 text-green-400" />
-              <ArrowUp className="h-3 w-3 text-green-400" />
-            </div>
-          )}
+      {/* purl / manifest path — only when present, as a subtle second line */}
+      {secondLine && (
+        <div className="mt-1.5 truncate font-mono text-xs text-muted-foreground" title={secondLine}>
+          {secondLine}
         </div>
-
-        {/* Dependency type + file */}
-        <div className="flex flex-wrap gap-4 text-xs text-muted-foreground mt-2">
-          <span>{isDirect ? 'Direct dependency' : 'Transitive dependency'}</span>
-          {finding.filePath && <span className="font-mono">{finding.filePath}</span>}
-        </div>
-      </CardContent>
-    </Card>
+      )}
+    </div>
   )
 }

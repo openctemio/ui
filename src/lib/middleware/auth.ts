@@ -98,6 +98,12 @@ export function validateRedirectUrl(url: string): string {
   try {
     // If it starts with /, it's internal - safe
     if (url.startsWith('/') && !url.startsWith('//')) {
+      // Reject backslash / protocol-relative tricks: browsers normalise
+      // "\" to "/", so "/\evil.com" becomes an external protocol-relative
+      // redirect. Block a leading "/" followed by "/" or "\".
+      if (/^\/[/\\]/.test(url)) {
+        return '/dashboard'
+      }
       return url
     }
 

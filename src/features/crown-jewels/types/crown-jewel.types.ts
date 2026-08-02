@@ -28,6 +28,18 @@ export interface CrownJewel {
   tags: string[]
   createdAt: string
   updatedAt: string
+
+  // Real API-backed fields (optional; populated from the assets API so the UI
+  // shows true signal instead of hardcoded placeholders).
+  assetType?: string // raw asset type, e.g. "database", "host"
+  findingCount?: number
+  businessImpactScore?: number // 0-100
+  findingSeverity?: { critical: number; high: number; medium: number; low: number }
+  exposure?: string // reachability: "internet" | "internal" | "unknown"
+  isInternetAccessible?: boolean
+  criticality?: string // "critical" | "high" | "medium" | "low"
+  piiExposed?: boolean
+  phiExposed?: boolean
 }
 
 export interface CrownJewelDependency {

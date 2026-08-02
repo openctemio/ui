@@ -35,6 +35,7 @@ import {
   TrendingUp,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { EmptyState } from '@/features/shared'
 import { Can, Permission } from '@/lib/permissions'
 import {
   useNotificationIntegrationsApi,
@@ -373,11 +374,12 @@ function HistoryList({
 
   if (allEntries.length === 0) {
     return (
-      <div className="text-center py-12 text-muted-foreground">
-        <History className="mx-auto h-12 w-12 mb-4 opacity-50" />
-        <p>No notifications sent yet</p>
-        <p className="text-sm mt-2">Send a test notification to see it here</p>
-      </div>
+      <EmptyState
+        card={false}
+        icon={History}
+        title="No notifications sent yet"
+        description="Send a test notification to see it here"
+      />
     )
   }
 
@@ -476,7 +478,7 @@ function HistoryContent() {
           </Button>
           <div className="h-6 w-px bg-border" />
           <div>
-            <h1 className="text-xl font-semibold">Notification Events</h1>
+            <h1 className="text-2xl font-bold tracking-tight">Notification Events</h1>
           </div>
         </div>
 
@@ -542,10 +544,11 @@ function HistoryContent() {
         </CardHeader>
         <CardContent>
           {!selectedId ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <Bell className="mx-auto h-12 w-12 mb-4 opacity-50" />
-              <p>Select a channel to view its notification events</p>
-            </div>
+            <EmptyState
+              card={false}
+              icon={Bell}
+              title="Select a channel to view its notification events"
+            />
           ) : (
             <HistoryList integrationId={selectedId} onStatsChange={handleStatsChange} />
           )}

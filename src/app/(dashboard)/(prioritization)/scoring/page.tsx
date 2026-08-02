@@ -2,7 +2,13 @@
 
 import { useMemo } from 'react'
 import { Main } from '@/components/layout'
-import { PageHeader, StatsCard } from '@/features/shared'
+import {
+  PageHeader,
+  StatsCard,
+  EmptyState,
+  formatRiskScore,
+  getRiskScoreChangeType,
+} from '@/features/shared'
 import { useDashboardStats } from '@/features/dashboard/hooks/use-dashboard-stats'
 import { useTenant } from '@/context/tenant-provider'
 import {
@@ -21,6 +27,7 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Progress } from '@/components/ui/progress'
 import { cn } from '@/lib/utils'
+import { SEVERITY_BADGE_SOFT, type SeverityLevel } from '@/lib/severity-colors'
 import { Gauge, Shield, AlertTriangle, Target, TrendingUp } from 'lucide-react'
 
 const SEVERITY_COLORS: Record<string, string> = {
@@ -55,18 +62,7 @@ const SCORING_FACTORS = [
 ]
 
 function getSeverityBadgeClass(severity: string) {
-  switch (severity) {
-    case 'critical':
-      return 'bg-red-500/10 text-red-500 border-red-500/20'
-    case 'high':
-      return 'bg-orange-500/10 text-orange-500 border-orange-500/20'
-    case 'medium':
-      return 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
-    case 'low':
-      return 'bg-blue-500/10 text-blue-500 border-blue-500/20'
-    default:
-      return 'bg-muted text-muted-foreground'
-  }
+  return SEVERITY_BADGE_SOFT[severity as SeverityLevel] ?? 'bg-muted text-muted-foreground'
 }
 
 function getCvssRiskLabel(cvss: number): { label: string; severity: string } {
@@ -218,23 +214,20 @@ export default function ExposureScoringPage() {
       {isLoading ? (
         <LoadingSkeleton />
       ) : isEmpty ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-16">
-            <Gauge className="text-muted-foreground mb-4 h-12 w-12" />
-            <p className="text-muted-foreground text-center text-sm">
-              No scoring data available. Start scanning to generate risk scores.
-            </p>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={Gauge}
+          title="No scoring data available"
+          description="Start scanning to generate risk scores."
+        />
       ) : (
         <>
           {/* Stats Row */}
           <section className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
             <StatsCard
               title="Risk Score"
-              value={`${riskScore.toFixed(1)} / 10`}
+              value={formatRiskScore(riskScore)}
               description="Overall exposure risk"
-              changeType={riskScore >= 7 ? 'negative' : riskScore >= 4 ? 'neutral' : 'positive'}
+              changeType={getRiskScoreChangeType(riskScore)}
               icon={Gauge}
             />
             <StatsCard

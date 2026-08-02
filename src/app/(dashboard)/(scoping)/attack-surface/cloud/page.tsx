@@ -1,9 +1,11 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
-import { useAssets } from '@/features/assets'
+import { getErrorMessage } from '@/lib/api/error-handler'
+import { useRouter } from 'next/navigation'
+import { createAsset, type CreateAssetInput, useAssets } from '@/features/assets'
 import { Main } from '@/components/layout'
-import { PageHeader } from '@/features/shared'
+import { PageHeader, DataTableRowActions, StatsCard, SheetBody } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -12,7 +14,6 @@ import { Progress } from '@/components/ui/progress'
 import {
   Cloud,
   Plus,
-  MoreHorizontal,
   Eye,
   Pencil,
   Trash2,
@@ -33,12 +34,6 @@ import {
   Box,
 } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import {
   Dialog,
   DialogContent,
@@ -71,6 +66,7 @@ import {
 } from '@/components/ui/table'
 import { toast } from 'sonner'
 import { Can, Permission } from '@/lib/permissions'
+import { exportToCsv } from '@/hooks/use-csv-export'
 
 type CloudProvider = 'aws' | 'azure' | 'gcp' | 'other'
 type ResourceType = 'compute' | 'storage' | 'database' | 'network' | 'iam' | 'serverless'
@@ -99,10 +95,10 @@ interface CloudResource {
 }
 
 const providerColors: Record<CloudProvider, string> = {
-  aws: 'bg-orange-500/10 text-orange-500 border-orange-500/20',
-  azure: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
-  gcp: 'bg-red-500/10 text-red-500 border-red-500/20',
-  other: 'bg-gray-500/10 text-gray-500 border-gray-500/20',
+  aws: 'bg-orange-500/10 text-orange-500 border-orange-500/20 dark:bg-orange-900/30 dark:text-orange-400',
+  azure: 'bg-blue-500/10 text-blue-500 border-blue-500/20 dark:bg-blue-900/30 dark:text-blue-400',
+  gcp: 'bg-red-500/10 text-red-500 border-red-500/20 dark:bg-red-900/30 dark:text-red-400',
+  other: 'bg-gray-500/10 text-gray-500 border-gray-500/20 dark:bg-gray-800 dark:text-gray-400',
 }
 
 const providerLabels: Record<CloudProvider, string> = {
@@ -113,23 +109,28 @@ const providerLabels: Record<CloudProvider, string> = {
 }
 
 const statusColors: Record<ResourceStatus, string> = {
-  running: 'bg-green-500/10 text-green-500 border-green-500/20',
-  stopped: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20',
-  terminated: 'bg-gray-500/10 text-gray-500 border-gray-500/20',
-  unknown: 'bg-gray-500/10 text-gray-500 border-gray-500/20',
+  running:
+    'bg-green-500/10 text-green-500 border-green-500/20 dark:bg-green-900/30 dark:text-green-400',
+  stopped:
+    'bg-yellow-500/10 text-yellow-500 border-yellow-500/20 dark:bg-yellow-900/30 dark:text-yellow-400',
+  terminated: 'bg-gray-500/10 text-gray-500 border-gray-500/20 dark:bg-gray-800 dark:text-gray-400',
+  unknown: 'bg-gray-500/10 text-gray-500 border-gray-500/20 dark:bg-gray-800 dark:text-gray-400',
 }
 
 const exposureColors: Record<ExposureLevel, string> = {
-  public: 'bg-red-500/10 text-red-500 border-red-500/20',
-  private: 'bg-green-500/10 text-green-500 border-green-500/20',
-  internal: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
+  public: 'bg-red-500/10 text-red-500 border-red-500/20 dark:bg-red-900/30 dark:text-red-400',
+  private:
+    'bg-green-500/10 text-green-500 border-green-500/20 dark:bg-green-900/30 dark:text-green-400',
+  internal:
+    'bg-blue-500/10 text-blue-500 border-blue-500/20 dark:bg-blue-900/30 dark:text-blue-400',
 }
 
 const riskColors: Record<RiskLevel, string> = {
-  critical: 'bg-red-500/10 text-red-500 border-red-500/20',
-  high: 'bg-orange-500/10 text-orange-500 border-orange-500/20',
-  medium: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20',
-  low: 'bg-green-500/10 text-green-500 border-green-500/20',
+  critical: 'bg-red-500/10 text-red-500 border-red-500/20 dark:bg-red-900/30 dark:text-red-400',
+  high: 'bg-orange-500/10 text-orange-500 border-orange-500/20 dark:bg-orange-900/30 dark:text-orange-400',
+  medium:
+    'bg-yellow-500/10 text-yellow-500 border-yellow-500/20 dark:bg-yellow-900/30 dark:text-yellow-400',
+  low: 'bg-green-500/10 text-green-500 border-green-500/20 dark:bg-green-900/30 dark:text-green-400',
 }
 
 const typeIcons: Record<ResourceType, React.ElementType> = {
@@ -142,8 +143,9 @@ const typeIcons: Record<ResourceType, React.ElementType> = {
 }
 
 export default function CloudSurfacePage() {
+  const router = useRouter()
   // Fetch real cloud assets from API, fallback to mock for demo
-  const { assets: apiAssets } = useAssets({
+  const { assets: apiAssets, mutate: refetchAssets } = useAssets({
     types: ['cloud_account'],
     pageSize: 100,
   })
@@ -256,33 +258,39 @@ export default function CloudSurfacePage() {
     })
   }
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!formData.name || !formData.accountId || !formData.region) {
       toast.error('Please fill in all required fields')
       return
     }
-    const newResource: CloudResource = {
-      id: `cloud-${Date.now()}`,
-      name: formData.name,
-      provider: formData.provider,
-      resourceType: formData.resourceType,
-      region: formData.region,
-      accountId: formData.accountId,
-      accountName: formData.accountName || undefined,
-      status: formData.status,
-      exposure: formData.exposure,
-      riskLevel: formData.riskLevel,
-      lastSeen: new Date().toISOString(),
-      discoveredAt: new Date().toISOString(),
-      findingsCount: 0,
-      publicIp: formData.publicIp || undefined,
-      privateIp: formData.privateIp || undefined,
-      notes: formData.notes || undefined,
+    // Persist through the real API. This previously only pushed onto local
+    // state and reported success, so the resource vanished on the next reload —
+    // the page reads from useAssets but the writes never reached it.
+    try {
+      await createAsset({
+        name: formData.name,
+        // The page lists types:['cloud_account'], so create must match or the new
+        // row would be invisible in the very list that just reported success.
+        type: 'cloud_account' as CreateAssetInput['type'],
+        scope: 'external',
+        description: formData.notes || undefined,
+        metadata: {
+          cloud_provider: formData.provider,
+          resource_type: formData.resourceType,
+          region: formData.region,
+          account_id: formData.accountId,
+          ...(formData.accountName ? { account_name: formData.accountName } : {}),
+          ...(formData.publicIp ? { public_ip: formData.publicIp } : {}),
+          ...(formData.privateIp ? { private_ip: formData.privateIp } : {}),
+        },
+      })
+      toast.success('Cloud resource added')
+      setIsCreateOpen(false)
+      resetForm()
+      await refetchAssets()
+    } catch (e) {
+      toast.error(getErrorMessage(e, 'Failed to add cloud resource'))
     }
-    setResources((prev) => [...prev, newResource])
-    toast.success('Cloud resource added successfully')
-    setIsCreateOpen(false)
-    resetForm()
   }
 
   const handleEdit = () => {
@@ -321,6 +329,25 @@ export default function CloudSurfacePage() {
     setResources((prev) => prev.filter((r) => r.id !== deleteResource.id))
     toast.success('Cloud resource deleted successfully')
     setDeleteResource(null)
+  }
+
+  const handleExport = () => {
+    exportToCsv(
+      filteredResources,
+      [
+        { header: 'Name', accessor: (r) => r.name },
+        { header: 'Provider', accessor: (r) => providerLabels[r.provider] },
+        { header: 'Resource Type', accessor: (r) => r.resourceType },
+        { header: 'Region', accessor: (r) => r.region },
+        { header: 'Account ID', accessor: (r) => r.accountId },
+        { header: 'Status', accessor: (r) => r.status },
+        { header: 'Exposure', accessor: (r) => r.exposure },
+        { header: 'Risk Level', accessor: (r) => r.riskLevel },
+        { header: 'Findings', accessor: (r) => r.findingsCount },
+        { header: 'Last Seen', accessor: (r) => r.lastSeen },
+      ],
+      'cloud-resources'
+    )
   }
 
   const openEdit = (resource: CloudResource) => {
@@ -506,11 +533,11 @@ export default function CloudSurfacePage() {
           description="Discover and monitor cloud resources across AWS, Azure, and GCP"
         >
           <div className="flex gap-2">
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" disabled title="Coming soon">
               <RefreshCw className="me-2 h-4 w-4" />
               Sync Resources
             </Button>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" onClick={handleExport}>
               <Download className="me-2 h-4 w-4" />
               Export
             </Button>
@@ -525,46 +552,32 @@ export default function CloudSurfacePage() {
 
         {/* Stats Cards */}
         <div className="grid gap-4 md:grid-cols-5 mb-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Total Resources</CardTitle>
-              <Cloud className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.total}</div>
-              <p className="text-xs text-muted-foreground">{stats.running} running</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Public Exposure</CardTitle>
-              <Globe className="h-4 w-4 text-red-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-500">{stats.publicExposure}</div>
-              <p className="text-xs text-muted-foreground">Internet-facing</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Critical Risk</CardTitle>
-              <AlertTriangle className="h-4 w-4 text-red-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-500">{stats.critical}</div>
-              <p className="text-xs text-muted-foreground">Needs attention</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Findings</CardTitle>
-              <Shield className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.totalFindings}</div>
-              <p className="text-xs text-muted-foreground">Misconfigurations</p>
-            </CardContent>
-          </Card>
+          <StatsCard
+            title="Total Resources"
+            value={stats.total}
+            icon={Cloud}
+            description={`${stats.running} running`}
+          />
+          <StatsCard
+            title="Public Exposure"
+            value={stats.publicExposure}
+            valueClassName="text-red-600"
+            icon={Globe}
+            description="Internet-facing"
+          />
+          <StatsCard
+            title="Critical Risk"
+            value={stats.critical}
+            valueClassName="text-red-600"
+            icon={AlertTriangle}
+            description="Needs attention"
+          />
+          <StatsCard
+            title="Findings"
+            value={stats.totalFindings}
+            icon={Shield}
+            description="Misconfigurations"
+          />
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">Clean Resources</CardTitle>
@@ -753,34 +766,30 @@ export default function CloudSurfacePage() {
                       </TableCell>
                       <TableCell>
                         <Can permission={[Permission.ScopeWrite, Permission.ScopeDelete]}>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                              <Button variant="ghost" size="icon">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => setViewResource(resource)}>
-                                <Eye className="me-2 h-4 w-4" />
-                                View Details
-                              </DropdownMenuItem>
-                              <Can permission={Permission.ScopeWrite}>
-                                <DropdownMenuItem onClick={() => openEdit(resource)}>
-                                  <Pencil className="me-2 h-4 w-4" />
-                                  Edit
-                                </DropdownMenuItem>
-                              </Can>
-                              <Can permission={Permission.ScopeDelete}>
-                                <DropdownMenuItem
-                                  className="text-red-500"
-                                  onClick={() => setDeleteResource(resource)}
-                                >
-                                  <Trash2 className="me-2 h-4 w-4" />
-                                  Delete
-                                </DropdownMenuItem>
-                              </Can>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                          <span onClick={(e) => e.stopPropagation()}>
+                            <DataTableRowActions
+                              actions={[
+                                {
+                                  label: 'View Details',
+                                  icon: Eye,
+                                  onClick: () => setViewResource(resource),
+                                },
+                                {
+                                  label: 'Edit',
+                                  icon: Pencil,
+                                  onClick: () => openEdit(resource),
+                                  permission: Permission.ScopeWrite,
+                                },
+                                {
+                                  label: 'Delete',
+                                  icon: Trash2,
+                                  onClick: () => setDeleteResource(resource),
+                                  destructive: true,
+                                  permission: Permission.ScopeDelete,
+                                },
+                              ]}
+                            />
+                          </span>
                         </Can>
                       </TableCell>
                     </TableRow>
@@ -866,152 +875,161 @@ export default function CloudSurfacePage() {
                 </div>
               </SheetHeader>
 
-              <div className="mt-6 space-y-4">
-                <div className="grid grid-cols-3 gap-4">
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Provider</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <Badge variant="outline" className={providerColors[viewResource.provider]}>
-                        {providerLabels[viewResource.provider]}
-                      </Badge>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Exposure</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <Badge variant="outline" className={exposureColors[viewResource.exposure]}>
-                        {viewResource.exposure}
-                      </Badge>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Risk Level</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <Badge variant="outline" className={riskColors[viewResource.riskLevel]}>
-                        {viewResource.riskLevel}
-                      </Badge>
-                    </CardContent>
-                  </Card>
-                </div>
+              <SheetBody>
+                <div className="mt-6 space-y-4">
+                  <div className="grid grid-cols-3 gap-4">
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">Provider</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <Badge variant="outline" className={providerColors[viewResource.provider]}>
+                          {providerLabels[viewResource.provider]}
+                        </Badge>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">Exposure</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <Badge variant="outline" className={exposureColors[viewResource.exposure]}>
+                          {viewResource.exposure}
+                        </Badge>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">Risk Level</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <Badge variant="outline" className={riskColors[viewResource.riskLevel]}>
+                          {viewResource.riskLevel}
+                        </Badge>
+                      </CardContent>
+                    </Card>
+                  </div>
 
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">Resource Details</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Type</span>
-                      <span className="capitalize">{viewResource.resourceType}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Region</span>
-                      <span>{viewResource.region}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Account ID</span>
-                      <code className="text-xs">{viewResource.accountId}</code>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Status</span>
-                      <Badge variant="outline" className={statusColors[viewResource.status]}>
-                        {viewResource.status}
-                      </Badge>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {(viewResource.publicIp || viewResource.privateIp) && (
                   <Card>
                     <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Network</CardTitle>
+                      <CardTitle className="text-sm">Resource Details</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-2 text-sm">
-                      {viewResource.publicIp && (
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Public IP</span>
-                          <code>{viewResource.publicIp}</code>
-                        </div>
-                      )}
-                      {viewResource.privateIp && (
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Private IP</span>
-                          <code>{viewResource.privateIp}</code>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                )}
-
-                {viewResource.tags && Object.keys(viewResource.tags).length > 0 && (
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Tags</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex flex-wrap gap-2">
-                        {Object.entries(viewResource.tags).map(([key, value]) => (
-                          <Badge key={key} variant="secondary">
-                            {key}: {value}
-                          </Badge>
-                        ))}
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Type</span>
+                        <span className="capitalize">{viewResource.resourceType}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Region</span>
+                        <span>{viewResource.region}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Account ID</span>
+                        <code className="text-xs">{viewResource.accountId}</code>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Status</span>
+                        <Badge variant="outline" className={statusColors[viewResource.status]}>
+                          {viewResource.status}
+                        </Badge>
                       </div>
                     </CardContent>
                   </Card>
-                )}
 
-                <div className="grid grid-cols-2 gap-4">
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Findings</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div
-                        className={`text-2xl font-bold ${viewResource.findingsCount > 0 ? 'text-orange-500' : ''}`}
-                      >
-                        {viewResource.findingsCount}
-                      </div>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Last Seen</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm">
-                        {new Date(viewResource.lastSeen).toLocaleDateString()}
-                      </p>
-                    </CardContent>
-                  </Card>
+                  {(viewResource.publicIp || viewResource.privateIp) && (
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">Network</CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-2 text-sm">
+                        {viewResource.publicIp && (
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Public IP</span>
+                            <code>{viewResource.publicIp}</code>
+                          </div>
+                        )}
+                        {viewResource.privateIp && (
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Private IP</span>
+                            <code>{viewResource.privateIp}</code>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {viewResource.tags && Object.keys(viewResource.tags).length > 0 && (
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">Tags</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex flex-wrap gap-2">
+                          {Object.entries(viewResource.tags).map(([key, value]) => (
+                            <Badge key={key} variant="secondary">
+                              {key}: {value}
+                            </Badge>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">Findings</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div
+                          className={`text-2xl font-bold ${viewResource.findingsCount > 0 ? 'text-orange-500' : ''}`}
+                        >
+                          {viewResource.findingsCount}
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">Last Seen</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-sm">
+                          {new Date(viewResource.lastSeen).toLocaleDateString()}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {viewResource.notes && (
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">Notes</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-sm text-muted-foreground">{viewResource.notes}</p>
+                      </CardContent>
+                    </Card>
+                  )}
                 </div>
 
-                {viewResource.notes && (
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Notes</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-muted-foreground">{viewResource.notes}</p>
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
-
-              <div className="mt-6 flex gap-2">
-                <Button className="flex-1" variant="outline" onClick={() => openEdit(viewResource)}>
-                  <Pencil className="me-2 h-4 w-4" />
-                  Edit
-                </Button>
-                <Button className="flex-1">
-                  <Lock className="me-2 h-4 w-4" />
-                  View Findings
-                </Button>
-              </div>
+                <div className="mt-6 flex gap-2">
+                  <Button
+                    className="flex-1"
+                    variant="outline"
+                    onClick={() => openEdit(viewResource)}
+                  >
+                    <Pencil className="me-2 h-4 w-4" />
+                    Edit
+                  </Button>
+                  <Button
+                    className="flex-1"
+                    onClick={() => router.push(`/findings?assetId=${viewResource.id}`)}
+                  >
+                    <Lock className="me-2 h-4 w-4" />
+                    View Findings
+                  </Button>
+                </div>
+              </SheetBody>
             </>
           )}
         </SheetContent>

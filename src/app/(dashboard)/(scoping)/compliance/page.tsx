@@ -2,7 +2,13 @@
 
 import { useState, useMemo } from 'react'
 import { Main } from '@/components/layout'
-import { PageHeader } from '@/features/shared'
+import {
+  PageHeader,
+  DataTableRowActions,
+  StatsCard,
+  EmptyState,
+  SheetBody,
+} from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -12,7 +18,6 @@ import { Progress } from '@/components/ui/progress'
 import {
   Download,
   Filter,
-  MoreHorizontal,
   Eye,
   Pencil,
   ClipboardCheck,
@@ -26,14 +31,9 @@ import {
   X,
   Calendar,
   ChevronRight,
+  Circle,
 } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import {
   Dialog,
   DialogContent,
@@ -71,6 +71,7 @@ import {
   type ComplianceAssessmentApi,
 } from '@/features/compliance/api/use-compliance-api'
 import { mutate as swrMutate } from 'swr'
+import { exportToCsv } from '@/hooks/use-csv-export'
 
 // ── Local view types ──────────────────────────────────────────────────────────
 
@@ -112,10 +113,14 @@ function mapAssessmentPriority(p: string | undefined): Priority {
 }
 
 const statusColors: Record<ControlStatus, string> = {
-  implemented: 'bg-green-500/10 text-green-500 border-green-500/20',
-  partial: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20',
-  not_implemented: 'bg-red-500/10 text-red-500 border-red-500/20',
-  not_applicable: 'bg-gray-500/10 text-gray-500 border-gray-500/20',
+  implemented:
+    'bg-green-500/10 text-green-500 border-green-500/20 dark:bg-green-900/30 dark:text-green-400',
+  partial:
+    'bg-yellow-500/10 text-yellow-500 border-yellow-500/20 dark:bg-yellow-900/30 dark:text-yellow-400',
+  not_implemented:
+    'bg-red-500/10 text-red-500 border-red-500/20 dark:bg-red-900/30 dark:text-red-400',
+  not_applicable:
+    'bg-gray-500/10 text-gray-500 border-gray-500/20 dark:bg-gray-800 dark:text-gray-400',
 }
 
 const statusLabels: Record<ControlStatus, string> = {
@@ -133,10 +138,11 @@ const statusIcons: Record<ControlStatus, React.ElementType> = {
 }
 
 const priorityColors: Record<Priority, string> = {
-  critical: 'bg-red-500/10 text-red-500 border-red-500/20',
-  high: 'bg-orange-500/10 text-orange-500 border-orange-500/20',
-  medium: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20',
-  low: 'bg-green-500/10 text-green-500 border-green-500/20',
+  critical: 'bg-red-500/10 text-red-500 border-red-500/20 dark:bg-red-900/30 dark:text-red-400',
+  high: 'bg-orange-500/10 text-orange-500 border-orange-500/20 dark:bg-orange-900/30 dark:text-orange-400',
+  medium:
+    'bg-yellow-500/10 text-yellow-500 border-yellow-500/20 dark:bg-yellow-900/30 dark:text-yellow-400',
+  low: 'bg-green-500/10 text-green-500 border-green-500/20 dark:bg-green-900/30 dark:text-green-400',
 }
 
 export default function CompliancePage() {
@@ -319,6 +325,25 @@ export default function CompliancePage() {
     }
   }
 
+  const handleExport = () => {
+    exportToCsv(
+      filteredRows,
+      [
+        { header: 'Framework', accessor: (r) => r.frameworkName },
+        { header: 'Control ID', accessor: (r) => r.controlId },
+        { header: 'Title', accessor: (r) => r.title },
+        { header: 'Category', accessor: (r) => r.category },
+        { header: 'Status', accessor: (r) => statusLabels[r.status] },
+        { header: 'Priority', accessor: (r) => r.priority },
+        { header: 'Owner', accessor: (r) => r.owner },
+        { header: 'Due Date', accessor: (r) => r.dueDate ?? '' },
+        { header: 'Evidence', accessor: (r) => r.evidenceCount },
+        { header: 'Findings', accessor: (r) => r.findingCount },
+      ],
+      'compliance-controls'
+    )
+  }
+
   const openEdit = (req: ControlRow) => {
     setFormData({
       status: req.status,
@@ -337,7 +362,7 @@ export default function CompliancePage() {
           title="Compliance Requirements"
           description="Track compliance frameworks and regulatory requirements"
         >
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={handleExport}>
             <Download className="me-2 h-4 w-4" />
             Export Report
           </Button>
@@ -345,30 +370,18 @@ export default function CompliancePage() {
 
         {/* Stats Cards */}
         <div className="grid gap-4 md:grid-cols-4 mb-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Frameworks</CardTitle>
-              <ClipboardCheck className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.totalFrameworks}</div>
-              <p className="text-xs text-muted-foreground">Active frameworks</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Controls</CardTitle>
-              <Shield className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {apiStats?.total_controls ?? stats.totalControls}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {stats.byStatus.implemented} implemented
-              </p>
-            </CardContent>
-          </Card>
+          <StatsCard
+            title="Frameworks"
+            value={stats.totalFrameworks}
+            icon={ClipboardCheck}
+            description="Active frameworks"
+          />
+          <StatsCard
+            title="Controls"
+            value={apiStats?.total_controls ?? stats.totalControls}
+            icon={Shield}
+            description={`${stats.byStatus.implemented} implemented`}
+          />
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">Avg Compliance</CardTitle>
@@ -381,16 +394,13 @@ export default function CompliancePage() {
               <Progress value={stats.averageComplianceScore} className="mt-2" />
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Overdue</CardTitle>
-              <AlertTriangle className="h-4 w-4 text-red-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-500">{stats.overdueControls}</div>
-              <p className="text-xs text-muted-foreground">Controls need attention</p>
-            </CardContent>
-          </Card>
+          <StatsCard
+            title="Overdue"
+            value={stats.overdueControls}
+            valueClassName="text-red-600"
+            icon={AlertTriangle}
+            description="Controls need attention"
+          />
         </div>
 
         <Tabs defaultValue="frameworks" className="space-y-6">
@@ -404,9 +414,7 @@ export default function CompliancePage() {
             {loadingFrameworks ? (
               <div className="text-center py-12 text-muted-foreground">Loading frameworks...</div>
             ) : frameworks.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
-                No compliance frameworks configured yet.
-              </div>
+              <EmptyState icon={Shield} title="No compliance frameworks configured yet." />
             ) : (
               <div className="grid gap-4 md:grid-cols-2">
                 {frameworks.map((fw) => (
@@ -489,11 +497,12 @@ export default function CompliancePage() {
                 {loadingControls ? (
                   <div className="py-8 text-center text-muted-foreground">Loading controls...</div>
                 ) : filteredRows.length === 0 ? (
-                  <div className="py-8 text-center text-muted-foreground">No controls found.</div>
+                  <EmptyState icon={ClipboardCheck} title="No controls found." card={false} />
                 ) : (
                   <div className="space-y-3">
                     {filteredRows.map((req) => {
-                      const StatusIcon = statusIcons[req.status]
+                      // Guard: an unmapped status must not render undefined.
+                      const StatusIcon = statusIcons[req.status] ?? Circle
                       return (
                         <div
                           key={req.id}
@@ -525,23 +534,22 @@ export default function CompliancePage() {
                                 {req.evidenceCount} evidence
                               </div>
                             </div>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                                <Button variant="ghost" size="icon">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => setViewRequirement(req)}>
-                                  <Eye className="me-2 h-4 w-4" />
-                                  View Details
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => openEdit(req)}>
-                                  <Pencil className="me-2 h-4 w-4" />
-                                  Update Status
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                            <span onClick={(e) => e.stopPropagation()}>
+                              <DataTableRowActions
+                                actions={[
+                                  {
+                                    label: 'View Details',
+                                    icon: Eye,
+                                    onClick: () => setViewRequirement(req),
+                                  },
+                                  {
+                                    label: 'Update Status',
+                                    icon: Pencil,
+                                    onClick: () => openEdit(req),
+                                  },
+                                ]}
+                              />
+                            </span>
                             <ChevronRight className="h-4 w-4 text-muted-foreground" />
                           </div>
                         </div>
@@ -574,108 +582,110 @@ export default function CompliancePage() {
                 </div>
               </SheetHeader>
 
-              <div className="mt-6 space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <p className="text-sm text-muted-foreground">Status</p>
-                    <Badge variant="outline" className={statusColors[viewRequirement.status]}>
-                      {statusLabels[viewRequirement.status]}
-                    </Badge>
+              <SheetBody>
+                <div className="mt-6 space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <p className="text-sm text-muted-foreground">Status</p>
+                      <Badge variant="outline" className={statusColors[viewRequirement.status]}>
+                        {statusLabels[viewRequirement.status]}
+                      </Badge>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-sm text-muted-foreground">Priority</p>
+                      <Badge variant="outline" className={priorityColors[viewRequirement.priority]}>
+                        {viewRequirement.priority}
+                      </Badge>
+                    </div>
                   </div>
-                  <div className="space-y-1">
-                    <p className="text-sm text-muted-foreground">Priority</p>
-                    <Badge variant="outline" className={priorityColors[viewRequirement.priority]}>
-                      {viewRequirement.priority}
-                    </Badge>
+
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm">Description</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm">{viewRequirement.description}</p>
+                    </CardContent>
+                  </Card>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">Evidence</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-2xl font-bold">{viewRequirement.evidenceCount}</div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">Findings</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div
+                          className={`text-2xl font-bold ${viewRequirement.findingCount > 0 ? 'text-red-500' : ''}`}
+                        >
+                          {viewRequirement.findingCount}
+                        </div>
+                      </CardContent>
+                    </Card>
                   </div>
+
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm">Owner</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="font-medium">{viewRequirement.owner}</p>
+                    </CardContent>
+                  </Card>
+
+                  {viewRequirement.dueDate && (
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">Due Date</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4" />
+                          {new Date(viewRequirement.dueDate).toLocaleDateString()}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {viewRequirement.notes && (
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">Notes</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-sm">{viewRequirement.notes}</p>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {viewRequirement.lastAssessed && (
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">Last Assessed</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-sm">
+                          {new Date(viewRequirement.lastAssessed).toLocaleDateString()}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  )}
                 </div>
 
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">Description</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm">{viewRequirement.description}</p>
-                  </CardContent>
-                </Card>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Evidence</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold">{viewRequirement.evidenceCount}</div>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Findings</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div
-                        className={`text-2xl font-bold ${viewRequirement.findingCount > 0 ? 'text-red-500' : ''}`}
-                      >
-                        {viewRequirement.findingCount}
-                      </div>
-                    </CardContent>
-                  </Card>
+                <div className="mt-6">
+                  <Button className="w-full" onClick={() => openEdit(viewRequirement)}>
+                    <Pencil className="me-2 h-4 w-4" />
+                    Update Status
+                  </Button>
                 </div>
-
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">Owner</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="font-medium">{viewRequirement.owner}</p>
-                  </CardContent>
-                </Card>
-
-                {viewRequirement.dueDate && (
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Due Date</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4" />
-                        {new Date(viewRequirement.dueDate).toLocaleDateString()}
-                      </p>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {viewRequirement.notes && (
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Notes</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm">{viewRequirement.notes}</p>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {viewRequirement.lastAssessed && (
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Last Assessed</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm">
-                        {new Date(viewRequirement.lastAssessed).toLocaleDateString()}
-                      </p>
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
-
-              <div className="mt-6">
-                <Button className="w-full" onClick={() => openEdit(viewRequirement)}>
-                  <Pencil className="me-2 h-4 w-4" />
-                  Update Status
-                </Button>
-              </div>
+              </SheetBody>
             </>
           )}
         </SheetContent>

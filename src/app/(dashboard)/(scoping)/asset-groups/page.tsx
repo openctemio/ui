@@ -4,7 +4,13 @@ import { useState, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { ColumnDef } from '@tanstack/react-table'
 import { Main } from '@/components/layout'
-import { PageHeader, DataTable, DataTableColumnHeader, RiskScoreBadge } from '@/features/shared'
+import {
+  PageHeader,
+  DataTable,
+  DataTableColumnHeader,
+  DataTableRowActions,
+  RiskScoreBadge,
+} from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -16,7 +22,6 @@ import {
   Download,
   Filter,
   RefreshCw,
-  MoreHorizontal,
   Eye,
   Pencil,
   Trash2,
@@ -37,7 +42,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
@@ -48,16 +52,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
@@ -80,6 +75,7 @@ import type { AssetGroup, CreateAssetGroupInput } from '@/features/asset-groups/
 import type { AssetGroupApiFilters } from '@/features/asset-groups/api'
 import { copyToClipboard } from '@/lib/clipboard'
 import { Can, Permission } from '@/lib/permissions'
+import { CRITICALITY_BADGE_SOFT } from '@/lib/criticality-colors'
 import { useCsvExport, type ExportFieldConfig } from '@/hooks/use-csv-export'
 
 // ============================================
@@ -89,12 +85,7 @@ import { useCsvExport, type ExportFieldConfig } from '@/hooks/use-csv-export'
 type Environment = 'production' | 'staging' | 'development' | 'testing'
 type Criticality = 'critical' | 'high' | 'medium' | 'low'
 
-const CRITICALITY_BADGE: Record<string, string> = {
-  critical: 'bg-red-500 text-white',
-  high: 'bg-orange-500 text-white',
-  medium: 'bg-yellow-500 text-black',
-  low: 'bg-blue-500 text-white',
-}
+const CRITICALITY_BADGE: Record<string, string> = CRITICALITY_BADGE_SOFT
 
 const ENVIRONMENT_BADGE: Record<string, string> = {
   production: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100',
@@ -478,7 +469,7 @@ export default function AssetGroupsPage() {
       accessorKey: 'criticality',
       header: ({ column }) => <DataTableColumnHeader column={column} title="Criticality" />,
       cell: ({ row }) => (
-        <Badge className={CRITICALITY_BADGE[row.original.criticality]}>
+        <Badge variant="outline" className={CRITICALITY_BADGE[row.original.criticality]}>
           {row.original.criticality}
         </Badge>
       ),
@@ -511,55 +502,49 @@ export default function AssetGroupsPage() {
       cell: ({ row }) => {
         const group = row.original
         return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setViewGroup(group)}>
-                <Eye className="me-2 h-4 w-4" />
-                Quick View
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => router.push(`/asset-groups/${group.id}`)}>
-                <ExternalLink className="me-2 h-4 w-4" />
-                Open Full Page
-              </DropdownMenuItem>
-              <Can permission={Permission.AssetGroupsWrite}>
-                <DropdownMenuItem onClick={() => setEditGroup(group)}>
-                  <Pencil className="me-2 h-4 w-4" />
-                  Edit
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setAddAssetsGroup(group)}>
-                  <Plus className="me-2 h-4 w-4" />
-                  Add Assets
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => router.push(`/asset-groups/${group.id}?tab=assets`)}
-                >
-                  <Package className="me-2 h-4 w-4" />
-                  Manage Assets
-                </DropdownMenuItem>
-              </Can>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => handleCopyId(group.id)}>
-                <Copy className="me-2 h-4 w-4" />
-                Copy ID
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleCopyLink(group.id)}>
-                <Link className="me-2 h-4 w-4" />
-                Copy Link
-              </DropdownMenuItem>
-              <Can permission={Permission.AssetGroupsDelete}>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem className="text-red-400" onClick={() => setDeleteGroup(group)}>
-                  <Trash2 className="me-2 h-4 w-4" />
-                  Delete
-                </DropdownMenuItem>
-              </Can>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <DataTableRowActions
+            actions={[
+              { label: 'Quick View', icon: Eye, onClick: () => setViewGroup(group) },
+              {
+                label: 'Open Full Page',
+                icon: ExternalLink,
+                onClick: () => router.push(`/asset-groups/${group.id}`),
+              },
+              {
+                label: 'Edit',
+                icon: Pencil,
+                onClick: () => setEditGroup(group),
+                permission: Permission.AssetGroupsWrite,
+              },
+              {
+                label: 'Add Assets',
+                icon: Plus,
+                onClick: () => setAddAssetsGroup(group),
+                permission: Permission.AssetGroupsWrite,
+              },
+              {
+                label: 'Manage Assets',
+                icon: Package,
+                onClick: () => router.push(`/asset-groups/${group.id}?tab=assets`),
+                permission: Permission.AssetGroupsWrite,
+              },
+              {
+                label: 'Copy ID',
+                icon: Copy,
+                onClick: () => handleCopyId(group.id),
+                separatorBefore: true,
+              },
+              { label: 'Copy Link', icon: Link, onClick: () => handleCopyLink(group.id) },
+              {
+                label: 'Delete',
+                icon: Trash2,
+                onClick: () => setDeleteGroup(group),
+                destructive: true,
+                separatorBefore: true,
+                permission: Permission.AssetGroupsDelete,
+              },
+            ]}
+          />
         )
       },
     },
@@ -648,7 +633,7 @@ export default function AssetGroupsPage() {
                       {(['critical', 'high', 'medium', 'low'] as Criticality[]).map((crit) => (
                         <Badge
                           key={crit}
-                          variant={filters.criticalities.includes(crit) ? 'default' : 'outline'}
+                          variant="outline"
                           className={`cursor-pointer ${
                             filters.criticalities.includes(crit)
                               ? CRITICALITY_BADGE[crit]
@@ -802,7 +787,9 @@ export default function AssetGroupsPage() {
                         key={crit}
                         onClick={() => handleBulkAction('change-criticality', crit)}
                       >
-                        <Badge className={`me-2 ${CRITICALITY_BADGE[crit]}`}>{crit}</Badge>
+                        <Badge variant="outline" className={`me-2 ${CRITICALITY_BADGE[crit]}`}>
+                          {crit}
+                        </Badge>
                       </DropdownMenuItem>
                     ))}
                   </DropdownMenuContent>
@@ -977,42 +964,36 @@ export default function AssetGroupsPage() {
       )}
 
       {/* Delete Confirmation */}
-      <AlertDialog open={!!deleteGroup} onOpenChange={() => setDeleteGroup(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Asset Group</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete &quot;{deleteGroup?.name}&quot;? This action cannot be
-              undone. All assets in this group will be unassigned.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction className="bg-red-500 hover:bg-red-600" onClick={handleDelete}>
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={!!deleteGroup}
+        onOpenChange={() => setDeleteGroup(null)}
+        title="Delete Asset Group"
+        desc={
+          <>
+            Are you sure you want to delete &quot;{deleteGroup?.name}&quot;? This action cannot be
+            undone. All assets in this group will be unassigned.
+          </>
+        }
+        confirmText="Delete"
+        destructive
+        handleConfirm={handleDelete}
+      />
 
       {/* Bulk Delete Confirmation */}
-      <AlertDialog open={bulkDeleteConfirm} onOpenChange={setBulkDeleteConfirm}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete {selectedIds.length} Asset Groups</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete {selectedIds.length} group(s)? This action cannot be
-              undone. All assets in these groups will be unassigned.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction className="bg-red-500 hover:bg-red-600" onClick={handleBulkDelete}>
-              Delete {selectedIds.length} Groups
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={bulkDeleteConfirm}
+        onOpenChange={setBulkDeleteConfirm}
+        title={`Delete ${selectedIds.length} Asset Groups`}
+        desc={
+          <>
+            Are you sure you want to delete {selectedIds.length} group(s)? This action cannot be
+            undone. All assets in these groups will be unassigned.
+          </>
+        }
+        confirmText={`Delete ${selectedIds.length} Groups`}
+        destructive
+        handleConfirm={handleBulkDelete}
+      />
 
       {/* Add Assets Dialog */}
       {addAssetsGroup && (

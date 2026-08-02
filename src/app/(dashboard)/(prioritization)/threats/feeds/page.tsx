@@ -1,8 +1,9 @@
 'use client'
 
 import { useMemo } from 'react'
+import { formatChartDate } from '@/lib/format-chart-date'
 import { Main } from '@/components/layout'
-import { PageHeader, StatsCard } from '@/features/shared'
+import { PageHeader, StatsCard, EmptyState } from '@/features/shared'
 import { useDashboardStats } from '@/features/dashboard/hooks/use-dashboard-stats'
 import { useTenant } from '@/context/tenant-provider'
 import {
@@ -165,7 +166,7 @@ export default function ThreatFeedsPage() {
   const trendChartData = useMemo(() => {
     if (!stats.findingTrend || stats.findingTrend.length === 0) return []
     return stats.findingTrend.map((point) => ({
-      date: point.date,
+      date: formatChartDate(point.date),
       critical: point.critical,
       high: point.high,
       medium: point.medium,
@@ -228,15 +229,11 @@ export default function ThreatFeedsPage() {
       {isLoading ? (
         <LoadingSkeleton />
       ) : isEmpty ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-16">
-            <Rss className="text-muted-foreground mb-4 h-12 w-12" />
-            <p className="text-muted-foreground text-center text-sm">
-              No threat intelligence data available. Connect scanners and integrate feeds to get
-              started.
-            </p>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={Rss}
+          title="No threat intelligence data available"
+          description="Connect scanners and integrate feeds to get started."
+        />
       ) : (
         <>
           {/* Stats Row */}

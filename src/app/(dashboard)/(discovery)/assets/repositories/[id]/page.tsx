@@ -6,7 +6,7 @@ import { useFindingsApi } from '@/features/findings/api/use-findings-api'
 import type { ApiFinding } from '@/features/findings/api/finding-api.types'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { Main } from '@/components/layout'
-import { RiskScoreBadge } from '@/features/shared'
+import { RiskScoreBadge, DataTableRowActions, EmptyState } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
@@ -27,16 +27,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import {
   Select,
   SelectContent,
@@ -628,6 +619,7 @@ function transformToRepositoryView(asset: ApiAssetResponse): RepositoryView {
 }
 
 import { cn, sanitizeExternalUrl } from '@/lib/utils'
+import { SEVERITY_DOT_COLORS } from '@/lib/severity-colors'
 import { copyToClipboard } from '@/lib/clipboard'
 import { Can, Permission } from '@/lib/permissions'
 import { getErrorMessage } from '@/lib/api/error-handler'
@@ -757,11 +749,13 @@ function OverviewTab({
   branches,
   findings,
   activities,
+  onScan,
 }: {
   repository: Repository
   branches: BranchDetail[]
   findings: FindingDetail[]
   activities: ActivityLog[]
+  onScan?: () => void
 }) {
   const router = useRouter()
   const overdueFindingsCount = getOverdueFindingsCount(findings)
@@ -769,11 +763,48 @@ function OverviewTab({
   const defaultBranch = branches.find((b) => b.is_default)
 
   // Compute severity from actual findings data (not from repo extension which may be stale)
-  const criticalCount = findings.filter((f) => f.severity === 'critical').length
-  const highCount = findings.filter((f) => f.severity === 'high').length
+  const sevCounts: Record<Severity, number> = {
+    critical: findings.filter((f) => f.severity === 'critical').length,
+    high: findings.filter((f) => f.severity === 'high').length,
+    medium: findings.filter((f) => f.severity === 'medium').length,
+    low: findings.filter((f) => f.severity === 'low').length,
+    info: findings.filter((f) => f.severity === 'info').length,
+  }
+  const criticalCount = sevCounts.critical
+  const highCount = sevCounts.high
+  // The repo carries ingested findings but OpenCTEM hasn't mapped its branches yet.
+  const neverScanned = !repository.last_scanned_at && branches.length === 0
+  // Real security posture always available from findings — used to fill the
+  // left card even before any branch is scanned (no more empty dead-space).
+  const sevRank: Severity[] = ['critical', 'high', 'medium', 'low', 'info']
+  const topFindings = [...findings]
+    .sort((a, b) => sevRank.indexOf(a.severity) - sevRank.indexOf(b.severity))
+    .slice(0, 5)
 
   return (
     <div className="space-y-6">
+      {neverScanned && (
+        <div className="flex items-center gap-3 rounded-xl border border-primary/30 border-l-4 border-l-primary bg-primary/[0.03] p-4">
+          <div className="bg-primary/10 text-primary flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
+            <Play className="h-4 w-4" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium">
+              This repo has findings from ingest, but OpenCTEM hasn’t scanned it yet.
+            </p>
+            <p className="text-muted-foreground text-xs">
+              Run a scan to map its branches, build the SBOM (components), and enable per-branch
+              drift &amp; SLA tracking.
+            </p>
+          </div>
+          {onScan && (
+            <Button size="sm" onClick={onScan} className="shrink-0">
+              <Play className="me-2 h-4 w-4" />
+              Run first scan
+            </Button>
+          )}
+        </div>
+      )}
       {/* Key Metrics */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
         <Card>
@@ -815,11 +846,20 @@ function OverviewTab({
               <GitBranch className="h-4 w-4 text-blue-500" />
               Branches
             </CardDescription>
-            <CardTitle className="text-3xl text-blue-500">{branches.length}</CardTitle>
+            <CardTitle
+              className={cn(
+                'text-3xl',
+                neverScanned ? 'text-muted-foreground/50' : 'text-blue-500'
+              )}
+            >
+              {neverScanned ? '—' : branches.length}
+            </CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
             <p className="text-xs text-muted-foreground">
-              {branches.filter((b) => b.scan_status === 'passed').length} passing
+              {neverScanned
+                ? 'scan to map branches'
+                : `${branches.filter((b) => b.scan_status === 'passed').length} passing`}
             </p>
           </CardContent>
         </Card>
@@ -830,13 +870,22 @@ function OverviewTab({
               <Package className="h-4 w-4 text-purple-500" />
               Components
             </CardDescription>
-            <CardTitle className="text-3xl text-purple-500">
-              {repository.components_summary?.total || 0}
+            <CardTitle
+              className={cn(
+                'text-3xl',
+                !repository.components_summary?.total
+                  ? 'text-muted-foreground/50'
+                  : 'text-purple-500'
+              )}
+            >
+              {repository.components_summary?.total ? repository.components_summary.total : '—'}
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
             <p className="text-xs text-muted-foreground">
-              {repository.components_summary?.vulnerable || 0} vulnerable
+              {repository.components_summary?.total
+                ? `${repository.components_summary?.vulnerable || 0} vulnerable`
+                : 'scan to build SBOM'}
             </p>
           </CardContent>
         </Card>
@@ -856,16 +905,17 @@ function OverviewTab({
 
       {/* Two column layout */}
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Default Branch Status */}
+        {/* Default Branch Status — falls back to overall security posture when
+            no branch has been scanned yet, so the card is never empty. */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <GitBranch className="h-4 w-4" />
-              Default Branch
+              {defaultBranch ? 'Default Branch' : 'Security posture'}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {defaultBranch && (
+            {defaultBranch ? (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -891,13 +941,7 @@ function OverviewTab({
                         const count = defaultBranch.findings_summary.by_severity[severity]
                         const total = defaultBranch.findings_summary.total || 1
                         const width = (count / total) * 100
-                        const colors: Record<Severity, string> = {
-                          critical: 'bg-red-500',
-                          high: 'bg-orange-500',
-                          medium: 'bg-yellow-500',
-                          low: 'bg-blue-500',
-                          info: 'bg-gray-400',
-                        }
+                        const colors: Record<Severity, string> = SEVERITY_DOT_COLORS
                         if (count === 0) return null
                         return (
                           <TooltipProvider key={severity}>
@@ -954,6 +998,74 @@ function OverviewTab({
                     </code>
                   </div>
                 )}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {/* Severity breakdown from real findings — available even before a scan */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span>Findings by severity</span>
+                    <span className="text-muted-foreground">{findings.length} total</span>
+                  </div>
+                  <div className="flex h-3 overflow-hidden rounded-full bg-muted">
+                    {(['critical', 'high', 'medium', 'low', 'info'] as Severity[]).map(
+                      (severity) => {
+                        const count = sevCounts[severity]
+                        if (count === 0) return null
+                        const colors: Record<Severity, string> = SEVERITY_DOT_COLORS
+                        return (
+                          <div
+                            key={severity}
+                            className={cn(colors[severity])}
+                            style={{ width: `${(count / (findings.length || 1)) * 100}%` }}
+                          />
+                        )
+                      }
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-4 text-xs">
+                    <span className="flex items-center gap-1">
+                      <span className="h-2 w-2 rounded-full bg-red-500" />
+                      Critical: {sevCounts.critical}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <span className="h-2 w-2 rounded-full bg-orange-500" />
+                      High: {sevCounts.high}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <span className="h-2 w-2 rounded-full bg-yellow-500" />
+                      Medium: {sevCounts.medium}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Top findings — replaces the previously-empty branch panel */}
+                {topFindings.length > 0 && (
+                  <div className="divide-y rounded-lg border">
+                    {topFindings.map((f) => {
+                      const dot: Record<Severity, string> = SEVERITY_DOT_COLORS
+                      return (
+                        <button
+                          key={f.id}
+                          type="button"
+                          onClick={() => router.push(`/findings/${f.id}`)}
+                          className="hover:bg-muted/50 flex w-full items-center gap-2.5 px-3 py-2 text-start"
+                        >
+                          <span className={cn('h-2 w-2 shrink-0 rounded-full', dot[f.severity])} />
+                          <span className="flex-1 truncate text-sm">{f.title}</span>
+                          <span className="text-muted-foreground shrink-0 text-xs capitalize">
+                            {f.severity}
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+
+                <p className="text-muted-foreground flex items-center gap-1.5 text-xs">
+                  <GitBranch className="h-3.5 w-3.5" />
+                  No branches scanned yet — run a scan to see per-branch drift &amp; SLA.
+                </p>
               </div>
             )}
           </CardContent>
@@ -1039,13 +1151,13 @@ function OverviewTab({
                 >
                   <SeverityBadge severity={finding.severity} />
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <code className="text-xs bg-muted px-1.5 py-0.5 rounded">{finding.id}</code>
-                      <span className="font-medium text-sm truncate">{finding.title}</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {finding.file_path}:{finding.line_start}
-                    </p>
+                    <span className="block truncate text-sm font-medium">{finding.title}</span>
+                    {finding.file_path && (
+                      <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                        {finding.file_path}
+                        {finding.line_start ? `:${finding.line_start}` : ''}
+                      </p>
+                    )}
                   </div>
                   <div className="flex items-center gap-2">
                     <FindingStatusBadge status={finding.status} />
@@ -1368,24 +1480,15 @@ function BranchesTab({
                     </div>
                   </TableCell>
                   <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            onViewBranchFindings?.(branch.name)
-                          }}
-                        >
-                          <Eye className="me-2 h-4 w-4" />
-                          View Findings
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <DataTableRowActions
+                      actions={[
+                        {
+                          label: 'View Findings',
+                          icon: Eye,
+                          onClick: () => onViewBranchFindings?.(branch.name),
+                        },
+                      ]}
+                    />
                   </TableCell>
                 </TableRow>
               ))}
@@ -1637,36 +1740,43 @@ function FindingsTab({
                     <SeverityBadge severity={finding.severity} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">
-                        {finding.id}
-                      </code>
+                    {/* Title leads; the raw UUID is dropped from the row (it's
+                        machine noise — the row is clickable to the detail page). */}
+                    <h4 className="font-medium leading-snug">{finding.title}</h4>
+                    {finding.description && finding.description !== finding.title && (
+                      <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
+                        {finding.description}
+                      </p>
+                    )}
+                    <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                       <Badge variant="outline" className="text-xs">
                         {SCANNER_TYPE_LABELS[finding.scanner_type]}
                       </Badge>
-                      <TriageStatusBadge status={finding.triage_status} />
-                    </div>
-                    <h4 className="font-medium mb-1">{finding.title}</h4>
-                    <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
-                      {finding.description}
-                    </p>
-                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <FileCode className="h-3 w-3" />
-                        {finding.file_path}:{finding.line_start}
-                      </span>
-                      <span className="flex items-center gap-1" title={finding.branches.join(', ')}>
-                        <GitBranch className="h-3 w-3" />
-                        {finding.branches.length > 0 ? (
-                          finding.branches.map((b) => (
+                      {/* Only surface triage when it needs action; "Triaged" is
+                          the normal state and just adds noise on every row. */}
+                      {finding.triage_status !== 'triaged' && (
+                        <TriageStatusBadge status={finding.triage_status} />
+                      )}
+                      {finding.file_path && (
+                        <span className="flex items-center gap-1">
+                          <FileCode className="h-3 w-3" />
+                          {finding.file_path}
+                          {finding.line_start ? `:${finding.line_start}` : ''}
+                        </span>
+                      )}
+                      {finding.branches.length > 0 && (
+                        <span
+                          className="flex items-center gap-1"
+                          title={finding.branches.join(', ')}
+                        >
+                          <GitBranch className="h-3 w-3" />
+                          {finding.branches.map((b) => (
                             <code key={b} className="bg-muted px-1 rounded text-[10px]">
                               {b}
                             </code>
-                          ))
-                        ) : (
-                          <span className="text-muted-foreground">no branch</span>
-                        )}
-                      </span>
+                          ))}
+                        </span>
+                      )}
                       {finding.cwe_ids && finding.cwe_ids.length > 0 && (
                         <span className="flex items-center gap-1">
                           <Shield className="h-3 w-3" />
@@ -1709,10 +1819,7 @@ function FindingsTab({
               </div>
             ))}
             {filteredFindings.length === 0 && !findingsLoading && (
-              <div className="text-center py-12 text-muted-foreground">
-                <Shield className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No findings match your filters</p>
-              </div>
+              <EmptyState card={false} icon={Shield} title="No findings match your filters" />
             )}
             {findingsLoading && (
               <div className="space-y-3">
@@ -2608,26 +2715,20 @@ export default function RepositoryDetailPage() {
                 </DropdownMenuContent>
               </DropdownMenu>
 
-              <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Delete repository?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This will permanently delete &quot;{repository.name}&quot;. This action cannot
-                      be undone.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={handleDelete}
-                      className="bg-red-500 text-white hover:bg-red-600"
-                    >
-                      Delete
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+              <ConfirmDialog
+                open={showDeleteDialog}
+                onOpenChange={setShowDeleteDialog}
+                title="Delete repository?"
+                desc={
+                  <>
+                    This will permanently delete &quot;{repository.name}&quot;. This action cannot
+                    be undone.
+                  </>
+                }
+                confirmText="Delete"
+                destructive
+                handleConfirm={handleDelete}
+              />
             </div>
           </div>
         </div>
@@ -2674,6 +2775,7 @@ export default function RepositoryDetailPage() {
               branches={branches}
               findings={findings}
               activities={activities}
+              onScan={handleScan}
             />
           </TabsContent>
 

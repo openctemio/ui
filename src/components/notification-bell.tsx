@@ -22,6 +22,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
+import { SEVERITY_TEXT_COLORS } from '@/lib/severity-colors'
 import {
   useNotificationsApi,
   useUnreadCountApi,
@@ -33,13 +34,7 @@ import {
 import { useTenantChannel } from '@/hooks/use-websocket'
 import { useTenant } from '@/context/tenant-provider'
 
-const severityColors: Record<string, string> = {
-  critical: 'text-red-500',
-  high: 'text-orange-500',
-  medium: 'text-yellow-500',
-  low: 'text-blue-500',
-  info: 'text-muted-foreground',
-}
+const severityColors: Record<string, string> = { ...SEVERITY_TEXT_COLORS }
 
 const severityBgColors: Record<string, string> = {
   critical: 'bg-red-500/10',

@@ -72,7 +72,7 @@ export function ValidationCoverageCard({ className }: { className?: string }) {
             </div>
 
             <div className="grid gap-2 sm:grid-cols-2">
-              {sortBands(data.by_severity).map((b) => (
+              {sortBands(data.by_severity ?? []).map((b) => (
                 <div
                   key={b.severity}
                   className="flex items-center justify-between rounded-md border px-3 py-2"

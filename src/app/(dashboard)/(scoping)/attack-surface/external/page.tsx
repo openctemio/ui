@@ -1,9 +1,11 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
-import { useAssets } from '@/features/assets'
+import { getErrorMessage } from '@/lib/api/error-handler'
+import { useRouter } from 'next/navigation'
+import { createAsset, type CreateAssetInput, useAssets } from '@/features/assets'
 import { Main } from '@/components/layout'
-import { PageHeader } from '@/features/shared'
+import { PageHeader, DataTableRowActions, StatsCard, SheetBody } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -12,7 +14,6 @@ import { Progress } from '@/components/ui/progress'
 import {
   Globe,
   Plus,
-  MoreHorizontal,
   Eye,
   Pencil,
   Trash2,
@@ -32,12 +33,6 @@ import {
   ArrowUpRight,
 } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import {
   Dialog,
   DialogContent,
@@ -70,6 +65,8 @@ import {
 } from '@/components/ui/table'
 import { toast } from 'sonner'
 import { Can, Permission } from '@/lib/permissions'
+import { exportToCsv } from '@/hooks/use-csv-export'
+import { ScanAssetsDialog, type ScanCandidate } from '@/features/scans/components'
 
 type AssetStatus = 'active' | 'inactive' | 'monitoring'
 type RiskLevel = 'critical' | 'high' | 'medium' | 'low'
@@ -93,16 +90,19 @@ interface ExternalAsset {
 }
 
 const statusColors: Record<AssetStatus, string> = {
-  active: 'bg-green-500/10 text-green-500 border-green-500/20',
-  inactive: 'bg-gray-500/10 text-gray-500 border-gray-500/20',
-  monitoring: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
+  active:
+    'bg-green-500/10 text-green-500 border-green-500/20 dark:bg-green-900/30 dark:text-green-400',
+  inactive: 'bg-gray-500/10 text-gray-500 border-gray-500/20 dark:bg-gray-800 dark:text-gray-400',
+  monitoring:
+    'bg-blue-500/10 text-blue-500 border-blue-500/20 dark:bg-blue-900/30 dark:text-blue-400',
 }
 
 const riskColors: Record<RiskLevel, string> = {
-  critical: 'bg-red-500/10 text-red-500 border-red-500/20',
-  high: 'bg-orange-500/10 text-orange-500 border-orange-500/20',
-  medium: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20',
-  low: 'bg-green-500/10 text-green-500 border-green-500/20',
+  critical: 'bg-red-500/10 text-red-500 border-red-500/20 dark:bg-red-900/30 dark:text-red-400',
+  high: 'bg-orange-500/10 text-orange-500 border-orange-500/20 dark:bg-orange-900/30 dark:text-orange-400',
+  medium:
+    'bg-yellow-500/10 text-yellow-500 border-yellow-500/20 dark:bg-yellow-900/30 dark:text-yellow-400',
+  low: 'bg-green-500/10 text-green-500 border-green-500/20 dark:bg-green-900/30 dark:text-green-400',
 }
 
 const typeIcons: Record<AssetType, React.ElementType> = {
@@ -113,8 +113,9 @@ const typeIcons: Record<AssetType, React.ElementType> = {
 }
 
 export default function ExternalSurfacePage() {
+  const router = useRouter()
   // Fetch external assets from API
-  const { assets: apiAssets } = useAssets({
+  const { assets: apiAssets, mutate: refetchAssets } = useAssets({
     types: ['domain', 'subdomain', 'service', 'ip_address'],
     scopes: ['external'],
     pageSize: 100,
@@ -155,6 +156,8 @@ export default function ExternalSurfacePage() {
   const [viewAsset, setViewAsset] = useState<ExternalAsset | null>(null)
   const [editAsset, setEditAsset] = useState<ExternalAsset | null>(null)
   const [deleteAsset, setDeleteAsset] = useState<ExternalAsset | null>(null)
+  const [scanCandidates, setScanCandidates] = useState<ScanCandidate[]>([])
+  const [scanDialogOpen, setScanDialogOpen] = useState(false)
 
   const [formData, setFormData] = useState({
     name: '',
@@ -209,29 +212,33 @@ export default function ExternalSurfacePage() {
     })
   }
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!formData.name) {
       toast.error('Please enter an asset name')
       return
     }
-    const newAsset: ExternalAsset = {
-      id: `ext-${Date.now()}`,
-      name: formData.name,
-      type: formData.type,
-      parentDomain: formData.parentDomain || undefined,
-      ipAddress: formData.ipAddress || undefined,
-      port: formData.port ? parseInt(formData.port) : undefined,
-      status: formData.status,
-      riskLevel: formData.riskLevel,
-      lastSeen: new Date().toISOString(),
-      discoveredAt: new Date().toISOString(),
-      findingsCount: 0,
-      notes: formData.notes || undefined,
+    // Persist through the real API. This previously only pushed onto local
+    // state and reported success, so the asset vanished on the next reload —
+    // the page reads from useAssets but the writes never reached it.
+    try {
+      await createAsset({
+        name: formData.name,
+        type: formData.type as CreateAssetInput['type'],
+        scope: 'external',
+        description: formData.notes || undefined,
+        metadata: {
+          ...(formData.ipAddress ? { ip_address: formData.ipAddress } : {}),
+          ...(formData.port ? { port: Number(formData.port) } : {}),
+          ...(formData.parentDomain ? { parent_domain: formData.parentDomain } : {}),
+        },
+      })
+      toast.success('External asset added')
+      setIsCreateOpen(false)
+      resetForm()
+      await refetchAssets()
+    } catch (e) {
+      toast.error(getErrorMessage(e, 'Failed to add external asset'))
     }
-    setAssets((prev) => [...prev, newAsset])
-    toast.success('External asset added successfully')
-    setIsCreateOpen(false)
-    resetForm()
   }
 
   const handleEdit = () => {
@@ -266,6 +273,37 @@ export default function ExternalSurfacePage() {
     setAssets((prev) => prev.filter((a) => a.id !== deleteAsset.id))
     toast.success('External asset deleted successfully')
     setDeleteAsset(null)
+  }
+
+  // Derive a scan target from an external asset: prefer resolved IP, fall back
+  // to the asset name (domain / subdomain / service host is itself a target).
+  const toScanCandidate = (a: ExternalAsset): ScanCandidate => ({
+    id: a.id,
+    label: a.name || a.ipAddress || a.id,
+    target: (a.ipAddress || a.name || '').trim(),
+  })
+
+  const openScanDialog = (items: ExternalAsset[]) => {
+    setScanCandidates(items.map(toScanCandidate))
+    setScanDialogOpen(true)
+  }
+
+  const handleExport = () => {
+    exportToCsv(
+      filteredAssets,
+      [
+        { header: 'Name', accessor: (a) => a.name },
+        { header: 'Type', accessor: (a) => a.type },
+        { header: 'Parent Domain', accessor: (a) => a.parentDomain ?? '' },
+        { header: 'IP Address', accessor: (a) => a.ipAddress ?? '' },
+        { header: 'Port', accessor: (a) => a.port ?? '' },
+        { header: 'Status', accessor: (a) => a.status },
+        { header: 'Risk Level', accessor: (a) => a.riskLevel },
+        { header: 'Findings', accessor: (a) => a.findingsCount },
+        { header: 'Last Seen', accessor: (a) => a.lastSeen },
+      ],
+      'external-assets'
+    )
   }
 
   const openEdit = (asset: ExternalAsset) => {
@@ -392,11 +430,18 @@ export default function ExternalSurfacePage() {
           description="Monitor and manage internet-facing assets and their exposure"
         >
           <div className="flex gap-2">
-            <Button variant="outline" size="sm">
-              <RefreshCw className="me-2 h-4 w-4" />
-              Scan Now
-            </Button>
-            <Button variant="outline" size="sm">
+            <Can permission={Permission.ScansExecute}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => openScanDialog(filteredAssets)}
+                disabled={filteredAssets.length === 0}
+              >
+                <RefreshCw className="me-2 h-4 w-4" />
+                Scan Now
+              </Button>
+            </Can>
+            <Button variant="outline" size="sm" onClick={handleExport}>
               <Download className="me-2 h-4 w-4" />
               Export
             </Button>
@@ -411,46 +456,32 @@ export default function ExternalSurfacePage() {
 
         {/* Stats Cards */}
         <div className="grid gap-4 md:grid-cols-5 mb-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Total Assets</CardTitle>
-              <Globe className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.total}</div>
-              <p className="text-xs text-muted-foreground">{stats.active} active</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Critical Risk</CardTitle>
-              <AlertTriangle className="h-4 w-4 text-red-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-500">{stats.critical}</div>
-              <p className="text-xs text-muted-foreground">Needs immediate attention</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Total Findings</CardTitle>
-              <Shield className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.totalFindings}</div>
-              <p className="text-xs text-muted-foreground">Across all assets</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Expiring Certs</CardTitle>
-              <Clock className="h-4 w-4 text-orange-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-orange-500">{stats.expiringCerts}</div>
-              <p className="text-xs text-muted-foreground">Within 30 days</p>
-            </CardContent>
-          </Card>
+          <StatsCard
+            title="Total Assets"
+            value={stats.total}
+            icon={Globe}
+            description={`${stats.active} active`}
+          />
+          <StatsCard
+            title="Critical Risk"
+            value={stats.critical}
+            valueClassName="text-red-600"
+            icon={AlertTriangle}
+            description="Needs immediate attention"
+          />
+          <StatsCard
+            title="Total Findings"
+            value={stats.totalFindings}
+            icon={Shield}
+            description="Across all assets"
+          />
+          <StatsCard
+            title="Expiring Certs"
+            value={stats.expiringCerts}
+            valueClassName="text-amber-600"
+            icon={Clock}
+            description="Within 30 days"
+          />
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">Coverage</CardTitle>
@@ -553,7 +584,7 @@ export default function ExternalSurfacePage() {
               </TableHeader>
               <TableBody>
                 {filteredAssets.map((asset) => {
-                  const TypeIcon = typeIcons[asset.type]
+                  const TypeIcon = typeIcons[asset.type] ?? Globe
                   return (
                     <TableRow
                       key={asset.id}
@@ -606,34 +637,30 @@ export default function ExternalSurfacePage() {
                       </TableCell>
                       <TableCell>
                         <Can permission={[Permission.ScopeWrite, Permission.ScopeDelete]}>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                              <Button variant="ghost" size="icon">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => setViewAsset(asset)}>
-                                <Eye className="me-2 h-4 w-4" />
-                                View Details
-                              </DropdownMenuItem>
-                              <Can permission={Permission.ScopeWrite}>
-                                <DropdownMenuItem onClick={() => openEdit(asset)}>
-                                  <Pencil className="me-2 h-4 w-4" />
-                                  Edit
-                                </DropdownMenuItem>
-                              </Can>
-                              <Can permission={Permission.ScopeDelete}>
-                                <DropdownMenuItem
-                                  className="text-red-500"
-                                  onClick={() => setDeleteAsset(asset)}
-                                >
-                                  <Trash2 className="me-2 h-4 w-4" />
-                                  Delete
-                                </DropdownMenuItem>
-                              </Can>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                          <span onClick={(e) => e.stopPropagation()}>
+                            <DataTableRowActions
+                              actions={[
+                                {
+                                  label: 'View Details',
+                                  icon: Eye,
+                                  onClick: () => setViewAsset(asset),
+                                },
+                                {
+                                  label: 'Edit',
+                                  icon: Pencil,
+                                  onClick: () => openEdit(asset),
+                                  permission: Permission.ScopeWrite,
+                                },
+                                {
+                                  label: 'Delete',
+                                  icon: Trash2,
+                                  onClick: () => setDeleteAsset(asset),
+                                  destructive: true,
+                                  permission: Permission.ScopeDelete,
+                                },
+                              ]}
+                            />
+                          </span>
                         </Can>
                       </TableCell>
                     </TableRow>
@@ -717,137 +744,150 @@ export default function ExternalSurfacePage() {
                 </div>
               </SheetHeader>
 
-              <div className="mt-6 space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+              <SheetBody>
+                <div className="mt-6 space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">Status</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <Badge variant="outline" className={statusColors[viewAsset.status]}>
+                          {viewAsset.status}
+                        </Badge>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">Risk Level</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <Badge variant="outline" className={riskColors[viewAsset.riskLevel]}>
+                          {viewAsset.riskLevel}
+                        </Badge>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {viewAsset.ipAddress && (
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">Network</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="font-mono text-sm">
+                          {viewAsset.ipAddress}
+                          {viewAsset.port && `:${viewAsset.port}`}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">Findings</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div
+                          className={`text-2xl font-bold ${viewAsset.findingsCount > 0 ? 'text-orange-500' : ''}`}
+                        >
+                          {viewAsset.findingsCount}
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">SSL Expiry</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex flex-wrap items-center gap-2">
+                          {viewAsset.sslExpiry ? (
+                            <Lock className="h-4 w-4 text-green-500" />
+                          ) : (
+                            <Unlock className="h-4 w-4 text-gray-500" />
+                          )}
+                          <span className="text-sm">
+                            {viewAsset.sslExpiry
+                              ? new Date(viewAsset.sslExpiry).toLocaleDateString()
+                              : 'No SSL'}
+                          </span>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {viewAsset.technologies && viewAsset.technologies.length > 0 && (
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">Technologies</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex flex-wrap gap-2">
+                          {viewAsset.technologies.map((tech) => (
+                            <Badge key={tech} variant="secondary">
+                              {tech}
+                            </Badge>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {viewAsset.notes && (
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">Notes</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-sm text-muted-foreground">{viewAsset.notes}</p>
+                      </CardContent>
+                    </Card>
+                  )}
+
                   <Card>
                     <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Status</CardTitle>
+                      <CardTitle className="text-sm">Timeline</CardTitle>
                     </CardHeader>
-                    <CardContent>
-                      <Badge variant="outline" className={statusColors[viewAsset.status]}>
-                        {viewAsset.status}
-                      </Badge>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Risk Level</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <Badge variant="outline" className={riskColors[viewAsset.riskLevel]}>
-                        {viewAsset.riskLevel}
-                      </Badge>
+                    <CardContent className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Discovered</span>
+                        <span>{new Date(viewAsset.discoveredAt).toLocaleDateString()}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Last Seen</span>
+                        <span>{new Date(viewAsset.lastSeen).toLocaleDateString()}</span>
+                      </div>
                     </CardContent>
                   </Card>
                 </div>
 
-                {viewAsset.ipAddress && (
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Network</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="font-mono text-sm">
-                        {viewAsset.ipAddress}
-                        {viewAsset.port && `:${viewAsset.port}`}
-                      </p>
-                    </CardContent>
-                  </Card>
-                )}
-
-                <div className="grid grid-cols-2 gap-4">
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Findings</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div
-                        className={`text-2xl font-bold ${viewAsset.findingsCount > 0 ? 'text-orange-500' : ''}`}
-                      >
-                        {viewAsset.findingsCount}
-                      </div>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">SSL Expiry</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex flex-wrap items-center gap-2">
-                        {viewAsset.sslExpiry ? (
-                          <Lock className="h-4 w-4 text-green-500" />
-                        ) : (
-                          <Unlock className="h-4 w-4 text-gray-500" />
-                        )}
-                        <span className="text-sm">
-                          {viewAsset.sslExpiry
-                            ? new Date(viewAsset.sslExpiry).toLocaleDateString()
-                            : 'No SSL'}
-                        </span>
-                      </div>
-                    </CardContent>
-                  </Card>
+                <div className="mt-6 flex gap-2">
+                  <Button className="flex-1" variant="outline" onClick={() => openEdit(viewAsset)}>
+                    <Pencil className="me-2 h-4 w-4" />
+                    Edit
+                  </Button>
+                  <Button
+                    className="flex-1"
+                    onClick={() => router.push(`/findings?assetId=${viewAsset.id}`)}
+                  >
+                    <ExternalLink className="me-2 h-4 w-4" />
+                    View Findings
+                  </Button>
                 </div>
-
-                {viewAsset.technologies && viewAsset.technologies.length > 0 && (
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Technologies</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex flex-wrap gap-2">
-                        {viewAsset.technologies.map((tech) => (
-                          <Badge key={tech} variant="secondary">
-                            {tech}
-                          </Badge>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {viewAsset.notes && (
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Notes</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-muted-foreground">{viewAsset.notes}</p>
-                    </CardContent>
-                  </Card>
-                )}
-
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">Timeline</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Discovered</span>
-                      <span>{new Date(viewAsset.discoveredAt).toLocaleDateString()}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Last Seen</span>
-                      <span>{new Date(viewAsset.lastSeen).toLocaleDateString()}</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              <div className="mt-6 flex gap-2">
-                <Button className="flex-1" variant="outline" onClick={() => openEdit(viewAsset)}>
-                  <Pencil className="me-2 h-4 w-4" />
-                  Edit
-                </Button>
-                <Button className="flex-1">
-                  <ExternalLink className="me-2 h-4 w-4" />
-                  View Findings
-                </Button>
-              </div>
+              </SheetBody>
             </>
           )}
         </SheetContent>
       </Sheet>
+
+      {/* Quick-scan flow */}
+      <ScanAssetsDialog
+        open={scanDialogOpen}
+        onOpenChange={setScanDialogOpen}
+        candidates={scanCandidates}
+        title="Scan external assets"
+      />
     </>
   )
 }

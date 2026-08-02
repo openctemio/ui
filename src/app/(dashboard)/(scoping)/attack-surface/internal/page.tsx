@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
-import { useAssets } from '@/features/assets'
+import { getErrorMessage } from '@/lib/api/error-handler'
+import { createAsset, type CreateAssetInput, useAssets } from '@/features/assets'
 import { Main } from '@/components/layout'
-import { PageHeader } from '@/features/shared'
+import { PageHeader, DataTableRowActions, StatsCard, SheetBody } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -12,7 +13,6 @@ import { Progress } from '@/components/ui/progress'
 import {
   Network,
   Plus,
-  MoreHorizontal,
   Eye,
   Pencil,
   Trash2,
@@ -33,12 +33,6 @@ import {
   Wifi,
 } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import {
   Dialog,
   DialogContent,
@@ -71,6 +65,8 @@ import {
 } from '@/components/ui/table'
 import { toast } from 'sonner'
 import { Can, Permission } from '@/lib/permissions'
+import { exportToCsv } from '@/hooks/use-csv-export'
+import { ScanAssetsDialog, type ScanCandidate } from '@/features/scans/components'
 
 type AssetStatus = 'online' | 'offline' | 'unknown'
 type RiskLevel = 'critical' | 'high' | 'medium' | 'low'
@@ -98,23 +94,27 @@ interface InternalAsset {
 }
 
 const statusColors: Record<AssetStatus, string> = {
-  online: 'bg-green-500/10 text-green-500 border-green-500/20',
-  offline: 'bg-gray-500/10 text-gray-500 border-gray-500/20',
-  unknown: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20',
+  online:
+    'bg-green-500/10 text-green-500 border-green-500/20 dark:bg-green-900/30 dark:text-green-400',
+  offline: 'bg-gray-500/10 text-gray-500 border-gray-500/20 dark:bg-gray-800 dark:text-gray-400',
+  unknown:
+    'bg-yellow-500/10 text-yellow-500 border-yellow-500/20 dark:bg-yellow-900/30 dark:text-yellow-400',
 }
 
 const riskColors: Record<RiskLevel, string> = {
-  critical: 'bg-red-500/10 text-red-500 border-red-500/20',
-  high: 'bg-orange-500/10 text-orange-500 border-orange-500/20',
-  medium: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20',
-  low: 'bg-green-500/10 text-green-500 border-green-500/20',
+  critical: 'bg-red-500/10 text-red-500 border-red-500/20 dark:bg-red-900/30 dark:text-red-400',
+  high: 'bg-orange-500/10 text-orange-500 border-orange-500/20 dark:bg-orange-900/30 dark:text-orange-400',
+  medium:
+    'bg-yellow-500/10 text-yellow-500 border-yellow-500/20 dark:bg-yellow-900/30 dark:text-yellow-400',
+  low: 'bg-green-500/10 text-green-500 border-green-500/20 dark:bg-green-900/30 dark:text-green-400',
 }
 
 const zoneColors: Record<NetworkZone, string> = {
-  dmz: 'bg-purple-500/10 text-purple-500 border-purple-500/20',
-  internal: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
-  restricted: 'bg-red-500/10 text-red-500 border-red-500/20',
-  guest: 'bg-gray-500/10 text-gray-500 border-gray-500/20',
+  dmz: 'bg-purple-500/10 text-purple-500 border-purple-500/20 dark:bg-purple-900/30 dark:text-purple-400',
+  internal:
+    'bg-blue-500/10 text-blue-500 border-blue-500/20 dark:bg-blue-900/30 dark:text-blue-400',
+  restricted: 'bg-red-500/10 text-red-500 border-red-500/20 dark:bg-red-900/30 dark:text-red-400',
+  guest: 'bg-gray-500/10 text-gray-500 border-gray-500/20 dark:bg-gray-800 dark:text-gray-400',
 }
 
 const typeIcons: Record<AssetType, React.ElementType> = {
@@ -127,7 +127,7 @@ const typeIcons: Record<AssetType, React.ElementType> = {
 
 export default function InternalSurfacePage() {
   // Fetch internal assets from API
-  const { assets: apiAssets } = useAssets({
+  const { assets: apiAssets, mutate: refetchAssets } = useAssets({
     types: ['host', 'database', 'network', 'container'],
     scopes: ['internal'],
     pageSize: 100,
@@ -168,6 +168,8 @@ export default function InternalSurfacePage() {
   const [viewAsset, setViewAsset] = useState<InternalAsset | null>(null)
   const [editAsset, setEditAsset] = useState<InternalAsset | null>(null)
   const [deleteAsset, setDeleteAsset] = useState<InternalAsset | null>(null)
+  const [scanCandidates, setScanCandidates] = useState<ScanCandidate[]>([])
+  const [scanDialogOpen, setScanDialogOpen] = useState(false)
 
   const [formData, setFormData] = useState({
     hostname: '',
@@ -231,32 +233,35 @@ export default function InternalSurfacePage() {
     })
   }
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!formData.hostname || !formData.ipAddress) {
       toast.error('Please enter hostname and IP address')
       return
     }
-    const newAsset: InternalAsset = {
-      id: `int-${Date.now()}`,
-      hostname: formData.hostname,
-      type: formData.type,
-      ipAddress: formData.ipAddress,
-      macAddress: formData.macAddress || undefined,
-      networkZone: formData.networkZone,
-      vlan: formData.vlan || undefined,
-      operatingSystem: formData.operatingSystem || undefined,
-      status: formData.status,
-      riskLevel: formData.riskLevel,
-      lastSeen: new Date().toISOString(),
-      discoveredAt: new Date().toISOString(),
-      findingsCount: 0,
-      owner: formData.owner || undefined,
-      notes: formData.notes || undefined,
+    // Persist through the real API. This previously only pushed onto local
+    // state and reported success, so the asset vanished on the next reload —
+    // the page reads from useAssets but the writes never reached it.
+    try {
+      await createAsset({
+        name: formData.hostname,
+        type: formData.type as CreateAssetInput['type'],
+        scope: 'internal',
+        description: formData.notes || undefined,
+        metadata: {
+          ...(formData.ipAddress ? { ip_address: formData.ipAddress } : {}),
+          ...(formData.macAddress ? { mac_address: formData.macAddress } : {}),
+          ...(formData.operatingSystem ? { operating_system: formData.operatingSystem } : {}),
+          ...(formData.vlan ? { vlan: formData.vlan } : {}),
+          network_zone: formData.networkZone,
+        },
+      })
+      toast.success('Internal asset added')
+      setIsCreateOpen(false)
+      resetForm()
+      await refetchAssets()
+    } catch (e) {
+      toast.error(getErrorMessage(e, 'Failed to add internal asset'))
     }
-    setAssets((prev) => [...prev, newAsset])
-    toast.success('Internal asset added successfully')
-    setIsCreateOpen(false)
-    resetForm()
   }
 
   const handleEdit = () => {
@@ -294,6 +299,37 @@ export default function InternalSurfacePage() {
     setAssets((prev) => prev.filter((a) => a.id !== deleteAsset.id))
     toast.success('Internal asset deleted successfully')
     setDeleteAsset(null)
+  }
+
+  // Derive a scan target from an internal asset: prefer IP, fall back to hostname.
+  const toScanCandidate = (a: InternalAsset): ScanCandidate => ({
+    id: a.id,
+    label: a.hostname || a.ipAddress || a.id,
+    target: (a.ipAddress || a.hostname || '').trim(),
+  })
+
+  const openScanDialog = (items: InternalAsset[]) => {
+    setScanCandidates(items.map(toScanCandidate))
+    setScanDialogOpen(true)
+  }
+
+  const handleExport = () => {
+    exportToCsv(
+      filteredAssets,
+      [
+        { header: 'Hostname', accessor: (a) => a.hostname },
+        { header: 'Type', accessor: (a) => a.type },
+        { header: 'IP Address', accessor: (a) => a.ipAddress },
+        { header: 'Network Zone', accessor: (a) => a.networkZone },
+        { header: 'Operating System', accessor: (a) => a.operatingSystem ?? '' },
+        { header: 'Status', accessor: (a) => a.status },
+        { header: 'Risk Level', accessor: (a) => a.riskLevel },
+        { header: 'Findings', accessor: (a) => a.findingsCount },
+        { header: 'Owner', accessor: (a) => a.owner ?? '' },
+        { header: 'Last Seen', accessor: (a) => a.lastSeen },
+      ],
+      'internal-assets'
+    )
   }
 
   const openEdit = (asset: InternalAsset) => {
@@ -458,11 +494,18 @@ export default function InternalSurfacePage() {
           description="Map and monitor internal network assets and their security posture"
         >
           <div className="flex gap-2">
-            <Button variant="outline" size="sm">
-              <RefreshCw className="me-2 h-4 w-4" />
-              Scan Network
-            </Button>
-            <Button variant="outline" size="sm">
+            <Can permission={Permission.ScansExecute}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => openScanDialog(filteredAssets)}
+                disabled={filteredAssets.length === 0}
+              >
+                <RefreshCw className="me-2 h-4 w-4" />
+                Scan Network
+              </Button>
+            </Can>
+            <Button variant="outline" size="sm" onClick={handleExport}>
               <Download className="me-2 h-4 w-4" />
               Export
             </Button>
@@ -477,46 +520,26 @@ export default function InternalSurfacePage() {
 
         {/* Stats Cards */}
         <div className="grid gap-4 md:grid-cols-5 mb-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Total Assets</CardTitle>
-              <Layers className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.total}</div>
-              <p className="text-xs text-muted-foreground">{stats.online} online</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Critical Risk</CardTitle>
-              <AlertTriangle className="h-4 w-4 text-red-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-500">{stats.critical}</div>
-              <p className="text-xs text-muted-foreground">Needs attention</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Findings</CardTitle>
-              <Shield className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.totalFindings}</div>
-              <p className="text-xs text-muted-foreground">Security issues</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Network Zones</CardTitle>
-              <Network className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">4</div>
-              <p className="text-xs text-muted-foreground">Segmented zones</p>
-            </CardContent>
-          </Card>
+          <StatsCard
+            title="Total Assets"
+            value={stats.total}
+            icon={Layers}
+            description={`${stats.online} online`}
+          />
+          <StatsCard
+            title="Critical Risk"
+            value={stats.critical}
+            valueClassName="text-red-600"
+            icon={AlertTriangle}
+            description="Needs attention"
+          />
+          <StatsCard
+            title="Findings"
+            value={stats.totalFindings}
+            icon={Shield}
+            description="Security issues"
+          />
+          <StatsCard title="Network Zones" value={4} icon={Network} description="Segmented zones" />
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">Coverage</CardTitle>
@@ -655,7 +678,7 @@ export default function InternalSurfacePage() {
               </TableHeader>
               <TableBody>
                 {filteredAssets.map((asset) => {
-                  const TypeIcon = typeIcons[asset.type]
+                  const TypeIcon = typeIcons[asset.type] ?? Server
                   return (
                     <TableRow
                       key={asset.id}
@@ -709,34 +732,30 @@ export default function InternalSurfacePage() {
                       </TableCell>
                       <TableCell>
                         <Can permission={[Permission.ScopeWrite, Permission.ScopeDelete]}>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                              <Button variant="ghost" size="icon">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => setViewAsset(asset)}>
-                                <Eye className="me-2 h-4 w-4" />
-                                View Details
-                              </DropdownMenuItem>
-                              <Can permission={Permission.ScopeWrite}>
-                                <DropdownMenuItem onClick={() => openEdit(asset)}>
-                                  <Pencil className="me-2 h-4 w-4" />
-                                  Edit
-                                </DropdownMenuItem>
-                              </Can>
-                              <Can permission={Permission.ScopeDelete}>
-                                <DropdownMenuItem
-                                  className="text-red-500"
-                                  onClick={() => setDeleteAsset(asset)}
-                                >
-                                  <Trash2 className="me-2 h-4 w-4" />
-                                  Delete
-                                </DropdownMenuItem>
-                              </Can>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                          <span onClick={(e) => e.stopPropagation()}>
+                            <DataTableRowActions
+                              actions={[
+                                {
+                                  label: 'View Details',
+                                  icon: Eye,
+                                  onClick: () => setViewAsset(asset),
+                                },
+                                {
+                                  label: 'Edit',
+                                  icon: Pencil,
+                                  onClick: () => openEdit(asset),
+                                  permission: Permission.ScopeWrite,
+                                },
+                                {
+                                  label: 'Delete',
+                                  icon: Trash2,
+                                  onClick: () => setDeleteAsset(asset),
+                                  destructive: true,
+                                  permission: Permission.ScopeDelete,
+                                },
+                              ]}
+                            />
+                          </span>
                         </Can>
                       </TableCell>
                     </TableRow>
@@ -820,174 +839,186 @@ export default function InternalSurfacePage() {
                 </div>
               </SheetHeader>
 
-              <div className="mt-6 space-y-4">
-                <div className="grid grid-cols-3 gap-4">
+              <SheetBody>
+                <div className="mt-6 space-y-4">
+                  <div className="grid grid-cols-3 gap-4">
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">Status</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <Badge variant="outline" className={statusColors[viewAsset.status]}>
+                          {viewAsset.status}
+                        </Badge>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">Risk Level</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <Badge variant="outline" className={riskColors[viewAsset.riskLevel]}>
+                          {viewAsset.riskLevel}
+                        </Badge>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">Zone</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <Badge variant="outline" className={zoneColors[viewAsset.networkZone]}>
+                          {viewAsset.networkZone.toUpperCase()}
+                        </Badge>
+                      </CardContent>
+                    </Card>
+                  </div>
+
                   <Card>
                     <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Status</CardTitle>
+                      <CardTitle className="text-sm">Network Details</CardTitle>
                     </CardHeader>
-                    <CardContent>
-                      <Badge variant="outline" className={statusColors[viewAsset.status]}>
-                        {viewAsset.status}
-                      </Badge>
+                    <CardContent className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">IP Address</span>
+                        <code>{viewAsset.ipAddress}</code>
+                      </div>
+                      {viewAsset.macAddress && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">MAC Address</span>
+                          <code>{viewAsset.macAddress}</code>
+                        </div>
+                      )}
+                      {viewAsset.vlan && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">VLAN</span>
+                          <span>{viewAsset.vlan}</span>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
+
+                  {viewAsset.operatingSystem && (
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">Operating System</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-sm">{viewAsset.operatingSystem}</p>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {viewAsset.openPorts && viewAsset.openPorts.length > 0 && (
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">Open Ports</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex flex-wrap gap-2">
+                          {viewAsset.openPorts.map((port) => (
+                            <Badge key={port} variant="secondary">
+                              {port}
+                            </Badge>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {viewAsset.services && viewAsset.services.length > 0 && (
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">Services</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex flex-wrap gap-2">
+                          {viewAsset.services.map((service) => (
+                            <Badge key={service} variant="outline">
+                              {service}
+                            </Badge>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">Findings</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div
+                          className={`text-2xl font-bold ${viewAsset.findingsCount > 0 ? 'text-orange-500' : ''}`}
+                        >
+                          {viewAsset.findingsCount}
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">Owner</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-sm">{viewAsset.owner || 'Unassigned'}</p>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {viewAsset.notes && (
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">Notes</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-sm text-muted-foreground">{viewAsset.notes}</p>
+                      </CardContent>
+                    </Card>
+                  )}
+
                   <Card>
                     <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Risk Level</CardTitle>
+                      <CardTitle className="text-sm">Timeline</CardTitle>
                     </CardHeader>
-                    <CardContent>
-                      <Badge variant="outline" className={riskColors[viewAsset.riskLevel]}>
-                        {viewAsset.riskLevel}
-                      </Badge>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Zone</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <Badge variant="outline" className={zoneColors[viewAsset.networkZone]}>
-                        {viewAsset.networkZone.toUpperCase()}
-                      </Badge>
+                    <CardContent className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Discovered</span>
+                        <span>{new Date(viewAsset.discoveredAt).toLocaleDateString()}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Last Seen</span>
+                        <span>{new Date(viewAsset.lastSeen).toLocaleDateString()}</span>
+                      </div>
                     </CardContent>
                   </Card>
                 </div>
 
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">Network Details</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">IP Address</span>
-                      <code>{viewAsset.ipAddress}</code>
-                    </div>
-                    {viewAsset.macAddress && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">MAC Address</span>
-                        <code>{viewAsset.macAddress}</code>
-                      </div>
-                    )}
-                    {viewAsset.vlan && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">VLAN</span>
-                        <span>{viewAsset.vlan}</span>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-
-                {viewAsset.operatingSystem && (
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Operating System</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm">{viewAsset.operatingSystem}</p>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {viewAsset.openPorts && viewAsset.openPorts.length > 0 && (
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Open Ports</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex flex-wrap gap-2">
-                        {viewAsset.openPorts.map((port) => (
-                          <Badge key={port} variant="secondary">
-                            {port}
-                          </Badge>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {viewAsset.services && viewAsset.services.length > 0 && (
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Services</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex flex-wrap gap-2">
-                        {viewAsset.services.map((service) => (
-                          <Badge key={service} variant="outline">
-                            {service}
-                          </Badge>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-
-                <div className="grid grid-cols-2 gap-4">
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Findings</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div
-                        className={`text-2xl font-bold ${viewAsset.findingsCount > 0 ? 'text-orange-500' : ''}`}
-                      >
-                        {viewAsset.findingsCount}
-                      </div>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Owner</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm">{viewAsset.owner || 'Unassigned'}</p>
-                    </CardContent>
-                  </Card>
+                <div className="mt-6 flex gap-2">
+                  <Button className="flex-1" variant="outline" onClick={() => openEdit(viewAsset)}>
+                    <Pencil className="me-2 h-4 w-4" />
+                    Edit
+                  </Button>
+                  <Can permission={Permission.ScansExecute}>
+                    <Button className="flex-1" onClick={() => openScanDialog([viewAsset])}>
+                      <Wifi className="me-2 h-4 w-4" />
+                      Scan Asset
+                    </Button>
+                  </Can>
                 </div>
-
-                {viewAsset.notes && (
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Notes</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-muted-foreground">{viewAsset.notes}</p>
-                    </CardContent>
-                  </Card>
-                )}
-
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">Timeline</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Discovered</span>
-                      <span>{new Date(viewAsset.discoveredAt).toLocaleDateString()}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Last Seen</span>
-                      <span>{new Date(viewAsset.lastSeen).toLocaleDateString()}</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              <div className="mt-6 flex gap-2">
-                <Button className="flex-1" variant="outline" onClick={() => openEdit(viewAsset)}>
-                  <Pencil className="me-2 h-4 w-4" />
-                  Edit
-                </Button>
-                <Button className="flex-1">
-                  <Wifi className="me-2 h-4 w-4" />
-                  Scan Asset
-                </Button>
-              </div>
+              </SheetBody>
             </>
           )}
         </SheetContent>
       </Sheet>
+
+      {/* Quick-scan flow */}
+      <ScanAssetsDialog
+        open={scanDialogOpen}
+        onOpenChange={setScanDialogOpen}
+        candidates={scanCandidates}
+        title="Scan network assets"
+      />
     </>
   )
 }

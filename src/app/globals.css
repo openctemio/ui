@@ -13,9 +13,16 @@
   html {
     @apply overflow-x-hidden;
     scrollbar-gutter: stable;
+    /* Kill the document-level rubber-band bounce. On iOS Safari that bounce
+       lets the body "scroll" and intermittently steal touch-scroll from the
+       app-shell's inner scrollers (the sidebar nav). Additive + safe: pages
+       that legitimately scroll (auth/onboarding) still scroll, just without the
+       overscroll chaining. No layout/height changes. */
+    overscroll-behavior: none;
   }
   body {
     @apply bg-background text-foreground has-[div[data-variant='inset']]:bg-sidebar min-h-svh w-full;
+    overscroll-behavior: none;
   }
 
   /* Override Radix scroll locking for sticky headers */
@@ -109,4 +116,19 @@
   to {
     height: 0;
   }
+}
+
+/*
+ * Markdown editor (@uiw/react-md-editor) toolbar in narrow form columns
+ * (e.g. the Steps to Reproduce / Proof of Concept editors) used to wrap its
+ * buttons into a cramped two-row block. Keep it on a single row and let it
+ * scroll horizontally within its own container instead.
+ */
+.w-md-editor-toolbar {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+.w-md-editor-toolbar ul {
+  flex-wrap: nowrap;
 }

@@ -17,6 +17,7 @@ import { Main } from '@/components/layout'
 import { PageHeader } from '@/features/shared'
 import { copyToClipboard } from '@/lib/clipboard'
 import { cn } from '@/lib/utils'
+import { SEVERITY_BADGE_SOLID } from '@/lib/severity-colors'
 import {
   Search,
   RefreshCw,
@@ -158,8 +159,14 @@ export default function ExposuresPage() {
     if (isExporting) return
     setIsExporting(true)
     try {
-      const all = await fetchAllPages<ExposureEvent>((p, per_page) =>
-        exposureEndpoints.list({ ...apiFilters, page: p, per_page })
+      const all = await fetchAllPages<ExposureEvent>(
+        (p, per_page) => exposureEndpoints.list({ ...apiFilters, page: p, per_page }),
+        {
+          onTruncated: (loaded) =>
+            toast.warning(
+              `Export limited to the first ${loaded.toLocaleString()} exposures — refine filters to export the rest`
+            ),
+        }
       )
       exportToCsv(all, EXPOSURE_EXPORT_FIELDS, 'exposures')
     } catch {
@@ -478,14 +485,7 @@ export default function ExposuresPage() {
 }
 
 function getSeverityButtonClass(severity: ExposureSeverity): string {
-  const classes: Record<ExposureSeverity, string> = {
-    critical: 'bg-red-500 hover:bg-red-600',
-    high: 'bg-orange-500 hover:bg-orange-600',
-    medium: 'bg-yellow-500 hover:bg-yellow-600 text-black',
-    low: 'bg-blue-500 hover:bg-blue-600',
-    info: 'bg-gray-500 hover:bg-gray-600',
-  }
-  return classes[severity]
+  return SEVERITY_BADGE_SOLID[severity]
 }
 
 interface EventTypeDistributionProps {
@@ -1157,12 +1157,5 @@ function StateHistorySection({ history, isLoading }: StateHistorySectionProps) {
 }
 
 function getSeverityBadgeClass(severity: ExposureSeverity): string {
-  const classes: Record<ExposureSeverity, string> = {
-    critical: 'bg-red-500 text-white',
-    high: 'bg-orange-500 text-white',
-    medium: 'bg-yellow-500 text-black',
-    low: 'bg-blue-500 text-white',
-    info: 'bg-gray-500 text-white',
-  }
-  return classes[severity]
+  return SEVERITY_BADGE_SOLID[severity]
 }

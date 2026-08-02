@@ -39,6 +39,32 @@ interface AssetFormDialogSharedProps {
   includeGroupSelect?: boolean
 }
 
+// Universal CTEM classification fields shown on every asset form regardless of
+// per-type config. The backend infers these on ingest, but an operator must be
+// able to set/override them — previously they were hardcoded on create
+// (medium/internal/unknown) and never editable.
+const CRITICALITY_OPTIONS = [
+  { value: 'critical', label: 'Critical' },
+  { value: 'high', label: 'High' },
+  { value: 'medium', label: 'Medium' },
+  { value: 'low', label: 'Low' },
+]
+const SCOPE_OPTIONS = [
+  { value: 'internal', label: 'Internal' },
+  { value: 'external', label: 'External' },
+  { value: 'cloud', label: 'Cloud' },
+  { value: 'partner', label: 'Partner' },
+  { value: 'vendor', label: 'Vendor' },
+  { value: 'shadow', label: 'Shadow IT' },
+]
+const EXPOSURE_OPTIONS = [
+  { value: 'public', label: 'Public' },
+  { value: 'restricted', label: 'Restricted' },
+  { value: 'private', label: 'Private' },
+  { value: 'isolated', label: 'Isolated' },
+  { value: 'unknown', label: 'Unknown' },
+]
+
 function getInitialValues(
   fields: FormFieldConfig[],
   asset?: Asset | null
@@ -64,6 +90,11 @@ function getInitialValues(
   // in every form regardless of per-type config so users can label ownership
   // without us threading it through 24 separate config files.
   values.ownerRef = asset?.ownerRef ?? ''
+  // Universal CTEM classification — prefill from the asset (edit) or sensible
+  // defaults (create) so the operator sees and can change what the backend inferred.
+  values.criticality = asset?.criticality ?? 'medium'
+  values.scope = asset?.scope ?? 'internal'
+  values.exposure = asset?.exposure ?? 'unknown'
   return values
 }
 
@@ -149,6 +180,12 @@ export function AssetFormDialogShared({
       const trimmed = ownerRefRaw.trim().slice(0, 500)
       data.ownerRef = trimmed || undefined
     }
+
+    // Forward the universal CTEM classification so create/update persist what
+    // the operator chose instead of hardcoded defaults.
+    data.criticality = formData.criticality
+    data.scope = formData.scope
+    data.exposure = formData.exposure
 
     if (includeGroupSelect) {
       data.groupId = groupId
@@ -301,6 +338,39 @@ export function AssetFormDialogShared({
             </div>
           ))}
 
+          {/* Universal CTEM classification — settable on every asset type. The
+              backend infers these on ingest; here the operator can override. */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            {(
+              [
+                { name: 'criticality', label: 'Criticality', options: CRITICALITY_OPTIONS },
+                { name: 'scope', label: 'Scope', options: SCOPE_OPTIONS },
+                { name: 'exposure', label: 'Exposure', options: EXPOSURE_OPTIONS },
+              ] as const
+            ).map((f) => (
+              <div key={f.name}>
+                <Label className="text-sm font-medium">{f.label}</Label>
+                <div className="mt-1.5">
+                  <Select
+                    value={String(formData[f.name] ?? '')}
+                    onValueChange={(v) => handleChange(f.name, v)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={`Select ${f.label.toLowerCase()}`} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {f.options.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            ))}
+          </div>
+
           {/* Owner reference — universal field for all asset types. Free-text
               label like a team name, contact email, or cost center. */}
           <div>
@@ -321,7 +391,12 @@ export function AssetFormDialogShared({
             </p>
           </div>
 
-          {includeGroupSelect && (
+          {/* Group is a create-time convenience only. On edit we have no way to
+              show/reconcile an asset's *current* group membership (it isn't part
+              of the asset record and is many-to-many), so showing the picker
+              there would imply a change that silently no-ops. Manage membership
+              of an existing asset from the Asset Groups page instead. */}
+          {includeGroupSelect && !asset && (
             <div>
               <Label className="text-sm font-medium">Group</Label>
               <div className="mt-1.5">

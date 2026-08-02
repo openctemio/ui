@@ -4,7 +4,7 @@ import { useMemo } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Main } from '@/components/layout'
-import { StatusBadge } from '@/features/shared'
+import { StatusBadge, EmptyState } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -18,16 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import { toast } from 'sonner'
 import { useState } from 'react'
 import {
@@ -51,18 +42,19 @@ import {
 } from 'lucide-react'
 import { copyToClipboard } from '@/lib/clipboard'
 import { Can, Permission } from '@/lib/permissions'
-import { useScanConfig, useScanSessions, invalidateScanConfigsCache } from '@/lib/api/scan-hooks'
+import { useScanConfig, useScanRuns, invalidateScanConfigsCache } from '@/lib/api/scan-hooks'
 import { post, del } from '@/lib/api/client'
 import { getErrorMessage } from '@/lib/api/error-handler'
-import { scanEndpoints } from '@/lib/api/endpoints'
+import { scanEndpoints, pipelineRunEndpoints } from '@/lib/api/endpoints'
 import {
   SCAN_TYPE_LABELS,
   SCHEDULE_TYPE_LABELS,
   AGENT_PREFERENCE_LABELS,
   SCAN_RUN_STATUS_LABELS,
-  type ScanSession,
+  type PipelineRun,
   type ScanRunStatus,
 } from '@/lib/api/scan-types'
+import { PIPELINE_TRIGGER_LABELS, type PipelineTriggerType } from '@/lib/api/pipeline-types'
 
 // Format date helper
 function formatDate(dateString: string | undefined) {
@@ -79,6 +71,14 @@ function formatDuration(ms: number | undefined) {
   if (hours > 0) return `${hours}h ${minutes % 60}m`
   if (minutes > 0) return `${minutes}m ${seconds % 60}s`
   return `${seconds}s`
+}
+
+// A pipeline run reports timestamps, not a duration_ms, so derive it. A run
+// that has started but not finished shows elapsed time so far.
+function formatRunDuration(run: PipelineRun) {
+  if (!run.started_at) return '-'
+  const end = run.completed_at ? new Date(run.completed_at) : new Date()
+  return formatDuration(end.getTime() - new Date(run.started_at).getTime())
 }
 
 // Run status badge component
@@ -131,16 +131,17 @@ export default function ScanDetailPage() {
   // Fetch scan config
   const { data: config, isLoading, error } = useScanConfig(scanId)
 
-  // Fetch recent runs for this scan
-  const { data: sessionsResponse, isLoading: isLoadingRuns } = useScanSessions(
-    { per_page: 10 },
-    { refreshInterval: 10000 } // Refresh every 10s
-  )
+  // Runs of THIS scan. This used to list scan sessions, which are an agent's
+  // execution records and carry no scan_id — so the list showed the tenant's
+  // last 10 sessions no matter which scan you opened. Pipeline runs carry
+  // scan_id, so this endpoint answers the question the page is asking.
+  const {
+    data: runsResponse,
+    isLoading: isLoadingRuns,
+    mutate: refetchRuns,
+  } = useScanRuns(scanId, 10, { refreshInterval: 10000 })
 
-  // Filter sessions for this scan config (if API supports it in future)
-  const recentRuns = useMemo(() => {
-    return sessionsResponse?.data || []
-  }, [sessionsResponse])
+  const recentRuns = useMemo(() => runsResponse?.data || [], [runsResponse])
 
   // Calculate progress
   const progress = useMemo(() => {
@@ -165,13 +166,14 @@ export default function ScanDetailPage() {
   }
 
   // Cancel an active run. Backend cascade-cancels all in-flight commands.
-  const handleStopRun = async (run: ScanSession) => {
+  // This posted to /scan-sessions/{id}/stop, a route that does not exist —
+  // the scan-sessions group has no /stop. Pipeline runs do have /cancel.
+  const handleStopRun = async (run: PipelineRun) => {
     setStoppingRunId(run.id)
     try {
-      await post(`/api/v1/scan-sessions/${run.id}/stop`, {})
+      await post(pipelineRunEndpoints.cancel(run.id), {})
       toast.success('Run cancelled. In-flight commands will stop shortly.')
-      // Re-fetch runs
-      await invalidateScanConfigsCache()
+      await refetchRuns()
     } catch (err) {
       toast.error(getErrorMessage(err, 'Failed to cancel run'))
     } finally {
@@ -468,27 +470,27 @@ export default function ScanDetailPage() {
                   ))}
                 </div>
               ) : recentRuns.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Activity className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No runs yet</p>
-                  <p className="text-sm">Trigger this scan to see run history</p>
-                </div>
+                <EmptyState
+                  card={false}
+                  icon={Activity}
+                  title="No runs yet"
+                  description="Trigger this scan to see run history"
+                />
               ) : (
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>Status</TableHead>
-                      <TableHead>Scanner</TableHead>
-                      <TableHead>Target</TableHead>
+                      <TableHead>Trigger</TableHead>
+                      <TableHead>Steps</TableHead>
                       <TableHead>Findings</TableHead>
-                      <TableHead>Quality Gate</TableHead>
                       <TableHead>Duration</TableHead>
                       <TableHead>Started</TableHead>
                       <TableHead className="text-end">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {recentRuns.map((run: ScanSession) => {
+                    {recentRuns.map((run: PipelineRun) => {
                       const isActive =
                         run.status === 'pending' ||
                         run.status === 'queued' ||
@@ -497,75 +499,60 @@ export default function ScanDetailPage() {
                         <TableRow key={run.id}>
                           <TableCell>
                             <div className="flex items-center gap-1">
-                              <RunStatusBadge status={run.status} />
-                              {run.retry_attempt !== undefined && run.retry_attempt > 0 && (
+                              <RunStatusBadge status={run.status as ScanRunStatus} />
+                              {run.failed_steps > 0 && (
                                 <Badge
                                   variant="outline"
-                                  className="text-xs"
-                                  title={`Retry attempt ${run.retry_attempt}`}
+                                  className="text-xs text-red-500"
+                                  title={run.error_message || `${run.failed_steps} step(s) failed`}
                                 >
-                                  <RefreshCw className="h-3 w-3 me-0.5" />
-                                  {run.retry_attempt}
+                                  <AlertTriangle className="h-3 w-3 me-0.5" />
+                                  {run.failed_steps}
                                 </Badge>
                               )}
                             </div>
                           </TableCell>
-                          <TableCell className="font-medium">{run.scanner_name}</TableCell>
-                          <TableCell className="max-w-[200px] truncate">
-                            {run.asset_value}
+                          <TableCell className="font-medium">
+                            <div className="flex flex-col">
+                              <span>
+                                {PIPELINE_TRIGGER_LABELS[run.trigger_type as PipelineTriggerType] ??
+                                  run.trigger_type}
+                              </span>
+                              {run.triggered_by && (
+                                <span className="text-muted-foreground text-xs">
+                                  {run.triggered_by}
+                                </span>
+                              )}
+                            </div>
                           </TableCell>
                           <TableCell>
-                            {run.findings_total > 0 ? (
-                              <Link
-                                href={`/findings?scan_id=${run.id}`}
-                                className="hover:underline"
-                              >
-                                <div className="flex items-center gap-1">
-                                  <Badge variant="secondary">{run.findings_total}</Badge>
-                                  {run.findings_new > 0 && (
-                                    <Badge className="bg-red-500">{run.findings_new} new</Badge>
-                                  )}
-                                </div>
-                              </Link>
+                            <span className="tabular-nums">
+                              {run.completed_steps}/{run.total_steps}
+                            </span>
+                            {run.skipped_steps > 0 && (
+                              <span className="text-muted-foreground ms-1 text-xs">
+                                ({run.skipped_steps} skipped)
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {run.total_findings > 0 ? (
+                              <Badge variant="secondary">{run.total_findings}</Badge>
                             ) : (
                               <span className="text-muted-foreground">-</span>
                             )}
                           </TableCell>
-                          <TableCell>
-                            {run.quality_gate_result ? (
-                              run.quality_gate_result.passed ? (
-                                <Badge className="bg-green-600 hover:bg-green-700">
-                                  <CheckCircle className="h-3 w-3 me-1" />
-                                  Passed
-                                </Badge>
-                              ) : (
-                                <Badge
-                                  variant="destructive"
-                                  title={
-                                    run.quality_gate_result.breaches
-                                      ?.map(
-                                        (b) =>
-                                          `${b.metric}: ${b.actual} > ${b.limit === 0 ? 'any' : b.limit}`
-                                      )
-                                      .join(', ') || 'Quality gate failed'
-                                  }
-                                >
-                                  <AlertTriangle className="h-3 w-3 me-1" />
-                                  Failed
-                                  {run.quality_gate_result.breaches &&
-                                    run.quality_gate_result.breaches.length > 0 &&
-                                    ` (${run.quality_gate_result.breaches.length})`}
-                                </Badge>
-                              )
-                            ) : (
-                              <span className="text-muted-foreground text-xs">-</span>
-                            )}
-                          </TableCell>
-                          <TableCell>{formatDuration(run.duration_ms)}</TableCell>
+                          <TableCell>{formatRunDuration(run)}</TableCell>
                           <TableCell>{formatDate(run.started_at)}</TableCell>
                           <TableCell className="text-end">
                             {isActive && (
-                              <Can permission={Permission.ScansWrite}>
+                              // PipelinesWrite, not ScansWrite. Cancel posts to
+                              // POST /pipeline-runs/{id}/cancel, and that route
+                              // requires pipelines:write. Gating on scans:write
+                              // showed an enabled button to users the API would
+                              // reject with a 403 — the button changed endpoint
+                              // in #335 and the permission gate did not follow.
+                              <Can permission={Permission.PipelinesWrite}>
                                 <Button
                                   size="sm"
                                   variant="ghost"
@@ -844,27 +831,21 @@ export default function ScanDetailPage() {
       </Tabs>
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Scan Configuration</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete &quot;{config.name}&quot;? This action cannot be
-              undone and will remove all associated run history.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteConfig}
-              disabled={isDeleting}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              {isDeleting ? 'Deleting...' : 'Delete'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={deleteConfirmOpen}
+        onOpenChange={setDeleteConfirmOpen}
+        title="Delete Scan Configuration"
+        desc={
+          <>
+            Are you sure you want to delete &quot;{config.name}&quot;? This action cannot be undone
+            and will remove all associated run history.
+          </>
+        }
+        confirmText={isDeleting ? 'Deleting...' : 'Delete'}
+        destructive
+        isLoading={isDeleting}
+        handleConfirm={handleDeleteConfig}
+      />
     </Main>
   )
 }

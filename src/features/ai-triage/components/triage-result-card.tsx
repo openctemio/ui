@@ -7,7 +7,7 @@ import { Progress } from '@/components/ui/progress'
 import { Separator } from '@/components/ui/separator'
 import { AlertTriangle, Shield, Target, FileWarning, Clock, Bot, XCircle } from 'lucide-react'
 import { TriageStatusBadge } from './triage-status-badge'
-import { SEVERITY_CONFIG } from '@/features/shared/types'
+import { SEVERITY_BADGE_LIGHT, type SeverityLevel } from '@/lib/severity-colors'
 import type { AITriageResult, Exploitability } from '../types'
 import { EXPLOITABILITY_CONFIG, EFFORT_CONFIG } from '../types'
 
@@ -23,8 +23,9 @@ export function TriageResultCard({ result, className }: TriageResultCardProps) {
 
   const getSeverityColor = (severity: string | undefined) => {
     if (!severity) return 'bg-gray-100 text-gray-800'
-    const config = SEVERITY_CONFIG[severity.toLowerCase() as keyof typeof SEVERITY_CONFIG]
-    return config ? `${config.color} ${config.textColor}` : 'bg-gray-100 text-gray-800'
+    return (
+      SEVERITY_BADGE_LIGHT[severity.toLowerCase() as SeverityLevel] ?? 'bg-gray-100 text-gray-800'
+    )
   }
 
   const getRiskScoreColor = (score: number) => {

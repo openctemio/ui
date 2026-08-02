@@ -12,7 +12,7 @@ import {
   useReactTable,
 } from '@tanstack/react-table'
 import { Main } from '@/components/layout'
-import { PageHeader, DataTablePagination } from '@/features/shared'
+import { PageHeader, DataTablePagination, EmptyState } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -48,6 +48,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -1285,13 +1286,12 @@ export default function UsersPage() {
               </CardHeader>
               <CardContent className="space-y-3">
                 {invitations.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Mail className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
-                    <p className="text-sm text-muted-foreground">No pending invitations</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Invite someone to join your team
-                    </p>
-                  </div>
+                  <EmptyState
+                    card={false}
+                    icon={Mail}
+                    title="No pending invitations"
+                    description="Invite someone to join your team"
+                  />
                 ) : (
                   invitations.map((invitation) => {
                     // Get role names from role_ids
@@ -1859,58 +1859,50 @@ export default function UsersPage() {
       </AlertDialog>
 
       {/* Remove Member Confirmation Dialog */}
-      <AlertDialog
+      <ConfirmDialog
         open={!!removeConfirmMember}
         onOpenChange={(open) => {
           if (!open && !isRemoving) setRemoveConfirmMember(null)
         }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <Trash2 className="h-5 w-5 text-red-500" />
-              Remove member from team?
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {removeConfirmMember && (
-                <>
-                  <span className="font-medium text-foreground">
-                    {removeConfirmMember.name || removeConfirmMember.email}
-                  </span>{' '}
-                  will be removed from this team. Their membership row, role assignments, and any
-                  pending invitations addressed to their email will be deleted. This is permanent —
-                  to undo, you would need to invite them again from scratch. Prefer{' '}
-                  <span className="font-medium text-foreground">Suspend</span> if you only want to
-                  pause access temporarily.
-                </>
-              )}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isRemoving}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={(e) => {
-                e.preventDefault()
-                void handleConfirmRemove()
-              }}
-              disabled={isRemoving}
-              className="bg-red-500 text-white hover:bg-red-600 focus:ring-red-500"
-            >
-              {isRemoving ? (
-                <>
-                  <Loader2 className="me-2 h-4 w-4 animate-spin" />
-                  Removing...
-                </>
-              ) : (
-                <>
-                  <Trash2 className="me-2 h-4 w-4" />
-                  Remove
-                </>
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        title={
+          <span className="flex items-center gap-2">
+            <Trash2 className="h-5 w-5 text-red-500" />
+            Remove member from team?
+          </span>
+        }
+        desc={
+          <>
+            {removeConfirmMember && (
+              <>
+                <span className="font-medium text-foreground">
+                  {removeConfirmMember.name || removeConfirmMember.email}
+                </span>{' '}
+                will be removed from this team. Their membership row, role assignments, and any
+                pending invitations addressed to their email will be deleted. This is permanent — to
+                undo, you would need to invite them again from scratch. Prefer{' '}
+                <span className="font-medium text-foreground">Suspend</span> if you only want to
+                pause access temporarily.
+              </>
+            )}
+          </>
+        }
+        confirmText={
+          isRemoving ? (
+            <>
+              <Loader2 className="me-2 h-4 w-4 animate-spin" />
+              Removing...
+            </>
+          ) : (
+            <>
+              <Trash2 className="me-2 h-4 w-4" />
+              Remove
+            </>
+          )
+        }
+        destructive
+        isLoading={isRemoving}
+        handleConfirm={() => void handleConfirmRemove()}
+      />
     </MemberRolesContext.Provider>
   )
 }

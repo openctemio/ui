@@ -22,6 +22,7 @@ import {
 import { toast } from 'sonner'
 
 import { Main } from '@/components/layout'
+import { EmptyState, ErrorState } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -40,16 +41,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import {
   Select,
   SelectContent,
@@ -194,11 +186,13 @@ export default function NotificationOutboxPage() {
   // Fetch data
   const {
     data: statsData,
+    error: statsError,
     isLoading: statsLoading,
     mutate: mutateStats,
   } = useNotificationOutboxStatsApi()
   const {
     data: entriesData,
+    error: entriesError,
     isLoading: entriesLoading,
     mutate: mutateEntries,
   } = useNotificationOutboxApi({
@@ -283,6 +277,24 @@ export default function NotificationOutboxPage() {
     }
   }
 
+  // A failed read would otherwise render an all-zero (i.e. healthy, empty) queue
+  // while the real queue may be backed up with dead entries.
+  const loadError = statsError ?? entriesError
+  if (loadError) {
+    return (
+      <Main>
+        <ErrorState
+          title="notification queue"
+          error={loadError}
+          onRetry={() => {
+            void mutateStats()
+            void mutateEntries()
+          }}
+        />
+      </Main>
+    )
+  }
+
   return (
     <>
       <Main>
@@ -297,7 +309,7 @@ export default function NotificationOutboxPage() {
             </Button>
             <div className="h-6 w-px bg-border" />
             <div>
-              <h1 className="text-xl font-semibold">Notification Queue</h1>
+              <h1 className="text-2xl font-bold tracking-tight">Notification Queue</h1>
             </div>
           </div>
           <Button variant="outline" size="sm" onClick={handleRefresh}>
@@ -354,15 +366,16 @@ export default function NotificationOutboxPage() {
                     ))}
                   </div>
                 ) : entries.length === 0 ? (
-                  <div className="rounded-lg border border-dashed p-8 text-center">
-                    <Inbox className="mx-auto h-10 w-10 text-muted-foreground" />
-                    <h3 className="mt-3 font-semibold">No entries found</h3>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      {statusFilter !== 'all'
+                  <EmptyState
+                    card={false}
+                    icon={Inbox}
+                    title="No entries found"
+                    description={
+                      statusFilter !== 'all'
                         ? `No ${statusFilter} entries in the queue`
-                        : 'The notification queue is empty'}
-                    </p>
-                  </div>
+                        : 'The notification queue is empty'
+                    }
+                  />
                 ) : (
                   <>
                     <div className="rounded-md border">
@@ -559,37 +572,32 @@ export default function NotificationOutboxPage() {
         )}
 
         {/* Delete Confirmation Dialog */}
-        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Delete Entry</AlertDialogTitle>
-              <AlertDialogDescription>
-                Are you sure you want to delete this notification entry? This action cannot be
-                undone.
-                {selectedEntry && (
-                  <span className="mt-2 block font-medium">{selectedEntry.title}</span>
-                )}
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={handleDeleteConfirm}
-                disabled={isDeleting}
-                className="bg-red-500 hover:bg-red-600"
-              >
-                {isDeleting ? (
-                  <>
-                    <Loader2 className="me-2 h-4 w-4 animate-spin" />
-                    Deleting...
-                  </>
-                ) : (
-                  'Delete'
-                )}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        <ConfirmDialog
+          open={deleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
+          title="Delete Entry"
+          desc={
+            <>
+              Are you sure you want to delete this notification entry? This action cannot be undone.
+              {selectedEntry && (
+                <span className="mt-2 block font-medium">{selectedEntry.title}</span>
+              )}
+            </>
+          }
+          confirmText={
+            isDeleting ? (
+              <>
+                <Loader2 className="me-2 h-4 w-4 animate-spin" />
+                Deleting...
+              </>
+            ) : (
+              'Delete'
+            )
+          }
+          destructive
+          isLoading={isDeleting}
+          handleConfirm={() => void handleDeleteConfirm()}
+        />
       </Main>
     </>
   )

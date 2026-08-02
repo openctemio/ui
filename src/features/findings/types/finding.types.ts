@@ -6,6 +6,7 @@
  */
 
 import type { Severity } from '@/features/shared/types'
+import { SEVERITY_BADGE_SOFT, type SeverityLevel } from '@/lib/severity-colors'
 
 // ============================================
 // FINDING STATUS (Workflow-based)
@@ -264,6 +265,26 @@ export function getValidTransitions(status: FindingStatus): FindingStatus[] {
 // SEVERITY
 // ============================================
 
+/**
+ * Split a centralized soft-tint palette entry into the discrete color fields
+ * this config exposes. Keeps colors sourced from `@/lib/severity-colors` so the
+ * app stays visually consistent (and `low` stays canonical blue, not green).
+ */
+function softSeverityStyles(level: SeverityLevel): {
+  color: string
+  bgColor: string
+  textColor: string
+} {
+  const tokens = SEVERITY_BADGE_SOFT[level].split(' ')
+  const pick = (...prefixes: string[]): string =>
+    tokens.filter((t) => prefixes.some((p) => t.startsWith(p))).join(' ')
+  return {
+    color: pick('border-', 'dark:border-'),
+    bgColor: pick('bg-', 'dark:bg-'),
+    textColor: pick('text-', 'dark:text-'),
+  }
+}
+
 export const SEVERITY_CONFIG: Record<
   Severity,
   {
@@ -274,48 +295,13 @@ export const SEVERITY_CONFIG: Record<
     cvssRange: string
   }
 > = {
-  critical: {
-    label: 'Critical',
-    color: 'border-red-500/50',
-    bgColor: 'bg-red-500/20',
-    textColor: 'text-red-400',
-    cvssRange: '9.0 - 10.0',
-  },
-  high: {
-    label: 'High',
-    color: 'border-orange-500/50',
-    bgColor: 'bg-orange-500/20',
-    textColor: 'text-orange-400',
-    cvssRange: '7.0 - 8.9',
-  },
-  medium: {
-    label: 'Medium',
-    color: 'border-yellow-500/50',
-    bgColor: 'bg-yellow-500/20',
-    textColor: 'text-yellow-400',
-    cvssRange: '4.0 - 6.9',
-  },
-  low: {
-    label: 'Low',
-    color: 'border-green-500/50',
-    bgColor: 'bg-green-500/20',
-    textColor: 'text-green-400',
-    cvssRange: '0.1 - 3.9',
-  },
-  info: {
-    label: 'Info',
-    color: 'border-gray-500/50',
-    bgColor: 'bg-gray-500/20',
-    textColor: 'text-gray-400',
-    cvssRange: '0',
-  },
-  none: {
-    label: 'None',
-    color: 'border-gray-500/50',
-    bgColor: 'bg-gray-500/20',
-    textColor: 'text-gray-400',
-    cvssRange: '0',
-  },
+  critical: { label: 'Critical', ...softSeverityStyles('critical'), cvssRange: '9.0 - 10.0' },
+  high: { label: 'High', ...softSeverityStyles('high'), cvssRange: '7.0 - 8.9' },
+  medium: { label: 'Medium', ...softSeverityStyles('medium'), cvssRange: '4.0 - 6.9' },
+  low: { label: 'Low', ...softSeverityStyles('low'), cvssRange: '0.1 - 3.9' },
+  info: { label: 'Info', ...softSeverityStyles('info'), cvssRange: '0' },
+  // `Severity` carries an extra `none` key with no palette entry — reuse `info`.
+  none: { label: 'None', ...softSeverityStyles('info'), cvssRange: '0' },
 }
 
 // ============================================

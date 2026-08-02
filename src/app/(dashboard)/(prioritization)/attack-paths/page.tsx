@@ -3,7 +3,7 @@
 import { createElement } from 'react'
 import Link from 'next/link'
 import { Main } from '@/components/layout'
-import { PageHeader, StatsCard } from '@/features/shared'
+import { PageHeader, StatsCard, EmptyState } from '@/features/shared'
 import { useAttackPathScoring } from '@/features/attack-surface'
 import type { AttackPathScore } from '@/features/attack-surface'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Progress } from '@/components/ui/progress'
 import { cn } from '@/lib/utils'
+import { CRITICALITY_BADGE_SOFT, type CriticalityLevel } from '@/lib/criticality-colors'
 import {
   Route,
   ShieldAlert,
@@ -33,18 +34,7 @@ function capitalize(s: string): string {
 }
 
 function getCriticalityClass(criticality: string) {
-  switch (criticality) {
-    case 'critical':
-      return 'bg-red-500/10 text-red-500 border-red-500/20'
-    case 'high':
-      return 'bg-orange-500/10 text-orange-500 border-orange-500/20'
-    case 'medium':
-      return 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
-    case 'low':
-      return 'bg-blue-500/10 text-blue-500 border-blue-500/20'
-    default:
-      return 'bg-muted text-muted-foreground'
-  }
+  return CRITICALITY_BADGE_SOFT[criticality as CriticalityLevel] ?? 'bg-muted text-muted-foreground'
 }
 
 function getExposureClass(exposure: string) {
@@ -205,14 +195,11 @@ function AssetRow({ asset, rank, maxPathScore }: AssetRowProps) {
 
 function NoRelationshipData() {
   return (
-    <Card>
-      <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-        <GitBranch className="mb-4 h-12 w-12 text-muted-foreground" />
-        <p className="text-lg font-medium">No relationship data yet</p>
-        <p className="mt-2 max-w-md text-sm text-muted-foreground">
-          Attack path scoring requires asset relationships. Add relationships between your assets to
-          see which internal assets are reachable from internet-facing entry points.
-        </p>
+    <EmptyState
+      icon={GitBranch}
+      title="No relationship data yet"
+      description="Attack path scoring requires asset relationships. Add relationships between your assets to see which internal assets are reachable from internet-facing entry points."
+      action={
         <Link
           href="/assets"
           className="mt-6 inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
@@ -220,8 +207,8 @@ function NoRelationshipData() {
           Go to Assets
           <ArrowRight className="h-4 w-4" />
         </Link>
-      </CardContent>
-    </Card>
+      }
+    />
   )
 }
 

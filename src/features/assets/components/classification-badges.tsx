@@ -26,6 +26,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
+import { CRITICALITY_BADGE_SOFT } from '@/lib/criticality-colors'
 import type { AssetScope, ExposureLevel, Criticality } from '../types'
 import {
   ASSET_SCOPE_LABELS,
@@ -36,7 +37,6 @@ import {
   EXPOSURE_LEVEL_COLORS,
   CRITICALITY_LABELS,
   CRITICALITY_DESCRIPTIONS,
-  CRITICALITY_COLORS,
 } from '../types'
 
 // Scope icons
@@ -185,7 +185,6 @@ export function CriticalityBadge({
   size = 'md',
   className,
 }: CriticalityBadgeProps) {
-  const colors = CRITICALITY_COLORS[criticality]
   const Icon = CRITICALITY_ICONS[criticality]
   const label = CRITICALITY_LABELS[criticality]
   const description = CRITICALITY_DESCRIPTIONS[criticality]
@@ -195,9 +194,7 @@ export function CriticalityBadge({
       variant="outline"
       className={cn(
         'gap-1 font-medium border',
-        colors.bg,
-        colors.text,
-        colors.border,
+        CRITICALITY_BADGE_SOFT[criticality],
         size === 'sm' ? 'text-xs px-1.5 py-0' : 'text-xs px-2 py-0.5',
         className
       )}

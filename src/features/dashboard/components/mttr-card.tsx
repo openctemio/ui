@@ -1,6 +1,7 @@
 'use client'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { formatChartDate } from '@/lib/format-chart-date'
 import { Clock, TrendingDown, TrendingUp } from 'lucide-react'
 import { SEVERITY_CHART_COLORS } from '@/lib/severity-colors'
 import { useMTTRMetrics, useRiskVelocity } from '../hooks/use-dashboard-stats'
@@ -96,7 +97,7 @@ export function RiskVelocityCard() {
   const Icon = isImproving ? TrendingDown : TrendingUp
 
   const chartData = velocity.map((v) => ({
-    week: new Date(v.week).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+    week: formatChartDate(v.week),
     New: v.new_count,
     Resolved: v.resolved_count,
   }))

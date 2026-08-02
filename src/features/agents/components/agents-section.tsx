@@ -51,6 +51,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Can, Permission } from '@/lib/permissions'
 
 import { AddAgentDialog } from './add-agent-dialog'
@@ -71,6 +72,7 @@ import {
 } from '@/lib/api/agent-hooks'
 import type { AgentListFilters, Agent } from '@/lib/api/agent-types'
 import { PlatformStatsCard } from '@/features/platform'
+import { EmptyState } from '@/features/shared'
 
 type TabFilter = 'all' | 'daemon' | 'standalone' | 'collector'
 type AgentTypeFilter = 'runner' | 'worker' | 'collector' | 'sensor'
@@ -124,15 +126,19 @@ function calculateStats(agents: Agent[]): AgentStats {
     .filter(isAgentOnline)
     .reduce((sum, a) => sum + getAgentMetrics(a).activeJobs, 0)
 
+  const total = agents.length
+  const online = onlineAgents.length
+  const error = agents.filter((w) => w.health === 'error').length
+
   return {
-    total: agents.length,
-    online: onlineAgents.length,
-    // Offline includes: health='offline' or health='unknown', or disabled agents
-    offline: agents.filter(
-      (a) => a.health === 'offline' || a.health === 'unknown' || a.status === 'disabled'
-    ).length,
-    // Error count from health field
-    error: agents.filter((w) => w.health === 'error').length,
+    total,
+    online,
+    // Offline is everything that is neither online nor errored (offline/unknown
+    // health, disabled/revoked status, ...). Deriving it as the remainder keeps
+    // the KPI buckets reconciling to Total (online + offline + error === total)
+    // instead of double-counting e.g. a disabled agent whose health is offline.
+    offline: Math.max(total - online - error, 0),
+    error,
     activeJobs: totalActiveJobs,
     byMode: {
       daemon: daemonAgents.length,
@@ -196,14 +202,19 @@ export function AgentsSection({ typeFilter }: AgentsSectionProps) {
   // resolved yet (or for the type-filtered case where we filter client-side).
   const stats = useMemo(() => {
     if (tenantAgentStats && !typeFilter) {
+      // Single source of truth: derive every status bucket from the tenant
+      // total so Total === Online + Offline + Error. `online_active` counts
+      // agents that are both active AND health='online'; Offline is the
+      // remainder (offline/unknown health + disabled/revoked status), which
+      // avoids double-counting an agent across by_health and by_status.
+      const total = tenantAgentStats.total
+      const online = tenantAgentStats.online_active ?? tenantAgentStats.by_health?.online ?? 0
+      const error = tenantAgentStats.by_health?.error ?? 0
       return {
-        total: tenantAgentStats.total,
-        online: tenantAgentStats.by_health?.online ?? 0,
-        offline:
-          (tenantAgentStats.by_health?.offline ?? 0) +
-          (tenantAgentStats.by_health?.unknown ?? 0) +
-          (tenantAgentStats.by_status?.disabled ?? 0),
-        error: tenantAgentStats.by_health?.error ?? 0,
+        total,
+        online,
+        offline: Math.max(total - online - error, 0),
+        error,
         activeJobs: tenantAgentStats.active_jobs,
         byMode: {
           daemon: tenantAgentStats.by_execution_mode?.daemon ?? 0,
@@ -723,23 +734,26 @@ export function AgentsSection({ typeFilter }: AgentsSectionProps) {
                 onRegenerateKey={handleRegenerateKey}
               />
             ) : (
-              <div className="rounded-lg border border-dashed p-8 text-center">
-                <Bot className="mx-auto mb-3 h-10 w-10 text-muted-foreground" />
-                <h3 className="mb-1 font-medium">No Agents Found</h3>
-                <p className="mb-4 text-sm text-muted-foreground">
-                  {searchQuery
+              <EmptyState
+                icon={Bot}
+                title="No Agents Found"
+                description={
+                  searchQuery
                     ? 'No agents match your search. Try adjusting your search.'
-                    : 'Create an agent to start scanning and collecting data.'}
-                </p>
-                {!searchQuery && (
-                  <Can permission={Permission.AgentsWrite}>
-                    <Button onClick={() => setAddDialogOpen(true)}>
-                      <Plus className="me-2 h-4 w-4" />
-                      Add Your First Agent
-                    </Button>
-                  </Can>
-                )}
-              </div>
+                    : 'Create an agent to start scanning and collecting data.'
+                }
+                card={false}
+                action={
+                  !searchQuery ? (
+                    <Can permission={Permission.AgentsWrite}>
+                      <Button onClick={() => setAddDialogOpen(true)}>
+                        <Plus className="me-2 h-4 w-4" />
+                        Add Your First Agent
+                      </Button>
+                    </Can>
+                  ) : undefined
+                }
+              />
             )}
           </CardContent>
         </Card>
@@ -790,49 +804,39 @@ export function AgentsSection({ typeFilter }: AgentsSectionProps) {
       )}
 
       {/* Delete Confirmation */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Agent</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete <strong>{selectedAgent?.name}</strong>? This action
-              cannot be undone and will invalidate the agent&apos;s API key.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-            <Button variant="destructive" onClick={handleDeleteConfirm} disabled={isDeleting}>
-              {isDeleting && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
-              Delete
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        title="Delete Agent"
+        desc={
+          <>
+            Are you sure you want to delete <strong>{selectedAgent?.name}</strong>? This action
+            cannot be undone and will invalidate the agent&apos;s API key.
+          </>
+        }
+        confirmText="Delete"
+        destructive
+        isLoading={isDeleting}
+        handleConfirm={handleDeleteConfirm}
+      />
 
       {/* Bulk Delete Confirmation */}
-      <AlertDialog open={bulkDeleteDialogOpen} onOpenChange={setBulkDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Multiple Agents</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete{' '}
-              <strong>{Object.keys(rowSelection).filter((k) => rowSelection[k]).length}</strong>{' '}
-              agent(s)? This action cannot be undone and will invalidate all their API keys.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isBulkDeleting}>Cancel</AlertDialogCancel>
-            <Button
-              variant="destructive"
-              onClick={handleBulkDeleteConfirm}
-              disabled={isBulkDeleting}
-            >
-              {isBulkDeleting && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
-              Delete All
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={bulkDeleteDialogOpen}
+        onOpenChange={setBulkDeleteDialogOpen}
+        title="Delete Multiple Agents"
+        desc={
+          <>
+            Are you sure you want to delete{' '}
+            <strong>{Object.keys(rowSelection).filter((k) => rowSelection[k]).length}</strong>{' '}
+            agent(s)? This action cannot be undone and will invalidate all their API keys.
+          </>
+        }
+        confirmText="Delete All"
+        destructive
+        isLoading={isBulkDeleting}
+        handleConfirm={handleBulkDeleteConfirm}
+      />
 
       {/* Revoke Confirmation */}
       <AlertDialog open={revokeDialogOpen} onOpenChange={setRevokeDialogOpen}>

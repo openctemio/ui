@@ -16,17 +16,11 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
-import { SheetDetailToolbar } from '@/features/shared'
+import { SheetDetailToolbar, DataTableRowActions } from '@/features/shared'
 import { Progress } from '@/components/ui/progress'
 import { Textarea } from '@/components/ui/textarea'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import {
   ExternalLink,
   FileText,
@@ -38,7 +32,6 @@ import {
   Copy,
   Link2,
   MessageSquare,
-  MoreHorizontal,
   Route,
   LogIn,
   ArrowRight,
@@ -203,6 +196,7 @@ export function FindingDetailDrawer({
   const [assignee, setAssignee] = useState<FindingUser | null | undefined>(undefined)
   const [comment, setComment] = useState('')
   const [showCommentInput, setShowCommentInput] = useState(false)
+  const [showAllAssets, setShowAllAssets] = useState(false)
   const [ticketOpen, setTicketOpen] = useState(false)
 
   // Check if we need to fetch assignee info (name is empty but id exists)
@@ -608,24 +602,18 @@ export function FindingDetailDrawer({
                 />
 
                 {/* Overflow actions */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="ms-auto h-8 w-8"
-                      title="More actions"
-                    >
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => setTicketOpen(true)}>
-                      <Ticket className="me-2 h-4 w-4" />
-                      Create Jira Ticket
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <div className="ms-auto">
+                  <DataTableRowActions
+                    label="More actions"
+                    actions={[
+                      {
+                        label: 'Create Jira Ticket',
+                        icon: Ticket,
+                        onClick: () => setTicketOpen(true),
+                      },
+                    ]}
+                  />
+                </div>
               </div>
 
               {/* Scrollable Content */}
@@ -819,29 +807,38 @@ export function FindingDetailDrawer({
                       </Badge>
                     </div>
                     <div className="space-y-2">
-                      {finding.assets.slice(0, 3).map((asset) => (
-                        <div
-                          key={asset.id}
-                          className="flex items-center justify-between rounded-lg border p-2.5"
-                        >
-                          <div className="flex items-center gap-2 min-w-0">
-                            <Badge variant="outline" className="text-xs capitalize shrink-0">
-                              {asset.type}
-                            </Badge>
-                            <span className="text-sm truncate">{asset.name}</span>
+                      {(showAllAssets ? finding.assets : finding.assets.slice(0, 3)).map(
+                        (asset) => (
+                          <div
+                            key={asset.id}
+                            className="flex items-center justify-between rounded-lg border p-2.5"
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <Badge variant="outline" className="text-xs capitalize shrink-0">
+                                {asset.type}
+                              </Badge>
+                              <span className="text-sm truncate">{asset.name}</span>
+                            </div>
+                            {asset.criticality && (
+                              <Badge
+                                className={`text-xs shrink-0 ${SEVERITY_CONFIG[asset.criticality].bgColor} ${SEVERITY_CONFIG[asset.criticality].textColor} border-0`}
+                              >
+                                {asset.criticality}
+                              </Badge>
+                            )}
                           </div>
-                          {asset.criticality && (
-                            <Badge
-                              className={`text-xs shrink-0 ${SEVERITY_CONFIG[asset.criticality].bgColor} ${SEVERITY_CONFIG[asset.criticality].textColor} border-0`}
-                            >
-                              {asset.criticality}
-                            </Badge>
-                          )}
-                        </div>
-                      ))}
+                        )
+                      )}
                       {finding.assets.length > 3 && (
-                        <Button variant="ghost" size="sm" className="w-full text-xs h-7">
-                          +{finding.assets.length - 3} more assets
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="w-full text-xs h-7"
+                          onClick={() => setShowAllAssets((prev) => !prev)}
+                        >
+                          {showAllAssets
+                            ? 'Show less'
+                            : `+${finding.assets.length - 3} more assets`}
                         </Button>
                       )}
                     </div>

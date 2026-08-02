@@ -2,13 +2,8 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Input } from '@/components/ui/input'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { Shield, Plus, Trash2, MoreHorizontal, Search, ChevronRight } from 'lucide-react'
+import { Shield, Plus, Trash2, Search, ChevronRight } from 'lucide-react'
+import { DataTableRowActions, EmptyState } from '@/features/shared'
 import { type PermissionSet } from '@/features/access-control'
 import { useState } from 'react'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
@@ -64,10 +59,7 @@ export function PermissionsTab({
           ))}
         </div>
       ) : permissionSets.length === 0 ? (
-        <div className="text-center py-8 text-muted-foreground">
-          <Shield className="h-8 w-8 mx-auto mb-2 opacity-50" />
-          <p>No permission sets assigned</p>
-        </div>
+        <EmptyState icon={Shield} title="No permission sets assigned" card={false} />
       ) : filteredPermissionSets.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground">
           <p>No permission sets found matching &quot;{searchQuery}&quot;</p>
@@ -126,22 +118,16 @@ export function PermissionsTab({
                       <Badge variant="secondary" className="text-xs">
                         {permissionsList.length} permissions
                       </Badge>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            className="text-red-400"
-                            onClick={() => onRemovePermissionSet(ps.id, name)}
-                          >
-                            <Trash2 className="me-2 h-4 w-4" />
-                            Remove
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      <DataTableRowActions
+                        actions={[
+                          {
+                            label: 'Remove',
+                            icon: Trash2,
+                            destructive: true,
+                            onClick: () => onRemovePermissionSet(ps.id, name),
+                          },
+                        ]}
+                      />
                     </div>
                   </div>
                   <CollapsibleContent>

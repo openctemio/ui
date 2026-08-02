@@ -12,7 +12,7 @@ import {
   useReactTable,
 } from '@tanstack/react-table'
 import { Main } from '@/components/layout'
-import { PageHeader } from '@/features/shared'
+import { PageHeader, DataTableRowActions } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -36,13 +36,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -54,7 +47,6 @@ import { toast } from 'sonner'
 import {
   GitBranch,
   Plus,
-  MoreHorizontal,
   Trash2,
   ArrowUpDown,
   ChevronLeft,
@@ -114,8 +106,11 @@ const CONDITION_OPTIONS: Record<string, string[]> = {
     'api_endpoint',
   ],
   finding_severity: ['critical', 'high', 'medium', 'low', 'info'],
-  asset_status: ['active', 'inactive', 'decommissioned'],
-  asset_criticality: ['critical', 'high', 'medium', 'low'],
+  // NOTE: asset_status / asset_criticality were phantom condition keys — the
+  // backend AssignmentConditions only accepts asset_type, file_path_pattern,
+  // finding_severity, finding_type, finding_source, asset_tags, and silently
+  // drops anything else (no DisallowUnknownFields). Rules built on them never
+  // matched. Removed until the backend supports them.
 }
 
 export default function AssignmentRulesPage() {
@@ -283,56 +278,46 @@ export default function AssignmentRulesPage() {
         const rule = row.original
 
         return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setSelectedRuleId(rule.id)}>
-                <Eye className="me-2 h-4 w-4" />
-                View Details
-              </DropdownMenuItem>
-              <Can permission={Permission.AssignmentRulesWrite}>
-                <DropdownMenuItem onClick={() => setSelectedRuleId(rule.id)}>
-                  <Pencil className="me-2 h-4 w-4" />
-                  Edit
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={async () => {
-                    try {
-                      const result = await fetcherWithOptions<{ matching_findings: number }>(
-                        `/api/v1/assignment-rules/${rule.id}/test`,
-                        { method: 'POST' }
-                      )
-                      if (result) {
-                        toast.success(`Rule matched ${result.matching_findings} finding(s)`)
-                      }
-                    } catch (error) {
-                      toast.error(getErrorMessage(error, 'Failed to test rule'))
+          <DataTableRowActions
+            actions={[
+              { label: 'View Details', icon: Eye, onClick: () => setSelectedRuleId(rule.id) },
+              {
+                label: 'Edit',
+                icon: Pencil,
+                permission: Permission.AssignmentRulesWrite,
+                onClick: () => setSelectedRuleId(rule.id),
+              },
+              {
+                label: 'Test Rule',
+                icon: Play,
+                permission: Permission.AssignmentRulesWrite,
+                onClick: async () => {
+                  try {
+                    const result = await fetcherWithOptions<{ matching_findings: number }>(
+                      `/api/v1/assignment-rules/${rule.id}/test`,
+                      { method: 'POST' }
+                    )
+                    if (result) {
+                      toast.success(`Rule matched ${result.matching_findings} finding(s)`)
                     }
-                  }}
-                >
-                  <Play className="me-2 h-4 w-4" />
-                  Test Rule
-                </DropdownMenuItem>
-              </Can>
-              <Can permission={Permission.AssignmentRulesDelete}>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  className="text-red-400"
-                  onClick={() => {
-                    setRuleToDelete(rule)
-                    setDeleteDialogOpen(true)
-                  }}
-                >
-                  <Trash2 className="me-2 h-4 w-4" />
-                  Delete
-                </DropdownMenuItem>
-              </Can>
-            </DropdownMenuContent>
-          </DropdownMenu>
+                  } catch (error) {
+                    toast.error(getErrorMessage(error, 'Failed to test rule'))
+                  }
+                },
+              },
+              {
+                label: 'Delete',
+                icon: Trash2,
+                destructive: true,
+                separatorBefore: true,
+                permission: Permission.AssignmentRulesDelete,
+                onClick: () => {
+                  setRuleToDelete(rule)
+                  setDeleteDialogOpen(true)
+                },
+              },
+            ]}
+          />
         )
       },
     },

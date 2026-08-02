@@ -3,7 +3,15 @@
 import { useState, useMemo, useEffect } from 'react'
 import { ColumnDef } from '@tanstack/react-table'
 import { Main } from '@/components/layout'
-import { PageHeader, DataTable, DataTableColumnHeader, RiskScoreBadge } from '@/features/shared'
+import {
+  PageHeader,
+  DataTable,
+  DataTableColumnHeader,
+  DataTableRowActions,
+  RiskScoreBadge,
+  StatsCard,
+  SheetBody,
+} from '@/features/shared'
 import { Can, Permission } from '@/lib/permissions'
 import { useCsvExport, type ExportFieldConfig } from '@/hooks/use-csv-export'
 import { Button } from '@/components/ui/button'
@@ -16,7 +24,6 @@ import {
   Plus,
   Download,
   Filter,
-  MoreHorizontal,
   Eye,
   Pencil,
   Trash2,
@@ -27,16 +34,11 @@ import {
   Building2,
   Mail,
   ChevronRight,
+  ChevronsUpDown,
+  Check,
   X,
 } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import {
   Dialog,
   DialogContent,
@@ -59,16 +61,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command'
+import { cn } from '@/lib/utils'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from 'sonner'
 import { type BusinessUnit, type Criticality, type RiskTolerance } from '@/features/business-units'
@@ -78,13 +81,13 @@ import {
   useUpdateBusinessUnit,
 } from '@/features/business-units/api/use-business-units'
 import { del } from '@/lib/api/client'
+import {
+  CRITICALITY_BADGE_SOFT,
+  CRITICALITY_LABELS,
+  CRITICALITY_DOT_COLORS,
+} from '@/lib/criticality-colors'
 
-const criticalityColors: Record<Criticality, string> = {
-  critical: 'bg-red-500/10 text-red-500 border-red-500/20',
-  high: 'bg-orange-500/10 text-orange-500 border-orange-500/20',
-  medium: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20',
-  low: 'bg-green-500/10 text-green-500 border-green-500/20',
-}
+const criticalityColors: Record<Criticality, string> = CRITICALITY_BADGE_SOFT
 
 const riskToleranceLabels: Record<RiskTolerance, string> = {
   very_low: 'Very Low',
@@ -95,16 +98,133 @@ const riskToleranceLabels: Record<RiskTolerance, string> = {
 }
 
 const riskToleranceColors: Record<RiskTolerance, string> = {
-  very_low: 'bg-green-500/10 text-green-500 border-green-500/20',
-  low: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
-  medium: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20',
-  high: 'bg-orange-500/10 text-orange-500 border-orange-500/20',
-  very_high: 'bg-red-500/10 text-red-500 border-red-500/20',
+  very_low:
+    'bg-green-500/10 text-green-500 border-green-500/20 dark:bg-green-900/30 dark:text-green-400',
+  low: 'bg-blue-500/10 text-blue-500 border-blue-500/20 dark:bg-blue-900/30 dark:text-blue-400',
+  medium:
+    'bg-yellow-500/10 text-yellow-500 border-yellow-500/20 dark:bg-yellow-900/30 dark:text-yellow-400',
+  high: 'bg-orange-500/10 text-orange-500 border-orange-500/20 dark:bg-orange-900/30 dark:text-orange-400',
+  very_high: 'bg-red-500/10 text-red-500 border-red-500/20 dark:bg-red-900/30 dark:text-red-400',
 }
 
 /** Filter children of a given parent from the full list */
 function getChildUnits(allUnits: BusinessUnit[], parentId: string): BusinessUnit[] {
   return allUnits.filter((bu) => bu.parentId === parentId)
+}
+
+/** Collect all transitive descendant ids of a unit (to prevent parent cycles). */
+function getDescendantIds(allUnits: BusinessUnit[], rootId: string): Set<string> {
+  const result = new Set<string>()
+  const stack = [rootId]
+  while (stack.length > 0) {
+    const current = stack.pop() as string
+    for (const bu of allUnits) {
+      if (bu.parentId === current && !result.has(bu.id)) {
+        result.add(bu.id)
+        stack.push(bu.id)
+      }
+    }
+  }
+  return result
+}
+
+/** Backend accepts only critical|high|medium|low for criticality. */
+const CRITICALITY_OPTIONS: Criticality[] = ['critical', 'high', 'medium', 'low']
+/** Backend accepts only low|medium|high for risk tolerance. */
+const RISK_TOLERANCE_OPTIONS: RiskTolerance[] = ['low', 'medium', 'high']
+
+/**
+ * Searchable parent-unit combobox. Excludes the unit being edited (`excludeId`)
+ * and all of its descendants so a cycle can't be created. The "None" option
+ * clears the parent (sends `""`).
+ */
+function ParentUnitSelect({
+  units,
+  value,
+  onChange,
+  excludeId,
+}: {
+  units: BusinessUnit[]
+  value: string
+  onChange: (id: string) => void
+  excludeId?: string
+}) {
+  const [open, setOpen] = useState(false)
+  const [search, setSearch] = useState('')
+
+  const candidates = useMemo(() => {
+    const excluded = new Set<string>()
+    if (excludeId) {
+      excluded.add(excludeId)
+      for (const id of getDescendantIds(units, excludeId)) excluded.add(id)
+    }
+    const q = search.trim().toLowerCase()
+    return units.filter((u) => !excluded.has(u.id) && (!q || u.name.toLowerCase().includes(q)))
+  }, [units, excludeId, search])
+
+  const selected = units.find((u) => u.id === value)
+
+  return (
+    <Popover
+      open={open}
+      onOpenChange={(isOpen) => {
+        setOpen(isOpen)
+        if (!isOpen) setSearch('')
+      }}
+    >
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="w-full justify-between font-normal"
+        >
+          <span className={selected ? '' : 'text-muted-foreground'}>
+            {selected ? selected.name : 'None (top-level)'}
+          </span>
+          <ChevronsUpDown className="ms-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+        <Command shouldFilter={false}>
+          <CommandInput placeholder="Filter units..." value={search} onValueChange={setSearch} />
+          <CommandList>
+            <CommandEmpty>No business units found.</CommandEmpty>
+            <CommandGroup>
+              <CommandItem
+                value="__none__"
+                onSelect={() => {
+                  onChange('')
+                  setOpen(false)
+                  setSearch('')
+                }}
+              >
+                <Check className={cn('me-2 h-4 w-4', !value ? 'opacity-100' : 'opacity-0')} />
+                None (top-level)
+              </CommandItem>
+              {candidates.map((u) => (
+                <CommandItem
+                  key={u.id}
+                  value={u.id}
+                  onSelect={() => {
+                    onChange(u.id)
+                    setOpen(false)
+                    setSearch('')
+                  }}
+                >
+                  <Check
+                    className={cn('me-2 h-4 w-4', value === u.id ? 'opacity-100' : 'opacity-0')}
+                  />
+                  {u.name}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  )
 }
 
 const BUSINESS_UNIT_EXPORT_FIELDS: ExportFieldConfig<BusinessUnit>[] = [
@@ -133,15 +253,15 @@ export default function BusinessUnitsPage() {
           description: bu.description || '',
           owner: bu.owner_name || 'Unassigned',
           ownerEmail: bu.owner_email || '',
-          criticality: 'medium' as Criticality,
-          riskTolerance: 'medium' as RiskTolerance,
+          criticality: (bu.criticality || 'medium') as Criticality,
+          riskTolerance: (bu.risk_tolerance || 'medium') as RiskTolerance,
           assetCount: bu.asset_count,
           findingCount: bu.finding_count,
           riskScore: bu.avg_risk_score,
           criticalFindingCount: bu.critical_finding_count,
           regulatoryFrameworks: [],
           tags: bu.tags || [],
-          parentId: undefined,
+          parentId: bu.parent_id ?? undefined,
           childCount: 0,
           createdAt: bu.created_at,
           updatedAt: bu.updated_at,
@@ -195,10 +315,6 @@ export default function BusinessUnitsPage() {
     }
   }, [businessUnits])
 
-  const rootUnits = useMemo(() => {
-    return businessUnits.filter((bu) => !bu.parentId)
-  }, [businessUnits])
-
   const filteredUnits = useMemo(() => {
     return businessUnits.filter((unit) => {
       if (filterCriticality !== 'all' && unit.criticality !== filterCriticality) return false
@@ -231,6 +347,9 @@ export default function BusinessUnitsPage() {
         description: formData.description || '',
         owner_name: formData.owner,
         owner_email: formData.ownerEmail,
+        criticality: formData.criticality,
+        risk_tolerance: formData.riskTolerance,
+        parent_id: formData.parentId, // '' = top-level (no parent)
         tags: formData.tags
           ? formData.tags
               .split(',')
@@ -259,6 +378,9 @@ export default function BusinessUnitsPage() {
         description: formData.description || '',
         owner_name: formData.owner,
         owner_email: formData.ownerEmail,
+        criticality: formData.criticality,
+        risk_tolerance: formData.riskTolerance,
+        parent_id: formData.parentId, // '' = clear parent
         tags: formData.tags
           ? formData.tags
               .split(',')
@@ -336,7 +458,7 @@ export default function BusinessUnitsPage() {
       header: ({ column }) => <DataTableColumnHeader column={column} title="Criticality" />,
       cell: ({ row }) => (
         <Badge variant="outline" className={criticalityColors[row.original.criticality]}>
-          {row.original.criticality}
+          {CRITICALITY_LABELS[row.original.criticality]}
         </Badge>
       ),
       filterFn: (row, id, value) => value.includes(row.getValue(id)),
@@ -389,35 +511,25 @@ export default function BusinessUnitsPage() {
         const unit = row.original
         return (
           <Can permission={[Permission.ScopeWrite, Permission.ScopeDelete]}>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon">
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setViewUnit(unit)}>
-                  <Eye className="me-2 h-4 w-4" />
-                  View Details
-                </DropdownMenuItem>
-                <Can permission={Permission.ScopeWrite}>
-                  <DropdownMenuItem onClick={() => openEdit(unit)}>
-                    <Pencil className="me-2 h-4 w-4" />
-                    Edit
-                  </DropdownMenuItem>
-                </Can>
-                <Can permission={Permission.ScopeDelete}>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onClick={() => setDeleteUnit(unit)}
-                    className="text-destructive"
-                  >
-                    <Trash2 className="me-2 h-4 w-4" />
-                    Delete
-                  </DropdownMenuItem>
-                </Can>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <DataTableRowActions
+              actions={[
+                { label: 'View Details', icon: Eye, onClick: () => setViewUnit(unit) },
+                {
+                  label: 'Edit',
+                  icon: Pencil,
+                  onClick: () => openEdit(unit),
+                  permission: Permission.ScopeWrite,
+                },
+                {
+                  label: 'Delete',
+                  icon: Trash2,
+                  onClick: () => setDeleteUnit(unit),
+                  destructive: true,
+                  separatorBefore: true,
+                  permission: Permission.ScopeDelete,
+                },
+              ]}
+            />
           </Can>
         )
       },
@@ -426,35 +538,14 @@ export default function BusinessUnitsPage() {
 
   const formFields = (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="name">Name *</Label>
-          <Input
-            id="name"
-            value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            placeholder="e.g., Technology & Engineering"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="parentId">Parent Unit</Label>
-          <Select
-            value={formData.parentId}
-            onValueChange={(value) => setFormData({ ...formData, parentId: value })}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="None (Root level)" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">None (Root level)</SelectItem>
-              {rootUnits.map((unit) => (
-                <SelectItem key={unit.id} value={unit.id}>
-                  {unit.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+      <div className="space-y-2">
+        <Label htmlFor="name">Name *</Label>
+        <Input
+          id="name"
+          value={formData.name}
+          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+          placeholder="e.g., Technology & Engineering"
+        />
       </div>
 
       <div className="space-y-2">
@@ -470,44 +561,57 @@ export default function BusinessUnitsPage() {
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="criticality">Criticality *</Label>
+          <Label htmlFor="criticality">Criticality</Label>
           <Select
             value={formData.criticality}
-            onValueChange={(value) =>
-              setFormData({ ...formData, criticality: value as Criticality })
-            }
+            onValueChange={(v) => setFormData({ ...formData, criticality: v as Criticality })}
           >
-            <SelectTrigger>
+            <SelectTrigger id="criticality">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="critical">Critical</SelectItem>
-              <SelectItem value="high">High</SelectItem>
-              <SelectItem value="medium">Medium</SelectItem>
-              <SelectItem value="low">Low</SelectItem>
+              {CRITICALITY_OPTIONS.map((level) => (
+                <SelectItem key={level} value={level}>
+                  <span className="flex items-center gap-2">
+                    <span className={cn('h-2 w-2 rounded-full', CRITICALITY_DOT_COLORS[level])} />
+                    {CRITICALITY_LABELS[level]}
+                  </span>
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
         <div className="space-y-2">
-          <Label htmlFor="riskTolerance">Risk Tolerance *</Label>
+          <Label htmlFor="riskTolerance">Risk Tolerance</Label>
           <Select
             value={formData.riskTolerance}
-            onValueChange={(value) =>
-              setFormData({ ...formData, riskTolerance: value as RiskTolerance })
-            }
+            onValueChange={(v) => setFormData({ ...formData, riskTolerance: v as RiskTolerance })}
           >
-            <SelectTrigger>
+            <SelectTrigger id="riskTolerance">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="very_low">Very Low</SelectItem>
-              <SelectItem value="low">Low</SelectItem>
-              <SelectItem value="medium">Medium</SelectItem>
-              <SelectItem value="high">High</SelectItem>
-              <SelectItem value="very_high">Very High</SelectItem>
+              {RISK_TOLERANCE_OPTIONS.map((level) => (
+                <SelectItem key={level} value={level}>
+                  {riskToleranceLabels[level]}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label>Parent Unit</Label>
+        <ParentUnitSelect
+          units={businessUnits}
+          value={formData.parentId}
+          onChange={(id) => setFormData({ ...formData, parentId: id })}
+          excludeId={editUnit?.id}
+        />
+        <p className="text-xs text-muted-foreground">
+          Optional. Nest this unit under a parent to build your org hierarchy.
+        </p>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
@@ -570,28 +674,18 @@ export default function BusinessUnitsPage() {
 
         {/* Stats Cards */}
         <div className="grid gap-4 md:grid-cols-4 mb-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Total Units</CardTitle>
-              <Layers className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.total}</div>
-              <p className="text-xs text-muted-foreground">
-                {stats.active} active, {stats.inactive} inactive
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Total Assets</CardTitle>
-              <Shield className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.totalAssets}</div>
-              <p className="text-xs text-muted-foreground">Across all units</p>
-            </CardContent>
-          </Card>
+          <StatsCard
+            title="Total Units"
+            value={stats.total}
+            icon={Layers}
+            description={`${stats.active} active, ${stats.inactive} inactive`}
+          />
+          <StatsCard
+            title="Total Assets"
+            value={stats.totalAssets}
+            icon={Shield}
+            description="Across all units"
+          />
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">Avg Risk Score</CardTitle>
@@ -647,11 +741,9 @@ export default function BusinessUnitsPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All</SelectItem>
-                    <SelectItem value="very_low">Very Low</SelectItem>
                     <SelectItem value="low">Low</SelectItem>
                     <SelectItem value="medium">Medium</SelectItem>
                     <SelectItem value="high">High</SelectItem>
-                    <SelectItem value="very_high">Very High</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -745,199 +837,205 @@ export default function BusinessUnitsPage() {
                 </div>
               </SheetHeader>
 
-              <Tabs defaultValue="overview" className="mt-6">
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="overview">Overview</TabsTrigger>
-                  <TabsTrigger value="hierarchy">Hierarchy</TabsTrigger>
-                </TabsList>
+              <SheetBody>
+                <Tabs defaultValue="overview" className="mt-2">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="overview">Overview</TabsTrigger>
+                    <TabsTrigger value="hierarchy">Hierarchy</TabsTrigger>
+                  </TabsList>
 
-                <TabsContent value="overview" className="space-y-4 mt-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <p className="text-sm text-muted-foreground">Criticality</p>
-                      <Badge variant="outline" className={criticalityColors[viewUnit.criticality]}>
-                        {viewUnit.criticality}
-                      </Badge>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-sm text-muted-foreground">Risk Tolerance</p>
-                      <Badge
-                        variant="outline"
-                        className={riskToleranceColors[viewUnit.riskTolerance]}
-                      >
-                        {riskToleranceLabels[viewUnit.riskTolerance]}
-                      </Badge>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm">Assets</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-2xl font-bold">{viewUnit.assetCount}</div>
-                      </CardContent>
-                    </Card>
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm">Employees</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-2xl font-bold">{viewUnit.employeeCount}</div>
-                      </CardContent>
-                    </Card>
-                  </div>
-
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Risk Score</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex items-center gap-4">
-                        <RiskScoreBadge score={viewUnit.riskScore} />
-                        <Progress value={viewUnit.riskScore} className="flex-1" />
+                  <TabsContent value="overview" className="space-y-4 mt-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">Criticality</p>
+                        <Badge
+                          variant="outline"
+                          className={criticalityColors[viewUnit.criticality]}
+                        >
+                          {CRITICALITY_LABELS[viewUnit.criticality]}
+                        </Badge>
                       </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Compliance Score</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex items-center gap-4">
-                        <span className="text-2xl font-bold">{viewUnit.complianceScore}%</span>
-                        <Progress value={viewUnit.complianceScore} className="flex-1" />
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Owner</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
-                          <Users className="h-5 w-5" />
-                        </div>
-                        <div>
-                          <p className="font-medium">{viewUnit.owner}</p>
-                          <p className="text-sm text-muted-foreground flex items-center gap-1">
-                            <Mail className="h-3 w-3" />
-                            {viewUnit.ownerEmail}
-                          </p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {viewUnit.tags.length > 0 && (
-                    <div className="space-y-2">
-                      <p className="text-sm text-muted-foreground">Tags</p>
-                      <div className="flex flex-wrap gap-2">
-                        {viewUnit.tags.map((tag) => (
-                          <Badge key={tag} variant="secondary">
-                            {tag}
-                          </Badge>
-                        ))}
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">Risk Tolerance</p>
+                        <Badge
+                          variant="outline"
+                          className={riskToleranceColors[viewUnit.riskTolerance]}
+                        >
+                          {riskToleranceLabels[viewUnit.riskTolerance]}
+                        </Badge>
                       </div>
                     </div>
-                  )}
-                </TabsContent>
 
-                <TabsContent value="hierarchy" className="mt-4">
-                  {viewUnit.parentId && (
-                    <div className="mb-4">
-                      <p className="text-sm text-muted-foreground mb-2">Parent Unit</p>
-                      <Card className="p-3">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                          <span className="font-medium">
-                            {businessUnits.find((u) => u.id === viewUnit.parentId)?.name}
-                          </span>
-                        </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <Card>
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-sm">Assets</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="text-2xl font-bold">{viewUnit.assetCount}</div>
+                        </CardContent>
+                      </Card>
+                      <Card>
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-sm">Employees</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="text-2xl font-bold">{viewUnit.employeeCount}</div>
+                        </CardContent>
                       </Card>
                     </div>
-                  )}
 
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-2">Sub-units</p>
-                    {getChildUnits(businessUnits, viewUnit.id).length > 0 ? (
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">Risk Score</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex items-center gap-4">
+                          <RiskScoreBadge score={viewUnit.riskScore} />
+                          <Progress value={viewUnit.riskScore} className="flex-1" />
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">Compliance Score</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex items-center gap-4">
+                          <span className="text-2xl font-bold">{viewUnit.complianceScore}%</span>
+                          <Progress value={viewUnit.complianceScore} className="flex-1" />
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">Owner</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
+                            <Users className="h-5 w-5" />
+                          </div>
+                          <div>
+                            <p className="font-medium">{viewUnit.owner}</p>
+                            <p className="text-sm text-muted-foreground flex items-center gap-1">
+                              <Mail className="h-3 w-3" />
+                              {viewUnit.ownerEmail}
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {viewUnit.tags.length > 0 && (
                       <div className="space-y-2">
-                        {getChildUnits(businessUnits, viewUnit.id).map((child) => (
-                          <Card key={child.id} className="p-3">
-                            <div className="flex items-center justify-between">
-                              <div className="flex flex-wrap items-center gap-2">
-                                <Building2 className="h-4 w-4 text-muted-foreground" />
-                                <span className="font-medium">{child.name}</span>
-                              </div>
-                              <Badge
-                                variant="outline"
-                                className={criticalityColors[child.criticality]}
-                              >
-                                {child.criticality}
-                              </Badge>
-                            </div>
-                          </Card>
-                        ))}
+                        <p className="text-sm text-muted-foreground">Tags</p>
+                        <div className="flex flex-wrap gap-2">
+                          {viewUnit.tags.map((tag) => (
+                            <Badge key={tag} variant="secondary">
+                              {tag}
+                            </Badge>
+                          ))}
+                        </div>
                       </div>
-                    ) : (
-                      <p className="text-sm text-muted-foreground">No sub-units</p>
                     )}
-                  </div>
-                </TabsContent>
-              </Tabs>
+                  </TabsContent>
 
-              <div className="mt-6 flex gap-2">
-                <Button variant="outline" className="flex-1" onClick={() => openEdit(viewUnit)}>
-                  <Pencil className="me-2 h-4 w-4" />
-                  Edit
-                </Button>
-                <Button
-                  variant="destructive"
-                  className="flex-1"
-                  onClick={() => {
-                    setViewUnit(null)
-                    setDeleteUnit(viewUnit)
-                  }}
-                >
-                  <Trash2 className="me-2 h-4 w-4" />
-                  Delete
-                </Button>
-              </div>
+                  <TabsContent value="hierarchy" className="mt-4">
+                    {viewUnit.parentId &&
+                      (() => {
+                        const parent = businessUnits.find((u) => u.id === viewUnit.parentId)
+                        return (
+                          <div className="mb-4">
+                            <p className="text-sm text-muted-foreground mb-2">Parent Unit</p>
+                            <Card
+                              className={cn('p-3', parent && 'cursor-pointer hover:bg-muted/50')}
+                              onClick={() => parent && setViewUnit(parent)}
+                            >
+                              <div className="flex flex-wrap items-center gap-2">
+                                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                                <span className="font-medium">
+                                  {parent?.name ?? 'Unknown unit'}
+                                </span>
+                              </div>
+                            </Card>
+                          </div>
+                        )
+                      })()}
+
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-2">Sub-units</p>
+                      {getChildUnits(businessUnits, viewUnit.id).length > 0 ? (
+                        <div className="space-y-2">
+                          {getChildUnits(businessUnits, viewUnit.id).map((child) => (
+                            <Card key={child.id} className="p-3">
+                              <div className="flex items-center justify-between">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <Building2 className="h-4 w-4 text-muted-foreground" />
+                                  <span className="font-medium">{child.name}</span>
+                                </div>
+                                <Badge
+                                  variant="outline"
+                                  className={criticalityColors[child.criticality]}
+                                >
+                                  {CRITICALITY_LABELS[child.criticality]}
+                                </Badge>
+                              </div>
+                            </Card>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">No sub-units</p>
+                      )}
+                    </div>
+                  </TabsContent>
+                </Tabs>
+
+                <div className="mt-6 flex gap-2">
+                  <Button variant="outline" className="flex-1" onClick={() => openEdit(viewUnit)}>
+                    <Pencil className="me-2 h-4 w-4" />
+                    Edit
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    className="flex-1"
+                    onClick={() => {
+                      setViewUnit(null)
+                      setDeleteUnit(viewUnit)
+                    }}
+                  >
+                    <Trash2 className="me-2 h-4 w-4" />
+                    Delete
+                  </Button>
+                </div>
+              </SheetBody>
             </>
           )}
         </SheetContent>
       </Sheet>
 
       {/* Delete Confirmation */}
-      <AlertDialog open={!!deleteUnit} onOpenChange={(open) => !open && setDeleteUnit(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Business Unit?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete &quot;{deleteUnit?.name}&quot;? This action cannot be
-              undone.
-              {getChildUnits(businessUnits, deleteUnit?.id || '').length > 0 && (
-                <span className="block mt-2 text-destructive">
-                  Warning: This unit has sub-units that will also be affected.
-                </span>
-              )}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              className="bg-destructive text-destructive-foreground"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={!!deleteUnit}
+        onOpenChange={(open) => !open && setDeleteUnit(null)}
+        title="Delete Business Unit?"
+        desc={
+          <>
+            Are you sure you want to delete &quot;{deleteUnit?.name}&quot;? This action cannot be
+            undone.
+            {getChildUnits(businessUnits, deleteUnit?.id || '').length > 0 && (
+              <span className="block mt-2 text-destructive">
+                Warning: This unit has sub-units that will also be affected.
+              </span>
+            )}
+          </>
+        }
+        confirmText="Delete"
+        destructive
+        handleConfirm={handleDelete}
+      />
     </>
   )
 }

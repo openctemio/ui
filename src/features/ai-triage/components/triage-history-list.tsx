@@ -9,6 +9,7 @@ import { TriageStatusBadge } from './triage-status-badge'
 import { TriageResultCard } from './triage-result-card'
 import { useTriageHistory } from '../api'
 import type { AITriageResult } from '../types'
+import { EmptyState } from '@/features/shared'
 
 interface TriageHistoryListProps {
   findingId: string
@@ -74,12 +75,11 @@ export function TriageHistoryList({ findingId, limit = 10, className }: TriageHi
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col items-center justify-center py-8 text-center">
-            <Bot className="h-10 w-10 text-muted-foreground mb-3" />
-            <p className="text-sm text-muted-foreground">
-              No triage history yet. Run AI Triage to analyze this finding.
-            </p>
-          </div>
+          <EmptyState
+            icon={Bot}
+            title="No triage history yet. Run AI Triage to analyze this finding."
+            card={false}
+          />
         </CardContent>
       </Card>
     )

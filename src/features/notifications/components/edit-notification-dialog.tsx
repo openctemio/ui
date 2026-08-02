@@ -46,6 +46,7 @@ import {
 } from '@/features/integrations/types/integration.types'
 import { useTenantEventTypes } from '@/features/integrations/api/use-event-types'
 import { cn } from '@/lib/utils'
+import { SEVERITY_TEXT_COLORS, type SeverityLevel } from '@/lib/severity-colors'
 import { getErrorMessage } from '@/lib/api/error-handler'
 
 // Template presets for different use cases
@@ -106,7 +107,7 @@ const formSchema = z.object({
   // Advanced settings
   message_template: z.string().max(2000).optional(),
   include_details: z.boolean(),
-  min_interval_minutes: z.number().min(0).max(60),
+  min_interval_minutes: z.number().min(5).max(60),
   // Email-specific fields
   smtp_host: z.string().optional(),
   smtp_port: z.number().optional(),
@@ -245,7 +246,7 @@ export function EditNotificationDialog({
       // Advanced settings
       message_template: ext?.message_template || '',
       include_details: ext?.include_details ?? true,
-      min_interval_minutes: ext?.min_interval_minutes ?? 0,
+      min_interval_minutes: ext?.min_interval_minutes ?? 5,
       // Email defaults (leave empty - user must re-enter for security)
       smtp_host: '',
       smtp_port: 587,
@@ -279,7 +280,7 @@ export function EditNotificationDialog({
         // Advanced settings
         message_template: ext?.message_template || '',
         include_details: ext?.include_details ?? true,
-        min_interval_minutes: ext?.min_interval_minutes ?? 0,
+        min_interval_minutes: ext?.min_interval_minutes ?? 5,
         // Email config from metadata (non-sensitive fields)
         smtp_host: (metadata.smtp_host as string) || '',
         smtp_port: (metadata.smtp_port as number) || 587,
@@ -350,8 +351,11 @@ export function EditNotificationDialog({
           enabled_severities: data.enabled_severities,
           // Event type filters (dynamic JSONB array)
           enabled_event_types: data.enabled_event_types,
-          // Advanced settings
-          message_template: data.message_template || undefined,
+          // Advanced settings.
+          // Send an explicit "" (not undefined) so clearing the template / picking
+          // the Default preset actually resets it — the backend treats a nil
+          // pointer as "no change", which previously made the old template stick.
+          message_template: data.message_template ?? '',
           include_details: data.include_details,
           min_interval_minutes: data.min_interval_minutes,
         }),
@@ -567,14 +571,10 @@ export function EditNotificationDialog({
                 {ALL_NOTIFICATION_SEVERITIES.map((severity) => {
                   const enabledSeverities = watch('enabled_severities')
                   const isChecked = enabledSeverities.includes(severity.value)
-                  const colorClass = {
-                    critical: 'text-red-600',
-                    high: 'text-orange-600',
-                    medium: 'text-yellow-600',
-                    low: 'text-blue-600',
-                    info: 'text-gray-600',
-                    none: 'text-gray-400',
-                  }[severity.value]
+                  const colorClass =
+                    SEVERITY_TEXT_COLORS[
+                      (severity.value === 'none' ? 'info' : severity.value) as SeverityLevel
+                    ]
                   return (
                     <div key={severity.value} className="flex items-center space-x-2">
                       <Checkbox
@@ -736,14 +736,12 @@ export function EditNotificationDialog({
                   <div className="flex items-center justify-between">
                     <Label htmlFor="edit_min_interval">Rate Limiting</Label>
                     <span className="text-sm text-muted-foreground">
-                      {watch('min_interval_minutes') === 0
-                        ? 'No limit'
-                        : `${watch('min_interval_minutes')} min`}
+                      {`${watch('min_interval_minutes')} min`}
                     </span>
                   </div>
                   <Slider
                     id="edit_min_interval"
-                    min={0}
+                    min={5}
                     max={60}
                     step={5}
                     value={[watch('min_interval_minutes')]}
@@ -751,7 +749,7 @@ export function EditNotificationDialog({
                     className="w-full"
                   />
                   <p className="text-xs text-muted-foreground">
-                    Minimum interval between notifications (0 = no limit). Prevents notification
+                    Minimum interval between notifications (minimum 5 min). Prevents notification
                     spam.
                   </p>
                 </div>

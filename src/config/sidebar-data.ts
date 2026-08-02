@@ -17,14 +17,12 @@ import {
   LayoutDashboard,
   FolderKanban,
   ClipboardCheck,
+  BadgeCheck,
   Target,
   Settings2,
   Radar,
-  Globe,
-  MonitorSmartphone,
   Container,
   GitBranch,
-  Cloud,
   KeyRound,
   Building2,
   Crown,
@@ -40,10 +38,7 @@ import {
   AudioWaveform,
   Building,
   Zap,
-  Server,
   Boxes,
-  Database,
-  Smartphone,
   Crosshair,
   ClipboardList,
   Bug,
@@ -56,10 +51,8 @@ import {
   Wrench,
   // New icons for CTEM architecture
   LayoutGrid,
-  ShieldAlert,
   Package,
   Scale,
-  Download,
   // CTEM Phase 1 icons
   TrendingUp,
   AlertTriangle,
@@ -78,6 +71,15 @@ import {
   FileCode2,
   // Attack path icons
   Route,
+  Waypoints,
+  // CTEM section-header icons (sidebar-07 collapsible group headers)
+  Goal,
+  Telescope,
+  ListOrdered,
+  FlaskConical,
+  Rocket,
+  BarChart3,
+  Settings,
 } from 'lucide-react'
 import { type SidebarData } from '@/components/types'
 import { Permission, Role } from '@/lib/permissions'
@@ -126,6 +128,7 @@ export const sidebarData: SidebarData = {
     // ========================================
     {
       title: 'Scoping',
+      icon: Goal,
       items: [
         {
           title: 'Attack Surface',
@@ -184,6 +187,13 @@ export const sidebarData: SidebarData = {
           module: 'attacker_profiles',
         },
         {
+          title: 'Threat Model',
+          url: '/threat-model',
+          icon: Crosshair,
+          permission: Permission.AssetsRead,
+          module: 'attack_surface',
+        },
+        {
           title: 'Relationships',
           url: '/relationships/suggestions',
           icon: Link2,
@@ -207,6 +217,7 @@ export const sidebarData: SidebarData = {
     // ========================================
     {
       title: 'Discovery',
+      icon: Telescope,
       items: [
         {
           title: 'Scans',
@@ -222,114 +233,10 @@ export const sidebarData: SidebarData = {
         // ----------------------------------------
         {
           title: 'Asset Inventory',
+          url: '/assets',
           icon: Container,
           permission: Permission.AssetsRead,
           module: 'assets',
-          items: [
-            // Overview - Entry point with asset statistics (always shown)
-            {
-              title: 'Overview',
-              url: '/assets',
-              icon: Container,
-            },
-            // External Attack Surface
-            {
-              title: 'Domains',
-              url: '/assets/domains',
-              icon: Globe,
-              subModuleKey: 'domains',
-            },
-            {
-              title: 'Certificates',
-              url: '/assets/certificates',
-              icon: ShieldCheck,
-              subModuleKey: 'certificates',
-            },
-            {
-              title: 'IP Addresses',
-              url: '/assets/ip-addresses',
-              icon: Target,
-              subModuleKey: 'ip-addresses',
-            },
-            // Applications
-            {
-              title: 'Websites',
-              url: '/assets/websites',
-              icon: MonitorSmartphone,
-              subModuleKey: 'websites',
-            },
-            {
-              title: 'APIs',
-              url: '/assets/apis',
-              icon: Zap,
-              subModuleKey: 'apis',
-            },
-            {
-              title: 'Mobile Apps',
-              url: '/assets/mobile',
-              icon: Smartphone,
-              subModuleKey: 'mobile',
-            },
-            {
-              title: 'Services',
-              url: '/assets/services',
-              icon: Zap,
-              subModuleKey: 'services',
-            },
-            // Infrastructure
-            {
-              title: 'Hosts',
-              url: '/assets/hosts',
-              icon: Server,
-              subModuleKey: 'hosts',
-            },
-            {
-              title: 'Containers & K8s',
-              url: '/assets/containers',
-              icon: Boxes,
-              subModuleKey: 'containers',
-            },
-            {
-              title: 'Network Devices',
-              url: '/assets/networks',
-              icon: Target,
-              subModuleKey: 'networks',
-            },
-            // Data
-            {
-              title: 'Databases',
-              url: '/assets/databases',
-              icon: Database,
-              subModuleKey: 'databases',
-            },
-            {
-              title: 'Storage',
-              url: '/assets/storage',
-              icon: Database,
-              subModuleKey: 'storage',
-            },
-            // Cloud
-            {
-              title: 'Cloud Accounts',
-              url: '/assets/cloud-accounts',
-              icon: Cloud,
-              subModuleKey: 'cloud-accounts',
-            },
-            // Identity
-            {
-              title: 'Identity & Access',
-              url: '/assets/identity',
-              icon: KeyRound,
-              subModuleKey: 'identity',
-            },
-            // Code & CI/CD
-            {
-              title: 'Repositories',
-              url: '/assets/repositories',
-              icon: GitBranch,
-              subModuleKey: 'repositories',
-            },
-          ],
         },
         // ----------------------------------------
         // EXPOSURES (CVEs + non-CVE security issues)
@@ -341,9 +248,16 @@ export const sidebarData: SidebarData = {
           title: 'Exposures',
           icon: AlertTriangle,
           // Group is visible if user has EITHER findings:read OR vulnerabilities:read.
-          // Sub-items self-gate by their own permission.
           permission: [Permission.FindingsRead, Permission.VulnerabilitiesRead],
           module: 'findings',
+          // A collapsible cannot also carry a `url` (NavCollapsible has no url in
+          // src/components/types.ts), so the parent page is reached through an
+          // Overview child — the same shape Integrations uses below.
+          //
+          // Only the four children scoped to their own finding type are listed.
+          // /exposures/credentials is deliberately absent: it reads
+          // useDashboardStats and renders EVERY finding in the tenant under a
+          // "Credential Exposures" heading. See docs/nav-coverage.md.
           items: [
             {
               title: 'Overview',
@@ -351,31 +265,24 @@ export const sidebarData: SidebarData = {
               icon: AlertTriangle,
             },
             {
-              // The CTEM "Active CVEs" view lives at /exposures/vulnerabilities.
-              // It is the default tab — distinct from /exposures (event-style
-              // exposures) and from the global CVE catalog browser.
               title: 'Vulnerabilities',
               url: '/exposures/vulnerabilities',
-              icon: ShieldAlert,
-              permission: Permission.VulnerabilitiesRead,
-            },
-            {
-              title: 'Misconfigurations',
-              url: '/exposures/misconfigurations',
-              icon: Settings2,
-              permission: Permission.FindingsRead,
+              icon: Bug,
             },
             {
               title: 'Secrets',
               url: '/exposures/secrets',
               icon: KeyRound,
-              permission: Permission.FindingsRead,
             },
             {
               title: 'Code',
               url: '/exposures/code',
-              icon: FileCode2,
-              permission: Permission.FindingsRead,
+              icon: FileWarning,
+            },
+            {
+              title: 'Misconfigurations',
+              url: '/exposures/misconfigurations',
+              icon: Wrench,
             },
           ],
         },
@@ -384,7 +291,7 @@ export const sidebarData: SidebarData = {
         // Module: credentials (requires Team+ plan)
         // ----------------------------------------
         {
-          title: 'Credential Leaks',
+          title: 'Credentials',
           url: '/credentials',
           icon: KeyRound,
           // Badge is now dynamic - fetched from API via useDynamicBadges hook
@@ -397,48 +304,11 @@ export const sidebarData: SidebarData = {
         // ----------------------------------------
         {
           title: 'Components',
+          url: '/components',
           icon: Package,
           permission: Permission.ComponentsRead,
           module: 'components',
-          items: [
-            {
-              title: 'Overview',
-              url: '/components',
-              icon: Package,
-            },
-            {
-              title: 'All Components',
-              url: '/components/all',
-              icon: Package,
-            },
-            {
-              title: 'Vulnerable',
-              url: '/components/vulnerable',
-              icon: ShieldAlert,
-            },
-            {
-              title: 'Ecosystems',
-              url: '/components/ecosystems',
-              icon: Boxes,
-            },
-            {
-              title: 'Licenses',
-              url: '/components/licenses',
-              icon: Scale,
-            },
-            {
-              title: 'SBOM Export',
-              url: '/components/sbom-export',
-              icon: Download,
-              // Same pattern as MITRE Coverage — own module post-000161.
-              module: 'sbom_export',
-            },
-          ],
         },
-        // ----------------------------------------
-        // COMING SOON - Identities
-        // See docs/ROADMAP.md for full feature specs
-        // ----------------------------------------
       ],
     },
 
@@ -449,11 +319,19 @@ export const sidebarData: SidebarData = {
     // ========================================
     {
       title: 'Prioritization',
+      icon: ListOrdered,
       items: [
         {
           title: 'Exposure Chains',
           url: '/exposure-chains',
           icon: Route,
+          permission: Permission.AssetsRead,
+          module: 'attack_surface',
+        },
+        {
+          title: 'Attack Paths',
+          url: '/attack-paths',
+          icon: Waypoints,
           permission: Permission.AssetsRead,
           module: 'attack_surface',
         },
@@ -488,6 +366,7 @@ export const sidebarData: SidebarData = {
     // ========================================
     {
       title: 'Validation',
+      icon: FlaskConical,
       items: [
         {
           title: 'Penetration Testing',
@@ -563,11 +442,17 @@ export const sidebarData: SidebarData = {
     // ========================================
     {
       title: 'Mobilization',
+      icon: Rocket,
       items: [
         {
-          title: 'Remediation Tasks',
+          // One nav item; the two related views (Tasks / Solution Families) are
+          // presented as in-page <SectionTabs> rather than two near-identical
+          // sidebar entries.
+          // "Solution Families" (/remediations) is reachable as an in-page
+          // SectionTabs tab on this page — not a separate sidebar entry.
+          title: 'Remediation',
           url: '/remediation',
-          icon: ListChecks,
+          icon: Wrench,
           permission: Permission.RemediationRead,
           module: 'remediation_tasks',
         },
@@ -593,6 +478,7 @@ export const sidebarData: SidebarData = {
     // ========================================
     {
       title: 'Insights',
+      icon: BarChart3,
       items: [
         {
           title: 'Executive Summary',
@@ -632,6 +518,7 @@ export const sidebarData: SidebarData = {
     // ========================================
     {
       title: 'Settings',
+      icon: Settings,
       items: [
         {
           title: 'Scanning',
@@ -795,6 +682,10 @@ export const sidebarData: SidebarData = {
             {
               title: 'CI/CD',
               url: '/settings/integrations/cicd',
+              // This route renders ComingSoonPage. The badge is what keeps the entry
+              // honest: without it the item looks like every other live integration
+              // and the click is a dead end.
+              badge: 'Soon',
               icon: Workflow,
               subModuleKey: 'pipelines_int',
             },
@@ -807,6 +698,10 @@ export const sidebarData: SidebarData = {
             {
               title: 'SIEM',
               url: '/settings/integrations/siem',
+              // This route renders ComingSoonPage. The badge is what keeps the entry
+              // honest: without it the item looks like every other live integration
+              // and the click is a dead end.
+              badge: 'Soon',
               icon: Shield,
               subModuleKey: 'siem',
             },
@@ -820,6 +715,16 @@ export const sidebarData: SidebarData = {
               title: 'SAML SSO',
               url: '/settings/integrations/saml',
               icon: ShieldCheck,
+            },
+            {
+              title: 'Verified Domains',
+              url: '/settings/integrations/verified-domains',
+              icon: BadgeCheck,
+            },
+            {
+              title: 'AI Access (MCP)',
+              url: '/settings/integrations/mcp',
+              icon: Bot,
             },
           ],
         },

@@ -3,16 +3,9 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Input } from '@/components/ui/input'
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import {
   Box,
   Plus,
   Trash2,
-  MoreHorizontal,
   Search,
   Globe,
   Database,
@@ -22,6 +15,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react'
+import { DataTableRowActions, EmptyState } from '@/features/shared'
 import { type GroupAsset } from '@/features/access-control'
 import { useState, useEffect } from 'react'
 
@@ -116,10 +110,7 @@ export function AssetsTab({
           ))}
         </div>
       ) : totalCount === 0 ? (
-        <div className="text-center py-8 text-muted-foreground">
-          <Box className="h-8 w-8 mx-auto mb-2 opacity-50" />
-          <p>No assets assigned to this group</p>
-        </div>
+        <EmptyState icon={Box} title="No assets assigned to this group" card={false} />
       ) : filteredAssets.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground">
           <p>No assets found matching &quot;{searchQuery}&quot;</p>
@@ -150,22 +141,16 @@ export function AssetsTab({
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem
-                      className="text-red-400"
-                      onClick={() => onRemoveAsset(item.asset_id, item.asset?.name || 'Asset')}
-                    >
-                      <Trash2 className="me-2 h-4 w-4" />
-                      Remove
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <DataTableRowActions
+                  actions={[
+                    {
+                      label: 'Remove',
+                      icon: Trash2,
+                      destructive: true,
+                      onClick: () => onRemoveAsset(item.asset_id, item.asset?.name || 'Asset'),
+                    },
+                  ]}
+                />
               </div>
             </div>
           ))}

@@ -13,7 +13,13 @@ import {
   useReactTable,
 } from '@tanstack/react-table'
 import { Main } from '@/components/layout'
-import { PageHeader, StatusBadge, RiskScoreBadge, DataTablePagination } from '@/features/shared'
+import {
+  PageHeader,
+  StatusBadge,
+  RiskScoreBadge,
+  DataTablePagination,
+  DataTableRowActions,
+} from '@/features/shared'
 import {
   AssetDetailSheet,
   StatCard,
@@ -58,13 +64,6 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -76,7 +75,6 @@ import {
   Plus,
   KeyRound,
   Search as SearchIcon,
-  MoreHorizontal,
   Eye,
   Pencil,
   Trash2,
@@ -101,12 +99,10 @@ import { AssetGroupSelect } from '@/features/asset-groups'
 import type { Status } from '@/features/shared/types'
 import {
   useCredentialsApi,
-  useCredentialStatsApi,
   useCredentialIdentitiesApi,
   useRelatedCredentialsApi,
   useIdentityExposuresApi,
   mapCredentialsToAssets,
-  extractCredentialStats,
   invalidateCredentialsCache,
 } from '@/features/credentials'
 import { getErrorMessage } from '@/lib/api/error-handler'
@@ -116,7 +112,8 @@ import type {
 } from '@/features/credentials/api/credential-api.types'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { copyToClipboard } from '@/lib/clipboard'
-import { Can, Permission } from '@/lib/permissions'
+import { exportToCsv } from '@/hooks/use-csv-export'
+import { Permission } from '@/lib/permissions'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Skeleton } from '@/components/ui/skeleton'
 
@@ -166,10 +163,6 @@ const categorizeSource = (source: string): SourceFilter => {
 }
 
 export default function CredentialsPage() {
-  // API hooks
-  const [page, _setPage] = useState(1)
-  const pageSize = 20
-
   // Build API filters based on UI filters
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all')
@@ -200,19 +193,33 @@ export default function CredentialsPage() {
     isLoading,
     mutate,
   } = useCredentialsApi({
-    page,
-    page_size: pageSize,
+    // The table paginates client-side (DataTablePagination), so fetch a full
+    // working set rather than a frozen 20-row page — the server `page` state
+    // was never advanced, making rows 21+ permanently unreachable.
+    page: 1,
+    page_size: 500,
     state: apiStateFilter.length > 0 ? apiStateFilter : undefined,
     search: globalFilter || undefined,
   })
 
-  // Fetch stats from API
-  const { data: apiStats, isLoading: statsLoading } = useCredentialStatsApi()
+  // Fetch the full credential set (all states, unfiltered) to derive the KPI
+  // stat cards and the status-filter counts. These MUST be derived from the
+  // same credentials list that feeds the table — a separate /stats aggregate
+  // endpoint can drift out of sync with the list, showing phantom counts (e.g.
+  // "3 active leaks") while the table itself renders zero rows. Deriving the
+  // counts here from the list endpoint (the source of truth) guarantees the
+  // cards and the table can never contradict each other.
+  const { data: allCredentialsResponse, isLoading: statsLoading } = useCredentialsApi({
+    page: 1,
+    page_size: 1000,
+  })
 
   // Fetch identities (grouped by username/email) for identity view
   const { data: identitiesResponse, isLoading: identitiesLoading } = useCredentialIdentitiesApi({
-    page,
-    page_size: pageSize,
+    // Client-side paginated like the credentials table above — fetch the full
+    // working set so identities beyond the first page stay reachable.
+    page: 1,
+    page_size: 500,
     state: apiStateFilter.length > 0 ? apiStateFilter : undefined,
     search: globalFilter || undefined,
   })
@@ -223,8 +230,34 @@ export default function CredentialsPage() {
     return mapCredentialsToAssets(apiResponse.items)
   }, [apiResponse])
 
-  // Extract stats
-  const stats = useMemo(() => extractCredentialStats(apiStats), [apiStats])
+  // Derive stats from the full credentials list (source of truth) so the KPI
+  // cards always agree with the table below.
+  const stats = useMemo(() => {
+    const items = allCredentialsResponse?.items ?? []
+    const derived = {
+      total: allCredentialsResponse?.total ?? items.length,
+      active: 0,
+      resolved: 0,
+      accepted: 0,
+      falsePositive: 0,
+      critical: 0,
+      high: 0,
+      medium: 0,
+      low: 0,
+    }
+    for (const c of items) {
+      if (c.state === 'active') derived.active += 1
+      else if (c.state === 'resolved') derived.resolved += 1
+      else if (c.state === 'accepted') derived.accepted += 1
+      else if (c.state === 'false_positive') derived.falsePositive += 1
+
+      if (c.severity === 'critical') derived.critical += 1
+      else if (c.severity === 'high') derived.high += 1
+      else if (c.severity === 'medium') derived.medium += 1
+      else if (c.severity === 'low') derived.low += 1
+    }
+    return derived
+  }, [allCredentialsResponse])
 
   const [selectedCredential, setSelectedCredential] = useState<Asset | null>(null)
   const [sorting, setSorting] = useState<SortingState>([])
@@ -415,42 +448,37 @@ export default function CredentialsPage() {
       cell: ({ row }) => {
         const credential = row.original
         return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setSelectedCredential(credential)}>
-                <Eye className="me-2 h-4 w-4" />
-                View Details
-              </DropdownMenuItem>
-              <Can permission={Permission.CredentialsWrite}>
-                <DropdownMenuItem onClick={() => handleOpenEdit(credential)}>
-                  <Pencil className="me-2 h-4 w-4" />
-                  Edit
-                </DropdownMenuItem>
-              </Can>
-              <DropdownMenuItem onClick={() => handleCopyCredential(credential)}>
-                <Copy className="me-2 h-4 w-4" />
-                Copy Name
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <Can permission={Permission.CredentialsWrite}>
-                <DropdownMenuItem
-                  className="text-destructive"
-                  onClick={() => {
-                    setCredentialToDelete(credential)
-                    setDeleteDialogOpen(true)
-                  }}
-                >
-                  <Trash2 className="me-2 h-4 w-4" />
-                  Delete
-                </DropdownMenuItem>
-              </Can>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <DataTableRowActions
+            actions={[
+              {
+                label: 'View Details',
+                icon: Eye,
+                onClick: () => setSelectedCredential(credential),
+              },
+              {
+                label: 'Edit',
+                icon: Pencil,
+                onClick: () => handleOpenEdit(credential),
+                permission: Permission.CredentialsWrite,
+              },
+              {
+                label: 'Copy Name',
+                icon: Copy,
+                onClick: () => handleCopyCredential(credential),
+              },
+              {
+                label: 'Delete',
+                icon: Trash2,
+                onClick: () => {
+                  setCredentialToDelete(credential)
+                  setDeleteDialogOpen(true)
+                },
+                destructive: true,
+                separatorBefore: true,
+                permission: Permission.CredentialsWrite,
+              },
+            ]}
+          />
         )
       },
     },
@@ -515,6 +543,24 @@ export default function CredentialsPage() {
   const handleCopyCredential = (credential: Asset) => {
     copyToClipboard(credential.name)
     toast.success('Credential name copied to clipboard')
+  }
+
+  const handleExport = () => {
+    exportToCsv(
+      filteredData,
+      [
+        { header: 'Credential', accessor: (c) => c.name },
+        { header: 'Description', accessor: (c) => c.description ?? '' },
+        { header: 'Source', accessor: (c) => c.metadata.source ?? '' },
+        { header: 'Username', accessor: (c) => c.metadata.username ?? '' },
+        { header: 'Leak Date', accessor: (c) => c.metadata.leakDate ?? '' },
+        { header: 'Status', accessor: (c) => c.status },
+        { header: 'Scope', accessor: (c) => c.scope ?? '' },
+        { header: 'Exposure', accessor: (c) => c.exposure ?? '' },
+        { header: 'Risk Score', accessor: (c) => c.riskScore },
+      ],
+      'credential-leaks'
+    )
   }
 
   const handleMarkResolved = async (credential: Asset) => {
@@ -717,7 +763,7 @@ export default function CredentialsPage() {
                     </TabsTrigger>
                   </TabsList>
                 </Tabs>
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" onClick={handleExport}>
                   <Download className="me-2 h-4 w-4" />
                   Export
                 </Button>
