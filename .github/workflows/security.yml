@@ -206,7 +206,19 @@ jobs:
   docker-scan:
     name: Docker Image Scan
     runs-on: ubuntu-latest
-    if: github.event_name == 'schedule' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    # Also on a PR into main — that is a release candidate, and this job builds
+    # the image itself (push: false, load: true) rather than pulling a published
+    # one, so it can run before the tag exists. Scanning the image only after it
+    # is already published is the wrong order for a security product.
+    #
+    # It also clears a failing check: code scanning compares a PR against the
+    # configurations present on the base branch, and main expects a Trivy
+    # analysis from this job. While the job skipped, every release PR reported
+    # "1 configuration present on refs/heads/main was not found".
+    if: >-
+      github.event_name == 'schedule'
+      || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+      || (github.event_name == 'pull_request' && github.base_ref == 'main')
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
