@@ -61,8 +61,12 @@ export function parseChannel(channel: string): { type: ChannelType; id: string }
 export interface WebSocketMessage {
   type: MessageType
   channel?: string
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  data?: any
+  // `unknown`, not `any`: this is the pre-narrowing shape returned by
+  // JSON.parse before the `type` discriminant is read. Every branch that
+  // actually reads the payload narrows to EventMessage<T> or ErrorMessage
+  // first, both of which type `data` properly, so nothing here needs to be
+  // dereferenced blind.
+  data?: unknown
   timestamp: number
   request_id?: string
 }
