@@ -45,6 +45,7 @@ import {
   type NotificationSeverity,
 } from '@/features/integrations/types/integration.types'
 import { useTenantEventTypes } from '@/features/integrations/api/use-event-types'
+import { EventTypeSelector } from './event-type-selector'
 import { cn } from '@/lib/utils'
 import { SEVERITY_TEXT_COLORS, type SeverityLevel } from '@/lib/severity-colors'
 import { getErrorMessage } from '@/lib/api/error-handler'
@@ -185,16 +186,15 @@ export function EditNotificationDialog({
   const [selectedPreset, setSelectedPreset] = useState('custom')
   const [templateTab, setTemplateTab] = useState<'edit' | 'preview'>('edit')
 
-  // Get event types from API (database-driven, filtered by tenant's plan)
-  // Only fetch when dialog is open (lazy loading)
+  // The event-type catalog comes from the API, module-filtered for this tenant.
+  // Only fetched once the dialog is open.
   const {
     eventTypes: availableEventTypes,
-    defaultEventIds,
+    categories: eventCategories,
+    defaultEnabled: defaultEventTypes,
     isLoading: eventTypesLoading,
+    error: eventTypesError,
   } = useTenantEventTypes(open)
-
-  // Get default event type IDs (used as fallback)
-  const defaultEventTypes = defaultEventIds
 
   const handlePresetChange = (presetId: string) => {
     setSelectedPreset(presetId)
@@ -605,43 +605,15 @@ export function EditNotificationDialog({
               </div>
             </div>
 
-            <div className="space-y-3">
-              <Label>Event Types</Label>
-              <p className="text-xs text-muted-foreground">
-                Select which event types should be sent to this channel
-                {eventTypesLoading && ' (loading...)'}
-              </p>
-              <div className="grid grid-cols-2 gap-3">
-                {availableEventTypes.map((eventType) => {
-                  const enabledTypes = watch('enabled_event_types')
-                  const isChecked = enabledTypes.includes(eventType.id)
-                  return (
-                    <div key={eventType.id} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`edit_event_${eventType.id}`}
-                        checked={isChecked}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            setValue('enabled_event_types', [...enabledTypes, eventType.id])
-                          } else {
-                            setValue(
-                              'enabled_event_types',
-                              enabledTypes.filter((t) => t !== eventType.id)
-                            )
-                          }
-                        }}
-                      />
-                      <label
-                        htmlFor={`edit_event_${eventType.id}`}
-                        className="text-sm font-normal cursor-pointer"
-                      >
-                        {eventType.name}
-                      </label>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
+            <EventTypeSelector
+              eventTypes={availableEventTypes}
+              categories={eventCategories}
+              value={watch('enabled_event_types')}
+              onChange={(next) => setValue('enabled_event_types', next)}
+              idPrefix="edit_event"
+              isLoading={eventTypesLoading}
+              error={eventTypesError}
+            />
 
             {/* Advanced Settings */}
             <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
