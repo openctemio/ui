@@ -15,6 +15,14 @@ const eslintConfig = defineConfig([
     // Ignore coverage and sentry configs
     "coverage/**",
     "sentry-configs/**",
+    // Git worktrees and stale build dirs are whole extra checkouts of this
+    // repo, so linting them reports every file two or three times. CI never
+    // sees them (fresh checkout), but locally `npx eslint .` returned 42,786
+    // results against 40 real ones — enough noise to bury the real ones, which
+    // is exactly what happened while investigating the six errors this commit
+    // fixes.
+    ".claude/**",
+    ".next.*/**",
   ]),
   // Global rules
   {

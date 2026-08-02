@@ -85,9 +85,15 @@ export class WebSocketClient {
   private pingTimeout: ReturnType<typeof setTimeout> | null = null
   private pongTimeout: ReturnType<typeof setTimeout> | null = null
 
-  /** Active subscriptions: channel -> Set of callbacks */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private subscriptions = new Map<string, Set<(data: any) => void>>()
+  /**
+   * Active subscriptions: channel -> Set of callbacks.
+   *
+   * Stored as `(data: unknown) => void` because one map holds callbacks for
+   * every channel, each with its own payload type. subscribe<T> keeps the
+   * caller's type at the boundary; the cast on insert is the one place the
+   * two meet.
+   */
+  private subscriptions = new Map<string, Set<(data: unknown) => void>>()
   /** Pending subscription requests: requestId -> resolve/reject */
   private pendingRequests = new Map<string, { resolve: () => void; reject: (err: Error) => void }>()
   /** Request ID counter */
@@ -157,8 +163,7 @@ export class WebSocketClient {
     if (!this.subscriptions.has(channel)) {
       this.subscriptions.set(channel, new Set())
     }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    this.subscriptions.get(channel)!.add(callback as (data: any) => void)
+    this.subscriptions.get(channel)!.add(callback as (data: unknown) => void)
 
     // If not connected, subscription will be sent on reconnect
     if (this.state !== 'connected') {
@@ -193,16 +198,16 @@ export class WebSocketClient {
    * @param channel Channel name
    * @param callback Optional: specific callback to remove. If not provided, removes all callbacks.
    */
-  async unsubscribe(
-    channel: string,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    callback?: (data: any) => void
-  ): Promise<void> {
+  async unsubscribe<T = unknown>(channel: string, callback?: (data: T) => void): Promise<void> {
     const callbacks = this.subscriptions.get(channel)
     if (!callbacks) return
 
     if (callback) {
-      callbacks.delete(callback)
+      // Mirrors the cast in subscribe(): callers hold a typed callback, the
+      // map holds them erased. Set.delete matches on identity, so the cast
+      // only has to satisfy the compiler — it removes exactly the function
+      // that was inserted.
+      callbacks.delete(callback as (data: unknown) => void)
       // If there are still other callbacks, don't unsubscribe from server
       if (callbacks.size > 0) return
     }
