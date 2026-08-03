@@ -25,6 +25,7 @@
     "generate-secret": "npx tsx scripts/generate-secret.ts",
     "generate:api-types": "bash scripts/generate-api-types.sh",
     "check:api-types": "bash scripts/generate-api-types.sh --check",
+    "check:spec-vendored": "bash scripts/check-spec-vendored.sh",
     "prepare": "husky"
   },
   "lint-staged": {
