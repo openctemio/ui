@@ -2,11 +2,12 @@
  * Tenant Modules API Hook
  *
  * SWR hook for fetching tenant's enabled modules.
- * Used for filtering available event types in notification channels and other
- * module-gated features.
+ * Used for module-gated features (sidebar, route guards, feature toggles).
  *
- * The endpoint returns modules enabled for the current tenant, including
- * the event types that map to each module.
+ * Notification event types are NOT here: the server module-filters that catalog
+ * itself and serves it from `GET /api/v1/me/event-types`
+ * (see `useTenantEventTypes`). This response carried an `event_types` field that
+ * the api never populated, so anything reading it got an empty list forever.
  */
 
 'use client'
@@ -15,7 +16,6 @@ import useSWR, { type SWRConfiguration } from 'swr'
 import { get } from '@/lib/api/client'
 import { handleApiError } from '@/lib/api/error-handler'
 import { devLog } from '@/lib/logger'
-import type { NotificationEventType } from '../types/integration.types'
 
 // ============================================
 // TYPES
@@ -56,7 +56,6 @@ export interface LicensingModule {
   release_status: ReleaseStatus
   /** Parent module ID for sub-modules (e.g., "assets" for "assets.domains") */
   parent_module_id?: string
-  event_types?: string[]
   /** Permissions that belong to this module - used for access control */
   permissions?: ModulePermission[]
 }
@@ -69,7 +68,6 @@ export interface TenantModulesResponse {
   modules: LicensingModule[]
   /** Sub-modules organized by parent module ID (e.g., "assets" -> [domains, certificates, ...]) */
   sub_modules?: Record<string, LicensingModule[]>
-  event_types?: NotificationEventType[]
   coming_soon_module_ids?: string[]
   beta_module_ids?: string[]
 }
@@ -107,14 +105,11 @@ const defaultConfig: SWRConfiguration = {
 /**
  * Fetch tenant's enabled modules
  *
- * @returns Object with module IDs, module details, and available event types
+ * @returns Object with module IDs and module details
  *
  * @example
  * ```tsx
- * const { moduleIds, modules, eventTypes, isLoading } = useTenantModules();
- *
- * // Filter event types based on enabled modules
- * const availableEventTypes = getAvailableEventTypes(moduleIds);
+ * const { moduleIds, modules, isLoading } = useTenantModules();
  * ```
  */
 export function useTenantModules() {
@@ -133,7 +128,6 @@ export function useTenantModules() {
         return {
           module_ids: [],
           modules: [],
-          event_types: [],
         }
       }
     },
@@ -147,8 +141,6 @@ export function useTenantModules() {
     modules: data?.modules || [],
     /** Sub-modules organized by parent module ID (e.g., "assets" -> [domains, certificates, ...]) */
     subModules: data?.sub_modules || {},
-    /** Pre-computed available event types for this tenant */
-    eventTypes: data?.event_types || [],
     /** Module IDs that are coming soon */
     comingSoonModuleIds: data?.coming_soon_module_ids || [],
     /** Module IDs that are in beta */
