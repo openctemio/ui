@@ -50,30 +50,40 @@ export function mapCredentialToAsset(credential: ApiCredential): Asset {
     other: 'Other',
   }
 
+  // Every field on the generated wire type is optional: swag emits no `required`
+  // list for response structs, so the contract says any of these may be absent.
+  // The Asset view model requires them, so defaults belong here rather than in a
+  // hand-written type that simply asserted they are always present.
+  const credType = credential.credential_type ?? ''
+  const source = credential.source ?? ''
+  const severity = credential.severity ?? ''
+  const state = credential.state ?? ''
+  const firstSeen = credential.first_seen_at ?? ''
+  const lastSeen = credential.last_seen_at ?? ''
+
   return {
-    id: credential.id,
+    id: credential.id ?? '',
     type: 'credential',
-    name: credential.identifier,
-    description: `${credential.credential_type} from ${credential.source}`,
-    criticality:
-      credential.severity === 'critical' || credential.severity === 'high' ? 'critical' : 'high',
-    status: stateToStatus[credential.state] || 'active',
+    name: credential.identifier ?? '',
+    description: `${credType} from ${source}`,
+    criticality: severity === 'critical' || severity === 'high' ? 'critical' : 'high',
+    status: stateToStatus[state] || 'active',
     scope: 'internal',
     exposure: 'public',
-    riskScore: severityToRiskScore[credential.severity] || 50,
+    riskScore: severityToRiskScore[severity] || 50,
     findingCount: 1,
     metadata: {
-      source: credential.source,
+      source,
       username: username || email,
-      leakDate: credential.first_seen_at?.split('T')[0] || '',
+      leakDate: firstSeen.split('T')[0] || '',
       secretValue: credential.secret_value,
-      credentialType: credTypeMap[credential.credential_type] || credential.credential_type,
+      credentialType: credTypeMap[credType] || credType,
     },
     tags: [],
-    firstSeen: credential.first_seen_at,
-    lastSeen: credential.last_seen_at,
-    createdAt: credential.first_seen_at,
-    updatedAt: credential.last_seen_at,
+    firstSeen,
+    lastSeen,
+    createdAt: firstSeen,
+    updatedAt: lastSeen,
   }
 }
 

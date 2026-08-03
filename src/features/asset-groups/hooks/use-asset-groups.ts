@@ -89,7 +89,7 @@ export function useAssetGroups(options: UseAssetGroupsOptions = {}): UseAssetGro
   const result = useMemo(() => {
     if (USE_REAL_API && enabled) {
       return {
-        data: apiResult.data ? transformApiAssetGroups(apiResult.data.data) : [],
+        data: transformApiAssetGroups(apiResult.data?.data ?? []),
         total: apiResult.data?.total ?? 0,
         isLoading: apiResult.isLoading,
         isError: !!apiResult.error,
@@ -214,7 +214,7 @@ export function useGroupAssets(
   const result = useMemo(() => {
     if (USE_REAL_API) {
       return {
-        data: apiResult.data ? transformApiGroupAssets(apiResult.data.data) : [],
+        data: transformApiGroupAssets(apiResult.data?.data ?? []),
         total: apiResult.data?.total ?? 0,
         isLoading: apiResult.isLoading,
         isError: !!apiResult.error,
@@ -258,7 +258,7 @@ export function useGroupFindings(
   const result = useMemo(() => {
     if (USE_REAL_API) {
       return {
-        data: apiResult.data ? transformApiGroupFindings(apiResult.data.data) : [],
+        data: transformApiGroupFindings(apiResult.data?.data ?? []),
         total: apiResult.data?.total ?? 0,
         isLoading: apiResult.isLoading,
         isError: !!apiResult.error,
@@ -299,14 +299,20 @@ export function useAssetGroupStats(): UseAssetGroupStatsReturn {
       // Transform API stats to match mock data format
       const apiStats = apiResult.data
       return {
+        // The stats response declares every field optional, and the view model
+        // requires them; fall back to the zeroed mock shape per field rather
+        // than pretending the server always sends a complete object.
         data: apiStats
           ? {
-              total: apiStats.total,
-              byEnvironment: apiStats.by_environment,
-              byCriticality: apiStats.by_criticality,
-              totalAssets: apiStats.total_assets,
-              totalFindings: apiStats.total_findings,
-              averageRiskScore: apiStats.average_risk_score,
+              ...getMockStats(),
+              total: apiStats.total ?? 0,
+              byEnvironment: (apiStats.by_environment ??
+                getMockStats().byEnvironment) as UseAssetGroupStatsReturn['data']['byEnvironment'],
+              byCriticality: (apiStats.by_criticality ??
+                getMockStats().byCriticality) as UseAssetGroupStatsReturn['data']['byCriticality'],
+              totalAssets: apiStats.total_assets ?? 0,
+              totalFindings: apiStats.total_findings ?? 0,
+              averageRiskScore: apiStats.average_risk_score ?? 0,
             }
           : getMockStats(),
         isLoading: apiResult.isLoading,

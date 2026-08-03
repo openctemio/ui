@@ -112,32 +112,35 @@ const PRIORITY_MAP: Record<number, 'critical' | 'high' | 'medium' | 'low'> = {
   4: 'low',
 }
 
+// Every field of the generated wire type is optional (swag emits no `required`
+// list for response structs), so the API-to-view-model boundary supplies the
+// defaults.
 function transformApiTarget(api: ApiScopeTarget): ScopeTarget {
   return {
-    id: api.id,
-    type: api.target_type as ScopeTargetType,
-    pattern: api.pattern,
-    description: api.description,
-    status: api.status as ScopeTargetStatus,
-    priority: PRIORITY_MAP[api.priority],
+    id: api.id ?? '',
+    type: (api.target_type ?? '') as ScopeTargetType,
+    pattern: api.pattern ?? '',
+    description: api.description ?? '',
+    status: (api.status ?? '') as ScopeTargetStatus,
+    priority: PRIORITY_MAP[api.priority ?? 0],
     tags: api.tags,
-    addedAt: api.created_at,
-    addedBy: api.created_by,
-    updatedAt: api.updated_at,
+    addedAt: api.created_at ?? '',
+    addedBy: api.created_by ?? '',
+    updatedAt: api.updated_at ?? '',
   }
 }
 
 function transformApiExclusion(api: ApiScopeExclusion): ScopeExclusion {
   return {
-    id: api.id,
-    type: api.exclusion_type as ScopeTargetType,
-    pattern: api.pattern,
-    reason: api.reason,
-    status: api.status as ScopeTargetStatus,
+    id: api.id ?? '',
+    type: (api.exclusion_type ?? '') as ScopeTargetType,
+    pattern: api.pattern ?? '',
+    reason: api.reason ?? '',
+    status: (api.status ?? '') as ScopeTargetStatus,
     expiresAt: api.expires_at,
     approvedBy: api.approved_by,
-    addedAt: api.created_at,
-    addedBy: api.created_by,
+    addedAt: api.created_at ?? '',
+    addedBy: api.created_by ?? '',
   }
 }
 
