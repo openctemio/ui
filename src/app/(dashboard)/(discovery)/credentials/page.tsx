@@ -831,28 +831,34 @@ export default function CredentialsPage() {
                     </div>
                   ))
                 ) : identitiesResponse?.items?.length ? (
-                  identitiesResponse.items.map((identity) => (
-                    <IdentityCard
-                      key={identity.identity}
-                      identity={identity}
-                      isExpanded={expandedIdentities.has(identity.identity)}
-                      onToggle={() => {
-                        setExpandedIdentities((prev) => {
-                          const next = new Set(prev)
-                          if (next.has(identity.identity)) {
-                            next.delete(identity.identity)
-                          } else {
-                            next.add(identity.identity)
-                          }
-                          return next
-                        })
-                      }}
-                      onSelectCredential={(cred) => {
-                        const asset = mapCredentialsToAssets([cred])[0]
-                        setSelectedCredential(asset)
-                      }}
-                    />
-                  ))
+                  identitiesResponse.items.map((identity) => {
+                    // The contract declares `identity` optional; it is the row
+                    // key and the expansion-set member, so fall back rather
+                    // than keying on undefined.
+                    const identityKey = identity.identity ?? ''
+                    return (
+                      <IdentityCard
+                        key={identityKey}
+                        identity={identity}
+                        isExpanded={expandedIdentities.has(identityKey)}
+                        onToggle={() => {
+                          setExpandedIdentities((prev) => {
+                            const next = new Set(prev)
+                            if (next.has(identityKey)) {
+                              next.delete(identityKey)
+                            } else {
+                              next.add(identityKey)
+                            }
+                            return next
+                          })
+                        }}
+                        onSelectCredential={(cred) => {
+                          const asset = mapCredentialsToAssets([cred])[0]
+                          setSelectedCredential(asset)
+                        }}
+                      />
+                    )
+                  })
                 ) : (
                   <div className="rounded-lg border border-dashed p-8 text-center text-muted-foreground">
                     No identities found
@@ -1348,7 +1354,7 @@ function RelatedExposuresSection({
                 <Badge variant="outline" className="text-xs">
                   {cred.source}
                 </Badge>
-                <Badge className={severityColors[cred.severity] || severityColors.info}>
+                <Badge className={severityColors[cred.severity ?? ''] || severityColors.info}>
                   {cred.severity}
                 </Badge>
               </div>
@@ -1363,7 +1369,7 @@ function RelatedExposuresSection({
 function IdentityCard({ identity, isExpanded, onToggle, onSelectCredential }: IdentityCardProps) {
   // Fetch exposures only when card is expanded
   const { data: exposuresResponse, isLoading: exposuresLoading } = useIdentityExposuresApi(
-    isExpanded ? identity.identity : null,
+    isExpanded ? (identity.identity ?? null) : null,
     { page_size: 50 }
   )
 
@@ -1403,9 +1409,9 @@ function IdentityCard({ identity, isExpanded, onToggle, onSelectCredential }: Id
                     </Badge>
                   </div>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
-                    <span>Sources: {identity.sources.join(', ')}</span>
+                    <span>Sources: {(identity.sources ?? []).join(', ')}</span>
                     <span className="text-muted-foreground/50">|</span>
-                    <span>Types: {identity.credential_types.join(', ')}</span>
+                    <span>Types: {(identity.credential_types ?? []).join(', ')}</span>
                   </div>
                 </div>
               </div>
@@ -1425,7 +1431,9 @@ function IdentityCard({ identity, isExpanded, onToggle, onSelectCredential }: Id
                     </Badge>
                   )}
                 </div>
-                <Badge className={severityColors[identity.highest_severity] || severityColors.info}>
+                <Badge
+                  className={severityColors[identity.highest_severity ?? ''] || severityColors.info}
+                >
                   {identity.highest_severity}
                 </Badge>
                 <ChevronDown
@@ -1465,16 +1473,22 @@ function IdentityCard({ identity, isExpanded, onToggle, onSelectCredential }: Id
                         <Badge variant="outline" className="text-xs">
                           {exposure.source}
                         </Badge>
-                        <Badge className={severityColors[exposure.severity] || severityColors.info}>
+                        <Badge
+                          className={severityColors[exposure.severity ?? ''] || severityColors.info}
+                        >
                           {exposure.severity}
                         </Badge>
                       </div>
                     </div>
                     <div className="mt-1 text-xs text-muted-foreground">
-                      First seen: {new Date(exposure.first_seen_at).toLocaleDateString()}
-                      {exposure.last_seen_at !== exposure.first_seen_at && (
-                        <> | Last seen: {new Date(exposure.last_seen_at).toLocaleDateString()}</>
-                      )}
+                      First seen:{' '}
+                      {exposure.first_seen_at
+                        ? new Date(exposure.first_seen_at).toLocaleDateString()
+                        : '—'}
+                      {exposure.last_seen_at &&
+                        exposure.last_seen_at !== exposure.first_seen_at && (
+                          <> | Last seen: {new Date(exposure.last_seen_at).toLocaleDateString()}</>
+                        )}
                     </div>
                   </button>
                 ))

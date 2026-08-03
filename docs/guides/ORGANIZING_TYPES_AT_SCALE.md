@@ -19,6 +19,7 @@
 ## Problem
 
 **Current structure (small projects):**
+
 ```typescript
 // src/lib/api/types.ts (1 file)
 export interface User { ... }
@@ -31,6 +32,7 @@ export interface Category { ... }
 ```
 
 **Issues when scaling:**
+
 - ❌ Hard to find specific type
 - ❌ Merge conflicts frequently
 - ❌ Slow IDE autocomplete
@@ -73,6 +75,7 @@ src/lib/api/types/
 ### Level 1: Small Projects (<20 types)
 
 **Keep single file:**
+
 ```
 src/lib/api/
 └── types.ts              # All types in one file
@@ -85,6 +88,7 @@ src/lib/api/
 ### Level 2: Medium Projects (20-50 types)
 
 **Split by category:**
+
 ```
 src/lib/api/types/
 ├── index.ts              # Re-exports
@@ -102,6 +106,7 @@ src/lib/api/types/
 ### Level 3: Large Projects (50+ types) ⭐ RECOMMENDED
 
 **Feature-based with subfolders:**
+
 ```
 src/lib/api/types/
 ├── index.ts                      # Main re-export
@@ -165,6 +170,7 @@ npx tsx scripts/setup-types-structure.ts
 ### Step 2: Move Types to Domain Files
 
 **Before (single file):**
+
 ```typescript
 // src/lib/api/types.ts
 export interface User { ... }
@@ -174,6 +180,7 @@ export interface Order { ... }
 ```
 
 **After (organized):**
+
 ```typescript
 // src/lib/api/types/users/user.types.ts
 export interface User { ... }
@@ -192,6 +199,7 @@ export interface CreateOrderRequest { ... }
 ### Step 3: Create Re-export Files
 
 **Domain index:**
+
 ```typescript
 // src/lib/api/types/users/index.ts
 export * from './user.types'
@@ -200,6 +208,7 @@ export * from './profile.types'
 ```
 
 **Main index:**
+
 ```typescript
 // src/lib/api/types/index.ts
 export * from './common'
@@ -212,17 +221,20 @@ export * from './posts'
 ### Step 4: Update Imports
 
 **Before:**
+
 ```typescript
 import type { User, Product } from '@/lib/api/types'
 ```
 
 **After (same!):**
+
 ```typescript
 import type { User, Product } from '@/lib/api/types'
 // Still works thanks to re-exports!
 ```
 
 **Or be specific:**
+
 ```typescript
 import type { User } from '@/lib/api/types/users'
 import type { Product } from '@/lib/api/types/products'
@@ -235,6 +247,7 @@ import type { Product } from '@/lib/api/types/products'
 ### 1. Naming Conventions
 
 **File naming:**
+
 ```
 ✅ user.types.ts
 ✅ product.types.ts
@@ -246,6 +259,7 @@ import type { Product } from '@/lib/api/types/products'
 ```
 
 **Type naming:**
+
 ```typescript
 // Entity types
 export interface User { ... }
@@ -271,6 +285,7 @@ export type Products = Product[]
 ### 2. File Organization
 
 **Keep related types together:**
+
 ```typescript
 // ✅ Good - related types in same file
 // src/lib/api/types/users/user.types.ts
@@ -292,6 +307,7 @@ export type UserStatus = ...
 ```
 
 **But separate when file gets too large (>300 lines):**
+
 ```typescript
 // user.types.ts (100 lines)
 export interface User { ... }
@@ -306,6 +322,7 @@ export interface UserPermissions { ... }
 ### 3. Common Types
 
 **Extract truly shared types:**
+
 ```typescript
 // src/lib/api/types/common/api.types.ts
 export interface ApiResponse<T = unknown> {
@@ -337,6 +354,7 @@ export interface PaginationMeta {
 ### 4. Avoid Circular Dependencies
 
 **Problem:**
+
 ```typescript
 // user.types.ts
 import type { Post } from './post.types'
@@ -353,17 +371,19 @@ export interface Post {
 ```
 
 **Solution 1: Inline minimal type**
+
 ```typescript
 // post.types.ts
 export interface Post {
   author: {
     id: string
     name: string
-  }  // Don't import full User
+  } // Don't import full User
 }
 ```
 
 **Solution 2: Extract to common**
+
 ```typescript
 // common/entities.types.ts
 export interface UserSummary {
@@ -381,7 +401,8 @@ export interface Post {
 ### 5. Documentation
 
 **Add JSDoc comments:**
-```typescript
+
+````typescript
 /**
  * User entity from backend
  *
@@ -411,7 +432,7 @@ export interface User {
    */
   status: UserStatus
 }
-```
+````
 
 ---
 
@@ -500,14 +521,32 @@ src/lib/api/types/
 
 ### Auto-generate Types from OpenAPI/Swagger
 
-```bash
-# Install
-npm install --save-dev openapi-typescript
+**This is now wired up.** The API response shapes live in
+`src/lib/api/generated/api.types.ts`, generated from the spec vendored at
+`src/lib/api/openapi/swagger.yaml`:
 
-# Generate from OpenAPI spec
-npx openapi-typescript http://localhost:8000/openapi.json \
-  --output src/lib/api/types/generated.ts
+```bash
+npm run generate:api-types   # regenerate
+npm run check:api-types      # fail if out of date (also runs in CI)
 ```
+
+Two things differ from the sketch this section used to carry:
+
+- The API generates **Swagger 2.0** (swaggo/swag v1) and `openapi-typescript`
+  v7 reads 3.x only, so `scripts/generate-api-types.sh` runs the spec through
+  `swagger2openapi` first. The intermediate 3.0 document is not committed — it
+  is a pure function of the spec.
+- Do not import from `api.types.ts` directly. Its schema keys are Go package
+  paths (`internal_infra_http_handler.FindingResponse`) and change whenever a
+  handler type moves package. Use the named aliases in
+  `src/lib/api/generated/index.ts`, which is a naming layer only and declares no
+  field shapes of its own.
+
+Every field on a generated response type is optional, because swaggo emits no
+`required` list for response structs. That is the contract as the server states
+it, so apply defaults at the API-to-view-model boundary (the `transform*` and
+`mapper` functions) rather than asserting the fields are always present — that
+asserting is what let the UI declare fields the server never returned.
 
 ### Generate from Backend Code (if using TypeScript backend)
 
@@ -550,6 +589,7 @@ When migrating to organized structure:
 
 **Q: Should I organize from the start?**
 A: No! Start simple with single file. Organize when:
+
 - File > 500 lines
 - 20+ types
 - Multiple people editing
@@ -575,11 +615,13 @@ A: Use minimal inline types or extract to common.
 ## Summary
 
 **Small Project (<20 types):**
+
 ```
 src/lib/api/types.ts          # Single file
 ```
 
 **Medium Project (20-50 types):**
+
 ```
 src/lib/api/types/
 ├── index.ts
@@ -590,6 +632,7 @@ src/lib/api/types/
 ```
 
 **Large Project (50+ types):**
+
 ```
 src/lib/api/types/
 ├── index.ts
@@ -613,6 +656,7 @@ src/lib/api/types/
 ---
 
 **Next Steps:**
+
 1. Start with single file
 2. Split when needed (>20 types)
 3. Organize by domain
