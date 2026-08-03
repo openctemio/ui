@@ -3,7 +3,17 @@
  *
  * Type definitions matching backend API responses for asset groups
  * Following CTEM (Continuous Threat Exposure Management) Scoping phase
+ *
+ * The response shapes are GENERATED from the API's OpenAPI spec; only the
+ * request inputs, filters and UI unions are declared here.
  */
+import type {
+  ApiResponse,
+  AssetGroupResponse,
+  AssetGroupStatsResponse,
+  GroupAssetResponse,
+  GroupFindingResponse,
+} from '@/lib/api/generated'
 
 // ============================================
 // Common Types
@@ -29,105 +39,30 @@ export type AssetType =
   | 'other'
 
 // ============================================
-// API Response Types
+// API Response Types — GENERATED
+//
+// These are aliases into src/lib/api/generated; nothing here restates a field.
+// Two corrections the generation made:
+//
+//   • ApiAssetGroup declared `tenant_id`, which AssetGroupResponse does not
+//     carry — the tenant is implied by the caller's token, and the server
+//     never returns it.
+//   • ApiAssetGroupStats declared `critical_groups` and `high_risk_groups`;
+//     AssetGroupStatsResponse has neither. Any UI reading them was reading
+//     undefined.
+//
+// The list envelopes are declared inline in the spec rather than as named
+// schemas, so they are reached through the path + method.
 // ============================================
 
-/**
- * Asset Group entity from API
- */
-export interface ApiAssetGroup {
-  id: string
-  tenant_id: string
-  name: string
-  description?: string
-  environment: Environment
-  criticality: Criticality
+export type ApiAssetGroup = AssetGroupResponse
+export type ApiGroupAsset = GroupAssetResponse
+export type ApiGroupFinding = GroupFindingResponse
+export type ApiAssetGroupStats = AssetGroupStatsResponse
 
-  // Business Context (CTEM Scoping)
-  business_unit?: string
-  owner?: string
-  owner_email?: string
-  tags?: string[]
-
-  // Asset counts
-  asset_count: number
-  domain_count: number
-  website_count: number
-  service_count: number
-  repository_count: number
-  cloud_count: number
-  credential_count: number
-
-  // Risk metrics
-  risk_score: number
-  finding_count: number
-
-  // Timestamps
-  created_at: string
-  updated_at: string
-}
-
-/**
- * Asset within a group (lightweight)
- */
-export interface ApiGroupAsset {
-  id: string
-  name: string
-  type: AssetType
-  status: 'active' | 'inactive' | 'monitoring'
-  risk_score: number
-  finding_count: number
-  last_seen: string
-}
-
-/**
- * Finding associated with a group
- */
-export interface ApiGroupFinding {
-  id: string
-  title: string
-  severity: 'critical' | 'high' | 'medium' | 'low' | 'info'
-  status: 'open' | 'in_progress' | 'resolved' | 'accepted' | 'false_positive'
-  asset_id: string
-  asset_name: string
-  discovered_at: string
-}
-
-// ============================================
-// List Response Types
-// ============================================
-
-export interface PaginationLinks {
-  first?: string
-  prev?: string
-  next?: string
-  last?: string
-}
-
-export interface ApiAssetGroupListResponse {
-  data: ApiAssetGroup[]
-  total: number
-  page: number
-  per_page: number
-  total_pages: number
-  links?: PaginationLinks
-}
-
-export interface ApiGroupAssetsResponse {
-  data: ApiGroupAsset[]
-  total: number
-  page: number
-  per_page: number
-  total_pages: number
-}
-
-export interface ApiGroupFindingsResponse {
-  data: ApiGroupFinding[]
-  total: number
-  page: number
-  per_page: number
-  total_pages: number
-}
+export type ApiAssetGroupListResponse = ApiResponse<'/asset-groups', 'get'>
+export type ApiGroupAssetsResponse = ApiResponse<'/asset-groups/{id}/assets', 'get'>
+export type ApiGroupFindingsResponse = ApiResponse<'/asset-groups/{id}/findings', 'get'>
 
 // ============================================
 // Input Types
@@ -227,21 +162,6 @@ export interface GroupAssetsApiFilters {
   search?: string
   page?: number
   per_page?: number
-}
-
-// ============================================
-// Stats Types
-// ============================================
-
-export interface ApiAssetGroupStats {
-  total: number
-  by_environment: Record<Environment, number>
-  by_criticality: Record<Criticality, number>
-  total_assets: number
-  total_findings: number
-  average_risk_score: number
-  critical_groups: number
-  high_risk_groups: number
 }
 
 // ============================================

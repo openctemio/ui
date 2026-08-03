@@ -588,11 +588,14 @@ export function AddAssetsDialog({
                       <SelectValue placeholder={isLoadingTypes ? 'Loading...' : 'Select type'} />
                     </SelectTrigger>
                     <SelectContent>
-                      {assetTypes.map((type) => (
-                        <SelectItem key={type.code} value={type.code}>
-                          {type.name}
-                        </SelectItem>
-                      ))}
+                      {assetTypes.map((type) =>
+                        // The spec declares code optional, so a Select value could be undefined.
+                        type.code ? (
+                          <SelectItem key={type.code} value={type.code}>
+                            {type.name}
+                          </SelectItem>
+                        ) : null
+                      )}
                     </SelectContent>
                   </Select>
                   <Input

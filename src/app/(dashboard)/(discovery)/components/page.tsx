@@ -212,7 +212,10 @@ export default function ComponentsOverviewPage() {
                               </Badge>
                             </div>
                             <div className="flex items-center gap-2 mt-0.5">
-                              <EcosystemBadge ecosystem={component.ecosystem} size="sm" />
+                              <EcosystemBadge
+                                ecosystem={component.ecosystem ?? 'unknown'}
+                                size="sm"
+                              />
                               {component.in_cisa_kev && (
                                 <Badge className="bg-red-600 text-white text-xs">CISA KEV</Badge>
                               )}
@@ -220,10 +223,10 @@ export default function ComponentsOverviewPage() {
                           </div>
                         </div>
                         <div className="flex flex-wrap items-center gap-2">
-                          {component.critical_count > 0 && (
+                          {(component.critical_count ?? 0) > 0 && (
                             <Badge variant="destructive">{component.critical_count}C</Badge>
                           )}
-                          {component.high_count > 0 && (
+                          {(component.high_count ?? 0) > 0 && (
                             <Badge className="bg-orange-500/15 text-orange-600">
                               {component.high_count}H
                             </Badge>
@@ -273,20 +276,22 @@ export default function ComponentsOverviewPage() {
                       <div key={eco.ecosystem} className="space-y-1.5">
                         <div className="flex items-center justify-between">
                           <div className="flex flex-wrap items-center gap-2">
-                            <EcosystemBadge ecosystem={eco.ecosystem} />
-                            <span className="text-sm font-medium">{eco.total}</span>
+                            <EcosystemBadge ecosystem={eco.ecosystem ?? 'unknown'} />
+                            <span className="text-sm font-medium">{eco.total ?? 0}</span>
                           </div>
                           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            {eco.vulnerable > 0 && (
+                            {(eco.vulnerable ?? 0) > 0 && (
                               <span className="text-red-500">{eco.vulnerable} vulns</span>
                             )}
-                            {eco.outdated > 0 && (
+                            {(eco.outdated ?? 0) > 0 && (
                               <span className="text-yellow-500">{eco.outdated} outdated</span>
                             )}
                           </div>
                         </div>
                         <Progress
-                          value={totalComponents > 0 ? (eco.total / totalComponents) * 100 : 0}
+                          value={
+                            totalComponents > 0 ? ((eco.total ?? 0) / totalComponents) * 100 : 0
+                          }
                           className="h-1.5"
                         />
                       </div>
