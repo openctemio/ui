@@ -101,212 +101,31 @@ export const ALL_NOTIFICATION_SEVERITIES: {
 export const DEFAULT_ENABLED_SEVERITIES: NotificationSeverity[] = ['critical', 'high']
 
 /**
- * Event category for grouping event types
+ * Notification event type identifier, e.g. `sla_breach`, `new_finding`.
+ *
+ * Intentionally a bare string. The authoritative catalog — which identifiers
+ * exist, their labels, descriptions, categories, which module each requires and
+ * which are on by default — is served by `GET /api/v1/me/event-types` and read
+ * through `useTenantEventTypes()`.
+ *
+ * This used to be a 16-value union with a matching `ALL_NOTIFICATION_EVENT_TYPES`
+ * array, `EVENT_CATEGORY_LABELS` map and a client-side module filter, all
+ * maintained by hand against `integration.AllEventTypes()` in the api. They
+ * drifted: six event types the backend routes had no checkbox here, so no
+ * operator could enable them, and two event categories had no label. Narrowing
+ * this back to a union would reintroduce that — a value the server sends would
+ * fail to typecheck here for no reason other than that this file had not caught
+ * up.
  */
-export type NotificationEventCategory = 'system' | 'asset' | 'scan' | 'finding' | 'exposure'
+export type NotificationEventType = string
 
 /**
- * Event types that can trigger notifications
+ * Event category identifier, e.g. `finding`, `approval`.
+ *
+ * A bare string for the same reason as {@link NotificationEventType}: the
+ * category list and its display labels come from the API.
  */
-export type NotificationEventType =
-  // System events
-  | 'security_alert'
-  | 'system_error'
-  // Asset events
-  | 'new_asset'
-  | 'asset_changed'
-  | 'asset_deleted'
-  // Scan events
-  | 'scan_started'
-  | 'scan_completed'
-  | 'scan_failed'
-  // Finding events
-  | 'new_finding'
-  | 'finding_confirmed'
-  | 'finding_triaged'
-  | 'finding_fixed'
-  | 'finding_reopened'
-  // Exposure events
-  | 'new_exposure'
-  | 'exposure_resolved'
-  // Legacy types (backward compatibility)
-  | 'findings'
-  | 'exposures'
-  | 'scans'
-  | 'alerts'
-
-/**
- * Event type info with metadata for UI display
- */
-export interface NotificationEventTypeInfo {
-  value: NotificationEventType
-  category: NotificationEventCategory
-  label: string
-  description: string
-  /** Module ID required for this event type (maps to modules.id). If undefined, always available. */
-  requiredModule?: string
-}
-
-/**
- * All known event types grouped by category
- * Each event type maps to a required module (from modules table)
- * System events have no requiredModule - always available
- */
-export const ALL_NOTIFICATION_EVENT_TYPES: NotificationEventTypeInfo[] = [
-  // System events - always available (no module required)
-  {
-    value: 'security_alert',
-    category: 'system',
-    label: 'Security Alert',
-    description: 'Security-related alerts and warnings',
-  },
-  {
-    value: 'system_error',
-    category: 'system',
-    label: 'System Error',
-    description: 'System errors and failures',
-  },
-  // Asset events - require 'assets' module
-  {
-    value: 'new_asset',
-    category: 'asset',
-    label: 'New Asset',
-    description: 'New asset discovered or added',
-    requiredModule: 'assets',
-  },
-  {
-    value: 'asset_changed',
-    category: 'asset',
-    label: 'Asset Changed',
-    description: 'Asset information changed',
-    requiredModule: 'assets',
-  },
-  {
-    value: 'asset_deleted',
-    category: 'asset',
-    label: 'Asset Deleted',
-    description: 'Asset removed from inventory',
-    requiredModule: 'assets',
-  },
-  // Scan events - require 'scans' module
-  {
-    value: 'scan_started',
-    category: 'scan',
-    label: 'Scan Started',
-    description: 'Scan job started',
-    requiredModule: 'scans',
-  },
-  {
-    value: 'scan_completed',
-    category: 'scan',
-    label: 'Scan Completed',
-    description: 'Scan job completed successfully',
-    requiredModule: 'scans',
-  },
-  {
-    value: 'scan_failed',
-    category: 'scan',
-    label: 'Scan Failed',
-    description: 'Scan job failed',
-    requiredModule: 'scans',
-  },
-  // Finding events - require 'findings' module
-  {
-    value: 'new_finding',
-    category: 'finding',
-    label: 'New Finding',
-    description: 'New security finding detected',
-    requiredModule: 'findings',
-  },
-  {
-    value: 'finding_confirmed',
-    category: 'finding',
-    label: 'Confirmed Finding',
-    description: 'Finding confirmed as valid',
-    requiredModule: 'findings',
-  },
-  {
-    value: 'finding_triaged',
-    category: 'finding',
-    label: 'Need Triage Finding',
-    description: 'Finding needs triage/review',
-    requiredModule: 'findings',
-  },
-  {
-    value: 'finding_fixed',
-    category: 'finding',
-    label: 'Fixed Finding',
-    description: 'Finding has been remediated',
-    requiredModule: 'findings',
-  },
-  {
-    value: 'finding_reopened',
-    category: 'finding',
-    label: 'Reopened Finding',
-    description: 'Finding reopened after fix',
-    requiredModule: 'findings',
-  },
-  // Exposure events - require 'findings' module (exposures are part of findings feature)
-  {
-    value: 'new_exposure',
-    category: 'exposure',
-    label: 'New Exposure',
-    description: 'New credential/data exposure detected',
-    requiredModule: 'findings',
-  },
-  {
-    value: 'exposure_resolved',
-    category: 'exposure',
-    label: 'Exposure Resolved',
-    description: 'Exposure has been resolved',
-    requiredModule: 'findings',
-  },
-]
-
-/**
- * Event category labels for UI grouping
- */
-export const EVENT_CATEGORY_LABELS: Record<NotificationEventCategory, string> = {
-  system: 'System Events',
-  asset: 'Asset Events',
-  scan: 'Scan Events',
-  finding: 'Finding Events',
-  exposure: 'Exposure Events',
-}
-
-/**
- * Default enabled event types for new notification channels
- */
-export const DEFAULT_ENABLED_EVENT_TYPES: NotificationEventType[] = [
-  'security_alert',
-  'new_finding',
-  'new_exposure',
-]
-
-/**
- * Filter event types based on enabled modules
- * @param enabledModuleIds - Array of module IDs that are enabled for the tenant
- * @returns Filtered array of event types that the tenant can use
- */
-export function getAvailableEventTypes(enabledModuleIds: string[]): NotificationEventTypeInfo[] {
-  return ALL_NOTIFICATION_EVENT_TYPES.filter((et) => {
-    // System events are always available (no module required)
-    if (!et.requiredModule) return true
-    // Check if required module is enabled for tenant
-    return enabledModuleIds.includes(et.requiredModule)
-  })
-}
-
-/**
- * Get default enabled event types filtered by available modules
- * @param enabledModuleIds - Array of module IDs that are enabled for the tenant
- * @returns Default event types that are available for the tenant
- */
-export function getDefaultEnabledEventTypes(enabledModuleIds: string[]): NotificationEventType[] {
-  const availableTypes = getAvailableEventTypes(enabledModuleIds)
-  const availableValues = new Set(availableTypes.map((t) => t.value))
-  return DEFAULT_ENABLED_EVENT_TYPES.filter((et) => availableValues.has(et))
-}
+export type NotificationEventCategory = string
 
 /**
  * Notification Extension - additional fields specific to notification integrations

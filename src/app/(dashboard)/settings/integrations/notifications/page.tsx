@@ -46,13 +46,13 @@ import {
 } from '@/features/integrations'
 import type { Integration } from '@/features/integrations'
 import { getErrorMessage } from '@/lib/api/error-handler'
+import { ALL_NOTIFICATION_SEVERITIES } from '@/features/integrations/types/integration.types'
 import {
-  ALL_NOTIFICATION_EVENT_TYPES,
-  ALL_NOTIFICATION_SEVERITIES,
-  DEFAULT_ENABLED_EVENT_TYPES,
-  EVENT_CATEGORY_LABELS,
-  type NotificationEventCategory,
-} from '@/features/integrations/types/integration.types'
+  useTenantEventTypes,
+  labelEventTypes,
+  type NotificationEventTypeInfo,
+  type NotificationEventCategoryInfo,
+} from '@/features/integrations/api/use-event-types'
 import { cn } from '@/lib/utils'
 import { SEVERITY_BADGE_SOFT, type SeverityLevel } from '@/lib/severity-colors'
 import { AddNotificationDialog } from '@/features/notifications/components/add-notification-dialog'
@@ -114,6 +114,40 @@ function ProviderIcon({ provider, className }: { provider: string; className?: s
   }
 }
 
+/**
+ * Group a channel's enabled event type identifiers into labelled category
+ * buckets, using the catalog the API returned.
+ *
+ * Identifiers with no catalog entry are kept under an "Other" bucket rather
+ * than dropped. The previous implementation did a `.find()` against a
+ * hardcoded array and skipped anything it did not recognise, so a channel
+ * routing `sla_breach` displayed as though it routed nothing — the display
+ * silently disagreed with what the backend would deliver.
+ */
+function summarizeEventTypes(
+  enabled: string[],
+  catalog: NotificationEventTypeInfo[],
+  categories: NotificationEventCategoryInfo[]
+): { category: string; label: string; labels: string[] }[] {
+  const labelled = labelEventTypes(enabled, catalog)
+  const byCategory = new Map<string, string[]>()
+  for (const { label, category } of labelled) {
+    const bucket = byCategory.get(category)
+    if (bucket) {
+      bucket.push(label)
+    } else {
+      byCategory.set(category, [label])
+    }
+  }
+
+  const categoryLabels = new Map(categories.map((c) => [c.category, c.label]))
+  return Array.from(byCategory.entries()).map(([category, labels]) => ({
+    category,
+    label: categoryLabels.get(category) ?? (category === 'unknown' ? 'Other' : category),
+    labels,
+  }))
+}
+
 export default function NotificationIntegrationsPage() {
   const router = useRouter()
   const [addDialogOpen, setAddDialogOpen] = useState(false)
@@ -123,6 +157,16 @@ export default function NotificationIntegrationsPage() {
   const [actionInProgress, setActionInProgress] = useState<string | null>(null)
 
   const { data: integrationsData, error, isLoading, mutate } = useNotificationIntegrationsApi()
+
+  // The event-type catalog is served by the API from the same registry the
+  // notification outbox routes on. Nothing about it is hardcoded here — see
+  // use-event-types.ts for why.
+  const {
+    eventTypes: eventTypeCatalog,
+    categories: eventCategories,
+    defaultEnabled: defaultEventTypes,
+    totalCount: eventTypeCount,
+  } = useTenantEventTypes()
 
   // Handle the API response format
   const integrations = useMemo(() => {
@@ -364,86 +408,55 @@ export default function NotificationIntegrationsPage() {
         enableSorting: false,
         cell: ({ row }) => {
           const ext = row.original.notification_extension
+          const enabled = ext?.enabled_event_types ?? defaultEventTypes
+          // "All events" only when the catalog has actually loaded — otherwise
+          // eventTypeCount is 0 and every channel would claim to route
+          // everything.
+          const isAll =
+            enabled.length === 0 || (eventTypeCount > 0 && enabled.length === eventTypeCount)
+          const groups = summarizeEventTypes(enabled, eventTypeCatalog, eventCategories)
+
           return (
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div className="flex gap-1 flex-wrap cursor-default">
-                    {(() => {
-                      const eventTypes = ext?.enabled_event_types ?? DEFAULT_ENABLED_EVENT_TYPES
-                      if (
-                        eventTypes.length === 0 ||
-                        eventTypes.length === ALL_NOTIFICATION_EVENT_TYPES.length
-                      ) {
-                        return <span className="text-xs text-muted-foreground">All events</span>
-                      }
-                      // Group by category and show summary
-                      const byCategory = new Map<NotificationEventCategory, string[]>()
-                      eventTypes.forEach((et) => {
-                        const config = ALL_NOTIFICATION_EVENT_TYPES.find((t) => t.value === et)
-                        if (config) {
-                          const cat = config.category
-                          if (!byCategory.has(cat)) byCategory.set(cat, [])
-                          byCategory.get(cat)!.push(config.label)
-                        }
-                      })
-                      // Show category badges with count
-                      const categories = Array.from(byCategory.entries())
-                      if (categories.length <= 2) {
-                        // Show category names with count
-                        return categories.map(([cat, items]) => (
-                          <Badge
-                            key={cat}
-                            variant="outline"
-                            className="text-xs bg-purple-500/10 text-purple-600 border-purple-200"
-                          >
-                            {EVENT_CATEGORY_LABELS[cat].replace(' Events', '')} ({items.length})
-                          </Badge>
-                        ))
-                      }
-                      // Show total count
-                      return (
+                    {isAll ? (
+                      <span className="text-xs text-muted-foreground">All events</span>
+                    ) : groups.length > 0 && groups.length <= 2 ? (
+                      groups.map((g) => (
                         <Badge
+                          key={g.category}
                           variant="outline"
-                          className="text-xs bg-purple-500/10 text-purple-600 border-purple-200"
+                          className="text-xs bg-primary/10 text-primary border-primary/20"
                         >
-                          {eventTypes.length} event types
+                          {g.label.replace(' Events', '')} ({g.labels.length})
                         </Badge>
-                      )
-                    })()}
+                      ))
+                    ) : (
+                      <Badge
+                        variant="outline"
+                        className="text-xs bg-primary/10 text-primary border-primary/20"
+                      >
+                        {enabled.length} event types
+                      </Badge>
+                    )}
                   </div>
                 </TooltipTrigger>
                 <TooltipContent side="bottom" className="max-w-[280px]">
                   <p className="text-xs font-medium mb-1">Event Types:</p>
-                  {(() => {
-                    const eventTypes = ext?.enabled_event_types ?? DEFAULT_ENABLED_EVENT_TYPES
-                    if (
-                      eventTypes.length === 0 ||
-                      eventTypes.length === ALL_NOTIFICATION_EVENT_TYPES.length
-                    ) {
-                      return (
-                        <p className="text-xs text-muted-foreground">All event types enabled</p>
-                      )
-                    }
-                    // Group by category for tooltip
-                    const byCategory = new Map<NotificationEventCategory, string[]>()
-                    eventTypes.forEach((et) => {
-                      const config = ALL_NOTIFICATION_EVENT_TYPES.find((t) => t.value === et)
-                      if (config) {
-                        const cat = config.category
-                        if (!byCategory.has(cat)) byCategory.set(cat, [])
-                        byCategory.get(cat)!.push(config.label)
-                      }
-                    })
-                    return Array.from(byCategory.entries()).map(([cat, items]) => (
-                      <div key={cat} className="mb-1 last:mb-0">
-                        <span className="text-xs font-medium">{EVENT_CATEGORY_LABELS[cat]}:</span>
+                  {isAll ? (
+                    <p className="text-xs text-muted-foreground">All event types enabled</p>
+                  ) : (
+                    groups.map((g) => (
+                      <div key={g.category} className="mb-1 last:mb-0">
+                        <span className="text-xs font-medium">{g.label}:</span>
                         <span className="text-xs text-muted-foreground ms-1">
-                          {items.join(', ')}
+                          {g.labels.join(', ')}
                         </span>
                       </div>
                     ))
-                  })()}
+                  )}
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -495,7 +508,16 @@ export default function NotificationIntegrationsPage() {
         },
       },
     ],
-    [router, handleTestNotification, handleEditClick, handleDeleteClick]
+    [
+      router,
+      handleTestNotification,
+      handleEditClick,
+      handleDeleteClick,
+      eventTypeCatalog,
+      eventCategories,
+      defaultEventTypes,
+      eventTypeCount,
+    ]
   )
 
   // Error state

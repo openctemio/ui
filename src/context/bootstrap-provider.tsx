@@ -337,7 +337,9 @@ export function useBootstrapModules() {
   return {
     moduleIds: data?.modules?.module_ids || [],
     modules: data?.modules?.modules || [],
-    eventTypes: data?.modules?.event_types || [],
+    // No eventTypes here: the bootstrap payload declared an `event_types` field
+    // the api never populated, so this was always []. The notification
+    // event-type catalog comes from `useTenantEventTypes()`.
     comingSoonModuleIds: data?.modules?.coming_soon_module_ids || [],
     betaModuleIds: data?.modules?.beta_module_ids || [],
     hasModule,
