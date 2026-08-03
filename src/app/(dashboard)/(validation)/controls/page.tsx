@@ -27,20 +27,35 @@ import {
 } from '@/components/ui/select'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Plus, Trash2, FlaskConical } from 'lucide-react'
-import { get, post, del, patch } from '@/lib/api/client'
+import { Plus, Trash2, FlaskConical, Link2 } from 'lucide-react'
+import { get, post, del } from '@/lib/api/client'
+import { getErrorMessage } from '@/lib/api/error-handler'
 import { Can, Permission } from '@/lib/permissions'
 import { toast } from 'sonner'
+import { LinkAssetsDialog } from '@/features/controls/components/link-assets-dialog'
+import {
+  CONTROL_TYPES,
+  MAX_REDUCTION_PERCENT,
+  MIN_REDUCTION_PERCENT,
+  TEST_RESULTS,
+  factorToPercent,
+  humanizeControlValue,
+  isValidReductionPercent,
+  percentToFactor,
+  type ControlStatus,
+  type ControlType,
+  type TestResult,
+} from '@/features/controls/vocabulary'
 
 interface CompensatingControl {
   id: string
   name: string
   description: string
-  control_type: 'preventive' | 'detective' | 'corrective' | 'compensating'
-  status: 'active' | 'inactive' | 'pending'
+  control_type: ControlType
+  status: ControlStatus
   reduction_factor: number
   last_tested_at: string | null
-  test_result: 'pass' | 'fail' | 'partial' | null
+  test_result: TestResult | null
   created_at: string
   updated_at: string
 }
@@ -52,23 +67,14 @@ interface PaginatedResponse {
   per_page: number
 }
 
-const controlTypeColors: Record<string, string> = {
-  preventive:
-    'bg-blue-500/10 text-blue-500 border-blue-500/20 dark:bg-blue-900/30 dark:text-blue-400',
-  detective:
-    'bg-purple-500/10 text-purple-500 border-purple-500/20 dark:bg-purple-900/30 dark:text-purple-400',
-  corrective:
-    'bg-orange-500/10 text-orange-500 border-orange-500/20 dark:bg-orange-900/30 dark:text-orange-400',
-  compensating:
-    'bg-green-500/10 text-green-500 border-green-500/20 dark:bg-green-900/30 dark:text-green-400',
-}
-
+// Control type is a category, not a risk level — a neutral badge is honest and
+// keeps this page free of hardcoded light/dark colour pairs.
 const statusColors: Record<string, string> = {
   active:
     'bg-green-500/10 text-green-500 border-green-500/20 dark:bg-green-900/30 dark:text-green-400',
   inactive: 'bg-muted text-muted-foreground',
-  pending:
-    'bg-yellow-500/10 text-yellow-500 border-yellow-500/20 dark:bg-yellow-900/30 dark:text-yellow-400',
+  expired: 'bg-destructive/10 text-destructive border-destructive/20',
+  untested: 'bg-muted text-muted-foreground',
 }
 
 const testResultColors: Record<string, string> = {
@@ -96,51 +102,75 @@ export default function CompensatingControlsPage() {
 
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [testControlId, setTestControlId] = useState<string | null>(null)
-  const [testResult, setTestResult] = useState<'pass' | 'fail' | 'partial'>('pass')
+  const [testResult, setTestResult] = useState<TestResult>('pass')
   const [deleteControl, setDeleteControl] = useState<CompensatingControl | null>(null)
+  const [linkControl, setLinkControl] = useState<CompensatingControl | null>(null)
+  const [isCreating, setIsCreating] = useState(false)
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    control_type: 'compensating' as CompensatingControl['control_type'],
-    reduction_factor: '20',
+    control_type: 'runtime' as ControlType,
+    // Percent as the operator types it; converted to the 0-1 fraction the API
+    // stores at the boundary in handleCreate.
+    reduction_percent: '20',
   })
 
   const resetForm = () => {
-    setFormData({ name: '', description: '', control_type: 'compensating', reduction_factor: '20' })
+    setFormData({
+      name: '',
+      description: '',
+      control_type: 'runtime',
+      reduction_percent: '20',
+    })
   }
 
   const handleCreate = async () => {
-    if (!formData.name) {
+    if (!formData.name.trim()) {
       toast.error('Please provide a control name')
       return
     }
+    const percent = Number(formData.reduction_percent)
+    if (!isValidReductionPercent(percent)) {
+      toast.error('Reduction must be between 1% and 100% — a 0% control would have no effect')
+      return
+    }
+    setIsCreating(true)
     try {
       await post('/api/v1/compensating-controls', {
-        name: formData.name,
+        name: formData.name.trim(),
         description: formData.description,
         control_type: formData.control_type,
-        reduction_factor: Number(formData.reduction_factor),
+        // The API takes a fraction (DECIMAL(3,2), CHECK 0..1), not a percent.
+        reduction_factor: percentToFactor(percent),
       })
       await mutate()
-      toast.success('Compensating control created')
+      toast.success('Compensating control created. Link assets to make it reduce their priority.')
       setIsCreateOpen(false)
       resetForm()
-    } catch {
-      toast.error('Failed to create control')
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Failed to create control'))
+    } finally {
+      setIsCreating(false)
     }
   }
 
   const handleRecordTest = async () => {
     if (!testControlId) return
     try {
-      await patch(`/api/v1/compensating-controls/${testControlId}/test`, {
+      // POST, not PATCH — the route is registered as POST /{id}/test and a
+      // PATCH returned 405, so recording a test never worked.
+      await post(`/api/v1/compensating-controls/${testControlId}/test`, {
         test_result: testResult,
       })
       await mutate()
-      toast.success('Test result recorded')
+      toast.success(
+        testResult === 'fail'
+          ? 'Test result recorded. A failed control is deactivated and stops reducing priority.'
+          : 'Test result recorded'
+      )
       setTestControlId(null)
-    } catch {
-      toast.error('Failed to record test result')
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Failed to record test result'))
     }
   }
 
@@ -151,8 +181,8 @@ export default function CompensatingControlsPage() {
       await mutate()
       toast.success('Control deleted')
       setDeleteControl(null)
-    } catch {
-      toast.error('Failed to delete control')
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Failed to delete control'))
     }
   }
 
@@ -167,9 +197,7 @@ export default function CompensatingControlsPage() {
         accessorKey: 'control_type',
         header: ({ column }) => <DataTableColumnHeader column={column} title="Type" />,
         cell: ({ row }) => (
-          <Badge variant="outline" className={controlTypeColors[row.original.control_type] || ''}>
-            {row.original.control_type}
-          </Badge>
+          <Badge variant="outline">{humanizeControlValue(row.original.control_type)}</Badge>
         ),
       },
       {
@@ -177,15 +205,20 @@ export default function CompensatingControlsPage() {
         header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
         cell: ({ row }) => (
           <Badge variant="outline" className={statusColors[row.original.status] || ''}>
-            {row.original.status}
+            {humanizeControlValue(row.original.status)}
           </Badge>
         ),
       },
       {
         accessorKey: 'reduction_factor',
         header: ({ column }) => <DataTableColumnHeader column={column} title="Reduction" />,
+        // The API stores a 0-1 fraction; render it as the percent the form
+        // accepts. Previously the raw fraction was suffixed with "%", so a
+        // stored 0.30 displayed as "0.3%".
         cell: ({ row }) => (
-          <span className="font-mono text-sm">{row.original.reduction_factor}%</span>
+          <span className="font-mono text-sm">
+            {factorToPercent(row.original.reduction_factor)}%
+          </span>
         ),
       },
       {
@@ -219,6 +252,10 @@ export default function CompensatingControlsPage() {
           return (
             <Can permission={Permission.CompensatingControlsWrite}>
               <div className="flex items-center justify-end gap-1">
+                <Button variant="ghost" size="sm" onClick={() => setLinkControl(control)}>
+                  <Link2 className="me-1 h-3 w-3" />
+                  Link Assets
+                </Button>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -252,7 +289,7 @@ export default function CompensatingControlsPage() {
       <Main>
         <PageHeader
           title="Compensating Controls"
-          description="Manage compensating controls that reduce finding risk scores"
+          description="Controls that hold down the priority of findings on the assets they protect. Link assets to a control to apply it."
         >
           <Can permission={Permission.CompensatingControlsWrite}>
             <Button size="sm" onClick={() => setIsCreateOpen(true)}>
@@ -275,7 +312,7 @@ export default function CompensatingControlsPage() {
               </div>
             ) : controls.length === 0 ? (
               <p className="text-muted-foreground text-center py-8 text-sm">
-                No compensating controls yet. Create one to get started.
+                No compensating controls yet. Create one, then link the assets it protects.
               </p>
             ) : (
               <DataTable columns={columns} data={controls} searchPlaceholder="Search controls..." />
@@ -318,7 +355,7 @@ export default function CompensatingControlsPage() {
                   onValueChange={(value) =>
                     setFormData({
                       ...formData,
-                      control_type: value as CompensatingControl['control_type'],
+                      control_type: value as ControlType,
                     })
                   }
                 >
@@ -326,31 +363,41 @@ export default function CompensatingControlsPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="preventive">Preventive</SelectItem>
-                    <SelectItem value="detective">Detective</SelectItem>
-                    <SelectItem value="corrective">Corrective</SelectItem>
-                    <SelectItem value="compensating">Compensating</SelectItem>
+                    {/* Driven from the shared vocabulary so the form cannot
+                        offer a value the backend rejects. */}
+                    {CONTROL_TYPES.map((type) => (
+                      <SelectItem key={type.value} value={type.value}>
+                        {type.label}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="reduction_factor">Reduction Factor (%)</Label>
+                <Label htmlFor="reduction_percent">Risk Reduction (%)</Label>
                 <Input
-                  id="reduction_factor"
+                  id="reduction_percent"
                   type="number"
-                  min="0"
-                  max="100"
-                  value={formData.reduction_factor}
-                  onChange={(e) => setFormData({ ...formData, reduction_factor: e.target.value })}
+                  min={MIN_REDUCTION_PERCENT}
+                  max={MAX_REDUCTION_PERCENT}
+                  value={formData.reduction_percent}
+                  onChange={(e) => setFormData({ ...formData, reduction_percent: e.target.value })}
                 />
               </div>
             </div>
+            <p className="text-muted-foreground text-xs">
+              A control caps the priority of findings on the assets you link to it — a protected
+              asset is held at P2 rather than P1. The percentage is recorded and shown as the
+              rationale; it does not currently scale the result further.
+            </p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsCreateOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleCreate}>Create</Button>
+            <Button onClick={handleCreate} disabled={isCreating}>
+              {isCreating ? 'Creating…' : 'Create'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -373,12 +420,20 @@ export default function CompensatingControlsPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="pass">Pass</SelectItem>
-                  <SelectItem value="fail">Fail</SelectItem>
-                  <SelectItem value="partial">Partial</SelectItem>
+                  {TEST_RESULTS.map((result) => (
+                    <SelectItem key={result} value={result}>
+                      {humanizeControlValue(result)}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
+            {testResult === 'fail' && (
+              <p className="text-muted-foreground text-xs">
+                Recording a failure deactivates this control — it will stop reducing the priority of
+                findings on its linked assets.
+              </p>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setTestControlId(null)}>
@@ -388,6 +443,15 @@ export default function CompensatingControlsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Link Assets — the only action that makes a control affect scoring */}
+      <LinkAssetsDialog
+        control={linkControl}
+        onOpenChange={(open) => !open && setLinkControl(null)}
+        onLinked={() => {
+          void mutate()
+        }}
+      />
 
       {/* Delete Confirmation */}
       <ConfirmDialog
