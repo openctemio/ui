@@ -46,7 +46,7 @@ export default function LicensesPage() {
   // Calculate total components (fallback to sum of license counts if stats not available)
   const totalComponents = useMemo(() => {
     if (stats?.total_components) return stats.total_components
-    if (licenseStats) return licenseStats.reduce((sum, l) => sum + l.count, 0)
+    if (licenseStats) return licenseStats.reduce((sum, l) => sum + (l.count ?? 0), 0)
     return 0
   }, [stats, licenseStats])
 
@@ -66,9 +66,9 @@ export default function LicensesPage() {
     licenseStats.forEach((l) => {
       const category = (l.category || 'unknown') as LicenseCategory
       if (categories[category]) {
-        categories[category].count += l.count
+        categories[category].count += l.count ?? 0
         if (categories[category].components.length < 5) {
-          categories[category].components.push(l.license_id)
+          categories[category].components.push(l.license_id ?? 'unknown')
         }
       }
     })
@@ -92,7 +92,7 @@ export default function LicensesPage() {
     licenseStats.forEach((l) => {
       const risk = (l.risk || 'unknown') as LicenseRisk
       if (risks[risk] !== undefined) {
-        risks[risk] += l.count
+        risks[risk] += l.count ?? 0
       }
     })
 

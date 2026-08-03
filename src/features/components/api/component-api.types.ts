@@ -4,6 +4,13 @@
  * Type definitions matching backend API responses
  * These are separate from the richer frontend types
  */
+import type {
+  ComponentResponse,
+  ComponentStats,
+  EcosystemStats,
+  LicenseStats,
+  VulnerableComponent,
+} from '@/lib/api/generated'
 
 // ============================================
 // API Response Types (match backend)
@@ -44,28 +51,14 @@ export type ApiDependencyType = 'direct' | 'transitive' | 'dev' | 'optional' | '
 export type ApiComponentStatus = 'active' | 'deprecated' | 'vulnerable' | 'outdated'
 
 /**
- * Component entity from API
+ * Component entity from API — GENERATED.
+ *
+ * The hand-written version omitted three fields the server does return:
+ * `depth`, `is_direct` and `parent_component_id`. That is the dependency-tree
+ * position of the component, which the UI could not see because the type did
+ * not mention it.
  */
-export interface ApiComponent {
-  id: string
-  tenant_id: string
-  asset_id: string
-  name: string
-  version: string
-  ecosystem: ApiComponentEcosystem
-  package_manager?: string
-  namespace?: string
-  manifest_file?: string
-  manifest_path?: string
-  dependency_type?: ApiDependencyType
-  license?: string
-  purl: string
-  vulnerability_count: number
-  status?: ApiComponentStatus
-  metadata?: Record<string, unknown>
-  created_at: string
-  updated_at: string
-}
+export type ApiComponent = ComponentResponse
 
 // ============================================
 // List Response Types
@@ -139,54 +132,26 @@ export interface ComponentApiFilters {
 /**
  * Component stats from API
  */
-export interface ApiComponentStats {
-  total_components: number
-  direct_dependencies: number
-  transitive_dependencies: number
-  vulnerable_components: number
-
-  // Extended stats
-  total_vulnerabilities: number
-  outdated_components: number
-  cisa_kev_components: number
-  vuln_by_severity: Record<string, number> // { critical: N, high: N, medium: N, low: N }
-  license_risks: Record<string, number> // { critical: N, high: N, medium: N, low: N, unknown: N }
-}
+export type ApiComponentStats = ComponentStats
 
 /**
  * Ecosystem stats from API
  */
-export interface ApiEcosystemStats {
-  ecosystem: string
-  total: number
-  vulnerable: number
-  outdated: number
-  manifest_file: string
-}
+export type ApiEcosystemStats = EcosystemStats
 
 /**
  * Vulnerable component with details from API
  */
-export interface ApiVulnerableComponent {
-  id: string
-  name: string
-  version: string
-  ecosystem: string
-  purl: string
-  license?: string
-
-  // Vulnerability breakdown
-  critical_count: number
-  high_count: number
-  medium_count: number
-  low_count: number
-  total_count: number
-  in_cisa_kev: boolean
-}
+export type ApiVulnerableComponent = VulnerableComponent
 
 /**
  * Asset that uses a given component (blast-radius reverse lookup).
  * Returned by GET /api/v1/components/{id}/assets.
+ *
+ * NOT GENERATED — that handler returns map[string]any, so the spec describes
+ * the response only as "an object". Same for ApiComponentVulnerability and all
+ * three list envelopes in this file. Generating them means giving those
+ * handlers real response structs on the server.
  */
 export interface ApiComponentAssetUsage {
   asset_id: string
@@ -254,11 +219,4 @@ export interface ApiComponentVulnerabilityListResponse {
 /**
  * License stats from API
  */
-export interface ApiLicenseStats {
-  license_id: string // SPDX identifier (e.g., MIT, Apache-2.0)
-  name: string // Human-readable name
-  category: string // permissive, copyleft, weak-copyleft, proprietary, public-domain, unknown
-  risk: string // critical, high, medium, low, none, unknown
-  url?: string | null // Link to license text (SPDX URL)
-  count: number // Number of components using this license
-}
+export type ApiLicenseStats = LicenseStats

@@ -6,6 +6,8 @@
 
 import type { AssetGroup, CreateAssetGroupInput, UpdateAssetGroupInput } from '../types'
 import type {
+  Criticality,
+  Environment,
   ApiAssetGroup,
   CreateAssetGroupApiInput,
   CreateAssetInGroupApiInput,
@@ -23,12 +25,17 @@ import type { GroupAsset, GroupFinding } from '../lib/mock-data'
  * Transform API AssetGroup to frontend AssetGroup
  */
 export function transformApiAssetGroup(api: ApiAssetGroup): AssetGroup {
+  // Every field of the generated wire type is optional — swag emits no
+  // `required` list for response structs, so the contract permits any of them
+  // to be absent. This transformer is already the API-to-view-model boundary,
+  // so the defaults belong here rather than in a type that just asserted the
+  // fields are always present.
   return {
-    id: api.id,
-    name: api.name,
+    id: api.id ?? '',
+    name: api.name ?? '',
     description: api.description,
-    environment: api.environment,
-    criticality: api.criticality,
+    environment: (api.environment ?? 'production') as Environment,
+    criticality: (api.criticality ?? 'medium') as Criticality,
 
     // Business Context
     businessUnit: api.business_unit,
@@ -37,22 +44,22 @@ export function transformApiAssetGroup(api: ApiAssetGroup): AssetGroup {
     tags: api.tags,
 
     // Asset counts
-    assetCount: api.asset_count,
-    domainCount: api.domain_count,
-    websiteCount: api.website_count,
-    serviceCount: api.service_count,
-    repositoryCount: api.repository_count,
-    projectCount: api.repository_count, // @deprecated, same as repositoryCount
-    cloudCount: api.cloud_count,
-    credentialCount: api.credential_count,
+    assetCount: api.asset_count ?? 0,
+    domainCount: api.domain_count ?? 0,
+    websiteCount: api.website_count ?? 0,
+    serviceCount: api.service_count ?? 0,
+    repositoryCount: api.repository_count ?? 0,
+    projectCount: api.repository_count ?? 0, // @deprecated, same as repositoryCount
+    cloudCount: api.cloud_count ?? 0,
+    credentialCount: api.credential_count ?? 0,
 
     // Risk metrics
-    riskScore: api.risk_score,
-    findingCount: api.finding_count,
+    riskScore: api.risk_score ?? 0,
+    findingCount: api.finding_count ?? 0,
 
     // Timestamps
-    createdAt: api.created_at,
-    updatedAt: api.updated_at,
+    createdAt: api.created_at ?? '',
+    updatedAt: api.updated_at ?? '',
   }
 }
 
@@ -80,13 +87,13 @@ export function transformApiGroupAsset(api: ApiGroupAsset): GroupAsset {
   }
 
   return {
-    id: api.id,
-    name: api.name,
-    type: typeMap[api.type] || 'host',
-    status: api.status,
-    riskScore: api.risk_score,
-    findingCount: api.finding_count,
-    lastSeen: api.last_seen,
+    id: api.id ?? '',
+    name: api.name ?? '',
+    type: typeMap[api.type ?? ''] || 'host',
+    status: (api.status ?? 'active') as GroupAsset['status'],
+    riskScore: api.risk_score ?? 0,
+    findingCount: api.finding_count ?? 0,
+    lastSeen: api.last_seen ?? '',
   }
 }
 
@@ -106,12 +113,12 @@ export function transformApiGroupFinding(api: ApiGroupFinding): GroupFinding {
   }
 
   return {
-    id: api.id,
-    title: api.title,
-    severity: api.severity,
-    status: statusMap[api.status] || 'open',
-    assetName: api.asset_name,
-    discoveredAt: api.discovered_at,
+    id: api.id ?? '',
+    title: api.title ?? '',
+    severity: (api.severity ?? 'info') as GroupFinding['severity'],
+    status: statusMap[api.status ?? ''] || 'open',
+    assetName: api.asset_name ?? '',
+    discoveredAt: api.discovered_at ?? '',
   }
 }
 

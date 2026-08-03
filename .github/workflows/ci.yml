@@ -32,6 +32,19 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # The API wire types in src/lib/api/generated are generated from
+      # src/lib/api/openapi/swagger.yaml. Hand-written ones are how the
+      # event-type picker came to fetch GET /api/v1/me/event-types — a path the
+      # OSS server never had — and how six notification event types ended up
+      # with no checkbox. This fails if the generated file was hand-edited or
+      # the vendored spec moved without regenerating.
+      #
+      # Unconditional on purpose: no `if:`, no base-ref lookup. It compares a
+      # committed file against a pure function of another committed file, so it
+      # gives the same answer on a push and on a pull request.
+      - name: Check generated API types match the spec
+        run: npm run check:api-types
+
       # Run all checks in parallel using &
       - name: Run type check
         run: npm run type-check

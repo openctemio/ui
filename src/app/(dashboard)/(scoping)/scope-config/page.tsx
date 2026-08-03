@@ -586,9 +586,9 @@ export default function ScopeConfigPage() {
 
   const openEditTarget = (target: ApiScopeTarget) => {
     setTargetForm({
-      type: target.target_type as ScopeTargetType,
-      pattern: target.pattern,
-      description: target.description,
+      type: (target.target_type ?? '') as ScopeTargetType,
+      pattern: target.pattern ?? '',
+      description: target.description ?? '',
       priority: target.priority ?? 0,
       tags: target.tags ?? [],
     })
@@ -673,9 +673,9 @@ export default function ScopeConfigPage() {
 
   const openEditExclusion = (exclusion: ApiScopeExclusion) => {
     setExclusionForm({
-      type: exclusion.exclusion_type as ScopeTargetType,
-      pattern: exclusion.pattern,
-      reason: exclusion.reason,
+      type: (exclusion.exclusion_type ?? '') as ScopeTargetType,
+      pattern: exclusion.pattern ?? '',
+      reason: exclusion.reason ?? '',
     })
     setEditExclusion(exclusion)
   }
@@ -792,8 +792,8 @@ export default function ScopeConfigPage() {
 
   const openEditSchedule = (schedule: ApiScanSchedule) => {
     setScheduleForm({
-      name: schedule.name,
-      type: schedule.scan_type as ScanType,
+      name: schedule.name ?? '',
+      type: (schedule.scan_type ?? '') as ScanType,
       targets: schedule.target_tags?.join(', ') || '',
       frequency: mapScheduleToFrequency(schedule),
       time: schedule.cron_expression || '',
@@ -1397,9 +1397,9 @@ export default function ScopeConfigPage() {
                         <TableRow key={target.id}>
                           <TableCell>
                             <div className="flex flex-wrap items-center gap-2">
-                              {targetTypeIcons[target.target_type]}
+                              {targetTypeIcons[target.target_type ?? '']}
                               <span className="text-sm capitalize">
-                                {target.target_type.replace('_', ' ')}
+                                {(target.target_type ?? '').replace('_', ' ')}
                               </span>
                             </div>
                           </TableCell>
@@ -1454,12 +1454,12 @@ export default function ScopeConfigPage() {
                     )}
                   </TableBody>
                 </Table>
-                {targetsData && targetsData.total_pages > 1 && (
+                {targetsData && (targetsData.total_pages ?? 0) > 1 && (
                   <Pagination
-                    currentPage={targetsData.page}
-                    totalPages={targetsData.total_pages}
+                    currentPage={targetsData.page ?? 1}
+                    totalPages={targetsData.total_pages ?? 0}
                     pageSize={targetPerPage}
-                    totalItems={targetsData.total}
+                    totalItems={targetsData.total ?? 0}
                     onPageChange={setTargetPage}
                     onPageSizeChange={(size) => {
                       setTargetPerPage(size)
@@ -1563,11 +1563,11 @@ export default function ScopeConfigPage() {
                         <TableRow key={exclusion.id}>
                           <TableCell>
                             <div className="flex flex-wrap items-center gap-2">
-                              {targetTypeIcons[exclusion.exclusion_type] || (
+                              {targetTypeIcons[exclusion.exclusion_type ?? ''] || (
                                 <Ban className="h-4 w-4" />
                               )}
                               <span className="text-sm capitalize">
-                                {exclusion.exclusion_type.replace('_', ' ')}
+                                {(exclusion.exclusion_type ?? '').replace('_', ' ')}
                               </span>
                             </div>
                           </TableCell>
@@ -1622,12 +1622,12 @@ export default function ScopeConfigPage() {
                     )}
                   </TableBody>
                 </Table>
-                {exclusionsData && exclusionsData.total_pages > 1 && (
+                {exclusionsData && (exclusionsData.total_pages ?? 0) > 1 && (
                   <Pagination
-                    currentPage={exclusionsData.page}
-                    totalPages={exclusionsData.total_pages}
+                    currentPage={exclusionsData.page ?? 1}
+                    totalPages={exclusionsData.total_pages ?? 0}
                     pageSize={exclusionPerPage}
-                    totalItems={exclusionsData.total}
+                    totalItems={exclusionsData.total ?? 0}
                     onPageChange={setExclusionPage}
                     onPageSizeChange={(size) => {
                       setExclusionPerPage(size)
@@ -1717,7 +1717,7 @@ export default function ScopeConfigPage() {
                       </TableRow>
                     ) : (
                       schedules.map((schedule) => {
-                        const typeConfig = scanTypeConfig[schedule.scan_type] || {
+                        const typeConfig = scanTypeConfig[schedule.scan_type ?? ''] || {
                           label: schedule.scan_type,
                           color: 'bg-gray-500/20 text-gray-400',
                         }
@@ -1806,12 +1806,12 @@ export default function ScopeConfigPage() {
                     )}
                   </TableBody>
                 </Table>
-                {schedulesData && schedulesData.total_pages > 1 && (
+                {schedulesData && (schedulesData.total_pages ?? 0) > 1 && (
                   <Pagination
-                    currentPage={schedulesData.page}
-                    totalPages={schedulesData.total_pages}
+                    currentPage={schedulesData.page ?? 1}
+                    totalPages={schedulesData.total_pages ?? 0}
                     pageSize={schedulePerPage}
-                    totalItems={schedulesData.total}
+                    totalItems={schedulesData.total ?? 0}
                     onPageChange={setSchedulePage}
                     onPageSizeChange={(size) => {
                       setSchedulePerPage(size)

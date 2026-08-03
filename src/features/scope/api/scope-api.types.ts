@@ -3,7 +3,20 @@
  *
  * Type definitions matching backend API responses for scope configuration
  * Following CTEM (Continuous Threat Exposure Management) Scoping phase
+ *
+ * The response shapes are GENERATED from the API's OpenAPI spec; only the
+ * request inputs and query filters are declared here.
  */
+import type {
+  ApiResponse,
+  Schemas,
+  ScanScheduleResponse,
+  ScopeBulkOperationResponse,
+  ScopeExclusionResponse,
+  ScopeMatchResponse,
+  ScopeStatsResponse,
+  ScopeTargetResponse,
+} from '@/lib/api/generated'
 
 // Types imported from '../types' are used for reference only - actual API values are strings
 
@@ -14,134 +27,25 @@
 // Note: These are used for frontend display; actual values come from backend as strings
 
 // ============================================
-// API Response Types
+// API Response Types — GENERATED
+//
+// Aliases into src/lib/api/generated; nothing here restates a field. The list
+// envelopes and PaginationLinks are named schemas on the server, so they are
+// aliased rather than re-declared.
 // ============================================
 
-/**
- * Scope Target entity from API
- */
-export interface ApiScopeTarget {
-  id: string
-  tenant_id: string
-  target_type: string
-  pattern: string
-  description: string
-  status: string
-  priority: number
-  tags?: string[]
-  created_by: string
-  created_at: string
-  updated_at: string
-}
+export type ApiScopeTarget = ScopeTargetResponse
+export type ApiScopeExclusion = ScopeExclusionResponse
+export type ApiScanSchedule = ScanScheduleResponse
+export type ApiScopeStats = ScopeStatsResponse
+export type ApiCheckScopeResponse = ScopeMatchResponse
+export type BulkOperationResponse = ScopeBulkOperationResponse
 
-/**
- * Scope Exclusion entity from API
- */
-export interface ApiScopeExclusion {
-  id: string
-  tenant_id: string
-  exclusion_type: string
-  pattern: string
-  reason: string
-  status: string
-  expires_at?: string
-  approved_by?: string
-  approved_at?: string
-  created_by: string
-  created_at: string
-  updated_at: string
-}
+export type PaginationLinks = Schemas['internal_infra_http_handler.PaginationLinks']
 
-/**
- * Scan Schedule entity from API
- */
-export interface ApiScanSchedule {
-  id: string
-  tenant_id: string
-  name: string
-  description?: string
-  scan_type: string
-  target_scope: string
-  target_ids?: string[]
-  target_tags?: string[]
-  scanner_configs?: Record<string, unknown>
-  schedule_type: string
-  cron_expression?: string
-  interval_hours?: number
-  enabled: boolean
-  last_run_at?: string
-  last_run_status?: string
-  next_run_at?: string
-  notify_on_completion: boolean
-  notify_on_findings: boolean
-  notification_channels?: string[]
-  created_by: string
-  created_at: string
-  updated_at: string
-}
-
-// ============================================
-// List Response Types
-// ============================================
-
-export interface PaginationLinks {
-  first?: string
-  prev?: string
-  next?: string
-  last?: string
-}
-
-export interface ApiScopeTargetListResponse {
-  data: ApiScopeTarget[]
-  total: number
-  page: number
-  per_page: number
-  total_pages: number
-  links?: PaginationLinks
-}
-
-export interface ApiScopeExclusionListResponse {
-  data: ApiScopeExclusion[]
-  total: number
-  page: number
-  per_page: number
-  total_pages: number
-  links?: PaginationLinks
-}
-
-export interface ApiScanScheduleListResponse {
-  data: ApiScanSchedule[]
-  total: number
-  page: number
-  per_page: number
-  total_pages: number
-  links?: PaginationLinks
-}
-
-// ============================================
-// Stats Response Types
-// ============================================
-
-export interface ApiScopeStats {
-  total_targets: number
-  total_exclusions: number
-  total_schedules: number
-  active_targets: number
-  active_exclusions: number
-  enabled_schedules: number
-  coverage: number
-}
-
-// ============================================
-// Check Scope Response Type
-// ============================================
-
-export interface ApiCheckScopeResponse {
-  in_scope: boolean
-  excluded: boolean
-  matched_target_ids: string[]
-  matched_exclusion_ids: string[]
-}
+export type ApiScopeTargetListResponse = ApiResponse<'/scope/targets', 'get'>
+export type ApiScopeExclusionListResponse = ApiResponse<'/scope/exclusions', 'get'>
+export type ApiScanScheduleListResponse = ApiResponse<'/scope/schedules', 'get'>
 
 /**
  * Input for checking if a value is in scope
@@ -291,11 +195,4 @@ export interface BulkUpdateTargetsInput {
     add_tags?: string[]
     remove_tags?: string[]
   }
-}
-
-export interface BulkOperationResponse {
-  success: boolean
-  affected_count: number
-  failed_ids?: string[]
-  errors?: Record<string, string>
 }

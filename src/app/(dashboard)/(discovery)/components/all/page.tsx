@@ -117,7 +117,8 @@ export default function AllComponentsPage() {
   // Fetch ecosystem list from API instead of hardcoding
   const { data: ecosystemStats } = useEcosystemStatsApi()
   const ecosystems = useMemo(
-    () => ecosystemStats?.map((e) => e.ecosystem).filter(Boolean) ?? [],
+    () =>
+      ecosystemStats?.map((e) => e.ecosystem).filter((eco): eco is string => Boolean(eco)) ?? [],
     [ecosystemStats]
   )
 
