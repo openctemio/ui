@@ -14,6 +14,12 @@
 # local checkout to run it offline; otherwise it fetches the branch named by
 # API_REF (default: develop, which is what openctemio/api ships from).
 #
+# Wired into ci.yml's quality job, unconditionally. It could not be wired when
+# this script was written, because the spec it vendors had not yet merged into
+# api's develop — a job that is red for a reason no UI change can fix is the
+# same "gate people route around" problem in reverse. openctemio/api#407 is now
+# merged and the check passes.
+#
 # Usage:
 #   scripts/check-spec-vendored.sh
 #   SPEC_SOURCE=../api/api/openapi/swagger.yaml scripts/check-spec-vendored.sh

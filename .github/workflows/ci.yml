@@ -45,6 +45,17 @@ jobs:
       - name: Check generated API types match the spec
         run: npm run check:api-types
 
+      # ...and the spec itself must still be the server's. The check above only
+      # proves the types match the vendored copy; it cannot see that the copy
+      # has fallen behind openctemio/api, which would leave the UI generating a
+      # faithful client for a server that has moved on — the same failure one
+      # hop further out.
+      #
+      # A fetch failure exits 2 rather than passing. When this goes red the fix
+      # is two commands, printed in the failure message.
+      - name: Vendored spec matches openctemio/api
+        run: npm run check:spec-vendored
+
       # Run all checks in parallel using &
       - name: Run type check
         run: npm run type-check
