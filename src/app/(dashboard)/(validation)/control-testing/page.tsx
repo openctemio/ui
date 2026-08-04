@@ -44,15 +44,19 @@ import {
   Clock,
   AlertTriangle,
   Plus,
+  FlaskConical,
 } from 'lucide-react'
 import {
   useControlTests,
   useControlTestStats,
   useCreateControlTest,
+  useRecordControlTestResult,
   useSimulations,
   type ControlTest,
   type FrameworkStats,
 } from '@/features/simulation/api/use-simulation-api'
+import { CONTROL_TEST_RESULTS } from '@/features/simulation/vocabulary'
+import { Can, Permission } from '@/lib/permissions'
 import { toast } from 'sonner'
 import { mutate } from 'swr'
 
@@ -193,6 +197,7 @@ function MitreCoverageTable({ coverage }: { coverage: MitreCoverage[] }) {
 
 function ControlTestRow({ ct }: { ct: ControlTest }) {
   const config = statusConfig[ct.status] ?? statusConfig.untested
+  const [recordOpen, setRecordOpen] = useState(false)
 
   return (
     <TableRow>
@@ -226,7 +231,135 @@ function ControlTestRow({ ct }: { ct: ControlTest }) {
       <TableCell className="text-muted-foreground text-sm">
         {ct.last_tested_at ? new Date(ct.last_tested_at).toLocaleDateString() : 'Never'}
       </TableCell>
+      <TableCell className="text-end">
+        <Can permission={Permission.PentestWrite}>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="cursor-pointer"
+            onClick={() => setRecordOpen(true)}
+            aria-label={`Record a test result for ${ct.name}`}
+          >
+            <FlaskConical className="size-4" />
+            <span className="ms-1 hidden sm:inline">Record result</span>
+          </Button>
+          <RecordResultDialog ct={ct} open={recordOpen} onOpenChange={setRecordOpen} />
+        </Can>
+      </TableCell>
     </TableRow>
+  )
+}
+
+// ─────────────────────────────────────────────────────────
+// Record test result dialog
+// ─────────────────────────────────────────────────────────
+
+function RecordResultDialog({
+  ct,
+  open,
+  onOpenChange,
+}: {
+  ct: ControlTest
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}) {
+  const [status, setStatus] = useState<string>('pass')
+  const [evidence, setEvidence] = useState('')
+  const [notes, setNotes] = useState('')
+
+  const { trigger: recordResult, isMutating } = useRecordControlTestResult(ct.id)
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    try {
+      await recordResult({ status, evidence, notes })
+      toast.success('Test result recorded')
+      await mutate(
+        (key: unknown) => typeof key === 'string' && key.startsWith('/api/v1/control-tests'),
+        undefined,
+        { revalidate: true }
+      )
+      onOpenChange(false)
+      setEvidence('')
+      setNotes('')
+      setStatus('pass')
+    } catch {
+      toast.error('Could not record the test result')
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Record test result</DialogTitle>
+          <DialogDescription>
+            {ct.name}
+            {ct.control_id ? ` · ${ct.control_id}` : ''}
+          </DialogDescription>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className="grid gap-4">
+          <div className="grid gap-2">
+            <Label htmlFor="ct-result">Result</Label>
+            <Select value={status} onValueChange={setStatus}>
+              <SelectTrigger id="ct-result" className="cursor-pointer">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {CONTROL_TEST_RESULTS.map((r) => (
+                  <SelectItem key={r.value} value={r.value} className="cursor-pointer">
+                    {r.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {ct.expected_result ? (
+            <div className="grid gap-1">
+              <Label className="text-muted-foreground text-xs">Expected result</Label>
+              <p className="text-sm">{ct.expected_result}</p>
+            </div>
+          ) : null}
+
+          <div className="grid gap-2">
+            <Label htmlFor="ct-evidence">Evidence</Label>
+            <Textarea
+              id="ct-evidence"
+              value={evidence}
+              onChange={(e) => setEvidence(e.target.value)}
+              placeholder="What was observed, and where it can be checked"
+              rows={3}
+            />
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="ct-notes">Notes</Label>
+            <Textarea
+              id="ct-notes"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={2}
+            />
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              className="cursor-pointer"
+              onClick={() => onOpenChange(false)}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isMutating} className="cursor-pointer">
+              {isMutating ? 'Recording…' : 'Record result'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   )
 }
 
@@ -616,6 +749,7 @@ export default function ControlTestingPage() {
                   <TableHead>Risk</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Last Tested</TableHead>
+                  <TableHead className="w-px text-end">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
