@@ -15,3 +15,10 @@ build
 *.log
 .DS_Store
 coverage
+
+# Vendored from openctemio/api. It must stay a byte-for-byte copy of the spec
+# the server generates, so that it can be diffed against the source of truth.
+# Prettier reformats YAML block sequences (`- $ref` indentation) and rewrote
+# 6,665 lines of it on the first commit, which would have made every future
+# re-vendor look like a contract change.
+src/lib/api/openapi/swagger.yaml

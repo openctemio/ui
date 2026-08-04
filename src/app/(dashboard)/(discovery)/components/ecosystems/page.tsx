@@ -126,17 +126,17 @@ export default function EcosystemsPage() {
       const query = sheetSearchQuery.toLowerCase()
       filtered = filtered.filter(
         (c) =>
-          c.name.toLowerCase().includes(query) ||
-          c.version.toLowerCase().includes(query) ||
+          c.name?.toLowerCase().includes(query) ||
+          c.version?.toLowerCase().includes(query) ||
           c.purl?.toLowerCase().includes(query)
       )
     }
 
     // Apply security filter
     if (securityFilter === 'vulnerable') {
-      filtered = filtered.filter((c) => c.vulnerability_count > 0)
+      filtered = filtered.filter((c) => (c.vulnerability_count ?? 0) > 0)
     } else if (securityFilter === 'secure') {
-      filtered = filtered.filter((c) => c.vulnerability_count === 0)
+      filtered = filtered.filter((c) => (c.vulnerability_count ?? 0) === 0)
     }
 
     return filtered
@@ -159,9 +159,9 @@ export default function EcosystemsPage() {
     if (!ecosystemStatsData) return []
     return ecosystemStatsData.map((e) => ({
       ecosystem: e.ecosystem as ComponentEcosystem,
-      count: e.total,
-      vulnerabilities: e.vulnerable,
-      outdated: e.outdated,
+      count: e.total ?? 0,
+      vulnerabilities: e.vulnerable ?? 0,
+      outdated: e.outdated ?? 0,
     }))
   }, [ecosystemStatsData])
 
@@ -658,8 +658,9 @@ export default function EcosystemsPage() {
                       <span className="text-sm text-muted-foreground">Vulnerable</span>
                     </div>
                     <p className="mt-1 text-2xl font-bold text-red-500">
-                      {ecosystemComponentsData?.data?.filter((c) => c.vulnerability_count > 0)
-                        .length ?? 0}
+                      {ecosystemComponentsData?.data?.filter(
+                        (c) => (c.vulnerability_count ?? 0) > 0
+                      ).length ?? 0}
                     </p>
                   </button>
                   <button
@@ -755,7 +756,7 @@ export default function EcosystemsPage() {
                               )}
                             </TableCell>
                             <TableCell className="text-end">
-                              {comp.vulnerability_count > 0 ? (
+                              {(comp.vulnerability_count ?? 0) > 0 ? (
                                 <TooltipProvider>
                                   <Tooltip>
                                     <TooltipTrigger asChild>

@@ -32,6 +32,30 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # The API wire types in src/lib/api/generated are generated from
+      # src/lib/api/openapi/swagger.yaml. Hand-written ones are how the
+      # event-type picker came to fetch GET /api/v1/me/event-types — a path the
+      # OSS server never had — and how six notification event types ended up
+      # with no checkbox. This fails if the generated file was hand-edited or
+      # the vendored spec moved without regenerating.
+      #
+      # Unconditional on purpose: no `if:`, no base-ref lookup. It compares a
+      # committed file against a pure function of another committed file, so it
+      # gives the same answer on a push and on a pull request.
+      - name: Check generated API types match the spec
+        run: npm run check:api-types
+
+      # ...and the spec itself must still be the server's. The check above only
+      # proves the types match the vendored copy; it cannot see that the copy
+      # has fallen behind openctemio/api, which would leave the UI generating a
+      # faithful client for a server that has moved on — the same failure one
+      # hop further out.
+      #
+      # A fetch failure exits 2 rather than passing. When this goes red the fix
+      # is two commands, printed in the failure message.
+      - name: Vendored spec matches openctemio/api
+        run: npm run check:spec-vendored
+
       # Run all checks in parallel using &
       - name: Run type check
         run: npm run type-check
@@ -46,8 +70,21 @@ jobs:
       # count grew 4,825 -> 5,323 in a month, so a cleanup without a gate regrows.
       # Only lines this branch adds are checked, so it names your lines rather
       # than a 5,000-line backlog.
+      # PR-only on purpose. This gate answers "what does this branch ADD", which
+      # only has meaning while there is a branch to answer for. After the merge
+      # the same lines are already in the base, so a push run re-asks a question
+      # nobody can act on — and on a push `github.base_ref` is empty, so the
+      # expression falls back to `develop` and diffs main against develop. Since
+      # release merges are squashed, main is not an ancestor of develop, the
+      # merge-base lands before the last release, and a month of already-gated
+      # code is reported as new. That is what turned main red after v0.4.0.
+      #
+      # Skipping here loses no coverage: every one of those lines was gated on
+      # the PR that introduced it. This is not the docker-scan shape, where a
+      # condition meant the scan never ran anywhere.
       - name: Check palette drift
-        run: bash scripts/check-palette-drift.sh "origin/${{ github.base_ref || 'develop' }}"
+        if: github.event_name == 'pull_request'
+        run: bash scripts/check-palette-drift.sh "origin/${{ github.base_ref }}"
 
   # ============================================
   # Test
