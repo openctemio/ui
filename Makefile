@@ -179,3 +179,15 @@ pre-commit-run:
 		echo "No .pre-commit-config.yaml found. This project uses Husky."; \
 		echo "Run 'make validate' instead."; \
 	fi
+
+## release-branch: build a release branch that can merge into main (VERSION=v0.5.0)
+##
+## Releases here are squash-merged, which leaves main with a single parent so git
+## cannot see that develop already contains it. The next release then reports
+## dozens of phantom conflicts. That has happened four times across this repo and
+## api. The script sidesteps the merge strategy instead of fighting it: the branch
+## carries develop's tree byte-for-byte plus one `merge -s ours` commit recording
+## main as a parent, so it merges cleanly whichever button anyone presses.
+release-branch:
+	@if [ -z "$(VERSION)" ]; then echo "usage: make release-branch VERSION=v0.5.0" >&2; exit 2; fi
+	@bash scripts/release-branch.sh "$(VERSION)"
