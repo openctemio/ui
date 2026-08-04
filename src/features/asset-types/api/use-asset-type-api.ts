@@ -116,15 +116,18 @@ export function assetTypeToScopeConfig(assetType: ApiAssetType) {
       pattern = /^.+$/
     }
   }
+  // The spec declares every response field optional, so `name` can be absent;
+  // it used to be read straight into .toLowerCase().
+  const label = assetType.name ?? assetType.code ?? ''
   return {
     type: assetType.code,
-    label: assetType.name,
+    label,
     icon: assetType.icon ?? 'FileQuestion',
     placeholder: assetType.pattern_placeholder ?? '',
     helpText: assetType.description ?? '',
     validation: {
       pattern,
-      message: `Invalid ${assetType.name.toLowerCase()} format`,
+      message: `Invalid ${label.toLowerCase()} format`,
     },
     supportsWildcard: assetType.supports_wildcard,
     supportsCIDR: assetType.supports_cidr,

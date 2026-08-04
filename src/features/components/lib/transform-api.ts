@@ -108,7 +108,10 @@ function detectLicenseCategory(licenseId?: string): LicenseCategory {
  * Transform API component to UI component type
  */
 export function transformApiComponent(api: ApiComponent): Component {
-  const ecosystem = mapEcosystem(api.ecosystem)
+  // Every field of the generated wire type is optional: swag emits no `required`
+  // list for response structs, so the contract permits any of them to be absent.
+  // This is the API-to-view-model boundary, so the defaults live here.
+  const ecosystem = mapEcosystem(api.ecosystem ?? '')
   const licenseCategory = detectLicenseCategory(api.license)
   const isDirect = api.dependency_type === 'direct'
 
@@ -116,12 +119,12 @@ export function transformApiComponent(api: ApiComponent): Component {
   const metadata = api.metadata || {}
 
   return {
-    id: api.id,
-    name: api.name,
-    version: api.version,
+    id: api.id ?? '',
+    name: api.name ?? '',
+    version: api.version ?? '',
     ecosystem,
     type: 'library' as ComponentType,
-    purl: api.purl,
+    purl: api.purl ?? '',
     description: (metadata.description as string) || undefined,
     homepage: (metadata.homepage as string) || undefined,
     repositoryUrl: (metadata.repository_url as string) || undefined,
@@ -147,10 +150,10 @@ export function transformApiComponent(api: ApiComponent): Component {
     author: (metadata.author as string) || undefined,
     publishedAt: (metadata.published_at as string) || undefined,
     status: 'active' as const,
-    firstSeen: api.created_at,
-    lastSeen: api.updated_at,
-    createdAt: api.created_at,
-    updatedAt: api.updated_at,
+    firstSeen: api.created_at ?? '',
+    lastSeen: api.updated_at ?? '',
+    createdAt: api.created_at ?? '',
+    updatedAt: api.updated_at ?? '',
   }
 }
 
@@ -327,34 +330,37 @@ function calculateRiskScore(critical: number, high: number, medium: number, low:
  * Used for the vulnerable components page
  */
 export function transformVulnerableComponent(api: ApiVulnerableComponent): Component {
-  const ecosystem = mapEcosystem(api.ecosystem)
+  // Every field of the generated wire type is optional (swag emits no `required`
+  // list), so an absent count has to read as zero rather than blow up the
+  // arithmetic and the placeholder vulnerabilities built from it.
+  const criticalCount = api.critical_count ?? 0
+  const highCount = api.high_count ?? 0
+  const mediumCount = api.medium_count ?? 0
+  const lowCount = api.low_count ?? 0
+
+  const ecosystem = mapEcosystem(api.ecosystem ?? '')
   const licenseCategory = detectLicenseCategory(api.license)
-  const riskScore = calculateRiskScore(
-    api.critical_count,
-    api.high_count,
-    api.medium_count,
-    api.low_count
-  )
+  const riskScore = calculateRiskScore(criticalCount, highCount, mediumCount, lowCount)
 
   // Create placeholder vulnerabilities to support UI features
   // The count tells us there are vulnerabilities, but we don't have full details
   const vulnerabilities: Component['vulnerabilities'] = []
 
   // Add a placeholder for each severity level to enable filtering
-  if (api.critical_count > 0) {
+  if (criticalCount > 0) {
     vulnerabilities.push({
       id: `${api.id}-critical`,
-      cveId: `${api.critical_count} Critical`,
+      cveId: `${criticalCount} Critical`,
       severity: 'critical',
       cvssScore: 9.5,
       cvssVector: null,
-      title: `${api.critical_count} critical vulnerabilities`,
+      title: `${criticalCount} critical vulnerabilities`,
       description: '',
       fixedVersion: null,
       fixAvailable: false,
       exploitAvailable: false,
       exploitMaturity: 'not-defined',
-      inCisaKev: api.in_cisa_kev,
+      inCisaKev: api.in_cisa_kev ?? false,
       epssScore: null,
       epssPercentile: null,
       references: [],
@@ -363,14 +369,14 @@ export function transformVulnerableComponent(api: ApiVulnerableComponent): Compo
     })
   }
 
-  if (api.high_count > 0) {
+  if (highCount > 0) {
     vulnerabilities.push({
       id: `${api.id}-high`,
-      cveId: `${api.high_count} High`,
+      cveId: `${highCount} High`,
       severity: 'high',
       cvssScore: 8.0,
       cvssVector: null,
-      title: `${api.high_count} high vulnerabilities`,
+      title: `${highCount} high vulnerabilities`,
       description: '',
       fixedVersion: null,
       fixAvailable: false,
@@ -388,12 +394,12 @@ export function transformVulnerableComponent(api: ApiVulnerableComponent): Compo
   const now = new Date().toISOString()
 
   return {
-    id: api.id,
-    name: api.name,
-    version: api.version,
+    id: api.id ?? '',
+    name: api.name ?? '',
+    version: api.version ?? '',
     ecosystem,
     type: 'library',
-    purl: api.purl,
+    purl: api.purl ?? '',
     description: undefined,
     homepage: undefined,
     repositoryUrl: undefined,
@@ -405,10 +411,10 @@ export function transformVulnerableComponent(api: ApiVulnerableComponent): Compo
     isOutdated: false,
     vulnerabilities,
     vulnerabilityCount: {
-      critical: api.critical_count,
-      high: api.high_count,
-      medium: api.medium_count,
-      low: api.low_count,
+      critical: criticalCount,
+      high: highCount,
+      medium: mediumCount,
+      low: lowCount,
       info: 0,
     },
     riskScore,

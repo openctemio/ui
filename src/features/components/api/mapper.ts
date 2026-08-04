@@ -6,6 +6,10 @@ import type { Status } from '@/features/shared/types'
  * Maps API component to UI component model
  */
 export function mapApiComponentToUi(apiComponent: ApiComponent): Component {
+  // Every field of the generated wire type is optional: swag emits no `required`
+  // list for response structs, so the contract permits any of them to be absent.
+  // This is the API-to-view-model boundary, so the defaults live here.
+
   // Default values for fields missing in API
   const defaultVulnerabilityCount = {
     critical: 0,
@@ -21,12 +25,12 @@ export function mapApiComponentToUi(apiComponent: ApiComponent): Component {
   // We'll leave it as 0s since we can't invent severity.
 
   return {
-    id: apiComponent.id,
-    name: apiComponent.name,
-    version: apiComponent.version,
-    ecosystem: (apiComponent.ecosystem as ComponentEcosystem) || 'active',
+    id: apiComponent.id ?? '',
+    name: apiComponent.name ?? '',
+    version: apiComponent.version ?? '',
+    ecosystem: (apiComponent.ecosystem ?? 'npm') as ComponentEcosystem,
     type: 'library', // Default type
-    purl: apiComponent.purl,
+    purl: apiComponent.purl ?? '',
     description: apiComponent.purl, // Fallback description
     homepage: undefined,
     repositoryUrl: undefined,
@@ -47,7 +51,7 @@ export function mapApiComponentToUi(apiComponent: ApiComponent): Component {
       ...defaultVulnerabilityCount,
       // If we simply want to show "there are vulnerabilities", we might hack this.
       // But better to be accurate.
-      low: apiComponent.vulnerability_count, // Temporary: dump all in low so they show up? Or just leave 0?
+      low: apiComponent.vulnerability_count ?? 0, // Temporary: dump all in low so they show up? Or just leave 0?
     },
     riskScore: 0,
 
@@ -56,11 +60,11 @@ export function mapApiComponentToUi(apiComponent: ApiComponent): Component {
     licenseCategory: 'unknown' as LicenseCategory,
     licenseRisk: 'unknown' as LicenseRisk,
 
-    status: (apiComponent.status as Status) || 'active',
+    status: (apiComponent.status ?? 'active') as Status,
 
-    firstSeen: apiComponent.created_at,
-    lastSeen: apiComponent.updated_at,
-    createdAt: apiComponent.created_at,
-    updatedAt: apiComponent.updated_at,
+    firstSeen: apiComponent.created_at ?? '',
+    lastSeen: apiComponent.updated_at ?? '',
+    createdAt: apiComponent.created_at ?? '',
+    updatedAt: apiComponent.updated_at ?? '',
   }
 }
