@@ -195,9 +195,7 @@ export function EditAgentDialog({ open, onOpenChange, agent, onSuccess }: EditAg
                     <FormItem>
                       <FormLabel>Status</FormLabel>
                       <div className="grid grid-cols-3 gap-2">
-                        {AGENT_STATUS_OPTIONS.filter((opt) =>
-                          ['active', 'inactive', 'pending'].includes(opt.value)
-                        ).map((option) => (
+                        {AGENT_STATUS_OPTIONS.map((option) => (
                           <div
                             key={option.value}
                             onClick={() => field.onChange(option.value)}
