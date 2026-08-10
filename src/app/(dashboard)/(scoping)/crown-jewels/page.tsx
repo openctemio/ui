@@ -276,8 +276,8 @@ export default function CrownJewelsPage() {
       // clobbering it; the designate form only collects notes, not a score.
       const selectedAsset = allAssets?.data?.find((a) => a.id === selectedAssetId)
       const existingScore = Number(
-        (selectedAsset?.properties as Record<string, unknown> | undefined)
-          ?.business_impact_score ?? 0
+        (selectedAsset?.properties as Record<string, unknown> | undefined)?.business_impact_score ??
+          0
       )
       await designate({
         assetId: selectedAssetId,

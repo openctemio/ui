@@ -1274,10 +1274,7 @@ export default function WorkflowsPage() {
 
                 <div className="flex gap-2">
                   <WorkflowRunButton workflow={selectedWorkflow} className="flex-1" />
-                  <Button
-                    variant="outline"
-                    onClick={() => handleEditInBuilder(selectedWorkflow)}
-                  >
+                  <Button variant="outline" onClick={() => handleEditInBuilder(selectedWorkflow)}>
                     <Pencil className="me-2 h-4 w-4" />
                     Edit
                   </Button>
