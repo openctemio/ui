@@ -1809,18 +1809,11 @@ function ConfigDetailSheet({ config, onClose: _onClose, onDelete }: ConfigDetail
 interface RunActionsCellProps {
   session: ScanSession
   onViewDetails: (session: ScanSession) => void
-  onStop: (session: ScanSession) => void
   onRetry: (session: ScanSession) => void
   isActioning?: boolean
 }
 
-function RunActionsCell({
-  session,
-  onViewDetails,
-  onStop,
-  onRetry,
-  isActioning,
-}: RunActionsCellProps) {
+function RunActionsCell({ session, onViewDetails, onRetry, isActioning }: RunActionsCellProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -1833,12 +1826,6 @@ function RunActionsCell({
           <Eye className="me-2 h-4 w-4" />
           View Details
         </DropdownMenuItem>
-        {session.status === 'running' && (
-          <DropdownMenuItem onClick={() => onStop(session)} disabled={isActioning}>
-            <XCircle className="me-2 h-4 w-4" />
-            Stop
-          </DropdownMenuItem>
-        )}
         {session.status === 'failed' && (
           <DropdownMenuItem onClick={() => onRetry(session)} disabled={isActioning}>
             <RefreshCw className="me-2 h-4 w-4" />
@@ -1933,18 +1920,10 @@ function RunsTab() {
     setSelectedSession(session)
   }, [])
 
-  const handleStopSession = useCallback(async (session: ScanSession) => {
-    setActioningSessionId(session.id)
-    try {
-      await post(`/api/v1/scan-sessions/${session.id}/stop`, {})
-      toast.success('Scan session stopped')
-      await invalidateScanSessionsCache()
-    } catch (err) {
-      toast.error(getErrorMessage(err, 'Failed to stop session'))
-    } finally {
-      setActioningSessionId(null)
-    }
-  }, [])
+  // NOTE: there is no "stop scan session" endpoint on the backend — the
+  // /api/v1/scan-sessions route group exposes only GET (list/stats/{id}) and
+  // DELETE. The former Stop control POSTed to a non-existent /stop route and
+  // always 404'd, so it has been removed rather than left as a dead action.
 
   const handleRetrySession = useCallback(async (session: ScanSession) => {
     setActioningSessionId(session.id)
@@ -2156,14 +2135,13 @@ function RunsTab() {
           <RunActionsCell
             session={row.original}
             onViewDetails={handleViewDetails}
-            onStop={handleStopSession}
             onRetry={handleRetrySession}
             isActioning={actioningSessionId === row.original.id}
           />
         ),
       },
     ],
-    [handleViewDetails, handleStopSession, handleRetrySession, actioningSessionId]
+    [handleViewDetails, handleRetrySession, actioningSessionId]
   )
 
   const table = useReactTable({
@@ -2448,7 +2426,6 @@ function RunsTab() {
           {selectedSession && (
             <SessionDetailSheet
               session={selectedSession}
-              onStop={handleStopSession}
               onRetry={handleRetrySession}
               isActioning={actioningSessionId === selectedSession.id}
             />
@@ -2465,12 +2442,11 @@ function RunsTab() {
 
 interface SessionDetailSheetProps {
   session: ScanSession
-  onStop: (session: ScanSession) => void
   onRetry: (session: ScanSession) => void
   isActioning?: boolean
 }
 
-function SessionDetailSheet({ session, onStop, onRetry, isActioning }: SessionDetailSheetProps) {
+function SessionDetailSheet({ session, onRetry, isActioning }: SessionDetailSheetProps) {
   // Get severity counts from findings_by_severity
   const severities = session.findings_by_severity ?? {}
   const criticalCount = severities.critical ?? 0
@@ -2578,22 +2554,6 @@ function SessionDetailSheet({ session, onStop, onRetry, isActioning }: SessionDe
 
         {/* Quick Actions */}
         <div className="flex gap-2 mt-4">
-          {session.status === 'running' && (
-            <Button
-              size="sm"
-              variant="destructive"
-              className="flex-1"
-              onClick={() => onStop(session)}
-              disabled={isActioning}
-            >
-              {isActioning ? (
-                <RefreshCw className="me-2 h-4 w-4 animate-spin" />
-              ) : (
-                <XCircle className="me-2 h-4 w-4" />
-              )}
-              Stop
-            </Button>
-          )}
           {session.status === 'failed' && (
             <Button
               size="sm"
