@@ -19,11 +19,17 @@ function componentLabel(name: string): string {
   return COMPONENT_LABEL[name] ?? name.replace(/_/g, ' ')
 }
 
-/** Score → traffic-light accent, dark-mode aware. */
+/**
+ * Score → traffic-light accent, dark-mode aware. There is no semantic
+ * success/warning token in theme.css (only `destructive`), so the
+ * green/amber bands use the same explicit palette pair the rest of the
+ * app's health scales use (e.g. validation-coverage-card). The low band
+ * uses the semantic `text-destructive` token.
+ */
 export function scoreTone(score: number): string {
-  if (score >= 80) return 'text-emerald-600 dark:text-emerald-400'
-  if (score >= 50) return 'text-amber-600 dark:text-amber-400'
-  return 'text-red-600 dark:text-red-400'
+  if (score >= 80) return 'text-emerald-600 dark:text-emerald-400' // palette-ok: health scale, no success token
+  if (score >= 50) return 'text-amber-600 dark:text-amber-400' // palette-ok: health scale, no warning token
+  return 'text-destructive'
 }
 
 function ComponentRow({ c }: { c: MaturityComponent }) {

@@ -68,6 +68,6 @@ describe('MaturityBreakdownCard', () => {
   it('scoreTone maps score bands to accents', () => {
     expect(scoreTone(90)).toContain('emerald')
     expect(scoreTone(60)).toContain('amber')
-    expect(scoreTone(20)).toContain('red')
+    expect(scoreTone(20)).toBe('text-destructive')
   })
 })
