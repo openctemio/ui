@@ -31,6 +31,12 @@ import { getErrorMessage } from '@/lib/api/error-handler'
 import { useCreateTenant } from '../api'
 import { createTenantSchema, generateSlug, type CreateTenantInput } from '../schemas'
 import { createFirstTeamAction } from '@/features/auth/actions/local-auth-actions'
+import {
+  useModulePresetsPublic,
+  subscribeBundlesRequest,
+  type ModulePreset,
+} from '@/features/organization/api/use-tenant-modules'
+import { OnboardingBundlePicker } from './onboarding-bundle-picker'
 
 interface CreateTeamFormProps {
   /** Whether to show cancel button (hide when shown in TenantGate) */
@@ -58,6 +64,37 @@ export function CreateTeamForm({
 }
 
 // ============================================
+// BUNDLE SELECTION (shared by both flows)
+// ============================================
+
+/**
+ * Loads the public product-bundle catalog and tracks the (optional) selection.
+ * Shared by both onboarding flows so the picker + subscribe behaviour stays
+ * identical whether it's a user's first team or an additional one. Uses the
+ * tenantless preset endpoint because the tenant doesn't exist yet at this point.
+ */
+function useBundleSelection() {
+  const { presets, isLoading } = useModulePresetsPublic()
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+
+  const toggle = useCallback((id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }, [])
+
+  return {
+    bundles: presets as ModulePreset[],
+    isLoadingBundles: isLoading,
+    selected,
+    toggle,
+  }
+}
+
+// ============================================
 // FIRST TEAM FORM (no TenantProvider needed)
 // ============================================
 
@@ -70,6 +107,7 @@ function CreateFirstTeamFormInner({
 }) {
   const [isSlugManuallyEdited, setIsSlugManuallyEdited] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const { bundles, isLoadingBundles, selected, toggle } = useBundleSelection()
 
   const form = useForm<CreateTenantInput>({
     resolver: zodResolver(createTenantSchema),
@@ -115,6 +153,11 @@ function CreateFirstTeamFormInner({
           description: `Welcome to ${result.tenant.name}!`,
         })
 
+        // createFirstTeamAction already set the access-token cookie for the new
+        // tenant, so this client-side subscribe is authorised. Non-blocking:
+        // the team exists regardless of whether this succeeds.
+        await subscribeSelectedBundles(result.tenant.id, [...selected])
+
         // Force full page reload to pick up new cookies
         window.location.href = '/'
       } else {
@@ -141,6 +184,10 @@ function CreateFirstTeamFormInner({
       isSubmitting={isSubmitting}
       isMutating={false}
       showCancel={showCancel}
+      bundles={bundles}
+      isLoadingBundles={isLoadingBundles}
+      selectedBundles={selected}
+      onToggleBundle={toggle}
     />
   )
 }
@@ -160,6 +207,7 @@ function CreateAdditionalTeamFormInner({
   const { trigger, isMutating } = useCreateTenant()
   const [isSlugManuallyEdited, setIsSlugManuallyEdited] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const { bundles, isLoadingBundles, selected, toggle } = useBundleSelection()
 
   const form = useForm<CreateTenantInput>({
     resolver: zodResolver(createTenantSchema),
@@ -226,6 +274,11 @@ function CreateAdditionalTeamFormInner({
           devLog.error('[CreateTeamForm] Switch team error:', switchError)
         }
 
+        // Subscribe to the chosen products now that switch-team has scoped the
+        // access token to the new tenant. Non-blocking: the team exists
+        // regardless of whether this succeeds.
+        await subscribeSelectedBundles(result.id, [...selected])
+
         // Force full page reload to pick up new cookies and refresh all state
         window.location.href = '/'
       }
@@ -251,6 +304,10 @@ function CreateAdditionalTeamFormInner({
       isMutating={isMutating}
       showCancel={showCancel}
       onCancel={() => router.back()}
+      bundles={bundles}
+      isLoadingBundles={isLoadingBundles}
+      selectedBundles={selected}
+      onToggleBundle={toggle}
     />
   )
 }
@@ -269,6 +326,10 @@ interface CreateTeamFormUIProps {
   isMutating: boolean
   showCancel: boolean
   onCancel?: () => void
+  bundles: ModulePreset[]
+  isLoadingBundles: boolean
+  selectedBundles: Set<string>
+  onToggleBundle: (id: string) => void
 }
 
 function CreateTeamFormUI({
@@ -281,6 +342,10 @@ function CreateTeamFormUI({
   isMutating,
   showCancel,
   onCancel,
+  bundles,
+  isLoadingBundles,
+  selectedBundles,
+  onToggleBundle,
 }: CreateTeamFormUIProps) {
   // No Card wrapper, no duplicate title, no icon clutter on labels.
   // The page-level <h1> already says "Set up your first team" — the form
@@ -364,6 +429,16 @@ function CreateTeamFormUI({
           )}
         />
 
+        {/* Products — optional. Narrow the platform to the products this team
+            runs, or leave empty to start with everything on (the default). */}
+        <OnboardingBundlePicker
+          bundles={bundles}
+          selected={selectedBundles}
+          onToggle={onToggleBundle}
+          isLoading={isLoadingBundles}
+          disabled={isMutating || isSubmitting}
+        />
+
         {/* Action row — primary button is full-width when there's no Cancel
             (onboarding case) so the next step is unmistakable. With Cancel,
             buttons share the row. No icon on the Create button — the text
@@ -403,6 +478,26 @@ function CreateTeamFormUI({
 // ============================================
 // HELPERS
 // ============================================
+
+/**
+ * Subscribes the freshly-created tenant to the chosen product bundles. An empty
+ * selection is the default (every module on), so we skip the call entirely.
+ *
+ * Best-effort by design: the tenant is already created and the user is about to
+ * be redirected in, so a failure here must never block. We surface a
+ * non-blocking toast and let them set products later in Settings → Products.
+ */
+async function subscribeSelectedBundles(tenantIdOrSlug: string, bundleIds: string[]) {
+  if (bundleIds.length === 0) return
+  try {
+    await subscribeBundlesRequest(tenantIdOrSlug, bundleIds)
+  } catch (error) {
+    devLog.error('[CreateTeamForm] Bundle subscription failed (non-blocking):', error)
+    toast.warning('Team created, but your product selection could not be applied', {
+      description: 'You can choose products anytime in Settings → Products.',
+    })
+  }
+}
 
 function handleFormError(error: unknown, form: UseFormReturn<CreateTenantInput>) {
   const errorMessage = getErrorMessage(error, 'An unexpected error occurred. Please try again.')
