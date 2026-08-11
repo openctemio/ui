@@ -108,7 +108,7 @@ export function DryRunDialog({ open, onOpenChange, rule }: DryRunDialogProps) {
     : null
 
   useEffect(() => {
-    if (!open || !rule) {
+    if (!open || !ruleKey) {
       setState({ status: 'idle' })
       return
     }
@@ -116,10 +116,13 @@ export function DryRunDialog({ open, onOpenChange, rule }: DryRunDialogProps) {
     let cancelled = false
     setState({ status: 'loading' })
 
-    post<DryRunResult>(DRY_RUN_ENDPOINT, {
-      conditions: rule.conditions,
-      priority_class: rule.priority_class,
-    })
+    // ruleKey is the serialized predicate set; parsing it here rather than
+    // reading `rule` keeps the effect's dependencies exact — it re-runs only
+    // when the dialog opens or the rule's predicates change, not on every
+    // parent render that hands us a new `rule` object identity.
+    const payload = JSON.parse(ruleKey) as Pick<DryRunRule, 'conditions' | 'priority_class'>
+
+    post<DryRunResult>(DRY_RUN_ENDPOINT, payload)
       .then((result) => {
         if (cancelled) return
         setState({ status: 'done', result })
@@ -134,9 +137,6 @@ export function DryRunDialog({ open, onOpenChange, rule }: DryRunDialogProps) {
     return () => {
       cancelled = true
     }
-    // `rule` is captured through the stable `ruleKey`; re-running on the object
-    // identity alone would refetch on every parent render.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, ruleKey])
 
   if (!rule) return null
