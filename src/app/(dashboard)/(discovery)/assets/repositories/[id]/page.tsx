@@ -619,6 +619,7 @@ function transformToRepositoryView(asset: ApiAssetResponse): RepositoryView {
 }
 
 import { cn, sanitizeExternalUrl } from '@/lib/utils'
+import { useModuleEnabled } from '@/features/integrations/api/use-tenant-modules'
 import { SEVERITY_DOT_COLORS } from '@/lib/severity-colors'
 import { copyToClipboard } from '@/lib/clipboard'
 import { Can, Permission } from '@/lib/permissions'
@@ -2423,10 +2424,25 @@ export default function RepositoryDetailPage() {
   const searchParams = useSearchParams()
   const urlTab = searchParams.get('tab') as DetailTab | null
   const urlBranch = searchParams.get('branch')
+
+  // The Branches tab belongs to the `branches` module (Phase-3 gated). When the
+  // tenant has it disabled its endpoint 403s, so we must not show the tab nor
+  // fetch it. Fail-open when the platform reports no modules (OSS edition).
+  const branchesEnabled = useModuleEnabled('branches')
+  const isTabEnabled = useCallback(
+    (tab: DetailTab) => tab !== 'branches' || branchesEnabled,
+    [branchesEnabled]
+  )
+
   const [activeTab, setActiveTabState] = useState<DetailTab>(urlTab || 'overview')
-  // Sync tab state when URL changes (e.g. from branch click)
-  if (urlTab && urlTab !== activeTab) {
+  // Sync tab state when URL changes (e.g. from branch click), ignoring tabs
+  // whose module is disabled.
+  if (urlTab && urlTab !== activeTab && isTabEnabled(urlTab)) {
     setActiveTabState(urlTab)
+  }
+  // If the active tab's module got disabled, fall back to a safe default tab.
+  if (!isTabEnabled(activeTab)) {
+    setActiveTabState('overview')
   }
   const setActiveTab = useCallback(
     (tab: DetailTab) => {
@@ -2451,9 +2467,10 @@ export default function RepositoryDetailPage() {
     mutate: mutateRepo,
   } = useRepository(repositoryId)
 
-  // Fetch branches from API
+  // Fetch branches from API — skipped entirely when the `branches` module is
+  // disabled (endpoint would 403 MODULE_NOT_ENABLED).
   const { data: branchesData, isLoading: _branchesLoading } = useRepositoryBranches(
-    repositoryData ? repositoryId : null
+    repositoryData && branchesEnabled ? repositoryId : null
   )
 
   // Transform API response to RepositoryView
@@ -2745,13 +2762,15 @@ export default function RepositoryDetailPage() {
               <Layers className="h-4 w-4" />
               Overview
             </TabsTrigger>
-            <TabsTrigger value="branches" className="gap-2">
-              <GitBranch className="h-4 w-4" />
-              Branches
-              <Badge variant="secondary" className="ms-1 h-5 px-1.5">
-                {branches.length}
-              </Badge>
-            </TabsTrigger>
+            {branchesEnabled && (
+              <TabsTrigger value="branches" className="gap-2">
+                <GitBranch className="h-4 w-4" />
+                Branches
+                <Badge variant="secondary" className="ms-1 h-5 px-1.5">
+                  {branches.length}
+                </Badge>
+              </TabsTrigger>
+            )}
             <TabsTrigger value="findings" className="gap-2">
               <Shield className="h-4 w-4" />
               Findings
@@ -2780,19 +2799,21 @@ export default function RepositoryDetailPage() {
           </TabsContent>
 
           <TabsContent value="branches">
-            <BranchesTab
-              branches={branches}
-              repositoryName={repository.name}
-              repositoryId={repositoryId}
-              onViewBranchFindings={(branchName) => {
-                setActiveTab('findings')
-                // Branch filter will be picked up by FindingsTab
-                const params = new URLSearchParams(window.location.search)
-                params.set('tab', 'findings')
-                params.set('branch', branchName)
-                router.replace(`?${params.toString()}`, { scroll: false })
-              }}
-            />
+            {branchesEnabled && (
+              <BranchesTab
+                branches={branches}
+                repositoryName={repository.name}
+                repositoryId={repositoryId}
+                onViewBranchFindings={(branchName) => {
+                  setActiveTab('findings')
+                  // Branch filter will be picked up by FindingsTab
+                  const params = new URLSearchParams(window.location.search)
+                  params.set('tab', 'findings')
+                  params.set('branch', branchName)
+                  router.replace(`?${params.toString()}`, { scroll: false })
+                }}
+              />
+            )}
           </TabsContent>
 
           <TabsContent value="findings">

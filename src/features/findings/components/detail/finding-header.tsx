@@ -28,6 +28,7 @@ import { getErrorMessage } from '@/lib/api/error-handler'
 import { sanitizeExternalUrl } from '@/lib/utils'
 import { useTenant } from '@/context/tenant-provider'
 import { useCVEEnrichment } from '@/features/threat-intel/hooks'
+import { useModuleEnabled } from '@/features/integrations/api/use-tenant-modules'
 import { EPSSScoreBadge } from '@/features/shared/components/epss-score-badge'
 import { KEVIndicatorBadge } from '@/features/shared/components/kev-indicator-badge'
 import { AITriageButton } from '@/features/ai-triage/components'
@@ -138,8 +139,16 @@ export function FindingHeader({
     setAssigneeState(newAssignee)
   }
 
-  // Fetch EPSS/KEV data if finding has CVE
-  const { epss, kev } = useCVEEnrichment(currentTenant?.id || null, finding.cve || null)
+  // Fetch EPSS/KEV data if finding has CVE. The enrichment endpoint belongs to
+  // the (Phase-3 gated) threat_intel module; when disabled it 403s, so skip the
+  // fetch entirely by passing a null CVE — the EPSS/KEV badges below already
+  // render only when `epss`/`kev` are present, so they self-hide. Fail-open on
+  // OSS (no modules reported).
+  const threatIntelEnabled = useModuleEnabled('threat_intel')
+  const { epss, kev } = useCVEEnrichment(
+    currentTenant?.id || null,
+    threatIntelEnabled ? finding.cve || null : null
+  )
 
   const handleStatusChange = async (newStatus: FindingStatus, skipUndo = false) => {
     // Skip if selecting the same status

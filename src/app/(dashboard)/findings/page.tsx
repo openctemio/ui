@@ -87,6 +87,7 @@ import { copyToClipboard } from '@/lib/clipboard'
 import { getErrorMessage } from '@/lib/api/error-handler'
 import { patch, post, del, csrfFetch } from '@/lib/api/client'
 import { usePermissions } from '@/context/permission-provider'
+import { useModuleEnabled } from '@/features/integrations/api/use-tenant-modules'
 
 // ============================================
 // Transform API Finding to UI Finding
@@ -320,6 +321,12 @@ function FindingsContent() {
     priority?: string
   } | null>(null)
   const { hasPermission } = usePermissions()
+  // Both are Phase-3 gated modules embedded in this (findings) page: the "Create
+  // Jira Ticket" action hits the integrations module, and "Add to remediation"
+  // hits the remediation module. Hide + skip-fetch when disabled (fail-open on
+  // OSS where no modules are reported).
+  const remediationEnabled = useModuleEnabled('remediation')
+  const integrationsEnabled = useModuleEnabled('integrations')
   const pendingCount = usePendingVerificationCount()
 
   // Statuses hidden from default dashboard view (pentest WIP, not ready for visibility)
@@ -976,11 +983,13 @@ function FindingsContent() {
                   <CheckCircle className="me-2 h-4 w-4" />
                   Change Status
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleRowAction('create_ticket', finding)}>
-                  <Ticket className="me-2 h-4 w-4" />
-                  Create Jira Ticket
-                </DropdownMenuItem>
-                {hasPermission('findings:remediation:write') && (
+                {integrationsEnabled && (
+                  <DropdownMenuItem onClick={() => handleRowAction('create_ticket', finding)}>
+                    <Ticket className="me-2 h-4 w-4" />
+                    Create Jira Ticket
+                  </DropdownMenuItem>
+                )}
+                {hasPermission('findings:remediation:write') && remediationEnabled && (
                   <DropdownMenuItem onClick={() => handleRowAction('remediate', finding)}>
                     <Wrench className="me-2 h-4 w-4" />
                     Add to remediation
@@ -1021,7 +1030,14 @@ function FindingsContent() {
     return hasAnyPriority
       ? cols
       : cols.filter((c) => !('accessorKey' in c) || c.accessorKey !== 'priorityClass')
-  }, [handleRowAction, handleRowClick, hasPermission, hasAnyPriority])
+  }, [
+    handleRowAction,
+    handleRowClick,
+    hasPermission,
+    hasAnyPriority,
+    remediationEnabled,
+    integrationsEnabled,
+  ])
 
   // Error state
   if (error) {
@@ -1337,7 +1353,7 @@ function FindingsContent() {
                         if (user) void handleBulkAssign(user.id)
                       }}
                     />
-                    {hasPermission('findings:remediation:write') && (
+                    {hasPermission('findings:remediation:write') && remediationEnabled && (
                       <Button
                         variant="outline"
                         size="sm"
@@ -1494,16 +1510,21 @@ function FindingsContent() {
         />
       )}
 
-      <LinkFindingsToRemediationDialog
-        open={!!remedContext}
-        onOpenChange={(open) => {
-          if (!open) setRemedContext(null)
-        }}
-        findingIds={remedContext?.ids ?? []}
-        suggestedName={remedContext?.name}
-        suggestedPriority={remedContext?.priority}
-        onDone={() => setSelectedFindingIds([])}
-      />
+      {/* Mounted only while open: the dialog fetches remediation campaigns on
+          mount, so keeping it always-mounted would fire that (gated-module)
+          request on every Findings page load. */}
+      {remedContext && (
+        <LinkFindingsToRemediationDialog
+          open={!!remedContext}
+          onOpenChange={(open) => {
+            if (!open) setRemedContext(null)
+          }}
+          findingIds={remedContext?.ids ?? []}
+          suggestedName={remedContext?.name}
+          suggestedPriority={remedContext?.priority}
+          onDone={() => setSelectedFindingIds([])}
+        />
+      )}
 
       {/* Finding Quick View Drawer */}
       <FindingDetailDrawer
