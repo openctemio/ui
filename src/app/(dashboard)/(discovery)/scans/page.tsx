@@ -94,7 +94,6 @@ import {
   useBulkDisableScanConfigs,
   useBulkDeleteScanConfigs,
   invalidateScanConfigsCache,
-  invalidateScanSessionsCache,
 } from '@/lib/api/scan-hooks'
 import type { ScanSession, ScanRunStatus } from '@/lib/api/scan-types'
 import { post, del } from '@/lib/api/client'
@@ -1809,15 +1808,13 @@ function ConfigDetailSheet({ config, onClose: _onClose, onDelete }: ConfigDetail
 interface RunActionsCellProps {
   session: ScanSession
   onViewDetails: (session: ScanSession) => void
-  onRetry: (session: ScanSession) => void
-  isActioning?: boolean
 }
 
-function RunActionsCell({ session, onViewDetails, onRetry, isActioning }: RunActionsCellProps) {
+function RunActionsCell({ session, onViewDetails }: RunActionsCellProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="sm" className="h-8 w-8 p-0" disabled={isActioning}>
+        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
           <MoreHorizontal className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
@@ -1826,12 +1823,6 @@ function RunActionsCell({ session, onViewDetails, onRetry, isActioning }: RunAct
           <Eye className="me-2 h-4 w-4" />
           View Details
         </DropdownMenuItem>
-        {session.status === 'failed' && (
-          <DropdownMenuItem onClick={() => onRetry(session)} disabled={isActioning}>
-            <RefreshCw className="me-2 h-4 w-4" />
-            Retry
-          </DropdownMenuItem>
-        )}
         {session.status === 'completed' && session.findings_total > 0 && (
           <DropdownMenuItem asChild>
             <Link href={`/findings?scan_id=${session.id}`}>
@@ -1912,31 +1903,16 @@ function RunsTab() {
     [stats]
   )
 
-  // Action states
-  const [actioningSessionId, setActioningSessionId] = useState<string | null>(null)
-
   // Handlers
   const handleViewDetails = useCallback((session: ScanSession) => {
     setSelectedSession(session)
   }, [])
 
-  // NOTE: there is no "stop scan session" endpoint on the backend — the
-  // /api/v1/scan-sessions route group exposes only GET (list/stats/{id}) and
-  // DELETE. The former Stop control POSTed to a non-existent /stop route and
-  // always 404'd, so it has been removed rather than left as a dead action.
-
-  const handleRetrySession = useCallback(async (session: ScanSession) => {
-    setActioningSessionId(session.id)
-    try {
-      await post(`/api/v1/scan-sessions/${session.id}/retry`, {})
-      toast.success('Scan session retry started')
-      await invalidateScanSessionsCache()
-    } catch (err) {
-      toast.error(getErrorMessage(err, 'Failed to retry session'))
-    } finally {
-      setActioningSessionId(null)
-    }
-  }, [])
+  // NOTE: the /api/v1/scan-sessions route group exposes only GET (list/stats/
+  // {id}) and DELETE — there is no /stop and no /retry endpoint. The former Stop
+  // and Retry controls POSTed to non-existent routes and always 404'd, so both
+  // have been removed rather than left as dead actions. (The /{id}/retry route
+  // that does exist belongs to the notification-outbox group, not scan sessions.)
 
   // Export handlers
   const handleExportCSV = useCallback(() => {
@@ -2132,16 +2108,11 @@ function RunsTab() {
       {
         id: 'actions',
         cell: ({ row }) => (
-          <RunActionsCell
-            session={row.original}
-            onViewDetails={handleViewDetails}
-            onRetry={handleRetrySession}
-            isActioning={actioningSessionId === row.original.id}
-          />
+          <RunActionsCell session={row.original} onViewDetails={handleViewDetails} />
         ),
       },
     ],
-    [handleViewDetails, handleRetrySession, actioningSessionId]
+    [handleViewDetails]
   )
 
   const table = useReactTable({
@@ -2423,13 +2394,7 @@ function RunsTab() {
           <VisuallyHidden>
             <SheetTitle>Session Details</SheetTitle>
           </VisuallyHidden>
-          {selectedSession && (
-            <SessionDetailSheet
-              session={selectedSession}
-              onRetry={handleRetrySession}
-              isActioning={actioningSessionId === selectedSession.id}
-            />
-          )}
+          {selectedSession && <SessionDetailSheet session={selectedSession} />}
         </SheetContent>
       </Sheet>
     </>
@@ -2442,11 +2407,9 @@ function RunsTab() {
 
 interface SessionDetailSheetProps {
   session: ScanSession
-  onRetry: (session: ScanSession) => void
-  isActioning?: boolean
 }
 
-function SessionDetailSheet({ session, onRetry, isActioning }: SessionDetailSheetProps) {
+function SessionDetailSheet({ session }: SessionDetailSheetProps) {
   // Get severity counts from findings_by_severity
   const severities = session.findings_by_severity ?? {}
   const criticalCount = severities.critical ?? 0
@@ -2554,21 +2517,6 @@ function SessionDetailSheet({ session, onRetry, isActioning }: SessionDetailShee
 
         {/* Quick Actions */}
         <div className="flex gap-2 mt-4">
-          {session.status === 'failed' && (
-            <Button
-              size="sm"
-              className="flex-1"
-              onClick={() => onRetry(session)}
-              disabled={isActioning}
-            >
-              {isActioning ? (
-                <RefreshCw className="me-2 h-4 w-4 animate-spin" />
-              ) : (
-                <RefreshCw className="me-2 h-4 w-4" />
-              )}
-              Retry
-            </Button>
-          )}
           {session.status === 'completed' && session.findings_total > 0 && (
             <Button asChild size="sm" className="flex-1">
               <Link href={`/findings?scan_id=${session.id}`}>
