@@ -399,11 +399,27 @@ export function useModuleBundles(tenantIdOrSlug: string | undefined) {
   }
 }
 
-async function subscribeBundles(url: string, { arg }: { arg: { bundle_ids: string[] } }) {
+function postBundleSubscription(url: string, bundleIds: string[]) {
   return fetcherWithOptions<TenantModuleListResponse>(url, {
     method: 'POST',
-    body: JSON.stringify(arg),
+    body: JSON.stringify({ bundle_ids: bundleIds }),
   })
+}
+
+async function subscribeBundles(url: string, { arg }: { arg: { bundle_ids: string[] } }) {
+  return postBundleSubscription(url, arg.bundle_ids)
+}
+
+/**
+ * Imperative bundle subscription — the same POST the {@link useSubscribeBundles}
+ * mutation performs, but callable outside a hook binding. Onboarding needs this:
+ * the tenant doesn't exist at render time, so the SWR-mutation key can't be
+ * bound to its id until after creation. Both paths hit the same endpoint through
+ * the same shared client (CSRF handled), so the catalog + write path stay a
+ * single source of truth.
+ */
+export function subscribeBundlesRequest(tenantIdOrSlug: string, bundleIds: string[]) {
+  return postBundleSubscription(tenantEndpoints.modulesBundles(tenantIdOrSlug), bundleIds)
 }
 
 /**

@@ -29,7 +29,7 @@ import { cn } from '@/lib/utils'
 import { getErrorMessage } from '@/lib/api/error-handler'
 import { useModuleBundles, useSubscribeBundles } from '../api/use-tenant-modules'
 
-const BUNDLE_ICONS: Record<string, LucideIcon> = {
+export const BUNDLE_ICONS: Record<string, LucideIcon> = {
   Package,
   Database,
   ShieldAlert,
