@@ -3,22 +3,17 @@
 /**
  * Dry-run preview dialog for a priority rule.
  *
- * Shows the operator what WOULD happen if this rule became active,
- * without actually re-classifying any finding. Preview is computed
- * from the rule's conditions against the findings list — only the
- * subset of conditions that map to existing finding-list filters
- * (severity, status) is honoured client-side. Other predicates
- * (is_in_kev, epss_score, asset_is_crown_jewel, compensating
- * controls) require server-side evaluation and are flagged in the
- * UI as "approximate — backend evaluates the full predicate".
- *
- * A future POST /priority-rules/{id}/dry-run endpoint will return an
- * exact match count + sample; when it ships, this dialog swaps its
- * client-side heuristic for the endpoint response.
+ * Shows the operator EXACTLY what would happen if this rule became active,
+ * without actually re-classifying any finding. The preview is computed by the
+ * backend engine (POST /api/v1/priority-rules/dry-run), which evaluates the
+ * full predicate set — severity, EPSS, KEV, asset context, compensating
+ * controls — the same way a live classification sweep would. The dialog is
+ * intentionally decoupled from the persisted rule entity (see {@link DryRunRule})
+ * so an in-progress, unsaved form can be previewed too: it sends the current
+ * conditions + target class, not a rule id.
  */
 
-import { useMemo } from 'react'
-import useSWR from 'swr'
+import { useEffect, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -31,9 +26,11 @@ import {
 } from '@/components/ui/dialog'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Skeleton } from '@/components/ui/skeleton'
-import { get } from '@/lib/api/client'
+import { cn } from '@/lib/utils'
+import { post } from '@/lib/api/client'
 import { PriorityClassBadge } from '@/features/findings/components/priority-class-badge'
-import { AlertTriangle, FlaskConical, ListChecks, CheckCircle2 } from 'lucide-react'
+import { SEVERITY_BADGE_SOFT, type SeverityLevel } from '@/lib/severity-colors'
+import { AlertTriangle, ArrowRight, FlaskConical, ListChecks } from 'lucide-react'
 import type { PriorityClass } from '@/features/findings/types/finding.types'
 
 type FieldKey =
@@ -61,42 +58,38 @@ export interface DryRunRule {
   conditions: Condition[]
 }
 
-interface FindingsListResponse {
-  data?: Array<{ id: string; title: string; severity: string; priority_class?: PriorityClass }>
-  total?: number
+interface DryRunSample {
+  finding_id: string
+  title: string
+  severity: string
+  current_class: PriorityClass
+  would_be_class: PriorityClass
 }
 
-// Only these condition fields map 1:1 to existing findings list
-// filters. Everything else is labelled "server-evaluated" in the UI.
-const CLIENT_EVALUABLE: FieldKey[] = ['severity']
-
-function buildApproximateFilter(conditions: Condition[]): URLSearchParams {
-  const params = new URLSearchParams()
-  // Only open statuses (new, confirmed, in_progress, fix_applied) —
-  // closed findings are not candidates for future reclassification.
-  params.set('exclude_statuses', 'resolved,verified,false_positive,accepted,duplicate')
-  for (const c of conditions) {
-    if (c.field !== 'severity') continue
-    // `eq` → include just that severity.
-    if (c.operator === 'eq' && typeof c.value === 'string' && c.value) {
-      params.append('severities', c.value)
-      continue
-    }
-    // `in` (array) → include each.
-    if (c.operator === 'in' && Array.isArray(c.value)) {
-      for (const v of c.value) {
-        if (typeof v === 'string') params.append('severities', v)
-      }
-    }
-  }
-  params.set('per_page', '10')
-  params.set('page', '1')
-  return params
+// Response of POST /api/v1/priority-rules/dry-run.
+export interface DryRunResult {
+  evaluated: number
+  matched: number
+  capped: boolean
+  cap: number
+  sample: DryRunSample[]
+  would_be_distribution: Partial<Record<PriorityClass, number>>
 }
 
-function serverOnlyConditions(conditions: Condition[]): Condition[] {
-  return conditions.filter((c) => !CLIENT_EVALUABLE.includes(c.field))
+const DRY_RUN_ENDPOINT = '/api/v1/priority-rules/dry-run'
+const PRIORITY_ORDER: PriorityClass[] = ['P0', 'P1', 'P2', 'P3']
+
+/** Map a raw severity string to its centralized soft-tint badge classes. */
+function severityBadgeClass(severity: string): string {
+  const key = severity.toLowerCase() as SeverityLevel
+  return SEVERITY_BADGE_SOFT[key] ?? SEVERITY_BADGE_SOFT.info
 }
+
+type FetchState =
+  | { status: 'idle' }
+  | { status: 'loading' }
+  | { status: 'error'; message: string }
+  | { status: 'done'; result: DryRunResult }
 
 interface DryRunDialogProps {
   open: boolean
@@ -105,27 +98,48 @@ interface DryRunDialogProps {
 }
 
 export function DryRunDialog({ open, onOpenChange, rule }: DryRunDialogProps) {
-  const params = useMemo(() => {
-    if (!rule) return null
-    return buildApproximateFilter(rule.conditions).toString()
-  }, [rule])
+  const [state, setState] = useState<FetchState>({ status: 'idle' })
 
-  const { data, isLoading } = useSWR<FindingsListResponse>(
-    open && params ? `/api/v1/findings?${params}` : null,
-    get,
-    { revalidateOnFocus: false }
-  )
+  // Re-run whenever the dialog opens for a (possibly different) rule. Keyed on
+  // the serialized predicate set so re-opening the same rule doesn't refetch,
+  // and an edited in-progress rule does.
+  const ruleKey = rule
+    ? JSON.stringify({ conditions: rule.conditions, priority_class: rule.priority_class })
+    : null
 
-  const serverOnly = useMemo(() => (rule ? serverOnlyConditions(rule.conditions) : []), [rule])
-  const clientConditions = useMemo(
-    () => (rule ? rule.conditions.filter((c) => CLIENT_EVALUABLE.includes(c.field)) : []),
-    [rule]
-  )
+  useEffect(() => {
+    if (!open || !rule) {
+      setState({ status: 'idle' })
+      return
+    }
+
+    let cancelled = false
+    setState({ status: 'loading' })
+
+    post<DryRunResult>(DRY_RUN_ENDPOINT, {
+      conditions: rule.conditions,
+      priority_class: rule.priority_class,
+    })
+      .then((result) => {
+        if (cancelled) return
+        setState({ status: 'done', result })
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return
+        const message =
+          err instanceof Error ? err.message : 'Failed to evaluate the rule. Please try again.'
+        setState({ status: 'error', message })
+      })
+
+    return () => {
+      cancelled = true
+    }
+    // `rule` is captured through the stable `ruleKey`; re-running on the object
+    // identity alone would refetch on every parent render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, ruleKey])
 
   if (!rule) return null
-
-  const matchCount = data?.total ?? data?.data?.length ?? 0
-  const hasServerOnlyConditions = serverOnly.length > 0
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -147,106 +161,17 @@ export function DryRunDialog({ open, onOpenChange, rule }: DryRunDialogProps) {
             <PriorityClassBadge priorityClass={rule.priority_class} />
           </div>
 
-          {/* Approximate match count */}
-          <div className="rounded-md border p-4">
-            <div className="mb-2 flex items-center gap-2 text-sm font-medium">
-              <ListChecks className="size-4 text-neutral-500" />
-              Approximate impact (open findings only)
-            </div>
-            {isLoading ? (
-              <Skeleton className="h-8 w-32" />
-            ) : (
-              <div className="flex items-baseline gap-2">
-                <span className="text-2xl font-bold tabular-nums">{matchCount}</span>
-                <span className="text-muted-foreground text-sm">
-                  finding{matchCount === 1 ? '' : 's'} match the client-evaluable predicates
-                </span>
-              </div>
-            )}
-            {clientConditions.length > 0 ? (
-              <div className="mt-3 flex flex-wrap gap-1">
-                {clientConditions.map((c, i) => (
-                  <Badge key={i} variant="outline" className="text-xs">
-                    {c.field} {c.operator} {String(c.value)}
-                  </Badge>
-                ))}
-              </div>
-            ) : (
-              <p className="text-muted-foreground mt-2 text-xs">
-                No client-evaluable predicates in this rule — preview count is total open findings.
-              </p>
-            )}
-          </div>
-
-          {/* Server-only predicates warning */}
-          {hasServerOnlyConditions ? (
-            <Alert variant="default" className="border-amber-300 bg-amber-50">
-              <AlertTriangle className="size-4 text-amber-700" />
-              <AlertTitle className="text-amber-900">Approximate preview</AlertTitle>
-              <AlertDescription className="text-amber-800">
-                <p className="mb-2">
-                  This rule uses predicates the UI cannot evaluate client-side. The backend looks
-                  these up at classification time (EPSS, KEV, asset context, compensating controls).
-                  The real match count will likely be smaller than {matchCount}.
-                </p>
-                <div className="flex flex-wrap gap-1">
-                  {serverOnly.map((c, i) => (
-                    <Badge
-                      key={i}
-                      variant="outline"
-                      className="border-amber-300 bg-white text-xs text-amber-900"
-                    >
-                      {c.field} {c.operator} {String(c.value)}
-                    </Badge>
-                  ))}
-                </div>
-              </AlertDescription>
+          {state.status === 'loading' ? (
+            <LoadingState />
+          ) : state.status === 'error' ? (
+            <Alert variant="destructive">
+              <AlertTriangle className="size-4" />
+              <AlertTitle>Could not evaluate the rule</AlertTitle>
+              <AlertDescription>{state.message}</AlertDescription>
             </Alert>
+          ) : state.status === 'done' ? (
+            <ResultView result={state.result} targetClass={rule.priority_class} />
           ) : null}
-
-          {/* Sample findings */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-sm font-medium">
-              <CheckCircle2 className="size-4 text-neutral-500" />
-              Sample findings (up to 10)
-            </div>
-            {isLoading ? (
-              <div className="space-y-2">
-                {[0, 1, 2].map((i) => (
-                  <Skeleton key={i} className="h-10 w-full" />
-                ))}
-              </div>
-            ) : data?.data && data.data.length > 0 ? (
-              <ul className="max-h-64 space-y-1 overflow-y-auto rounded-md border p-2">
-                {data.data.map((f) => (
-                  <li
-                    key={f.id}
-                    className="flex items-center justify-between rounded px-2 py-1 text-sm hover:bg-neutral-50"
-                  >
-                    <span className="truncate pe-2">{f.title}</span>
-                    <div className="flex shrink-0 items-center gap-1">
-                      <Badge variant="outline" className="text-[10px]">
-                        {f.severity}
-                      </Badge>
-                      {f.priority_class ? (
-                        <PriorityClassBadge priorityClass={f.priority_class} />
-                      ) : null}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-muted-foreground text-sm">
-                No matching findings in the current open set.
-              </p>
-            )}
-          </div>
-
-          <p className="text-muted-foreground border-t pt-3 text-xs">
-            Dry run is a preview only. To actually change priorities, save the rule and trigger a
-            reclassification sweep from the Cycles page (admin). A future server-side dry-run
-            endpoint will return exact counts for rules with EPSS / KEV / asset predicates.
-          </p>
         </div>
 
         <DialogFooter>
@@ -259,5 +184,120 @@ export function DryRunDialog({ open, onOpenChange, rule }: DryRunDialogProps) {
   )
 }
 
-// Exported for unit tests.
-export { buildApproximateFilter, serverOnlyConditions, CLIENT_EVALUABLE }
+function LoadingState() {
+  return (
+    <div className="space-y-4" aria-busy="true" aria-label="Evaluating rule">
+      <div className="rounded-md border p-4">
+        <Skeleton className="mb-3 h-4 w-40" />
+        <Skeleton className="h-8 w-56" />
+      </div>
+      <div className="space-y-2">
+        {[0, 1, 2].map((i) => (
+          <Skeleton key={i} className="h-10 w-full" />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function ResultView({ result, targetClass }: { result: DryRunResult; targetClass: PriorityClass }) {
+  const { evaluated, matched, capped, cap, sample, would_be_distribution } = result
+
+  // Nothing to evaluate — no open findings were in scope at all.
+  if (evaluated === 0) {
+    return (
+      <div className="rounded-md border border-dashed p-6 text-center">
+        <ListChecks className="text-muted-foreground mx-auto mb-2 size-6" />
+        <p className="text-sm font-medium">No findings to evaluate</p>
+        <p className="text-muted-foreground mt-1 text-xs">
+          There are no findings in scope for this rule right now, so it would have no effect.
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <>
+      {/* Exact impact */}
+      <div className="rounded-md border p-4">
+        <div className="text-muted-foreground mb-2 flex items-center gap-2 text-sm font-medium">
+          <ListChecks className="size-4" />
+          Impact
+        </div>
+        <div className="flex items-baseline gap-2">
+          <span className="text-2xl font-bold tabular-nums">{matched}</span>
+          <span className="text-muted-foreground text-sm">
+            of <span className="tabular-nums">{evaluated}</span> finding
+            {evaluated === 1 ? '' : 's'} would be reclassified to{' '}
+            <PriorityClassBadge priorityClass={targetClass} showTooltip={false} />
+          </span>
+        </div>
+      </div>
+
+      {/* Would-be distribution */}
+      {matched > 0 ? (
+        <div className="rounded-md border p-4">
+          <div className="text-muted-foreground mb-3 text-sm font-medium">
+            Would-be priority distribution
+          </div>
+          <div className="flex flex-wrap gap-3">
+            {PRIORITY_ORDER.map((pc) => (
+              <div key={pc} className="flex items-center gap-1.5">
+                <PriorityClassBadge priorityClass={pc} showTooltip={false} />
+                <span className="text-sm font-semibold tabular-nums">
+                  {would_be_distribution[pc] ?? 0}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {/* Sample findings */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between text-sm font-medium">
+          <span>Sample findings</span>
+          {capped ? (
+            <span className="text-muted-foreground text-xs font-normal">
+              Showing first <span className="tabular-nums">{sample.length}</span> of{' '}
+              <span className="tabular-nums">{matched}</span> matches (capped at{' '}
+              <span className="tabular-nums">{cap}</span>)
+            </span>
+          ) : null}
+        </div>
+        {sample.length > 0 ? (
+          <ul className="max-h-64 space-y-1 overflow-y-auto rounded-md border p-2">
+            {sample.map((f) => (
+              <li
+                key={f.finding_id}
+                className="hover:bg-muted flex items-center justify-between rounded px-2 py-1.5 text-sm"
+              >
+                <span className="truncate pe-2">{f.title}</span>
+                <div className="flex shrink-0 items-center gap-1.5">
+                  <Badge
+                    variant="outline"
+                    className={cn('text-[10px] uppercase', severityBadgeClass(f.severity))}
+                  >
+                    {f.severity}
+                  </Badge>
+                  <PriorityClassBadge priorityClass={f.current_class} showTooltip={false} />
+                  <ArrowRight className="text-muted-foreground size-3" aria-label="becomes" />
+                  <PriorityClassBadge priorityClass={f.would_be_class} showTooltip={false} />
+                </div>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-muted-foreground rounded-md border border-dashed p-4 text-center text-sm">
+            No findings match this rule — nothing would be reclassified.
+          </p>
+        )}
+      </div>
+
+      <p className="text-muted-foreground border-t pt-3 text-xs">
+        Dry run is a preview only. To actually change priorities, save the rule and trigger a
+        reclassification sweep from the Cycles page (admin).
+      </p>
+    </>
+  )
+}
