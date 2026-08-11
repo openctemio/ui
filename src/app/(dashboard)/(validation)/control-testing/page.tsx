@@ -56,6 +56,7 @@ import {
   type FrameworkStats,
 } from '@/features/simulation/api/use-simulation-api'
 import { CONTROL_TEST_RESULTS } from '@/features/simulation/vocabulary'
+import { useModuleEnabled } from '@/features/integrations/api/use-tenant-modules'
 import { Can, Permission } from '@/lib/permissions'
 import { toast } from 'sonner'
 import { mutate } from 'swr'
@@ -635,7 +636,11 @@ export default function ControlTestingPage() {
 
   const { data: testsData, isLoading: testsLoading, mutate: reloadTests } = useControlTests()
   const { data: statsData, isLoading: statsLoading } = useControlTestStats()
-  const { data: simulationsData } = useSimulations()
+  // The MITRE coverage panel is derived from the (Phase-3 gated) attack_simulation
+  // module. When it's disabled the /simulations fetch 403s — skip it and hide the
+  // panel. Fail-open on OSS (no modules reported).
+  const simulationEnabled = useModuleEnabled('attack_simulation')
+  const { data: simulationsData } = useSimulations({ enabled: simulationEnabled })
 
   const isLoading = testsLoading || statsLoading
 
@@ -727,8 +732,8 @@ export default function ControlTestingPage() {
         </div>
       )}
 
-      {/* MITRE ATT&CK Coverage from simulations */}
-      <MitreCoverageTable coverage={mitreCoverage} />
+      {/* MITRE ATT&CK Coverage from simulations — only when attack_simulation is enabled */}
+      {simulationEnabled && <MitreCoverageTable coverage={mitreCoverage} />}
 
       {/* Control Tests Table */}
       <Card className="mt-6">

@@ -70,6 +70,7 @@ import { AssigneeSelect } from './assignee-select'
 import { StatusSelect } from './status-select'
 import { SeveritySelect } from './severity-select'
 import { CreateTicketDialog } from './create-ticket-dialog'
+import { useModuleEnabled } from '@/features/integrations/api/use-tenant-modules'
 import { useTenant } from '@/context/tenant-provider'
 import { useMembers } from '@/features/organization/api/use-members'
 
@@ -198,6 +199,9 @@ export function FindingDetailDrawer({
   const [showCommentInput, setShowCommentInput] = useState(false)
   const [showAllAssets, setShowAllAssets] = useState(false)
   const [ticketOpen, setTicketOpen] = useState(false)
+  // The Jira "Create Ticket" action belongs to the (Phase-3 gated) integrations
+  // module; hide it (and skip its dialog fetch) when disabled. Fail-open on OSS.
+  const integrationsEnabled = useModuleEnabled('integrations')
 
   // Check if we need to fetch assignee info (name is empty but id exists)
   const needsAssigneeFetch = open && finding?.assignee?.id && !finding?.assignee?.name
@@ -602,18 +606,20 @@ export function FindingDetailDrawer({
                 />
 
                 {/* Overflow actions */}
-                <div className="ms-auto">
-                  <DataTableRowActions
-                    label="More actions"
-                    actions={[
-                      {
-                        label: 'Create Jira Ticket',
-                        icon: Ticket,
-                        onClick: () => setTicketOpen(true),
-                      },
-                    ]}
-                  />
-                </div>
+                {integrationsEnabled && (
+                  <div className="ms-auto">
+                    <DataTableRowActions
+                      label="More actions"
+                      actions={[
+                        {
+                          label: 'Create Jira Ticket',
+                          icon: Ticket,
+                          onClick: () => setTicketOpen(true),
+                        },
+                      ]}
+                    />
+                  </div>
+                )}
               </div>
 
               {/* Scrollable Content */}
@@ -1036,14 +1042,17 @@ export function FindingDetailDrawer({
           )}
         </SheetContent>
       </Sheet>
-      {/* `finding` is non-null past the `if (!finding) return null` guard above,
-          so this renders unconditionally (removes a CodeQL useless-conditional). */}
-      <CreateTicketDialog
-        findingId={finding.id}
-        findingTitle={finding.title}
-        open={ticketOpen}
-        onOpenChange={setTicketOpen}
-      />
+      {/* `finding` is non-null past the `if (!finding) return null` guard above.
+          Mounted only when the integrations module is enabled so its Jira-projects
+          fetch never fires for tenants without the module. */}
+      {integrationsEnabled && (
+        <CreateTicketDialog
+          findingId={finding.id}
+          findingTitle={finding.title}
+          open={ticketOpen}
+          onOpenChange={setTicketOpen}
+        />
+      )}
     </>
   )
 }
