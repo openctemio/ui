@@ -58,6 +58,7 @@ export interface FindingGroupsFilters {
   sources?: string
   cve_ids?: string
   asset_tags?: string
+  assigned_to_me?: boolean
   page?: number
   per_page?: number
 }
@@ -66,7 +67,7 @@ export interface FindingGroupsFilters {
 // Hooks
 // ============================================
 
-function buildGroupsUrl(filters: FindingGroupsFilters): string {
+export function buildGroupsUrl(filters: FindingGroupsFilters): string {
   const params = new URLSearchParams()
   params.set('group_by', filters.group_by)
   if (filters.severities) params.set('severities', filters.severities)
@@ -74,6 +75,7 @@ function buildGroupsUrl(filters: FindingGroupsFilters): string {
   if (filters.sources) params.set('sources', filters.sources)
   if (filters.cve_ids) params.set('cve_ids', filters.cve_ids)
   if (filters.asset_tags) params.set('asset_tags', filters.asset_tags)
+  if (filters.assigned_to_me) params.set('assigned_to_me', 'true')
   if (filters.page) params.set('page', String(filters.page))
   if (filters.per_page) params.set('per_page', String(filters.per_page))
   return `/api/v1/findings/groups?${params.toString()}`

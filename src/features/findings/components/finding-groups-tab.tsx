@@ -63,6 +63,7 @@ export function FindingGroupsTab({ onViewFindings, onMarkFixed }: FindingGroupsT
   const { data, error, isLoading, mutate } = useFindingGroups({
     group_by: dimension,
     statuses: 'new,confirmed,in_progress,fix_applied,resolved',
+    assigned_to_me: showOnlyMine,
   })
 
   const groups = data?.data ?? []
