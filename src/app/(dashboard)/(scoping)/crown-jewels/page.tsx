@@ -272,9 +272,16 @@ export default function CrownJewelsPage() {
       return
     }
     try {
+      // Preserve the selected asset's existing business impact score instead of
+      // clobbering it; the designate form only collects notes, not a score.
+      const selectedAsset = allAssets?.data?.find((a) => a.id === selectedAssetId)
+      const existingScore = Number(
+        (selectedAsset?.properties as Record<string, unknown> | undefined)?.business_impact_score ??
+          0
+      )
       await designate({
         assetId: selectedAssetId,
-        businessImpactScore: 75,
+        businessImpactScore: existingScore > 0 ? existingScore : 75,
         businessImpactNotes: formData.businessImpact,
       })
       await mutate(CROWN_JEWELS_KEY)
@@ -294,9 +301,11 @@ export default function CrownJewelsPage() {
       return
     }
     try {
+      // Keep the asset's real business impact score; the edit form only lets the
+      // user change notes, so it must not overwrite the stored score with a constant.
       await designate({
         assetId: editJewel.id as string,
-        businessImpactScore: 75,
+        businessImpactScore: editJewel.businessImpactScore ?? 75,
         businessImpactNotes: formData.businessImpact,
       })
       await mutate(CROWN_JEWELS_KEY)
