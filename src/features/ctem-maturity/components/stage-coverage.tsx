@@ -49,7 +49,7 @@ export function StageCoverageCard({
                   className={cn(
                     'flex h-6 w-6 shrink-0 items-center justify-center rounded-full',
                     covered
-                      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400'
+                      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400' // palette-ok: covered-stage success accent, no semantic success token
                       : 'bg-muted text-muted-foreground'
                   )}
                   aria-hidden
