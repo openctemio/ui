@@ -931,6 +931,8 @@ export default function AssetGroupsPage() {
                 : 'Create your first asset group to organize your assets'
             }
             onRowClick={(group) => setViewGroup(group)}
+            getRowId={(group) => group.id}
+            onSelectionChange={(rows) => setSelectedIds(rows.map((g) => g.id))}
           />
         </div>
       </Main>
