@@ -26,7 +26,7 @@ function Kv({ n, label, danger }: { n: number; label: string; danger?: boolean }
 
 export function ThreatIntelCard({ stats, isLoading }: ThreatIntelCardProps) {
   return (
-    <Card>
+    <Card className="gap-4">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <span className="text-sm font-semibold tracking-tight">Threat intel context</span>
         <span className="font-mono text-[11px] text-muted-foreground">threat-intel · live</span>

@@ -48,21 +48,24 @@ export default function Dashboard() {
     }
   }
 
+  // Built once and handed to whichever view is active. Only the active
+  // TabsContent mounts, so exactly one switcher renders — inside that view's
+  // page header rather than in a standalone row above the content.
+  const viewSwitcher = (
+    <TabsList aria-label="Dashboard view">
+      <TabsTrigger value="ctem">CTEM</TabsTrigger>
+      <TabsTrigger value="classic">Classic</TabsTrigger>
+    </TabsList>
+  )
+
   return (
     <Main>
       <Tabs value={view} onValueChange={handleChange} className="gap-6">
-        <div className="flex items-center justify-end">
-          <TabsList aria-label="Dashboard view">
-            <TabsTrigger value="ctem">CTEM</TabsTrigger>
-            <TabsTrigger value="classic">Classic</TabsTrigger>
-          </TabsList>
-        </div>
-
         <TabsContent value="ctem">
-          <CtemDashboard />
+          <CtemDashboard headerSwitcher={viewSwitcher} />
         </TabsContent>
         <TabsContent value="classic">
-          <ClassicDashboard />
+          <ClassicDashboard headerSwitcher={viewSwitcher} />
         </TabsContent>
       </Tabs>
     </Main>

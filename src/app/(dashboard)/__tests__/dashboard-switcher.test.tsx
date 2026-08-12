@@ -1,15 +1,28 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
+import type { ReactNode } from 'react'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import Dashboard from '../page'
 
 // The two views are exercised by their own tests; here we only verify the
 // switcher — which view renders, that switching persists, and the default.
+// The switcher now lives inside each view's header (passed as `headerSwitcher`),
+// so the mocks must render it for the tablist to appear.
 vi.mock('@/features/dashboard/components/ctem-dashboard', () => ({
-  CtemDashboard: () => <div>CTEM_VIEW</div>,
+  CtemDashboard: ({ headerSwitcher }: { headerSwitcher?: ReactNode }) => (
+    <div>
+      {headerSwitcher}
+      CTEM_VIEW
+    </div>
+  ),
 }))
 vi.mock('@/features/dashboard/components/classic-dashboard', () => ({
-  ClassicDashboard: () => <div>CLASSIC_VIEW</div>,
+  ClassicDashboard: ({ headerSwitcher }: { headerSwitcher?: ReactNode }) => (
+    <div>
+      {headerSwitcher}
+      CLASSIC_VIEW
+    </div>
+  ),
 }))
 
 const STORAGE_KEY = 'openctem:dashboard-view'

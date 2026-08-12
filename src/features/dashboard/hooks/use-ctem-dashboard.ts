@@ -72,10 +72,17 @@ export interface ThreatIntelStats {
   }
 }
 
+export interface ExposureChainHop {
+  asset_id?: string
+  name?: string
+  asset_type?: string
+  exposure?: string
+}
+
 export interface ExposureChain {
   entry_point_name: string
   target_name: string
-  hops: number
+  hops: ExposureChainHop[]
   kev_count: number
   score: number
   is_crown_jewel: boolean
