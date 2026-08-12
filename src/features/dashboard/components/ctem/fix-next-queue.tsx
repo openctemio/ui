@@ -36,7 +36,10 @@ function toItems(chains: ExposureChain[], topRisks: ExecTopRisk[]): FixNextItem[
     title: `${c.target_name} — via ${c.entry_point_name}`,
     href: '/attack-surface',
     kev: c.kev_count > 0,
-    meta: [`${c.hops} hop${c.hops === 1 ? '' : 's'}`, ...(c.is_crown_jewel ? ['crown jewel'] : [])],
+    meta: [
+      `${c.hops.length} hop${c.hops.length === 1 ? '' : 's'}`,
+      ...(c.is_crown_jewel ? ['crown jewel'] : []),
+    ],
   }))
 
   const riskItems: FixNextItem[] = topRisks.map((r, i) => ({
@@ -57,7 +60,7 @@ export function FixNextQueue({ chains, topRisks, isLoading, limit = 6 }: FixNext
   const items = toItems(chains ?? [], topRisks ?? []).slice(0, limit)
 
   return (
-    <Card className="flex flex-col">
+    <Card className="flex flex-col gap-4">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <span className="text-sm font-semibold tracking-tight">Fix next</span>
         <span className="font-mono text-[11px] text-muted-foreground">ranked by exposure</span>

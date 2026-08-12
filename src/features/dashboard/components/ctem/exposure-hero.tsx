@@ -30,7 +30,7 @@ function Head({ title, desc }: { title: string; desc: string }) {
 export function ExposureHero({ summary, trend, kevChainCount, isLoading }: ExposureHeroProps) {
   if (isLoading) {
     return (
-      <Card>
+      <Card className="gap-4">
         <Head title="Active exposure" desc="exploitable now" />
         <CardContent className="space-y-4">
           <Skeleton className="h-14 w-40" />
@@ -54,7 +54,7 @@ export function ExposureHero({ summary, trend, kevChainCount, isLoading }: Expos
   const TrendIcon = losing ? TrendingUp : TrendingDown
 
   return (
-    <Card>
+    <Card className="gap-4">
       <Head title="Active exposure" desc="exploitable now" />
       <CardContent>
         {/* Hero number + tiny label */}

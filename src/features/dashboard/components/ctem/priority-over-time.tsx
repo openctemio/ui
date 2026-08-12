@@ -27,16 +27,16 @@ export function PriorityOverTime({ trend, isLoading }: PriorityOverTimeProps) {
   const max = Math.max(1, ...PRIORITY_ORDER.map((p) => current[p]))
 
   return (
-    <Card>
+    <Card className="gap-4">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <span className="text-sm font-semibold tracking-tight">Priority classes over time</span>
         <span className="font-mono text-[11px] text-muted-foreground">P0–P3 open · 90d</span>
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <Skeleton className="h-[120px] w-full" />
+          <Skeleton className="h-28 w-full" />
         ) : points.length > 1 ? (
-          <div className="h-[130px] w-full">
+          <div className="h-28 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={points} margin={{ top: 4, right: 4, bottom: 0, left: 4 }}>
                 <XAxis dataKey="date" hide />
@@ -61,13 +61,13 @@ export function PriorityOverTime({ trend, isLoading }: PriorityOverTimeProps) {
             </ResponsiveContainer>
           </div>
         ) : (
-          <div className="flex h-[130px] items-center justify-center text-xs text-muted-foreground">
+          <div className="flex h-28 items-center justify-center text-xs text-muted-foreground">
             No trend data yet
           </div>
         )}
 
         {/* Current distribution */}
-        <div className="mt-3 flex flex-col gap-2">
+        <div className="mt-3 flex flex-col gap-1.5">
           {PRIORITY_ORDER.map((p) => (
             <div key={p} className="grid grid-cols-[2rem_1fr_2rem] items-center gap-2.5">
               <PriorityClassBadge priorityClass={p} showTooltip={false} />
