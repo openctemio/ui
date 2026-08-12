@@ -38,10 +38,10 @@ export function ThreatIntelCard({ stats, isLoading }: ThreatIntelCardProps) {
           </div>
         ) : stats ? (
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-            <Kv n={stats.kev.past_due_count} label="KEV past-due" danger />
-            <Kv n={stats.kev.ransomware_related_count} label="Ransomware KEV" />
-            <Kv n={stats.epss.critical_risk_count} label="EPSS critical" />
-            <Kv n={stats.kev.recently_added_last_30_days} label="KEV new · 30d" />
+            <Kv n={stats.kev?.past_due_count ?? 0} label="KEV past-due" danger />
+            <Kv n={stats.kev?.ransomware_related_count ?? 0} label="Ransomware KEV" />
+            <Kv n={stats.epss?.critical_risk_count ?? 0} label="EPSS critical" />
+            <Kv n={stats.kev?.recently_added_last_30_days ?? 0} label="KEV new · 30d" />
           </div>
         ) : (
           <p className="py-4 text-center text-xs text-muted-foreground">Threat intel unavailable</p>

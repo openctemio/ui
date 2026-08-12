@@ -114,11 +114,15 @@ export interface ValidationCoverage {
   total: number
 }
 
-export interface CtemMaturityPoint {
-  date?: string
-  period?: string
-  maturity_score?: number
-  score?: number
+export interface CtemMaturityBreakdown {
+  score: number
+  cycles_analyzed: number
+  ctem_stage_coverage?: { covered_count: number }
+}
+
+export interface CtemMaturityTrend {
+  cycles_analyzed: number
+  maturity: CtemMaturityBreakdown
 }
 
 // ============================================
@@ -214,9 +218,9 @@ export function useValidationCoverage(tenantId: string | null) {
  * disabled tenant never hits the 403.
  */
 export function useCtemMaturityTrend(tenantId: string | null, enabled: boolean) {
-  return useSWR<CtemMaturityPoint[]>(
+  return useSWR<CtemMaturityTrend>(
     useKey(enabled ? '/api/v1/ctem-cycles/metrics/trend' : null, tenantId),
-    ([url]) => get<CtemMaturityPoint[]>(url),
+    ([url]) => get<CtemMaturityTrend>(url),
     config
   )
 }

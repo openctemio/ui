@@ -30,17 +30,20 @@ interface FixNextQueueProps {
 }
 
 function toItems(chains: ExposureChain[], topRisks: ExecTopRisk[]): FixNextItem[] {
-  const chainItems: FixNextItem[] = chains.map((c, i) => ({
-    key: `chain-${i}-${c.target_name}`,
-    score: Math.round(c.score),
-    title: `${c.target_name} — via ${c.entry_point_name}`,
-    href: '/attack-surface',
-    kev: c.kev_count > 0,
-    meta: [
-      `${c.hops.length} hop${c.hops.length === 1 ? '' : 's'}`,
-      ...(c.is_crown_jewel ? ['crown jewel'] : []),
-    ],
-  }))
+  const chainItems: FixNextItem[] = chains.map((c, i) => {
+    const hopCount = c.hops?.length ?? 0
+    return {
+      key: `chain-${i}-${c.target_name}`,
+      score: Math.round(c.score),
+      title: `${c.target_name} — via ${c.entry_point_name}`,
+      href: '/attack-surface',
+      kev: c.kev_count > 0,
+      meta: [
+        `${hopCount} hop${hopCount === 1 ? '' : 's'}`,
+        ...(c.is_crown_jewel ? ['crown jewel'] : []),
+      ],
+    }
+  })
 
   const riskItems: FixNextItem[] = topRisks.map((r, i) => ({
     key: `risk-${i}-${r.title}`,

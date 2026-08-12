@@ -18,8 +18,8 @@ interface AttackPathsCardProps {
 }
 
 export function AttackPathsCard({ attackPaths, chains, isLoading }: AttackPathsCardProps) {
-  const reachable = attackPaths?.summary.reachable_assets ?? 0
-  const crownJewels = attackPaths?.summary.crown_jewels_at_risk ?? 0
+  const reachable = attackPaths?.summary?.reachable_assets ?? 0
+  const crownJewels = attackPaths?.summary?.crown_jewels_at_risk ?? 0
   const topChains = (chains ?? []).slice(0, 4)
 
   return (
