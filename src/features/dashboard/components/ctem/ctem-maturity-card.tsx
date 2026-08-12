@@ -22,7 +22,7 @@ export function CtemMaturityCard({ data, isLoading }: CtemMaturityCardProps) {
   const state = coverageState(score)
 
   return (
-    <Card>
+    <Card className="gap-4">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <span className="text-sm font-semibold tracking-tight">CTEM maturity</span>
         <span className="font-mono text-[11px] text-muted-foreground">ctem-cycles · trend</span>

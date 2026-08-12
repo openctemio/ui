@@ -111,7 +111,7 @@ vi.mock('@/features/dashboard/hooks/use-ctem-dashboard', () => ({
         {
           entry_point_name: 'public',
           target_name: 'example.com',
-          hops: 1,
+          hops: [{ name: 'public', asset_type: 'host' }],
           kev_count: 1,
           score: 52,
           is_crown_jewel: false,
@@ -139,9 +139,8 @@ describe('CTEM Dashboard page', () => {
   it('renders the action-first CTEM story sections and keeps Quick Actions + analyst detail', () => {
     render(<Dashboard />)
 
-    // Header + retained Quick Actions
+    // Header + retained quick-action strip (now a slim strip, no card title)
     expect(screen.getByRole('heading', { name: 'Dashboard' })).toBeInTheDocument()
-    expect(screen.getByText('Quick Actions')).toBeInTheDocument()
     expect(screen.getByText('New Scan')).toBeInTheDocument()
 
     // CTEM story

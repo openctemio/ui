@@ -87,7 +87,7 @@ const chains: ExposureChain[] = [
   {
     entry_point_name: 'public',
     target_name: 'example.com',
-    hops: 1,
+    hops: [{ name: 'public', asset_type: 'host' }],
     kev_count: 1,
     score: 52,
     is_crown_jewel: false,
