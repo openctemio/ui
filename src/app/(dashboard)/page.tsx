@@ -2,8 +2,14 @@
 
 import { useEffect, useState } from 'react'
 
+import Link from 'next/link'
+import { Plus } from 'lucide-react'
+
 import { Main } from '@/components/layout'
+import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { PageHeader } from '@/features/shared'
+import { Can, Permission } from '@/lib/permissions'
 import { CtemDashboard } from '@/features/dashboard/components/ctem-dashboard'
 import { ClassicDashboard } from '@/features/dashboard/components/classic-dashboard'
 
@@ -48,24 +54,35 @@ export default function Dashboard() {
     }
   }
 
-  // Built once and handed to whichever view is active. Only the active
-  // TabsContent mounts, so exactly one switcher renders — inside that view's
-  // page header rather than in a standalone row above the content.
-  const viewSwitcher = (
-    <TabsList aria-label="Dashboard view">
-      <TabsTrigger value="ctem">CTEM</TabsTrigger>
-      <TabsTrigger value="classic">Classic</TabsTrigger>
-    </TabsList>
-  )
-
   return (
     <Main>
-      <Tabs value={view} onValueChange={handleChange} className="gap-6">
+      <Tabs value={view} onValueChange={handleChange} className="flex flex-col gap-6">
+        {/* One shared header, rendered outside TabsContent so the view switcher
+            renders exactly once and stays put when the active view changes. */}
+        <PageHeader
+          title="Dashboard"
+          description="Continuous threat exposure — what's exploitable now, and what to do about it."
+        >
+          <div className="flex items-center gap-2">
+            <Can permission={Permission.ScansWrite} mode="disable">
+              <Button asChild size="sm">
+                <Link href="/scans">
+                  <Plus className="me-2 h-4 w-4" />
+                  Run scan
+                </Link>
+              </Button>
+            </Can>
+            <TabsList aria-label="Dashboard view">
+              <TabsTrigger value="ctem">CTEM</TabsTrigger>
+              <TabsTrigger value="classic">Classic</TabsTrigger>
+            </TabsList>
+          </div>
+        </PageHeader>
         <TabsContent value="ctem">
-          <CtemDashboard headerSwitcher={viewSwitcher} />
+          <CtemDashboard />
         </TabsContent>
         <TabsContent value="classic">
-          <ClassicDashboard headerSwitcher={viewSwitcher} />
+          <ClassicDashboard />
         </TabsContent>
       </Tabs>
     </Main>
