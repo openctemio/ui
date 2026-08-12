@@ -61,7 +61,7 @@ export function CtemDashboard() {
   return (
     <>
       {/* Row 1 — Active exposure hero + Priority over time (matched-height charts) */}
-      <section className="mb-6 grid items-start gap-4 lg:grid-cols-2">
+      <section className="mb-6 grid gap-4 lg:grid-cols-2">
         <ExposureHero
           summary={summary}
           trend={trend}
@@ -83,7 +83,7 @@ export function CtemDashboard() {
       </section>
 
       {/* Row 3 — Fix next + Attack paths */}
-      <section className="mb-6 grid items-start gap-4 lg:grid-cols-[1.3fr_1fr]">
+      <section className="mb-6 grid gap-4 lg:grid-cols-[1.3fr_1fr]">
         <FixNextQueue
           chains={chains}
           topRisks={summary?.top_risks}
@@ -97,7 +97,7 @@ export function CtemDashboard() {
       </section>
 
       {/* Row 4 — Threat intel + coverage/hygiene (+ optional maturity) */}
-      <section className="mb-6 grid items-start gap-4 lg:grid-cols-2">
+      <section className="mb-6 grid gap-4 lg:grid-cols-2">
         <ThreatIntelCard stats={threatIntel} isLoading={threatLoading} />
         <CoverageHygiene
           scan={scanCoverage}
