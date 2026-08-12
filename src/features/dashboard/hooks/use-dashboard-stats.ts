@@ -32,6 +32,7 @@ interface ActivityItem {
   title: string
   description: string
   timestamp: string
+  ref_id?: string
 }
 
 interface FindingTrendPoint {
