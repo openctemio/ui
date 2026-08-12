@@ -1,193 +1,70 @@
 'use client'
 
+import { useEffect, useState } from 'react'
+
 import { Main } from '@/components/layout'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { PageHeader } from '@/features/shared'
-import { Can, Permission } from '@/lib/permissions'
-import Link from 'next/link'
-import { Plus, FileWarning, ListChecks, ArrowRight } from 'lucide-react'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { CtemDashboard } from '@/features/dashboard/components/ctem-dashboard'
+import { ClassicDashboard } from '@/features/dashboard/components/classic-dashboard'
 
-import { useTenant } from '@/context/tenant-provider'
-import { useDashboardStats } from '@/features/dashboard'
-import { useModuleEnabled } from '@/features/integrations/api/use-tenant-modules'
-import {
-  useRiskTrend,
-  useExecutiveSummary,
-  useThreatIntelStats,
-  useExposureChains,
-  useAttackPaths,
-  useScanCoverage,
-  useValidationCoverage,
-  useCtemMaturityTrend,
-} from '@/features/dashboard/hooks/use-ctem-dashboard'
-import {
-  ExposureHero,
-  FixNextQueue,
-  CtemLoop,
-  PriorityOverTime,
-  AttackPathsCard,
-  ThreatIntelCard,
-  CoverageHygiene,
-  CtemMaturityCard,
-} from '@/features/dashboard/components/ctem'
-import { AnalystDetail } from '@/features/dashboard/components/analyst-detail'
+type DashboardView = 'ctem' | 'classic'
 
+const STORAGE_KEY = 'openctem:dashboard-view'
+const DEFAULT_VIEW: DashboardView = 'ctem'
+
+function isDashboardView(value: string | null): value is DashboardView {
+  return value === 'ctem' || value === 'classic'
+}
+
+/**
+ * Main dashboard shell. The product ships two views — the new CTEM action-first
+ * dashboard (default) and the previous ("Classic") dashboard — and lets the user
+ * switch between them. The choice persists in localStorage.
+ *
+ * Hydration: server and the first client render both use DEFAULT_VIEW so the
+ * markup matches; the persisted choice is only applied inside useEffect, which
+ * never runs on the server. Each view fetches its own data and only the active
+ * TabsContent is mounted, so there is no shared state or double-fetching.
+ */
 export default function Dashboard() {
-  const { currentTenant } = useTenant()
-  const tenantId = currentTenant?.id || null
+  const [view, setView] = useState<DashboardView>(DEFAULT_VIEW)
 
-  // CTEM story data
-  const { data: trend, isLoading: trendLoading } = useRiskTrend(tenantId, 90)
-  const { data: summary, isLoading: summaryLoading } = useExecutiveSummary(tenantId)
-  const { data: threatIntel, isLoading: threatLoading } = useThreatIntelStats(tenantId)
-  const { data: exposure, isLoading: exposureLoading } = useExposureChains(tenantId)
-  const { data: attackPaths, isLoading: pathsLoading } = useAttackPaths(tenantId)
-  const { data: scanCoverage, isLoading: scanLoading } = useScanCoverage(tenantId)
-  const { data: validationCoverage, isLoading: validationLoading } = useValidationCoverage(tenantId)
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem(STORAGE_KEY)
+      if (isDashboardView(saved)) setView(saved)
+    } catch {
+      // localStorage unavailable (private mode, etc.) — keep the default.
+    }
+  }, [])
 
-  // Maturity is module-gated — skip the fetch entirely when disabled so it 403s nothing.
-  const ctemCyclesEnabled = useModuleEnabled('ctem_cycles')
-  const { data: maturity, isLoading: maturityLoading } = useCtemMaturityTrend(
-    tenantId,
-    ctemCyclesEnabled
-  )
-
-  // Retained analyst charts
-  const { stats, isLoading: statsLoading } = useDashboardStats(tenantId)
-
-  const chains = exposure?.chains ?? []
-  const kevChainCount = chains.filter((c) => c.kev_count > 0).length
+  const handleChange = (next: string) => {
+    if (!isDashboardView(next)) return
+    setView(next)
+    try {
+      window.localStorage.setItem(STORAGE_KEY, next)
+    } catch {
+      // Persisting is best-effort; the in-memory choice still applies.
+    }
+  }
 
   return (
     <Main>
-      <PageHeader
-        title="Dashboard"
-        description="Continuous threat exposure — what's exploitable now, and what to do about it."
-        className="mb-6"
-      >
-        <Can permission={Permission.ScansWrite} mode="disable">
-          <Button asChild size="sm">
-            <Link href="/scans">
-              <Plus className="me-2 h-4 w-4" />
-              Run scan
-            </Link>
-          </Button>
-        </Can>
-      </PageHeader>
+      <Tabs value={view} onValueChange={handleChange} className="gap-6">
+        <div className="flex items-center justify-end">
+          <TabsList aria-label="Dashboard view">
+            <TabsTrigger value="ctem">CTEM</TabsTrigger>
+            <TabsTrigger value="classic">Classic</TabsTrigger>
+          </TabsList>
+        </div>
 
-      {/* Quick Actions (permission-gated) */}
-      <Card className="mb-6">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">Quick Actions</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-wrap gap-2">
-          <Can
-            permission={Permission.ScansWrite}
-            mode="disable"
-            disabledTooltip="You don't have permission to create scans"
-          >
-            <Button asChild size="sm">
-              <Link href="/scans">
-                <Plus className="me-2 h-4 w-4" />
-                New Scan
-              </Link>
-            </Button>
-          </Can>
-          <Can
-            permission={Permission.FindingsRead}
-            mode="disable"
-            disabledTooltip="You don't have permission to view findings"
-          >
-            <Button asChild variant="outline" size="sm">
-              <Link href="/findings">
-                <FileWarning className="me-2 h-4 w-4" />
-                View Findings
-              </Link>
-            </Button>
-          </Can>
-          <Can
-            permission={Permission.RemediationRead}
-            mode="disable"
-            disabledTooltip="You don't have permission to view remediation tasks"
-          >
-            <Button asChild variant="outline" size="sm">
-              <Link href="/remediation">
-                <ListChecks className="me-2 h-4 w-4" />
-                Remediation Tasks
-              </Link>
-            </Button>
-          </Can>
-          <Can
-            permission={Permission.ReportsRead}
-            mode="disable"
-            disabledTooltip="You don't have permission to generate reports"
-          >
-            <Button asChild variant="outline" size="sm">
-              <Link href="/reports">
-                <ArrowRight className="me-2 h-4 w-4" />
-                Generate Report
-              </Link>
-            </Button>
-          </Can>
-        </CardContent>
-      </Card>
-
-      {/* Row 1 — Active exposure hero + Fix next */}
-      <section className="mb-6 grid gap-4 lg:grid-cols-[1.35fr_1fr]">
-        <ExposureHero
-          summary={summary}
-          trend={trend}
-          kevChainCount={kevChainCount}
-          isLoading={summaryLoading || trendLoading}
-        />
-        <FixNextQueue
-          chains={chains}
-          topRisks={summary?.top_risks}
-          isLoading={exposureLoading || summaryLoading}
-        />
-      </section>
-
-      {/* Row 2 — CTEM loop */}
-      <section className="mb-6">
-        <CtemLoop
-          summary={summary}
-          scanCoverage={scanCoverage}
-          validationCoverage={validationCoverage}
-          threatIntel={threatIntel}
-          isLoading={summaryLoading || scanLoading || validationLoading}
-        />
-      </section>
-
-      {/* Row 3 — Priority over time + Attack paths */}
-      <section className="mb-6 grid gap-4 lg:grid-cols-[1.3fr_1fr]">
-        <PriorityOverTime trend={trend} isLoading={trendLoading} />
-        <AttackPathsCard
-          attackPaths={attackPaths}
-          chains={chains}
-          isLoading={pathsLoading || exposureLoading}
-        />
-      </section>
-
-      {/* Row 4 — Threat intel + coverage/hygiene (+ optional maturity) */}
-      <section className="mb-6 grid gap-4 lg:grid-cols-2">
-        <ThreatIntelCard stats={threatIntel} isLoading={threatLoading} />
-        <CoverageHygiene
-          scan={scanCoverage}
-          validation={validationCoverage}
-          slaPct={summary?.sla_compliance_pct}
-          isLoading={scanLoading || validationLoading || summaryLoading}
-        />
-      </section>
-
-      {ctemCyclesEnabled && (
-        <section className="mb-6">
-          <CtemMaturityCard data={maturity} isLoading={maturityLoading} />
-        </section>
-      )}
-
-      {/* Analyst detail — the retained charts */}
-      <AnalystDetail stats={stats} isLoading={statsLoading} />
+        <TabsContent value="ctem">
+          <CtemDashboard />
+        </TabsContent>
+        <TabsContent value="classic">
+          <ClassicDashboard />
+        </TabsContent>
+      </Tabs>
     </Main>
   )
 }
