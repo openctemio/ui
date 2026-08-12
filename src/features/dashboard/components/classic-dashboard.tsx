@@ -511,6 +511,11 @@ export function ClassicDashboard() {
                           title={activity.title}
                           description={activity.description}
                           time={new Date(activity.timestamp).toLocaleDateString()}
+                          href={
+                            activity.type === 'finding' && activity.ref_id
+                              ? `/findings/${activity.ref_id}`
+                              : undefined
+                          }
                         />
                       ))}
                     </div>
