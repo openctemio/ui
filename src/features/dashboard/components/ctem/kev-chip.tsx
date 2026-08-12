@@ -10,7 +10,7 @@ export function KevChip({ className }: { className?: string }) {
   return (
     <span
       className={cn(
-        'rounded border border-destructive/40 bg-destructive/10 px-1 font-mono text-[10px] font-bold text-destructive',
+        'rounded border border-destructive/40 bg-destructive/10 px-1 text-[10px] font-bold text-destructive',
         className
       )}
     >
