@@ -7,7 +7,7 @@ import { formatRiskScore } from '@/features/shared'
 import { TrendingUp, TrendingDown } from 'lucide-react'
 import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip } from '@/components/charts'
 import type { ExecutiveSummary, RiskTrendPoint } from '../../hooks/use-ctem-dashboard'
-import { PRIORITY_CHART_COLORS, STATE_TEXT } from '../../lib/ctem-colors'
+import { CHART_TOOLTIP_PROPS, PRIORITY_CHART_COLORS, STATE_TEXT } from '../../lib/ctem-colors'
 
 interface ExposureHeroProps {
   summary?: ExecutiveSummary
@@ -64,13 +64,20 @@ export function ExposureHero({ summary, trend, kevChainCount, isLoading }: Expos
           <span
             className={cn(
               'text-5xl font-semibold leading-none tracking-tight tabular-nums',
-              STATE_TEXT.crit
+              p0 > 0 ? STATE_TEXT.crit : 'text-foreground'
             )}
           >
             {p0}
           </span>
           <div className="flex flex-col leading-tight">
-            <span className={cn('text-sm font-bold', STATE_TEXT.crit)}>P0</span>
+            <span
+              className={cn(
+                'text-sm font-bold',
+                p0 > 0 ? STATE_TEXT.crit : 'text-muted-foreground'
+              )}
+            >
+              P0
+            </span>
             <span className="text-xs text-muted-foreground">exploitable now</span>
           </div>
         </div>
@@ -127,7 +134,7 @@ export function ExposureHero({ summary, trend, kevChainCount, isLoading }: Expos
                   <XAxis dataKey="date" hide />
                   <YAxis hide domain={[0, 'dataMax + 1']} />
                   <Tooltip
-                    contentStyle={{ fontSize: 12 }}
+                    {...CHART_TOOLTIP_PROPS}
                     labelFormatter={(v) => new Date(String(v)).toLocaleDateString()}
                     formatter={(value) => [value as number, 'P0 open']}
                   />
