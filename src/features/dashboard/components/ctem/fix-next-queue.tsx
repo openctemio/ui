@@ -36,7 +36,7 @@ function toItems(chains: ExposureChain[], topRisks: ExecTopRisk[]): FixNextItem[
       key: `chain-${i}-${c.target_name}`,
       score: Math.round(c.score),
       title: `${c.target_name} — via ${c.entry_point_name}`,
-      href: '/attack-surface',
+      href: '/exposure-chains',
       kev: c.kev_count > 0,
       meta: [
         `${hopCount} hop${hopCount === 1 ? '' : 's'}`,
@@ -63,7 +63,7 @@ export function FixNextQueue({ chains, topRisks, isLoading, limit = 6 }: FixNext
   const items = toItems(chains ?? [], topRisks ?? []).slice(0, limit)
 
   return (
-    <Card className="flex flex-col gap-4">
+    <Card className="gap-4">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <span className="text-sm font-semibold tracking-tight">Fix next</span>
         <span className="text-[11px] text-muted-foreground">ranked by exposure</span>
@@ -110,7 +110,8 @@ export function FixNextQueue({ chains, topRisks, isLoading, limit = 6 }: FixNext
                 </div>
                 <Link
                   href={it.href}
-                  className="shrink-0 text-[11px] font-semibold text-primary hover:underline"
+                  aria-label={`Triage ${it.title}`}
+                  className="shrink-0 text-[11px] font-semibold text-primary hover:underline focus-visible:underline"
                 >
                   Triage →
                 </Link>

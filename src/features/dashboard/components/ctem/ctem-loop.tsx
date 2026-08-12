@@ -32,7 +32,7 @@ interface Stage {
 function StageCard({ stage }: { stage: Stage }) {
   return (
     <Link href={stage.href} className="group">
-      <Card className="relative flex h-full flex-col gap-1.5 overflow-hidden p-3.5 transition-colors group-hover:border-muted-foreground/40">
+      <Card className="relative flex h-full flex-col gap-1.5 overflow-hidden p-3.5 transition-colors group-hover:border-muted-foreground/40 group-focus-visible:border-muted-foreground/40">
         <span className={cn('absolute inset-y-0 left-0 w-[3px]', STATE_STRIPE[stage.state])} />
         <div className="flex items-center justify-between">
           <span className="text-xs font-semibold">{stage.name}</span>
@@ -90,7 +90,7 @@ export function CtemLoop({
     {
       index: '01',
       name: 'Scoping',
-      href: '/assets',
+      href: '/crown-jewels',
       value: (
         <>
           {crownJewels} <Unit>crown jewels</Unit>

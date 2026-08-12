@@ -25,6 +25,19 @@ export const PRIORITY_CHART_COLORS: Record<PriorityClass, string> = {
 
 export const PRIORITY_ORDER: PriorityClass[] = ['P0', 'P1', 'P2', 'P3']
 
+/** Recharts <Tooltip> props that adapt to light/dark via theme tokens. */
+export const CHART_TOOLTIP_PROPS = {
+  contentStyle: {
+    backgroundColor: 'var(--popover)',
+    border: '1px solid var(--border)',
+    borderRadius: 8,
+    fontSize: 12,
+    color: 'var(--popover-foreground)',
+  },
+  labelStyle: { color: 'var(--popover-foreground)' },
+  itemStyle: { color: 'var(--popover-foreground)' },
+} as const
+
 /** Chart hex for "resolved / good" — no severity or semantic token covers it. */
 export const RESOLVED_CHART_COLOR = '#22c55e'
 

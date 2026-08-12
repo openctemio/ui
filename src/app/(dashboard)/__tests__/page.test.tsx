@@ -154,9 +154,9 @@ describe('CTEM Dashboard page', () => {
 
     // Retained analyst charts
     expect(screen.getByText(/Analyst detail/i)).toBeInTheDocument()
-    expect(screen.getByText('Findings Trend')).toBeInTheDocument()
-    expect(screen.getByText('Severity Distribution')).toBeInTheDocument()
-    expect(screen.getByText('Asset Distribution')).toBeInTheDocument()
-    expect(screen.getByText('Recent Activity')).toBeInTheDocument()
+    expect(screen.getByText('Findings trend')).toBeInTheDocument()
+    expect(screen.getByText('Severity distribution')).toBeInTheDocument()
+    expect(screen.getByText('Asset distribution')).toBeInTheDocument()
+    expect(screen.getByText('Recent activity')).toBeInTheDocument()
   })
 })
