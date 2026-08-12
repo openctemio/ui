@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatChartDate } from '@/lib/format-chart-date'
 import { Clock, TrendingDown, TrendingUp } from 'lucide-react'
 import { SEVERITY_CHART_COLORS } from '@/lib/severity-colors'
+import { STATE_TEXT } from '../lib/ctem-colors'
 import { useMTTRMetrics, useRiskVelocity } from '../hooks/use-dashboard-stats'
 import { useTenant } from '@/context/tenant-provider'
 import {
@@ -56,7 +57,8 @@ export function MTTRCard() {
         <div className="text-2xl font-bold">{formatHours(avgAll)}</div>
         <div className="flex gap-3 mt-1 text-xs text-muted-foreground">
           <span>
-            Critical: <span className="font-medium text-red-500">{formatHours(criticalMTTR)}</span>
+            Critical:{' '}
+            <span className={`font-medium ${STATE_TEXT.crit}`}>{formatHours(criticalMTTR)}</span>
           </span>
           <span>
             High: <span className="font-medium text-orange-500">{formatHours(highMTTR)}</span>
@@ -106,12 +108,12 @@ export function RiskVelocityCard() {
     <Card>
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-medium flex items-center gap-2">
-          <Icon className={`h-4 w-4 ${isImproving ? 'text-green-500' : 'text-red-500'}`} />
+          <Icon className={`h-4 w-4 ${isImproving ? STATE_TEXT.good : STATE_TEXT.crit}`} />
           Risk Velocity
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className={`text-2xl font-bold ${isImproving ? 'text-green-600' : 'text-red-600'}`}>
+        <div className={`text-2xl font-bold ${isImproving ? STATE_TEXT.good : STATE_TEXT.crit}`}>
           {latest.velocity > 0 ? '+' : ''}
           {latest.velocity}
         </div>

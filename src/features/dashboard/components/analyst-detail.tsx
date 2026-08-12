@@ -18,6 +18,7 @@ import {
   Pie,
 } from '@/components/charts'
 import { SEVERITY_CHART_COLORS as SEVERITY_COLORS } from '@/lib/severity-colors'
+import { CHART_TOOLTIP_PROPS } from '../lib/ctem-colors'
 import { ActivityItem } from './activity-item'
 import type { DashboardStats } from '../hooks/use-dashboard-stats'
 
@@ -63,9 +64,9 @@ export function AnalystDetail({ stats, isLoading }: AnalystDetailProps) {
 
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-7">
         {/* Findings Trend */}
-        <Card className="col-span-1 lg:col-span-4">
+        <Card className="col-span-1 gap-4 lg:col-span-4">
           <CardHeader>
-            <CardTitle>Findings Trend</CardTitle>
+            <CardTitle>Findings trend</CardTitle>
             <CardDescription>Security findings over the last 6 months</CardDescription>
           </CardHeader>
           <CardContent>
@@ -74,7 +75,7 @@ export function AnalystDetail({ stats, isLoading }: AnalystDetailProps) {
                 <AreaChart data={stats.findingTrend}>
                   <XAxis dataKey="date" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
                   <YAxis tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
-                  <Tooltip />
+                  <Tooltip {...CHART_TOOLTIP_PROPS} />
                   <Legend />
                   <Area
                     type="monotone"
@@ -123,9 +124,9 @@ export function AnalystDetail({ stats, isLoading }: AnalystDetailProps) {
         </Card>
 
         {/* Severity Distribution */}
-        <Card className="col-span-1 lg:col-span-3">
+        <Card className="col-span-1 gap-4 lg:col-span-3">
           <CardHeader>
-            <CardTitle>Severity Distribution</CardTitle>
+            <CardTitle>Severity distribution</CardTitle>
             <CardDescription>Findings by severity level</CardDescription>
           </CardHeader>
           <CardContent>
@@ -146,7 +147,7 @@ export function AnalystDetail({ stats, isLoading }: AnalystDetailProps) {
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
-                  <Tooltip />
+                  <Tooltip {...CHART_TOOLTIP_PROPS} />
                 </PieChart>
               </ResponsiveContainer>
             ) : (
@@ -160,9 +161,9 @@ export function AnalystDetail({ stats, isLoading }: AnalystDetailProps) {
 
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:h-[420px]">
         {/* Asset Distribution */}
-        <Card className="flex h-full min-h-[380px] flex-col">
+        <Card className="flex h-full min-h-[380px] flex-col gap-4">
           <CardHeader>
-            <CardTitle>Asset Distribution</CardTitle>
+            <CardTitle>Asset distribution</CardTitle>
             <CardDescription>{stats.assets.total} total assets by type</CardDescription>
           </CardHeader>
           <CardContent className="min-h-0 flex-1">
@@ -180,7 +181,7 @@ export function AnalystDetail({ stats, isLoading }: AnalystDetailProps) {
                     height={80}
                   />
                   <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} width={40} />
-                  <Tooltip />
+                  <Tooltip {...CHART_TOOLTIP_PROPS} />
                   <Bar dataKey="count" fill={SEVERITY_COLORS.low} radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
@@ -193,9 +194,9 @@ export function AnalystDetail({ stats, isLoading }: AnalystDetailProps) {
         </Card>
 
         {/* Recent Activity */}
-        <Card className="flex h-full flex-col overflow-hidden">
+        <Card className="flex h-full flex-col gap-4 overflow-hidden">
           <CardHeader className="flex-shrink-0">
-            <CardTitle>Recent Activity</CardTitle>
+            <CardTitle>Recent activity</CardTitle>
             <CardDescription>Latest security events and updates</CardDescription>
           </CardHeader>
           <CardContent className="min-h-0 flex-1 overflow-y-auto">

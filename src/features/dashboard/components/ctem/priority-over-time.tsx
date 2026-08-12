@@ -6,7 +6,7 @@ import { PriorityClassBadge } from '@/features/findings/components/priority-clas
 import type { PriorityClass } from '@/features/findings/types/finding.types'
 import { cn } from '@/lib/utils'
 import { AreaChart, Area, ResponsiveContainer, XAxis, YAxis, Tooltip } from '@/components/charts'
-import { PRIORITY_CHART_COLORS, PRIORITY_ORDER } from '../../lib/ctem-colors'
+import { CHART_TOOLTIP_PROPS, PRIORITY_CHART_COLORS, PRIORITY_ORDER } from '../../lib/ctem-colors'
 import type { RiskTrendPoint } from '../../hooks/use-ctem-dashboard'
 
 interface PriorityOverTimeProps {
@@ -42,7 +42,7 @@ export function PriorityOverTime({ trend, isLoading }: PriorityOverTimeProps) {
                 <XAxis dataKey="date" hide />
                 <YAxis hide />
                 <Tooltip
-                  contentStyle={{ fontSize: 12 }}
+                  {...CHART_TOOLTIP_PROPS}
                   labelFormatter={(v) => new Date(String(v)).toLocaleDateString()}
                 />
                 {PRIORITY_ORDER.map((p) => (
@@ -67,23 +67,31 @@ export function PriorityOverTime({ trend, isLoading }: PriorityOverTimeProps) {
         )}
 
         {/* Current distribution */}
-        <div className="mt-3 flex flex-col gap-1.5">
-          {PRIORITY_ORDER.map((p) => (
-            <div key={p} className="grid grid-cols-[2rem_1fr_2rem] items-center gap-2.5">
-              <PriorityClassBadge priorityClass={p} showTooltip={false} />
-              <div className="h-2 overflow-hidden rounded bg-muted">
-                <div
-                  className={cn('h-full rounded')}
-                  style={{
-                    width: `${(current[p] / max) * 100}%`,
-                    backgroundColor: PRIORITY_CHART_COLORS[p],
-                  }}
-                />
+        {isLoading ? (
+          <div className="mt-3 flex flex-col gap-1.5">
+            {PRIORITY_ORDER.map((p) => (
+              <Skeleton key={p} className="h-5 w-full" />
+            ))}
+          </div>
+        ) : (
+          <div className="mt-3 flex flex-col gap-1.5">
+            {PRIORITY_ORDER.map((p) => (
+              <div key={p} className="grid grid-cols-[2rem_1fr_2rem] items-center gap-2.5">
+                <PriorityClassBadge priorityClass={p} showTooltip={false} />
+                <div className="h-2 overflow-hidden rounded bg-muted">
+                  <div
+                    className={cn('h-full rounded')}
+                    style={{
+                      width: `${(current[p] / max) * 100}%`,
+                      backgroundColor: PRIORITY_CHART_COLORS[p],
+                    }}
+                  />
+                </div>
+                <span className="text-right text-[13px] tabular-nums">{current[p]}</span>
               </div>
-              <span className="text-right text-[13px] tabular-nums">{current[p]}</span>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </CardContent>
     </Card>
   )

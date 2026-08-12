@@ -46,7 +46,7 @@ export function AttackPathsCard({ attackPaths, chains, isLoading }: AttackPathsC
             card={false}
             action={
               <Button asChild size="sm">
-                <Link href="/assets">
+                <Link href="/crown-jewels">
                   Designate <ArrowRight className="ms-1 h-4 w-4" />
                 </Link>
               </Button>
@@ -63,15 +63,15 @@ export function AttackPathsCard({ attackPaths, chains, isLoading }: AttackPathsC
 
         {topChains.length > 0 && (
           <>
-            <p className="mb-1 mt-4 text-[11px] uppercase tracking-wider text-muted-foreground">
-              Reachable now
-            </p>
+            <p className="mb-1 mt-4 text-[11px] text-muted-foreground">Reachable now</p>
             <ul className="divide-y divide-border">
               {topChains.map((c, i) => (
                 <li key={`${c.target_name}-${i}`} className="flex items-center gap-2 py-2 text-xs">
-                  <span className="truncate">{c.target_name}</span>
-                  <span className="text-muted-foreground">→</span>
-                  <span className="truncate text-muted-foreground">{c.entry_point_name}</span>
+                  <div className="flex min-w-0 flex-1 items-center gap-2">
+                    <span className="truncate">{c.target_name}</span>
+                    <span className="text-muted-foreground">→</span>
+                    <span className="truncate text-muted-foreground">{c.entry_point_name}</span>
+                  </div>
                   {c.kev_count > 0 && <KevChip />}
                   <span className={cn('ms-auto text-xs font-bold tabular-nums', STATE_TEXT.crit)}>
                     {Math.round(c.score)}
