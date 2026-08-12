@@ -36,6 +36,11 @@ export interface ExecTopRisk {
   asset_name: string
   epss_score?: number
   is_in_kev: boolean
+  // Optional deep-link targets. `finding_id` is being added by a sibling API PR;
+  // treat both as OPTIONAL so the UI links only when present and still ships
+  // safely against an API that hasn't deployed them yet.
+  finding_id?: string
+  asset_id?: string
 }
 
 export interface ExecutiveSummary {
