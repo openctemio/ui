@@ -118,8 +118,8 @@ function AssetRow({ asset, rank, maxPathScore }: AssetRowProps) {
   const assetIcon = getAssetTypeIcon(asset.assetType)
   const progressPct = maxPathScore > 0 ? Math.round((asset.pathScore / maxPathScore) * 100) : 0
 
-  return (
-    <div className="flex items-start gap-4 rounded-lg border p-4 transition-colors hover:bg-muted/30">
+  const inner = (
+    <>
       {/* Rank badge */}
       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-bold text-muted-foreground">
         {rank}
@@ -185,6 +185,26 @@ function AssetRow({ asset, rank, maxPathScore }: AssetRowProps) {
           {asset.reachableFrom === 1 ? 'entry point' : 'entry points'}
         </span>
       </div>
+    </>
+  )
+
+  // Deep-link the row to this asset's findings. Only link when an asset id is
+  // present so we never fabricate a bogus target.
+  if (asset.assetId) {
+    return (
+      <Link
+        href={`/findings?assetId=${asset.assetId}`}
+        aria-label={`View findings for ${asset.name}`}
+        className="flex items-start gap-4 rounded-lg border p-4 transition-colors hover:bg-muted/30 focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none"
+      >
+        {inner}
+      </Link>
+    )
+  }
+
+  return (
+    <div className="flex items-start gap-4 rounded-lg border p-4 transition-colors hover:bg-muted/30">
+      {inner}
     </div>
   )
 }
@@ -371,11 +391,8 @@ export default function AttackPathAnalysisPage() {
                     <div className="space-y-2">
                       {entryPointAssets.map((ep) => {
                         const Icon = getAssetTypeIcon(ep.assetType)
-                        return (
-                          <div
-                            key={ep.assetId}
-                            className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted/50"
-                          >
+                        const row = (
+                          <>
                             <Icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                             <span className="min-w-0 flex-1 truncate">{ep.name}</span>
                             {ep.findingCount > 0 && (
@@ -383,6 +400,23 @@ export default function AttackPathAnalysisPage() {
                                 {ep.findingCount}F
                               </span>
                             )}
+                          </>
+                        )
+                        return ep.assetId ? (
+                          <Link
+                            key={ep.assetId}
+                            href={`/findings?assetId=${ep.assetId}`}
+                            aria-label={`View findings for ${ep.name}`}
+                            className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted/50 focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none"
+                          >
+                            {row}
+                          </Link>
+                        ) : (
+                          <div
+                            key={ep.name}
+                            className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm"
+                          >
+                            {row}
                           </div>
                         )
                       })}

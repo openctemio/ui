@@ -45,16 +45,23 @@ function toItems(chains: ExposureChain[], topRisks: ExecTopRisk[]): FixNextItem[
     }
   })
 
-  const riskItems: FixNextItem[] = topRisks.map((r, i) => ({
-    key: `risk-${i}-${r.title}`,
-    // EPSS is 0..1; scale to a comparable 0..100 exposure score.
-    score: Math.round((r.epss_score ?? 0) * 100),
-    title: r.title,
-    href: '/findings',
-    kev: r.is_in_kev,
-    priorityClass: (r.priority_class?.toUpperCase() as PriorityClass) || undefined,
-    meta: [r.asset_name].filter(Boolean),
-  }))
+  const riskItems: FixNextItem[] = topRisks.map((r, i) => {
+    const priorityClass = (r.priority_class?.toUpperCase() as PriorityClass) || undefined
+    return {
+      key: `risk-${i}-${r.title}`,
+      // EPSS is 0..1; scale to a comparable 0..100 exposure score.
+      score: Math.round((r.epss_score ?? 0) * 100),
+      title: r.title,
+      // Deep-link to the specific finding when the id is present (sibling API PR
+      // is adding it); otherwise fall back to the priority-filtered list.
+      href: r.finding_id
+        ? `/findings/${r.finding_id}`
+        : `/findings?priority=${priorityClass || ''}`,
+      kev: r.is_in_kev,
+      priorityClass,
+      meta: [r.asset_name].filter(Boolean),
+    }
+  })
 
   return [...chainItems, ...riskItems].sort((a, b) => b.score - a.score)
 }
