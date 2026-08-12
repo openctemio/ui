@@ -29,7 +29,7 @@ export function ThreatIntelCard({ stats, isLoading }: ThreatIntelCardProps) {
         <span className="text-sm font-semibold tracking-tight">Threat intel context</span>
         <span className="text-[11px] text-muted-foreground">threat-intel · live</span>
       </CardHeader>
-      <CardContent>
+      <CardContent className="flex flex-1 flex-col justify-center">
         {isLoading ? (
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             {[0, 1, 2, 3].map((i) => (

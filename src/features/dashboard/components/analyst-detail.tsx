@@ -59,9 +59,7 @@ export function AnalystDetail({ stats, isLoading }: AnalystDetailProps) {
 
   return (
     <div className="space-y-4">
-      <p className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-        Analyst detail — retained charts
-      </p>
+      <h2 className="text-sm font-semibold tracking-tight">Analyst detail</h2>
 
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-7">
         {/* Findings Trend */}

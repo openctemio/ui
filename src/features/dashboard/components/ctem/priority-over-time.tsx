@@ -32,11 +32,11 @@ export function PriorityOverTime({ trend, isLoading }: PriorityOverTimeProps) {
         <span className="text-sm font-semibold tracking-tight">Priority classes over time</span>
         <span className="text-[11px] text-muted-foreground">P0–P3 open · 90d</span>
       </CardHeader>
-      <CardContent>
+      <CardContent className="flex flex-1 flex-col">
         {isLoading ? (
           <Skeleton className="h-28 w-full" />
         ) : points.length > 1 ? (
-          <div className="h-28 w-full">
+          <div className="w-full flex-1 min-h-28">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={points} margin={{ top: 4, right: 4, bottom: 0, left: 4 }}>
                 <XAxis dataKey="date" hide />
@@ -61,7 +61,7 @@ export function PriorityOverTime({ trend, isLoading }: PriorityOverTimeProps) {
             </ResponsiveContainer>
           </div>
         ) : (
-          <div className="flex h-28 items-center justify-center text-xs text-muted-foreground">
+          <div className="flex flex-1 min-h-28 items-center justify-center text-xs text-muted-foreground">
             No trend data yet
           </div>
         )}
