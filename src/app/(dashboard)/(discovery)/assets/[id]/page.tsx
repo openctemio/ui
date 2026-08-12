@@ -17,6 +17,7 @@
 
 import * as React from 'react'
 import { useRouter, useParams } from 'next/navigation'
+import Link from 'next/link'
 import { AlertCircle, ArrowLeft, Globe, Loader2, Server, Shield } from 'lucide-react'
 import { Main } from '@/components/layout'
 import { Button } from '@/components/ui/button'
@@ -167,9 +168,16 @@ export default function AssetDetailPage() {
             <CardTitle className="text-sm">Findings</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className={cn('text-2xl font-bold', asset.findingCount > 0 ? 'text-red-500' : '')}>
+            <Link
+              href={`/findings?assetId=${assetId}`}
+              className={cn(
+                'inline-block text-2xl font-bold hover:underline',
+                asset.findingCount > 0 ? 'text-destructive' : ''
+              )}
+              aria-label={`View ${asset.findingCount} findings for this asset`}
+            >
               {asset.findingCount}
-            </p>
+            </Link>
           </CardContent>
         </Card>
       </div>

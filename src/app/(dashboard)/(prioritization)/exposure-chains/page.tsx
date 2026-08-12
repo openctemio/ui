@@ -103,19 +103,20 @@ function HopPath({ hops }: { hops: ChainHop[] }) {
         const Icon = getAssetTypeIcon(hop.assetType)
         return (
           <Fragment key={hop.assetId}>
-            <span
+            <Link
+              href={`/findings?assetId=${hop.assetId}`}
               className={cn(
-                'inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs',
+                'inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs transition-shadow hover:ring-1 hover:ring-current',
                 isEntry && 'border-red-500/30 bg-red-500/10 text-red-500',
                 isTarget && 'border-orange-500/30 bg-orange-500/10 font-medium text-orange-500',
                 !isEntry && !isTarget && 'border-border bg-muted/40 text-muted-foreground'
               )}
-              title={`${hop.name} (${capitalize(hop.assetType)}, ${capitalize(hop.exposure)})`}
+              title={`${hop.name} (${capitalize(hop.assetType)}, ${capitalize(hop.exposure)}) — view findings`}
             >
               {isEntry && <Globe className="h-3 w-3 shrink-0" aria-label="Public entry point" />}
               {!isEntry && createElement(Icon, { className: 'h-3 w-3 shrink-0' })}
               <span className="max-w-[10rem] truncate">{hop.name}</span>
-            </span>
+            </Link>
             {!isTarget && <ArrowRight className="h-3 w-3 shrink-0 text-muted-foreground" />}
           </Fragment>
         )
