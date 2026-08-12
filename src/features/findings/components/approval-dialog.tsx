@@ -24,6 +24,8 @@ interface ApprovalDialogProps {
   targetStatus: FindingStatus
   open: boolean
   onOpenChange: (open: boolean) => void
+  /** Called after an approval request is submitted successfully (e.g. to refresh lists/history) */
+  onSuccess?: () => void | Promise<void>
 }
 
 export function ApprovalDialog({
@@ -31,6 +33,7 @@ export function ApprovalDialog({
   targetStatus,
   open,
   onOpenChange,
+  onSuccess,
 }: ApprovalDialogProps) {
   const [justification, setJustification] = useState('')
   const [expiresAt, setExpiresAt] = useState('')
@@ -69,6 +72,7 @@ export function ApprovalDialog({
       setExpiresAt('')
       setStep('input')
       onOpenChange(false)
+      await onSuccess?.()
     } catch (error) {
       toast.error(getErrorMessage(error, 'Failed to submit approval request'))
     }
