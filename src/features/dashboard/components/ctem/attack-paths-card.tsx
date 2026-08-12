@@ -23,7 +23,7 @@ export function AttackPathsCard({ attackPaths, chains, isLoading }: AttackPathsC
   const topChains = (chains ?? []).slice(0, 4)
 
   return (
-    <Card>
+    <Card className="gap-4">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <span className="text-sm font-semibold tracking-tight">Attack paths → crown jewels</span>
         <span className="font-mono text-[11px] text-muted-foreground">{reachable} reachable</span>

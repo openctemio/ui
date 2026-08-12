@@ -1,7 +1,9 @@
 'use client'
 
+import type { ReactNode } from 'react'
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { ProcessStepper, StatsCard } from '@/features/shared'
+import { PageHeader, ProcessStepper, StatsCard } from '@/features/shared'
 import { ActivityItem, QuickStat, useDashboardStats } from '@/features/dashboard'
 import { MTTRCard, RiskVelocityCard } from '@/features/dashboard/components/mttr-card'
 import { Can, Permission } from '@/lib/permissions'
@@ -135,7 +137,7 @@ function BottomSectionsSkeleton() {
  * Palette literals from the original were swapped for the shared severity tokens
  * (single-source); everything else is the pre-redesign layout unchanged.
  */
-export function ClassicDashboard() {
+export function ClassicDashboard({ headerSwitcher }: { headerSwitcher?: ReactNode }) {
   const { currentTenant } = useTenant()
   const { stats, isLoading, error } = useDashboardStats(currentTenant?.id || null)
 
@@ -193,6 +195,10 @@ export function ClassicDashboard() {
 
   return (
     <>
+      <PageHeader title="Dashboard" className="mb-6">
+        {headerSwitcher}
+      </PageHeader>
+
       {/* Quick Actions & Process Stepper */}
       <section className="mb-6 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {/* Quick Actions */}
