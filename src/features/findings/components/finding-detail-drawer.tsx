@@ -70,6 +70,7 @@ import { AssigneeSelect } from './assignee-select'
 import { StatusSelect } from './status-select'
 import { SeveritySelect } from './severity-select'
 import { CreateTicketDialog } from './create-ticket-dialog'
+import { ApprovalDialog } from './approval-dialog'
 import { useModuleEnabled } from '@/features/integrations/api/use-tenant-modules'
 import { useTenant } from '@/context/tenant-provider'
 import { useMembers } from '@/features/organization/api/use-members'
@@ -238,6 +239,11 @@ export function FindingDetailDrawer({
   )
   const [approvalHistoryOpen, setApprovalHistoryOpen] = useState(false)
 
+  // Approval-required status changes (false_positive, accepted, accepted_risk)
+  // route through the same ApprovalDialog the full finding-detail page uses.
+  const [approvalDialogOpen, setApprovalDialogOpen] = useState(false)
+  const [approvalTargetStatus, setApprovalTargetStatus] = useState<FindingStatus | null>(null)
+
   // Reset local state when finding changes (drawer opens with new finding)
   useEffect(() => {
     if (finding) {
@@ -317,11 +323,12 @@ export function FindingDetailDrawer({
       return
     }
 
-    // Check if status requires approval
+    // Approval-required statuses (false_positive, accepted, accepted_risk) can't
+    // be set directly — open the same ApprovalDialog the full page uses so the
+    // user submits a justified approval request instead of a silent no-op.
     if (requiresApproval(newStatus)) {
-      toast.info(
-        `${FINDING_STATUS_CONFIG[newStatus].label} requires approval. Feature coming soon.`
-      )
+      setApprovalTargetStatus(newStatus)
+      setApprovalDialogOpen(true)
       return
     }
 
@@ -1051,6 +1058,18 @@ export function FindingDetailDrawer({
           findingTitle={finding.title}
           open={ticketOpen}
           onOpenChange={setTicketOpen}
+        />
+      )}
+      {/* Approval-required status changes reuse the same dialog + request-approval
+          mutation as the full finding-detail page. On success we refresh the
+          findings cache so pending-approval state is reflected. */}
+      {approvalTargetStatus && (
+        <ApprovalDialog
+          findingId={finding.id}
+          targetStatus={approvalTargetStatus}
+          open={approvalDialogOpen}
+          onOpenChange={setApprovalDialogOpen}
+          onSuccess={() => invalidateFindingsCache()}
         />
       )}
     </>
