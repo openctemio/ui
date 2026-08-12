@@ -17,7 +17,7 @@ function Kv({ n, label, danger }: { n: number; label: string; danger?: boolean }
       <span className={cn('text-lg font-semibold tabular-nums', danger && STATE_TEXT.crit)}>
         {n.toLocaleString()}
       </span>
-      <span className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</span>
+      <span className="text-[11px] text-muted-foreground">{label}</span>
     </div>
   )
 }

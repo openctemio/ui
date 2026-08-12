@@ -78,7 +78,7 @@ export function CtemDashboard() {
           scanCoverage={scanCoverage}
           validationCoverage={validationCoverage}
           threatIntel={threatIntel}
-          isLoading={summaryLoading || scanLoading || validationLoading}
+          isLoading={summaryLoading || scanLoading || validationLoading || threatLoading}
         />
       </section>
 
