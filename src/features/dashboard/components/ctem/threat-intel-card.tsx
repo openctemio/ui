@@ -14,9 +14,7 @@ interface ThreatIntelCardProps {
 function Kv({ n, label, danger }: { n: number; label: string; danger?: boolean }) {
   return (
     <div className="flex flex-col gap-0.5">
-      <span
-        className={cn('font-mono text-lg font-semibold tabular-nums', danger && STATE_TEXT.crit)}
-      >
+      <span className={cn('text-lg font-semibold tabular-nums', danger && STATE_TEXT.crit)}>
         {n.toLocaleString()}
       </span>
       <span className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</span>
@@ -29,7 +27,7 @@ export function ThreatIntelCard({ stats, isLoading }: ThreatIntelCardProps) {
     <Card className="gap-4">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <span className="text-sm font-semibold tracking-tight">Threat intel context</span>
-        <span className="font-mono text-[11px] text-muted-foreground">threat-intel · live</span>
+        <span className="text-[11px] text-muted-foreground">threat-intel · live</span>
       </CardHeader>
       <CardContent>
         {isLoading ? (

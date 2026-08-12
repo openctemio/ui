@@ -26,7 +26,7 @@ export function AttackPathsCard({ attackPaths, chains, isLoading }: AttackPathsC
     <Card className="gap-4">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <span className="text-sm font-semibold tracking-tight">Attack paths → crown jewels</span>
-        <span className="font-mono text-[11px] text-muted-foreground">{reachable} reachable</span>
+        <span className="text-[11px] text-muted-foreground">{reachable} reachable</span>
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -54,7 +54,7 @@ export function AttackPathsCard({ attackPaths, chains, isLoading }: AttackPathsC
           />
         ) : (
           <div className="flex items-baseline gap-2">
-            <span className={cn('font-mono text-3xl font-semibold tabular-nums', STATE_TEXT.crit)}>
+            <span className={cn('text-3xl font-semibold tabular-nums', STATE_TEXT.crit)}>
               {crownJewels}
             </span>
             <span className="text-xs text-muted-foreground">crown jewels at risk</span>
@@ -63,22 +63,17 @@ export function AttackPathsCard({ attackPaths, chains, isLoading }: AttackPathsC
 
         {topChains.length > 0 && (
           <>
-            <p className="mb-1 mt-4 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+            <p className="mb-1 mt-4 text-[11px] uppercase tracking-wider text-muted-foreground">
               Reachable now
             </p>
             <ul className="divide-y divide-border">
               {topChains.map((c, i) => (
                 <li key={`${c.target_name}-${i}`} className="flex items-center gap-2 py-2 text-xs">
                   <span className="truncate">{c.target_name}</span>
-                  <span className="font-mono text-muted-foreground">→</span>
+                  <span className="text-muted-foreground">→</span>
                   <span className="truncate text-muted-foreground">{c.entry_point_name}</span>
                   {c.kev_count > 0 && <KevChip />}
-                  <span
-                    className={cn(
-                      'ms-auto font-mono text-xs font-bold tabular-nums',
-                      STATE_TEXT.crit
-                    )}
-                  >
+                  <span className={cn('ms-auto text-xs font-bold tabular-nums', STATE_TEXT.crit)}>
                     {Math.round(c.score)}
                   </span>
                 </li>

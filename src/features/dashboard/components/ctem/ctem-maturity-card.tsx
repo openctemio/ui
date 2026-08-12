@@ -25,7 +25,7 @@ export function CtemMaturityCard({ data, isLoading }: CtemMaturityCardProps) {
     <Card className="gap-4">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <span className="text-sm font-semibold tracking-tight">CTEM maturity</span>
-        <span className="font-mono text-[11px] text-muted-foreground">ctem-cycles · trend</span>
+        <span className="text-[11px] text-muted-foreground">ctem-cycles · trend</span>
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -33,9 +33,7 @@ export function CtemMaturityCard({ data, isLoading }: CtemMaturityCardProps) {
         ) : (
           <>
             <div className="flex items-baseline gap-2">
-              <span
-                className={cn('font-mono text-3xl font-semibold tabular-nums', STATE_TEXT[state])}
-              >
+              <span className={cn('text-3xl font-semibold tabular-nums', STATE_TEXT[state])}>
                 {score.toFixed(0)}
               </span>
               <span className="text-xs text-muted-foreground">maturity score</span>

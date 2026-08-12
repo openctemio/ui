@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { PageHeader } from '@/features/shared'
 import { Can, Permission } from '@/lib/permissions'
 import Link from 'next/link'
-import { Plus, FileWarning, ListChecks, ArrowRight } from 'lucide-react'
+import { Plus } from 'lucide-react'
 
 import { useTenant } from '@/context/tenant-provider'
 import { useDashboardStats } from '@/features/dashboard'
@@ -85,58 +85,6 @@ export function CtemDashboard({ headerSwitcher }: { headerSwitcher?: ReactNode }
           </Can>
         </div>
       </PageHeader>
-
-      {/* Quick Actions (permission-gated) — slim strip so exposure leads */}
-      <div className="mb-6 flex flex-wrap gap-2">
-        <Can
-          permission={Permission.ScansWrite}
-          mode="disable"
-          disabledTooltip="You don't have permission to create scans"
-        >
-          <Button asChild size="sm">
-            <Link href="/scans">
-              <Plus className="me-2 h-4 w-4" />
-              New Scan
-            </Link>
-          </Button>
-        </Can>
-        <Can
-          permission={Permission.FindingsRead}
-          mode="disable"
-          disabledTooltip="You don't have permission to view findings"
-        >
-          <Button asChild variant="outline" size="sm">
-            <Link href="/findings">
-              <FileWarning className="me-2 h-4 w-4" />
-              View Findings
-            </Link>
-          </Button>
-        </Can>
-        <Can
-          permission={Permission.RemediationRead}
-          mode="disable"
-          disabledTooltip="You don't have permission to view remediation tasks"
-        >
-          <Button asChild variant="outline" size="sm">
-            <Link href="/remediation">
-              <ListChecks className="me-2 h-4 w-4" />
-              Remediation Tasks
-            </Link>
-          </Button>
-        </Can>
-        <Can
-          permission={Permission.ReportsRead}
-          mode="disable"
-          disabledTooltip="You don't have permission to generate reports"
-        >
-          <Button asChild variant="outline" size="sm">
-            <Link href="/reports">
-              <ArrowRight className="me-2 h-4 w-4" />
-              Generate Report
-            </Link>
-          </Button>
-        </Can>
-      </div>
 
       {/* Row 1 — Active exposure hero + Fix next */}
       <section className="mb-6 grid items-start gap-4 lg:grid-cols-[1.35fr_1fr]">

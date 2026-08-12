@@ -22,7 +22,7 @@ function Head({ title, desc }: { title: string; desc: string }) {
   return (
     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
       <span className="text-sm font-semibold tracking-tight">{title}</span>
-      <span className="font-mono text-[11px] text-muted-foreground">{desc}</span>
+      <span className="text-[11px] text-muted-foreground">{desc}</span>
     </CardHeader>
   )
 }
@@ -61,14 +61,14 @@ export function ExposureHero({ summary, trend, kevChainCount, isLoading }: Expos
         <div className="flex items-center gap-4">
           <span
             className={cn(
-              'font-mono text-5xl font-semibold leading-none tracking-tight tabular-nums',
+              'text-5xl font-semibold leading-none tracking-tight tabular-nums',
               STATE_TEXT.crit
             )}
           >
             {p0}
           </span>
           <div className="flex flex-col leading-tight">
-            <span className={cn('font-mono text-sm font-bold', STATE_TEXT.crit)}>P0</span>
+            <span className={cn('text-sm font-bold', STATE_TEXT.crit)}>P0</span>
             <span className="text-xs text-muted-foreground">exploitable now</span>
           </div>
         </div>
@@ -77,21 +77,17 @@ export function ExposureHero({ summary, trend, kevChainCount, isLoading }: Expos
         <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-xs text-muted-foreground">
           <span>
             Risk{' '}
-            <span className="font-mono font-semibold text-foreground">
+            <span className="font-semibold text-foreground">
               {summary ? formatRiskScore(summary.risk_score_current) : '—'}
             </span>
           </span>
           <span>
-            KEV chains{' '}
-            <span className="font-mono font-semibold text-foreground">{kevChainCount}</span>
+            KEV chains <span className="font-semibold text-foreground">{kevChainCount}</span>
           </span>
           <span>
             Crown jewels{' '}
             <span
-              className={cn(
-                'font-mono font-semibold',
-                crownJewels > 0 ? STATE_TEXT.crit : 'text-foreground'
-              )}
+              className={cn('font-semibold', crownJewels > 0 ? STATE_TEXT.crit : 'text-foreground')}
             >
               {crownJewels}
             </span>
@@ -99,10 +95,7 @@ export function ExposureHero({ summary, trend, kevChainCount, isLoading }: Expos
           <span>
             SLA{' '}
             <span
-              className={cn(
-                'font-mono font-semibold',
-                slaPct >= 90 ? STATE_TEXT.good : 'text-foreground'
-              )}
+              className={cn('font-semibold', slaPct >= 90 ? STATE_TEXT.good : 'text-foreground')}
             >
               {slaPct.toFixed(0)}%
             </span>
@@ -111,7 +104,7 @@ export function ExposureHero({ summary, trend, kevChainCount, isLoading }: Expos
 
         {/* Burn-down */}
         <div className="mt-4">
-          <div className="mb-1 flex items-center justify-between font-mono text-[11px] text-muted-foreground">
+          <div className="mb-1 flex items-center justify-between text-[11px] text-muted-foreground">
             <span>P0 open · 90d · {resolved} resolved this period</span>
             <span
               className={cn('flex items-center gap-1', losing ? STATE_TEXT.crit : STATE_TEXT.good)}
