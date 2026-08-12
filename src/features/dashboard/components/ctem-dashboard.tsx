@@ -1,13 +1,5 @@
 'use client'
 
-import type { ReactNode } from 'react'
-
-import { Button } from '@/components/ui/button'
-import { PageHeader } from '@/features/shared'
-import { Can, Permission } from '@/lib/permissions'
-import Link from 'next/link'
-import { Plus } from 'lucide-react'
-
 import { useTenant } from '@/context/tenant-provider'
 import { useDashboardStats } from '@/features/dashboard'
 import { useModuleEnabled } from '@/features/integrations/api/use-tenant-modules'
@@ -40,7 +32,7 @@ import { AnalystDetail } from '@/features/dashboard/components/analyst-detail'
  * the retained analyst charts. Rendered as a sibling of ClassicDashboard behind
  * the dashboard view switcher.
  */
-export function CtemDashboard({ headerSwitcher }: { headerSwitcher?: ReactNode }) {
+export function CtemDashboard() {
   const { currentTenant } = useTenant()
   const tenantId = currentTenant?.id || null
 
@@ -68,37 +60,15 @@ export function CtemDashboard({ headerSwitcher }: { headerSwitcher?: ReactNode }
 
   return (
     <>
-      <PageHeader
-        title="Dashboard"
-        description="Continuous threat exposure — what's exploitable now, and what to do about it."
-        className="mb-6"
-      >
-        <div className="flex items-center gap-2">
-          {headerSwitcher}
-          <Can permission={Permission.ScansWrite} mode="disable">
-            <Button asChild size="sm">
-              <Link href="/scans">
-                <Plus className="me-2 h-4 w-4" />
-                Run scan
-              </Link>
-            </Button>
-          </Can>
-        </div>
-      </PageHeader>
-
-      {/* Row 1 — Active exposure hero + Fix next */}
-      <section className="mb-6 grid items-start gap-4 lg:grid-cols-[1.35fr_1fr]">
+      {/* Row 1 — Active exposure hero + Priority over time (matched-height charts) */}
+      <section className="mb-6 grid items-start gap-4 lg:grid-cols-2">
         <ExposureHero
           summary={summary}
           trend={trend}
           kevChainCount={kevChainCount}
           isLoading={summaryLoading || trendLoading}
         />
-        <FixNextQueue
-          chains={chains}
-          topRisks={summary?.top_risks}
-          isLoading={exposureLoading || summaryLoading}
-        />
+        <PriorityOverTime trend={trend} isLoading={trendLoading} />
       </section>
 
       {/* Row 2 — CTEM loop */}
@@ -112,9 +82,13 @@ export function CtemDashboard({ headerSwitcher }: { headerSwitcher?: ReactNode }
         />
       </section>
 
-      {/* Row 3 — Priority over time + Attack paths */}
+      {/* Row 3 — Fix next + Attack paths */}
       <section className="mb-6 grid items-start gap-4 lg:grid-cols-[1.3fr_1fr]">
-        <PriorityOverTime trend={trend} isLoading={trendLoading} />
+        <FixNextQueue
+          chains={chains}
+          topRisks={summary?.top_risks}
+          isLoading={exposureLoading || summaryLoading}
+        />
         <AttackPathsCard
           attackPaths={attackPaths}
           chains={chains}
