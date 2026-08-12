@@ -4,21 +4,23 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 import { coverageState, STATE_BAR, STATE_TEXT } from '../../lib/ctem-colors'
-import type { CtemMaturityPoint } from '../../hooks/use-ctem-dashboard'
+import type { CtemMaturityTrend } from '../../hooks/use-ctem-dashboard'
 
 interface CtemMaturityCardProps {
-  data?: CtemMaturityPoint[]
+  data?: CtemMaturityTrend
   isLoading?: boolean
 }
 
 /**
  * CTEM maturity gauge — module-gated (`ctem_cycles`). Only rendered when the
  * module is enabled; the fetch is skipped otherwise, so this never sees a 403.
- * Shape is read defensively (either `maturity_score` or `score`).
+ * The endpoint returns an object; the score lives at `data.maturity.score`
+ * (0-100), with stage coverage and cycle count read from the same sub-object.
  */
 export function CtemMaturityCard({ data, isLoading }: CtemMaturityCardProps) {
-  const latest = data && data.length > 0 ? data[data.length - 1] : undefined
-  const score = latest?.maturity_score ?? latest?.score ?? 0
+  const score = data?.maturity?.score ?? 0
+  const covered = data?.maturity?.ctem_stage_coverage?.covered_count
+  const cycles = data?.maturity?.cycles_analyzed ?? data?.cycles_analyzed
   const state = coverageState(score)
 
   return (
@@ -44,6 +46,13 @@ export function CtemMaturityCard({ data, isLoading }: CtemMaturityCardProps) {
                 style={{ width: `${Math.min(100, Math.max(0, score))}%` }}
               />
             </div>
+            {(covered !== undefined || cycles !== undefined) && (
+              <p className="mt-2 text-[11px] text-muted-foreground">
+                {covered !== undefined && `${covered} of 5 CTEM stages`}
+                {covered !== undefined && cycles !== undefined && ' · '}
+                {cycles !== undefined && `${cycles} cycle${cycles === 1 ? '' : 's'} analyzed`}
+              </p>
+            )}
           </>
         )}
       </CardContent>
