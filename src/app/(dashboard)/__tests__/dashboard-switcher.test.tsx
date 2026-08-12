@@ -1,28 +1,24 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import type { ReactNode } from 'react'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import Dashboard from '../page'
 
 // The two views are exercised by their own tests; here we only verify the
 // switcher — which view renders, that switching persists, and the default.
-// The switcher now lives inside each view's header (passed as `headerSwitcher`),
-// so the mocks must render it for the tablist to appear.
+// The switcher now lives in the shell (a real TabsList rendered outside the
+// views), so the view mocks are just content stubs.
 vi.mock('@/features/dashboard/components/ctem-dashboard', () => ({
-  CtemDashboard: ({ headerSwitcher }: { headerSwitcher?: ReactNode }) => (
-    <div>
-      {headerSwitcher}
-      CTEM_VIEW
-    </div>
-  ),
+  CtemDashboard: () => <div>CTEM_VIEW</div>,
 }))
 vi.mock('@/features/dashboard/components/classic-dashboard', () => ({
-  ClassicDashboard: ({ headerSwitcher }: { headerSwitcher?: ReactNode }) => (
-    <div>
-      {headerSwitcher}
-      CLASSIC_VIEW
-    </div>
-  ),
+  ClassicDashboard: () => <div>CLASSIC_VIEW</div>,
+}))
+
+// The shell's shared header now renders a permission-gated "Run scan" action.
+// Stub the permission layer so the switcher test needs no tenant/auth providers.
+vi.mock('@/lib/permissions', () => ({
+  Can: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  Permission: { ScansWrite: 'scans:write' },
 }))
 
 const STORAGE_KEY = 'openctem:dashboard-view'
