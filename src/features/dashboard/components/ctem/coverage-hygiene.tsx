@@ -24,7 +24,7 @@ function Row({ label, pct }: { label: string; pct: number }) {
           style={{ width: `${Math.min(100, Math.max(0, pct))}%` }}
         />
       </div>
-      <span className={cn('w-9 text-right font-mono tabular-nums', STATE_TEXT[state])}>
+      <span className={cn('w-9 text-right tabular-nums', STATE_TEXT[state])}>
         {pct.toFixed(0)}%
       </span>
     </div>
@@ -36,9 +36,7 @@ export function CoverageHygiene({ scan, validation, slaPct, isLoading }: Coverag
     <Card className="gap-4">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <span className="text-sm font-semibold tracking-tight">Coverage &amp; hygiene</span>
-        <span className="font-mono text-[11px] text-muted-foreground">
-          scans · validation · SLA
-        </span>
+        <span className="text-[11px] text-muted-foreground">scans · validation · SLA</span>
       </CardHeader>
       <CardContent>
         {isLoading ? (

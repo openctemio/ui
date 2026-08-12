@@ -30,7 +30,7 @@ export function PriorityOverTime({ trend, isLoading }: PriorityOverTimeProps) {
     <Card className="gap-4">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <span className="text-sm font-semibold tracking-tight">Priority classes over time</span>
-        <span className="font-mono text-[11px] text-muted-foreground">P0–P3 open · 90d</span>
+        <span className="text-[11px] text-muted-foreground">P0–P3 open · 90d</span>
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -80,7 +80,7 @@ export function PriorityOverTime({ trend, isLoading }: PriorityOverTimeProps) {
                   }}
                 />
               </div>
-              <span className="text-right font-mono text-[13px] tabular-nums">{current[p]}</span>
+              <span className="text-right text-[13px] tabular-nums">{current[p]}</span>
             </div>
           ))}
         </div>
