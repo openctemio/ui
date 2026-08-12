@@ -50,7 +50,9 @@ export function ExposureHero({ summary, trend, kevChainCount, isLoading }: Expos
   const series = (trend ?? []).map((p) => ({ date: p.date, p0: p.p0_open }))
   const first = series[0]?.p0 ?? 0
   const last = series[series.length - 1]?.p0 ?? 0
-  const losing = last > first
+  const hasTrend = series.length > 1
+  const delta = last - first
+  const losing = delta > 0
   const TrendIcon = losing ? TrendingUp : TrendingDown
 
   return (
@@ -106,12 +108,17 @@ export function ExposureHero({ summary, trend, kevChainCount, isLoading }: Expos
         <div className="mt-4 flex flex-1 flex-col">
           <div className="mb-1 flex items-center justify-between text-[11px] text-muted-foreground">
             <span>P0 open · 90d · {resolved} resolved this period</span>
-            <span
-              className={cn('flex items-center gap-1', losing ? STATE_TEXT.crit : STATE_TEXT.good)}
-            >
-              <TrendIcon className="h-3 w-3" />
-              {losing ? 'losing ground' : 'gaining ground'}
-            </span>
+            {hasTrend && delta !== 0 && (
+              <span
+                className={cn(
+                  'flex items-center gap-1',
+                  losing ? STATE_TEXT.crit : STATE_TEXT.good
+                )}
+              >
+                <TrendIcon className="h-3 w-3" />
+                {losing ? 'losing ground' : 'gaining ground'}
+              </span>
+            )}
           </div>
           {series.length > 1 ? (
             <div className="w-full flex-1 min-h-16">

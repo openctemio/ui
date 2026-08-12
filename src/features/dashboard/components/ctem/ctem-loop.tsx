@@ -84,7 +84,7 @@ export function CtemLoop({
   const p0 = summary?.p0_open ?? 0
   const valPct = validationCoverage?.overall_pct ?? 0
   const slaPct = summary?.sla_compliance_pct ?? 0
-  const kevTotal = threatIntel?.kev.total_entries ?? 0
+  const kevTotal = threatIntel?.kev?.total_entries ?? 0
 
   const stages: Stage[] = [
     {
