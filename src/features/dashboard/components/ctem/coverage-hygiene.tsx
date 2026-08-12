@@ -38,7 +38,7 @@ export function CoverageHygiene({ scan, validation, slaPct, isLoading }: Coverag
         <span className="text-sm font-semibold tracking-tight">Coverage &amp; hygiene</span>
         <span className="text-[11px] text-muted-foreground">scans · validation · SLA</span>
       </CardHeader>
-      <CardContent>
+      <CardContent className="flex flex-1 flex-col justify-center">
         {isLoading ? (
           <div className="space-y-3">
             {[0, 1, 2].map((i) => (
