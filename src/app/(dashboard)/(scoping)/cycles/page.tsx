@@ -21,7 +21,8 @@ import {
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Plus, Play, Eye, CheckCircle, RefreshCw } from 'lucide-react'
-import { get, post, patch } from '@/lib/api/client'
+import { get, post } from '@/lib/api/client'
+import { getErrorMessage } from '@/lib/api/error-handler'
 import { toast } from 'sonner'
 
 interface CtemCycle {
@@ -103,15 +104,22 @@ export default function CtemCyclesPage() {
   }
 
   const handleStatusChange = async (id: string, action: 'activate' | 'review' | 'close') => {
-    const statusMap = { activate: 'active', review: 'review', close: 'closed' } as const
+    // Cycle transitions have dedicated endpoints that also snapshot scope
+    // (activate) and enforce close gates. A plain PATCH {status} does NOT
+    // transition the cycle — it hits the metadata Update handler, which
+    // blanks the name and only matches WHERE status='planning'.
+    const endpointMap = { activate: 'activate', review: 'start-review', close: 'close' } as const
+    const successMap = {
+      activate: 'Cycle activated',
+      review: 'Cycle moved to review',
+      close: 'Cycle closed',
+    } as const
     try {
-      await patch(`/api/v1/ctem-cycles/${id}`, { status: statusMap[action] })
+      await post(`/api/v1/ctem-cycles/${id}/${endpointMap[action]}`)
       await mutate()
-      toast.success(
-        `Cycle ${action === 'activate' ? 'activated' : action === 'review' ? 'moved to review' : 'closed'}`
-      )
-    } catch {
-      toast.error('Failed to update cycle status')
+      toast.success(successMap[action])
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to update cycle status'))
     }
   }
 
