@@ -56,7 +56,7 @@ export function ExposureHero({ summary, trend, kevChainCount, isLoading }: Expos
   return (
     <Card className="gap-4">
       <Head title="Active exposure" desc="exploitable now" />
-      <CardContent>
+      <CardContent className="flex flex-1 flex-col">
         {/* Hero number + tiny label */}
         <div className="flex items-center gap-4">
           <span
@@ -103,7 +103,7 @@ export function ExposureHero({ summary, trend, kevChainCount, isLoading }: Expos
         </div>
 
         {/* Burn-down */}
-        <div className="mt-4">
+        <div className="mt-4 flex flex-1 flex-col">
           <div className="mb-1 flex items-center justify-between text-[11px] text-muted-foreground">
             <span>P0 open · 90d · {resolved} resolved this period</span>
             <span
@@ -114,7 +114,7 @@ export function ExposureHero({ summary, trend, kevChainCount, isLoading }: Expos
             </span>
           </div>
           {series.length > 1 ? (
-            <div className="h-16 w-full">
+            <div className="w-full flex-1 min-h-16">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={series} margin={{ top: 4, right: 4, bottom: 0, left: 4 }}>
                   <XAxis dataKey="date" hide />
@@ -135,7 +135,7 @@ export function ExposureHero({ summary, trend, kevChainCount, isLoading }: Expos
               </ResponsiveContainer>
             </div>
           ) : (
-            <div className="flex h-16 items-center justify-center text-xs text-muted-foreground">
+            <div className="flex flex-1 min-h-16 items-center justify-center text-xs text-muted-foreground">
               No trend data yet
             </div>
           )}

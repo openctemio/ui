@@ -28,7 +28,7 @@ export function AttackPathsCard({ attackPaths, chains, isLoading }: AttackPathsC
         <span className="text-sm font-semibold tracking-tight">Attack paths → crown jewels</span>
         <span className="text-[11px] text-muted-foreground">{reachable} reachable</span>
       </CardHeader>
-      <CardContent>
+      <CardContent className="flex flex-1 flex-col">
         {isLoading ? (
           <div className="space-y-3">
             <Skeleton className="h-16 w-full" />
