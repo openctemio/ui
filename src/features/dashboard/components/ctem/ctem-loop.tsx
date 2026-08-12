@@ -36,14 +36,12 @@ function StageCard({ stage }: { stage: Stage }) {
         <span className={cn('absolute inset-y-0 left-0 w-[3px]', STATE_STRIPE[stage.state])} />
         <div className="flex items-center justify-between">
           <span className="text-xs font-semibold">{stage.name}</span>
-          <span className="font-mono text-[10px] text-muted-foreground">{stage.index}</span>
+          <span className="text-[10px] text-muted-foreground">{stage.index}</span>
         </div>
-        <div className="font-mono text-2xl font-semibold leading-none tabular-nums">
-          {stage.value}
-        </div>
+        <div className="text-2xl font-semibold leading-none tabular-nums">{stage.value}</div>
         <p className="text-[11px] text-muted-foreground">{stage.sub}</p>
         {stage.flag && (
-          <span className={cn('mt-0.5 font-mono text-[10px] font-medium', STATE_TEXT[stage.state])}>
+          <span className={cn('mt-0.5 text-[10px] font-medium', STATE_TEXT[stage.state])}>
             {stage.flag}
           </span>
         )}
@@ -164,9 +162,7 @@ export function CtemLoop({
 
   return (
     <div>
-      <p className="mb-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-        The CTEM loop — one real KPI per stage, click to drill in
-      </p>
+      <h2 className="mb-2 text-sm font-semibold tracking-tight">The CTEM loop</h2>
       <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 lg:grid-cols-5">
         {stages.map((s) => (
           <StageCard key={s.index} stage={s} />

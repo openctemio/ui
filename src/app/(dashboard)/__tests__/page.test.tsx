@@ -136,12 +136,12 @@ vi.mock('@/features/dashboard/hooks/use-ctem-dashboard', () => ({
 }))
 
 describe('CTEM Dashboard page', () => {
-  it('renders the action-first CTEM story sections and keeps Quick Actions + analyst detail', () => {
+  it('renders the action-first CTEM story sections and keeps the header action + analyst detail', () => {
     render(<Dashboard />)
 
-    // Header + retained quick-action strip (now a slim strip, no card title)
+    // Header + single primary action
     expect(screen.getByRole('heading', { name: 'Dashboard' })).toBeInTheDocument()
-    expect(screen.getByText('New Scan')).toBeInTheDocument()
+    expect(screen.getByText('Run scan')).toBeInTheDocument()
 
     // CTEM story
     expect(screen.getByText('Active exposure')).toBeInTheDocument()

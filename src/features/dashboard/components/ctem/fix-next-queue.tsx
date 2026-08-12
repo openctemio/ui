@@ -63,7 +63,7 @@ export function FixNextQueue({ chains, topRisks, isLoading, limit = 6 }: FixNext
     <Card className="flex flex-col gap-4">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <span className="text-sm font-semibold tracking-tight">Fix next</span>
-        <span className="font-mono text-[11px] text-muted-foreground">ranked by exposure</span>
+        <span className="text-[11px] text-muted-foreground">ranked by exposure</span>
       </CardHeader>
       <CardContent className="flex-1">
         {isLoading ? (
@@ -85,7 +85,7 @@ export function FixNextQueue({ chains, topRisks, isLoading, limit = 6 }: FixNext
               <li key={it.key} className="flex items-center gap-3 py-2.5">
                 <span
                   className={cn(
-                    'w-7 shrink-0 text-center font-mono text-sm font-bold',
+                    'w-7 shrink-0 text-center text-sm font-bold',
                     it.score >= 40 ? STATE_TEXT.crit : STATE_TEXT.warn
                   )}
                 >
@@ -93,7 +93,7 @@ export function FixNextQueue({ chains, topRisks, isLoading, limit = 6 }: FixNext
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[13px] font-medium">{it.title}</p>
-                  <div className="mt-0.5 flex flex-wrap items-center gap-1.5 font-mono text-[11px] text-muted-foreground">
+                  <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
                     {it.kev && <KevChip />}
                     {it.priorityClass && (
                       <PriorityClassBadge priorityClass={it.priorityClass} showTooltip={false} />
