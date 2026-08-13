@@ -59,6 +59,8 @@ import {
   SEVERITY_CONFIG,
 } from '@/features/findings'
 import { PriorityClassBadge } from '@/features/findings/components/priority-class-badge'
+import { SlaStatusBadge } from '@/features/sla/components/sla-status-badge'
+import { formatDueRelative } from '@/features/sla/lib/sla'
 import { AssigneeSelect } from '@/features/findings/components/assignee-select'
 import { FindingGroupsTab } from '@/features/findings/components/finding-groups-tab'
 import { MarkFixedDialog } from '@/features/findings/components/mark-fixed-dialog'
@@ -194,6 +196,9 @@ function transformApiToUiFinding(api: ApiFinding): Finding {
     verifiedAt: undefined,
     createdAt: api.created_at,
     updatedAt: api.updated_at,
+    // SLA tracking
+    slaStatus: api.sla_status,
+    slaDeadline: api.sla_deadline,
     // Threat Intel Enrichment (RFC-004)
     epssScore: api.epss_score,
     epssPercentile: api.epss_percentile,
@@ -947,6 +952,26 @@ function FindingsContent() {
         cell: ({ row }) => <FindingStatusBadge status={row.getValue('status')} />,
         filterFn: (row, id, value) => {
           return value.includes(row.getValue(id))
+        },
+      },
+      {
+        accessorKey: 'slaStatus',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Due / SLA" />,
+        cell: ({ row }) => {
+          const status = row.original.slaStatus
+          if (!status || status === 'not_applicable') {
+            return <span className="text-muted-foreground text-sm">—</span>
+          }
+          return (
+            <div className="flex flex-col gap-0.5">
+              <SlaStatusBadge status={status} />
+              {row.original.slaDeadline && (
+                <span className="text-muted-foreground text-xs tabular-nums">
+                  {formatDueRelative(row.original.slaDeadline)}
+                </span>
+              )}
+            </div>
+          )
         },
       },
       {

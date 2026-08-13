@@ -722,7 +722,8 @@ export interface Finding {
   impact?: string // high/medium/low
   likelihood?: string // high/medium/low
   rank?: number // priority score
-  slaStatus?: string // on_track/at_risk/breached/not_applicable
+  slaStatus?: string // on_track | warning | overdue | exceeded | not_applicable
+  slaDeadline?: string // ISO timestamp of the remediation deadline (nullable)
 
   // Threat Intel Enrichment (RFC-004)
   epssScore?: number
