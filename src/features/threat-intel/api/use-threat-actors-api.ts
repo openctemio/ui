@@ -20,13 +20,7 @@ import { get, post, del } from '@/lib/api/client'
 const BASE = '/api/v1/threat-actors'
 
 // ── Actor type (matches backend threatactor.ActorType) ──────────────────────
-export type ActorType =
-  | 'apt'
-  | 'cybercrime'
-  | 'hacktivist'
-  | 'insider'
-  | 'nation_state'
-  | 'unknown'
+export type ActorType = 'apt' | 'cybercrime' | 'hacktivist' | 'insider' | 'nation_state' | 'unknown'
 
 export const ACTOR_TYPES: ActorType[] = [
   'apt',
@@ -136,9 +130,8 @@ export function useThreatActor(id: string | null) {
 
 /** Create a threat actor. */
 export function useCreateThreatActor() {
-  return useSWRMutation(
-    BASE,
-    (url: string, { arg }: { arg: CreateThreatActorInput }) => post<ThreatActor>(url, arg)
+  return useSWRMutation(BASE, (url: string, { arg }: { arg: CreateThreatActorInput }) =>
+    post<ThreatActor>(url, arg)
   )
 }
 

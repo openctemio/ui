@@ -111,9 +111,8 @@ export function useIOC(id: string | null) {
 
 /** Create an IOC. */
 export function useCreateIOC() {
-  return useSWRMutation(
-    BASE,
-    (url: string, { arg }: { arg: CreateIOCInput }) => post<IOC>(url, arg)
+  return useSWRMutation(BASE, (url: string, { arg }: { arg: CreateIOCInput }) =>
+    post<IOC>(url, arg)
   )
 }
 
