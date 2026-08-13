@@ -26,6 +26,8 @@ import {
   ThreatIntelOverview,
   SyncStatusManager,
   CompactSyncStatus,
+  ThreatActorsPanel,
+  IOCsPanel,
 } from '@/features/threat-intel/components'
 import { EPSSScoreBadge, EPSSScoreMeter } from '@/features/shared/components/epss-score-badge'
 import { KEVIndicatorBadge, KEVStatus } from '@/features/shared/components/kev-indicator-badge'
@@ -57,7 +59,7 @@ export default function ThreatIntelPage() {
           {/* Page Header */}
           <PageHeader
             title="Threat Intelligence"
-            description="EPSS and CISA KEV data for vulnerability prioritization"
+            description="Threat landscape (EPSS + CISA KEV), tracked threat actors, and indicators of compromise"
           >
             <div className="flex items-center gap-4">
               <CompactSyncStatus statuses={syncStatuses} />
@@ -75,7 +77,9 @@ export default function ThreatIntelPage() {
           {/* Main Content */}
           <Tabs defaultValue="overview" className="space-y-4">
             <TabsList>
-              <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="overview">Threat Landscape</TabsTrigger>
+              <TabsTrigger value="actors">Threat Actors</TabsTrigger>
+              <TabsTrigger value="iocs">IOCs</TabsTrigger>
               <TabsTrigger value="lookup">CVE Lookup</TabsTrigger>
               <TabsTrigger value="sync">Sync Status</TabsTrigger>
             </TabsList>
@@ -111,6 +115,16 @@ export default function ThreatIntelPage() {
                   ]}
                 />
               </div>
+            </TabsContent>
+
+            {/* Threat Actors Tab */}
+            <TabsContent value="actors" className="space-y-4">
+              <ThreatActorsPanel />
+            </TabsContent>
+
+            {/* IOCs Tab */}
+            <TabsContent value="iocs" className="space-y-4">
+              <IOCsPanel />
             </TabsContent>
 
             {/* CVE Lookup Tab */}
