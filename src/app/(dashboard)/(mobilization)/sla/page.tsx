@@ -1,84 +1,58 @@
 'use client'
 
 import { useMemo } from 'react'
-import { formatChartDate } from '@/lib/format-chart-date'
+import { useRouter } from 'next/navigation'
+import type { ColumnDef } from '@tanstack/react-table'
+import { AlertOctagon, AlertTriangle, Clock, CheckCircle2, Timer } from 'lucide-react'
+
 import { Main } from '@/components/layout'
-import { PageHeader, StatsCard } from '@/features/shared'
-import { useDashboardStats } from '@/features/dashboard/hooks/use-dashboard-stats'
-import { useTenant } from '@/context/tenant-provider'
+import {
+  PageHeader,
+  StatsCard,
+  DataTable,
+  DataTableColumnHeader,
+  EmptyState,
+  SeverityBadge,
+} from '@/features/shared'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Progress } from '@/components/ui/progress'
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  AreaChart,
-  Area,
-} from '@/components/charts'
 import { cn } from '@/lib/utils'
-import {
-  ShieldCheck,
-  AlertTriangle,
-  TrendingUp,
-  CheckCircle,
-  Clock,
-  CircleDot,
-  Target,
-} from 'lucide-react'
+import { formatRelative } from '@/lib/format-date'
+import { SEVERITY_DOT_COLORS, SEVERITY_ORDER, type SeverityLevel } from '@/lib/severity-colors'
 
-const SLA_TARGETS = [
-  {
-    severity: 'Critical',
-    target: '24 hours',
-    description: 'Must be remediated within 1 day of discovery',
-    color: 'text-red-500',
-    bgColor: 'bg-red-50 dark:bg-red-950/20',
-    borderColor: 'border-red-200 dark:border-red-800',
-  },
-  {
-    severity: 'High',
-    target: '72 hours',
-    description: 'Must be remediated within 3 days of discovery',
-    color: 'text-orange-500',
-    bgColor: 'bg-orange-50 dark:bg-orange-950/20',
-    borderColor: 'border-orange-200 dark:border-orange-800',
-  },
-  {
-    severity: 'Medium',
-    target: '7 days',
-    description: 'Must be remediated within 1 week of discovery',
-    color: 'text-yellow-500',
-    bgColor: 'bg-yellow-50 dark:bg-yellow-950/20',
-    borderColor: 'border-yellow-200 dark:border-yellow-800',
-  },
-  {
-    severity: 'Low',
-    target: '30 days',
-    description: 'Must be remediated within 1 month of discovery',
-    color: 'text-blue-500',
-    bgColor: 'bg-blue-50 dark:bg-blue-950/20',
-    borderColor: 'border-blue-200 dark:border-blue-800',
-  },
-]
+import { useFindingsApi } from '@/features/findings/api/use-findings-api'
+import type { ApiFinding } from '@/features/findings/api/finding-api.types'
+import { SlaStatusBadge } from '@/features/sla/components/sla-status-badge'
+import { AGING_BUCKETS, agingBucketFor, formatDueRelative, isBreach } from '@/features/sla/lib/sla'
 
-function StatsCardsSkeleton() {
+// Terminal statuses are dropped: an SLA breach is only actionable while the
+// finding is still open.
+const OPEN_FINDINGS_FILTER = {
+  exclude_statuses: [
+    'resolved',
+    'false_positive',
+    'accepted',
+    'accepted_risk',
+    'duplicate',
+    'verified',
+  ],
+  // MaxPerPage on the API is 100. There is no server-side sla_status filter yet
+  // (see note in the UI), so we score one prioritized page client-side rather
+  // than paginating the whole finding set.
+  per_page: 100,
+  page: 1,
+}
+
+function StatCardSkeletons() {
   return (
-    <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
       {[1, 2, 3, 4].map((i) => (
         <Card key={i}>
           <CardHeader className="pb-2">
             <Skeleton className="h-4 w-24" />
           </CardHeader>
           <CardContent>
-            <Skeleton className="mb-2 h-8 w-16" />
-            <Skeleton className="h-3 w-20" />
+            <Skeleton className="h-8 w-16" />
           </CardContent>
         </Card>
       ))}
@@ -86,344 +60,214 @@ function StatsCardsSkeleton() {
   )
 }
 
-function ContentSkeleton() {
-  return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <Skeleton className="h-5 w-40" />
-          <Skeleton className="h-4 w-56" />
-        </CardHeader>
-        <CardContent>
-          <Skeleton className="h-8 w-full" />
-        </CardContent>
-      </Card>
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        {[1, 2].map((i) => (
-          <Card key={i}>
-            <CardHeader>
-              <Skeleton className="h-5 w-32" />
-              <Skeleton className="h-4 w-48" />
-            </CardHeader>
-            <CardContent>
-              <Skeleton className="h-[300px] w-full" />
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    </div>
+export default function SlaBreachBoardPage() {
+  const router = useRouter()
+  const { data, isLoading } = useFindingsApi(OPEN_FINDINGS_FILTER)
+
+  const findings = useMemo(() => data?.data ?? [], [data])
+  const loadedTotal = findings.length
+  const serverTotal = data?.total ?? 0
+
+  const counts = useMemo(() => {
+    const c = { exceeded: 0, overdue: 0, warning: 0, on_track: 0, not_applicable: 0 }
+    for (const f of findings) {
+      const s = (f.sla_status as keyof typeof c) || 'not_applicable'
+      if (s in c) c[s] += 1
+    }
+    return c
+  }, [findings])
+
+  const breached = useMemo(() => findings.filter((f) => isBreach(f.sla_status)), [findings])
+
+  const breachBySeverity = useMemo(() => {
+    const m = new Map<SeverityLevel, number>()
+    for (const f of breached) {
+      const sev = f.severity as SeverityLevel
+      m.set(sev, (m.get(sev) ?? 0) + 1)
+    }
+    return SEVERITY_ORDER.map((sev) => ({ sev, count: m.get(sev) ?? 0 })).filter((r) => r.count > 0)
+  }, [breached])
+
+  const agingCounts = useMemo(() => {
+    return AGING_BUCKETS.map((bucket) => ({
+      bucket,
+      count: breached.filter((f) => agingBucketFor(f.sla_deadline)?.label === bucket.label).length,
+    }))
+  }, [breached])
+
+  const columns = useMemo<ColumnDef<ApiFinding>[]>(
+    () => [
+      {
+        accessorKey: 'severity',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Severity" />,
+        cell: ({ row }) => <SeverityBadge severity={row.original.severity} />,
+      },
+      {
+        accessorKey: 'title',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Finding" />,
+        cell: ({ row }) => (
+          <span className="line-clamp-1 font-medium">
+            {row.original.title || row.original.message}
+          </span>
+        ),
+      },
+      {
+        id: 'asset',
+        header: 'Asset',
+        enableSorting: false,
+        cell: ({ row }) => (
+          <span className="line-clamp-1 text-sm text-muted-foreground">
+            {row.original.asset?.name || row.original.asset_id}
+          </span>
+        ),
+      },
+      {
+        accessorKey: 'sla_status',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="SLA" />,
+        cell: ({ row }) => <SlaStatusBadge status={row.original.sla_status} />,
+      },
+      {
+        id: 'due',
+        header: 'Overdue',
+        enableSorting: false,
+        cell: ({ row }) => (
+          <span className="text-sm tabular-nums text-destructive">
+            {formatDueRelative(row.original.sla_deadline)}
+          </span>
+        ),
+      },
+      {
+        id: 'detected',
+        header: 'Detected',
+        enableSorting: false,
+        cell: ({ row }) => (
+          <span className="text-sm text-muted-foreground">
+            {formatRelative(row.original.first_detected_at)}
+          </span>
+        ),
+      },
+    ],
+    []
   )
-}
-
-export default function SLAManagementPage() {
-  const { currentTenant } = useTenant()
-  const { stats, isLoading } = useDashboardStats(currentTenant?.id || null)
-
-  const overdueCount = stats.findings.overdue || 0
-  const totalFindings = stats.findings.total || 0
-  const averageCvss = stats.findings.averageCvss || 0
-
-  const complianceRate = useMemo(() => {
-    if (totalFindings === 0) return 100
-    return Math.round(((totalFindings - overdueCount) / totalFindings) * 100)
-  }, [totalFindings, overdueCount])
-
-  const onTrackCount = totalFindings - overdueCount
-
-  const complianceColor = useMemo(() => {
-    if (complianceRate >= 90) return 'text-green-500'
-    if (complianceRate >= 70) return 'text-yellow-500'
-    return 'text-red-500'
-  }, [complianceRate])
-
-  const complianceProgressColor = useMemo(() => {
-    if (complianceRate >= 90) return '[&>div]:bg-green-500'
-    if (complianceRate >= 70) return '[&>div]:bg-yellow-500'
-    return '[&>div]:bg-red-500'
-  }, [complianceRate])
-
-  const complianceLabel = useMemo(() => {
-    if (complianceRate >= 90) return 'Excellent - Meeting SLA targets'
-    if (complianceRate >= 70) return 'Needs improvement - Some SLA violations'
-    return 'Critical - Significant SLA breaches'
-  }, [complianceRate])
-
-  const trendData = useMemo(() => {
-    return (stats.findingTrend || []).map((point) => {
-      const total = point.critical + point.high + point.medium + point.low + point.info
-      return {
-        date: formatChartDate(point.date),
-        total,
-        critical: point.critical,
-        high: point.high,
-        medium: point.medium,
-        low: point.low,
-      }
-    })
-  }, [stats.findingTrend])
-
-  const severityComplianceData = useMemo(() => {
-    const bySeverity = stats.findings.bySeverity || {}
-    const severities = ['critical', 'high', 'medium', 'low']
-    return severities
-      .filter((s) => (bySeverity[s] || 0) > 0)
-      .map((severity) => {
-        const count = bySeverity[severity] || 0
-        const estimatedOverdue =
-          totalFindings > 0 ? Math.round(count * (overdueCount / totalFindings)) : 0
-        const compliant = count - estimatedOverdue
-        return {
-          name: severity.charAt(0).toUpperCase() + severity.slice(1),
-          compliant: Math.max(compliant, 0),
-          overdue: estimatedOverdue,
-          total: count,
-        }
-      })
-  }, [stats.findings.bySeverity, totalFindings, overdueCount])
 
   return (
     <Main>
       <PageHeader
         title="SLA Compliance"
-        description="Monitor service level agreement compliance for finding remediation"
+        description="Open findings tracked against their remediation SLA deadlines."
       />
 
       {isLoading ? (
-        <div className="mt-6">
-          <StatsCardsSkeleton />
-          <ContentSkeleton />
+        <div className="mt-6 space-y-6">
+          <StatCardSkeletons />
+          <Skeleton className="h-64 w-full" />
         </div>
       ) : (
-        <>
-          <section className="mb-6 mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <div className="mt-6 space-y-6">
+          <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             <StatsCard
-              title="SLA Compliance Rate"
-              value={`${complianceRate}%`}
-              changeType={
-                complianceRate >= 90 ? 'positive' : complianceRate >= 70 ? 'neutral' : 'negative'
-              }
-              change={complianceLabel}
-              icon={ShieldCheck}
+              title="SLA Exceeded"
+              value={counts.exceeded}
+              icon={AlertOctagon}
+              valueClassName={counts.exceeded > 0 ? 'text-destructive' : undefined}
+              description="Well past deadline"
             />
             <StatsCard
-              title="Overdue Violations"
-              value={overdueCount}
-              changeType={overdueCount > 0 ? 'negative' : 'positive'}
-              change={overdueCount > 0 ? 'SLA breaches' : 'No violations'}
+              title="Overdue"
+              value={counts.overdue}
               icon={AlertTriangle}
+              valueClassName={counts.overdue > 0 ? 'text-destructive' : undefined}
+              description="Past deadline"
             />
             <StatsCard
-              title="On-Track"
-              value={onTrackCount}
-              changeType="positive"
-              change="Within SLA"
-              icon={CheckCircle}
+              title="Warning"
+              value={counts.warning}
+              icon={Clock}
+              description="Approaching deadline"
             />
             <StatsCard
-              title="Average CVSS"
-              value={averageCvss.toFixed(1)}
-              changeType={averageCvss > 7 ? 'negative' : averageCvss > 4 ? 'neutral' : 'positive'}
-              change={
-                averageCvss > 7 ? 'High risk' : averageCvss > 4 ? 'Moderate risk' : 'Low risk'
-              }
-              icon={Target}
+              title="On Track"
+              value={counts.on_track}
+              icon={CheckCircle2}
+              description="Within SLA"
             />
           </section>
 
-          <section className="mb-6">
+          <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Card>
               <CardHeader>
-                <CardTitle>Overall SLA Compliance</CardTitle>
-                <CardDescription>{complianceLabel}</CardDescription>
+                <CardTitle>Breaches by severity</CardTitle>
+                <CardDescription>Overdue and exceeded findings, by severity.</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">
-                      {onTrackCount} of {totalFindings} findings within SLA
-                    </span>
-                    <span className={cn('text-3xl font-bold', complianceColor)}>
-                      {complianceRate}%
-                    </span>
+                {breachBySeverity.length === 0 ? (
+                  <p className="py-6 text-center text-sm text-muted-foreground">
+                    No breached findings.
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {breachBySeverity.map(({ sev, count }) => (
+                      <div key={sev} className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={cn('h-2.5 w-2.5 rounded-full', SEVERITY_DOT_COLORS[sev])}
+                          />
+                          <span className="text-sm capitalize">{sev}</span>
+                        </div>
+                        <span className="text-sm font-medium tabular-nums">{count}</span>
+                      </div>
+                    ))}
                   </div>
-                  <Progress value={complianceRate} className={cn('h-4', complianceProgressColor)} />
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>0%</span>
-                    <div className="flex gap-4">
-                      <span className="text-red-500">Below 70%: Critical</span>
-                      <span className="text-yellow-500">70-90%: Warning</span>
-                      <span className="text-green-500">Above 90%: Target</span>
-                    </div>
-                    <span>100%</span>
-                  </div>
-                </div>
+                )}
               </CardContent>
             </Card>
-          </section>
 
-          <section className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Card>
               <CardHeader>
-                <CardTitle>SLA Targets by Severity</CardTitle>
-                <CardDescription>Remediation timelines for each severity level</CardDescription>
+                <CardTitle>Aging of breaches</CardTitle>
+                <CardDescription>How long breached findings have been past due.</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {SLA_TARGETS.map((target) => (
-                    <div
-                      key={target.severity}
-                      className={cn(
-                        'flex items-center justify-between rounded-lg border p-3',
-                        target.bgColor,
-                        target.borderColor
-                      )}
-                    >
-                      <div className="flex items-center gap-3">
-                        <Clock className={cn('h-4 w-4', target.color)} />
-                        <div>
-                          <p className="text-sm font-medium">{target.severity}</p>
-                          <p className="text-xs text-muted-foreground">{target.description}</p>
-                        </div>
-                      </div>
-                      <Badge variant="outline" className={cn('text-sm font-bold', target.color)}>
-                        {target.target}
-                      </Badge>
+                  {agingCounts.map(({ bucket, count }) => (
+                    <div key={bucket.label} className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">{bucket.label}</span>
+                      <span className="text-sm font-medium tabular-nums">{count}</span>
                     </div>
                   ))}
                 </div>
               </CardContent>
             </Card>
+          </section>
 
-            {severityComplianceData.length > 0 ? (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Compliance by Severity</CardTitle>
-                  <CardDescription>On-track vs overdue findings per severity level</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={severityComplianceData}>
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                      <XAxis
-                        dataKey="name"
-                        tick={{ fontSize: 12 }}
-                        tickLine={false}
-                        axisLine={false}
-                      />
-                      <YAxis tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
-                      <Tooltip />
-                      <Legend />
-                      <Bar
-                        dataKey="compliant"
-                        name="On Track"
-                        stackId="a"
-                        fill="#22c55e"
-                        radius={[0, 0, 0, 0]}
-                      />
-                      <Bar
-                        dataKey="overdue"
-                        name="Overdue"
-                        stackId="a"
-                        fill="#ef4444"
-                        radius={[4, 4, 0, 0]}
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
+          <section className="space-y-2">
+            <div>
+              <h2 className="text-lg font-semibold">Breached findings</h2>
+              <p className="text-sm text-muted-foreground">
+                Overdue and exceeded open findings. Scored from the top {loadedTotal} of{' '}
+                {serverTotal} open findings by priority — a server-side{' '}
+                <code className="text-xs">?sla_status=</code> filter is a planned follow-up so the
+                board can cover the full set.
+              </p>
+            </div>
+            {breached.length === 0 ? (
+              <EmptyState
+                icon={Timer}
+                title="No SLA breaches"
+                description="No open findings are past their remediation deadline in the current scope."
+              />
             ) : (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Compliance by Severity</CardTitle>
-                  <CardDescription>On-track vs overdue findings per severity level</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex h-[300px] items-center justify-center">
-                    <div className="text-center">
-                      <CircleDot className="mx-auto mb-2 h-8 w-8 text-muted-foreground" />
-                      <p className="text-muted-foreground">No findings data available</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              <DataTable
+                columns={columns}
+                data={breached}
+                searchKey="title"
+                searchPlaceholder="Search findings..."
+                pageSize={10}
+                onRowClick={(row) => router.push(`/findings/${row.id}`)}
+              />
             )}
           </section>
-
-          <section>
-            <Card>
-              <CardHeader>
-                <CardTitle>Compliance Trajectory</CardTitle>
-                <CardDescription>
-                  Finding volume trend - lower counts indicate improving compliance
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {trendData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={300}>
-                    <AreaChart data={trendData}>
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                      <XAxis
-                        dataKey="date"
-                        tick={{ fontSize: 12 }}
-                        tickLine={false}
-                        axisLine={false}
-                      />
-                      <YAxis tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
-                      <Tooltip />
-                      <Legend />
-                      <Area
-                        type="monotone"
-                        dataKey="critical"
-                        stackId="1"
-                        stroke="#ef4444"
-                        fill="#ef4444"
-                        fillOpacity={0.8}
-                        name="Critical"
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="high"
-                        stackId="1"
-                        stroke="#f97316"
-                        fill="#f97316"
-                        fillOpacity={0.8}
-                        name="High"
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="medium"
-                        stackId="1"
-                        stroke="#eab308"
-                        fill="#eab308"
-                        fillOpacity={0.8}
-                        name="Medium"
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="low"
-                        stackId="1"
-                        stroke="#3b82f6"
-                        fill="#3b82f6"
-                        fillOpacity={0.8}
-                        name="Low"
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="flex h-[300px] items-center justify-center">
-                    <div className="text-center">
-                      <TrendingUp className="mx-auto mb-2 h-8 w-8 text-muted-foreground" />
-                      <p className="text-muted-foreground">No trend data available yet</p>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        Trend data will appear as findings are tracked over time
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </section>
-        </>
+        </div>
       )}
     </Main>
   )
