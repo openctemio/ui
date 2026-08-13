@@ -81,6 +81,7 @@ import {
   FileJson,
   FileSpreadsheet,
 } from 'lucide-react'
+import { useUrlFilter } from '@/hooks/use-url-param'
 import { copyToClipboard } from '@/lib/clipboard'
 import { Can, Permission } from '@/lib/permissions'
 import { exportToCSV, exportToJSON } from '@/lib/utils'
@@ -429,9 +430,21 @@ function ConfigurationsTab() {
   const [selectedConfig, setSelectedConfig] = useState<ScanConfig | null>(null)
   const [sorting, setSorting] = useState<SortingState>([])
   const [globalFilter, setGlobalFilter] = useState('')
-  const [statusFilter, setStatusFilter] = useState<ConfigStatusFilter>('all')
-  const [typeFilter, setTypeFilter] = useState<ConfigTypeFilter>('all')
-  const [scheduleFilter, setScheduleFilter] = useState<ConfigScheduleFilter>('all')
+  // Filters live in the URL so a filtered view is shareable and survives reload
+  // (matching the findings/assets pages). The hook returns a plain string; cast
+  // the tuple so downstream typing stays identical to the old useState.
+  const [statusFilter, setStatusFilter] = useUrlFilter('status', 'all') as [
+    ConfigStatusFilter,
+    (v: ConfigStatusFilter) => void,
+  ]
+  const [typeFilter, setTypeFilter] = useUrlFilter('type', 'all') as [
+    ConfigTypeFilter,
+    (v: ConfigTypeFilter) => void,
+  ]
+  const [scheduleFilter, setScheduleFilter] = useUrlFilter('schedule', 'all') as [
+    ConfigScheduleFilter,
+    (v: ConfigScheduleFilter) => void,
+  ]
   const [tagFilter, setTagFilter] = useState<string>('')
   const [rowSelection, setRowSelection] = useState({})
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)

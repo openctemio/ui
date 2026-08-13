@@ -113,6 +113,7 @@ import type {
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { copyToClipboard } from '@/lib/clipboard'
 import { exportToCsv } from '@/hooks/use-csv-export'
+import { useUrlFilter } from '@/hooks/use-url-param'
 import { Permission } from '@/lib/permissions'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -163,9 +164,18 @@ const categorizeSource = (source: string): SourceFilter => {
 }
 
 export default function CredentialsPage() {
-  // Build API filters based on UI filters
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
-  const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all')
+  // Build API filters based on UI filters. Filters live in the URL so a filtered
+  // view is shareable and survives reload (matching the findings/assets pages).
+  // The hook returns a plain string; cast the tuple so downstream typing stays
+  // identical to the old useState.
+  const [statusFilter, setStatusFilter] = useUrlFilter('status', 'all') as [
+    StatusFilter,
+    (v: StatusFilter) => void,
+  ]
+  const [sourceFilter, setSourceFilter] = useUrlFilter('source', 'all') as [
+    SourceFilter,
+    (v: SourceFilter) => void,
+  ]
   const [globalFilter, setGlobalFilter] = useState('')
 
   // Map status filter to API state filter
