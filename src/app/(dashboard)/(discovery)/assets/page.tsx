@@ -92,7 +92,6 @@ const ASSET_TYPE_URLS: Record<string, string> = {
   database: '/assets/databases',
   identity: '/assets/identity',
   repository: '/assets/repositories',
-  unclassified: '/assets/overview',
 }
 
 const ASSET_TYPE_ICONS: Record<string, LucideIcon> = {
