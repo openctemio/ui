@@ -1,262 +1,243 @@
 'use client'
 
-import { useMemo } from 'react'
-import { formatChartDate } from '@/lib/format-chart-date'
+import { useMemo, useState } from 'react'
+import type { ColumnDef } from '@tanstack/react-table'
+import { Plus, Pencil, Trash2, ShieldCheck, Timer } from 'lucide-react'
+
 import { Main } from '@/components/layout'
-import { PageHeader } from '@/features/shared'
-import { StatsCard } from '@/features/shared/components/stats-card'
-import { useDashboardStats } from '@/features/dashboard/hooks/use-dashboard-stats'
-import { useTenant } from '@/context/tenant-provider'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { PageHeader, DataTable, DataTableColumnHeader, EmptyState } from '@/features/shared'
+import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Progress } from '@/components/ui/progress'
+import { ConfirmDialog } from '@/components/confirm-dialog'
+import { Can, Permission } from '@/lib/permissions'
+import { toast } from 'sonner'
+import { getErrorMessage } from '@/lib/api/error-handler'
+import { SEVERITY_DOT_COLORS } from '@/lib/severity-colors'
+import { cn } from '@/lib/utils'
+
+import { SlaPolicyDialog } from '@/features/sla/components/sla-policy-dialog'
 import {
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-} from '@/components/charts'
-import { Timer, Clock, AlertTriangle, Target, CheckCircle2, XCircle } from 'lucide-react'
+  useSlaPoliciesApi,
+  useDeleteSlaPolicy,
+  invalidateSlaPoliciesCache,
+  type SlaPolicy,
+} from '@/features/sla/api/use-sla-policies-api'
 
-const SEVERITY_COLORS: Record<string, string> = {
-  critical: '#ef4444',
-  high: '#f97316',
-  medium: '#eab308',
-  low: '#3b82f6',
-  info: '#6b7280',
+const WINDOW_FIELDS: {
+  key: keyof SlaPolicy
+  label: string
+  dot: 'critical' | 'high' | 'medium' | 'low' | 'info'
+}[] = [
+  { key: 'critical_days', label: 'C', dot: 'critical' },
+  { key: 'high_days', label: 'H', dot: 'high' },
+  { key: 'medium_days', label: 'M', dot: 'medium' },
+  { key: 'low_days', label: 'L', dot: 'low' },
+  { key: 'info_days', label: 'I', dot: 'info' },
+]
+
+function WindowCells({ policy }: { policy: SlaPolicy }) {
+  return (
+    <div className="flex flex-wrap items-center gap-3">
+      {WINDOW_FIELDS.map((f) => (
+        <div key={f.key} className="flex items-center gap-1.5 text-sm tabular-nums" title={f.label}>
+          <span className={cn('h-2 w-2 rounded-full', SEVERITY_DOT_COLORS[f.dot])} />
+          <span className="text-muted-foreground">{f.label}</span>
+          <span className="font-medium">{policy[f.key] as number}d</span>
+        </div>
+      ))}
+    </div>
+  )
 }
 
-const SLA_TARGETS: Record<string, string> = {
-  critical: '24 hours',
-  high: '72 hours',
-  medium: '14 days',
-  low: '30 days',
-  info: '90 days',
-}
+export default function SlaPoliciesPage() {
+  const { data, isLoading } = useSlaPoliciesApi()
+  const policies = useMemo(() => data?.data ?? [], [data])
 
-export default function SLAPoliciesPage() {
-  const { currentTenant } = useTenant()
-  const { stats, isLoading } = useDashboardStats(currentTenant?.id || null)
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [editing, setEditing] = useState<SlaPolicy | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<SlaPolicy | null>(null)
 
-  const slaCompliance = useMemo(() => {
-    if (stats.findings.total === 0) return 100
-    const onTime = stats.findings.total - stats.findings.overdue
-    return Math.round((onTime / stats.findings.total) * 100)
-  }, [stats.findings.total, stats.findings.overdue])
+  const { trigger: deletePolicy, isMutating: isDeleting } = useDeleteSlaPolicy()
 
-  const severityData = useMemo(() => {
-    return Object.entries(stats.findings.bySeverity).map(([name, value]) => ({
-      name: name.charAt(0).toUpperCase() + name.slice(1),
-      value,
-      color: SEVERITY_COLORS[name] ?? '#6b7280',
-    }))
-  }, [stats.findings.bySeverity])
-
-  const trendData = useMemo(() => {
-    return stats.findingTrend.slice(-7).map((point) => ({
-      date: formatChartDate(point.date),
-      critical: point.critical,
-      high: point.high,
-      medium: point.medium,
-      low: point.low,
-    }))
-  }, [stats.findingTrend])
-
-  const slaPolicies = useMemo(() => {
-    return Object.entries(stats.findings.bySeverity).map(([severity, count]) => ({
-      severity: severity.charAt(0).toUpperCase() + severity.slice(1),
-      count,
-      target: SLA_TARGETS[severity] ?? 'N/A',
-      overdue:
-        severity === 'critical' || severity === 'high'
-          ? Math.round(stats.findings.overdue * (count / Math.max(stats.findings.total, 1)))
-          : 0,
-      color: SEVERITY_COLORS[severity] ?? '#6b7280',
-    }))
-  }, [stats.findings.bySeverity, stats.findings.overdue, stats.findings.total])
-
-  if (isLoading) {
-    return (
-      <Main>
-        <PageHeader
-          title="SLA Policies"
-          description="Configure service level agreement policies for remediation"
-        />
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-32 w-full rounded-xl" />
-          ))}
-        </div>
-        <div className="mt-6 grid gap-6 lg:grid-cols-2">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} className="h-80 w-full rounded-xl" />
-          ))}
-        </div>
-      </Main>
-    )
+  const openCreate = () => {
+    setEditing(null)
+    setDialogOpen(true)
   }
+  const openEdit = (policy: SlaPolicy) => {
+    setEditing(policy)
+    setDialogOpen(true)
+  }
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return
+    try {
+      await deletePolicy({ id: deleteTarget.id })
+      toast.success(`Policy "${deleteTarget.name}" deleted`)
+      await invalidateSlaPoliciesCache()
+      setDeleteTarget(null)
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to delete SLA policy'))
+    }
+  }
+
+  const columns = useMemo<ColumnDef<SlaPolicy>[]>(
+    () => [
+      {
+        accessorKey: 'name',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Policy" />,
+        cell: ({ row }) => {
+          const p = row.original
+          return (
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center gap-2">
+                <span className="font-medium">{p.name}</span>
+                {p.is_default && (
+                  <Badge variant="secondary" className="gap-1">
+                    <ShieldCheck className="h-3 w-3" />
+                    Default
+                  </Badge>
+                )}
+                {p.asset_id && (
+                  <Badge variant="outline" className="text-xs">
+                    Asset override
+                  </Badge>
+                )}
+              </div>
+              {p.description && (
+                <span className="text-xs text-muted-foreground line-clamp-1">{p.description}</span>
+              )}
+            </div>
+          )
+        },
+      },
+      {
+        id: 'windows',
+        header: 'Remediation windows',
+        enableSorting: false,
+        cell: ({ row }) => <WindowCells policy={row.original} />,
+      },
+      {
+        accessorKey: 'warning_threshold_pct',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Warning at" />,
+        cell: ({ row }) => (
+          <span className="tabular-nums">{row.original.warning_threshold_pct}%</span>
+        ),
+      },
+      {
+        accessorKey: 'escalation_enabled',
+        header: 'Escalation',
+        cell: ({ row }) =>
+          row.original.escalation_enabled ? (
+            <Badge variant="outline">On</Badge>
+          ) : (
+            <span className="text-muted-foreground text-sm">Off</span>
+          ),
+      },
+      {
+        id: 'actions',
+        header: () => <span className="sr-only">Actions</span>,
+        enableSorting: false,
+        cell: ({ row }) => {
+          const p = row.original
+          return (
+            <div className="flex items-center justify-end gap-1">
+              <Can permission={Permission.SLAWrite}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  aria-label={`Edit ${p.name}`}
+                  onClick={() => openEdit(p)}
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+              </Can>
+              <Can permission={Permission.SLADelete}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-destructive"
+                  aria-label={`Delete ${p.name}`}
+                  onClick={() => setDeleteTarget(p)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </Can>
+            </div>
+          )
+        },
+      },
+    ],
+    []
+  )
 
   return (
     <Main>
       <PageHeader
         title="SLA Policies"
-        description="Configure service level agreement policies for remediation"
+        description="Define per-severity remediation windows that drive finding SLA deadlines."
+      >
+        <Can permission={Permission.SLAWrite}>
+          <Button onClick={openCreate}>
+            <Plus className="me-2 h-4 w-4" />
+            New Policy
+          </Button>
+        </Can>
+      </PageHeader>
+
+      <div className="mt-6">
+        {isLoading ? (
+          <Card>
+            <CardContent className="space-y-3 py-6">
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-12 w-full" />
+              ))}
+            </CardContent>
+          </Card>
+        ) : policies.length === 0 ? (
+          <EmptyState
+            icon={Timer}
+            title="No SLA policies yet"
+            description="Create a policy to set remediation deadlines by severity. The default policy applies to every asset without a specific one."
+            action={
+              <Can permission={Permission.SLAWrite}>
+                <Button onClick={openCreate}>
+                  <Plus className="me-2 h-4 w-4" />
+                  New Policy
+                </Button>
+              </Can>
+            }
+          />
+        ) : (
+          <DataTable
+            columns={columns}
+            data={policies}
+            searchKey="name"
+            searchPlaceholder="Search policies..."
+            pageSize={10}
+          />
+        )}
+      </div>
+
+      <SlaPolicyDialog open={dialogOpen} onOpenChange={setDialogOpen} policy={editing} />
+
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        onOpenChange={(o) => !o && setDeleteTarget(null)}
+        title="Delete SLA policy"
+        desc={
+          <>
+            Delete <strong>{deleteTarget?.name}</strong>? Assets using it fall back to the default
+            policy. This action cannot be undone.
+          </>
+        }
+        confirmText="Delete"
+        destructive
+        isLoading={isDeleting}
+        handleConfirm={handleDelete}
       />
-
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatsCard
-          title="SLA Compliance"
-          value={`${slaCompliance}%`}
-          icon={Timer}
-          changeType={slaCompliance > 90 ? 'positive' : 'negative'}
-          description="Within SLA targets"
-        />
-        <StatsCard
-          title="Overdue Findings"
-          value={stats.findings.overdue}
-          icon={Clock}
-          changeType={stats.findings.overdue > 0 ? 'negative' : 'positive'}
-          description="Past SLA deadline"
-        />
-        <StatsCard
-          title="Total Findings"
-          value={stats.findings.total}
-          icon={Target}
-          description="Under SLA tracking"
-        />
-        <StatsCard
-          title="Avg CVSS"
-          value={stats.findings.averageCvss.toFixed(1)}
-          icon={AlertTriangle}
-          changeType={stats.findings.averageCvss > 7 ? 'negative' : 'neutral'}
-          description="Average severity"
-        />
-      </div>
-
-      <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>SLA Load by Severity</CardTitle>
-            <CardDescription>Findings under SLA tracking by severity level</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {severityData.length === 0 ? (
-              <div className="flex h-48 items-center justify-center text-muted-foreground">
-                No SLA data available
-              </div>
-            ) : (
-              <ResponsiveContainer width="100%" height={280}>
-                <PieChart>
-                  <Pie
-                    data={severityData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={100}
-                    dataKey="value"
-                    nameKey="name"
-                    paddingAngle={2}
-                  >
-                    {severityData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Daily Finding Intake</CardTitle>
-            <CardDescription>
-              New findings affecting SLA timelines over the past 7 days
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {trendData.length === 0 ? (
-              <div className="flex h-48 items-center justify-center text-muted-foreground">
-                No trend data available
-              </div>
-            ) : (
-              <ResponsiveContainer width="100%" height={280}>
-                <BarChart data={trendData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" fontSize={12} />
-                  <YAxis fontSize={12} />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey="critical" fill="#ef4444" name="Critical" />
-                  <Bar dataKey="high" fill="#f97316" name="High" />
-                  <Bar dataKey="medium" fill="#eab308" name="Medium" />
-                  <Bar dataKey="low" fill="#3b82f6" name="Low" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>SLA Policy Overview</CardTitle>
-            <CardDescription>Current SLA targets and compliance status by severity</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {slaPolicies.length === 0 ? (
-              <div className="flex h-32 items-center justify-center text-muted-foreground">
-                No SLA policies configured
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {slaPolicies.map((policy) => (
-                  <div
-                    key={policy.severity}
-                    className="flex items-center gap-4 rounded-lg border p-4"
-                  >
-                    <div
-                      className="h-3 w-3 shrink-0 rounded-full"
-                      style={{ backgroundColor: policy.color }}
-                    />
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium">{policy.severity}</p>
-                        <Badge variant="outline">{policy.target}</Badge>
-                        <Badge variant="secondary">{policy.count} findings</Badge>
-                      </div>
-                      {policy.overdue > 0 && (
-                        <p className="mt-1 text-sm text-red-500">{policy.overdue} overdue</p>
-                      )}
-                    </div>
-                    {policy.overdue > 0 ? (
-                      <XCircle className="h-5 w-5 shrink-0 text-red-500" />
-                    ) : (
-                      <CheckCircle2 className="h-5 w-5 shrink-0 text-green-500" />
-                    )}
-                  </div>
-                ))}
-                <div className="mt-4 rounded-lg bg-muted/50 p-4">
-                  <p className="text-sm font-medium">Overall SLA Compliance</p>
-                  <Progress value={slaCompliance} className="mt-2 h-2" />
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {slaCompliance}% of findings are being remediated within SLA targets
-                  </p>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
     </Main>
   )
 }

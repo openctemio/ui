@@ -183,7 +183,8 @@ export interface ApiFinding {
   occurrence_count?: number // number of occurrences
   duplicate_count?: number // number of duplicates
   comments_count?: number // number of comments
-  sla_status?: string // on_track/at_risk/breached/not_applicable
+  sla_status?: string // on_track | warning | overdue | exceeded | not_applicable
+  sla_deadline?: string // ISO timestamp of the remediation deadline (nullable)
 
   // Threat Intel Enrichment (RFC-004)
   epss_score?: number // 0.0-1.0 exploitation probability
