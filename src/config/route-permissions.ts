@@ -356,6 +356,14 @@ export const routePermissions: Record<string, RoutePermissionConfig> = {
     permission: Permission.WorkflowsRead,
     module: Module.Workflows,
   },
+  '/exceptions': {
+    permission: Permission.SuppressionsRead,
+    module: Module.Findings,
+  },
+  '/exceptions/**': {
+    permission: Permission.SuppressionsRead,
+    module: Module.Findings,
+  },
 
   // ========================================
   // Insights - Findings (Module: findings)
