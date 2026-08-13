@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { toast } from 'sonner'
 import { copyToClipboard } from '@/lib/clipboard'
 import { getErrorMessage } from '@/lib/api/error-handler'
@@ -39,8 +40,11 @@ import {
   ChevronDown,
   AlertOctagon,
   Ticket,
+  ArrowUpRight,
 } from 'lucide-react'
 import { PriorityClassBadge } from './priority-class-badge'
+import { PriorityExplanationCard } from './detail/priority-explanation-card'
+import { isLinkableAssetId, assetDetailHref } from '../lib/asset-link'
 import {
   DATA_FLOW_LOCATION_CONFIG,
   SEVERITY_CONFIG,
@@ -830,7 +834,17 @@ export function FindingDetailDrawer({
                               <Badge variant="outline" className="text-xs capitalize shrink-0">
                                 {asset.type}
                               </Badge>
-                              <span className="text-sm truncate">{asset.name}</span>
+                              {isLinkableAssetId(asset.id) ? (
+                                <Link
+                                  href={assetDetailHref(asset.id)}
+                                  className="focus-visible:ring-ring inline-flex min-w-0 items-center gap-1 rounded text-sm hover:underline focus-visible:ring-2 focus-visible:outline-none"
+                                >
+                                  <span className="truncate">{asset.name}</span>
+                                  <ArrowUpRight className="h-3.5 w-3.5 shrink-0" />
+                                </Link>
+                              ) : (
+                                <span className="text-sm truncate">{asset.name}</span>
+                              )}
                             </div>
                             {asset.criticality && (
                               <Badge
@@ -856,6 +870,10 @@ export function FindingDetailDrawer({
                       )}
                     </div>
                   </div>
+
+                  {/* Why this priority — read-only classifier breakdown.
+                      Renders nothing (incl. its own separator) when unavailable. */}
+                  <PriorityExplanationCard findingId={finding.id} variant="drawer" />
 
                   {/* Attack Path / Data Flow */}
                   {finding.dataFlow &&
