@@ -112,9 +112,7 @@ export function ThreatActorsPanel() {
             <div className="min-w-0">
               <div className="font-medium truncate">{a.name}</div>
               {a.aliases.length > 0 && (
-                <div className="text-xs text-muted-foreground truncate">
-                  {a.aliases.join(', ')}
-                </div>
+                <div className="text-xs text-muted-foreground truncate">{a.aliases.join(', ')}</div>
               )}
             </div>
           )
@@ -141,7 +139,11 @@ export function ThreatActorsPanel() {
         header: 'TTPs',
         cell: ({ row }) => {
           const n = row.original.ttps?.length ?? 0
-          return n > 0 ? <Badge variant="outline">{n}</Badge> : <span className="text-muted-foreground">—</span>
+          return n > 0 ? (
+            <Badge variant="outline">{n}</Badge>
+          ) : (
+            <span className="text-muted-foreground">—</span>
+          )
         },
       },
       {
@@ -158,7 +160,9 @@ export function ThreatActorsPanel() {
         accessorKey: 'updated_at',
         header: ({ column }) => <DataTableColumnHeader column={column} title="Updated" />,
         cell: ({ row }) => (
-          <span className="text-sm text-muted-foreground">{formatDate(row.original.updated_at)}</span>
+          <span className="text-sm text-muted-foreground">
+            {formatDate(row.original.updated_at)}
+          </span>
         ),
       },
       {
@@ -527,11 +531,7 @@ function CreateThreatActorDialog({
             </div>
             <div className="space-y-2">
               <Label htmlFor="ta-country">Country of origin</Label>
-              <Input
-                id="ta-country"
-                value={country}
-                onChange={(e) => setCountry(e.target.value)}
-              />
+              <Input id="ta-country" value={country} onChange={(e) => setCountry(e.target.value)} />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
