@@ -80,6 +80,7 @@ import {
   Rocket,
   BarChart3,
   Settings,
+  ShieldQuestion,
 } from 'lucide-react'
 import { type SidebarData } from '@/components/types'
 import { Permission, Role } from '@/lib/permissions'
@@ -455,6 +456,13 @@ export const sidebarData: SidebarData = {
           icon: Wrench,
           permission: Permission.RemediationRead,
           module: 'remediation_tasks',
+        },
+        {
+          title: 'Exceptions',
+          url: '/exceptions',
+          icon: ShieldQuestion,
+          permission: Permission.SuppressionsRead,
+          module: 'findings',
         },
         {
           title: 'Workflows',
