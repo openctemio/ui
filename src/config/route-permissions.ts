@@ -356,6 +356,9 @@ export const routePermissions: Record<string, RoutePermissionConfig> = {
     permission: Permission.WorkflowsRead,
     module: Module.Workflows,
   },
+  '/sla': {
+    permission: Permission.SLARead,
+  },
   '/exceptions': {
     permission: Permission.SuppressionsRead,
     module: Module.Findings,

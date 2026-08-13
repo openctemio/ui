@@ -46,6 +46,7 @@ import {
   BookTemplate,
   History,
   Clock,
+  Timer,
   Bot,
   FileSliders,
   Wrench,
@@ -458,6 +459,12 @@ export const sidebarData: SidebarData = {
           module: 'remediation_tasks',
         },
         {
+          title: 'SLA Compliance',
+          url: '/sla',
+          icon: Timer,
+          permission: Permission.SLARead,
+        },
+        {
           title: 'Exceptions',
           url: '/exceptions',
           icon: ShieldQuestion,
@@ -659,6 +666,12 @@ export const sidebarData: SidebarData = {
               icon: Crosshair,
               permission: Permission.TeamUpdate,
               module: 'pentest',
+            },
+            {
+              title: 'SLA Policies',
+              url: '/settings/sla-policies',
+              icon: Timer,
+              permission: Permission.SLARead,
             },
           ],
         },
