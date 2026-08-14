@@ -179,6 +179,14 @@ export interface AssetRelationship {
   // Impact analysis
   impactWeight: number // 1-10, how critical is this relationship
 
+  /**
+   * CTEM Scoping (api #467): marks this dependency edge as a control-plane
+   * dependency — the target governs the source's security posture (IdP,
+   * secrets store, CI/CD, SIEM, etc.). Used to surface blast-radius during
+   * scoping. Defaults to false.
+   */
+  isControlPlane?: boolean
+
   // Tags for filtering
   tags?: string[]
 
@@ -199,6 +207,8 @@ export interface CreateRelationshipInput {
   confidence?: RelationshipConfidence
   discoveryMethod?: DiscoveryMethod
   impactWeight?: number
+  /** Control-plane dependency flag (api #467). */
+  isControlPlane?: boolean
   tags?: string[]
 }
 
@@ -209,6 +219,8 @@ export interface UpdateRelationshipInput {
   description?: string
   confidence?: RelationshipConfidence
   impactWeight?: number
+  /** Control-plane dependency flag (api #467). */
+  isControlPlane?: boolean
   tags?: string[]
   lastVerified?: string
 }

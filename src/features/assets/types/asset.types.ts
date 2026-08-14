@@ -569,6 +569,34 @@ export const CRITICALITY_COLORS: Record<Criticality, { bg: string; text: string;
   }
 
 /**
+ * CIA Impact Rating (CTEM Scoping critical-asset register)
+ *
+ * Per-dimension business-impact rating an operator assigns to an asset:
+ * how severe the consequence would be if the asset's Confidentiality,
+ * Integrity, or Availability were compromised. Distinct from `criticality`
+ * (a single overall importance level) — CIA captures the three dimensions
+ * separately, matching NIST FIPS-199 style impact assessment.
+ *
+ * Backed by api #467 (asset.impact_confidentiality / _integrity /
+ * _availability). Each dimension is independently nullable: an unset
+ * dimension means "not yet rated". The empty string clears a rating on
+ * update.
+ */
+export type ImpactRating = 'low' | 'moderate' | 'high'
+
+export const IMPACT_RATING_LABELS: Record<ImpactRating, string> = {
+  low: 'Low',
+  moderate: 'Moderate',
+  high: 'High',
+}
+
+export const IMPACT_RATING_OPTIONS: { value: ImpactRating; label: string }[] = [
+  { value: 'low', label: 'Low' },
+  { value: 'moderate', label: 'Moderate' },
+  { value: 'high', label: 'High' },
+]
+
+/**
  * Cloud Provider type
  */
 export type CloudProvider = 'aws' | 'gcp' | 'azure' | 'oci' | 'alibaba' | 'digitalocean'
@@ -970,6 +998,14 @@ export interface Asset {
   status: Status
   scope: AssetScope // Ownership/location classification
   exposure: ExposureLevel // Network accessibility classification
+  /**
+   * CTEM Scoping critical-asset register: per-dimension CIA business-impact
+   * ratings (api #467). Each is independently optional — undefined means the
+   * dimension has not been rated yet.
+   */
+  impactConfidentiality?: ImpactRating
+  impactIntegrity?: ImpactRating
+  impactAvailability?: ImpactRating
   riskScore: number // 0-100, calculated from criticality, exposure, and findings
   findingCount: number
   groupId?: string // Optional - asset can be ungrouped
@@ -1018,6 +1054,13 @@ export interface CreateAssetInput {
   criticality?: Criticality // Defaults to 'medium' if not provided
   scope?: AssetScope // Defaults to 'internal' if not provided
   exposure?: ExposureLevel // Defaults to 'unknown' if not provided
+  /**
+   * CIA impact ratings (api #467). Empty string / undefined leaves the
+   * dimension unrated.
+   */
+  impactConfidentiality?: ImpactRating | ''
+  impactIntegrity?: ImpactRating | ''
+  impactAvailability?: ImpactRating | ''
   groupId?: string // Optional - can create ungrouped assets
   /** Free-text owner reference (team / contact / cost center). Max 500 chars. */
   ownerRef?: string
@@ -1034,6 +1077,13 @@ export interface UpdateAssetInput {
   criticality?: Criticality
   scope?: AssetScope
   exposure?: ExposureLevel
+  /**
+   * CIA impact ratings (api #467). Empty string clears a previously-set
+   * rating; undefined leaves it unchanged.
+   */
+  impactConfidentiality?: ImpactRating | ''
+  impactIntegrity?: ImpactRating | ''
+  impactAvailability?: ImpactRating | ''
   groupId?: string | null // null to remove from group
   /** Free-text owner reference (team / contact / cost center). Max 500 chars. */
   ownerRef?: string
