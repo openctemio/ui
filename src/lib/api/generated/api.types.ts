@@ -9853,6 +9853,8 @@ export interface paths {
           exclude_statuses?: string
           /** @description Filter by sources */
           sources?: string
+          /** @description Filter by SLA status (comma-separated: on_track,warning,overdue,exceeded,not_applicable) */
+          sla_status?: string
           /** @description Filter by tool name */
           tool_name?: string
           /** @description Page number */
@@ -26087,6 +26089,7 @@ export interface components {
       | 'BAD_REQUEST'
       | 'UNAUTHORIZED'
       | 'FORBIDDEN'
+      | 'MODULE_NOT_ENABLED'
       | 'NOT_FOUND'
       | 'CONFLICT'
       | 'UNPROCESSABLE_ENTITY'
@@ -26372,6 +26375,7 @@ export interface components {
     }
     'internal_infra_http_handler.ActivityItem': {
       description?: string
+      ref_id?: string
       timestamp?: string
       title?: string
       type?: string
