@@ -47,6 +47,20 @@ export interface PriorityFactors {
   critical_asset: boolean
 }
 
+/**
+ * Transparent CTEM composite score (ctem.org prioritization model) that EXPLAINS
+ * the priority class without changing it. Sub-scores are 0-5; control_reduction
+ * is 0-0.5; score = (impact + likelihood + exposure) * (1 - control_reduction),
+ * so it lands in 0-15. Optional — absent when the backend predates this field.
+ */
+export interface PriorityScoreBreakdown {
+  impact: number
+  likelihood: number
+  exposure: number
+  control_reduction: number
+  score: number
+}
+
 /** Read-only breakdown of why a finding holds its priority class. */
 export interface PriorityExplanation {
   finding_id: string
@@ -56,6 +70,7 @@ export interface PriorityExplanation {
   source: string
   rule_name?: string
   factors: PriorityFactors
+  score_breakdown?: PriorityScoreBreakdown
 }
 
 // ============================================
