@@ -91,7 +91,7 @@ import type { ApiScopeTarget, ApiScopeExclusion } from '@/features/scope/api/sco
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import { useDebounce } from '@/hooks/use-debounce'
 // Status filter is now string-based to support custom status values
-import type { AssetType, Criticality, AssetScope, ExposureLevel } from '../types'
+import type { AssetType, Criticality, AssetScope, ExposureLevel, ImpactRating } from '../types'
 import type { AssetPageConfig } from '../types/page-config.types'
 import { useAssetCRUD } from '../hooks/use-asset-crud'
 import { useAssetDialogs } from '../hooks/use-asset-dialogs'
@@ -601,6 +601,16 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
       const ownerRef = data.ownerRef as string | undefined
       delete data.ownerRef
 
+      // CIA impact ratings are universal shared-form fields (api #467), not in
+      // config.formFields — pull them out so they don't get dropped by the
+      // config-only loop below, and forward them explicitly. '' = not rated.
+      const impactConfidentiality = (data.impactConfidentiality as string | undefined) || undefined
+      const impactIntegrity = (data.impactIntegrity as string | undefined) || undefined
+      const impactAvailability = (data.impactAvailability as string | undefined) || undefined
+      delete data.impactConfidentiality
+      delete data.impactIntegrity
+      delete data.impactAvailability
+
       const metadata: Record<string, unknown> = {}
       const topLevel: Record<string, unknown> = {}
 
@@ -623,6 +633,11 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
           description: String(data.description ?? ''),
           scope: (data.scope as string | undefined) || 'internal',
           exposure: (data.exposure as string | undefined) || 'unknown',
+          ...(impactConfidentiality
+            ? { impactConfidentiality: impactConfidentiality as ImpactRating }
+            : {}),
+          ...(impactIntegrity ? { impactIntegrity: impactIntegrity as ImpactRating } : {}),
+          ...(impactAvailability ? { impactAvailability: impactAvailability as ImpactRating } : {}),
           ownerRef,
           tags,
           // Per-type fields collected by the form live in `metadata` (→ backend
@@ -664,6 +679,16 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
       delete data.scope
       delete data.exposure
 
+      // CIA impact ratings (api #467). The shared form always sends a value on
+      // edit ('' = not rated), so pass it through verbatim: '' clears the
+      // rating, a rating sets it. Only omit when the key is genuinely absent.
+      const impactConfidentiality = data.impactConfidentiality as ImpactRating | '' | undefined
+      const impactIntegrity = data.impactIntegrity as ImpactRating | '' | undefined
+      const impactAvailability = data.impactAvailability as ImpactRating | '' | undefined
+      delete data.impactConfidentiality
+      delete data.impactIntegrity
+      delete data.impactAvailability
+
       // Collect metadata and top-level fields (same logic as create)
       const metadata: Record<string, unknown> = {}
       const topLevel: Record<string, unknown> = {}
@@ -685,6 +710,9 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
         ...(criticality ? { criticality } : {}),
         ...(scope ? { scope } : {}),
         ...(exposure ? { exposure } : {}),
+        ...(impactConfidentiality !== undefined ? { impactConfidentiality } : {}),
+        ...(impactIntegrity !== undefined ? { impactIntegrity } : {}),
+        ...(impactAvailability !== undefined ? { impactAvailability } : {}),
         tags,
         ...(Object.keys(metadata).length > 0 ? { metadata } : {}),
         ...topLevel,
