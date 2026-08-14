@@ -496,6 +496,13 @@ export const sidebarData: SidebarData = {
       icon: BarChart3,
       items: [
         {
+          title: 'Program Health',
+          url: '/insights/program-health',
+          icon: Target,
+          // Outcome scorecard — always available with dashboard read, no module gate.
+          permission: Permission.DashboardRead,
+        },
+        {
           title: 'Executive Summary',
           url: '/insights/executive',
           icon: TrendingUp,
