@@ -181,6 +181,12 @@ export interface RiskScoringSettings {
   ctem_points: CTEMPointsConfig
   risk_levels: RiskLevelConfig
   score_composition_mode?: ScoreCompositionMode
+  /**
+   * When true, a finding on an asset with no assigned owner is never classified
+   * below P2 priority. It is a strict floor (only ever raises a P3 to P2, never
+   * lowers anything and never touches P0/P1). Off by default (opt-in).
+   */
+  floor_unowned_at_p2?: boolean
 }
 
 export interface RiskScorePreviewItem {
