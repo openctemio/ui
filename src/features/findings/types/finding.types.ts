@@ -780,6 +780,11 @@ export interface Finding {
     effort?: string // trivial, low, medium, high
     fix_available?: boolean
     auto_fixable?: boolean
+    // CTEM Mobilization: engineering-grade work-item fields
+    preferred_fix?: string
+    alternative_fixes?: string[]
+    verification_method?: string
+    success_criteria?: string // definition of done
   }
 
   // Extended: Tracking
