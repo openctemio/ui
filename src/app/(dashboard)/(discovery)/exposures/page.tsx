@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/sheet'
 import { Main } from '@/components/layout'
 import { PageHeader } from '@/features/shared'
+import { useUrlFilter, useUrlFilterList } from '@/hooks/use-url-param'
 import { copyToClipboard } from '@/lib/clipboard'
 import { cn } from '@/lib/utils'
 import { SEVERITY_BADGE_SOLID } from '@/lib/severity-colors'
@@ -93,16 +94,24 @@ export default function ExposuresPage() {
   const { currentTenant } = useTenant()
   const tenantId = currentTenant?.id || null
 
-  // State tab - primary filter
-  const [activeTab, setActiveTab] = useState<StateTab>('needs_attention')
+  // State tab - primary filter. Filters live in the URL so a filtered view is
+  // shareable and survives reload (matching the findings/assets pages). The hook
+  // returns plain strings; cast the tuples so downstream typing stays identical.
+  const [activeTab, setActiveTab] = useUrlFilter('state', 'needs_attention') as [
+    StateTab,
+    (v: StateTab) => void,
+  ]
 
-  // Filters state
+  // Pagination state (page/per_page stay local; page resets to 1 on filter change)
   const [filters, setFilters] = useState<ExposureListFilters>({
     page: 1,
     per_page: 20,
   })
-  const [searchQuery, setSearchQuery] = useState('')
-  const [selectedSeverities, setSelectedSeverities] = useState<ExposureSeverity[]>([])
+  const [searchQuery, setSearchQuery] = useUrlFilter('q', '')
+  const [selectedSeverities, setSelectedSeverities] = useUrlFilterList('severity') as [
+    ExposureSeverity[],
+    (next: ExposureSeverity[] | ((prev: ExposureSeverity[]) => ExposureSeverity[])) => void,
+  ]
 
   // Map tab to state filters
   const getStatesForTab = (tab: StateTab): ExposureState[] | undefined => {
