@@ -8,12 +8,7 @@
 
 import { describe, it, expect } from 'vitest'
 
-import {
-  charterToForm,
-  formToCharter,
-  charterWarnings,
-  emptyCharterForm,
-} from './charter.schema'
+import { charterToForm, formToCharter, charterWarnings, emptyCharterForm } from './charter.schema'
 import type { CtemCharter } from './types'
 
 describe('charterToForm', () => {
