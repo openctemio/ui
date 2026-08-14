@@ -9,6 +9,7 @@
  */
 
 import {
+  SEVERITY_BADGE_SOFT,
   SEVERITY_CHART_COLORS,
   SEVERITY_DOT_COLORS,
   SEVERITY_TEXT_COLORS,
@@ -64,6 +65,18 @@ export const STATE_BAR: Record<CtemState, string> = {
   good: GOOD_BAR,
   warn: SEVERITY_DOT_COLORS.medium,
   crit: SEVERITY_DOT_COLORS.critical,
+}
+
+/** Soft badge (bg + text + border) per health state — for pass/warn/fail chips.
+ * Warn/crit reuse the severity soft ramp; "good" green has no token, so it is
+ * annotated for the palette-drift gate exactly like GOOD_* above. */
+const GOOD_BADGE_SOFT =
+  'bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:text-emerald-400' // palette-ok: no semantic/severity token for "on-track" green
+
+export const STATE_BADGE_SOFT: Record<CtemState, string> = {
+  good: GOOD_BADGE_SOFT,
+  warn: SEVERITY_BADGE_SOFT.medium,
+  crit: SEVERITY_BADGE_SOFT.critical,
 }
 
 /** A percentage-coverage value → health state (higher is better). */

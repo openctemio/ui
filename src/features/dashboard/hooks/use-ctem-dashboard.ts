@@ -55,6 +55,11 @@ export interface ExecutiveSummary {
   crown_jewels_at_risk: number
   findings_total: number
   findings_resolved_period: number
+  // Program Health reads these; older API builds may omit them, so keep optional
+  // and let the consuming card fall back to "not yet measured" / 0.
+  findings_new_period?: number
+  regression_count?: number
+  regression_rate_pct?: number
   top_risks: ExecTopRisk[]
 }
 
@@ -62,6 +67,15 @@ export interface MttrAnalytics {
   by_severity: Record<string, number>
   by_priority_class: Record<PriorityClass, number>
   overall_hours: number
+}
+
+export interface DataQualityScorecard {
+  asset_ownership_pct: number
+  finding_evidence_pct: number
+  median_last_seen_days: number
+  deduplication_rate: number
+  total_assets: number
+  total_findings: number
 }
 
 export interface ThreatIntelStats {
@@ -173,6 +187,15 @@ export function useMttrAnalytics(tenantId: string | null) {
   return useSWR<MttrAnalytics>(
     useKey('/api/v1/dashboard/mttr-analytics', tenantId),
     ([url]) => get<MttrAnalytics>(url),
+    config
+  )
+}
+
+/** Data-quality scorecard (RFC-005 Gap 5) — owner coverage lives here. */
+export function useDataQuality(tenantId: string | null) {
+  return useSWR<DataQualityScorecard>(
+    useKey('/api/v1/dashboard/data-quality', tenantId),
+    ([url]) => get<DataQualityScorecard>(url),
     config
   )
 }
