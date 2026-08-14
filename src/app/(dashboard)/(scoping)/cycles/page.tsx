@@ -20,21 +20,11 @@ import {
 } from '@/components/ui/dialog'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Plus, Play, Eye, CheckCircle, RefreshCw } from 'lucide-react'
+import { Plus, Play, Eye, CheckCircle, RefreshCw, ScrollText } from 'lucide-react'
 import { get, post } from '@/lib/api/client'
 import { getErrorMessage } from '@/lib/api/error-handler'
 import { toast } from 'sonner'
-
-interface CtemCycle {
-  id: string
-  name: string
-  description: string
-  status: 'planning' | 'active' | 'review' | 'closed'
-  start_date: string
-  end_date: string
-  created_at: string
-  updated_at: string
-}
+import { CharterEditorSheet, type CtemCycle } from '@/features/cycles'
 
 interface PaginatedResponse {
   data: CtemCycle[]
@@ -82,6 +72,8 @@ export default function CtemCyclesPage() {
     action: 'activate' | 'review' | 'close'
     cycleName: string
   } | null>(null)
+  // Cycle whose charter is being viewed/edited in the side sheet.
+  const [charterCycle, setCharterCycle] = useState<CtemCycle | null>(null)
 
   const resetForm = () => {
     setFormData({ name: '', description: '', start_date: '', end_date: '' })
@@ -187,6 +179,15 @@ export default function CtemCyclesPage() {
           const cycle = row.original
           return (
             <div className="flex items-center justify-end gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setCharterCycle(cycle)}
+                title={cycle.status === 'planning' ? 'Edit charter' : 'View charter'}
+              >
+                <ScrollText className="me-1 h-3 w-3" />
+                Charter
+              </Button>
               {cycle.status === 'planning' && (
                 <Button
                   variant="ghost"
@@ -368,6 +369,13 @@ export default function CtemCyclesPage() {
         }
         confirmText={pendingAction ? confirmCopy[pendingAction.action].actionLabel : ''}
         handleConfirm={confirmStatusChange}
+      />
+
+      <CharterEditorSheet
+        cycle={charterCycle}
+        open={charterCycle !== null}
+        onOpenChange={(open) => !open && setCharterCycle(null)}
+        onSaved={() => mutate()}
       />
     </>
   )
