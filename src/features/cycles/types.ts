@@ -43,6 +43,13 @@ export interface CtemCharter {
   escalation_path?: string
   roles?: CharterRoles
   timeline?: string
+  /**
+   * Feedback-to-scope: what the review/close learned about scope — gaps to add,
+   * items to exclude next cycle, lessons for the next charter. Unlike the rest
+   * of the charter (fixed at planning) this is edited at review/close via
+   * POST /ctem-cycles/{id}/scope-refinement.
+   */
+  scope_refinement_notes?: string
 }
 
 export interface CtemCycle {

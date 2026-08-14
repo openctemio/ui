@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import {
   Dialog,
@@ -20,7 +21,7 @@ import {
 } from '@/components/ui/dialog'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Plus, Play, Eye, CheckCircle, RefreshCw, ScrollText } from 'lucide-react'
+import { Plus, Play, Eye, CheckCircle, RefreshCw, ScrollText, NotebookPen } from 'lucide-react'
 import { get, post } from '@/lib/api/client'
 import { getErrorMessage } from '@/lib/api/error-handler'
 import { toast } from 'sonner'
@@ -74,9 +75,35 @@ export default function CtemCyclesPage() {
   } | null>(null)
   // Cycle whose charter is being viewed/edited in the side sheet.
   const [charterCycle, setCharterCycle] = useState<CtemCycle | null>(null)
+  // Cycle whose scope-refinement notes (feedback-to-scope) are being edited.
+  const [scopeCycle, setScopeCycle] = useState<CtemCycle | null>(null)
+  const [scopeNotes, setScopeNotes] = useState('')
+  const [savingScope, setSavingScope] = useState(false)
 
   const resetForm = () => {
     setFormData({ name: '', description: '', start_date: '', end_date: '' })
+  }
+
+  const openScopeRefinement = (cycle: CtemCycle) => {
+    setScopeNotes(cycle.charter?.scope_refinement_notes ?? '')
+    setScopeCycle(cycle)
+  }
+
+  const handleSaveScopeRefinement = async () => {
+    if (!scopeCycle) return
+    setSavingScope(true)
+    try {
+      await post(`/api/v1/ctem-cycles/${scopeCycle.id}/scope-refinement`, {
+        scope_refinement_notes: scopeNotes,
+      })
+      await mutate()
+      toast.success('Scope refinement notes saved')
+      setScopeCycle(null)
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to save scope refinement notes'))
+    } finally {
+      setSavingScope(false)
+    }
   }
 
   const handleCreate = async () => {
@@ -218,6 +245,17 @@ export default function CtemCyclesPage() {
                 >
                   <Eye className="me-1 h-3 w-3" />
                   Start Review
+                </Button>
+              )}
+              {(cycle.status === 'review' || cycle.status === 'closed') && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => openScopeRefinement(cycle)}
+                  title="Record scope-refinement notes (feedback to next cycle's scope)"
+                >
+                  <NotebookPen className="me-1 h-3 w-3" />
+                  Scope Notes
                 </Button>
               )}
               {cycle.status === 'review' && (
@@ -377,6 +415,39 @@ export default function CtemCyclesPage() {
         onOpenChange={(open) => !open && setCharterCycle(null)}
         onSaved={() => mutate()}
       />
+
+      {/* Feedback-to-scope: record what the review/close learned about scope. */}
+      <Dialog open={scopeCycle !== null} onOpenChange={(open) => !open && setScopeCycle(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Scope refinement &amp; lessons</DialogTitle>
+            <DialogDescription>
+              {scopeCycle ? `${scopeCycle.name} — ` : ''}
+              what this cycle taught you about scope: gaps to add, items to exclude next time,
+              lessons for the next charter. Feeds the next cycle&rsquo;s scoping.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="scope-notes">Notes</Label>
+            <Textarea
+              id="scope-notes"
+              value={scopeNotes}
+              onChange={(e) => setScopeNotes(e.target.value)}
+              placeholder="e.g. Add exposed RDP to scope next cycle; the legacy VPN exclusion held up."
+              rows={6}
+              disabled={savingScope}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setScopeCycle(null)} disabled={savingScope}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveScopeRefinement} disabled={savingScope}>
+              {savingScope ? 'Saving…' : 'Save notes'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }
