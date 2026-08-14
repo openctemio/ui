@@ -492,6 +492,9 @@ export interface FindingApiFilters {
   priority_classes?: string[] // e.g. ['P0','P1']
   is_in_kev?: boolean
   is_reachable?: boolean
+  /** SLA status filter — sent as `sla_status` (comma-separated). Backend accepts
+   *  on_track | warning | overdue | exceeded | not_applicable. */
+  sla_statuses?: string[]
   epss_min?: number
   /** Restrict to a specific set of finding IDs (e.g. a remediation task's linked findings). */
   finding_ids?: string[]

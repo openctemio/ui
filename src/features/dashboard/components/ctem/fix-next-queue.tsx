@@ -47,16 +47,24 @@ function toItems(chains: ExposureChain[], topRisks: ExecTopRisk[]): FixNextItem[
 
   const riskItems: FixNextItem[] = topRisks.map((r, i) => {
     const priorityClass = (r.priority_class?.toUpperCase() as PriorityClass) || undefined
+    // Build a stacked deep-link: priority class AND (when exploited) KEV.
+    const listParams = new URLSearchParams()
+    if (priorityClass) listParams.set('priority', priorityClass)
+    if (r.is_in_kev) listParams.set('kev', 'true')
+    const listQuery = listParams.toString()
     return {
       key: `risk-${i}-${r.title}`,
       // EPSS is 0..1; scale to a comparable 0..100 exposure score.
       score: Math.round((r.epss_score ?? 0) * 100),
       title: r.title,
       // Deep-link to the specific finding when the id is present (sibling API PR
-      // is adding it); otherwise fall back to the priority-filtered list.
+      // is adding it); otherwise fall back to the filtered list. CTEM filters now
+      // stack, so a KEV top-risk links straight to the P0-AND-KEV intersection.
       href: r.finding_id
         ? `/findings/${r.finding_id}`
-        : `/findings?priority=${priorityClass || ''}`,
+        : listQuery
+          ? `/findings?${listQuery}`
+          : '/findings',
       kev: r.is_in_kev,
       priorityClass,
       meta: [r.asset_name].filter(Boolean),
