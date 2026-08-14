@@ -25,6 +25,7 @@ import {
 import { AssetGroupSelect } from '@/features/asset-groups'
 import type { FormFieldConfig } from '../types/page-config.types'
 import type { Asset } from '../types'
+import { IMPACT_RATING_OPTIONS } from '../types'
 
 interface AssetFormDialogSharedProps {
   open: boolean
@@ -65,6 +66,20 @@ const EXPOSURE_OPTIONS = [
   { value: 'unknown', label: 'Unknown' },
 ]
 
+// CTEM Scoping critical-asset register: CIA impact ratings (api #467). A
+// dimension may be left unrated. Radix <SelectItem> can't use an empty
+// value, so an explicit "Not rated" option carries a sentinel that we map
+// back to '' (the value the backend interprets as "clear/unset").
+const IMPACT_UNRATED = 'unrated'
+const CIA_FIELDS = [
+  {
+    name: 'impactConfidentiality' as const,
+    label: 'Confidentiality Impact',
+  },
+  { name: 'impactIntegrity' as const, label: 'Integrity Impact' },
+  { name: 'impactAvailability' as const, label: 'Availability Impact' },
+]
+
 function getInitialValues(
   fields: FormFieldConfig[],
   asset?: Asset | null
@@ -95,6 +110,10 @@ function getInitialValues(
   values.criticality = asset?.criticality ?? 'medium'
   values.scope = asset?.scope ?? 'internal'
   values.exposure = asset?.exposure ?? 'unknown'
+  // CIA impact ratings — default to '' (not rated). Stored as '' | rating.
+  values.impactConfidentiality = asset?.impactConfidentiality ?? ''
+  values.impactIntegrity = asset?.impactIntegrity ?? ''
+  values.impactAvailability = asset?.impactAvailability ?? ''
   return values
 }
 
@@ -186,6 +205,12 @@ export function AssetFormDialogShared({
     data.criticality = formData.criticality
     data.scope = formData.scope
     data.exposure = formData.exposure
+
+    // Forward CIA impact ratings. '' means "not rated" — for update the
+    // backend treats '' as clear, and for create it's simply omitted.
+    for (const cia of CIA_FIELDS) {
+      data[cia.name] = formData[cia.name] ?? ''
+    }
 
     if (includeGroupSelect) {
       data.groupId = groupId
@@ -369,6 +394,49 @@ export function AssetFormDialogShared({
                 </div>
               </div>
             ))}
+          </div>
+
+          {/* CTEM Scoping — CIA business-impact ratings (api #467). Each
+              dimension is optional; "Not rated" leaves it unset. Distinct
+              from Criticality above (one overall level) — these capture the
+              consequence of losing Confidentiality, Integrity, or
+              Availability independently. */}
+          <div>
+            <Label className="text-sm font-medium">Business Impact (CIA)</Label>
+            <div className="mt-1.5 grid grid-cols-1 gap-4 sm:grid-cols-3">
+              {CIA_FIELDS.map((f) => {
+                const current = String(formData[f.name] ?? '')
+                return (
+                  <div key={f.name}>
+                    <Label htmlFor={f.name} className="text-xs text-muted-foreground">
+                      {f.label}
+                    </Label>
+                    <div className="mt-1">
+                      <Select
+                        value={current === '' ? IMPACT_UNRATED : current}
+                        onValueChange={(v) => handleChange(f.name, v === IMPACT_UNRATED ? '' : v)}
+                      >
+                        <SelectTrigger id={f.name}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={IMPACT_UNRATED}>Not rated</SelectItem>
+                          {IMPACT_RATING_OPTIONS.map((opt) => (
+                            <SelectItem key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Optional — how severe the impact would be if this asset&apos;s confidentiality,
+              integrity, or availability were compromised.
+            </p>
           </div>
 
           {/* Owner reference — universal field for all asset types. Free-text
