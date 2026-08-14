@@ -17,7 +17,7 @@
 
 import useSWR, { type SWRConfiguration } from 'swr'
 import useSWRMutation from 'swr/mutation'
-import { get, post, del } from '@/lib/api/client'
+import { get, post, del, patch } from '@/lib/api/client'
 import { useTenant } from '@/context/tenant-provider'
 
 // ============================================
@@ -58,6 +58,19 @@ export interface AddRemediationStepInput {
 export interface RemediationStepsResponse {
   steps: string[]
   total: number
+}
+
+/**
+ * Payload for PATCH /findings/{id}/remediation — the CTEM Mobilization
+ * engineering-grade guidance (definition of done + acceptable fixes). Every
+ * field is optional; omitted fields are left unchanged server-side, so partial
+ * edits are safe.
+ */
+export interface UpdateFindingRemediationInput {
+  preferred_fix?: string
+  alternative_fixes?: string[]
+  verification_method?: string
+  success_criteria?: string
 }
 
 // ============================================
@@ -123,6 +136,22 @@ export function useAddRemediationStep(findingId: string | null) {
     currentTenant && findingId ? `/api/v1/findings/${findingId}/remediation/steps` : null,
     async (url: string, { arg }: { arg: AddRemediationStepInput }) => {
       return post<RemediationStepsResponse>(url, arg)
+    }
+  )
+}
+
+/**
+ * Update a finding's CTEM Mobilization remediation guidance (definition of
+ * done + acceptable fixes).
+ * PATCH /api/v1/findings/{id}/remediation
+ */
+export function useUpdateFindingRemediation(findingId: string | null) {
+  const { currentTenant } = useTenant()
+
+  return useSWRMutation(
+    currentTenant && findingId ? `/api/v1/findings/${findingId}/remediation` : null,
+    async (url: string, { arg }: { arg: UpdateFindingRemediationInput }) => {
+      return patch<unknown>(url, arg)
     }
   )
 }
