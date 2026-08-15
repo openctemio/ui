@@ -6,10 +6,10 @@
  * the inventory owned) — deliberately separated from the activity/volume
  * numbers (total findings / scans / tickets) that measure motion, not value.
  *
- * Every metric is grounded in a real dashboard endpoint. Where the guide asks
- * for something OpenCTEM does not yet measure (validation downgrade % — the
- * validation executor is deferred) the card renders "Not yet measured" rather
- * than a fabricated number.
+ * Every metric is grounded in a real endpoint — including the confirm-or-
+ * downgrade outcome (validation downgrade %), wired to validation/coverage
+ * (RFC-011.2 Phase 2a). A metric only renders "Not measured" when its source
+ * genuinely has no data yet, never a fabricated number.
  *
  * P0 ↔ P1 note: the guide numbers priority P1–P4; OpenCTEM numbers P0–P3. The
  * guide's most-urgent class ("P1") maps onto OpenCTEM's **P0** here.
@@ -40,6 +40,7 @@ import {
   useMttrAnalytics,
   useDataQuality,
   useRiskTrend,
+  useValidationCoverage,
 } from '../hooks/use-ctem-dashboard'
 import {
   type MetricStatus,
@@ -52,6 +53,7 @@ import {
   slaComplianceState,
   exposureTrendDelta,
   exposureTrendState,
+  downgradeState,
 } from '../lib/program-health'
 import {
   Target,
@@ -200,8 +202,9 @@ export function ProgramHealthView() {
   const { data: mttr, isLoading: mttrLoading } = useMttrAnalytics(tenantId)
   const { data: quality, isLoading: qualityLoading } = useDataQuality(tenantId)
   const { data: riskTrend, isLoading: trendLoading } = useRiskTrend(tenantId, Number(period))
+  const { data: validation, isLoading: validationLoading } = useValidationCoverage(tenantId)
 
-  const loading = summaryLoading || mttrLoading || qualityLoading
+  const loading = summaryLoading || mttrLoading || qualityLoading || validationLoading
 
   const openSeries = useMemo(() => (riskTrend ?? []).map((p) => p.findings_open), [riskTrend])
   const trendDelta = exposureTrendDelta(openSeries)
@@ -216,6 +219,23 @@ export function ProgramHealthView() {
     // 4/5. Regression (re-open / rediscovery).
     const reopenPct = summary?.regression_rate_pct
     const rediscovered = summary?.regression_count
+    // 8. Confirm-or-downgrade outcome (RFC-011.2 Phase 2a → 2c). `dgValidated`
+    // is the denominator (distinct findings with validation evidence): undefined
+    // = API predates the metric → "not measured"; 0 = wired but empty until
+    // validations run → "0% (no validations yet)", never "not measured".
+    const dgValidated = validation?.downgrade_validated
+    const dgDowngraded = validation?.downgraded
+    const dgPct = validation?.downgrade_pct
+    const dgDisplay =
+      dgValidated === undefined
+        ? null
+        : dgValidated <= 0
+          ? '0% (no validations yet)'
+          : fmtPct(dgPct)
+    const dgHint =
+      dgValidated && dgValidated > 0
+        ? `${dgDowngraded ?? 0} of ${dgValidated} validated finding${dgValidated === 1 ? '' : 's'} downgraded.`
+        : undefined
 
     return [
       {
@@ -294,14 +314,14 @@ export function ProgramHealthView() {
         id: 'validation-downgrade',
         label: 'Validation downgrade %',
         measures: 'Findings de-prioritised after validation proved them non-exploitable',
-        display: null,
+        display: dgDisplay,
         target: '25–40%',
-        status: 'pending',
-        source:
-          'Not yet measured — the validation executor is deferred, so no downgrade signal exists. Auto-verify is shallow; validation/coverage measures coverage, not downgrade.',
+        status: downgradeState(dgPct, dgValidated),
+        source: 'validation/coverage (downgraded ÷ distinct findings with validation evidence)',
+        hint: dgHint,
       },
     ]
-  }, [summary, mttr, quality, period, trendDelta])
+  }, [summary, mttr, quality, period, trendDelta, validation])
 
   if (!canRead) {
     return (

@@ -91,3 +91,25 @@ export function exposureTrendState(delta: number | null): MetricStatus {
   if (delta === 0) return 'warn'
   return 'crit'
 }
+
+/** Confirm-or-downgrade outcome (RFC-011.2). Share of validated findings a
+ * re-check downgraded (proved non-exploitable). The guide's healthy band is
+ * 25–40%: too low means validation isn't retiring false urgency, too high means
+ * prioritisation was badly miscalibrated up front.
+ *
+ * `validated` is the denominator (distinct findings with validation evidence).
+ * `undefined` denominator → the API predates the metric → 'pending' ("Not
+ * measured"). A denominator of 0 is NOT "not measured" — the metric exists, it
+ * is just empty until validations run; the caller renders "0% (no validations
+ * yet)" and this returns 'pending' (awaiting outcomes, not off/on track). */
+export function downgradeState(
+  pct: number | null | undefined,
+  validated: number | null | undefined
+): MetricStatus {
+  if (validated === null || validated === undefined) return 'pending'
+  if (validated <= 0) return 'pending'
+  if (pct === null || pct === undefined || Number.isNaN(pct)) return 'pending'
+  if (pct >= 25 && pct <= 40) return 'good'
+  if (pct >= 10 && pct <= 55) return 'warn'
+  return 'crit'
+}
