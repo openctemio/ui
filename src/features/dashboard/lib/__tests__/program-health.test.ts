@@ -9,6 +9,7 @@ import {
   slaComplianceState,
   exposureTrendDelta,
   exposureTrendState,
+  downgradeState,
 } from '../program-health'
 
 describe('remediationCompletionPct', () => {
@@ -94,5 +95,24 @@ describe('exposureTrendDelta / exposureTrendState', () => {
     expect(exposureTrendState(0)).toBe('warn')
     expect(exposureTrendState(1)).toBe('crit')
     expect(exposureTrendState(null)).toBe('pending')
+  })
+})
+
+describe('downgradeState', () => {
+  it('is pending when the denominator is absent (API predates the metric)', () => {
+    expect(downgradeState(undefined, undefined)).toBe('pending')
+    expect(downgradeState(0, null)).toBe('pending')
+  })
+  it('is pending — not measured — when wired but empty (0 validations yet)', () => {
+    expect(downgradeState(0, 0)).toBe('pending')
+  })
+  it('is good inside the 25-40% band, warn adjacent, crit far off', () => {
+    expect(downgradeState(25, 40)).toBe('good')
+    expect(downgradeState(33, 40)).toBe('good')
+    expect(downgradeState(40, 40)).toBe('good')
+    expect(downgradeState(10, 40)).toBe('warn')
+    expect(downgradeState(55, 40)).toBe('warn')
+    expect(downgradeState(5, 40)).toBe('crit')
+    expect(downgradeState(80, 40)).toBe('crit')
   })
 })
