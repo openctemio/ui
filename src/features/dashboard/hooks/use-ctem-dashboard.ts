@@ -131,6 +131,14 @@ export interface ValidationCoverage {
   overall_pct: number
   validated: number
   total: number
+  // Confirm-or-downgrade outcome metric (RFC-011.2 Phase 2a). `downgraded` is the
+  // count of validated findings a re-check downgraded (proved non-exploitable);
+  // `downgrade_validated` is that metric's own denominator (distinct findings
+  // with any validation evidence); `downgrade_pct` = downgraded ÷ that. Optional
+  // so the UI degrades to "not measured" against an API build that predates 2a.
+  downgraded?: number
+  downgrade_validated?: number
+  downgrade_pct?: number
 }
 
 export interface CtemMaturityBreakdown {
