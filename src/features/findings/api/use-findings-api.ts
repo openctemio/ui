@@ -466,6 +466,18 @@ export function useRequestValidationApi(findingId: string) {
   )
 }
 
+/**
+ * True when an error returned by {@link useRequestValidationApi} indicates that
+ * no validation-capable agent is currently online for the tenant. The API
+ * signals this as a 400 wrapping `ErrNoValidationAgent` whose message contains
+ * "no validation-capable agent is online". Callers surface a deploy-an-agent
+ * hint instead of a generic failure toast.
+ */
+export function isNoValidationAgentError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : typeof error === 'string' ? error : ''
+  return /no validation-capable agent/i.test(message)
+}
+
 /** A single validation-evidence record recorded against a finding. */
 export interface ValidationEvidenceItem {
   id: string
