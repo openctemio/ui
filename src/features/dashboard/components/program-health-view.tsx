@@ -317,8 +317,7 @@ export function ProgramHealthView() {
         display: dgDisplay,
         target: '25–40%',
         status: downgradeState(dgPct, dgValidated),
-        source:
-          'validation/coverage (downgraded ÷ distinct findings with validation evidence)',
+        source: 'validation/coverage (downgraded ÷ distinct findings with validation evidence)',
         hint: dgHint,
       },
     ]
