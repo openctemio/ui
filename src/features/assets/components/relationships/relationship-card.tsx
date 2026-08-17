@@ -16,6 +16,7 @@ import {
   ExternalLink,
   Clock,
   ShieldCheck,
+  ShieldAlert,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -270,6 +271,12 @@ export function RelationshipCard({
             {label}
           </Badge>
           <ConfidenceBadge confidence={relationship.confidence} />
+          {relationship.isControlPlane && (
+            <Badge variant="outline" className="text-xs gap-1">
+              <ShieldAlert className="h-3 w-3" />
+              Control-plane
+            </Badge>
+          )}
         </div>
         <DataTableRowActions
           actions={[
@@ -417,7 +424,15 @@ export function RelationshipListItem({
           <Link2 className={cn('h-4 w-4', colors.text)} />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium truncate">{otherAsset.name}</p>
+          <div className="flex items-center gap-1.5 min-w-0">
+            <p className="text-sm font-medium truncate">{otherAsset.name}</p>
+            {relationship.isControlPlane && (
+              <Badge variant="outline" className="text-[10px] gap-0.5 shrink-0 px-1 py-0">
+                <ShieldAlert className="h-2.5 w-2.5" />
+                Control-plane
+              </Badge>
+            )}
+          </div>
           <p className="text-xs text-muted-foreground">
             {label} - {EXTENDED_ASSET_TYPE_LABELS[otherAsset.type]}
           </p>

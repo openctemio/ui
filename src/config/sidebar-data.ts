@@ -46,6 +46,7 @@ import {
   BookTemplate,
   History,
   Clock,
+  Timer,
   Bot,
   FileSliders,
   Wrench,
@@ -80,6 +81,7 @@ import {
   Rocket,
   BarChart3,
   Settings,
+  ShieldQuestion,
 } from 'lucide-react'
 import { type SidebarData } from '@/components/types'
 import { Permission, Role } from '@/lib/permissions'
@@ -457,6 +459,19 @@ export const sidebarData: SidebarData = {
           module: 'remediation_tasks',
         },
         {
+          title: 'SLA Compliance',
+          url: '/sla',
+          icon: Timer,
+          permission: Permission.SLARead,
+        },
+        {
+          title: 'Exceptions',
+          url: '/exceptions',
+          icon: ShieldQuestion,
+          permission: Permission.SuppressionsRead,
+          module: 'findings',
+        },
+        {
           title: 'Workflows',
           url: '/workflows',
           icon: Workflow,
@@ -480,6 +495,13 @@ export const sidebarData: SidebarData = {
       title: 'Insights',
       icon: BarChart3,
       items: [
+        {
+          title: 'Program Health',
+          url: '/insights/program-health',
+          icon: Target,
+          // Outcome scorecard — always available with dashboard read, no module gate.
+          permission: Permission.DashboardRead,
+        },
         {
           title: 'Executive Summary',
           url: '/insights/executive',
@@ -651,6 +673,12 @@ export const sidebarData: SidebarData = {
               icon: Crosshair,
               permission: Permission.TeamUpdate,
               module: 'pentest',
+            },
+            {
+              title: 'SLA Policies',
+              url: '/settings/sla-policies',
+              icon: Timer,
+              permission: Permission.SLARead,
             },
           ],
         },

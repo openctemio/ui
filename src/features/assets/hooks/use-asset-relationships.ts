@@ -23,6 +23,7 @@ interface BackendRelationshipResponse {
   confidence: string
   discovery_method: string
   impact_weight: number
+  is_control_plane?: boolean
   tags?: string[]
   created_at: string
   updated_at: string
@@ -51,6 +52,7 @@ function transformRelationship(backend: BackendRelationshipResponse): AssetRelat
     confidence: backend.confidence as AssetRelationship['confidence'],
     discoveryMethod: backend.discovery_method as AssetRelationship['discoveryMethod'],
     impactWeight: backend.impact_weight,
+    isControlPlane: backend.is_control_plane ?? false,
     tags: backend.tags,
     createdAt: backend.created_at,
     updatedAt: backend.updated_at,
@@ -110,6 +112,10 @@ export async function addAssetRelationship(
     confidence: input.confidence ?? 'medium',
     discovery_method: input.discoveryMethod ?? 'manual',
     impact_weight: input.impactWeight,
+    // Control-plane dependency flag (api #467). Only the singleton create
+    // endpoint accepts this — the batch endpoint does not (see
+    // addAssetRelationshipBatch).
+    is_control_plane: input.isControlPlane,
     tags: input.tags,
   })
 }
@@ -153,6 +159,12 @@ export interface BatchCreateRelationshipResult {
  *
  * Used by AssetRelationshipsTab when the user multi-selects targets
  * in the Add Relationship dialog.
+ *
+ * NOTE: the batch item does NOT carry `is_control_plane` (api #467 only
+ * added it to the singleton create/update). Callers that need to set the
+ * control-plane flag at create time must follow up with
+ * `updateAssetRelationship` on the returned `relationship_id` — see
+ * AssetRelationshipsTab.handleAdd.
  */
 export async function addAssetRelationshipBatch(
   assetId: string,
@@ -191,6 +203,9 @@ export async function updateAssetRelationship(
     description: input.description,
     confidence: input.confidence,
     impact_weight: input.impactWeight,
+    // Control-plane dependency flag (api #467). Sent only when defined so a
+    // partial update doesn't reset it; the backend uses a *bool pointer.
+    is_control_plane: input.isControlPlane,
     tags: input.tags,
   })
 }

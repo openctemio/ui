@@ -101,6 +101,7 @@ export const DEV_USER: AuthUser & {
     'settings:billing:read',
     'settings:sla:read',
     'settings:sla:write',
+    'settings:sla:delete',
     // Attack Surface
     'attack_surface:scope:read',
     'attack_surface:scope:write',

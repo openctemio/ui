@@ -40,6 +40,7 @@ import { Input } from '@/components/ui/input'
 import { useAddRemediationStep } from '../../api/use-finding-evidence'
 import type { Remediation, RemediationStepStatus, FindingDetail } from '../../types'
 import { CodeHighlighter } from './code-highlighter'
+import { MobilizationBriefCard } from './mobilization-brief-card'
 import { buildRepositoryCodeUrl } from '../../lib/repository-url'
 
 interface RemediationTabProps {
@@ -353,6 +354,18 @@ export function RemediationTab({ remediation, finding }: RemediationTabProps) {
           </div>
         )}
       </div>
+
+      {/* CTEM Mobilization: definition of done + acceptable fixes */}
+      <MobilizationBriefCard
+        findingId={findingId}
+        canWrite={canWrite}
+        brief={{
+          successCriteria: apiRemed?.success_criteria,
+          verificationMethod: apiRemed?.verification_method,
+          preferredFix: apiRemed?.preferred_fix,
+          alternativeFixes: apiRemed?.alternative_fixes,
+        }}
+      />
 
       {/* Auto-Fix Code Section */}
       {(fixCode || fixRegex) && (

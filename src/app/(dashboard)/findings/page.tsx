@@ -59,6 +59,9 @@ import {
   SEVERITY_CONFIG,
 } from '@/features/findings'
 import { PriorityClassBadge } from '@/features/findings/components/priority-class-badge'
+import { SlaStatusBadge } from '@/features/sla/components/sla-status-badge'
+import { SLA_STATUS_LABELS, type SLAStatus } from '@/features/repositories/types/repository.types'
+import { formatDueRelative } from '@/features/sla/lib/sla'
 import { AssigneeSelect } from '@/features/findings/components/assignee-select'
 import { FindingGroupsTab } from '@/features/findings/components/finding-groups-tab'
 import { MarkFixedDialog } from '@/features/findings/components/mark-fixed-dialog'
@@ -87,6 +90,7 @@ import { copyToClipboard } from '@/lib/clipboard'
 import { getErrorMessage } from '@/lib/api/error-handler'
 import { patch, post, del, csrfFetch } from '@/lib/api/client'
 import { usePermissions } from '@/context/permission-provider'
+import { useModuleEnabled } from '@/features/integrations/api/use-tenant-modules'
 
 // ============================================
 // Transform API Finding to UI Finding
@@ -193,6 +197,9 @@ function transformApiToUiFinding(api: ApiFinding): Finding {
     verifiedAt: undefined,
     createdAt: api.created_at,
     updatedAt: api.updated_at,
+    // SLA tracking
+    slaStatus: api.sla_status,
+    slaDeadline: api.sla_deadline,
     // Threat Intel Enrichment (RFC-004)
     epssScore: api.epss_score,
     epssPercentile: api.epss_percentile,
@@ -302,8 +309,40 @@ function FindingsContent() {
   // Multiple sources at once: "everything from code scanning" is one question,
   // and it spans sast and secret. Comma-separated, matching what the API takes.
   const [sourceFilter, setSourceFilter] = useUrlFilterList('sources')
+  // CTEM signals are independent, stackable filters — each lives in its own URL
+  // param so "P0 AND reachable AND KEV" is one link, not three mutually-exclusive
+  // choices. The backend FindingFilter ANDs priority_classes + is_in_kev +
+  // is_reachable + sla_status, so the UI param model must let them coexist.
+  //  - `priority` : the P0–P3 class (single value)
+  //  - `kev`      : boolean flag → is_in_kev
+  //  - `reachable`: boolean flag → is_reachable
+  //  - `sla_status`: multi-select list → sla_status
   const [priorityFilter, setPriorityFilter] = useUrlFilter('priority', 'all')
+  const [kevFilter, setKevFilter] = useUrlFilter('kev', 'false')
+  const [reachableFilter, setReachableFilter] = useUrlFilter('reachable', 'false')
+  const [slaFilter, setSlaFilter] = useUrlFilterList('sla_status')
   const [searchQuery, setSearchQuery] = useUrlFilter('q', '')
+
+  // Backward-compat: legacy deep links modelled KEV / reachable as *values* of the
+  // single `priority` param (e.g. /findings?priority=kev). Treat those as the new
+  // boolean flags on read so old links keep working, and migrate the URL to the
+  // new param shape once so every subsequent interaction is clean.
+  const kevActive = kevFilter === 'true' || priorityFilter === 'kev'
+  const reachableActive = reachableFilter === 'true' || priorityFilter === 'reachable'
+  const priorityClass =
+    priorityFilter === 'all' || priorityFilter === 'kev' || priorityFilter === 'reachable'
+      ? null
+      : priorityFilter
+
+  useEffect(() => {
+    if (priorityFilter === 'kev') {
+      setKevFilter('true')
+      setPriorityFilter('all')
+    } else if (priorityFilter === 'reachable') {
+      setReachableFilter('true')
+      setPriorityFilter('all')
+    }
+  }, [priorityFilter, setKevFilter, setReachableFilter, setPriorityFilter])
   // Debounce so typing doesn't fire a backend list request per keystroke.
   const debouncedSearch = useDebounce(searchQuery, 300)
   // Server-side pagination state. The list is fetched one page at a time from
@@ -320,6 +359,12 @@ function FindingsContent() {
     priority?: string
   } | null>(null)
   const { hasPermission } = usePermissions()
+  // Both are Phase-3 gated modules embedded in this (findings) page: the "Create
+  // Jira Ticket" action hits the integrations module, and "Add to remediation"
+  // hits the remediation module. Hide + skip-fetch when disabled (fail-open on
+  // OSS where no modules are reported).
+  const remediationEnabled = useModuleEnabled('remediation')
+  const integrationsEnabled = useModuleEnabled('integrations')
   const pendingCount = usePendingVerificationCount()
 
   // Statuses hidden from default dashboard view (pentest WIP, not ready for visibility)
@@ -374,6 +419,31 @@ function FindingsContent() {
     [setSourceFilter]
   )
 
+  const toggleSla = useCallback(
+    (code: string) => {
+      setSlaFilter((prev) =>
+        prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code]
+      )
+    },
+    [setSlaFilter]
+  )
+
+  // Summarise the stacked CTEM signals in the Priority button. "P0 + KEV" reads
+  // as one composite filter, which is the whole point of making them stackable.
+  const priorityLabel = useMemo(() => {
+    const parts: string[] = []
+    if (priorityClass) parts.push(priorityClass.toUpperCase())
+    if (kevActive) parts.push('KEV')
+    if (reachableActive) parts.push('Reachable')
+    return parts.length > 0 ? parts.join(' + ') : 'All'
+  }, [priorityClass, kevActive, reachableActive])
+
+  const slaLabel = useMemo(() => {
+    if (slaFilter.length === 0) return 'All'
+    if (slaFilter.length === 1) return SLA_STATUS_LABELS[slaFilter[0] as SLAStatus] ?? slaFilter[0]
+    return `${slaFilter.length} selected`
+  }, [slaFilter])
+
   const apiFilters = useMemo((): FindingApiFilters => {
     const filters: FindingApiFilters = {
       page: pagination.pageIndex + 1,
@@ -399,14 +469,13 @@ function FindingsContent() {
     if (debouncedSearch.trim()) {
       filters.search = debouncedSearch.trim()
     }
-    // CTEM priority filter (RFC-017)
-    if (priorityFilter === 'kev') {
-      filters.is_in_kev = true
-    } else if (priorityFilter === 'reachable') {
-      filters.is_reachable = true
-    } else if (priorityFilter !== 'all') {
-      filters.priority_classes = [priorityFilter]
-    }
+    // CTEM prioritization filters (RFC-017) — independent and stackable. Each
+    // applies together (AND), mirroring how the backend FindingFilter combines
+    // PriorityClasses + IsInKEV + IsReachable + SLAStatuses.
+    if (priorityClass) filters.priority_classes = [priorityClass]
+    if (kevActive) filters.is_in_kev = true
+    if (reachableActive) filters.is_reachable = true
+    if (slaFilter.length > 0) filters.sla_statuses = slaFilter
     return filters
   }, [
     assetIdFilter,
@@ -415,7 +484,10 @@ function FindingsContent() {
     severityTab,
     statusFilter,
     sourceFilter,
-    priorityFilter,
+    priorityClass,
+    kevActive,
+    reachableActive,
+    slaFilter,
     debouncedSearch,
     HIDDEN_STATUSES,
     pagination,
@@ -432,7 +504,10 @@ function FindingsContent() {
     severityTab,
     statusFilter,
     sourceFilter,
-    priorityFilter,
+    priorityClass,
+    kevActive,
+    reachableActive,
+    slaFilter,
     debouncedSearch,
   ])
 
@@ -943,6 +1018,26 @@ function FindingsContent() {
         },
       },
       {
+        accessorKey: 'slaStatus',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Due / SLA" />,
+        cell: ({ row }) => {
+          const status = row.original.slaStatus
+          if (!status || status === 'not_applicable') {
+            return <span className="text-muted-foreground text-sm">—</span>
+          }
+          return (
+            <div className="flex flex-col gap-0.5">
+              <SlaStatusBadge status={status} />
+              {row.original.slaDeadline && (
+                <span className="text-muted-foreground text-xs tabular-nums">
+                  {formatDueRelative(row.original.slaDeadline)}
+                </span>
+              )}
+            </div>
+          )
+        },
+      },
+      {
         accessorKey: 'createdAt',
         header: ({ column }) => <DataTableColumnHeader column={column} title="Created" />,
         cell: ({ row }) => (
@@ -976,11 +1071,13 @@ function FindingsContent() {
                   <CheckCircle className="me-2 h-4 w-4" />
                   Change Status
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleRowAction('create_ticket', finding)}>
-                  <Ticket className="me-2 h-4 w-4" />
-                  Create Jira Ticket
-                </DropdownMenuItem>
-                {hasPermission('findings:remediation:write') && (
+                {integrationsEnabled && (
+                  <DropdownMenuItem onClick={() => handleRowAction('create_ticket', finding)}>
+                    <Ticket className="me-2 h-4 w-4" />
+                    Create Jira Ticket
+                  </DropdownMenuItem>
+                )}
+                {hasPermission('findings:remediation:write') && remediationEnabled && (
                   <DropdownMenuItem onClick={() => handleRowAction('remediate', finding)}>
                     <Wrench className="me-2 h-4 w-4" />
                     Add to remediation
@@ -1021,7 +1118,14 @@ function FindingsContent() {
     return hasAnyPriority
       ? cols
       : cols.filter((c) => !('accessorKey' in c) || c.accessorKey !== 'priorityClass')
-  }, [handleRowAction, handleRowClick, hasPermission, hasAnyPriority])
+  }, [
+    handleRowAction,
+    handleRowClick,
+    hasPermission,
+    hasAnyPriority,
+    remediationEnabled,
+    integrationsEnabled,
+  ])
 
   // Error state
   if (error) {
@@ -1289,19 +1393,15 @@ function FindingsContent() {
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="sm">
                     <Filter className="me-2 h-4 w-4" />
-                    Priority:{' '}
-                    {priorityFilter === 'all'
-                      ? 'All'
-                      : priorityFilter === 'kev'
-                        ? 'KEV'
-                        : priorityFilter === 'reachable'
-                          ? 'Reachable'
-                          : priorityFilter.toUpperCase()}
+                    Priority: {priorityLabel}
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
-                  <DropdownMenuItem onClick={() => setPriorityFilter('all')}>All</DropdownMenuItem>
-                  <DropdownMenuSeparator />
+                  {/* Priority class — a single P0–P3 selection. */}
+                  <DropdownMenuLabel className="text-xs">Priority class</DropdownMenuLabel>
+                  <DropdownMenuItem onClick={() => setPriorityFilter('all')}>
+                    All classes
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setPriorityFilter('P0')}>
                     P0 — Critical / Act now
                   </DropdownMenuItem>
@@ -1315,15 +1415,119 @@ function FindingsContent() {
                     P3 — Low
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => setPriorityFilter('kev')}>
+                  {/* CTEM signals — checkboxes so they stack with the class AND each
+                      other (P0 ∧ KEV ∧ reachable is one query). */}
+                  <DropdownMenuLabel className="text-xs">Threat signals</DropdownMenuLabel>
+                  <DropdownMenuCheckboxItem
+                    checked={kevActive}
+                    onCheckedChange={(v) => setKevFilter(v ? 'true' : 'false')}
+                    onSelect={(e) => e.preventDefault()}
+                  >
                     In CISA KEV
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setPriorityFilter('reachable')}>
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem
+                    checked={reachableActive}
+                    onCheckedChange={(v) => setReachableFilter(v ? 'true' : 'false')}
+                    onSelect={(e) => e.preventDefault()}
+                  >
                     Reachable
-                  </DropdownMenuItem>
+                  </DropdownMenuCheckboxItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <Filter className="me-2 h-4 w-4" />
+                    SLA: {slaLabel}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem onClick={() => setSlaFilter([])}>All</DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  {(
+                    ['overdue', 'exceeded', 'warning', 'on_track', 'not_applicable'] as SLAStatus[]
+                  ).map((s) => (
+                    <DropdownMenuCheckboxItem
+                      key={s}
+                      checked={slaFilter.includes(s)}
+                      onCheckedChange={() => toggleSla(s)}
+                      onSelect={(e) => e.preventDefault()}
+                    >
+                      {SLA_STATUS_LABELS[s]}
+                    </DropdownMenuCheckboxItem>
+                  ))}
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
+
+            {/* Active stackable filters — one removable badge per signal so the
+                AND-stacking is visible ("P0 + KEV + Overdue" is three chips), and
+                each can be cleared independently. "Clear all" resets every param. */}
+            {(priorityClass || kevActive || reachableActive || slaFilter.length > 0) && (
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <span className="text-muted-foreground text-xs">Active:</span>
+                {priorityClass && (
+                  <Badge variant="secondary" className="gap-1.5">
+                    {priorityClass.toUpperCase()}
+                    <button
+                      type="button"
+                      onClick={() => setPriorityFilter('all')}
+                      className="ms-0.5 rounded-full hover:bg-muted-foreground/20"
+                      aria-label="Clear priority class filter"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                )}
+                {kevActive && (
+                  <Badge variant="secondary" className="gap-1.5">
+                    KEV
+                    <button
+                      type="button"
+                      onClick={() => setKevFilter('false')}
+                      className="ms-0.5 rounded-full hover:bg-muted-foreground/20"
+                      aria-label="Clear KEV filter"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                )}
+                {reachableActive && (
+                  <Badge variant="secondary" className="gap-1.5">
+                    Reachable
+                    <button
+                      type="button"
+                      onClick={() => setReachableFilter('false')}
+                      className="ms-0.5 rounded-full hover:bg-muted-foreground/20"
+                      aria-label="Clear reachable filter"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                )}
+                {slaFilter.map((s) => (
+                  <Badge key={s} variant="secondary" className="gap-1.5">
+                    {SLA_STATUS_LABELS[s as SLAStatus] ?? s}
+                    <button
+                      type="button"
+                      onClick={() => toggleSla(s)}
+                      className="ms-0.5 rounded-full hover:bg-muted-foreground/20"
+                      aria-label={`Clear ${s} SLA filter`}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                ))}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 px-2 text-xs"
+                  onClick={clearFilters}
+                >
+                  Clear all
+                </Button>
+              </div>
+            )}
 
             {/* Bulk Actions Bar - Shows when items selected */}
             {selectedCount > 0 && (
@@ -1337,7 +1541,7 @@ function FindingsContent() {
                         if (user) void handleBulkAssign(user.id)
                       }}
                     />
-                    {hasPermission('findings:remediation:write') && (
+                    {hasPermission('findings:remediation:write') && remediationEnabled && (
                       <Button
                         variant="outline"
                         size="sm"
@@ -1494,16 +1698,21 @@ function FindingsContent() {
         />
       )}
 
-      <LinkFindingsToRemediationDialog
-        open={!!remedContext}
-        onOpenChange={(open) => {
-          if (!open) setRemedContext(null)
-        }}
-        findingIds={remedContext?.ids ?? []}
-        suggestedName={remedContext?.name}
-        suggestedPriority={remedContext?.priority}
-        onDone={() => setSelectedFindingIds([])}
-      />
+      {/* Mounted only while open: the dialog fetches remediation campaigns on
+          mount, so keeping it always-mounted would fire that (gated-module)
+          request on every Findings page load. */}
+      {remedContext && (
+        <LinkFindingsToRemediationDialog
+          open={!!remedContext}
+          onOpenChange={(open) => {
+            if (!open) setRemedContext(null)
+          }}
+          findingIds={remedContext?.ids ?? []}
+          suggestedName={remedContext?.name}
+          suggestedPriority={remedContext?.priority}
+          onDone={() => setSelectedFindingIds([])}
+        />
+      )}
 
       {/* Finding Quick View Drawer */}
       <FindingDetailDrawer

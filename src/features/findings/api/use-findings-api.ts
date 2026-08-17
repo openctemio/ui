@@ -98,6 +98,9 @@ function buildFindingsEndpoint(filters?: FindingApiFilters): string {
     params.set('priority_classes', filters.priority_classes.join(','))
   if (filters.is_in_kev) params.set('is_in_kev', 'true')
   if (filters.is_reachable) params.set('is_reachable', 'true')
+  // Backend query key is singular `sla_status` (comma-separated); maps to the
+  // FindingFilter.SLAStatuses list server-side.
+  if (filters.sla_statuses?.length) params.set('sla_status', filters.sla_statuses.join(','))
   if (filters.epss_min != null) params.set('epss_min', String(filters.epss_min))
   if (filters.finding_ids?.length) params.set('finding_ids', filters.finding_ids.join(','))
   if (filters.sort) params.set('sort', filters.sort)
@@ -461,6 +464,18 @@ export function useRequestValidationApi(findingId: string) {
       return post<RequestValidationResult>(url, {})
     }
   )
+}
+
+/**
+ * True when an error returned by {@link useRequestValidationApi} indicates that
+ * no validation-capable agent is currently online for the tenant. The API
+ * signals this as a 400 wrapping `ErrNoValidationAgent` whose message contains
+ * "no validation-capable agent is online". Callers surface a deploy-an-agent
+ * hint instead of a generic failure toast.
+ */
+export function isNoValidationAgentError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : typeof error === 'string' ? error : ''
+  return /no validation-capable agent/i.test(message)
 }
 
 /** A single validation-evidence record recorded against a finding. */

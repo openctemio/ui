@@ -1055,6 +1055,35 @@ export default function ScoringConfigurationPage() {
         </Card>
       </div>
 
+      {/* Unowned Findings Floor — CTEM "ownership unknown defaults to P2" rule */}
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-1">
+            Unowned Findings Floor
+            <InfoTip text="CTEM playbook rule. When enabled, findings on assets with no assigned owner are floored at P2 priority. It is a strict floor: only ever raises a P3 to P2, never lowers anything and never touches P0/P1." />
+          </CardTitle>
+          <CardDescription>How findings on ownerless assets are prioritized</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-start justify-between gap-4">
+            <div className="space-y-1">
+              <Label htmlFor="floor-unowned-toggle" className="text-sm font-medium">
+                Floor unowned findings at P2
+              </Label>
+              <p className="text-muted-foreground max-w-prose text-xs">
+                Findings on assets with no assigned owner can&apos;t be safely deprioritized — keep
+                them at P2 minimum. Off by default.
+              </p>
+            </div>
+            <Switch
+              id="floor-unowned-toggle"
+              checked={config.floor_unowned_at_p2 ?? false}
+              onCheckedChange={(v) => updateConfig((c) => ({ ...c, floor_unowned_at_p2: v }))}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Preview Changes — full width for table readability */}
       <Card className="mt-6">
         <CardHeader>

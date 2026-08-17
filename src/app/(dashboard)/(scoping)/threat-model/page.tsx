@@ -25,6 +25,7 @@ import {
   useThreatModels,
 } from '@/features/threat-model'
 import type { ThreatFilters } from '@/features/threat-model'
+import { useModuleEnabled } from '@/features/integrations/api/use-tenant-modules'
 
 const DEFAULT_FILTERS: ThreatFilters = {
   status: 'all',
@@ -41,7 +42,10 @@ export default function ThreatModelPage() {
   const { models, isLoading: modelsLoading, mutate: mutateModels } = useThreatModels()
   const { crownJewels, isLoading: crownJewelsLoading } = useCrownJewels()
   const { model, isLoading: modelLoading } = useThreatModel(selectedModelId)
-  const { profileMap } = useAttackerProfileMap()
+  // attacker_profiles is a separate (Phase-3 gated) module from this page's
+  // attack_surface module; skip its fetch when disabled (rows fall back to id).
+  const attackerProfilesEnabled = useModuleEnabled('attacker_profiles')
+  const { profileMap } = useAttackerProfileMap(attackerProfilesEnabled)
 
   const assetIds = useMemo(() => {
     if (!model?.threats) return []

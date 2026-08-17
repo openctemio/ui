@@ -173,11 +173,28 @@ export function CreateFindingDialog({ open, onOpenChange, onSuccess }: CreateFin
     }
 
     try {
+      // The API stores a finding's text in a single `message` field — there is no
+      // separate description column, nor dedicated columns for a network URL /
+      // container image / cloud ARN. Fold the required Description and any
+      // type-specific location context into the message so nothing the user
+      // typed is silently dropped.
+      const locationContext =
+        assetCategory === 'network' && affectedUrl.trim()
+          ? `Affected URL: ${affectedUrl.trim()}`
+          : assetCategory === 'container' && imageName.trim()
+            ? `Container Image: ${imageName.trim()}`
+            : assetCategory === 'cloud' && resourceArn.trim()
+              ? `Resource: ${resourceArn.trim()}`
+              : ''
+      const message = [title.trim(), description.trim(), locationContext]
+        .filter(Boolean)
+        .join('\n\n')
+
       await createFinding({
         asset_id: assetId,
         source,
         severity,
-        message: title,
+        message,
         tool_name: toolName || 'Manual Entry',
         // Code fields
         file_path: filePath || undefined,

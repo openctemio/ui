@@ -14,6 +14,10 @@ export type {
   AttackPathSummary,
 } from './hooks/use-attack-path-scoring'
 
+// Components
+export { PathGraph } from './components'
+export type { PathGraphNode, PathGraphPath, PathNodeRole } from './components'
+
 export { useExposureChains } from './hooks/use-exposure-chains'
 export type {
   ExposureChains,
