@@ -192,7 +192,7 @@ export function InventoryTable({
           const v = row.original.isInternetAccessible
           if (v === undefined) return <span className="text-muted-foreground">—</span>
           return v ? (
-            <span className="inline-flex items-center gap-1 text-xs text-orange-600 dark:text-orange-400">
+            <span className="inline-flex items-center gap-1 text-xs text-warning">
               <Globe className="h-3.5 w-3.5" />
               Facing
             </span>
