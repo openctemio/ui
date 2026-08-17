@@ -999,6 +999,12 @@ export interface Asset {
   scope: AssetScope // Ownership/location classification
   exposure: ExposureLevel // Network accessibility classification
   /**
+   * Whether the asset is reachable from the internet (assets.is_internet_accessible).
+   * Optional: the list response only carries it once the backend surfaces the
+   * column, so `undefined` reads as "unknown" in the inventory rather than false.
+   */
+  isInternetAccessible?: boolean
+  /**
    * CTEM Scoping critical-asset register: per-dimension CIA business-impact
    * ratings (api #467). Each is independently optional — undefined means the
    * dimension has not been rated yet.
