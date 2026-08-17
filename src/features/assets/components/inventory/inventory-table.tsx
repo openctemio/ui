@@ -17,6 +17,8 @@ import {
   type ColumnDef,
   type SortingState,
   type VisibilityState,
+  type RowSelectionState,
+  type OnChangeFn,
   flexRender,
   getCoreRowModel,
   useReactTable,
@@ -40,6 +42,7 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   Table,
@@ -90,6 +93,9 @@ interface InventoryTableProps {
   onPageSizeChange: (size: number) => void
   onSortChange: (sort: InventorySort | undefined) => void
   onRefresh: () => void
+  /** Row-selection state keyed by asset id (controlled by the parent). */
+  rowSelection: RowSelectionState
+  onRowSelectionChange: OnChangeFn<RowSelectionState>
 }
 
 function daysSinceISO(iso?: string | null): number | undefined {
@@ -129,6 +135,8 @@ export function InventoryTable({
   onPageSizeChange,
   onSortChange,
   onRefresh,
+  rowSelection,
+  onRowSelectionChange,
 }: InventoryTableProps) {
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null)
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
@@ -139,6 +147,32 @@ export function InventoryTable({
 
   const columns = useMemo<ColumnDef<Asset>[]>(
     () => [
+      {
+        id: 'select',
+        enableSorting: false,
+        enableHiding: false,
+        header: ({ table }) => (
+          <Checkbox
+            checked={
+              table.getIsAllPageRowsSelected() ||
+              (table.getIsSomePageRowsSelected() && 'indeterminate')
+            }
+            onCheckedChange={(v) => table.toggleAllPageRowsSelected(!!v)}
+            aria-label="Select all rows on this page"
+          />
+        ),
+        cell: ({ row }) => (
+          // Stop the row click (which opens the detail sheet) from firing when
+          // the operator is only toggling the selection checkbox.
+          <div onClick={(e) => e.stopPropagation()}>
+            <Checkbox
+              checked={row.getIsSelected()}
+              onCheckedChange={(v) => row.toggleSelected(!!v)}
+              aria-label="Select row"
+            />
+          </div>
+        ),
+      },
       {
         id: 'name',
         accessorKey: 'name',
@@ -285,7 +319,12 @@ export function InventoryTable({
   const table = useReactTable({
     data: assets,
     columns,
-    state: { sorting: sortingState, columnVisibility },
+    // Key selection by asset id so it survives re-sorts and the parent can map
+    // the RowSelectionState straight back to asset ids for bulk actions.
+    getRowId: (row) => row.id,
+    state: { sorting: sortingState, columnVisibility, rowSelection },
+    enableRowSelection: true,
+    onRowSelectionChange,
     manualPagination: true,
     manualSorting: true,
     onColumnVisibilityChange: setColumnVisibility,

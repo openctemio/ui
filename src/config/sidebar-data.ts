@@ -22,7 +22,6 @@ import {
   Settings2,
   Radar,
   Container,
-  ListFilter,
   GitBranch,
   KeyRound,
   Building2,
@@ -241,15 +240,9 @@ export const sidebarData: SidebarData = {
           permission: Permission.AssetsRead,
           module: 'assets',
         },
-        // Unified, filterable table across ALL asset types (the category
-        // Overview above stays as the drill-down landing page).
-        {
-          title: 'All Assets',
-          url: '/assets/all',
-          icon: ListFilter,
-          permission: Permission.AssetsRead,
-          module: 'assets',
-        },
+        // The unified, filterable "All Assets" inventory (/assets/all) is reached
+        // from a button on the Assets Overview page, so it is intentionally not a
+        // separate sidebar entry (it duplicated the item above).
         // ----------------------------------------
         // EXPOSURES (CVEs + non-CVE security issues)
         // ----------------------------------------

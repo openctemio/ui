@@ -13,6 +13,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { Search, Lock } from 'lucide-react'
+import type { RowSelectionState } from '@tanstack/react-table'
 import { Main } from '@/components/layout'
 import { PageHeader, EmptyState } from '@/features/shared'
 import { Input } from '@/components/ui/input'
@@ -29,7 +30,9 @@ import {
   type InventoryFilters,
 } from '../../lib/inventory-url'
 import { InventoryQuickPresets } from './inventory-quick-presets'
-import { InventoryFacetPanel } from './inventory-facet-panel'
+import { InventoryFilterBar } from './inventory-filter-bar'
+import { InventoryStatStrip } from './inventory-stat-strip'
+import { InventoryBulkBar } from './inventory-bulk-bar'
 import { InventoryActiveChips } from './inventory-active-chips'
 import { InventoryTable, type InventorySort } from './inventory-table'
 
@@ -76,6 +79,7 @@ export function AllAssetsInventory() {
   const searchParams = useSearchParams()
   const { can } = usePermissions()
   const canRead = can(Permission.AssetsRead)
+  const canWrite = can(Permission.AssetsWrite)
 
   // URL is the source of truth for all filter state.
   const filters = useMemo(
@@ -110,7 +114,7 @@ export function AllAssetsInventory() {
   const searchFilters = useMemo(() => toSearchFilters(filters), [filters])
   const { assets, total, page, pageSize, isLoading, isError, error, mutate } =
     useAssets(searchFilters)
-  const { stats } = useAssetStats()
+  const { stats, mutate: statsMutate } = useAssetStats()
   const { data: buData } = useBusinessUnits()
 
   const businessUnitLabels = useMemo(() => {
@@ -139,6 +143,17 @@ export function AllAssetsInventory() {
 
   const activeCount = countActiveFilters(filters)
 
+  // Row selection (keyed by asset id) for bulk actions. Cleared whenever the
+  // query changes so the bar only ever reflects rows on the current view.
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
+  useEffect(() => {
+    setRowSelection({})
+  }, [searchParams])
+  const selectedAssets = useMemo(
+    () => assets.filter((a) => rowSelection[a.id]),
+    [assets, rowSelection]
+  )
+
   if (!canRead) {
     return (
       <Main>
@@ -160,8 +175,18 @@ export function AllAssetsInventory() {
         description="One filterable inventory across every asset type — search, facet, and share deep links."
       />
 
+      {/* Clickable summary strip — each tile toggles the matching filter */}
+      <div className="mt-6">
+        <InventoryStatStrip
+          stats={stats}
+          filters={filters}
+          isLoading={isLoading}
+          onChange={setFilters}
+        />
+      </div>
+
       {/* Search + quick presets */}
-      <div className="mt-6 space-y-3">
+      <div className="mt-4 space-y-3">
         <div className="relative max-w-md">
           <Search className="absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -174,47 +199,49 @@ export function AllAssetsInventory() {
         <InventoryQuickPresets filters={filters} onToggle={togglePreset} />
       </div>
 
-      {/* Layout: facet panel (left) + table (right) */}
-      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[260px_1fr]">
-        <aside className="lg:sticky lg:top-4 lg:self-start">
-          <div className="rounded-lg border p-4">
-            <div className="mb-2 flex items-center justify-between">
-              <h2 className="text-sm font-semibold">Filters</h2>
-              {activeCount > 0 && (
-                <span className="text-xs text-muted-foreground">{activeCount} active</span>
-              )}
-            </div>
-            <InventoryFacetPanel
-              groups={facetGroups}
-              filters={filters}
-              stats={stats}
-              onChange={setFilters}
-            />
-          </div>
-        </aside>
-
-        <section className="min-w-0 space-y-3">
-          <InventoryActiveChips
-            filters={filters}
-            facetGroups={facetGroups}
-            onChange={setFilters}
-            onClearAll={() => setFilters({ sort: filters.sort, pageSize: filters.pageSize })}
+      {/* Full-width table with a horizontal facet toolbar (no left rail) */}
+      <div className="mt-4 min-w-0 space-y-3">
+        <InventoryFilterBar
+          groups={facetGroups}
+          filters={filters}
+          stats={stats}
+          onChange={setFilters}
+          activeCount={activeCount}
+        />
+        <InventoryActiveChips
+          filters={filters}
+          facetGroups={facetGroups}
+          onChange={setFilters}
+          onClearAll={() => setFilters({ sort: filters.sort, pageSize: filters.pageSize })}
+        />
+        {selectedAssets.length > 0 && (
+          <InventoryBulkBar
+            selected={selectedAssets}
+            canWrite={canWrite}
+            onClear={() => setRowSelection({})}
+            onDone={() => {
+              setRowSelection({})
+              mutate()
+              statsMutate()
+            }}
           />
-          <InventoryTable
-            assets={assets}
-            isLoading={isLoading}
-            isError={isError}
-            error={error}
-            total={total}
-            page={page}
-            pageSize={pageSize}
-            sort={toInventorySort(filters.sort)}
-            onPageChange={(p) => setFilters({ ...filters, page: p })}
-            onPageSizeChange={(size) => setFilters({ ...filters, pageSize: size, page: 1 })}
-            onSortChange={(s) => setFilters({ ...filters, sort: fromInventorySort(s), page: 1 })}
-            onRefresh={() => mutate()}
-          />
-        </section>
+        )}
+        <InventoryTable
+          assets={assets}
+          isLoading={isLoading}
+          isError={isError}
+          error={error}
+          total={total}
+          page={page}
+          pageSize={pageSize}
+          sort={toInventorySort(filters.sort)}
+          onPageChange={(p) => setFilters({ ...filters, page: p })}
+          onPageSizeChange={(size) => setFilters({ ...filters, pageSize: size, page: 1 })}
+          onSortChange={(s) => setFilters({ ...filters, sort: fromInventorySort(s), page: 1 })}
+          onRefresh={() => mutate()}
+          rowSelection={rowSelection}
+          onRowSelectionChange={setRowSelection}
+        />
       </div>
     </Main>
   )
