@@ -15,9 +15,41 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { cn } from '@/lib/utils'
-import type { FacetGroup, MultiFacetDef, BoolFacetDef } from '../../lib/inventory-facets'
+import type { FacetGroup, FacetDef, MultiFacetDef, BoolFacetDef } from '../../lib/inventory-facets'
 import type { AssetStatsData } from '../../hooks/use-assets'
 import type { InventoryFilters } from '../../lib/inventory-url'
+
+/**
+ * Render a single facet control (multi-select checkbox list OR tri-state
+ * boolean toggle) — the same rendering used inside the sticky rail, the
+ * desktop popover bar, and the mobile filter sheet. One source of truth for
+ * the facet UI so the three surfaces can never drift apart.
+ */
+export function FacetControl({
+  facet,
+  filters,
+  stats,
+  onChange,
+}: {
+  facet: FacetDef
+  filters: InventoryFilters
+  stats: AssetStatsData
+  onChange: (next: InventoryFilters) => void
+}) {
+  return facet.kind === 'multi' ? (
+    <MultiFacet facet={facet} filters={filters} stats={stats} onChange={onChange} />
+  ) : (
+    <BoolFacet facet={facet} filters={filters} stats={stats} onChange={onChange} />
+  )
+}
+
+/** Number of active selections on a facet (array length, or 1 for a set boolean). */
+export function facetActiveCount(facet: FacetDef, filters: InventoryFilters): number {
+  if (facet.kind === 'multi') {
+    return (filters[facet.filterKey as keyof InventoryFilters] as string[] | undefined)?.length ?? 0
+  }
+  return filters[facet.filterKey as keyof InventoryFilters] !== undefined ? 1 : 0
+}
 
 interface FacetPanelProps {
   groups: FacetGroup[]
