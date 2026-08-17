@@ -722,7 +722,8 @@ export interface Finding {
   impact?: string // high/medium/low
   likelihood?: string // high/medium/low
   rank?: number // priority score
-  slaStatus?: string // on_track/at_risk/breached/not_applicable
+  slaStatus?: string // on_track | warning | overdue | exceeded | not_applicable
+  slaDeadline?: string // ISO timestamp of the remediation deadline (nullable)
 
   // Threat Intel Enrichment (RFC-004)
   epssScore?: number
@@ -779,6 +780,11 @@ export interface Finding {
     effort?: string // trivial, low, medium, high
     fix_available?: boolean
     auto_fixable?: boolean
+    // CTEM Mobilization: engineering-grade work-item fields
+    preferred_fix?: string
+    alternative_fixes?: string[]
+    verification_method?: string
+    success_criteria?: string // definition of done
   }
 
   // Extended: Tracking

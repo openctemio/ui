@@ -21,13 +21,16 @@ import {
   ChevronDown,
   ChevronUp,
   ScanSearch,
+  ShieldCheck,
   Loader2,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { getErrorMessage } from '@/lib/api/error-handler'
 import { sanitizeExternalUrl } from '@/lib/utils'
 import { useTenant } from '@/context/tenant-provider'
+import { usePermissions } from '@/context/permission-provider'
 import { useCVEEnrichment } from '@/features/threat-intel/hooks'
+import { useModuleEnabled } from '@/features/integrations/api/use-tenant-modules'
 import { EPSSScoreBadge } from '@/features/shared/components/epss-score-badge'
 import { KEVIndicatorBadge } from '@/features/shared/components/kev-indicator-badge'
 import { AITriageButton } from '@/features/ai-triage/components'
@@ -37,6 +40,8 @@ import {
   useAssignFindingApi,
   useUnassignFindingApi,
   useRequestVerificationScanApi,
+  useRequestValidationApi,
+  isNoValidationAgentError,
   invalidateFindingsCache,
 } from '../../api/use-findings-api'
 import { FINDING_STATUS_CONFIG, SEVERITY_CONFIG, requiresApproval } from '../../types'
@@ -129,6 +134,14 @@ export function FindingHeader({
   const { trigger: unassignUser, isMutating: isUnassigning } = useUnassignFindingApi(finding.id)
   const { trigger: requestVerificationScan, isMutating: isRequestingVerificationScan } =
     useRequestVerificationScanApi(finding.id)
+  const { trigger: requestValidation, isMutating: isReverifying } = useRequestValidationApi(
+    finding.id
+  )
+
+  // Re-verify (CTEM Stage-4 safe-check) requires write access. Hidden entirely
+  // for users who lack it, matching the comment/composer gating.
+  const { hasPermission } = usePermissions()
+  const canReverify = hasPermission('findings:write')
 
   // Assignee comes from API with full user info (assigned_to_user)
   const assignee = assigneeState
@@ -138,8 +151,16 @@ export function FindingHeader({
     setAssigneeState(newAssignee)
   }
 
-  // Fetch EPSS/KEV data if finding has CVE
-  const { epss, kev } = useCVEEnrichment(currentTenant?.id || null, finding.cve || null)
+  // Fetch EPSS/KEV data if finding has CVE. The enrichment endpoint belongs to
+  // the (Phase-3 gated) threat_intel module; when disabled it 403s, so skip the
+  // fetch entirely by passing a null CVE — the EPSS/KEV badges below already
+  // render only when `epss`/`kev` are present, so they self-hide. Fail-open on
+  // OSS (no modules reported).
+  const threatIntelEnabled = useModuleEnabled('threat_intel')
+  const { epss, kev } = useCVEEnrichment(
+    currentTenant?.id || null,
+    threatIntelEnabled ? finding.cve || null : null
+  )
 
   const handleStatusChange = async (newStatus: FindingStatus, skipUndo = false) => {
     // Skip if selecting the same status
@@ -308,6 +329,27 @@ export function FindingHeader({
     }
   }
 
+  const handleReverify = async () => {
+    try {
+      await requestValidation()
+      toast.success('Re-verification queued', {
+        description: 'A safe-check validation job was dispatched to an agent.',
+        duration: 5000,
+      })
+    } catch (error) {
+      // The API returns 400 when no validation-capable agent is online — surface
+      // an actionable hint rather than a generic failure.
+      if (isNoValidationAgentError(error)) {
+        toast.error('No validation agent is online', {
+          description: 'Deploy a validation agent to run re-verification.',
+          duration: 6000,
+        })
+        return
+      }
+      toast.error(getErrorMessage(error, 'Failed to queue re-verification'))
+    }
+  }
+
   const handleRequestVerificationScan = async () => {
     if (!verificationScannerName.trim()) {
       toast.error('Scanner name is required')
@@ -438,6 +480,24 @@ export function FindingHeader({
                 size="sm"
                 onTriageCompleted={onTriageCompleted}
               />
+              {/* Re-verify Button - Mobile (safe-check validation) */}
+              {!isPentestSource && canReverify && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => void handleReverify()}
+                  disabled={isReverifying}
+                  className="h-7 gap-1"
+                  title="Re-run a safe-check to confirm this finding is still present"
+                >
+                  {isReverifying ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <ShieldCheck className="h-3.5 w-3.5" />
+                  )}
+                  Re-verify
+                </Button>
+              )}
               {/* Verification Scan Button - Mobile (fix_applied only) */}
               {status === 'fix_applied' && !isPentestSource && (
                 <Button
@@ -679,6 +739,27 @@ export function FindingHeader({
                 size="sm"
                 onTriageCompleted={onTriageCompleted}
               />
+              {/* Re-verify Button - Desktop (safe-check validation) */}
+              {!isPentestSource && canReverify && (
+                <>
+                  <div className="h-4 w-px bg-border" />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => void handleReverify()}
+                    disabled={isReverifying}
+                    className="h-7 gap-1"
+                    title="Re-run a safe-check to confirm this finding is still present"
+                  >
+                    {isReverifying ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <ShieldCheck className="h-3.5 w-3.5" />
+                    )}
+                    Re-verify
+                  </Button>
+                </>
+              )}
               {/* Verification Scan Button - Desktop (fix_applied only) */}
               {status === 'fix_applied' && !isPentestSource && (
                 <>

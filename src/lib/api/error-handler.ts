@@ -182,7 +182,12 @@ export function handleApiError(
   }
 
   // Show toast if enabled
-  if (showToast) {
+  // Defense-in-depth: a disabled module returns 403 MODULE_NOT_ENABLED. This is
+  // an expected empty state, not an error the user can act on — features for a
+  // disabled module should already be hidden and their fetches skipped, but if
+  // one slips through we swallow the toast (still logged above). Real RBAC
+  // denials (FORBIDDEN) keep their toast.
+  if (showToast && apiError.code !== 'MODULE_NOT_ENABLED') {
     // Different toast types based on error
     if (apiError.isAuthError()) {
       toast.error('Authentication Error', {

@@ -3,7 +3,13 @@
 import { useState, useMemo, useEffect } from 'react'
 import { getErrorMessage } from '@/lib/api/error-handler'
 import { useRouter } from 'next/navigation'
-import { createAsset, type CreateAssetInput, useAssets } from '@/features/assets'
+import {
+  createAsset,
+  updateAsset,
+  deleteAsset as apiDeleteAsset,
+  type CreateAssetInput,
+  useAssets,
+} from '@/features/assets'
 import { Main } from '@/components/layout'
 import { PageHeader, DataTableRowActions, StatsCard, SheetBody } from '@/features/shared'
 import { Button } from '@/components/ui/button'
@@ -241,38 +247,42 @@ export default function ExternalSurfacePage() {
     }
   }
 
-  const handleEdit = () => {
+  const handleEdit = async () => {
     if (!editAsset || !formData.name) {
       toast.error('Please enter an asset name')
       return
     }
-    setAssets((prev) =>
-      prev.map((a) =>
-        a.id === editAsset.id
-          ? {
-              ...a,
-              name: formData.name,
-              type: formData.type,
-              parentDomain: formData.parentDomain || undefined,
-              ipAddress: formData.ipAddress || undefined,
-              port: formData.port ? parseInt(formData.port) : undefined,
-              status: formData.status,
-              riskLevel: formData.riskLevel,
-              notes: formData.notes || undefined,
-            }
-          : a
-      )
-    )
-    toast.success('External asset updated successfully')
-    setEditAsset(null)
-    resetForm()
+    // Persist through the real API. This previously only mutated local state and
+    // reported success, so edits silently reverted on the next refetch.
+    try {
+      await updateAsset(editAsset.id, {
+        name: formData.name,
+        description: formData.notes || undefined,
+        metadata: {
+          ...(formData.ipAddress ? { ip_address: formData.ipAddress } : {}),
+          ...(formData.port ? { port: Number(formData.port) } : {}),
+          ...(formData.parentDomain ? { parent_domain: formData.parentDomain } : {}),
+        },
+      })
+      toast.success('External asset updated successfully')
+      setEditAsset(null)
+      resetForm()
+      await refetchAssets()
+    } catch (e) {
+      toast.error(getErrorMessage(e, 'Failed to update external asset'))
+    }
   }
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!deleteAsset) return
-    setAssets((prev) => prev.filter((a) => a.id !== deleteAsset.id))
-    toast.success('External asset deleted successfully')
-    setDeleteAsset(null)
+    try {
+      await apiDeleteAsset(deleteAsset.id)
+      toast.success('External asset deleted successfully')
+      setDeleteAsset(null)
+      await refetchAssets()
+    } catch (e) {
+      toast.error(getErrorMessage(e, 'Failed to delete external asset'))
+    }
   }
 
   // Derive a scan target from an external asset: prefer resolved IP, fall back

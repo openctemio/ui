@@ -13,6 +13,7 @@ import type {
   AssetScope,
   ExposureLevel,
   Criticality,
+  ImpactRating,
   CreateAssetInput,
   UpdateAssetInput,
   RepositoryExtension,
@@ -92,6 +93,11 @@ interface BackendAsset {
   status: string // active, inactive, archived
   scope: string // internal, external, cloud, partner, vendor, shadow
   exposure: string // public, restricted, private, isolated, unknown
+  // CTEM Scoping CIA impact ratings (api #467). Omitted by the backend when
+  // a dimension is unrated (json omitempty), so these are optional here.
+  impact_confidentiality?: string // low | moderate | high
+  impact_integrity?: string
+  impact_availability?: string
   risk_score: number // 0-100
   finding_count: number
   description?: string
@@ -124,6 +130,11 @@ function transformAsset(backend: BackendAsset): Asset {
     ownerRef: backend.owner_ref,
     scope: backend.scope as AssetScope,
     exposure: backend.exposure as ExposureLevel,
+    // CIA impact ratings (api #467). Backend omits unrated dimensions, so
+    // coerce the empty string to undefined to mean "not rated".
+    impactConfidentiality: (backend.impact_confidentiality as ImpactRating) || undefined,
+    impactIntegrity: (backend.impact_integrity as ImpactRating) || undefined,
+    impactAvailability: (backend.impact_availability as ImpactRating) || undefined,
     riskScore: backend.risk_score,
     findingCount: backend.finding_count,
     metadata: backend.properties || {},
@@ -482,6 +493,11 @@ export async function createAsset(input: CreateAssetInput): Promise<Asset> {
     description: input.description,
     scope: input.scope || 'internal',
     exposure: input.exposure || 'unknown',
+    // CIA impact ratings (api #467). Send undefined (omitted) when unrated so
+    // the backend leaves the dimension unset rather than storing an empty rating.
+    impact_confidentiality: input.impactConfidentiality || undefined,
+    impact_integrity: input.impactIntegrity || undefined,
+    impact_availability: input.impactAvailability || undefined,
     owner_ref: input.ownerRef,
     tags: input.tags,
     // Per-type fields collected by the form live in `metadata`; the backend
@@ -502,6 +518,12 @@ export async function updateAsset(assetId: string, input: UpdateAssetInput): Pro
     description: input.description,
     scope: input.scope,
     exposure: input.exposure,
+    // CIA impact ratings (api #467). The backend uses a *string pointer with
+    // omitempty: an empty string clears the rating; undefined (key omitted by
+    // JS) leaves it unchanged.
+    impact_confidentiality: input.impactConfidentiality,
+    impact_integrity: input.impactIntegrity,
+    impact_availability: input.impactAvailability,
     owner_ref: input.ownerRef,
     tags: input.tags,
     // Per-type form fields live in `metadata`; backend merges them into

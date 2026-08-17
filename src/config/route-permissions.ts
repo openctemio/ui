@@ -356,6 +356,17 @@ export const routePermissions: Record<string, RoutePermissionConfig> = {
     permission: Permission.WorkflowsRead,
     module: Module.Workflows,
   },
+  '/sla': {
+    permission: Permission.SLARead,
+  },
+  '/exceptions': {
+    permission: Permission.SuppressionsRead,
+    module: Module.Findings,
+  },
+  '/exceptions/**': {
+    permission: Permission.SuppressionsRead,
+    module: Module.Findings,
+  },
 
   // ========================================
   // Insights - Findings (Module: findings)
@@ -402,6 +413,12 @@ export const routePermissions: Record<string, RoutePermissionConfig> = {
   // ========================================
   // Insights — extended dashboards (each its own module post-000161)
   // ========================================
+  // Program Health is a core outcome scorecard — gated on dashboard read only
+  // (no dedicated module) so it is always available to anyone who can see the
+  // dashboard, without needing a new backend module registration.
+  '/insights/program-health': {
+    permission: Permission.DashboardRead,
+  },
   '/insights/executive': {
     permission: Permission.DashboardRead,
     module: Module.ExecutiveSummary,

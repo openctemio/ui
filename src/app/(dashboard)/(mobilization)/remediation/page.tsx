@@ -103,6 +103,7 @@ import { AssigneeSelect } from '@/features/findings/components/assignee-select'
 import { useMembers } from '@/features/organization/api/use-members'
 import { useTenant } from '@/context/tenant-provider'
 import { useHashTab } from '@/hooks/use-hash-tab'
+import { useUrlFilter, useUrlFilterList } from '@/hooks/use-url-param'
 import type { TaskStatus, TaskPriority, RemediationTask } from '@/features/remediation/types'
 import type { Severity } from '@/features/shared/types'
 import { exportToCsv, type ExportFieldConfig } from '@/hooks/use-csv-export'
@@ -182,12 +183,6 @@ interface Filters {
   priorities: TaskPriority[]
   statuses: TaskStatus[]
   assignees: string[]
-}
-
-const defaultFilters: Filters = {
-  priorities: [],
-  statuses: [],
-  assignees: [],
 }
 
 /** Safely format a date string. Returns null if invalid. */
@@ -443,10 +438,30 @@ export default function RemediationPage() {
 
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [isRefreshing, setIsRefreshing] = useState(false)
-  const [quickFilter, setQuickFilter] = useState('all')
+  // Filters live in the URL so a filtered view is shareable and survives reload
+  // (matching the findings/assets pages). The hook returns plain strings; cast
+  // the tuples so downstream typing stays identical.
+  const [quickFilter, setQuickFilter] = useUrlFilter('quick', 'all')
   // Table/Kanban view persisted in the URL hash (survives reload).
   const [viewTab, setViewTab] = useHashTab('table')
-  const [filters, setFilters] = useState<Filters>(defaultFilters)
+  const [priorityFilter, setPriorityFilter] = useUrlFilterList('priority') as [
+    TaskPriority[],
+    (next: TaskPriority[] | ((prev: TaskPriority[]) => TaskPriority[])) => void,
+  ]
+  const [statusFilter, setStatusFilter] = useUrlFilterList('status') as [
+    TaskStatus[],
+    (next: TaskStatus[] | ((prev: TaskStatus[]) => TaskStatus[])) => void,
+  ]
+  const [assigneeFilter, setAssigneeFilter] = useUrlFilterList('assignee') as [
+    string[],
+    (next: string[] | ((prev: string[]) => string[])) => void,
+  ]
+  // Reassemble the Filters object the rest of the page consumes, so filtering
+  // logic, activeFilterCount, and the popover checkboxes stay unchanged.
+  const filters = useMemo<Filters>(
+    () => ({ priorities: priorityFilter, statuses: statusFilter, assignees: assigneeFilter }),
+    [priorityFilter, statusFilter, assigneeFilter]
+  )
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [viewTask, setViewTask] = useState<RemediationTask | null>(null)
   const [editTask, setEditTask] = useState<RemediationTask | null>(null)
@@ -751,27 +766,29 @@ export default function RemediationPage() {
   }, [])
 
   const clearFilters = useCallback(() => {
-    setFilters(defaultFilters)
+    setPriorityFilter([])
+    setStatusFilter([])
+    setAssigneeFilter([])
     setQuickFilter('all')
-  }, [])
+  }, [setPriorityFilter, setStatusFilter, setAssigneeFilter, setQuickFilter])
 
-  const togglePriorityFilter = useCallback((priority: TaskPriority) => {
-    setFilters((prev) => ({
-      ...prev,
-      priorities: prev.priorities.includes(priority)
-        ? prev.priorities.filter((p) => p !== priority)
-        : [...prev.priorities, priority],
-    }))
-  }, [])
+  const togglePriorityFilter = useCallback(
+    (priority: TaskPriority) => {
+      setPriorityFilter((prev) =>
+        prev.includes(priority) ? prev.filter((p) => p !== priority) : [...prev, priority]
+      )
+    },
+    [setPriorityFilter]
+  )
 
-  const toggleStatusFilter = useCallback((status: TaskStatus) => {
-    setFilters((prev) => ({
-      ...prev,
-      statuses: prev.statuses.includes(status)
-        ? prev.statuses.filter((s) => s !== status)
-        : [...prev.statuses, status],
-    }))
-  }, [])
+  const toggleStatusFilter = useCallback(
+    (status: TaskStatus) => {
+      setStatusFilter((prev) =>
+        prev.includes(status) ? prev.filter((s) => s !== status) : [...prev, status]
+      )
+    },
+    [setStatusFilter]
+  )
 
   // ─── Table Columns ─────────────────────────────────────────────────
 
@@ -1084,12 +1101,11 @@ export default function RemediationPage() {
                             variant={filters.assignees.includes(name) ? 'default' : 'outline'}
                             className="cursor-pointer text-xs"
                             onClick={() =>
-                              setFilters((prev) => ({
-                                ...prev,
-                                assignees: prev.assignees.includes(name)
-                                  ? prev.assignees.filter((a) => a !== name)
-                                  : [...prev.assignees, name],
-                              }))
+                              setAssigneeFilter((prev) =>
+                                prev.includes(name)
+                                  ? prev.filter((a) => a !== name)
+                                  : [...prev, name]
+                              )
                             }
                           >
                             {name}

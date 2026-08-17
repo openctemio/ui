@@ -1,69 +1,63 @@
 'use client'
 
-import { createElement } from 'react'
+import { useMemo } from 'react'
 import Link from 'next/link'
 import { Main } from '@/components/layout'
 import { PageHeader, StatsCard, EmptyState } from '@/features/shared'
-import { useAttackPathScoring } from '@/features/attack-surface'
-import type { AttackPathScore } from '@/features/attack-surface'
+import { useAttackPathScoring, PathGraph } from '@/features/attack-surface'
+import type { AttackPathScore, PathGraphPath } from '@/features/attack-surface'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Progress } from '@/components/ui/progress'
 import { cn } from '@/lib/utils'
-import { CRITICALITY_BADGE_SOFT, type CriticalityLevel } from '@/lib/criticality-colors'
+import { CRITICALITY_CHART_COLORS } from '@/lib/criticality-colors'
 import {
   Route,
   ShieldAlert,
+  ShieldCheck,
   Globe,
-  Server,
   AlertTriangle,
   Activity,
-  Shield,
-  Crown,
   ArrowRight,
   GitBranch,
 } from 'lucide-react'
 
+// The "all clear" success hue reuses the shared criticality token (low = green =
+// good), so no hardcoded palette class is introduced for the safe state.
+const SAFE_COLOR = CRITICALITY_CHART_COLORS.low
+
 // ============================================================
-// Utility helpers
+// Map a scored asset onto the generic path-graph model. Attack-path
+// scoring is a reachability fan-out (public entry points → asset), so
+// each row renders as a two-node path: the internet-facing source and
+// the reachable asset, with the entry-point count on the counter.
 // ============================================================
 
-function capitalize(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1).replace(/_/g, ' ')
-}
-
-function getCriticalityClass(criticality: string) {
-  return CRITICALITY_BADGE_SOFT[criticality as CriticalityLevel] ?? 'bg-muted text-muted-foreground'
-}
-
-function getExposureClass(exposure: string) {
-  switch (exposure) {
-    case 'public':
-      return 'bg-red-500/10 text-red-500 border-red-500/20'
-    case 'restricted':
-      return 'bg-orange-500/10 text-orange-500 border-orange-500/20'
-    case 'internal':
-      return 'bg-blue-500/10 text-blue-500 border-blue-500/20'
-    case 'private':
-      return 'bg-green-500/10 text-green-500 border-green-500/20'
-    default:
-      return 'bg-muted text-muted-foreground'
-  }
-}
-
-function getAssetTypeIcon(assetType: string) {
-  switch (assetType) {
-    case 'host':
-    case 'cloud_instance':
-      return Server
-    case 'domain':
-    case 'subdomain':
-    case 'website':
-    case 'application':
-      return Globe
-    default:
-      return GitBranch
+function assetToPath(asset: AttackPathScore, maxPathScore: number): PathGraphPath {
+  return {
+    id: asset.assetId,
+    nodes: [
+      {
+        id: '',
+        name: 'Internet-facing entry points',
+        assetType: 'internet',
+        role: 'entry',
+        exposure: 'public',
+      },
+      {
+        id: asset.assetId,
+        name: asset.name,
+        assetType: asset.assetType,
+        role: 'target',
+        exposure: asset.exposure,
+        criticality: asset.criticality,
+        isCrownJewel: asset.isCrownJewel,
+        findingCount: asset.findingCount,
+        href: asset.assetId ? `/findings?assetId=${asset.assetId}` : undefined,
+      },
+    ],
+    score: asset.pathScore,
+    scorePct: maxPathScore > 0 ? (asset.pathScore / maxPathScore) * 100 : 0,
+    reachableFrom: asset.reachableFrom,
   }
 }
 
@@ -95,97 +89,12 @@ function LoadingSkeleton() {
         <CardContent>
           <div className="space-y-3">
             {[1, 2, 3, 4, 5].map((i) => (
-              <Skeleton key={i} className="h-16 w-full" />
+              <Skeleton key={i} className="h-28 w-full" />
             ))}
           </div>
         </CardContent>
       </Card>
     </>
-  )
-}
-
-// ============================================================
-// Asset row in the ranked table
-// ============================================================
-
-interface AssetRowProps {
-  asset: AttackPathScore
-  rank: number
-  maxPathScore: number
-}
-
-function AssetRow({ asset, rank, maxPathScore }: AssetRowProps) {
-  const assetIcon = getAssetTypeIcon(asset.assetType)
-  const progressPct = maxPathScore > 0 ? Math.round((asset.pathScore / maxPathScore) * 100) : 0
-
-  return (
-    <div className="flex items-start gap-4 rounded-lg border p-4 transition-colors hover:bg-muted/30">
-      {/* Rank badge */}
-      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-bold text-muted-foreground">
-        {rank}
-      </div>
-
-      {/* Asset info */}
-      <div className="min-w-0 flex-1">
-        <div className="mb-1 flex flex-wrap items-center gap-2">
-          {createElement(assetIcon, { className: 'h-4 w-4 shrink-0 text-muted-foreground' })}
-          <span className="truncate font-medium">{asset.name}</span>
-
-          {asset.isCrownJewel && (
-            <Crown className="h-4 w-4 shrink-0 text-yellow-500" aria-label="Crown jewel" />
-          )}
-          {asset.isProtected && (
-            <Shield className="h-4 w-4 shrink-0 text-green-500" aria-label="Protected" />
-          )}
-
-          <Badge
-            variant="outline"
-            className={cn('shrink-0 text-xs', getCriticalityClass(asset.criticality))}
-          >
-            {capitalize(asset.criticality)}
-          </Badge>
-          <Badge
-            variant="outline"
-            className={cn('shrink-0 text-xs', getExposureClass(asset.exposure))}
-          >
-            {capitalize(asset.exposure)}
-          </Badge>
-          {asset.isEntryPoint && (
-            <Badge
-              variant="outline"
-              className="shrink-0 border-red-400/30 bg-red-500/10 text-xs text-red-400"
-            >
-              Entry Point
-            </Badge>
-          )}
-        </div>
-
-        <div className="mb-2 text-xs text-muted-foreground">
-          {capitalize(asset.assetType)}
-          {asset.findingCount > 0 && (
-            <span className="ms-3 text-orange-500">
-              {asset.findingCount} open finding{asset.findingCount !== 1 ? 's' : ''}
-            </span>
-          )}
-        </div>
-
-        {/* Path score bar */}
-        <div className="flex items-center gap-3">
-          <Progress value={progressPct} className="h-1.5 flex-1" />
-          <span className="w-20 shrink-0 text-end text-xs text-muted-foreground">
-            score {asset.pathScore.toFixed(0)}
-          </span>
-        </div>
-      </div>
-
-      {/* Reachable from counter */}
-      <div className="flex shrink-0 flex-col items-center text-center">
-        <span className="text-2xl font-bold tabular-nums leading-none">{asset.reachableFrom}</span>
-        <span className="mt-0.5 text-xs text-muted-foreground">
-          {asset.reachableFrom === 1 ? 'entry point' : 'entry points'}
-        </span>
-      </div>
-    </div>
   )
 }
 
@@ -202,7 +111,7 @@ function NoRelationshipData() {
       action={
         <Link
           href="/assets"
-          className="mt-6 inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+          className="bg-primary text-primary-foreground hover:bg-primary/90 mt-6 inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium"
         >
           Go to Assets
           <ArrowRight className="h-4 w-4" />
@@ -220,16 +129,29 @@ export default function AttackPathAnalysisPage() {
   const { scoring, isLoading } = useAttackPathScoring()
 
   const summary = scoring?.summary
-  const topAssets = scoring?.topAssets ?? []
-
-  // Assets with actual path exposure (reachable from at least one entry point, not entry points themselves)
-  const riskRanked = topAssets.filter((a) => !a.isEntryPoint && a.reachableFrom > 0)
-  const maxPathScore = riskRanked.length > 0 ? riskRanked[0].pathScore : 1
-
-  // Entry points (public assets that are sources)
-  const entryPointAssets = topAssets.filter((a) => a.isEntryPoint).slice(0, 10)
-
+  const topAssets = useMemo(() => scoring?.topAssets ?? [], [scoring])
   const hasData = summary?.hasRelationshipData === true
+
+  // Assets with actual path exposure (reachable from ≥1 entry point, excluding
+  // the entry points themselves).
+  const riskRanked = useMemo(
+    () => topAssets.filter((a) => !a.isEntryPoint && a.reachableFrom > 0),
+    [topAssets]
+  )
+
+  const paths = useMemo(() => {
+    const maxPathScore = riskRanked.length > 0 ? riskRanked[0].pathScore : 1
+    return riskRanked.slice(0, 20).map((asset, idx) => ({
+      ...assetToPath(asset, maxPathScore),
+      rank: idx + 1,
+    }))
+  }, [riskRanked])
+
+  // Entry points (public assets that are sources).
+  const entryPointAssets = useMemo(
+    () => topAssets.filter((a) => a.isEntryPoint).slice(0, 10),
+    [topAssets]
+  )
 
   return (
     <Main>
@@ -277,7 +199,7 @@ export default function AttackPathAnalysisPage() {
             />
           </section>
 
-          {/* Main content: ranked table + entry points sidebar */}
+          {/* Main content: ranked path graph + entry points sidebar */}
           <section className="grid grid-cols-1 gap-6 lg:grid-cols-3">
             {/* Ranked assets */}
             <div className="lg:col-span-2">
@@ -288,32 +210,27 @@ export default function AttackPathAnalysisPage() {
                     Assets Ranked by Attack Path Score
                   </CardTitle>
                   <CardDescription>
-                    Score = reachable entry points x risk score x criticality weight. Fixing the
-                    top-ranked assets breaks the most attack paths.
+                    Score = reachable entry points x risk score x criticality weight. Hover to trace
+                    a path; click a node to open the asset&apos;s findings. Fixing the top-ranked
+                    assets breaks the most attack paths.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {riskRanked.length > 0 ? (
-                    <div className="space-y-3">
-                      {riskRanked.slice(0, 20).map((asset, idx) => (
-                        <AssetRow
-                          key={asset.assetId}
-                          asset={asset}
-                          rank={idx + 1}
-                          maxPathScore={maxPathScore}
-                        />
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="flex h-48 flex-col items-center justify-center text-center">
-                      <Shield className="mb-3 h-10 w-10 text-green-500" />
-                      <p className="font-medium text-green-500">No reachable internal assets</p>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        Your entry points don&apos;t currently reach any internal assets via tracked
-                        relationships.
-                      </p>
-                    </div>
-                  )}
+                  <PathGraph
+                    paths={paths}
+                    empty={
+                      <div className="flex h-48 flex-col items-center justify-center text-center">
+                        <ShieldCheck className="mb-3 h-10 w-10" style={{ color: SAFE_COLOR }} />
+                        <p className="font-medium" style={{ color: SAFE_COLOR }}>
+                          No reachable internal assets
+                        </p>
+                        <p className="text-muted-foreground mt-1 text-sm">
+                          Your entry points don&apos;t currently reach any internal assets via
+                          tracked relationships.
+                        </p>
+                      </div>
+                    }
+                  />
                 </CardContent>
               </Card>
             </div>
@@ -327,26 +244,30 @@ export default function AttackPathAnalysisPage() {
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Max chain depth</span>
+                    <span className="text-muted-foreground text-sm">Max chain depth</span>
                     <span className="font-bold">{summary?.maxDepth ?? 0} hops</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Crown jewels at risk</span>
+                    <span className="text-muted-foreground text-sm">Crown jewels at risk</span>
                     <span
                       className={cn(
                         'font-bold',
-                        (summary?.crownJewelsAtRisk ?? 0) > 0 ? 'text-red-500' : 'text-green-500'
+                        (summary?.crownJewelsAtRisk ?? 0) > 0
+                          ? 'text-destructive'
+                          : 'text-muted-foreground'
                       )}
                     >
                       {summary?.crownJewelsAtRisk ?? 0}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Critical/high reachable</span>
+                    <span className="text-muted-foreground text-sm">Critical/high reachable</span>
                     <span
                       className={cn(
                         'font-bold',
-                        (summary?.criticalReachable ?? 0) > 0 ? 'text-orange-500' : 'text-green-500'
+                        (summary?.criticalReachable ?? 0) > 0
+                          ? 'text-destructive'
+                          : 'text-muted-foreground'
                       )}
                     >
                       {summary?.criticalReachable ?? 0}
@@ -369,32 +290,46 @@ export default function AttackPathAnalysisPage() {
                 <CardContent>
                   {entryPointAssets.length > 0 ? (
                     <div className="space-y-2">
-                      {entryPointAssets.map((ep) => {
-                        const Icon = getAssetTypeIcon(ep.assetType)
-                        return (
-                          <div
+                      {entryPointAssets.map((ep) =>
+                        ep.assetId ? (
+                          <Link
                             key={ep.assetId}
-                            className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted/50"
+                            href={`/findings?assetId=${ep.assetId}`}
+                            aria-label={`View findings for ${ep.name}`}
+                            className="hover:bg-muted/50 focus-visible:ring-ring flex items-center gap-2 rounded-md px-2 py-1.5 text-sm focus-visible:ring-2 focus-visible:outline-none"
                           >
-                            <Icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                            <Globe className="text-muted-foreground h-3.5 w-3.5 shrink-0" />
                             <span className="min-w-0 flex-1 truncate">{ep.name}</span>
                             {ep.findingCount > 0 && (
-                              <span className="shrink-0 text-xs text-orange-500">
+                              <span className="text-muted-foreground shrink-0 text-xs">
+                                {ep.findingCount}F
+                              </span>
+                            )}
+                          </Link>
+                        ) : (
+                          <div
+                            key={ep.name}
+                            className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm"
+                          >
+                            <Globe className="text-muted-foreground h-3.5 w-3.5 shrink-0" />
+                            <span className="min-w-0 flex-1 truncate">{ep.name}</span>
+                            {ep.findingCount > 0 && (
+                              <span className="text-muted-foreground shrink-0 text-xs">
                                 {ep.findingCount}F
                               </span>
                             )}
                           </div>
                         )
-                      })}
+                      )}
                       {(summary?.entryPoints ?? 0) > entryPointAssets.length && (
-                        <p className="mt-2 text-xs text-muted-foreground">
+                        <p className="text-muted-foreground mt-2 text-xs">
                           + {(summary?.entryPoints ?? 0) - entryPointAssets.length} more entry
                           points
                         </p>
                       )}
                     </div>
                   ) : (
-                    <p className="py-4 text-center text-sm text-muted-foreground">
+                    <p className="text-muted-foreground py-4 text-center text-sm">
                       No public entry points found
                     </p>
                   )}
@@ -406,7 +341,7 @@ export default function AttackPathAnalysisPage() {
                 <CardHeader className="pb-3">
                   <CardTitle className="text-sm">How Scoring Works</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-2 text-xs text-muted-foreground">
+                <CardContent className="text-muted-foreground space-y-2 text-xs">
                   <p>
                     <strong className="text-foreground">Reachable from</strong> — BFS traversal from
                     every public asset following attack-path relationship types (runs_on,

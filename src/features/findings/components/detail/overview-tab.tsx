@@ -22,6 +22,7 @@ import {
   Network,
   Building2,
   Bot,
+  ArrowUpRight,
 } from 'lucide-react'
 import type { FindingDetail, Activity } from '../../types'
 import { SEVERITY_CONFIG, FINDING_TYPE_CONFIG } from '../../types'
@@ -33,6 +34,9 @@ import { useState, useCallback, useMemo } from 'react'
 import { copyToClipboard } from '@/lib/clipboard'
 import { cn, sanitizeExternalUrl } from '@/lib/utils'
 import { SEVERITY_BADGE_SOFT, type SeverityLevel } from '@/lib/severity-colors'
+import Link from 'next/link'
+import { isLinkableAssetId, assetDetailHref } from '../../lib/asset-link'
+import { PriorityExplanationCard } from './priority-explanation-card'
 
 interface OverviewTabProps {
   finding: FindingDetail
@@ -610,7 +614,17 @@ export function OverviewTab({ finding, activities = [] }: OverviewTabProps) {
                   {asset.type}
                 </Badge>
                 <div>
-                  <p className="font-medium">{asset.name}</p>
+                  {isLinkableAssetId(asset.id) ? (
+                    <Link
+                      href={assetDetailHref(asset.id)}
+                      className="focus-visible:ring-ring -mx-1 inline-flex items-center gap-1 rounded px-1 font-medium hover:underline focus-visible:ring-2 focus-visible:outline-none"
+                    >
+                      {asset.name}
+                      <ArrowUpRight className="h-3.5 w-3.5 shrink-0" />
+                    </Link>
+                  ) : (
+                    <p className="font-medium">{asset.name}</p>
+                  )}
                   {asset.url && (
                     <a
                       href={sanitizeExternalUrl(asset.url)}
@@ -635,6 +649,11 @@ export function OverviewTab({ finding, activities = [] }: OverviewTabProps) {
           ))}
         </div>
       </div>
+
+      {/* Why this priority — read-only breakdown from the backend classifier.
+          Renders nothing (incl. its own leading separator) when no explanation
+          is available. */}
+      <PriorityExplanationCard findingId={finding.id} variant="page" />
 
       {/* Scanner Metadata - hidden for pentest (data shown in Pentest Details tab) */}
       {!isPentest &&

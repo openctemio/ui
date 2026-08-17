@@ -41,6 +41,7 @@ import type {
   CreateAssetInput,
   UpdateAssetInput,
 } from '../../types'
+import { IMPACT_RATING_OPTIONS } from '../../types'
 import { useAssetTags } from '../../hooks'
 
 // Form schema with required fields
@@ -50,6 +51,10 @@ const formSchema = z.object({
   criticality: z.enum(['critical', 'high', 'medium', 'low']),
   scope: z.enum(['internal', 'external', 'cloud', 'partner', 'vendor', 'shadow']),
   exposure: z.enum(['public', 'restricted', 'private', 'isolated', 'unknown']),
+  // CIA impact ratings (api #467). '' = not rated.
+  impactConfidentiality: z.enum(['', 'low', 'moderate', 'high']),
+  impactIntegrity: z.enum(['', 'low', 'moderate', 'high']),
+  impactAvailability: z.enum(['', 'low', 'moderate', 'high']),
   tags: z.array(z.string().min(1).max(50)).max(20).optional(),
 })
 
@@ -91,12 +96,24 @@ const EXPOSURE_OPTIONS: { value: ExposureLevel; label: string }[] = [
   { value: 'unknown', label: 'Unknown' },
 ]
 
+// CIA impact ratings (api #467). Radix <SelectItem> can't hold an empty
+// value, so the "Not rated" option carries this sentinel, mapped back to ''.
+const IMPACT_UNRATED = 'unrated'
+const CIA_FIELDS = [
+  { name: 'impactConfidentiality' as const, label: 'Confidentiality' },
+  { name: 'impactIntegrity' as const, label: 'Integrity' },
+  { name: 'impactAvailability' as const, label: 'Availability' },
+]
+
 const DEFAULT_VALUES: FormValues = {
   name: '',
   description: '',
   criticality: 'medium',
   scope: 'internal',
   exposure: 'unknown',
+  impactConfidentiality: '',
+  impactIntegrity: '',
+  impactAvailability: '',
   tags: [],
 }
 
@@ -127,6 +144,9 @@ export function AssetFormDialog({
         criticality: asset.criticality,
         scope: asset.scope,
         exposure: asset.exposure,
+        impactConfidentiality: asset.impactConfidentiality ?? '',
+        impactIntegrity: asset.impactIntegrity ?? '',
+        impactAvailability: asset.impactAvailability ?? '',
         tags: asset.tags || [],
       })
     } else if (open && mode === 'create') {
@@ -145,6 +165,10 @@ export function AssetFormDialog({
         criticality: values.criticality,
         scope: values.scope,
         exposure: values.exposure,
+        // CIA impact ratings (api #467). '' is omitted by createAsset.
+        impactConfidentiality: values.impactConfidentiality,
+        impactIntegrity: values.impactIntegrity,
+        impactAvailability: values.impactAvailability,
         tags,
       } as CreateAssetInput)
     } else {
@@ -154,6 +178,10 @@ export function AssetFormDialog({
         criticality: values.criticality,
         scope: values.scope,
         exposure: values.exposure,
+        // CIA impact ratings (api #467). '' clears a previously-set rating.
+        impactConfidentiality: values.impactConfidentiality,
+        impactIntegrity: values.impactIntegrity,
+        impactAvailability: values.impactAvailability,
         tags,
       } as UpdateAssetInput)
     }
@@ -288,6 +316,48 @@ export function AssetFormDialog({
                 </FormItem>
               )}
             />
+
+            {/* CIA impact ratings (CTEM Scoping critical-asset register,
+                api #467). Optional per-dimension business-impact ratings —
+                "Not rated" leaves a dimension unset. */}
+            <FormItem>
+              <FormLabel>Business Impact (CIA)</FormLabel>
+              <div className="grid grid-cols-3 gap-4">
+                {CIA_FIELDS.map((cia) => (
+                  <FormField
+                    key={cia.name}
+                    control={form.control}
+                    name={cia.name}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs font-normal text-muted-foreground">
+                          {cia.label}
+                        </FormLabel>
+                        <Select
+                          value={field.value === '' ? IMPACT_UNRATED : field.value}
+                          onValueChange={(v) => field.onChange(v === IMPACT_UNRATED ? '' : v)}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value={IMPACT_UNRATED}>Not rated</SelectItem>
+                            {IMPACT_RATING_OPTIONS.map((option) => (
+                              <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                ))}
+              </div>
+            </FormItem>
 
             {/* Tags */}
             <FormField

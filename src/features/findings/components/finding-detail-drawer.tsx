@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { toast } from 'sonner'
 import { copyToClipboard } from '@/lib/clipboard'
 import { getErrorMessage } from '@/lib/api/error-handler'
@@ -39,8 +40,11 @@ import {
   ChevronDown,
   AlertOctagon,
   Ticket,
+  ArrowUpRight,
 } from 'lucide-react'
 import { PriorityClassBadge } from './priority-class-badge'
+import { PriorityExplanationCard } from './detail/priority-explanation-card'
+import { isLinkableAssetId, assetDetailHref } from '../lib/asset-link'
 import {
   DATA_FLOW_LOCATION_CONFIG,
   SEVERITY_CONFIG,
@@ -70,6 +74,8 @@ import { AssigneeSelect } from './assignee-select'
 import { StatusSelect } from './status-select'
 import { SeveritySelect } from './severity-select'
 import { CreateTicketDialog } from './create-ticket-dialog'
+import { ApprovalDialog } from './approval-dialog'
+import { useModuleEnabled } from '@/features/integrations/api/use-tenant-modules'
 import { useTenant } from '@/context/tenant-provider'
 import { useMembers } from '@/features/organization/api/use-members'
 
@@ -198,6 +204,9 @@ export function FindingDetailDrawer({
   const [showCommentInput, setShowCommentInput] = useState(false)
   const [showAllAssets, setShowAllAssets] = useState(false)
   const [ticketOpen, setTicketOpen] = useState(false)
+  // The Jira "Create Ticket" action belongs to the (Phase-3 gated) integrations
+  // module; hide it (and skip its dialog fetch) when disabled. Fail-open on OSS.
+  const integrationsEnabled = useModuleEnabled('integrations')
 
   // Check if we need to fetch assignee info (name is empty but id exists)
   const needsAssigneeFetch = open && finding?.assignee?.id && !finding?.assignee?.name
@@ -233,6 +242,11 @@ export function FindingDetailDrawer({
     shouldFetchApprovals ? finding?.id : undefined
   )
   const [approvalHistoryOpen, setApprovalHistoryOpen] = useState(false)
+
+  // Approval-required status changes (false_positive, accepted, accepted_risk)
+  // route through the same ApprovalDialog the full finding-detail page uses.
+  const [approvalDialogOpen, setApprovalDialogOpen] = useState(false)
+  const [approvalTargetStatus, setApprovalTargetStatus] = useState<FindingStatus | null>(null)
 
   // Reset local state when finding changes (drawer opens with new finding)
   useEffect(() => {
@@ -313,11 +327,12 @@ export function FindingDetailDrawer({
       return
     }
 
-    // Check if status requires approval
+    // Approval-required statuses (false_positive, accepted, accepted_risk) can't
+    // be set directly — open the same ApprovalDialog the full page uses so the
+    // user submits a justified approval request instead of a silent no-op.
     if (requiresApproval(newStatus)) {
-      toast.info(
-        `${FINDING_STATUS_CONFIG[newStatus].label} requires approval. Feature coming soon.`
-      )
+      setApprovalTargetStatus(newStatus)
+      setApprovalDialogOpen(true)
       return
     }
 
@@ -602,18 +617,20 @@ export function FindingDetailDrawer({
                 />
 
                 {/* Overflow actions */}
-                <div className="ms-auto">
-                  <DataTableRowActions
-                    label="More actions"
-                    actions={[
-                      {
-                        label: 'Create Jira Ticket',
-                        icon: Ticket,
-                        onClick: () => setTicketOpen(true),
-                      },
-                    ]}
-                  />
-                </div>
+                {integrationsEnabled && (
+                  <div className="ms-auto">
+                    <DataTableRowActions
+                      label="More actions"
+                      actions={[
+                        {
+                          label: 'Create Jira Ticket',
+                          icon: Ticket,
+                          onClick: () => setTicketOpen(true),
+                        },
+                      ]}
+                    />
+                  </div>
+                )}
               </div>
 
               {/* Scrollable Content */}
@@ -817,7 +834,17 @@ export function FindingDetailDrawer({
                               <Badge variant="outline" className="text-xs capitalize shrink-0">
                                 {asset.type}
                               </Badge>
-                              <span className="text-sm truncate">{asset.name}</span>
+                              {isLinkableAssetId(asset.id) ? (
+                                <Link
+                                  href={assetDetailHref(asset.id)}
+                                  className="focus-visible:ring-ring inline-flex min-w-0 items-center gap-1 rounded text-sm hover:underline focus-visible:ring-2 focus-visible:outline-none"
+                                >
+                                  <span className="truncate">{asset.name}</span>
+                                  <ArrowUpRight className="h-3.5 w-3.5 shrink-0" />
+                                </Link>
+                              ) : (
+                                <span className="text-sm truncate">{asset.name}</span>
+                              )}
                             </div>
                             {asset.criticality && (
                               <Badge
@@ -843,6 +870,10 @@ export function FindingDetailDrawer({
                       )}
                     </div>
                   </div>
+
+                  {/* Why this priority — read-only classifier breakdown.
+                      Renders nothing (incl. its own separator) when unavailable. */}
+                  <PriorityExplanationCard findingId={finding.id} variant="drawer" />
 
                   {/* Attack Path / Data Flow */}
                   {finding.dataFlow &&
@@ -1036,14 +1067,29 @@ export function FindingDetailDrawer({
           )}
         </SheetContent>
       </Sheet>
-      {/* `finding` is non-null past the `if (!finding) return null` guard above,
-          so this renders unconditionally (removes a CodeQL useless-conditional). */}
-      <CreateTicketDialog
-        findingId={finding.id}
-        findingTitle={finding.title}
-        open={ticketOpen}
-        onOpenChange={setTicketOpen}
-      />
+      {/* `finding` is non-null past the `if (!finding) return null` guard above.
+          Mounted only when the integrations module is enabled so its Jira-projects
+          fetch never fires for tenants without the module. */}
+      {integrationsEnabled && (
+        <CreateTicketDialog
+          findingId={finding.id}
+          findingTitle={finding.title}
+          open={ticketOpen}
+          onOpenChange={setTicketOpen}
+        />
+      )}
+      {/* Approval-required status changes reuse the same dialog + request-approval
+          mutation as the full finding-detail page. On success we refresh the
+          findings cache so pending-approval state is reflected. */}
+      {approvalTargetStatus && (
+        <ApprovalDialog
+          findingId={finding.id}
+          targetStatus={approvalTargetStatus}
+          open={approvalDialogOpen}
+          onOpenChange={setApprovalDialogOpen}
+          onSuccess={() => invalidateFindingsCache()}
+        />
+      )}
     </>
   )
 }

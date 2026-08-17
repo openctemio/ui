@@ -81,6 +81,7 @@ import {
   FileJson,
   FileSpreadsheet,
 } from 'lucide-react'
+import { useUrlFilter } from '@/hooks/use-url-param'
 import { copyToClipboard } from '@/lib/clipboard'
 import { Can, Permission } from '@/lib/permissions'
 import { exportToCSV, exportToJSON } from '@/lib/utils'
@@ -94,7 +95,6 @@ import {
   useBulkDisableScanConfigs,
   useBulkDeleteScanConfigs,
   invalidateScanConfigsCache,
-  invalidateScanSessionsCache,
 } from '@/lib/api/scan-hooks'
 import type { ScanSession, ScanRunStatus } from '@/lib/api/scan-types'
 import { post, del } from '@/lib/api/client'
@@ -430,9 +430,21 @@ function ConfigurationsTab() {
   const [selectedConfig, setSelectedConfig] = useState<ScanConfig | null>(null)
   const [sorting, setSorting] = useState<SortingState>([])
   const [globalFilter, setGlobalFilter] = useState('')
-  const [statusFilter, setStatusFilter] = useState<ConfigStatusFilter>('all')
-  const [typeFilter, setTypeFilter] = useState<ConfigTypeFilter>('all')
-  const [scheduleFilter, setScheduleFilter] = useState<ConfigScheduleFilter>('all')
+  // Filters live in the URL so a filtered view is shareable and survives reload
+  // (matching the findings/assets pages). The hook returns a plain string; cast
+  // the tuple so downstream typing stays identical to the old useState.
+  const [statusFilter, setStatusFilter] = useUrlFilter('status', 'all') as [
+    ConfigStatusFilter,
+    (v: ConfigStatusFilter) => void,
+  ]
+  const [typeFilter, setTypeFilter] = useUrlFilter('type', 'all') as [
+    ConfigTypeFilter,
+    (v: ConfigTypeFilter) => void,
+  ]
+  const [scheduleFilter, setScheduleFilter] = useUrlFilter('schedule', 'all') as [
+    ConfigScheduleFilter,
+    (v: ConfigScheduleFilter) => void,
+  ]
   const [tagFilter, setTagFilter] = useState<string>('')
   const [rowSelection, setRowSelection] = useState({})
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
@@ -1809,22 +1821,13 @@ function ConfigDetailSheet({ config, onClose: _onClose, onDelete }: ConfigDetail
 interface RunActionsCellProps {
   session: ScanSession
   onViewDetails: (session: ScanSession) => void
-  onStop: (session: ScanSession) => void
-  onRetry: (session: ScanSession) => void
-  isActioning?: boolean
 }
 
-function RunActionsCell({
-  session,
-  onViewDetails,
-  onStop,
-  onRetry,
-  isActioning,
-}: RunActionsCellProps) {
+function RunActionsCell({ session, onViewDetails }: RunActionsCellProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="sm" className="h-8 w-8 p-0" disabled={isActioning}>
+        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
           <MoreHorizontal className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
@@ -1833,18 +1836,6 @@ function RunActionsCell({
           <Eye className="me-2 h-4 w-4" />
           View Details
         </DropdownMenuItem>
-        {session.status === 'running' && (
-          <DropdownMenuItem onClick={() => onStop(session)} disabled={isActioning}>
-            <XCircle className="me-2 h-4 w-4" />
-            Stop
-          </DropdownMenuItem>
-        )}
-        {session.status === 'failed' && (
-          <DropdownMenuItem onClick={() => onRetry(session)} disabled={isActioning}>
-            <RefreshCw className="me-2 h-4 w-4" />
-            Retry
-          </DropdownMenuItem>
-        )}
         {session.status === 'completed' && session.findings_total > 0 && (
           <DropdownMenuItem asChild>
             <Link href={`/findings?scan_id=${session.id}`}>
@@ -1925,39 +1916,16 @@ function RunsTab() {
     [stats]
   )
 
-  // Action states
-  const [actioningSessionId, setActioningSessionId] = useState<string | null>(null)
-
   // Handlers
   const handleViewDetails = useCallback((session: ScanSession) => {
     setSelectedSession(session)
   }, [])
 
-  const handleStopSession = useCallback(async (session: ScanSession) => {
-    setActioningSessionId(session.id)
-    try {
-      await post(`/api/v1/scan-sessions/${session.id}/stop`, {})
-      toast.success('Scan session stopped')
-      await invalidateScanSessionsCache()
-    } catch (err) {
-      toast.error(getErrorMessage(err, 'Failed to stop session'))
-    } finally {
-      setActioningSessionId(null)
-    }
-  }, [])
-
-  const handleRetrySession = useCallback(async (session: ScanSession) => {
-    setActioningSessionId(session.id)
-    try {
-      await post(`/api/v1/scan-sessions/${session.id}/retry`, {})
-      toast.success('Scan session retry started')
-      await invalidateScanSessionsCache()
-    } catch (err) {
-      toast.error(getErrorMessage(err, 'Failed to retry session'))
-    } finally {
-      setActioningSessionId(null)
-    }
-  }, [])
+  // NOTE: the /api/v1/scan-sessions route group exposes only GET (list/stats/
+  // {id}) and DELETE — there is no /stop and no /retry endpoint. The former Stop
+  // and Retry controls POSTed to non-existent routes and always 404'd, so both
+  // have been removed rather than left as dead actions. (The /{id}/retry route
+  // that does exist belongs to the notification-outbox group, not scan sessions.)
 
   // Export handlers
   const handleExportCSV = useCallback(() => {
@@ -2153,17 +2121,11 @@ function RunsTab() {
       {
         id: 'actions',
         cell: ({ row }) => (
-          <RunActionsCell
-            session={row.original}
-            onViewDetails={handleViewDetails}
-            onStop={handleStopSession}
-            onRetry={handleRetrySession}
-            isActioning={actioningSessionId === row.original.id}
-          />
+          <RunActionsCell session={row.original} onViewDetails={handleViewDetails} />
         ),
       },
     ],
-    [handleViewDetails, handleStopSession, handleRetrySession, actioningSessionId]
+    [handleViewDetails]
   )
 
   const table = useReactTable({
@@ -2445,14 +2407,7 @@ function RunsTab() {
           <VisuallyHidden>
             <SheetTitle>Session Details</SheetTitle>
           </VisuallyHidden>
-          {selectedSession && (
-            <SessionDetailSheet
-              session={selectedSession}
-              onStop={handleStopSession}
-              onRetry={handleRetrySession}
-              isActioning={actioningSessionId === selectedSession.id}
-            />
-          )}
+          {selectedSession && <SessionDetailSheet session={selectedSession} />}
         </SheetContent>
       </Sheet>
     </>
@@ -2465,12 +2420,9 @@ function RunsTab() {
 
 interface SessionDetailSheetProps {
   session: ScanSession
-  onStop: (session: ScanSession) => void
-  onRetry: (session: ScanSession) => void
-  isActioning?: boolean
 }
 
-function SessionDetailSheet({ session, onStop, onRetry, isActioning }: SessionDetailSheetProps) {
+function SessionDetailSheet({ session }: SessionDetailSheetProps) {
   // Get severity counts from findings_by_severity
   const severities = session.findings_by_severity ?? {}
   const criticalCount = severities.critical ?? 0
@@ -2578,37 +2530,6 @@ function SessionDetailSheet({ session, onStop, onRetry, isActioning }: SessionDe
 
         {/* Quick Actions */}
         <div className="flex gap-2 mt-4">
-          {session.status === 'running' && (
-            <Button
-              size="sm"
-              variant="destructive"
-              className="flex-1"
-              onClick={() => onStop(session)}
-              disabled={isActioning}
-            >
-              {isActioning ? (
-                <RefreshCw className="me-2 h-4 w-4 animate-spin" />
-              ) : (
-                <XCircle className="me-2 h-4 w-4" />
-              )}
-              Stop
-            </Button>
-          )}
-          {session.status === 'failed' && (
-            <Button
-              size="sm"
-              className="flex-1"
-              onClick={() => onRetry(session)}
-              disabled={isActioning}
-            >
-              {isActioning ? (
-                <RefreshCw className="me-2 h-4 w-4 animate-spin" />
-              ) : (
-                <RefreshCw className="me-2 h-4 w-4" />
-              )}
-              Retry
-            </Button>
-          )}
           {session.status === 'completed' && session.findings_total > 0 && (
             <Button asChild size="sm" className="flex-1">
               <Link href={`/findings?scan_id=${session.id}`}>

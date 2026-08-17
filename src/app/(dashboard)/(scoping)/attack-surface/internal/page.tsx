@@ -2,7 +2,13 @@
 
 import { useState, useMemo, useEffect } from 'react'
 import { getErrorMessage } from '@/lib/api/error-handler'
-import { createAsset, type CreateAssetInput, useAssets } from '@/features/assets'
+import {
+  createAsset,
+  updateAsset,
+  deleteAsset as apiDeleteAsset,
+  type CreateAssetInput,
+  useAssets,
+} from '@/features/assets'
 import { Main } from '@/components/layout'
 import { PageHeader, DataTableRowActions, StatsCard, SheetBody } from '@/features/shared'
 import { Button } from '@/components/ui/button'
@@ -264,41 +270,45 @@ export default function InternalSurfacePage() {
     }
   }
 
-  const handleEdit = () => {
+  const handleEdit = async () => {
     if (!editAsset || !formData.hostname || !formData.ipAddress) {
       toast.error('Please enter hostname and IP address')
       return
     }
-    setAssets((prev) =>
-      prev.map((a) =>
-        a.id === editAsset.id
-          ? {
-              ...a,
-              hostname: formData.hostname,
-              type: formData.type,
-              ipAddress: formData.ipAddress,
-              macAddress: formData.macAddress || undefined,
-              networkZone: formData.networkZone,
-              vlan: formData.vlan || undefined,
-              operatingSystem: formData.operatingSystem || undefined,
-              status: formData.status,
-              riskLevel: formData.riskLevel,
-              owner: formData.owner || undefined,
-              notes: formData.notes || undefined,
-            }
-          : a
-      )
-    )
-    toast.success('Internal asset updated successfully')
-    setEditAsset(null)
-    resetForm()
+    // Persist through the real API. This previously only mutated local state and
+    // reported success, so edits silently reverted on the next refetch.
+    try {
+      await updateAsset(editAsset.id, {
+        name: formData.hostname,
+        description: formData.notes || undefined,
+        ownerRef: formData.owner || undefined,
+        metadata: {
+          ...(formData.ipAddress ? { ip_address: formData.ipAddress } : {}),
+          ...(formData.macAddress ? { mac_address: formData.macAddress } : {}),
+          ...(formData.operatingSystem ? { operating_system: formData.operatingSystem } : {}),
+          ...(formData.vlan ? { vlan: formData.vlan } : {}),
+          network_zone: formData.networkZone,
+        },
+      })
+      toast.success('Internal asset updated successfully')
+      setEditAsset(null)
+      resetForm()
+      await refetchAssets()
+    } catch (e) {
+      toast.error(getErrorMessage(e, 'Failed to update internal asset'))
+    }
   }
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!deleteAsset) return
-    setAssets((prev) => prev.filter((a) => a.id !== deleteAsset.id))
-    toast.success('Internal asset deleted successfully')
-    setDeleteAsset(null)
+    try {
+      await apiDeleteAsset(deleteAsset.id)
+      toast.success('Internal asset deleted successfully')
+      setDeleteAsset(null)
+      await refetchAssets()
+    } catch (e) {
+      toast.error(getErrorMessage(e, 'Failed to delete internal asset'))
+    }
   }
 
   // Derive a scan target from an internal asset: prefer IP, fall back to hostname.

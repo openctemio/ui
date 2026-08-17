@@ -176,3 +176,31 @@ export function useHasModule(moduleId: string) {
     isLoading,
   }
 }
+
+/**
+ * Check whether a module is enabled for the current tenant, with fail-open.
+ *
+ * Returns a single boolean suitable for gating in-page features (tabs,
+ * sections, widgets) and for building conditional SWR keys so a disabled
+ * module's endpoint is never fetched (it would 403 with MODULE_NOT_ENABLED).
+ *
+ * Fail-open: when no module data is present (`moduleIds.length === 0`, e.g. the
+ * OSS edition where the licensing API 404s), EVERYTHING is treated as enabled —
+ * mirroring `ModuleGate`. This intentionally errs toward showing features when
+ * the platform has no opinion about modules.
+ *
+ * @param moduleId - The module ID to check (e.g. 'branches', 'threat_intel')
+ * @returns true when the module is enabled (or module data is absent)
+ *
+ * @example
+ * ```tsx
+ * const branchesEnabled = useModuleEnabled('branches')
+ * const { data } = useRepositoryBranches(branchesEnabled ? repoId : null)
+ * {branchesEnabled && <TabsTrigger value="branches">Branches</TabsTrigger>}
+ * ```
+ */
+export function useModuleEnabled(moduleId: string): boolean {
+  const { moduleIds } = useTenantModules()
+  // Fail-open when the platform reports no modules (OSS edition / no licensing).
+  return moduleIds.length === 0 || moduleIds.includes(moduleId)
+}

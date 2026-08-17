@@ -31,6 +31,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Select,
   SelectContent,
@@ -120,6 +121,7 @@ export function AssetRelationshipsTab({
   const [editDescription, setEditDescription] = useState('')
   const [editConfidence, setEditConfidence] = useState<RelationshipConfidence>('medium')
   const [editImpactWeight, setEditImpactWeight] = useState(5)
+  const [editIsControlPlane, setEditIsControlPlane] = useState(false)
 
   // ============================================
   // Server-side asset search for the Add dialog
@@ -188,6 +190,27 @@ export function AssetRelationshipsTab({
         assetId,
         items.map((it) => it.input)
       )
+
+      // The batch endpoint doesn't carry the control-plane flag (api #467
+      // added it to the singleton create/update only). For every edge that
+      // was created AND requested control-plane, set the flag via a
+      // follow-up update on the returned relationship id.
+      const controlPlaneUpdates = result.results
+        .filter(
+          (r) =>
+            r.status === 'created' &&
+            !!r.relationship_id &&
+            items[r.index]?.input.isControlPlane === true
+        )
+        .map((r) => updateAssetRelationship(r.relationship_id as string, { isControlPlane: true }))
+      if (controlPlaneUpdates.length > 0) {
+        const settled = await Promise.allSettled(controlPlaneUpdates)
+        if (settled.some((s) => s.status === 'rejected')) {
+          toast.warning(
+            'Created, but some edges could not be marked as control-plane. Edit them to set the flag.'
+          )
+        }
+      }
 
       const succeededNames: string[] = []
       const duplicateNames: string[] = []
@@ -259,6 +282,7 @@ export function AssetRelationshipsTab({
     setEditDescription(rel.description ?? '')
     setEditConfidence(rel.confidence)
     setEditImpactWeight(rel.impactWeight)
+    setEditIsControlPlane(rel.isControlPlane ?? false)
   }
 
   const handleEdit = async () => {
@@ -269,6 +293,7 @@ export function AssetRelationshipsTab({
         description: editDescription,
         confidence: editConfidence,
         impactWeight: editImpactWeight,
+        isControlPlane: editIsControlPlane,
       })
       toast.success('Relationship updated')
       setEditTarget(null)
@@ -411,6 +436,28 @@ export function AssetRelationshipsTab({
                   step={1}
                   className="mt-2"
                 />
+              </div>
+            </div>
+
+            {/* Control-plane dependency flag (CTEM Scoping, api #467). */}
+            <div className="flex items-start gap-2 rounded-lg border p-3">
+              <Checkbox
+                id="edit-is-control-plane"
+                checked={editIsControlPlane}
+                onCheckedChange={(checked) => setEditIsControlPlane(checked === true)}
+                className="mt-0.5"
+              />
+              <div className="space-y-0.5">
+                <Label
+                  htmlFor="edit-is-control-plane"
+                  className="text-sm font-normal cursor-pointer"
+                >
+                  Control-plane dependency (IdP / secrets / CI-CD / SIEM)
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Flag when the target governs this asset&apos;s security posture, so scoping can
+                  trace blast radius.
+                </p>
               </div>
             </div>
           </div>

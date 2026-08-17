@@ -38,10 +38,18 @@ interface AttackerProfileListResponse {
   total: number
 }
 
-/** Map of attacker-profile id → { name, type } for resolving threat rows. */
-export function useAttackerProfileMap() {
+/**
+ * Map of attacker-profile id → { name, type } for resolving threat rows.
+ *
+ * The `/attacker-profiles` endpoint belongs to the (Phase-3 gated)
+ * attacker_profiles module. This hook is used on the Threat Model page (which
+ * lives under a different module), so pass `enabled: false` when the module is
+ * disabled to skip the fetch — it would otherwise 403. A null key = no fetch;
+ * threat rows fall back to the raw id.
+ */
+export function useAttackerProfileMap(enabled: boolean = true) {
   const { data, isLoading } = useSWR<AttackerProfileListResponse>(
-    '/api/v1/attacker-profiles?per_page=100',
+    enabled ? '/api/v1/attacker-profiles?per_page=100' : null,
     get,
     { revalidateOnFocus: false }
   )

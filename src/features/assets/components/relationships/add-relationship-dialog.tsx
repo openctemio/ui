@@ -24,6 +24,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Select,
   SelectContent,
@@ -219,6 +220,9 @@ export function AddRelationshipDialog({
   const [description, setDescription] = React.useState('')
   const [confidence, setConfidence] = React.useState<RelationshipConfidence>('medium')
   const [impactWeight, setImpactWeight] = React.useState(5)
+  // Control-plane dependency flag (api #467). Applies to every selected
+  // target when multi-selecting.
+  const [isControlPlane, setIsControlPlane] = React.useState(false)
   const [searchQuery, setSearchQuery] = React.useState('')
   const debouncedQuery = useDebounce(searchQuery, 250)
 
@@ -320,6 +324,7 @@ export function AddRelationshipDialog({
       setDescription('')
       setConfidence('medium')
       setImpactWeight(5)
+      setIsControlPlane(false)
       setSearchQuery('')
       setSearchResults([])
     }
@@ -353,6 +358,7 @@ export function AddRelationshipDialog({
           confidence,
           discoveryMethod: 'manual',
           impactWeight,
+          isControlPlane,
         },
         targetName: target.name,
       }))
@@ -733,6 +739,33 @@ export function AddRelationshipDialog({
                     step={1}
                     className="mt-2"
                   />
+                </div>
+              </div>
+
+              {/* Control-plane dependency flag (CTEM Scoping, api #467).
+                  Marks the target as governing the source's security posture
+                  (IdP / secrets / CI-CD / SIEM). Applies to all selected
+                  targets. */}
+              <div className="flex items-start gap-2 rounded-lg border p-3">
+                <Checkbox
+                  id="is-control-plane"
+                  checked={isControlPlane}
+                  onCheckedChange={(checked) => setIsControlPlane(checked === true)}
+                  className="mt-0.5"
+                />
+                <div className="space-y-0.5">
+                  <Label htmlFor="is-control-plane" className="text-sm font-normal cursor-pointer">
+                    Control-plane dependency (IdP / secrets / CI-CD / SIEM)
+                    {selectedTargets.length > 1 && (
+                      <span className="ms-1 text-xs text-muted-foreground">
+                        — applied to all {selectedTargets.length} relationships
+                      </span>
+                    )}
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Flag when the target governs this asset&apos;s security posture, so scoping can
+                    trace blast radius.
+                  </p>
                 </div>
               </div>
             </>
