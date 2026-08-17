@@ -22,6 +22,7 @@ import {
   Settings2,
   Radar,
   Container,
+  ListFilter,
   GitBranch,
   KeyRound,
   Building2,
@@ -237,6 +238,15 @@ export const sidebarData: SidebarData = {
           title: 'Asset Inventory',
           url: '/assets',
           icon: Container,
+          permission: Permission.AssetsRead,
+          module: 'assets',
+        },
+        // Unified, filterable table across ALL asset types (the category
+        // Overview above stays as the drill-down landing page).
+        {
+          title: 'All Assets',
+          url: '/assets/all',
+          icon: ListFilter,
           permission: Permission.AssetsRead,
           module: 'assets',
         },
