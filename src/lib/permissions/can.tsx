@@ -39,7 +39,7 @@
 
 import { type ReactNode, type ReactElement, cloneElement, isValidElement, Children } from 'react'
 import { usePermissions } from './hooks'
-import { type PermissionString, getPermissionLabel } from './constants'
+import { type PermissionString, type RoleString, getPermissionLabel } from './constants'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
 // ============================================
@@ -61,6 +61,16 @@ interface CanBaseProps {
    * @default false
    */
   requireAll?: boolean
+
+  /**
+   * Minimum role required IN ADDITION to the permission(s).
+   * Uses the role hierarchy: viewer < member < admin < owner.
+   * Use this when the backend enforces a role gate (e.g. RequireTeamAdmin)
+   * that a custom role's permission grant alone does not satisfy — otherwise
+   * the control renders live but every action 403s.
+   * @default undefined (no role requirement)
+   */
+  minRole?: RoleString | string
 
   /**
    * Content to render when user has permission
@@ -210,8 +220,8 @@ function DisabledWrapper({ children, tooltip }: DisabledWrapperProps) {
  * Permission-based conditional rendering component
  */
 export function Can(props: CanProps): ReactNode {
-  const { permission, requireAll = false, children, mode = 'hide' } = props
-  const { can, canAny, canAll, isLoading, tenantRole } = usePermissions()
+  const { permission, requireAll = false, minRole, children, mode = 'hide' } = props
+  const { can, canAny, canAll, isAtLeast, isLoading, tenantRole } = usePermissions()
 
   // While permissions are loading, hide content by default
   // Exception: owner/admin bypass (they always have access)
@@ -234,15 +244,23 @@ export function Can(props: CanProps): ReactNode {
     hasPermission = can(permission)
   }
 
-  // Has permission - render children normally
-  if (hasPermission) {
+  // A minRole requirement is ANDed with the permission check — the backend
+  // enforces both, so the control must too.
+  const meetsRole = !minRole || isAtLeast(minRole as RoleString)
+  const isAllowed = hasPermission && meetsRole
+
+  // Has access - render children normally
+  if (isAllowed) {
     return children
   }
 
-  // No permission - handle based on mode
+  // No access - handle based on mode
   if (mode === 'disable') {
+    const roleTooltip =
+      hasPermission && !meetsRole ? `Requires ${minRole} role or higher` : undefined
     const tooltip =
       (props as CanDisableModeProps).disabledTooltip ||
+      roleTooltip ||
       generateTooltipMessage(permission, requireAll)
     return <DisabledWrapper tooltip={tooltip}>{children}</DisabledWrapper>
   }
