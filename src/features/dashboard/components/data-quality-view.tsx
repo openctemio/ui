@@ -305,7 +305,9 @@ export function DataQualityView() {
               </div>
               <div>
                 <div className="text-2xl font-semibold text-muted-foreground tabular-nums">
-                  {q?.median_last_seen_days != null ? `${q.median_last_seen_days.toFixed(1)}d` : '—'}
+                  {q?.median_last_seen_days != null
+                    ? `${q.median_last_seen_days.toFixed(1)}d`
+                    : '—'}
                 </div>
                 <p className="text-xs text-muted-foreground">Median last-seen (internet-exposed)</p>
               </div>
