@@ -489,6 +489,15 @@ export interface ValidationEvidenceItem {
   created_at: string
   started_at?: string
   ended_at?: string
+  // Detection correlation verdict — answers "did any control OBSERVE this
+  // validation?", a different question from `outcome` ("is the exposure still
+  // reachable?"). See api internal/app/validation/detection.go. Values:
+  // observed | not_observed | no_telemetry_source | not_applicable |
+  // not_evaluated. `detection_is_gap` is the precomputed safe predicate
+  // (true only for not_observed) so the UI never gets the comparison wrong.
+  // Both optional so the panel degrades gracefully against an older API.
+  detection_status?: string
+  detection_is_gap?: boolean
 }
 
 interface ValidationEvidenceResponse {

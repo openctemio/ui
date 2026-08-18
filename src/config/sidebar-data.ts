@@ -82,6 +82,7 @@ import {
   BarChart3,
   Settings,
   ShieldQuestion,
+  Database,
 } from 'lucide-react'
 import { type SidebarData } from '@/components/types'
 import { Permission, Role } from '@/lib/permissions'
@@ -503,6 +504,13 @@ export const sidebarData: SidebarData = {
           url: '/insights/program-health',
           icon: Target,
           // Outcome scorecard — always available with dashboard read, no module gate.
+          permission: Permission.DashboardRead,
+        },
+        {
+          title: 'Data Quality',
+          url: '/insights/data-quality',
+          icon: Database,
+          // Discovery data-hygiene scorecard — core, no module gate (same as Program Health).
           permission: Permission.DashboardRead,
         },
         {
