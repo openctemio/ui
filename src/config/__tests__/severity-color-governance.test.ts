@@ -55,7 +55,11 @@ const ALLOWLIST = new Set(
 )
 
 // Files that DEFINE the palette are allowed to hold color literals.
-const SOURCE_FILES = new Set(['lib/severity-colors.ts', 'lib/criticality-colors.ts'])
+const SOURCE_FILES = new Set([
+  'lib/severity-colors.ts',
+  'lib/criticality-colors.ts',
+  'lib/impact-colors.ts',
+])
 
 function walk(dir: string, out: string[] = []): string[] {
   for (const entry of readdirSync(dir)) {
