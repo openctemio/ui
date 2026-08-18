@@ -21,7 +21,17 @@ import {
 } from '@/components/ui/dialog'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Plus, Play, Eye, CheckCircle, RefreshCw, ScrollText, NotebookPen } from 'lucide-react'
+import {
+  Plus,
+  Play,
+  Eye,
+  CheckCircle,
+  RefreshCw,
+  ScrollText,
+  NotebookPen,
+  CalendarClock,
+  Lightbulb,
+} from 'lucide-react'
 import { get, post } from '@/lib/api/client'
 import { getErrorMessage } from '@/lib/api/error-handler'
 import { toast } from 'sonner'
@@ -49,6 +59,43 @@ function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString()
 }
 
+// CTEM operating rhythm (https://ctem.org/docs/stages/ctem-mobilization): the
+// prescribed cadence that keeps a cycle running. Purely a reference rhythm —
+// no scheduler is implied; the dates are anchored to real cycle data below.
+const CTEM_CADENCE = [
+  {
+    key: 'weekly',
+    label: 'Weekly triage',
+    detail: 'Review new exposures, re-prioritize, unblock owners.',
+  },
+  {
+    key: 'monthly',
+    label: 'Monthly steering',
+    detail: 'Trend risk & SLA burn-down with sponsors; adjust focus.',
+  },
+  {
+    key: 'quarterly',
+    label: 'Quarterly scope refresh',
+    detail: 'Revisit the charter & scope; fold in last cycle’s lessons.',
+  },
+] as const
+
+// nextWeekday returns the next occurrence of the given weekday (0=Sun) from
+// today, used to anchor the weekly-triage checkpoint to a real date.
+function nextWeekday(weekday: number): Date {
+  const d = new Date()
+  d.setHours(0, 0, 0, 0)
+  const delta = (weekday - d.getDay() + 7) % 7 || 7
+  d.setDate(d.getDate() + delta)
+  return d
+}
+
+// firstOfNextMonth anchors the monthly-steering checkpoint.
+function firstOfNextMonth(): Date {
+  const d = new Date()
+  return new Date(d.getFullYear(), d.getMonth() + 1, 1)
+}
+
 export default function CtemCyclesPage() {
   const {
     data: response,
@@ -59,6 +106,27 @@ export default function CtemCyclesPage() {
   })
 
   const cycles = response?.data ?? []
+
+  // Feedback-to-scope loop: surface the most recent finished cycle's
+  // scope-refinement notes so they visibly feed the NEXT cycle's scoping
+  // (otherwise the notes are captured but never carried forward).
+  const lastLessons = useMemo(() => {
+    const withNotes = cycles.filter(
+      (c) =>
+        (c.status === 'closed' || c.status === 'review') &&
+        (c.charter?.scope_refinement_notes ?? '').trim() !== ''
+    )
+    withNotes.sort(
+      (a, b) =>
+        new Date(b.end_date || b.updated_at).getTime() -
+        new Date(a.end_date || a.updated_at).getTime()
+    )
+    return withNotes[0] ?? null
+  }, [cycles])
+
+  // The single active cycle anchors the operating-rhythm checkpoints to real
+  // dates (its scope-refresh checkpoint is the cycle's own end date).
+  const activeCycle = useMemo(() => cycles.find((c) => c.status === 'active') ?? null, [cycles])
 
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [formData, setFormData] = useState({
@@ -300,6 +368,48 @@ export default function CtemCyclesPage() {
           </Button>
         </PageHeader>
 
+        {/* CTEM operating rhythm — a lightweight, always-visible reminder of
+            the prescribed cadence. Checkpoints are anchored to real dates: the
+            weekly/monthly ones to the calendar, the quarterly scope refresh to
+            the active cycle's end date. No scheduler is implied. */}
+        <Card className="mb-4">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <CalendarClock className="h-4 w-4 text-muted-foreground" />
+              Operating rhythm
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-3 sm:grid-cols-3">
+              {CTEM_CADENCE.map((c) => {
+                let when = ''
+                if (c.key === 'weekly') when = formatDate(nextWeekday(1).toISOString())
+                else if (c.key === 'monthly') when = formatDate(firstOfNextMonth().toISOString())
+                else if (c.key === 'quarterly')
+                  when = activeCycle?.end_date ? formatDate(activeCycle.end_date) : ''
+                return (
+                  <div key={c.key} className="rounded-lg border bg-muted/30 p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm font-medium">{c.label}</span>
+                      {when && (
+                        <Badge variant="outline" className="text-xs">
+                          {when}
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">{c.detail}</p>
+                  </div>
+                )
+              })}
+            </div>
+            {!activeCycle && (
+              <p className="mt-3 text-xs text-muted-foreground">
+                Activate a cycle to anchor the quarterly scope-refresh checkpoint to its end date.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
             <CardTitle>All Cycles</CardTitle>
@@ -340,6 +450,23 @@ export default function CtemCyclesPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
+            {/* Feed-forward: the last finished cycle's scope-refinement notes,
+                shown read-only so the lessons visibly inform this new cycle's
+                scope instead of being copied by hand. */}
+            {lastLessons && (
+              <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 dark:bg-amber-900/10">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <Lightbulb className="h-4 w-4 text-amber-500" />
+                  Lessons from {lastLessons.name}
+                </div>
+                <p className="mt-1 whitespace-pre-wrap text-xs text-muted-foreground">
+                  {lastLessons.charter?.scope_refinement_notes}
+                </p>
+                <p className="mt-1.5 text-[11px] text-muted-foreground">
+                  Carry the relevant items into this cycle&rsquo;s scope and charter.
+                </p>
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="name">Name *</Label>
               <Input

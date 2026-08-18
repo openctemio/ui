@@ -597,6 +597,18 @@ export const IMPACT_RATING_OPTIONS: { value: ImpactRating; label: string }[] = [
 ]
 
 /**
+ * Soft-tint badge colors for a CIA impact rating. Higher impact reads hotter
+ * (a high-impact dimension is a bigger deal if compromised); low is the calm
+ * green end. Theme-aware to match the criticality/scope badges.
+ */
+export const IMPACT_RATING_BADGE_SOFT: Record<ImpactRating, string> = {
+  high: 'bg-red-500/10 text-red-500 border-red-500/20 dark:bg-red-900/30 dark:text-red-400',
+  moderate:
+    'bg-yellow-500/10 text-yellow-500 border-yellow-500/20 dark:bg-yellow-900/30 dark:text-yellow-400',
+  low: 'bg-green-500/10 text-green-500 border-green-500/20 dark:bg-green-900/30 dark:text-green-400',
+}
+
+/**
  * Cloud Provider type
  */
 export type CloudProvider = 'aws' | 'gcp' | 'azure' | 'oci' | 'alibaba' | 'digitalocean'
@@ -1012,6 +1024,13 @@ export interface Asset {
   impactConfidentiality?: ImpactRating
   impactIntegrity?: ImpactRating
   impactAvailability?: ImpactRating
+  /**
+   * CTEM Scoping critical-asset register: whether this asset is part of the
+   * control plane — infrastructure that governs other assets (identity,
+   * orchestration, CI/CD, secret stores). Optional; undefined reads as
+   * "unknown/not flagged" (api #467, backend `is_control_plane`).
+   */
+  isControlPlane?: boolean
   riskScore: number // 0-100, calculated from criticality, exposure, and findings
   findingCount: number
   groupId?: string // Optional - asset can be ungrouped
