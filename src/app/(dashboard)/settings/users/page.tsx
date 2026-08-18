@@ -809,7 +809,7 @@ export default function UsersPage() {
                       Change Role
                     </DropdownMenuItem>
                   </Can>
-                  <Can permission={Permission.MembersManage}>
+                  <Can permission={Permission.MembersManage} minRole="admin">
                     <DropdownMenuSeparator />
                     {member.status === 'suspended' ? (
                       <DropdownMenuItem
@@ -971,7 +971,7 @@ export default function UsersPage() {
           title="User Management"
           description="Manage team members and access permissions"
         >
-          <Can permission={Permission.MembersInvite} mode="disable">
+          <Can permission={Permission.MembersInvite} minRole="admin" mode="disable">
             <Button onClick={() => setInviteDialogOpen(true)}>
               <UserPlus className="me-2 h-4 w-4" />
               Invite User
@@ -1276,7 +1276,7 @@ export default function UsersPage() {
                     <CardTitle className="text-base">Pending Invitations</CardTitle>
                     <CardDescription>Invitations waiting to be accepted</CardDescription>
                   </div>
-                  <Can permission={Permission.MembersInvite} mode="disable">
+                  <Can permission={Permission.MembersInvite} minRole="admin" mode="disable">
                     <Button size="sm" variant="outline" onClick={() => setInviteDialogOpen(true)}>
                       <UserPlus className="me-2 h-4 w-4" />
                       Invite
@@ -1550,7 +1550,7 @@ export default function UsersPage() {
               </div>
 
               {/* Footer Actions */}
-              <Can permission={Permission.MembersManage}>
+              <Can permission={Permission.MembersManage} minRole="admin">
                 {selectedMember.role !== 'owner' && (
                   <div className="px-6 py-4 border-t bg-muted/30">
                     <Button
