@@ -76,6 +76,13 @@ export interface DataQualityScorecard {
   deduplication_rate: number
   total_assets: number
   total_findings: number
+  // Freshness signals (CTEM Discovery data-quality). `median_last_seen_age_hours`
+  // is how current the whole inventory is (median observation age, all assets);
+  // `stale_asset_pct` is the share not re-observed in 30 days — a coverage-decay
+  // signal. Optional so the page degrades to "not measured" against an API build
+  // that predates them (both are returned by current api).
+  median_last_seen_age_hours?: number
+  stale_asset_pct?: number
 }
 
 export interface ThreatIntelStats {

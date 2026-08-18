@@ -2,10 +2,11 @@
 
 import { useCallback } from 'react'
 import { toast } from 'sonner'
-import { ShieldCheck, RefreshCw, Loader2 } from 'lucide-react'
+import { ShieldCheck, RefreshCw, Loader2, Eye, EyeOff, Unplug, type LucideIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
+import { SEVERITY_BADGE_SOFT } from '@/lib/severity-colors'
 import { getErrorMessage } from '@/lib/api/error-handler'
 import { usePermissions } from '@/context/permission-provider'
 import {
@@ -34,6 +35,53 @@ const OUTCOME_LABELS: Record<string, string> = {
   skipped: 'Skipped',
 }
 
+/**
+ * Detection-correlation verdict → how to render it. This answers a DIFFERENT
+ * question from `outcome`: "did any control observe this validation?" — not "is
+ * the exposure still reachable?". Deliberately NOT a pass/fail chip: only
+ * `not_observed` is a genuine detection gap. `no_telemetry_source` means no
+ * telemetry is reaching the platform (UNKNOWN, never a control miss), and
+ * `observed` is the good case. `not_applicable` / `not_evaluated` carry no
+ * signal and render nothing.
+ */
+const DETECTION_META: Record<
+  string,
+  { label: string; title: string; className: string; Icon: LucideIcon }
+> = {
+  observed: {
+    label: 'Observed by controls',
+    title: 'A security control observed this validation activity.',
+    className: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400', // palette-ok: success accent — the theme has no semantic "success" token
+    Icon: Eye,
+  },
+  not_observed: {
+    label: 'Detection gap',
+    title: 'No control observed this validation — a detection gap worth closing.',
+    className: SEVERITY_BADGE_SOFT.medium,
+    Icon: EyeOff,
+  },
+  no_telemetry_source: {
+    label: 'No telemetry connected',
+    title:
+      'No telemetry source is connected for this asset, so detection is unknown — not a control failure.',
+    className: 'bg-muted text-muted-foreground',
+    Icon: Unplug,
+  },
+}
+
+function DetectionBadge({ item }: { item: ValidationEvidenceItem }) {
+  if (!item.detection_status) return null
+  const meta = DETECTION_META[item.detection_status]
+  if (!meta) return null
+  const { label, title, className, Icon } = meta
+  return (
+    <Badge variant="secondary" className={cn('gap-1 font-medium', className)} title={title}>
+      <Icon className="h-3 w-3" />
+      {label}
+    </Badge>
+  )
+}
+
 function formatTimestamp(value?: string): string {
   if (!value) return ''
   const d = new Date(value)
@@ -43,13 +91,14 @@ function formatTimestamp(value?: string): string {
 function EvidenceRow({ item }: { item: ValidationEvidenceItem }) {
   return (
     <li className="flex flex-col gap-1 rounded-md border p-3">
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <Badge
           variant="secondary"
           className={cn('font-medium', OUTCOME_STYLES[item.outcome] ?? OUTCOME_STYLES.skipped)}
         >
           {OUTCOME_LABELS[item.outcome] ?? item.outcome}
         </Badge>
+        <DetectionBadge item={item} />
         <span className="text-muted-foreground text-xs">{item.executor_kind}</span>
         {item.technique ? (
           <span className="text-muted-foreground text-xs">· {item.technique}</span>
