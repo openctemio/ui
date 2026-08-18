@@ -419,6 +419,12 @@ export const routePermissions: Record<string, RoutePermissionConfig> = {
   '/insights/program-health': {
     permission: Permission.DashboardRead,
   },
+  // Data Quality is a core CTEM Discovery hygiene scorecard over the shared
+  // data-quality endpoint — gated on dashboard read only (no dedicated module),
+  // exactly like Program Health, so it is always available with the dashboard.
+  '/insights/data-quality': {
+    permission: Permission.DashboardRead,
+  },
   '/insights/executive': {
     permission: Permission.DashboardRead,
     module: Module.ExecutiveSummary,
