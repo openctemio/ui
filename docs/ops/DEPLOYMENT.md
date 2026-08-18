@@ -25,18 +25,15 @@ Complete guide for deploying this Next.js application to production.
 
 ### Required Services
 
-1. **Keycloak Server**
-   - Production Keycloak instance running
-   - Realm and client configured
-   - HTTPS enabled
-   - @see [docs/auth/KEYCLOAK_SETUP.md](./auth/KEYCLOAK_SETUP.md)
+1. **Backend API** (also provides authentication)
+   - Your separate backend API deployed, accessible via HTTPS, CORS configured to
+     allow the frontend domain.
+   - Auth is local JWT (email/password) plus OAuth social (Google, GitHub,
+     Microsoft) and SAML SSO — all issued/validated by the backend. There is **no
+     Keycloak/OIDC dependency**. Configure OAuth app credentials and any SAML IdP
+     on the backend; the UI only needs `BACKEND_API_URL`.
 
-2. **Backend API**
-   - Your separate backend API deployed
-   - API accessible via HTTPS
-   - CORS configured to allow frontend domain
-
-3. **Domain & SSL**
+2. **Domain & SSL**
    - Custom domain name (optional but recommended)
    - SSL/TLS certificate (automatic with Vercel, manual with Docker)
 
@@ -45,13 +42,6 @@ Complete guide for deploying this Next.js application to production.
 Copy from .env.example and configure for production:
 
 ```bash
-# Keycloak (Production URLs)
-NEXT_PUBLIC_KEYCLOAK_URL=https://auth.your-domain.com
-NEXT_PUBLIC_KEYCLOAK_REALM=production-realm
-NEXT_PUBLIC_KEYCLOAK_CLIENT_ID=nextjs-client
-KEYCLOAK_CLIENT_SECRET=<secret-from-keycloak>
-NEXT_PUBLIC_KEYCLOAK_REDIRECT_URI=https://your-app.com/auth/callback
-
 # Backend API (server-side only — single source of truth)
 # Client-side requests proxied through Next.js at /api/v1/*
 BACKEND_API_URL=https://api.your-domain.com
@@ -90,24 +80,15 @@ npm run build
 # ✅ Environment variables validated successfully
 ```
 
-### 3. Update Keycloak Configuration
+### 3. Configure OAuth / SAML providers (backend)
 
-In Keycloak Admin Console:
+OAuth social login and SAML SSO are configured on the **backend**, not in the UI.
+Ensure each provider's allowed redirect/callback URLs include the production host:
 
-1. Navigate to your client settings
-2. Update **Valid Redirect URIs**:
-   ```
-   https://your-app.com/*
-   https://your-app.com/auth/callback
-   ```
-3. Update **Web Origins**:
-   ```
-   https://your-app.com
-   ```
-4. Update **Logout Redirect URIs**:
-   ```
-   https://your-app.com
-   ```
+```
+https://your-app.com/auth/callback/[provider]       # OAuth social (google, github, microsoft)
+https://your-app.com/auth/sso/callback/[provider]    # SAML SSO
+```
 
 ---
 
@@ -143,15 +124,11 @@ Then add to Vercel:
 
 ```bash
 # Option A: Via CLI
-vercel env add NEXT_PUBLIC_KEYCLOAK_URL
-vercel env add NEXT_PUBLIC_KEYCLOAK_REALM
-vercel env add NEXT_PUBLIC_KEYCLOAK_CLIENT_ID
-vercel env add KEYCLOAK_CLIENT_SECRET
 vercel env add BACKEND_API_URL
 vercel env add NEXT_PUBLIC_APP_URL
 vercel env add SECURE_COOKIES
 vercel env add CSRF_SECRET
-# ... add all required vars
+# ... add all required vars (see .env.example)
 
 # Option B: Via Vercel Dashboard
 # 1. Go to https://vercel.com/dashboard
@@ -221,7 +198,7 @@ Create `Dockerfile` in project root:
 # Multi-stage build for smaller image
 
 # Stage 1: Dependencies
-FROM node:20-alpine AS deps
+FROM node:26-alpine AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
@@ -230,22 +207,16 @@ COPY package.json package-lock.json ./
 RUN npm ci
 
 # Stage 2: Builder
-FROM node:20-alpine AS builder
+FROM node:26-alpine AS builder
 WORKDIR /app
 
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 # Build arguments for environment variables
-ARG NEXT_PUBLIC_KEYCLOAK_URL
-ARG NEXT_PUBLIC_KEYCLOAK_REALM
-ARG NEXT_PUBLIC_KEYCLOAK_CLIENT_ID
 ARG BACKEND_API_URL
 ARG NEXT_PUBLIC_APP_URL
 
-ENV NEXT_PUBLIC_KEYCLOAK_URL=$NEXT_PUBLIC_KEYCLOAK_URL
-ENV NEXT_PUBLIC_KEYCLOAK_REALM=$NEXT_PUBLIC_KEYCLOAK_REALM
-ENV NEXT_PUBLIC_KEYCLOAK_CLIENT_ID=$NEXT_PUBLIC_KEYCLOAK_CLIENT_ID
 ENV BACKEND_API_URL=$BACKEND_API_URL
 ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
 ENV NODE_ENV=production
@@ -254,7 +225,7 @@ ENV NODE_ENV=production
 RUN npm run build
 
 # Stage 3: Runner
-FROM node:20-alpine AS runner
+FROM node:26-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
@@ -313,16 +284,12 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_KEYCLOAK_URL: ${NEXT_PUBLIC_KEYCLOAK_URL}
-        NEXT_PUBLIC_KEYCLOAK_REALM: ${NEXT_PUBLIC_KEYCLOAK_REALM}
-        NEXT_PUBLIC_KEYCLOAK_CLIENT_ID: ${NEXT_PUBLIC_KEYCLOAK_CLIENT_ID}
         BACKEND_API_URL: ${BACKEND_API_URL}
         NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
     ports:
       - '3000:3000'
     environment:
       - NODE_ENV=production
-      - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET}
       - CSRF_SECRET=${CSRF_SECRET}
       - SECURE_COOKIES=true
     restart: unless-stopped
@@ -496,8 +463,9 @@ curl -I https://your-app.com
 ### 2. Test Authentication Flow
 
 1. Open https://your-app.com
-2. Click "Login"
-3. Verify redirect to Keycloak
+2. Sign in with email/password (or an OAuth social / SAML SSO provider)
+3. For social/SSO: verify redirect to the provider and back to
+   `/auth/callback/[provider]` or `/auth/sso/callback/[provider]`
 4. Complete login
 5. Verify redirect back to app
 6. Verify user data displayed
@@ -588,13 +556,12 @@ Before going live, verify:
 - [ ] NODE_ENV=production
 - [ ] HTTPS enabled
 
-### Keycloak
+### Authentication (backend-configured)
 
-- [ ] Production realm created
-- [ ] Client configured with production URLs
-- [ ] Valid Redirect URIs updated
-- [ ] Web Origins updated
-- [ ] Client secret secure
+- [ ] OAuth social apps (Google/GitHub/Microsoft) have production callback URLs
+      (`/auth/callback/[provider]`)
+- [ ] SAML SSO IdP has production ACS/callback URL (`/auth/sso/callback/[provider]`)
+- [ ] OAuth client secrets stored securely on the backend
 
 ### Security
 
@@ -630,12 +597,13 @@ Before going live, verify:
 
 ### "Redirect URI mismatch" Error
 
-**Cause:** Keycloak redirect URI not matching production URL
+**Cause:** OAuth/SAML provider callback URL not matching the production URL
 
 **Fix:**
 
-1. Go to Keycloak Admin → Clients → Your Client
-2. Add to **Valid Redirect URIs**: `https://your-app.com/auth/callback`
+1. Open the provider's app/IdP config (Google/GitHub/Microsoft OAuth app, or SAML IdP)
+2. Add the production callback: `https://your-app.com/auth/callback/[provider]`
+   (or `/auth/sso/callback/[provider]` for SAML)
 3. Save changes
 
 ### "CSRF validation failed" Error
@@ -709,7 +677,6 @@ docker stats
 - [Next.js Deployment Docs](https://nextjs.org/docs/deployment)
 - [Vercel Documentation](https://vercel.com/docs)
 - [Docker Best Practices](https://docs.docker.com/develop/dev-best-practices/)
-- [Keycloak Production Deployment](https://www.keycloak.org/server/configuration-production)
 
 ---
 

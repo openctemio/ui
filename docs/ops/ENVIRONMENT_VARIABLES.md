@@ -20,19 +20,22 @@ Next.js has two types of environment variables with different scopes and securit
 
 ## API URL Variables Explained
 
-### `NEXT_PUBLIC_API_URL`
+### `BACKEND_API_URL` (the only one you need)
 
-- **Purpose**: URL that browser/client-side code uses to make API calls
-- **Visibility**: Exposed to browser (visible in Network tab, source code)
-- **Value**: Usually the same as the frontend URL (e.g., `http://localhost:3000`)
-- **Why same origin?**: Browser calls Next.js API routes at the same origin, which then proxy to backend
-
-### `BACKEND_API_URL`
-
-- **Purpose**: Internal URL for Next.js server to communicate with backend
+- **Purpose**: Internal URL for the Next.js server / proxy to reach the backend
 - **Visibility**: Server-only (never sent to browser)
 - **Value**: Internal Docker network URL (e.g., `http://api:8080`)
 - **Why internal?**: More secure, faster (no external network hop)
+
+### There is no browser-side API-URL variable
+
+The browser **never** reads an env var for the API host. Client code calls the
+**relative** path `/api/v1/*` and the Next.js BFF proxy (`proxy.ts`) forwards to
+`BACKEND_API_URL`. `getApiBaseUrl()` returns an empty string in the browser.
+
+> `NEXT_PUBLIC_API_URL` is **not** load-bearing — it appears only in the Vitest test
+> setup (`src/test/setup.ts`) and is not read by application code. Do not set it in
+> production.
 
 ---
 
@@ -42,8 +45,8 @@ Next.js has two types of environment variables with different scopes and securit
 ┌─────────────────────────────────────────────────────────────────┐
 │                         BROWSER                                  │
 │  ┌──────────────────────────────────────────────────────────┐   │
-│  │  fetch('/api/v1/users')                                  │   │
-│  │  Uses: NEXT_PUBLIC_API_URL (http://localhost:3000)       │   │
+│  │  fetch('/api/v1/users')  // relative — no env var        │   │
+│  │  getApiBaseUrl() === '' in the browser (same origin)     │   │
 │  └──────────────────────────┬───────────────────────────────┘   │
 └──────────────────────────────┼───────────────────────────────────┘
                                │
@@ -86,12 +89,13 @@ Next.js has two types of environment variables with different scopes and securit
 // src/lib/api/client.ts
 // This code runs in the BROWSER
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || ''
+// getApiBaseUrl() returns '' in the browser -> a relative, same-origin request.
+const API_BASE = getApiBaseUrl() // '' client-side
 
 export async function fetchUsers() {
-  // Browser calls: http://localhost:3000/api/v1/users
-  // NOT http://localhost:8080/api/v1/users
-  const response = await fetch(`${API_BASE}/api/v1/users`)
+  // Browser calls the same origin: /api/v1/users
+  // The Next.js proxy forwards it to BACKEND_API_URL server-side.
+  const response = await fetch(`${API_BASE}/api/v1/users`, { credentials: 'include' })
   return response.json()
 }
 ```
@@ -155,7 +159,7 @@ Attacker CANNOT see:
 ### 2. Backend is Not Publicly Accessible
 
 ```yaml
-# docker-compose.staging.yml
+# docker-compose.prod.yml
 
 api:
   # Only expose internally within Docker network
@@ -182,26 +186,27 @@ ui:
 
 ## Environment File Example
 
+This mirrors the authoritative [`.env.example`](../../.env.example) — only variables
+the UI actually reads are shown. The UI has no database, SMTP or JWT-signing secret
+of its own; those belong to the backend, not here.
+
 ```env
-# .env.staging
+# .env.local
 
 # -----------------------------------------------------------------------------
 # Public Variables (NEXT_PUBLIC_*)
 # These are bundled into client-side JavaScript and visible to users
 # -----------------------------------------------------------------------------
 
-# Browser uses this URL for API calls (same origin as frontend)
-NEXT_PUBLIC_API_URL=http://localhost:3000
-
 # App URL for links, redirects, etc.
 NEXT_PUBLIC_APP_URL=http://localhost:3000
-
-# Auth provider type (shown in UI)
-NEXT_PUBLIC_AUTH_PROVIDER=local
 
 # Cookie names (browser needs to know these)
 NEXT_PUBLIC_AUTH_COOKIE_NAME=auth_token
 NEXT_PUBLIC_REFRESH_COOKIE_NAME=refresh_token
+
+# Optional: Sentry (inert until @sentry/nextjs is installed — see DOCKER_SENTRY_SETUP.md)
+NEXT_PUBLIC_SENTRY_DSN=
 
 
 # -----------------------------------------------------------------------------
@@ -209,22 +214,19 @@ NEXT_PUBLIC_REFRESH_COOKIE_NAME=refresh_token
 # These are NEVER sent to browser - only available on server
 # -----------------------------------------------------------------------------
 
-# Internal backend URL (Docker network)
+# Internal backend URL (Docker network) — the single required variable
 BACKEND_API_URL=http://api:8080
 
-# JWT secret (MUST be server-only!)
-AUTH_JWT_SECRET=your-super-secret-key
-
-# CSRF secret (MUST be server-only!)
+# CSRF secret for the double-submit token (MUST be server-only!)
 CSRF_SECRET=your-csrf-secret
 
-# Database credentials (MUST be server-only!)
-DB_PASSWORD=database-password
-
-# API keys for third-party services
-SMTP_PASSWORD=smtp-password
-SENTRY_DSN=https://xxx@sentry.io/xxx
+# HTTPS-only cookies (set true in production)
+SECURE_COOKIES=false
 ```
+
+> The UI does **not** read `AUTH_JWT_SECRET`, `DB_PASSWORD`, `SMTP_PASSWORD`,
+> `NEXT_PUBLIC_AUTH_PROVIDER`, or `NEXT_PUBLIC_API_URL` — earlier revisions listed
+> these but they are phantom for this app.
 
 ---
 
@@ -288,8 +290,8 @@ console.log('BACKEND_API_URL:', process.env.BACKEND_API_URL)
 console.log('BACKEND_API_URL:', process.env.BACKEND_API_URL)
 // Output: undefined (correct - not exposed)
 
-console.log('NEXT_PUBLIC_API_URL:', process.env.NEXT_PUBLIC_API_URL)
-// Output: http://localhost:3000
+// Client code uses a relative path, not an env var:
+await fetch('/api/v1/users', { credentials: 'include' })
 ```
 
 ### Verify in browser DevTools
@@ -321,7 +323,8 @@ console.log('NEXT_PUBLIC_API_URL:', process.env.NEXT_PUBLIC_API_URL)
 - [ARCHITECTURE.md](./ARCHITECTURE.md) - System architecture overview
 - [API_INTEGRATION.md](./API_INTEGRATION.md) - API integration patterns
 - [DEPLOYMENT.md](./DEPLOYMENT.md) - Deployment guide
-- [Docker Compose](../docker-compose.staging.yml) - Staging configuration
+- [`.env.example`](../../.env.example) - Authoritative list of variables the app reads
+- [Docker Compose](../../docker-compose.prod.yml) - Production configuration
 
 ---
 

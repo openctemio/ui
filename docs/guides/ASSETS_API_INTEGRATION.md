@@ -662,7 +662,7 @@ if (assets.length === 0) return <EmptyState />;
       "id": "uuid",
       "tenant_id": "uuid",
       "name": "asset-name",
-      "asset_type": "host",
+      "type": "host",
       "criticality": "high",
       "status": "active",
       "scope": "internal",

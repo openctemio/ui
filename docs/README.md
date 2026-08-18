@@ -1,6 +1,6 @@
 # Project Documentation
 
-Complete documentation for the Next.js 16 application with Keycloak authentication and backend API integration.
+Complete documentation for the Next.js 16 application with local-JWT / OAuth social / SAML SSO authentication and backend API integration.
 
 ## 📁 Documentation Structure
 
@@ -19,7 +19,7 @@ ui/docs/
 │
 ├── features/                        # Feature Documentation
 │   ├── README.md
-│   ├── auth/                        # Authentication (Keycloak)
+│   ├── auth/                        # Authentication (local JWT + OAuth + SAML SSO)
 │   └── ACCESS_CONTROL.md            # Access Control
 │
 ├── ops/                             # Operations & Deployment
@@ -45,7 +45,7 @@ ui/docs/
 3. Configure environment variables ([ops/ENVIRONMENT_VARIABLES.md](./ops/ENVIRONMENT_VARIABLES.md))
 
 **2. Setup Authentication**
-1. [features/auth/KEYCLOAK_SETUP.md](./features/auth/KEYCLOAK_SETUP.md) - Setup Keycloak server
+1. [features/auth/README.md](./features/auth/README.md) - Auth overview (local JWT, OAuth social, SAML SSO)
 2. [features/auth/AUTH_USAGE.md](./features/auth/AUTH_USAGE.md) - Implement login/logout
 
 **3. Connect to Backend**
@@ -83,8 +83,7 @@ ui/docs/
 
 ### ✨ Features (`features/`)
 
-**[Authentication](./features/auth/README.md)**
-- **[Setup Guide](./features/auth/KEYCLOAK_SETUP.md)**
+**[Authentication](./features/auth/README.md)** — local JWT, OAuth social (Google/GitHub/Microsoft), SAML SSO
 - **[Usage Guide](./features/auth/AUTH_USAGE.md)**
 - **[API Reference](./features/auth/API_REFERENCE.md)**
 
@@ -130,6 +129,5 @@ ui/docs/
 - **Next.js 16:** [nextjs.org/docs](https://nextjs.org/docs)
 - **React 19:** [react.dev](https://react.dev)
 - **Tailwind CSS:** [tailwindcss.com](https://tailwindcss.com)
-- **Keycloak:** [keycloak.org/documentation](https://www.keycloak.org/documentation)
 
 ---
