@@ -48,11 +48,16 @@ const statusColors: Record<CtemCycle['status'], string> = {
   planning:
     'bg-blue-500/10 text-blue-500 border-blue-500/20 dark:bg-blue-900/30 dark:text-blue-400',
   active:
-    'bg-green-500/10 text-green-500 border-green-500/20 dark:bg-green-900/30 dark:text-green-400',
+    'bg-green-500/10 text-green-500 border-green-500/20 dark:bg-green-900/30 dark:text-green-400', // palette-ok: distinct cycle-status accent
   review:
-    'bg-yellow-500/10 text-yellow-500 border-yellow-500/20 dark:bg-yellow-900/30 dark:text-yellow-400',
+    'bg-yellow-500/10 text-yellow-500 border-yellow-500/20 dark:bg-yellow-900/30 dark:text-yellow-400', // palette-ok: distinct cycle-status accent
   closed: 'bg-muted text-muted-foreground',
 }
+
+// Feed-forward "lessons" callout accent — a distinct info hue, not a severity/status color.
+const LESSONS_CALLOUT_CLASS =
+  'rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 dark:bg-amber-900/10' // palette-ok: distinct lessons info accent
+const LESSONS_ICON_CLASS = 'h-4 w-4 text-amber-500' // palette-ok: distinct lessons info accent
 
 function formatDate(dateStr: string): string {
   if (!dateStr) return '-'
@@ -454,9 +459,9 @@ export default function CtemCyclesPage() {
                 shown read-only so the lessons visibly inform this new cycle's
                 scope instead of being copied by hand. */}
             {lastLessons && (
-              <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 dark:bg-amber-900/10">
+              <div className={LESSONS_CALLOUT_CLASS}>
                 <div className="flex items-center gap-2 text-sm font-medium">
-                  <Lightbulb className="h-4 w-4 text-amber-500" />
+                  <Lightbulb className={LESSONS_ICON_CLASS} />
                   Lessons from {lastLessons.name}
                 </div>
                 <p className="mt-1 whitespace-pre-wrap text-xs text-muted-foreground">
