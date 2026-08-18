@@ -28,6 +28,7 @@ import { Badge } from '@/components/ui/badge'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { CRITICALITY_BADGE_SOFT } from '@/lib/criticality-colors'
+import { IMPACT_RATING_BADGE_SOFT } from '@/lib/impact-colors'
 import type { AssetScope, ExposureLevel, Criticality, ImpactRating } from '../types'
 import {
   ASSET_SCOPE_LABELS,
@@ -39,7 +40,6 @@ import {
   CRITICALITY_LABELS,
   CRITICALITY_DESCRIPTIONS,
   IMPACT_RATING_LABELS,
-  IMPACT_RATING_BADGE_SOFT,
 } from '../types'
 
 // Scope icons

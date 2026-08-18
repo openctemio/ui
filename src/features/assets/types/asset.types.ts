@@ -596,17 +596,9 @@ export const IMPACT_RATING_OPTIONS: { value: ImpactRating; label: string }[] = [
   { value: 'high', label: 'High' },
 ]
 
-/**
- * Soft-tint badge colors for a CIA impact rating. Higher impact reads hotter
- * (a high-impact dimension is a bigger deal if compromised); low is the calm
- * green end. Theme-aware to match the criticality/scope badges.
- */
-export const IMPACT_RATING_BADGE_SOFT: Record<ImpactRating, string> = {
-  high: 'bg-red-500/10 text-red-500 border-red-500/20 dark:bg-red-900/30 dark:text-red-400',
-  moderate:
-    'bg-yellow-500/10 text-yellow-500 border-yellow-500/20 dark:bg-yellow-900/30 dark:text-yellow-400',
-  low: 'bg-green-500/10 text-green-500 border-green-500/20 dark:bg-green-900/30 dark:text-green-400',
-}
+// CIA impact-rating badge colors live in the single-source palette at
+// src/lib/impact-colors.ts (IMPACT_RATING_BADGE_SOFT), peer to severity/
+// criticality colors.
 
 /**
  * Cloud Provider type
