@@ -377,7 +377,7 @@ export function ControlPlaneBadge({
       variant="outline"
       className={cn(
         'gap-1 font-medium border',
-        'bg-purple-500/10 text-purple-500 border-purple-500/20 dark:bg-purple-900/30 dark:text-purple-400',
+        'bg-purple-500/10 text-purple-500 border-purple-500/20 dark:bg-purple-900/30 dark:text-purple-400', // palette-ok: distinct control-plane accent (not a severity/status color)
         size === 'sm' ? 'text-xs px-1.5 py-0' : 'text-xs px-2 py-0.5',
         className
       )}
