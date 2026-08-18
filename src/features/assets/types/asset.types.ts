@@ -596,6 +596,10 @@ export const IMPACT_RATING_OPTIONS: { value: ImpactRating; label: string }[] = [
   { value: 'high', label: 'High' },
 ]
 
+// CIA impact-rating badge colors live in the single-source palette at
+// src/lib/impact-colors.ts (IMPACT_RATING_BADGE_SOFT), peer to severity/
+// criticality colors.
+
 /**
  * Cloud Provider type
  */
@@ -1012,6 +1016,13 @@ export interface Asset {
   impactConfidentiality?: ImpactRating
   impactIntegrity?: ImpactRating
   impactAvailability?: ImpactRating
+  /**
+   * CTEM Scoping critical-asset register: whether this asset is part of the
+   * control plane — infrastructure that governs other assets (identity,
+   * orchestration, CI/CD, secret stores). Optional; undefined reads as
+   * "unknown/not flagged" (api #467, backend `is_control_plane`).
+   */
+  isControlPlane?: boolean
   riskScore: number // 0-100, calculated from criticality, exposure, and findings
   findingCount: number
   groupId?: string // Optional - asset can be ungrouped

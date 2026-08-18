@@ -114,6 +114,7 @@ interface BackendAsset {
   impact_confidentiality?: string // low | moderate | high
   impact_integrity?: string
   impact_availability?: string
+  is_control_plane?: boolean // CTEM Scoping: asset governs other assets (api #467)
   risk_score: number // 0-100
   finding_count: number
   description?: string
@@ -152,6 +153,7 @@ function transformAsset(backend: BackendAsset): Asset {
     impactConfidentiality: (backend.impact_confidentiality as ImpactRating) || undefined,
     impactIntegrity: (backend.impact_integrity as ImpactRating) || undefined,
     impactAvailability: (backend.impact_availability as ImpactRating) || undefined,
+    isControlPlane: backend.is_control_plane ?? undefined,
     riskScore: backend.risk_score,
     findingCount: backend.finding_count,
     metadata: backend.properties || {},
