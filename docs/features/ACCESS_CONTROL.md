@@ -97,6 +97,32 @@ Features:
   - Audit (read)
   - Billing (read, manage)
 
+### Assignment Rules
+
+**Route:** `/settings/access-control/assignment-rules` (gated by
+`Permission.AssignmentRulesRead`)
+
+The third Access Control sub-page. Defines rules that auto-assign findings/assets
+to owners, complementing manual group ownership.
+
+---
+
+## Route-level access gating
+
+Access Control is enforced at two layers, not just in the UI chrome:
+
+- **`Can`** (`src/components/auth`) hides individual UI elements by permission and
+  supports a `minRole` prop.
+- **`RouteGuard`** enforces access per route using
+  `src/config/route-permissions.ts`, which maps each path to a required
+  **module + permission** pair. A user lacking either is blocked before the page
+  renders.
+
+Recently-added route gates include `/secret-store`, `/runners`,
+`/exceptions` (→ `SuppressionsRead`), `/simulation/scenarios` and
+`/attack-simulation`, and the three `/settings/access-control/*` sub-pages
+(`groups`, `permission-sets`, `assignment-rules`).
+
 ---
 
 ## API Endpoints

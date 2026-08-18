@@ -28,7 +28,7 @@ The project uses a single `Dockerfile` with multi-stage build targets:
 ┌─────────────────────────────────────────────────────────────┐
 │                      Dockerfile                              │
 ├─────────────────────────────────────────────────────────────┤
-│  base          │ Node.js 22 Alpine base image               │
+│  base          │ Node.js 26 Alpine base image               │
 │  deps          │ Install npm dependencies                   │
 │  development   │ Dev server with hot reload (~1.3GB)        │
 │  builder       │ Build production application               │
@@ -127,15 +127,10 @@ nano .env
 Required variables:
 
 ```env
-# Keycloak Authentication
-NEXT_PUBLIC_KEYCLOAK_URL=https://auth.your-domain.com
-NEXT_PUBLIC_KEYCLOAK_REALM=production
-NEXT_PUBLIC_KEYCLOAK_CLIENT_ID=nextjs-client
-NEXT_PUBLIC_KEYCLOAK_REDIRECT_URI=https://app.your-domain.com/auth/callback
-KEYCLOAK_CLIENT_SECRET=<from-keycloak>
-
 # API (server-side only — single source of truth)
-# Client-side requests proxied through Next.js at /api/v1/*
+# Auth (local JWT / OAuth social / SAML SSO) is handled by the backend — no
+# Keycloak/OIDC variables are needed. Client-side requests are proxied through
+# Next.js at /api/v1/*.
 BACKEND_API_URL=https://api.your-domain.com
 
 # Application
@@ -145,7 +140,7 @@ NEXT_PUBLIC_APP_URL=https://app.your-domain.com
 SECURE_COOKIES=true
 CSRF_SECRET=<generate-with-npm-run-generate-secret>
 
-# Optional
+# Optional (inert until @sentry/nextjs is wired — see Sentry Setup below)
 NEXT_PUBLIC_SENTRY_DSN=https://...@sentry.io/...
 ```
 
@@ -242,37 +237,42 @@ In `docker-compose.prod.yml`, uncomment the nginx service section.
 
 ## Sentry Setup
 
+> **Sentry is NOT wired yet.** `@sentry/nextjs` is not a dependency. The files
+> `sentry.{client,server,edge}.config.ts` are no-op stubs (`export {}`), the
+> `register()` hook in `instrumentation.ts` is a commented-out placeholder,
+> `next.config.ts` does not wrap the config in `withSentryConfig`, and there is no
+> `/api/test-sentry` route. Setting `NEXT_PUBLIC_SENTRY_DSN` alone does nothing.
+> The steps below are what it would take to enable it.
+
 ### Step 1: Create Sentry Project
 
 1. Go to [sentry.io](https://sentry.io)
 2. Create new project → Choose "Next.js"
 3. Copy the DSN
 
-### Step 2: Configure Environment
-
-Add to `.env.local` (dev) or `.env` (prod):
-
-```env
-NEXT_PUBLIC_SENTRY_DSN=https://...@sentry.io/...
-```
-
-### Step 3: Install SDK
+### Step 2: Install the SDK and make it a dependency
 
 ```bash
 npm install --save @sentry/nextjs
 ```
 
-### Step 4: Test Integration
+### Step 3: Wire it up
 
-```bash
-# Start server
-docker compose up
+1. Replace the stub `sentry.*.config.ts` files with real `Sentry.init(...)` configs
+   (reference copies live in `sentry-configs/`).
+2. Uncomment the Sentry initialization inside `register()` in `instrumentation.ts`.
+3. Wrap the exported config in `next.config.ts` with `withSentryConfig(...)`.
+4. Set the DSN in `.env.local` (dev) or `.env` (prod):
 
-# Trigger test error
-curl http://localhost:3000/api/test-sentry
-
-# Check Sentry dashboard
+```env
+NEXT_PUBLIC_SENTRY_DSN=https://...@sentry.io/...
 ```
+
+### Step 4: Verify
+
+With the SDK installed and wired, throw an error from any server/client component
+(or add a temporary throwing route) and confirm the event appears in the Sentry
+dashboard. There is no built-in `/api/test-sentry` endpoint.
 
 ---
 
@@ -345,8 +345,7 @@ newgrp docker
 - [ ] `.env` file created with all required variables
 - [ ] `CSRF_SECRET` generated (32+ chars)
 - [ ] `SECURE_COOKIES=true`
-- [ ] Keycloak URLs configured
-- [ ] Backend API accessible
+- [ ] Backend API accessible (handles auth: local JWT / OAuth / SAML SSO)
 
 ### Docker
 
@@ -360,8 +359,9 @@ newgrp docker
 - [ ] Domain configured in `nginx/nginx.conf`
 - [ ] HTTPS working
 
-### Monitoring
+### Monitoring (optional — Sentry not wired by default)
 
+- [ ] `@sentry/nextjs` installed and configs wired (see Sentry Setup)
 - [ ] Sentry DSN configured
 - [ ] Test error captured in Sentry
 - [ ] Alerts configured
