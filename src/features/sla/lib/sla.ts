@@ -1,4 +1,10 @@
-import type { SLAStatus } from '@/features/repositories/types/repository.types'
+import type { LucideIcon } from 'lucide-react'
+import { AlertTriangle, Clock, CheckCircle2 } from 'lucide-react'
+import {
+  SLA_STATUS_COLORS,
+  SLA_STATUS_LABELS,
+  type SLAStatus,
+} from '@/features/repositories/types/repository.types'
 
 /**
  * SLA helpers shared by the breach board and the findings SLA column.
@@ -9,6 +15,43 @@ import type { SLAStatus } from '@/features/repositories/types/repository.types'
 
 /** Statuses considered an active SLA breach (past deadline). */
 export const BREACH_STATUSES: SLAStatus[] = ['overdue', 'exceeded']
+
+/**
+ * Icon per SLA status — single-sourced alongside SLA_STATUS_COLORS /
+ * SLA_STATUS_LABELS so every SLA badge (findings list, breach board, finding
+ * header) reads the SAME color, label and icon for a given backend status and
+ * cannot drift. Breach states are never green.
+ */
+export const SLA_STATUS_ICONS: Record<SLAStatus, LucideIcon> = {
+  on_track: CheckCircle2,
+  warning: Clock,
+  overdue: AlertTriangle,
+  exceeded: AlertTriangle,
+  not_applicable: Clock,
+}
+
+export interface SlaBadgeMeta {
+  label: string
+  colors: { bg: string; text: string }
+  Icon: LucideIcon
+}
+
+/**
+ * Resolve the badge presentation (label + colors + icon) for a raw backend
+ * `sla_status` string. Returns null when nothing should be rendered —
+ * not_applicable, missing, or an unrecognised value — so an unknown status is
+ * never mislabelled (the old finding-header defaulted every unmatched value to
+ * a reassuring green "Breached").
+ */
+export function slaBadgeMeta(status?: string | null): SlaBadgeMeta | null {
+  if (!status || status === 'not_applicable' || !(status in SLA_STATUS_COLORS)) return null
+  const key = status as SLAStatus
+  return {
+    label: SLA_STATUS_LABELS[key],
+    colors: SLA_STATUS_COLORS[key],
+    Icon: SLA_STATUS_ICONS[key],
+  }
+}
 
 /** Order used when rendering the board columns / grouped counts (worst first). */
 export const SLA_BOARD_ORDER: SLAStatus[] = ['exceeded', 'overdue', 'warning', 'on_track']
