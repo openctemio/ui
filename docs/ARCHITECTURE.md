@@ -24,13 +24,13 @@
 │  │        Next.js Server (Edge/Node.js)            │   │
 │  │  - Server Components                             │   │
 │  │  - Server Actions                                │   │
-│  │  - Middleware (Auth, Locale)                     │   │
-│  │  - API Route Handlers (optional)                 │   │
+│  │  - proxy.ts (BFF proxy for /api/v1/*)            │   │
+│  │  - API Route Handlers                            │   │
 │  └─────────────────┬───────────────────────────────┘   │
 └────────────────────┼─────────────────────────────────────┘
                      │
                      │ HTTP/HTTPS Requests
-                     │ (Bearer Token Auth)
+                     │ (server attaches auth from httpOnly cookie)
                      │
 ┌────────────────────▼─────────────────────────────────────┐
 │              External Backend API                         │
@@ -55,8 +55,8 @@
 **Frontend (Next.js):**
 
 - ✅ User Interface & UX
-- ✅ Authentication Flow (Keycloak OAuth)
-- ✅ Token Management (access token in memory)
+- ✅ Authentication Flow (local JWT + OAuth social + SAML SSO)
+- ✅ Token Management (httpOnly cookies set by the BFF proxy)
 - ✅ Client-side State Management (Zustand)
 - ✅ Route Protection
 - ✅ Form Validation (Zod)
@@ -163,30 +163,38 @@ const users = await apiClient<User[]>('/api/users')
 
 ## 🔐 Authentication Flow (with Separate Backend)
 
+Auth is **local JWT (email/password)** plus **OAuth social login** (Google, GitHub,
+Microsoft) and **SAML SSO**. There is no Keycloak/OIDC dependency — `src/` contains
+zero `keycloak` references. Social/SSO callbacks land on
+`/auth/callback/[provider]` and `/auth/sso/callback/[provider]`.
+
+Tokens live in **httpOnly cookies** set by the Next.js BFF proxy — the browser
+never sees a Bearer token. The browser calls the relative proxy path `/api/v1/*`
+with `credentials: 'include'`; the proxy attaches the cookie-borne auth when it
+forwards to `BACKEND_API_URL`. A double-submit `csrf_token` cookie (JS-readable,
+backend-set) is echoed as the `X-CSRF-Token` header on mutations.
+
 ```
-1. User clicks Login
-   └─> Frontend redirects to Keycloak
+1. User signs in (email/password, OAuth social, or SAML SSO)
+   └─> Local: POST /api/v1/auth/login
+   └─> Social/SSO: redirect to provider, return to
+       /auth/callback/[provider] or /auth/sso/callback/[provider]
 
-2. Keycloak authenticates user
-   └─> Returns to /auth/callback with code
+2. Server (proxy / route handler) exchanges credentials for tokens
+   └─> Sets access + refresh tokens as httpOnly cookies
+   └─> Sets a JS-readable csrf_token cookie (double-submit)
 
-3. Frontend exchanges code for tokens
-   └─> Stores access_token in memory (Zustand)
-   └─> Stores refresh_token in HttpOnly cookie
+3. Browser makes API calls to the relative proxy path
+   └─> fetch('/api/v1/...', { credentials: 'include' })
+   └─> Mutations also send X-CSRF-Token: <csrf_token cookie>
 
-4. Frontend makes API calls to Backend
-   └─> Includes: Authorization: Bearer {access_token}
+4. Proxy forwards to BACKEND_API_URL with the cookie-borne auth
 
-5. Backend validates token
-   └─> Checks JWT signature
-   └─> Checks expiration
-   └─> Extracts user info from token
-   └─> Returns data
+5. Backend validates the JWT (signature + expiry) and returns data
 
 6. On token expiry
-   └─> Frontend refreshes token via Keycloak
-   └─> Updates access_token in Zustand
-   └─> Retries failed request
+   └─> Proxy/route handler refreshes via the refresh-token cookie
+   └─> Rotates the httpOnly cookies; browser retries transparently
 ```
 
 ---
@@ -319,10 +327,10 @@ BACKEND_API_URL=http://api:8080
    - Show loading/error states
 
 2. **Authentication**
-   - OAuth flow with Keycloak
-   - Token storage (memory + HttpOnly cookie)
-   - Token refresh
-   - Route protection
+   - Local JWT, OAuth social (Google/GitHub/Microsoft), SAML SSO
+   - Token storage (httpOnly cookies set by the BFF proxy)
+   - Token refresh (server-side, via refresh-token cookie)
+   - Route protection (RouteGuard: module + permission)
 
 3. **Client State**
    - UI state (modals, forms)
@@ -407,40 +415,12 @@ BACKEND_API_URL=http://api:8080
 
 Your backend API should support:
 
-- [ ] **JWT token validation** (verify Keycloak tokens)
+- [ ] **JWT token validation** (verify backend-issued JWTs)
 - [ ] **CORS headers** (allow Next.js domain)
 - [ ] **RESTful endpoints** (or GraphQL)
 - [ ] **Error responses** (consistent format)
 - [ ] **Rate limiting** (to prevent abuse)
 - [ ] **API documentation** (Swagger/OpenAPI)
-
----
-
-## 🔄 Migration from Mock Data
-
-### Steps to Connect Real Backend
-
-```bash
-# 1. Install SWR or React Query
-npm install swr
-
-# 2. Create API client
-# src/lib/api/client.ts
-
-# 3. Define endpoints
-# src/lib/api/endpoints.ts
-
-# 4. Create custom hooks
-# src/hooks/use-users.ts
-# src/hooks/use-posts.ts
-
-# 5. Replace mock data in components
-# Before: const data = MOCK_DATA
-# After:  const { data } = useSWR('/api/users')
-
-# 6. Test API integration
-npm run dev
-```
 
 ---
 
@@ -488,71 +468,20 @@ npm run dev
 
 ---
 
-## 📊 Updated Production Readiness
+## 🎨 Design System (current)
 
-With separate backend API:
+The API client is mature — this is a shipping product, not a mock-data scaffold.
+The shared UI primitives worth knowing:
 
-| Category                 | Score  | Status                |
-| ------------------------ | ------ | --------------------- |
-| Security                 | 95/100 | ✅ Excellent          |
-| Architecture             | 90/100 | ✅ Excellent          |
-| Testing                  | 85/100 | ✅ Good               |
-| **Database**             | N/A    | ✅ Backend handles it |
-| **API/Backend**          | N/A    | ✅ Separate service   |
-| **Frontend Integration** | 70/100 | ⚠️ Needs API client   |
-| CI/CD                    | 20/100 | ❌ Missing            |
-| Monitoring               | 10/100 | ❌ Missing            |
-
-**Updated Score: 82/100 (B+ Grade)**
-
-**Status:** Much closer to production-ready! Just need:
-
-1. API client implementation (1-2 days)
-2. CI/CD setup (1 day)
-3. Monitoring (1 day)
-
----
-
-## 🚀 Next Steps
-
-### Immediate (This Week)
-
-1. **Create API Client** (Priority: HIGH)
-   - Setup `src/lib/api/client.ts`
-   - Add auth header injection
-   - Error handling
-
-2. **Install SWR or React Query**
-   - For data fetching & caching
-   - Better UX with loading states
-
-3. **Define API Endpoints**
-   - Type-safe endpoint definitions
-   - Request/Response types
-
-### Short-term (Next 2 Weeks)
-
-1. **Replace Mock Data**
-   - Connect to real backend
-   - Test all API calls
-
-2. **Setup CI/CD**
-   - GitHub Actions
-   - Automated deployment
-
-3. **Add Monitoring**
-   - Sentry for errors
-   - Analytics
-
----
-
-**Architecture Type:** ✅ Frontend (Next.js) + Separate Backend API
-
-**Readiness:** 82/100 (B+ Grade) - Almost production-ready!
-
-**Timeline to production:** 1 week (just API integration + CI/CD)
-
----
+- **`DataTable`** (`src/components/`) supports a server-pagination mode; list pages
+  page/sort/filter against the backend instead of capping rows client-side.
+- **`SeverityBadge`** is the single source of truth for severity colours
+  (`src/lib/severity-colors.ts`); pages must not hardcode their own severity hues.
+- **`Can`** (`src/components/auth`) gates UI by permission and supports a `minRole`
+  prop; route-level access is enforced by `RouteGuard` (module + permission, see
+  `src/config/route-permissions.ts`).
+- **Routing:** Next.js 16 uses **`proxy.ts`** at the repo root for the `/api/v1/*`
+  BFF proxy — there is no `middleware.ts`.
 
 ---
 
