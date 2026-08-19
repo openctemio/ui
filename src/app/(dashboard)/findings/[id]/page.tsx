@@ -75,7 +75,10 @@ function transformApiToFindingDetail(api: ApiFinding): FindingDetail {
       id: `act-created-${api.id}`,
       type: 'created',
       actor: 'system',
-      content: `Discovered by ${api.tool_name}`,
+      // Uses created_at (ingest time), so label it "Recorded" — the header chip
+      // separately shows first_detected_at as "Discovered". Two distinct
+      // timestamps must not both read "Discovered".
+      content: `Recorded by ${api.tool_name}`,
       metadata: {
         source: api.source,
         scanId: api.scan_id,
