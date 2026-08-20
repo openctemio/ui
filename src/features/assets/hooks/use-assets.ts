@@ -70,6 +70,21 @@ export interface AssetSearchFilters {
   // Has findings filter
   hasFindings?: boolean
 
+  // Crown jewel filter (properties->>'is_crown_jewel')
+  isCrownJewel?: boolean
+
+  // CTEM inventory filter dimensions (api: all-assets-inventory).
+  // All optional; multi-select where an array.
+  businessUnitIds?: string[]
+  hasOwner?: boolean
+  dataClassifications?: string[] // public | internal | confidential | restricted | secret
+  isControlPlane?: boolean
+  isInternetAccessible?: boolean
+  environments?: string[] // production | staging | development | testing | dr
+  providers?: string[]
+  lastSeenBefore?: string // ISO timestamp — assets last seen before this instant
+  lastSeenAfter?: string // ISO timestamp — assets last seen after this instant
+
   // Properties filter: key=value pairs for JSONB containment (server-side)
   propertiesFilter?: Record<string, string[]>
 
@@ -93,11 +108,13 @@ interface BackendAsset {
   status: string // active, inactive, archived
   scope: string // internal, external, cloud, partner, vendor, shadow
   exposure: string // public, restricted, private, isolated, unknown
+  is_internet_accessible?: boolean // optional: present once the api surfaces the column
   // CTEM Scoping CIA impact ratings (api #467). Omitted by the backend when
   // a dimension is unrated (json omitempty), so these are optional here.
   impact_confidentiality?: string // low | moderate | high
   impact_integrity?: string
   impact_availability?: string
+  is_control_plane?: boolean // CTEM Scoping: asset governs other assets (api #467)
   risk_score: number // 0-100
   finding_count: number
   description?: string
@@ -130,11 +147,13 @@ function transformAsset(backend: BackendAsset): Asset {
     ownerRef: backend.owner_ref,
     scope: backend.scope as AssetScope,
     exposure: backend.exposure as ExposureLevel,
+    isInternetAccessible: backend.is_internet_accessible,
     // CIA impact ratings (api #467). Backend omits unrated dimensions, so
     // coerce the empty string to undefined to mean "not rated".
     impactConfidentiality: (backend.impact_confidentiality as ImpactRating) || undefined,
     impactIntegrity: (backend.impact_integrity as ImpactRating) || undefined,
     impactAvailability: (backend.impact_availability as ImpactRating) || undefined,
+    isControlPlane: backend.is_control_plane ?? undefined,
     riskScore: backend.risk_score,
     findingCount: backend.finding_count,
     metadata: backend.properties || {},
@@ -171,6 +190,15 @@ interface BackendAssetStats {
   findings_total: number
   high_risk_count?: number
   metadata_counts?: Record<string, Record<string, number>>
+  // CTEM inventory facet counts (api: all-assets-inventory). Optional so a
+  // pre-upgrade backend (which omits them) still deserializes cleanly.
+  by_data_classification?: Record<string, number>
+  by_environment?: Record<string, number>
+  by_provider?: Record<string, number>
+  by_internet_accessible?: Record<string, number> // keys "true" | "false"
+  by_has_owner?: Record<string, number> // keys "true" | "false"
+  by_control_plane?: Record<string, number> // keys "true" | "false"
+  by_business_unit?: Record<string, number> // keys = business_unit id
 }
 
 export interface AssetStatsData {
@@ -187,6 +215,14 @@ export interface AssetStatsData {
   highRiskCount: number
   /** Server-side metadata property counts. Key=field, Value=map[value]count */
   metadataCounts: Record<string, Record<string, number>>
+  // CTEM inventory facet counts (api: all-assets-inventory).
+  byDataClassification: Record<string, number>
+  byEnvironment: Record<string, number>
+  byProvider: Record<string, number>
+  byInternetAccessible: Record<string, number> // keys "true" | "false"
+  byHasOwner: Record<string, number> // keys "true" | "false"
+  byControlPlane: Record<string, number> // keys "true" | "false"
+  byBusinessUnit: Record<string, number> // keys = business_unit id
 }
 
 function transformAssetStats(backend: BackendAssetStats): AssetStatsData {
@@ -203,6 +239,13 @@ function transformAssetStats(backend: BackendAssetStats): AssetStatsData {
     totalFindings: backend.findings_total || 0,
     highRiskCount: backend.high_risk_count || 0,
     metadataCounts: backend.metadata_counts || {},
+    byDataClassification: backend.by_data_classification || {},
+    byEnvironment: backend.by_environment || {},
+    byProvider: backend.by_provider || {},
+    byInternetAccessible: backend.by_internet_accessible || {},
+    byHasOwner: backend.by_has_owner || {},
+    byControlPlane: backend.by_control_plane || {},
+    byBusinessUnit: backend.by_business_unit || {},
   }
 }
 
@@ -326,6 +369,22 @@ function buildAssetQueryParams(filters?: AssetSearchFilters): Record<string, str
 
   // Has findings
   if (filters.hasFindings !== undefined) params.has_findings = String(filters.hasFindings)
+
+  // Crown jewel
+  if (filters.isCrownJewel !== undefined) params.is_crown_jewel = String(filters.isCrownJewel)
+
+  // CTEM inventory dimensions
+  if (filters.businessUnitIds?.length) params.business_unit_ids = filters.businessUnitIds.join(',')
+  if (filters.hasOwner !== undefined) params.has_owner = String(filters.hasOwner)
+  if (filters.dataClassifications?.length)
+    params.data_classifications = filters.dataClassifications.join(',')
+  if (filters.isControlPlane !== undefined) params.is_control_plane = String(filters.isControlPlane)
+  if (filters.isInternetAccessible !== undefined)
+    params.is_internet_accessible = String(filters.isInternetAccessible)
+  if (filters.environments?.length) params.environments = filters.environments.join(',')
+  if (filters.providers?.length) params.providers = filters.providers.join(',')
+  if (filters.lastSeenBefore) params.last_seen_before = filters.lastSeenBefore
+  if (filters.lastSeenAfter) params.last_seen_after = filters.lastSeenAfter
 
   // Sorting
   if (filters.sort) params.sort = filters.sort
@@ -623,6 +682,13 @@ export function useAssetStats(
     totalFindings: 0,
     highRiskCount: 0,
     metadataCounts: {},
+    byDataClassification: {},
+    byEnvironment: {},
+    byProvider: {},
+    byInternetAccessible: {},
+    byHasOwner: {},
+    byControlPlane: {},
+    byBusinessUnit: {},
   }
 
   return {

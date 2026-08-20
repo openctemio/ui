@@ -16,14 +16,13 @@ import {
   ExternalLink,
   Calendar,
   CheckCircle2,
-  Clock,
-  AlertTriangle,
   ChevronDown,
   ChevronUp,
   ScanSearch,
   ShieldCheck,
   Loader2,
 } from 'lucide-react'
+import { slaBadgeMeta } from '@/features/sla/lib/sla'
 import { toast } from 'sonner'
 import { getErrorMessage } from '@/lib/api/error-handler'
 import { sanitizeExternalUrl } from '@/lib/utils'
@@ -652,30 +651,26 @@ export function FindingHeader({
                     Triaged
                   </Badge>
                 )}
-                {finding.slaStatus && finding.slaStatus !== 'not_applicable' && (
-                  <Badge
-                    variant="outline"
-                    className={`text-xs gap-1 ${
-                      finding.slaStatus === 'breached'
-                        ? 'border-red-500/50 text-red-400'
-                        : finding.slaStatus === 'at_risk'
-                          ? 'border-yellow-500/50 text-yellow-400'
-                          : 'border-green-500/50 text-green-400'
-                    }`}
-                  >
-                    {finding.slaStatus === 'breached' ? (
-                      <AlertTriangle className="h-3 w-3" />
-                    ) : (
-                      <Clock className="h-3 w-3" />
-                    )}
-                    SLA:{' '}
-                    {finding.slaStatus === 'on_track'
-                      ? 'On Track'
-                      : finding.slaStatus === 'at_risk'
-                        ? 'At Risk'
-                        : 'Breached'}
-                  </Badge>
-                )}
+                {(() => {
+                  // Map the REAL backend sla_status enum (on_track | warning |
+                  // overdue | exceeded | not_applicable) via the single-source
+                  // helper. The old code branched on 'breached'/'at_risk' —
+                  // values the API never emits — so overdue/exceeded/warning all
+                  // fell through to green "Breached". slaBadgeMeta returns null
+                  // for not_applicable / unknown, so nothing is rendered then.
+                  const sla = slaBadgeMeta(finding.slaStatus)
+                  if (!sla) return null
+                  const SlaIcon = sla.Icon
+                  return (
+                    <Badge
+                      variant="outline"
+                      className={`text-xs gap-1 ${sla.colors.bg} ${sla.colors.text}`}
+                    >
+                      <SlaIcon className="h-3 w-3" />
+                      SLA: {sla.label}
+                    </Badge>
+                  )
+                })()}
                 <Button
                   variant="ghost"
                   size="sm"

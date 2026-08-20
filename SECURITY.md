@@ -117,7 +117,7 @@ path: '/'
 | `refresh_token`       | Yes      | Yes       | Refresh token                        |
 | `oauth_state`         | Yes      | Yes       | OAuth CSRF state parameter           |
 | `oauth_redirect`      | Yes      | No        | Post-OAuth redirect URL              |
-| `csrf_token`          | Yes      | Yes       | CSRF protection token                |
+| `csrf_token`          | No       | No        | CSRF double-submit token (JS-readable by design) |
 | `app_tenant`          | No       | No        | Current tenant info (display only)   |
 | `app_user_info`       | No       | No        | User info for onboarding (5-min TTL) |
 | `app_pending_tenants` | No       | No        | Multi-tenant selection (5-min TTL)   |
@@ -283,7 +283,8 @@ Same pattern as WebSocket. Endpoint at `/api/auth/sse-token` returns access toke
 
 - **OAuth flows**: Protected via random `state` parameter stored in httpOnly cookie.
 - **API mutations**: Protected by same-origin proxy pattern. All API calls go through `/api/v1/*` (same-origin), so browsers enforce same-origin policy automatically.
-- **CSRF token**: `generateCsrfToken()` in `src/lib/cookies-server.ts` generates tokens stored in httpOnly, secure, sameSite=strict cookies. The proxy forwards `x-csrf-token` headers to the backend.
+- **CSRF token (double-submit)**: The **backend** sets a `csrf_token` cookie at login with **`HttpOnly=false` on purpose** so client JS can read it (`document.cookie` in `src/lib/api/client.ts`). On every state-changing method the client re-sends that value as the `X-CSRF-Token` header; the backend rejects a missing/mismatched header with `403 csrf_token_missing_header`. Making this cookie httpOnly would break double-submit, since JS could no longer read it.
+- **Note:** `generateCsrfToken()` / `setCsrfToken()` in `src/lib/cookies-server.ts` (which set an httpOnly `csrf_token`) exist but are **not wired** — they are not the client-visible double-submit token described above and have no callers.
 
 ---
 
@@ -354,7 +355,7 @@ Never exposed to the browser:
 
 | Layer             | Security Measure                                                     |
 | ----------------- | -------------------------------------------------------------------- |
-| Base image        | `node:25-alpine` (minimal attack surface)                            |
+| Base image        | `node:26-alpine` (minimal attack surface)                            |
 | Multi-stage build | Dev dependencies excluded from production image                      |
 | Non-root user     | Production runs as `nextjs` (UID 1001)                               |
 | Standalone output | Minimal file footprint in final image                                |

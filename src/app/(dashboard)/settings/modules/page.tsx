@@ -120,8 +120,11 @@ export default function ModuleManagementPage() {
   const [pendingChanges, setPendingChanges] = useState<Record<string, boolean>>({})
   const [showResetDialog, setShowResetDialog] = useState(false)
   const [coreExpanded, setCoreExpanded] = useState(false)
-  // Fine-tune phase groups that the admin has collapsed (default: all open).
-  const [collapsedPhases, setCollapsedPhases] = useState<Set<string>>(new Set())
+  // Fine-tune phase groups that the admin has collapsed (default: all collapsed;
+  // the admin opens each phase as needed to reduce initial clutter).
+  const [collapsedPhases, setCollapsedPhases] = useState<Set<string>>(
+    () => new Set(PHASE_GROUPS.map((g) => g.key))
+  )
   // Dependency-conflict dialog surfaced when the backend rejects a
   // save with code=module_dependency_violation. Stores the structured
   // ToggleError details so the modal can list blockers/required.

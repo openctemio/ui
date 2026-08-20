@@ -240,8 +240,11 @@ export default function TenantPage() {
   const tenantId = currentTenant?.id
 
   // Permission check - can user update tenant settings?
-  const { can } = usePermissions()
+  const { can, isOwner } = usePermissions()
   const canUpdateTenant = can(Permission.TeamUpdate)
+  // Security and API/webhook settings are owner-only on the backend
+  // (RequireTeamOwner) — TeamUpdate alone renders a dead control for admins.
+  const canManageSecurityAndAPI = canUpdateTenant && isOwner()
 
   // Fetch settings
   const { settings, isLoading, isError, error, mutate } = useTenantSettings(tenantId)
@@ -1062,7 +1065,7 @@ export default function TenantPage() {
                     onCheckedChange={(checked) =>
                       setSecurityForm({ ...securityForm, mfa_required: checked })
                     }
-                    disabled={!canUpdateTenant}
+                    disabled={!canManageSecurityAndAPI}
                   />
                 </div>
 
@@ -1075,7 +1078,7 @@ export default function TenantPage() {
                     onValueChange={(value) =>
                       setSecurityForm({ ...securityForm, session_timeout_min: Number(value) })
                     }
-                    disabled={!canUpdateTenant}
+                    disabled={!canManageSecurityAndAPI}
                   >
                     <SelectTrigger className="w-48">
                       <SelectValue />
@@ -1105,7 +1108,7 @@ export default function TenantPage() {
                         email_verification_mode: value as 'auto' | 'always' | 'never',
                       })
                     }
-                    disabled={!canUpdateTenant}
+                    disabled={!canManageSecurityAndAPI}
                   >
                     <SelectTrigger className="w-full max-w-md">
                       <SelectValue />
@@ -1236,7 +1239,7 @@ export default function TenantPage() {
                                     updateSsoForm(providerDef.value, 'display_name', e.target.value)
                                   }
                                   placeholder="Corporate SSO"
-                                  disabled={!canUpdateTenant}
+                                  disabled={!canManageSecurityAndAPI}
                                 />
                               </div>
                               <div className="space-y-2">
@@ -1263,7 +1266,7 @@ export default function TenantPage() {
                                         ? 'https://dev-123456.okta.com'
                                         : 'example.com'
                                   }
-                                  disabled={!canUpdateTenant}
+                                  disabled={!canManageSecurityAndAPI}
                                 />
                               </div>
                             </div>
@@ -1277,7 +1280,7 @@ export default function TenantPage() {
                                     updateSsoForm(providerDef.value, 'client_id', e.target.value)
                                   }
                                   placeholder="Application (client) ID"
-                                  disabled={!canUpdateTenant}
+                                  disabled={!canManageSecurityAndAPI}
                                 />
                               </div>
                               <div className="space-y-2">
@@ -1297,7 +1300,7 @@ export default function TenantPage() {
                                       ? 'Leave empty to keep current'
                                       : 'Client secret value'
                                   }
-                                  disabled={!canUpdateTenant}
+                                  disabled={!canManageSecurityAndAPI}
                                 />
                               </div>
                             </div>
@@ -1314,7 +1317,7 @@ export default function TenantPage() {
                                   )
                                 }
                                 placeholder="example.com, corp.example.com"
-                                disabled={!canUpdateTenant}
+                                disabled={!canManageSecurityAndAPI}
                               />
                               <p className="text-muted-foreground text-xs">
                                 Comma-separated. Leave empty to allow all domains.
@@ -1333,7 +1336,7 @@ export default function TenantPage() {
                                 onCheckedChange={(checked) =>
                                   updateSsoForm(providerDef.value, 'auto_provision', checked)
                                 }
-                                disabled={!canUpdateTenant}
+                                disabled={!canManageSecurityAndAPI}
                               />
                             </div>
 
@@ -1345,7 +1348,7 @@ export default function TenantPage() {
                                   onValueChange={(value) =>
                                     updateSsoForm(providerDef.value, 'default_role', value)
                                   }
-                                  disabled={!canUpdateTenant}
+                                  disabled={!canManageSecurityAndAPI}
                                 >
                                   <SelectTrigger>
                                     <SelectValue />
@@ -1368,7 +1371,7 @@ export default function TenantPage() {
                                       onCheckedChange={(checked) =>
                                         updateSsoForm(providerDef.value, 'is_active', checked)
                                       }
-                                      disabled={!canUpdateTenant}
+                                      disabled={!canManageSecurityAndAPI}
                                     />
                                     <span className="text-sm">
                                       {form.is_active ? 'Active' : 'Inactive'}
@@ -1378,7 +1381,7 @@ export default function TenantPage() {
                               )}
                             </div>
 
-                            {canUpdateTenant && (
+                            {canManageSecurityAndAPI && (
                               <div className="flex items-center justify-between pt-2">
                                 {isConfigured ? (
                                   <Button
@@ -1450,7 +1453,7 @@ export default function TenantPage() {
                       setSecurityForm({ ...securityForm, ip_whitelist: e.target.value })
                     }
                     rows={4}
-                    disabled={!canUpdateTenant}
+                    disabled={!canManageSecurityAndAPI}
                   />
                   <p className="text-xs text-muted-foreground">
                     Leave empty to allow access from any IP address
@@ -1466,11 +1469,11 @@ export default function TenantPage() {
                     <span>
                       <Button
                         onClick={handleSaveSecurity}
-                        disabled={isUpdatingSecurity || !canUpdateTenant}
+                        disabled={isUpdatingSecurity || !canManageSecurityAndAPI}
                       >
                         {isUpdatingSecurity ? (
                           <Loader2 className="me-2 h-4 w-4 animate-spin" />
-                        ) : !canUpdateTenant ? (
+                        ) : !canManageSecurityAndAPI ? (
                           <Lock className="me-2 h-4 w-4" />
                         ) : (
                           <Save className="me-2 h-4 w-4" />
@@ -1479,9 +1482,9 @@ export default function TenantPage() {
                       </Button>
                     </span>
                   </TooltipTrigger>
-                  {!canUpdateTenant && (
+                  {!canManageSecurityAndAPI && (
                     <TooltipContent>
-                      <p>You do not have permission to update tenant settings</p>
+                      <p>Only the tenant owner can change these settings</p>
                     </TooltipContent>
                   )}
                 </Tooltip>
@@ -1512,7 +1515,7 @@ export default function TenantPage() {
                     onCheckedChange={(checked) =>
                       setApiForm({ ...apiForm, api_key_enabled: checked })
                     }
-                    disabled={!canUpdateTenant}
+                    disabled={!canManageSecurityAndAPI}
                   />
                 </div>
 
@@ -1546,7 +1549,7 @@ export default function TenantPage() {
                     placeholder="https://your-server.com/webhook"
                     value={apiForm.webhook_url}
                     onChange={(e) => setApiForm({ ...apiForm, webhook_url: e.target.value })}
-                    disabled={!canUpdateTenant}
+                    disabled={!canManageSecurityAndAPI}
                   />
                 </div>
 
@@ -1559,7 +1562,7 @@ export default function TenantPage() {
                           checked={apiForm.webhook_events.includes(event.value)}
                           onCheckedChange={() => toggleWebhookEvent(event.value)}
                           id={event.value}
-                          disabled={!canUpdateTenant}
+                          disabled={!canManageSecurityAndAPI}
                         />
                         <Label htmlFor={event.value} className="font-mono text-sm cursor-pointer">
                           {event.value}
@@ -1573,7 +1576,7 @@ export default function TenantPage() {
                   variant="outline"
                   size="sm"
                   onClick={handleTestWebhook}
-                  disabled={!canUpdateTenant}
+                  disabled={!canManageSecurityAndAPI}
                 >
                   Test Webhook
                 </Button>
@@ -1585,10 +1588,13 @@ export default function TenantPage() {
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <span>
-                      <Button onClick={handleSaveAPI} disabled={isUpdatingAPI || !canUpdateTenant}>
+                      <Button
+                        onClick={handleSaveAPI}
+                        disabled={isUpdatingAPI || !canManageSecurityAndAPI}
+                      >
                         {isUpdatingAPI ? (
                           <Loader2 className="me-2 h-4 w-4 animate-spin" />
-                        ) : !canUpdateTenant ? (
+                        ) : !canManageSecurityAndAPI ? (
                           <Lock className="me-2 h-4 w-4" />
                         ) : (
                           <Save className="me-2 h-4 w-4" />
@@ -1597,9 +1603,9 @@ export default function TenantPage() {
                       </Button>
                     </span>
                   </TooltipTrigger>
-                  {!canUpdateTenant && (
+                  {!canManageSecurityAndAPI && (
                     <TooltipContent>
-                      <p>You do not have permission to update tenant settings</p>
+                      <p>Only the tenant owner can change these settings</p>
                     </TooltipContent>
                   )}
                 </Tooltip>

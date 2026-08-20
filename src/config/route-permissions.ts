@@ -203,7 +203,10 @@ export const routePermissions: Record<string, RoutePermissionConfig> = {
     module: Module.Assets,
   },
   '/secret-store': {
-    permission: Permission.CredentialsRead,
+    // API enforces scans:secret_store:read (SecretStoreRead), not
+    // findings:credentials:read — match the sidebar and the backend.
+    permission: Permission.SecretStoreRead,
+    module: Module.Scans,
   },
 
   // ========================================
@@ -305,6 +308,10 @@ export const routePermissions: Record<string, RoutePermissionConfig> = {
     module: Module.Pentest,
   },
   '/attack-simulation': {
+    permission: Permission.PentestRead,
+    module: Module.AttackSimulation,
+  },
+  '/simulation/scenarios': {
     permission: Permission.PentestRead,
     module: Module.AttackSimulation,
   },
@@ -419,6 +426,23 @@ export const routePermissions: Record<string, RoutePermissionConfig> = {
   '/insights/program-health': {
     permission: Permission.DashboardRead,
   },
+  // Data Quality is a core CTEM Discovery hygiene scorecard over the shared
+  // data-quality endpoint — gated on dashboard read only (no dedicated module),
+  // exactly like Program Health, so it is always available with the dashboard.
+  '/insights/data-quality': {
+    permission: Permission.DashboardRead,
+  },
+  // Analytics facades over shared dashboard data — not linked in nav but
+  // reachable by URL, so gate on dashboard read instead of leaving fail-open.
+  '/trending': {
+    permission: Permission.DashboardRead,
+  },
+  '/progress': {
+    permission: Permission.DashboardRead,
+  },
+  '/insights/analytics/mttr': {
+    permission: Permission.DashboardRead,
+  },
   '/insights/executive': {
     permission: Permission.DashboardRead,
     module: Module.ExecutiveSummary,
@@ -445,6 +469,12 @@ export const routePermissions: Record<string, RoutePermissionConfig> = {
     module: Module.Scans,
   },
   '/agents/**': {
+    permission: Permission.AgentsRead,
+    module: Module.Scans,
+  },
+  // /runners renders the same agent/runner inventory as /agents (typeFilter)
+  // — mirror its guard so it isn't left fail-open.
+  '/runners': {
     permission: Permission.AgentsRead,
     module: Module.Scans,
   },
@@ -510,8 +540,25 @@ export const routePermissions: Record<string, RoutePermissionConfig> = {
   '/settings/roles/**': {
     permission: Permission.RolesRead,
   },
-  '/settings/access-control/**': {
+  // Access control is three distinct resources with distinct API permissions —
+  // gate each path on its own read permission rather than one coarse GroupsRead.
+  '/settings/access-control/groups': {
     permission: Permission.GroupsRead,
+  },
+  '/settings/access-control/groups/**': {
+    permission: Permission.GroupsRead,
+  },
+  '/settings/access-control/assignment-rules': {
+    permission: Permission.AssignmentRulesRead,
+  },
+  '/settings/access-control/assignment-rules/**': {
+    permission: Permission.AssignmentRulesRead,
+  },
+  '/settings/access-control/permission-sets': {
+    permission: Permission.PermissionSetsRead,
+  },
+  '/settings/access-control/permission-sets/**': {
+    permission: Permission.PermissionSetsRead,
   },
 
   // ========================================

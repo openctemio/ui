@@ -29,33 +29,23 @@ Quick reference checklist for deploying to production. Print this and check off 
   ```bash
   npm run generate-secret
   ```
-- [ ] Keycloak URLs are HTTPS
 - [ ] Backend API URL is HTTPS
 - [ ] App URL is HTTPS
 - [ ] No secrets hardcoded in source code
 - [ ] Environment variables added to deployment platform
 
-### 3. Keycloak Configuration 🔑
+### 3. Authentication (backend-configured) 🔑
 
-- [ ] Production Keycloak server running
-- [ ] HTTPS enabled on Keycloak
-- [ ] Realm created for production
-- [ ] Client created and configured
-- [ ] **Valid Redirect URIs** updated:
-  ```
-  https://your-app.com/*
-  https://your-app.com/auth/callback
-  ```
-- [ ] **Web Origins** updated:
-  ```
-  https://your-app.com
-  ```
-- [ ] **Logout Redirect URIs** updated:
-  ```
-  https://your-app.com
-  ```
-- [ ] Client secret secured (in vault/secrets manager)
-- [ ] Test user created for verification
+Auth is local JWT + OAuth social (Google/GitHub/Microsoft) + SAML SSO — all
+issued/validated by the backend. There is **no Keycloak/OIDC dependency**; the UI
+only needs `BACKEND_API_URL`.
+
+- [ ] OAuth social apps have production callback URLs
+      (`https://your-app.com/auth/callback/[provider]`)
+- [ ] SAML SSO IdP has production ACS/callback URL
+      (`https://your-app.com/auth/sso/callback/[provider]`)
+- [ ] OAuth client secrets stored securely (vault/secrets manager) on the backend
+- [ ] Test user available for verification
 
 ### 4. Backend API 🌐
 
@@ -177,8 +167,9 @@ Quick reference checklist for deploying to production. Print this and check off 
 ### 8. Authentication Flow 🔐
 
 - [ ] Login page accessible
-- [ ] Click "Login" redirects to Keycloak
-- [ ] Keycloak login page loads
+- [ ] Email/password login works
+- [ ] OAuth social / SAML SSO redirects to the provider and back to
+      `/auth/callback/[provider]` or `/auth/sso/callback/[provider]`
 - [ ] Login with test credentials works
 - [ ] Redirects back to app successfully
 - [ ] User data displays correctly
@@ -243,7 +234,7 @@ Quick reference checklist for deploying to production. Print this and check off 
 ### 13. Backup & Recovery 💾
 
 - [ ] Environment variables backed up in secure vault
-- [ ] Keycloak configuration exported
+- [ ] OAuth app / SAML IdP configuration recorded (backend side)
 - [ ] Deployment scripts documented
 - [ ] Rollback procedure documented
 - [ ] Database backup configured (if applicable)

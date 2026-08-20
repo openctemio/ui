@@ -28,6 +28,12 @@ export function DependencyPanel({ finding }: DependencyPanelProps) {
   const affectedRange =
     (meta.vulnerable_range as string) || (meta.affected_versions as string) || ''
   const purl = (meta.purl as string) || ''
+  // Only assert Direct/Transitive when the fact is actually present. Defaulting
+  // an absent value to "Transitive" was a false claim about unknown metadata.
+  const depTypeKnown =
+    typeof meta.is_direct === 'boolean' ||
+    meta.dependency_type === 'direct' ||
+    meta.dependency_type === 'transitive'
   const isDirect = meta.is_direct === true || meta.dependency_type === 'direct'
 
   // If no useful SCA data, don't render
@@ -90,7 +96,7 @@ export function DependencyPanel({ finding }: DependencyPanelProps) {
               CVSS {finding.cvss.toFixed(1)}
             </span>
           )}
-          <span>{isDirect ? 'Direct dependency' : 'Transitive dependency'}</span>
+          {depTypeKnown && <span>{isDirect ? 'Direct dependency' : 'Transitive dependency'}</span>}
           {affectedRange && (
             <span className="font-mono">
               Affected <span className="text-foreground/80">{affectedRange}</span>

@@ -82,6 +82,7 @@ import {
   BarChart3,
   Settings,
   ShieldQuestion,
+  Database,
 } from 'lucide-react'
 import { type SidebarData } from '@/components/types'
 import { Permission, Role } from '@/lib/permissions'
@@ -240,6 +241,9 @@ export const sidebarData: SidebarData = {
           permission: Permission.AssetsRead,
           module: 'assets',
         },
+        // The unified, filterable "All Assets" inventory (/assets/all) is reached
+        // from a button on the Assets Overview page, so it is intentionally not a
+        // separate sidebar entry (it duplicated the item above).
         // ----------------------------------------
         // EXPOSURES (CVEs + non-CVE security issues)
         // ----------------------------------------
@@ -500,6 +504,13 @@ export const sidebarData: SidebarData = {
           url: '/insights/program-health',
           icon: Target,
           // Outcome scorecard — always available with dashboard read, no module gate.
+          permission: Permission.DashboardRead,
+        },
+        {
+          title: 'Data Quality',
+          url: '/insights/data-quality',
+          icon: Database,
+          // Discovery data-hygiene scorecard — core, no module gate (same as Program Health).
           permission: Permission.DashboardRead,
         },
         {

@@ -36,18 +36,18 @@ Frontend dashboard for the OpenCTEM Continuous Threat Exposure Management platfo
 - **Config builder system** for rapid asset type page creation
 - **Multi-tenant** with team switching
 - **i18n** support (English, Vietnamese, Arabic with RTL)
-- **RBAC** with 126 granular permissions
+- **RBAC** with ~170 granular permissions (ui constants; ~164 backend)
 
 ## Tech Stack
 
 | Category  | Technology                                                     |
 | --------- | -------------------------------------------------------------- |
-| Framework | Next.js 16 (App Router, Turbopack, React Compiler)             |
+| Framework | Next.js 16 (App Router, Turbopack; React Compiler NOT enabled) |
 | UI        | React 19, TypeScript 5 (strict), shadcn/ui, Tailwind CSS 4     |
 | State     | Zustand (auth), React Context (theme, direction, layout)       |
 | Data      | SWR (client fetching), Server Components (SSR)                 |
 | Forms     | React Hook Form + Zod validation                               |
-| Auth      | Local JWT, OAuth2 (Google, GitHub, Microsoft), OIDC (Keycloak) |
+| Auth      | Local JWT, OAuth2 (Google, GitHub, Microsoft), SAML SSO       |
 | Testing   | Vitest, React Testing Library, Playwright                      |
 
 ## Project Structure
@@ -56,7 +56,7 @@ Frontend dashboard for the OpenCTEM Continuous Threat Exposure Management platfo
 ui/src/
 ├── app/                          # Next.js App Router
 │   ├── (auth)/                   # Login, register, forgot password
-│   └── (dashboard)/              # Protected dashboard (172 pages)
+│   └── (dashboard)/              # Protected dashboard (144 of 154 page.tsx)
 │       ├── (discovery)/          # Assets (24 types), scans, components
 │       ├── (scoping)/            # Asset groups, scope config, attack surface
 │       ├── (mobilization)/       # Remediation, workflows
@@ -89,7 +89,7 @@ ui/src/
 
 ### Prerequisites
 
-- Node.js 22+
+- Node.js 26 (the Docker image builds on `node:26-alpine`)
 - npm
 
 ### Development
@@ -110,17 +110,17 @@ Open [http://localhost:3000](http://localhost:3000).
 ### Environment Variables
 
 ```env
-# Backend API (required)
+# Backend API (required, server-side only; the browser uses the relative
+# /api/v1/* proxy, so there is no NEXT_PUBLIC_ API URL in production)
 BACKEND_API_URL=http://localhost:8080
 
-# Auth provider
-NEXT_PUBLIC_AUTH_PROVIDER=local    # local | oidc | hybrid
+# App identity
 NEXT_PUBLIC_APP_NAME=OpenCTEM
-
-# Feature flags
-NEXT_PUBLIC_ENABLE_AI_TRIAGE=false
-NEXT_PUBLIC_ENABLE_LICENSING=false
 ```
+
+See [`.env.example`](.env.example) for the full, authoritative list of variables the
+app actually reads (`CSRF_SECRET`, `SECURE_COOKIES`, cookie names, sidebar-badge
+flag, etc.).
 
 ### Production
 
