@@ -30,13 +30,17 @@ The frontend connects to your separate backend API using:
 - **SWR Hooks:** React hooks for data fetching with caching
 - **Error Handler:** Centralized error handling with user-friendly messages
 
-**Architecture:**
+**Architecture (BFF proxy, httpOnly cookies):**
 
 ```
-Frontend (Next.js) → API Client → Backend API
-                        ↓
-                  Auto-inject Bearer Token
+Browser → fetch('/api/v1/*', credentials:'include')  (relative, same origin)
+        → Next.js proxy (proxy.ts) attaches auth from the httpOnly cookie
+        → Backend API
 ```
+
+The browser never holds a Bearer token: access/refresh tokens live in **httpOnly**
+cookies set by the proxy. Mutations carry a double-submit `X-CSRF-Token` header
+(see [Authentication](#authentication) below).
 
 ---
 
@@ -155,20 +159,34 @@ const users = await get<PaginatedResponse<User>>(endpoints.users.list({ page: 1,
 
 ### Authentication
 
-**Auth headers are injected automatically:**
+The app uses a **BFF (backend-for-frontend) proxy** with **httpOnly cookies** and
+**CSRF double-submit** — the browser does not attach a Bearer token.
+
+- **Browser → proxy:** client requests go to the relative path `/api/v1/*` with
+  `credentials: 'include'`. The access/refresh tokens are in httpOnly cookies the
+  browser cannot read, so they can't be exfiltrated by XSS.
+- **CSRF:** on state-changing methods the client reads the JS-readable, backend-set
+  `csrf_token` cookie (`document.cookie`) and echoes it as the `X-CSRF-Token`
+  header. The proxy rejects a mismatch with `403 csrf_token_missing_header`. This
+  is why the CSRF cookie is intentionally **not** httpOnly — double-submit needs JS
+  to read it. GET/HEAD are exempt.
+- **Proxy → backend:** the proxy forwards the cookie-borne auth to the backend
+  (server-side only).
 
 ```typescript
-import { get } from '@/lib/api'
+import { get, post } from '@/lib/api'
 
-// Access token from Zustand store is automatically added
-// Authorization: Bearer {accessToken}
-const profile = await get('/api/auth/me')
+// GET: cookie auth is sent automatically (credentials: 'include')
+const profile = await get('/api/v1/auth/me')
+
+// Mutations: the client attaches X-CSRF-Token from the csrf_token cookie for you
+await post('/api/v1/findings', { title: 'New finding' })
 ```
 
 **Skip auth (for public endpoints):**
 
 ```typescript
-const data = await get('/api/public/stats', { skipAuth: true })
+const data = await get('/api/v1/public/stats', { skipAuth: true })
 ```
 
 ### File Upload
@@ -272,19 +290,22 @@ function UserManagement() {
 
 ### File Upload with Progress
 
+There is **no `useUploadFile` hook** — use the `uploadFile(endpoint, file, options)`
+function directly and track state yourself:
+
 ```typescript
-import { useUploadFile } from '@/lib/api'
+import { uploadFile } from '@/lib/api'
 import { useState } from 'react'
 
 function FileUploader() {
-  const { trigger: uploadFile, isMutating } = useUploadFile()
+  const [isUploading, setIsUploading] = useState(false)
   const [progress, setProgress] = useState(0)
 
   const handleUpload = async (file: File) => {
+    setIsUploading(true)
     try {
-      const result = await uploadFile({
-        file,
-        onProgress: (p) => setProgress(p.percentage)
+      const result = await uploadFile<{ url: string }>('/api/files/upload', file, {
+        onProgress: (p) => setProgress(p.percentage),
       })
 
       toast.success(`File uploaded: ${result.url}`)
@@ -292,6 +313,7 @@ function FileUploader() {
       // Error handled automatically
     } finally {
       setProgress(0)
+      setIsUploading(false)
     }
   }
 
@@ -300,9 +322,9 @@ function FileUploader() {
       <input
         type="file"
         onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0])}
-        disabled={isMutating}
+        disabled={isUploading}
       />
-      {isMutating && <progress value={progress} max={100} />}
+      {isUploading && <progress value={progress} max={100} />}
     </div>
   )
 }
@@ -658,11 +680,8 @@ Your backend API must support:
 
 ### 1. JWT Token Validation
 
-Validate Keycloak JWT tokens from `Authorization` header:
-
-```
-Authorization: Bearer {access_token}
-```
+Validate the backend-issued JWT the proxy forwards (from the httpOnly auth cookie).
+Auth is local JWT + OAuth social + SAML SSO — there is no Keycloak/OIDC dependency.
 
 ### 2. CORS Configuration
 
@@ -747,9 +766,12 @@ app.use(
 
 **Solutions:**
 
-1. Check access token exists: `useAuthStore.getState().accessToken`
-2. Check token not expired: Use JWT debugger
-3. Verify backend validates Keycloak tokens correctly
+1. Check the auth cookie is present (httpOnly `auth_token`) and requests send
+   `credentials: 'include'`
+2. Check the token is not expired (the proxy refreshes via the refresh-token cookie)
+3. Verify the backend validates the forwarded JWT correctly
+4. For 403 on mutations: confirm the `csrf_token` cookie exists and is echoed as
+   `X-CSRF-Token`
 
 ### Network Errors
 

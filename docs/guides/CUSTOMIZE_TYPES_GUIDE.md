@@ -43,11 +43,11 @@ Your backend schema is unique! You need to:
 
 First, see what your backend actually returns:
 
-**Method A: Use API Test Page**
-```bash
-# Open http://localhost:3000/api-test
-# Click "Auth GET Request" to call /api/auth/me
-# Copy the JSON response
+**Method A: Browser DevTools**
+```
+# Open the app, then DevTools → Network tab
+# Trigger the relevant page/action and select the /api/v1/* request
+# Copy the JSON response from the Response tab
 ```
 
 **Method B: Use curl**
@@ -732,7 +732,7 @@ After customizing types:
 
 **See Also:**
 - [API Integration Guide](./API_INTEGRATION.md)
-- [Endpoint Customization](./CUSTOMIZE_ENDPOINTS_GUIDE.md) (next step)
+- [Organizing Types at Scale](./ORGANIZING_TYPES_AT_SCALE.md)
 
 ---
 

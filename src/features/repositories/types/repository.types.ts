@@ -504,7 +504,7 @@ export const SLA_STATUS_LABELS: Record<SLAStatus, string> = {
   on_track: 'On Track',
   warning: 'Warning',
   overdue: 'Overdue',
-  exceeded: 'SLA Exceeded',
+  exceeded: 'Exceeded',
   not_applicable: 'N/A',
 }
 

@@ -38,6 +38,7 @@ import {
   Target,
   Plus,
   MoreHorizontal,
+  ListFilter,
   type LucideIcon,
 } from 'lucide-react'
 import { useMemo } from 'react'
@@ -219,12 +220,20 @@ export default function AssetsOverviewPage() {
           title="Asset Inventory"
           description="Complete visibility into your organization's digital assets and attack surface"
         >
-          <Link href="/attack-surface">
-            <Button>
-              <Target className="me-2 h-4 w-4" />
-              Attack Surface
-            </Button>
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link href="/assets/all">
+              <Button variant="outline">
+                <ListFilter className="me-2 h-4 w-4" />
+                All Assets
+              </Button>
+            </Link>
+            <Link href="/attack-surface">
+              <Button>
+                <Target className="me-2 h-4 w-4" />
+                Attack Surface
+              </Button>
+            </Link>
+          </div>
         </PageHeader>
 
         {/* Duplicate review — surfaced contextually (only when the correlator

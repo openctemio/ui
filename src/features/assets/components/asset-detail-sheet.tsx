@@ -28,7 +28,7 @@ import {
 import { AssetMergeHistory } from './asset-merge-history'
 import { RelationshipPreview } from './relationships'
 import { AssetRelationshipsTab } from './asset-relationships-tab'
-import { ClassificationBadges } from './classification-badges'
+import { ClassificationBadges, CIABadges, ControlPlaneBadge } from './classification-badges'
 import { useAssetRelationships } from '../hooks'
 import type { Asset } from '../types/asset.types'
 
@@ -276,14 +276,24 @@ export function AssetDetailSheet<T extends Asset>({
                 />
               </div>
 
-              {/* Classification Badges */}
-              <div className="flex items-center gap-2 mb-2">
+              {/* Classification Badges — scope/exposure/criticality plus the
+                  CTEM Scoping register signals (control-plane flag + CIA
+                  business-impact ratings). These were editable but never shown
+                  read-only, so the edit → verify loop was broken (api #467). */}
+              <div className="flex flex-wrap items-center gap-2 mb-2">
                 <ClassificationBadges
                   scope={asset.scope}
                   exposure={asset.exposure}
                   criticality={asset.criticality}
                   size="md"
                   showTooltips
+                />
+                {asset.isControlPlane && <ControlPlaneBadge size="md" />}
+                <CIABadges
+                  confidentiality={asset.impactConfidentiality}
+                  integrity={asset.impactIntegrity}
+                  availability={asset.impactAvailability}
+                  size="md"
                 />
               </div>
 
