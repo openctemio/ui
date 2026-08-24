@@ -21,7 +21,7 @@ import { usePermissions, Permission } from '@/lib/permissions'
 import { useDebounce } from '@/hooks/use-debounce'
 import { useAssets, useAssetStats, type AssetSearchFilters } from '../../hooks/use-assets'
 import { useBusinessUnits } from '@/features/business-units/api/use-business-units'
-import { buildFacetGroups, type QuickPreset } from '../../lib/inventory-facets'
+import { buildFacetGroups, deactivatePreset, type QuickPreset } from '../../lib/inventory-facets'
 import {
   parseInventoryFilters,
   serializeInventoryFilters,
@@ -128,12 +128,9 @@ export function AllAssetsInventory() {
   const togglePreset = useCallback(
     (preset: QuickPreset) => {
       if (preset.isActive(filters)) {
-        // Turn it off: unset exactly the keys the preset controls.
-        const next = { ...filters }
-        for (const key of Object.keys(preset.apply) as (keyof InventoryFilters)[]) {
-          delete next[key]
-        }
-        setFilters({ ...next, page: 1 })
+        // Turn it off: remove only the values this preset contributed, keeping
+        // any the user selected manually (e.g. extra criticalities).
+        setFilters({ ...deactivatePreset(filters, preset), page: 1 })
       } else {
         setFilters({ ...filters, ...preset.apply, page: 1 })
       }
