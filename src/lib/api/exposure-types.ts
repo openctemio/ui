@@ -56,6 +56,29 @@ export interface ExposureEvent {
   resolution_notes?: string
   created_at: string
   updated_at: string
+
+  // CTEM enrichment (read-time, additive — api #483). Present only when the
+  // server-side enricher is wired AND the exposure has a linked asset
+  // (effective_criticality / reachability) or a CVE in its details (EPSS / KEV).
+  // Every field is optional: an exposure with no asset or no CVE carries fewer
+  // signals. Field names mirror the ExposureResponse JSON and the finding-side
+  // threat signals so the UX stays coherent across features.
+  /** MAX(asset own, business unit, powered services) — business-aligned criticality. */
+  effective_criticality?: string
+  /** Linked asset is public-facing OR sits on a validated public→crown-jewel path. */
+  is_internet_accessible?: boolean
+  /** Linked asset sits on a validated attack path to a KEV / crown-jewel target. */
+  on_attack_path?: boolean
+  /** CVE id resolved from the exposure's details (only when one is present). */
+  cve_id?: string
+  /** EPSS probability of exploitation in the next 30 days (0..1). */
+  epss_score?: number
+  /** EPSS percentile rank (0..1). */
+  epss_percentile?: number
+  /** CVE is in the CISA Known Exploited Vulnerabilities catalog. */
+  is_in_kev?: boolean
+  /** CISA KEV remediation due date (ISO 8601). */
+  kev_due_date?: string
 }
 
 /**

@@ -63,6 +63,7 @@ import {
   ExposureTable,
   ExposureActionDialog,
   ExposureBulkActions,
+  ExposureSecurityContext,
 } from '@/features/exposures/components'
 import type {
   ExposureEvent,
@@ -1007,6 +1008,11 @@ function ExposureDetailSheet({ exposure, open, onOpenChange, onAction }: Exposur
               <p className="text-sm">{exposure.description}</p>
             </div>
           )}
+
+          {/* Security context — read-time CTEM enrichment (api #483): effective
+              criticality, KEV, EPSS and attack-path reachability. Renders only
+              when the API returns at least one signal. */}
+          <ExposureSecurityContext exposure={exposure} />
 
           {/* Timeline Card */}
           <div className="rounded-lg border">
