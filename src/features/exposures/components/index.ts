@@ -9,6 +9,12 @@ export {
 export { ExposureTable } from './exposure-table'
 
 export {
+  ExposureThreatPills,
+  ExposureSecurityContext,
+  hasExposureEnrichment,
+} from './exposure-enrichment'
+
+export {
   ExposureActionDialog,
   ExposureQuickActions,
   ExposureBulkActions,
