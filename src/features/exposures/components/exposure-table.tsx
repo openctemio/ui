@@ -12,6 +12,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { DataTableRowActions, EmptyState } from '@/features/shared'
+import { ExposureThreatPills } from './exposure-enrichment'
 import {
   Check,
   X,
@@ -285,7 +286,10 @@ export function ExposureTable({
                 </TableCell>
                 <TableCell>
                   <div className="space-y-1">
-                    <p className="font-medium line-clamp-1">{exposure.title}</p>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <p className="font-medium line-clamp-1">{exposure.title}</p>
+                      <ExposureThreatPills exposure={exposure} />
+                    </div>
                     {exposure.description && (
                       <p className="text-xs text-muted-foreground line-clamp-1">
                         {exposure.description}
