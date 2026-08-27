@@ -62,6 +62,11 @@ export const Module = {
   CTEMCycles: 'ctem_cycles',
   AttackerProfiles: 'attacker_profiles',
   Relationships: 'relationships',
+  // Scoping split-outs (api migration 000214) — each toggleable on its
+  // own instead of sharing scope_config / attack_surface.
+  BusinessUnits: 'business_units',
+  CrownJewels: 'crown_jewels',
+  ThreatModel: 'threat_model',
   PriorityRules: 'priority_rules',
   RiskAnalysis: 'risk_analysis',
   RiskScoring: 'risk_scoring',
@@ -136,19 +141,19 @@ export const routePermissions: Record<string, RoutePermissionConfig> = {
   },
   '/business-units': {
     permission: Permission.ScopeRead,
-    module: Module.ScopeConfig,
+    module: Module.BusinessUnits,
   },
   '/business-units/**': {
     permission: Permission.ScopeRead,
-    module: Module.ScopeConfig,
+    module: Module.BusinessUnits,
   },
   '/crown-jewels': {
     permission: Permission.ScopeRead,
-    module: Module.ScopeConfig,
+    module: Module.CrownJewels,
   },
   '/crown-jewels/**': {
     permission: Permission.ScopeRead,
-    module: Module.ScopeConfig,
+    module: Module.CrownJewels,
   },
   '/scope-config': {
     permission: Permission.ScopeRead,
@@ -180,11 +185,11 @@ export const routePermissions: Record<string, RoutePermissionConfig> = {
   },
   '/threat-model': {
     permission: Permission.AssetsRead,
-    module: Module.AttackSurface,
+    module: Module.ThreatModel,
   },
   '/threat-model/**': {
     permission: Permission.AssetsRead,
-    module: Module.AttackSurface,
+    module: Module.ThreatModel,
   },
   '/relationships/**': {
     permission: Permission.AssetsRead,
