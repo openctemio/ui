@@ -166,14 +166,14 @@ export const sidebarData: SidebarData = {
           url: '/business-units',
           icon: Building2,
           permission: Permission.ScopeRead,
-          module: 'scope_config',
+          module: 'business_units',
         },
         {
           title: 'Crown Jewels',
           url: '/crown-jewels',
           icon: Crown,
           permission: Permission.ScopeRead,
-          module: 'scope_config',
+          module: 'crown_jewels',
         },
         {
           title: 'CTEM Cycles',
@@ -194,7 +194,7 @@ export const sidebarData: SidebarData = {
           url: '/threat-model',
           icon: Crosshair,
           permission: Permission.AssetsRead,
-          module: 'attack_surface',
+          module: 'threat_model',
         },
         {
           title: 'Relationships',
