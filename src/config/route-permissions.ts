@@ -48,8 +48,15 @@ export const Module = {
   Components: 'components',
   Pentest: 'pentest',
   Credentials: 'credentials',
+  // Exposures (non-CVE security issues) is its own toggleable module. The API
+  // gates /api/v1/exposures on ModuleExposures, so the route guard + sidebar
+  // must key off the same module — not `findings`, which used to be a stale
+  // mirror that let the toggle 403 the API while leaving the nav visible.
+  Exposures: 'exposures',
   Remediation: 'remediation',
   ThreatIntel: 'threat_intel',
+  // SLA is a real optional module (api gates registerSLARoutes on ModuleSLA).
+  Sla: 'sla',
   Integrations: 'integrations',
   Compliance: 'compliance',
   // Migration 000161 additions — these need their own constants so
@@ -227,15 +234,15 @@ export const routePermissions: Record<string, RoutePermissionConfig> = {
   },
 
   // ========================================
-  // Discovery Phase - Exposures (Module: findings)
+  // Discovery Phase - Exposures (Module: exposures)
   // ========================================
   '/exposures': {
     permission: Permission.FindingsRead,
-    module: Module.Findings,
+    module: Module.Exposures,
   },
   '/exposures/**': {
     permission: Permission.FindingsRead,
-    module: Module.Findings,
+    module: Module.Exposures,
   },
 
   // ========================================
@@ -370,6 +377,7 @@ export const routePermissions: Record<string, RoutePermissionConfig> = {
   },
   '/sla': {
     permission: Permission.SLARead,
+    module: Module.Sla,
   },
   '/exceptions': {
     permission: Permission.SuppressionsRead,
@@ -527,6 +535,7 @@ export const routePermissions: Record<string, RoutePermissionConfig> = {
   },
   '/settings/sla-policies': {
     permission: Permission.SLARead,
+    module: Module.Sla,
   },
   '/settings/pentest': {
     permission: Permission.PentestWrite,
