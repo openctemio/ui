@@ -247,15 +247,17 @@ export const sidebarData: SidebarData = {
         // ----------------------------------------
         // EXPOSURES (CVEs + non-CVE security issues)
         // ----------------------------------------
-        // Note: route guard at `/exposures/**` checks the `findings` module.
-        // Backend keeps a separate `exposures` module record (migration 000004)
-        // but no route enforces it, so binding sidebar to it caused a divergence.
+        // The API gates /api/v1/exposures on the `exposures` module
+        // (RequireModule(ModuleExposures)), so the sidebar binds the same
+        // module: turning the Exposures toggle off now hides the nav AND gates
+        // the API consistently. `exposures` ships active/default-on, so tenants
+        // with no override keep the group — only an explicit disable hides it.
         {
           title: 'Exposures',
           icon: AlertTriangle,
           // Group is visible if user has EITHER findings:read OR vulnerabilities:read.
           permission: [Permission.FindingsRead, Permission.VulnerabilitiesRead],
-          module: 'findings',
+          module: 'exposures',
           // A collapsible cannot also carry a `url` (NavCollapsible has no url in
           // src/components/types.ts), so the parent page is reached through an
           // Overview child — the same shape Integrations uses below.
@@ -467,6 +469,7 @@ export const sidebarData: SidebarData = {
           url: '/sla',
           icon: Timer,
           permission: Permission.SLARead,
+          module: 'sla',
         },
         {
           title: 'Exceptions',
@@ -690,6 +693,7 @@ export const sidebarData: SidebarData = {
               url: '/settings/sla-policies',
               icon: Timer,
               permission: Permission.SLARead,
+              module: 'sla',
             },
           ],
         },
