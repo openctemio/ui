@@ -50,6 +50,11 @@ export const Module = {
   Credentials: 'credentials',
   Remediation: 'remediation',
   ThreatIntel: 'threat_intel',
+  // IOC catalogue — its own backend module (`iocs`, migration 000156)
+  // that gates /api/v1/iocs. Distinct from `threat_intel` so an operator
+  // can run threat-intel enrichment without exposing the runtime IOC
+  // catalogue, and so the ModuleIOCs toggle gates a real page.
+  Iocs: 'iocs',
   Integrations: 'integrations',
   Compliance: 'compliance',
   // Migration 000161 additions — these need their own constants so
@@ -269,6 +274,14 @@ export const routePermissions: Record<string, RoutePermissionConfig> = {
   '/threat-intel': {
     permission: Permission.VulnerabilitiesRead,
     module: Module.ThreatIntel,
+  },
+  // IOC catalogue page — its own module (`iocs`) so the ModuleIOCs
+  // toggle gates it end-to-end. Exact match takes precedence over the
+  // `/threat-intel/**` wildcard below. Permission is threat_intel:read,
+  // matching what the backend enforces on /api/v1/iocs.
+  '/threat-intel/iocs': {
+    permission: Permission.ThreatIntelRead,
+    module: Module.Iocs,
   },
   '/threat-intel/**': {
     permission: Permission.VulnerabilitiesRead,
