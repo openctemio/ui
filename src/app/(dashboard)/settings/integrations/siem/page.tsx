@@ -81,25 +81,28 @@ export default function SIEMIntegrationPage() {
     }
   }, [form, createIntegration, mutate])
 
-  const handleTest = useCallback(async (integration: Integration) => {
-    setTestingId(integration.id)
-    try {
-      const res = await csrfFetch(`/api/v1/integrations/${integration.id}/test-notification`, {
-        method: 'POST',
-      })
-      if (res.ok) {
-        toast.success('Test event delivered to Splunk')
-      } else {
-        const body = await res.json().catch(() => ({}))
-        toast.error(body?.error || `Test failed (HTTP ${res.status})`)
+  const handleTest = useCallback(
+    async (integration: Integration) => {
+      setTestingId(integration.id)
+      try {
+        const res = await csrfFetch(`/api/v1/integrations/${integration.id}/test-notification`, {
+          method: 'POST',
+        })
+        if (res.ok) {
+          toast.success('Test event delivered to Splunk')
+        } else {
+          const body = await res.json().catch(() => ({}))
+          toast.error(body?.error || `Test failed (HTTP ${res.status})`)
+        }
+        await mutate()
+      } catch (err) {
+        toast.error(getErrorMessage(err))
+      } finally {
+        setTestingId(null)
       }
-      await mutate()
-    } catch (err) {
-      toast.error(getErrorMessage(err))
-    } finally {
-      setTestingId(null)
-    }
-  }, [mutate])
+    },
+    [mutate]
+  )
 
   const handleDelete = useCallback(async () => {
     if (!deleteTarget) return
@@ -278,11 +281,7 @@ export default function SIEMIntegrationPage() {
                     </Button>
                   </Can>
                   <Can permission={Permission.IntegrationsManage}>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setDeleteTarget(integration)}
-                    >
+                    <Button variant="ghost" size="sm" onClick={() => setDeleteTarget(integration)}>
                       <Trash2 className="size-4" />
                     </Button>
                   </Can>
