@@ -12,6 +12,7 @@
  */
 
 import { useMemo, useState } from 'react'
+import Link from 'next/link'
 import type { ColumnDef } from '@tanstack/react-table'
 import { Plus, Eye, Trash2, ShieldAlert, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -55,6 +56,7 @@ import {
   useIOCs,
   useCreateIOC,
   useDeleteIOC,
+  useIOCMatches,
   IOC_TYPES,
   IOC_TYPE_LABELS,
   IOC_SOURCES,
@@ -71,6 +73,12 @@ function formatDate(iso: string): string {
   if (!iso) return '—'
   const d = new Date(iso)
   return Number.isNaN(d.getTime()) ? '—' : d.toLocaleDateString()
+}
+
+function formatDateTime(iso: string): string {
+  if (!iso) return '—'
+  const d = new Date(iso)
+  return Number.isNaN(d.getTime()) ? '—' : d.toLocaleString()
 }
 
 export function IOCsPanel() {
@@ -319,11 +327,56 @@ function IOCDetailSheet({
                 <SheetInfoRow label="First seen">{formatDate(ioc.first_seen_at)}</SheetInfoRow>
                 <SheetInfoRow label="Last seen">{formatDate(ioc.last_seen_at)}</SheetInfoRow>
               </div>
+
+              <IOCMatchesSection iocId={ioc.id} />
             </SheetBody>
           </>
         )}
       </SheetContent>
     </Sheet>
+  )
+}
+
+// ── Matches (runtime-reopen signal) ─────────────────────────────────────────
+// The whole point of the IOC catalogue: which runtime telemetry hits matched
+// this indicator, and which findings that reopened (invariant B6). Backed by
+// GET /iocs/{id}/matches. Degrades to a neutral empty state on error, so a
+// deployment where that endpoint isn't live yet reads as "no matches" rather
+// than an error.
+function IOCMatchesSection({ iocId }: { iocId: string }) {
+  const { data, isLoading } = useIOCMatches(iocId)
+  const matches = data?.items ?? []
+
+  return (
+    <div className="space-y-2">
+      <p className="text-xs font-medium text-muted-foreground">Runtime matches</p>
+      {isLoading ? (
+        <Skeleton className="h-12 w-full" />
+      ) : matches.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          No runtime telemetry has matched this indicator yet.
+        </p>
+      ) : (
+        <ul className="space-y-2">
+          {matches.map((m) => (
+            <li key={m.id} className="rounded-lg border p-3 text-sm">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-muted-foreground">{formatDateTime(m.matched_at)}</span>
+                {m.reopened && <Badge variant="destructive">Reopened finding</Badge>}
+              </div>
+              {m.finding_id && (
+                <Link
+                  href={`/findings/${m.finding_id}`}
+                  className="mt-1 inline-block break-all text-primary hover:underline"
+                >
+                  {m.finding_title || m.finding_id}
+                </Link>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   )
 }
 

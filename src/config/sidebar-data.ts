@@ -58,6 +58,7 @@ import {
   TrendingUp,
   AlertTriangle,
   Link2,
+  Fingerprint,
   // Access Control icons
   FolderKey,
   Key,
@@ -349,6 +350,16 @@ export const sidebarData: SidebarData = {
           icon: TrendingUp,
           permission: Permission.VulnerabilitiesRead,
           module: 'threat_intel',
+        },
+        {
+          // IOC catalogue — bound to its own `iocs` module (not the parent's
+          // threat_intel) so the ModuleIOCs toggle gates this page end-to-end.
+          // permission threat_intel:read matches the backend on /api/v1/iocs.
+          title: 'Indicators (IOCs)',
+          url: '/threat-intel/iocs',
+          icon: Fingerprint,
+          permission: Permission.ThreatIntelRead,
+          module: 'iocs',
         },
         {
           title: 'Business Impact',
