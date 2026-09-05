@@ -567,24 +567,28 @@ export const sidebarData: SidebarData = {
       title: 'Settings',
       icon: Settings,
       items: [
+        // Agents — the execution/data-collection runtime (Fleet-style). Agents
+        // span recon/scan/validate/collect, so they are their own plane, not a
+        // sub-item of Scanning. Mirrors the Elastic Agent+Fleet / Datadog Agent
+        // model; "Scanning" below is narrowed to scan-job configuration.
         {
-          title: 'Scanning',
-          icon: Radar,
-          permission: Permission.ScansRead,
+          title: 'Agents',
+          icon: Bot,
+          permission: Permission.AgentsRead,
           module: 'scans',
           items: [
             {
-              title: 'Agents',
+              title: 'All Agents',
               url: '/agents',
               icon: Bot,
               permission: Permission.AgentsRead,
-              module: 'scans', // Agents are required to run scans, so bundle with scans module
+              module: 'scans',
             },
             {
-              title: 'Profiles',
-              url: '/scan-profiles',
-              icon: FileSliders,
-              permission: Permission.ScanProfilesRead,
+              title: 'Capabilities',
+              url: '/capabilities',
+              icon: Zap,
+              permission: Permission.ToolsRead,
               module: 'scans',
             },
             {
@@ -595,10 +599,25 @@ export const sidebarData: SidebarData = {
               module: 'scans',
             },
             {
-              title: 'Capabilities',
-              url: '/capabilities',
-              icon: Zap,
-              permission: Permission.ToolsRead,
+              title: 'Secret Store',
+              url: '/secret-store',
+              icon: Lock,
+              permission: Permission.SecretStoreRead,
+              module: 'scans',
+            },
+          ],
+        },
+        {
+          title: 'Scanning',
+          icon: Radar,
+          permission: Permission.ScansRead,
+          module: 'scans',
+          items: [
+            {
+              title: 'Profiles',
+              url: '/scan-profiles',
+              icon: FileSliders,
+              permission: Permission.ScanProfilesRead,
               module: 'scans',
             },
             {
@@ -614,13 +633,6 @@ export const sidebarData: SidebarData = {
               icon: FolderGit2,
               permission: Permission.TemplateSourcesRead,
               module: 'template_sources',
-            },
-            {
-              title: 'Secret Store',
-              url: '/secret-store',
-              icon: Lock,
-              permission: Permission.SecretStoreRead,
-              module: 'scans',
             },
           ],
         },
