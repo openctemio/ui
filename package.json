@@ -67,10 +67,10 @@
     "@radix-ui/react-tabs": "^1.1.21",
     "@radix-ui/react-toggle-group": "^1.1.19",
     "@radix-ui/react-tooltip": "^1.2.16",
-    "@sentry/nextjs": "^10.70.0",
+    "@sentry/nextjs": "^10.73.0",
     "@tanstack/react-table": "^8.21.3",
-    "@uiw/react-md-editor": "^4.1.1",
-    "@xyflow/react": "^12.11.3",
+    "@uiw/react-md-editor": "^4.1.2",
+    "@xyflow/react": "^12.11.6",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
@@ -85,7 +85,7 @@
     "react": "19.2.8",
     "react-day-picker": "^9.14.0",
     "react-dom": "19.2.8",
-    "react-hook-form": "^7.85.0",
+    "react-hook-form": "^7.87.0",
     "react-resizable-panels": "^3.0.6",
     "recharts": "^3.10.1",
     "sonner": "^2.0.8",
@@ -110,7 +110,7 @@
     "babel-plugin-react-compiler": "1.0.0",
     "eslint": "^9",
     "eslint-config-next": "^16.3.3",
-    "happy-dom": "^20.11.6",
+    "happy-dom": "^20.12.2",
     "husky": "^9.1.7",
     "jsdom": "^27.3.0",
     "lint-staged": "^16.4.0",
@@ -124,6 +124,6 @@
   },
   "overrides": {
     "postcss": "^8.5.20",
-    "sharp": "^0.35.3"
+    "sharp": "^0.35.4"
   }
 }
