@@ -110,7 +110,7 @@
     "babel-plugin-react-compiler": "1.0.0",
     "eslint": "^9",
     "eslint-config-next": "^16.3.3",
-    "happy-dom": "^20.12.2",
+    "happy-dom": "^20.14.0",
     "husky": "^9.1.7",
     "jsdom": "^27.3.0",
     "lint-staged": "^16.4.0",
