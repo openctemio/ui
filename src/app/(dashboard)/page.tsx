@@ -2,7 +2,18 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { Plus, ChevronDown, Check, Star, LayoutGrid, Settings2, Trash2, Pencil } from 'lucide-react'
+import {
+  Plus,
+  ChevronDown,
+  Check,
+  Star,
+  LayoutGrid,
+  Settings2,
+  Trash2,
+  Pencil,
+  RefreshCw,
+} from 'lucide-react'
+import { useSWRConfig } from 'swr'
 
 import { Main } from '@/components/layout'
 import { Button } from '@/components/ui/button'
@@ -41,10 +52,31 @@ const BUILTIN_LABEL: Record<string, string> = { ctem: 'CTEM', classic: 'Classic'
 export default function Dashboard() {
   const { data, isLoading } = useMyDashboards()
   const revalidate = useRevalidateDashboards()
+  const { mutate } = useSWRConfig()
   const custom = useMemo(() => data?.data ?? [], [data])
 
   const [active, setActive] = useState<string>('ctem')
   const [restored, setRestored] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
+
+  // Refresh all — re-fetch every dashboard/finding/stats query on the page (the
+  // widgets self-fetch via SWR, so revalidating their keys refreshes the view).
+  const refreshAll = async () => {
+    setRefreshing(true)
+    try {
+      await mutate(
+        (key) =>
+          typeof key === 'string' &&
+          (key.includes('/dashboard') ||
+            key.includes('/findings') ||
+            key.includes('/me/dashboards')),
+        undefined,
+        { revalidate: true }
+      )
+    } finally {
+      setRefreshing(false)
+    }
+  }
 
   // Resolve the initial view once dashboards have loaded: a persisted choice wins,
   // else the user's default custom dashboard, else CTEM.
@@ -109,6 +141,12 @@ export default function Dashboard() {
           description="Continuous threat exposure — what's exploitable now, and what to do about it."
         >
           <div className="flex items-center gap-2">
+            {/* Refresh all */}
+            <Button variant="outline" size="sm" onClick={refreshAll} disabled={refreshing}>
+              <RefreshCw className={'me-2 h-4 w-4' + (refreshing ? ' animate-spin' : '')} />
+              Refresh
+            </Button>
+
             {/* Switch Dashboard */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -168,6 +206,11 @@ export default function Dashboard() {
                 {activeCustom && (
                   <>
                     <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link href="/dashboards">
+                        <Plus className="me-2 h-4 w-4" /> Add widget
+                      </Link>
+                    </DropdownMenuItem>
                     <DropdownMenuItem asChild>
                       <Link href="/dashboards">
                         <Pencil className="me-2 h-4 w-4" /> Edit “{activeCustom.name}”
