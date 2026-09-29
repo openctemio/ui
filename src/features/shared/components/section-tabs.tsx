@@ -1,12 +1,16 @@
 'use client'
 
+import * as React from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { TAB_CLASS, TAB_STRIP_CLASS, useTabStripScroll } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
 
 export interface SectionTab {
   label: string
   href: string
+  /** Optional icon shown before the label. */
+  icon?: React.ElementType
   /** Optional: also mark active when the pathname starts with this prefix. */
   matchPrefix?: string
 }
@@ -14,36 +18,44 @@ export interface SectionTab {
 interface SectionTabsProps {
   tabs: SectionTab[]
   className?: string
+  /** Accessible name for the tab navigation. */
+  label?: string
 }
 
 /**
- * A horizontal tab strip of route links for a section with multiple related
- * sub-views (e.g. Remediation → Tasks | Solution Families). Consolidates what
- * would otherwise be several near-duplicate top-level sidebar entries into one
- * nav item with in-page tabs. Active tab is derived from the current pathname.
+ * Tabs whose items are routes (e.g. Remediation → Tasks | Solution families,
+ * Account → Profile | Security | …). Looks and scrolls exactly like `TabsList`:
+ * one underline strip, swipeable when the tabs do not fit, with the active tab
+ * kept in view. The active tab is derived from the pathname; the most specific
+ * match wins, so `/account` is not active on `/account/security`.
  */
-export function SectionTabs({ tabs, className }: SectionTabsProps) {
+export function SectionTabs({ tabs, className, label = 'Sections' }: SectionTabsProps) {
   const pathname = usePathname()
+  const ref = React.useRef<HTMLElement>(null)
+  useTabStripScroll(ref)
+
+  const matches = (tab: SectionTab) =>
+    pathname === tab.href ||
+    (tab.matchPrefix ? pathname.startsWith(tab.matchPrefix) : false) ||
+    pathname.startsWith(`${tab.href}/`)
+  const active = tabs.filter(matches).sort((a, b) => b.href.length - a.href.length)[0]?.href
+
   return (
-    <div className={cn('border-border/60 mb-6 flex gap-1 border-b', className)}>
+    <nav ref={ref} aria-label={label} className={cn(TAB_STRIP_CLASS, 'mb-5', className)}>
       {tabs.map((tab) => {
-        const active =
-          pathname === tab.href || (tab.matchPrefix ? pathname.startsWith(tab.matchPrefix) : false)
+        const Icon = tab.icon
         return (
           <Link
             key={tab.href}
             href={tab.href}
-            className={cn(
-              '-mb-px border-b-2 px-3 py-2 text-sm font-medium transition-colors',
-              active
-                ? 'border-primary text-foreground'
-                : 'text-muted-foreground hover:text-foreground border-transparent'
-            )}
+            aria-current={tab.href === active ? 'page' : undefined}
+            className={TAB_CLASS}
           >
+            {Icon && <Icon aria-hidden />}
             {tab.label}
           </Link>
         )
       })}
-    </div>
+    </nav>
   )
 }
