@@ -1501,6 +1501,8 @@ function FindingsContent() {
     </FacetPanel>
   )
 
+  const facetPanelScrollable = <div className="flex min-h-0 flex-1 flex-col">{facetPanel}</div>
+
   const total = findingsResponse?.total ?? 0
   const rangeStart = total === 0 ? 0 : pagination.pageIndex * pagination.pageSize + 1
   const rangeEnd = Math.min(total, pagination.pageIndex * pagination.pageSize + findings.length)
@@ -1646,17 +1648,17 @@ function FindingsContent() {
           <>
             <MetricStrip className="mt-5" loading={isInitialLoading} items={metrics} />
 
-            {/* Stretch (not items-start): the filter column runs the full height of
-                the list with its divider, so it reads as part of the table rather
-                than a panel floating beside it. */}
-            <div className="mt-5 flex gap-5">
+            <div className="mt-5 flex items-start gap-5">
               {filtersOpen && (
                 <aside
                   id="finding-filters"
                   aria-label="Finding filters"
-                  className="hidden w-60 shrink-0 border-e pe-5 lg:block"
+                  // A self-contained floating card, as tall as the viewport and
+                  // pinned while the page scrolls: its length no longer depends
+                  // on the table's, and long filter lists scroll inside it.
+                  className="sticky top-4 hidden h-[calc(100svh-7.5rem)] w-64 shrink-0 flex-col rounded-xl border bg-card p-4 shadow-sm lg:flex"
                 >
-                  {facetPanel}
+                  {facetPanelScrollable}
                 </aside>
               )}
 
