@@ -23,24 +23,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import {
-  Bot,
-  Plug,
-  ShieldCheck,
-  Copy,
-  Check,
-  Loader2,
-  KeyRound,
-  AlertTriangle,
-  FileText,
-  Sparkles,
-} from 'lucide-react'
+import { ShieldCheck, Copy, Check, Loader2, KeyRound, AlertTriangle, Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
 import { copyToClipboard } from '@/lib/clipboard'
 import { getErrorMessage } from '@/lib/api/error-handler'
 import { useCreateApiKey } from '@/features/api-keys/api/use-api-keys'
 import type { CreateAPIKeyResponse } from '@/features/api-keys/types/api-key.types'
-import { Can, Permission } from '@/lib/permissions'
+import { Can, Permission, useHasPermission } from '@/lib/permissions'
 
 // A minted MCP key carries exactly the read scopes below — nothing more. The
 // user picks the key's purpose so it maps to what the server's MCP tools/prompts
@@ -116,6 +105,7 @@ export default function MCPConnectPage() {
   const [expiry, setExpiry] = useState('90')
   const [created, setCreated] = useState<CreateAPIKeyResponse | null>(null)
   const { trigger, isMutating } = useCreateApiKey()
+  const canWriteKeys = useHasPermission(Permission.ApiKeysWrite)
 
   const activePreset = KEY_PRESETS[preset]
 
@@ -178,16 +168,21 @@ export default function MCPConnectPage() {
   return (
     <Main>
       <PageHeader
-        title="AI Access (MCP)"
+        title="AI access (MCP)"
         description="Connect Claude (Desktop, Code, or any MCP client) to this tenant's CTEM data — read-only."
-      />
+      >
+        <Can permission={Permission.ApiKeysWrite}>
+          <Button size="sm" onClick={() => setDialogOpen(true)}>
+            <KeyRound className="me-2 h-4 w-4" />
+            Generate connection key
+          </Button>
+        </Can>
+      </PageHeader>
 
-      <div className="grid gap-6">
+      <div className="mt-5 space-y-5">
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Bot className="h-5 w-5" /> What is MCP?
-            </CardTitle>
+            <CardTitle>What is MCP?</CardTitle>
             <CardDescription>
               The Model Context Protocol lets an AI assistant query your data through defined tools.
               This server exposes <strong>read-only</strong> access to findings,
@@ -211,9 +206,7 @@ export default function MCPConnectPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Plug className="h-5 w-5" /> Connect a client
-            </CardTitle>
+            <CardTitle>Connect a client</CardTitle>
             <CardDescription>
               Pick the key&apos;s purpose, generate a connection key, then add this configuration to
               your MCP client. The key is scoped to exactly the read permissions above and is bound
@@ -221,24 +214,16 @@ export default function MCPConnectPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Can
-              permission={Permission.ApiKeysWrite}
-              fallback={
-                <p className="text-muted-foreground text-sm">
-                  You need the API-keys permission to generate a connection key.
-                </p>
-              }
-            >
-              <Button onClick={() => setDialogOpen(true)}>
-                <KeyRound className="h-4 w-4" />
-                <span className="ml-1.5">Generate connection key</span>
-              </Button>
-            </Can>
+            {!canWriteKeys && (
+              <p className="text-muted-foreground text-sm">
+                You need the API-keys permission to generate a connection key.
+              </p>
+            )}
 
             {created ? (
               <div className="border-primary/40 bg-primary/5 space-y-3 rounded-md border p-4">
                 <div className="flex items-start gap-2 text-sm">
-                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                   <p>
                     Copy your key now — for security it is shown <strong>only once</strong>. It is
                     already embedded in the configuration below.
@@ -269,9 +254,7 @@ export default function MCPConnectPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5" /> Write pentest reports with MCP
-            </CardTitle>
+            <CardTitle>Write pentest reports with MCP</CardTitle>
             <CardDescription>
               Connect a <strong>Pentest report writing</strong> key, then draft report sections
               inside your MCP client (Claude Desktop, Code, or Cursor) and paste them back into the
