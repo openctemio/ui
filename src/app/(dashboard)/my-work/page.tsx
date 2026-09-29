@@ -144,7 +144,7 @@ export default function MyWorkPage() {
                           </span>
                         )}
                         {slaWarn && (
-                          <span className="rounded-full bg-amber-500/10 px-1.5 py-0.5 font-medium text-amber-600 dark:text-amber-500">
+                          <span className="rounded-full bg-muted px-1.5 py-0.5 font-medium text-muted-foreground">
                             Due soon
                           </span>
                         )}
