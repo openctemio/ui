@@ -19,7 +19,18 @@ import {
 import '@xyflow/react/dist/style.css'
 
 import { Main } from '@/components/layout'
-import { EmptyState, PageHeader, SheetBody } from '@/features/shared'
+import type { ColumnDef } from '@tanstack/react-table'
+import {
+  DataTable,
+  DataTableColumnHeader,
+  EmptyState,
+  MetricStrip,
+  PageHeader,
+  RunStatusBadge,
+  SheetBody,
+} from '@/features/shared'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { useUrlFilter } from '@/hooks/use-url-param'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -49,7 +60,6 @@ import {
   Workflow as WorkflowIcon,
   Play,
   Plus,
-  CheckCircle,
   XCircle,
   Zap,
   GitBranch,
@@ -96,21 +106,6 @@ import type {
   CreateEdgeRequest,
   WorkflowNodeType,
 } from '@/lib/api/workflow-types'
-
-// Status configuration
-const statusConfig: Record<string, { color: string; bgColor: string; label: string }> = {
-  active: { color: 'text-green-400', bgColor: 'bg-green-500/20', label: 'Active' },
-  inactive: { color: 'text-yellow-400', bgColor: 'bg-yellow-500/20', label: 'Inactive' },
-  paused: { color: 'text-yellow-400', bgColor: 'bg-yellow-500/20', label: 'Paused' },
-}
-
-const runStatusConfig: Record<string, { color: string; bgColor: string }> = {
-  pending: { color: 'text-yellow-400', bgColor: 'bg-yellow-500/20' },
-  running: { color: 'text-blue-400', bgColor: 'bg-blue-500/20' },
-  completed: { color: 'text-green-400', bgColor: 'bg-green-500/20' },
-  failed: { color: 'text-red-400', bgColor: 'bg-red-500/20' },
-  cancelled: { color: 'text-gray-400', bgColor: 'bg-gray-500/20' },
-}
 
 // Custom Node Components
 function TriggerNode({ data }: NodeProps) {
@@ -416,12 +411,14 @@ function WorkflowTriggerButton({
   return (
     <DropdownMenuItem onClick={handleRun} disabled={isMutating}>
       <Play className="me-2 h-4 w-4" />
-      {isMutating ? 'Running...' : 'Run Now'}
+      {isMutating ? 'Running...' : 'Run now'}
     </DropdownMenuItem>
   )
 }
 
 export default function WorkflowsPage() {
+  // Active tab in the URL (?tab=) so a reload or shared link keeps the view.
+  const [tab, setTab] = useUrlFilter('tab', 'workflows')
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes)
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)
   const [selectedWorkflow, setSelectedWorkflow] = useState<Workflow | null>(null)
@@ -700,8 +697,8 @@ export default function WorkflowsPage() {
       setEdges([])
     }
     setSelectedWorkflow(null)
-    // Switch to builder tab (user needs to click manually for now)
-    toast.info(`Loaded "${workflow.name}" into builder. Switch to Visual Builder tab to edit.`)
+    setTab('builder')
+    toast.info(`Loaded "${workflow.name}" into the builder.`)
   }
 
   const _handleNewInBuilder = () => {
@@ -749,308 +746,323 @@ export default function WorkflowsPage() {
     }
   }
 
+  const workflows = workflowsData?.items ?? []
+  const runs = runsData?.items ?? []
+  const workflowNameById = new Map(workflows.map((w) => [w.id, w.name]))
+
+  const workflowColumns: ColumnDef<Workflow>[] = [
+    {
+      accessorKey: 'name',
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Workflow" />,
+      cell: ({ row }) => (
+        <div className="min-w-0 max-w-[360px]">
+          <p className="truncate text-sm font-medium">{row.original.name}</p>
+          {row.original.description && (
+            <p className="truncate text-xs text-muted-foreground">{row.original.description}</p>
+          )}
+        </div>
+      ),
+    },
+    {
+      id: 'status',
+      accessorFn: (w) => (w.is_active ? 'active' : 'inactive'),
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
+      cell: ({ row }) => (
+        <Badge variant={row.original.is_active ? 'default' : 'secondary'}>
+          {row.original.is_active ? 'Active' : 'Inactive'}
+        </Badge>
+      ),
+    },
+    {
+      id: 'trigger',
+      enableSorting: false,
+      header: 'Trigger',
+      cell: ({ row }) => (
+        <span className="whitespace-nowrap text-sm text-muted-foreground">
+          {getTriggerDisplay(row.original)}
+        </span>
+      ),
+    },
+    {
+      id: 'actions_list',
+      enableSorting: false,
+      header: 'Steps',
+      cell: ({ row }) => {
+        const actions = getActionNames(row.original)
+        if (actions.length === 0) return <span className="text-sm text-muted-foreground">—</span>
+        return (
+          <div className="flex flex-wrap gap-1">
+            {actions.slice(0, 2).map((action, idx) => (
+              <Badge key={idx} variant="outline" className="text-xs">
+                {action}
+              </Badge>
+            ))}
+            {actions.length > 2 && (
+              <Badge variant="outline" className="text-xs">
+                +{actions.length - 2}
+              </Badge>
+            )}
+          </div>
+        )
+      },
+    },
+    {
+      accessorKey: 'total_runs',
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Runs" />,
+      cell: ({ row }) => {
+        const w = row.original
+        const rate = w.total_runs > 0 ? Math.round((w.successful_runs / w.total_runs) * 100) : 0
+        return (
+          <span className="whitespace-nowrap text-sm tabular-nums">
+            {w.total_runs}
+            {w.total_runs > 0 && (
+              <span className="ms-1 text-muted-foreground">({rate}% success)</span>
+            )}
+          </span>
+        )
+      },
+    },
+    {
+      accessorKey: 'last_run_at',
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Last run" />,
+      cell: ({ row }) => (
+        <span className="whitespace-nowrap text-sm text-muted-foreground">
+          {row.original.last_run_at ? formatRelativeTime(row.original.last_run_at) : 'Never'}
+        </span>
+      ),
+    },
+    {
+      id: 'enabled',
+      enableSorting: false,
+      header: 'Enabled',
+      cell: ({ row }) => (
+        <div onClick={(e) => e.stopPropagation()}>
+          <Switch
+            checked={row.original.is_active}
+            onCheckedChange={(checked) => handleToggleWorkflow(row.original, checked)}
+            aria-label={row.original.is_active ? 'Deactivate workflow' : 'Activate workflow'}
+          />
+        </div>
+      ),
+    },
+    {
+      id: 'actions',
+      enableHiding: false,
+      cell: ({ row }) => {
+        const workflow = row.original
+        return (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0"
+                aria-label={`Actions for ${workflow.name}`}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+              <DropdownMenuItem onClick={() => handleViewWorkflow(workflow)}>
+                <Eye className="me-2 h-4 w-4" />
+                View details
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleEditInBuilder(workflow)}>
+                <Pencil className="me-2 h-4 w-4" />
+                Edit in builder
+              </DropdownMenuItem>
+              <WorkflowTriggerButton workflowId={workflow.id} workflowName={workflow.name} />
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => handleDuplicateWorkflow(workflow)}>
+                <Copy className="me-2 h-4 w-4" />
+                Duplicate
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive"
+                onClick={() => handleDeleteWorkflow(workflow)}
+                disabled={isDeleting && deleteWorkflowId === workflow.id}
+              >
+                <Trash2 className="me-2 h-4 w-4" />
+                {isDeleting && deleteWorkflowId === workflow.id ? 'Deleting...' : 'Delete'}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )
+      },
+    },
+  ]
+
+  const runColumns: ColumnDef<WorkflowRun>[] = [
+    {
+      id: 'workflow',
+      accessorFn: (run) => workflowNameById.get(run.workflow_id) ?? 'Workflow run',
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Workflow" />,
+      cell: ({ getValue }) => <span className="text-sm font-medium">{getValue<string>()}</span>,
+    },
+    {
+      accessorKey: 'status',
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
+      cell: ({ row }) => <RunStatusBadge status={row.original.status} />,
+    },
+    {
+      id: 'nodes',
+      enableSorting: false,
+      header: 'Nodes',
+      cell: ({ row }) => (
+        <span className="whitespace-nowrap text-sm tabular-nums">
+          {row.original.completed_nodes}/{row.original.total_nodes}
+          {row.original.failed_nodes > 0 && (
+            <span className="ms-1.5 text-destructive">({row.original.failed_nodes} failed)</span>
+          )}
+        </span>
+      ),
+    },
+    {
+      id: 'duration',
+      enableSorting: false,
+      header: 'Duration',
+      cell: ({ row }) => {
+        const run = row.original
+        const duration =
+          run.started_at && run.completed_at
+            ? `${((new Date(run.completed_at).getTime() - new Date(run.started_at).getTime()) / 1000).toFixed(1)}s`
+            : run.started_at
+              ? 'Running…'
+              : '—'
+        return <span className="text-sm tabular-nums text-muted-foreground">{duration}</span>
+      },
+    },
+    {
+      accessorKey: 'created_at',
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Started" />,
+      cell: ({ row }) => (
+        <span className="whitespace-nowrap text-sm text-muted-foreground">
+          {formatRelativeTime(row.original.created_at)}
+        </span>
+      ),
+    },
+  ]
+
+  const tableSkeleton = (
+    <div className="space-y-px overflow-hidden rounded-xl border">
+      {[1, 2, 3, 4].map((i) => (
+        <Skeleton key={i} className="h-12 w-full rounded-none" />
+      ))}
+    </div>
+  )
+
   return (
     <>
       <Main>
         <PageHeader
-          title="Automation Workflows"
-          description="Create and manage automated security response workflows"
+          title="Workflows"
+          description="Automated responses that run when a trigger fires — notify, assign, open tickets."
         >
           <Can permission={Permission.WorkflowsWrite} mode="disable">
-            <Button onClick={() => setIsCreateDialogOpen(true)}>
+            <Button size="sm" onClick={() => setIsCreateDialogOpen(true)}>
               <Plus className="me-2 h-4 w-4" />
-              New Workflow
+              New workflow
             </Button>
           </Can>
         </PageHeader>
 
-        {/* Stats */}
-        <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription className="flex items-center gap-2">
-                <WorkflowIcon className="h-4 w-4" />
-                Total Workflows
-              </CardDescription>
-              {workflowsLoading ? (
-                <Skeleton className="h-9 w-16" />
-              ) : (
-                <CardTitle className="text-3xl">{workflowStats.totalWorkflows}</CardTitle>
-              )}
-            </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription className="flex items-center gap-2">
-                <Play className="h-4 w-4" />
-                Active
-              </CardDescription>
-              {workflowsLoading ? (
-                <Skeleton className="h-9 w-16" />
-              ) : (
-                <CardTitle className="text-3xl text-green-500">{workflowStats.active}</CardTitle>
-              )}
-            </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription className="flex items-center gap-2">
-                <Zap className="h-4 w-4" />
-                Total Triggered
-              </CardDescription>
-              {workflowsLoading ? (
-                <Skeleton className="h-9 w-16" />
-              ) : (
-                <CardTitle className="text-3xl">{workflowStats.triggered}</CardTitle>
-              )}
-            </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription className="flex items-center gap-2">
-                <CheckCircle className="h-4 w-4" />
-                Success Rate
-              </CardDescription>
-              {workflowsLoading ? (
-                <Skeleton className="h-9 w-16" />
-              ) : (
-                <CardTitle className="text-3xl text-green-500">
-                  {workflowStats.successRate}%
-                </CardTitle>
-              )}
-            </CardHeader>
-          </Card>
-        </div>
-
-        <Tabs defaultValue="workflows" className="mt-6">
+        <Tabs value={tab} onValueChange={setTab} className="mt-4">
           <TabsList>
             <TabsTrigger value="workflows">Workflows</TabsTrigger>
-            <TabsTrigger value="executions">Recent Executions</TabsTrigger>
-            <TabsTrigger value="builder">Visual Builder</TabsTrigger>
+            <TabsTrigger value="executions">Recent executions</TabsTrigger>
+            <TabsTrigger value="builder">Visual builder</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="workflows">
-            <Card className="mt-4">
-              <CardHeader>
-                <CardTitle>Configured Workflows</CardTitle>
-                <CardDescription>Manage your automation workflows</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {workflowsLoading ? (
-                  <div className="space-y-4">
-                    {[1, 2, 3].map((i) => (
-                      <div key={i} className="rounded-lg border p-4">
-                        <Skeleton className="h-6 w-48 mb-2" />
-                        <Skeleton className="h-4 w-96 mb-2" />
-                        <Skeleton className="h-4 w-64" />
-                      </div>
-                    ))}
-                  </div>
-                ) : workflowsError ? (
-                  <div className="flex flex-col items-center justify-center py-12 text-center">
-                    <AlertCircle className="h-12 w-12 text-destructive mb-4" />
-                    <p className="text-lg font-medium">Failed to load workflows</p>
-                    <p className="text-muted-foreground">Please try again later</p>
-                  </div>
-                ) : !workflowsData?.items || workflowsData.items.length === 0 ? (
-                  <EmptyState
-                    card={false}
-                    icon={WorkflowIcon}
-                    title="No workflows yet"
-                    description="Create your first automation workflow"
-                    action={
-                      <Button onClick={() => setIsCreateDialogOpen(true)}>
-                        <Plus className="me-2 h-4 w-4" />
-                        Create Workflow
-                      </Button>
-                    }
-                  />
-                ) : (
-                  <div className="space-y-4">
-                    {workflowsData.items.map((workflow) => {
-                      const status = workflow.is_active
-                        ? statusConfig['active']
-                        : statusConfig['inactive']
-                      const successRate =
-                        workflow.total_runs > 0
-                          ? Math.round((workflow.successful_runs / workflow.total_runs) * 100)
-                          : 0
-                      return (
-                        <div
-                          key={workflow.id}
-                          className="flex items-start justify-between rounded-lg border p-4 hover:bg-muted/50 transition-colors"
-                        >
-                          <div className="flex-1 space-y-2">
-                            <div className="flex items-center gap-3">
-                              <h4 className="font-medium">{workflow.name}</h4>
-                              <Badge className={`${status.bgColor} ${status.color} border-0`}>
-                                {status.label}
-                              </Badge>
-                            </div>
-                            <p className="text-muted-foreground text-sm">
-                              {workflow.description || 'No description'}
-                            </p>
-                            <div className="flex flex-wrap items-center gap-4 text-xs">
-                              <span className="text-muted-foreground flex items-center gap-1">
-                                <Zap className="h-3 w-3" />
-                                {getTriggerDisplay(workflow)}
-                              </span>
-                              {workflow.last_run_at && (
-                                <span className="text-muted-foreground flex items-center gap-1">
-                                  <Clock className="h-3 w-3" />
-                                  Last: {formatRelativeTime(workflow.last_run_at)}
-                                </span>
-                              )}
-                              <span className="text-muted-foreground">
-                                {workflow.total_runs} runs ({successRate}% success)
-                              </span>
-                            </div>
-                            <div className="flex flex-wrap gap-1">
-                              {getActionNames(workflow)
-                                .slice(0, 3)
-                                .map((action, idx) => (
-                                  <Badge key={idx} variant="outline" className="text-xs">
-                                    {action}
-                                  </Badge>
-                                ))}
-                              {getActionNames(workflow).length > 3 && (
-                                <Badge variant="outline" className="text-xs">
-                                  +{getActionNames(workflow).length - 3} more
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                          <div className="flex flex-wrap items-center gap-2">
-                            <Switch
-                              checked={workflow.is_active}
-                              onCheckedChange={(checked) => handleToggleWorkflow(workflow, checked)}
-                            />
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => handleViewWorkflow(workflow)}>
-                                  <Eye className="me-2 h-4 w-4" />
-                                  View Details
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleEditInBuilder(workflow)}>
-                                  <Pencil className="me-2 h-4 w-4" />
-                                  Edit in Builder
-                                </DropdownMenuItem>
-                                <WorkflowTriggerButton
-                                  workflowId={workflow.id}
-                                  workflowName={workflow.name}
-                                />
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem onClick={() => handleDuplicateWorkflow(workflow)}>
-                                  <Copy className="me-2 h-4 w-4" />
-                                  Duplicate
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  className="text-red-400"
-                                  onClick={() => handleDeleteWorkflow(workflow)}
-                                  disabled={isDeleting && deleteWorkflowId === workflow.id}
-                                >
-                                  <Trash2 className="me-2 h-4 w-4" />
-                                  {isDeleting && deleteWorkflowId === workflow.id
-                                    ? 'Deleting...'
-                                    : 'Delete'}
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+          <TabsContent value="workflows" className="mt-5 space-y-5">
+            {/* Counts other than the total cover the loaded page (per_page 50);
+                there is no /workflows/stats endpoint yet. */}
+            <MetricStrip
+              loading={workflowsLoading}
+              items={[
+                { key: 'total', label: 'Workflows', value: workflowStats.totalWorkflows },
+                { key: 'active', label: 'Active', value: workflowStats.active },
+                { key: 'runs', label: 'Total runs', value: workflowStats.triggered },
+                {
+                  key: 'success',
+                  label: 'Success rate',
+                  value: workflowStats.triggered > 0 ? `${workflowStats.successRate}%` : '—',
+                },
+              ]}
+            />
+            {workflowsLoading ? (
+              tableSkeleton
+            ) : workflowsError ? (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Failed to load workflows</AlertTitle>
+                <AlertDescription className="flex flex-wrap items-center gap-3">
+                  <span>{getErrorMessage(workflowsError, 'Please try again.')}</span>
+                  <Button variant="outline" size="sm" onClick={() => invalidateWorkflowsCache()}>
+                    <RefreshCw className="me-2 h-4 w-4" />
+                    Retry
+                  </Button>
+                </AlertDescription>
+              </Alert>
+            ) : workflows.length === 0 ? (
+              <EmptyState
+                icon={WorkflowIcon}
+                title="No workflows yet"
+                description="Create your first automation workflow."
+                action={
+                  <Can permission={Permission.WorkflowsWrite} mode="disable">
+                    <Button size="sm" onClick={() => setIsCreateDialogOpen(true)}>
+                      <Plus className="me-2 h-4 w-4" />
+                      Create workflow
+                    </Button>
+                  </Can>
+                }
+              />
+            ) : (
+              <DataTable
+                columns={workflowColumns}
+                data={workflows}
+                searchKey="name"
+                searchPlaceholder="Search workflows..."
+                getRowId={(w) => w.id}
+                onRowClick={handleViewWorkflow}
+                emptyMessage="No workflows match"
+              />
+            )}
           </TabsContent>
 
-          <TabsContent value="executions">
-            <Card className="mt-4">
-              <CardHeader>
-                <CardTitle>Recent Executions</CardTitle>
-                <CardDescription>Latest workflow runs and their status</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {runsLoading ? (
-                  <div className="space-y-3">
-                    {[1, 2, 3, 4].map((i) => (
-                      <div key={i} className="rounded-lg border p-4">
-                        <Skeleton className="h-5 w-48 mb-2" />
-                        <Skeleton className="h-4 w-32" />
-                      </div>
-                    ))}
-                  </div>
-                ) : !runsData?.items || runsData.items.length === 0 ? (
-                  <EmptyState
-                    card={false}
-                    icon={Clock}
-                    title="No executions yet"
-                    description="Run a workflow to see execution history"
-                  />
-                ) : (
-                  <div className="space-y-3">
-                    {runsData.items.map((run: WorkflowRun) => {
-                      const runStatus = runStatusConfig[run.status] || runStatusConfig['pending']
-                      const duration =
-                        run.started_at && run.completed_at
-                          ? `${((new Date(run.completed_at).getTime() - new Date(run.started_at).getTime()) / 1000).toFixed(1)}s`
-                          : run.started_at
-                            ? 'Running...'
-                            : 'Pending'
-                      return (
-                        <div
-                          key={run.id}
-                          className="flex items-center justify-between rounded-lg border p-4"
-                        >
-                          <div className="space-y-1">
-                            <p className="font-medium">Workflow Run</p>
-                            <div className="text-muted-foreground flex items-center gap-2 text-sm">
-                              <Clock className="h-4 w-4" />
-                              <span>{duration}</span>
-                              <span>-</span>
-                              <span>{formatRelativeTime(run.created_at)}</span>
-                            </div>
-                            <div className="text-muted-foreground text-xs">
-                              {run.completed_nodes}/{run.total_nodes} nodes completed
-                              {run.failed_nodes > 0 && (
-                                <span className="text-red-400 ms-2">
-                                  ({run.failed_nodes} failed)
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          <Badge className={`${runStatus.bgColor} ${runStatus.color} border-0`}>
-                            {run.status === 'completed' ? (
-                              <CheckCircle className="me-1 h-3 w-3" />
-                            ) : run.status === 'failed' ? (
-                              <XCircle className="me-1 h-3 w-3" />
-                            ) : null}
-                            {run.status}
-                          </Badge>
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+          <TabsContent value="executions" className="mt-5">
+            {runsLoading ? (
+              tableSkeleton
+            ) : runs.length === 0 ? (
+              <EmptyState
+                icon={Clock}
+                title="No executions yet"
+                description="Run a workflow to see its execution history here."
+              />
+            ) : (
+              <DataTable
+                columns={runColumns}
+                data={runs}
+                showSearch={false}
+                showColumnToggle={false}
+                showPagination={false}
+                getRowId={(r) => r.id}
+                toolbarStart={
+                  <span className="text-sm text-muted-foreground">Latest {runs.length} runs</span>
+                }
+              />
+            )}
           </TabsContent>
 
-          <TabsContent value="builder">
-            <Card className="mt-4">
+          <TabsContent value="builder" className="mt-5">
+            <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle className="flex items-center gap-2">
-                      Visual Workflow Builder
+                      Visual workflow builder
                       {editingWorkflow && (
                         <Badge variant="secondary" className="font-normal">
                           Editing: {editingWorkflow.name}
@@ -1091,7 +1103,7 @@ export default function WorkflowsPage() {
                     </Button>
                     <Button size="sm" onClick={handleSaveWorkflow} disabled={isSaving}>
                       <Save className="me-2 h-4 w-4" />
-                      {isSaving ? 'Saving...' : editingWorkflow ? 'Save Changes' : 'Save Workflow'}
+                      {isSaving ? 'Saving...' : editingWorkflow ? 'Save changes' : 'Save workflow'}
                     </Button>
                   </div>
                 </div>
@@ -1137,7 +1149,7 @@ export default function WorkflowsPage() {
 
                     <Separator className="my-4" />
 
-                    <h4 className="font-medium mb-4">Quick Actions</h4>
+                    <h4 className="font-medium mb-4">Quick actions</h4>
                     <div className="space-y-2 text-sm text-muted-foreground">
                       <p>Drag components to the canvas to build your workflow.</p>
                       <p>Connect nodes by dragging from one handle to another.</p>
@@ -1197,9 +1209,7 @@ export default function WorkflowsPage() {
             {selectedWorkflow && (
               <div className="mt-6 space-y-6">
                 <div className="flex flex-wrap items-center gap-2">
-                  <Badge
-                    className={`${selectedWorkflow.is_active ? statusConfig['active'].bgColor : statusConfig['inactive'].bgColor} ${selectedWorkflow.is_active ? statusConfig['active'].color : statusConfig['inactive'].color} border-0`}
-                  >
+                  <Badge variant={selectedWorkflow.is_active ? 'default' : 'secondary'}>
                     {selectedWorkflow.is_active ? 'Active' : 'Inactive'}
                   </Badge>
                   <Badge variant="outline">{selectedWorkflow.total_runs} runs</Badge>
@@ -1218,7 +1228,7 @@ export default function WorkflowsPage() {
                 <div className="space-y-2">
                   <Label className="text-muted-foreground">Trigger</Label>
                   <div className="flex items-center gap-2 p-3 rounded-lg border">
-                    <Zap className="h-4 w-4 text-green-500" />
+                    <Zap className="h-4 w-4 text-muted-foreground" />
                     <span>{getTriggerDisplay(selectedWorkflow)}</span>
                   </div>
                 </div>
@@ -1229,7 +1239,7 @@ export default function WorkflowsPage() {
                     {getActionNames(selectedWorkflow).length > 0 ? (
                       getActionNames(selectedWorkflow).map((action, idx) => (
                         <div key={idx} className="flex items-center gap-2 p-3 rounded-lg border">
-                          <Play className="h-4 w-4 text-blue-500" />
+                          <Play className="h-4 w-4 text-muted-foreground" />
                           <span>{action}</span>
                         </div>
                       ))
@@ -1256,11 +1266,11 @@ export default function WorkflowsPage() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="rounded-lg border p-4 text-center">
-                    <p className="text-2xl font-bold">{selectedWorkflow.total_runs}</p>
-                    <p className="text-xs text-muted-foreground">Total Runs</p>
+                    <p className="text-2xl font-bold tabular-nums">{selectedWorkflow.total_runs}</p>
+                    <p className="text-xs text-muted-foreground">Total runs</p>
                   </div>
                   <div className="rounded-lg border p-4 text-center">
-                    <p className="text-2xl font-bold text-green-500">
+                    <p className="text-2xl font-bold tabular-nums">
                       {selectedWorkflow.total_runs > 0
                         ? Math.round(
                             (selectedWorkflow.successful_runs / selectedWorkflow.total_runs) * 100
@@ -1268,7 +1278,7 @@ export default function WorkflowsPage() {
                         : 0}
                       %
                     </p>
-                    <p className="text-xs text-muted-foreground">Success Rate</p>
+                    <p className="text-xs text-muted-foreground">Success rate</p>
                   </div>
                 </div>
 
@@ -1289,7 +1299,7 @@ export default function WorkflowsPage() {
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Create New Workflow</DialogTitle>
+            <DialogTitle>Create workflow</DialogTitle>
             <DialogDescription>
               Create a new automation workflow. You can add nodes and configure triggers in the
               visual builder after creation.
@@ -1321,7 +1331,7 @@ export default function WorkflowsPage() {
               Cancel
             </Button>
             <Button onClick={handleCreateWorkflow} disabled={isCreating || !newWorkflowName.trim()}>
-              {isCreating ? 'Creating...' : 'Create Workflow'}
+              {isCreating ? 'Creating...' : 'Create workflow'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1331,7 +1341,7 @@ export default function WorkflowsPage() {
       <Dialog open={isSaveDialogOpen} onOpenChange={setIsSaveDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Save Workflow</DialogTitle>
+            <DialogTitle>Save workflow</DialogTitle>
             <DialogDescription>
               Save your workflow design. The workflow will include {nodes.length} node(s) and{' '}
               {edges.length} connection(s).
@@ -1358,7 +1368,7 @@ export default function WorkflowsPage() {
               />
             </div>
             <div className="rounded-lg border p-3 bg-muted/50">
-              <p className="text-sm font-medium mb-2">Workflow Summary</p>
+              <p className="text-sm font-medium mb-2">Workflow summary</p>
               <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground">
                 <div>Triggers: {nodes.filter((n) => n.type === 'trigger').length}</div>
                 <div>Conditions: {nodes.filter((n) => n.type === 'condition').length}</div>
@@ -1372,7 +1382,7 @@ export default function WorkflowsPage() {
               Cancel
             </Button>
             <Button onClick={handleSaveNewWorkflow} disabled={isSaving || !saveWorkflowName.trim()}>
-              {isSaving ? 'Saving...' : 'Save Workflow'}
+              {isSaving ? 'Saving...' : 'Save workflow'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1398,7 +1408,7 @@ function WorkflowRunButton({ workflow, className }: { workflow: Workflow; classN
   return (
     <Button className={className} onClick={handleRun} disabled={isMutating}>
       <Play className="me-2 h-4 w-4" />
-      {isMutating ? 'Running...' : 'Run Now'}
+      {isMutating ? 'Running...' : 'Run now'}
     </Button>
   )
 }

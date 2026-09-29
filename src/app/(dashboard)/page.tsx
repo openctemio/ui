@@ -18,6 +18,7 @@ import { useSWRConfig } from 'swr'
 
 import { Main } from '@/components/layout'
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { PageHeader } from '@/features/shared'
 // (Run scan removed from the dashboard header — kept clean; scans live in the Scans nav.)
 import {
@@ -139,17 +140,29 @@ export default function Dashboard() {
 
   return (
     <Main>
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-5">
         <PageHeader
           title="Dashboard"
           description="Continuous threat exposure — what's exploitable now, and what to do about it."
         >
           <div className="flex items-center gap-2">
-            {/* Refresh all */}
-            <Button variant="outline" size="sm" onClick={refreshAll} disabled={refreshing}>
-              <RefreshCw className={'me-2 h-4 w-4' + (refreshing ? ' animate-spin' : '')} />
-              Refresh
-            </Button>
+            {/* Refresh all — icon-only so the header keeps at most two labelled
+                outline buttons (the switcher and Options). */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={refreshAll}
+                  disabled={refreshing}
+                >
+                  <RefreshCw className={'h-4 w-4' + (refreshing ? ' animate-spin' : '')} />
+                  <span className="sr-only">Refresh</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Refresh</TooltipContent>
+            </Tooltip>
 
             {/* Switch Dashboard */}
             <DropdownMenu>

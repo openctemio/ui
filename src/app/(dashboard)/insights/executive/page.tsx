@@ -2,24 +2,31 @@
 
 import { useState } from 'react'
 import useSWR from 'swr'
+import type { ColumnDef } from '@tanstack/react-table'
 import { Main } from '@/components/layout'
-import { PageHeader, StatsCard, EmptyState, formatRiskScore } from '@/features/shared'
+import {
+  PageHeader,
+  StatsCard,
+  EmptyState,
+  DataTable,
+  SeverityBadge,
+  formatRiskScore,
+} from '@/features/shared'
+import { PriorityClassBadge } from '@/features/findings/components/priority-class-badge'
+import type { PriorityClass } from '@/features/findings/types/finding.types'
 import { useTenant } from '@/context/tenant-provider'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Button } from '@/components/ui/button'
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import { cn } from '@/lib/utils'
-import { SEVERITY_BADGE_SOFT, type SeverityLevel } from '@/lib/severity-colors'
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { get } from '@/lib/api/client'
+import type { Severity } from '@/features/shared/types'
 import {
   AlertTriangle,
   CheckCircle2,
@@ -85,35 +92,21 @@ interface ProcessMetrics {
 type Period = '30' | '90' | '365'
 
 const PERIOD_OPTIONS: { value: Period; label: string }[] = [
-  { value: '30', label: '30d' },
-  { value: '90', label: '90d' },
-  { value: '365', label: '1y' },
+  { value: '30', label: 'Last 30 days' },
+  { value: '90', label: 'Last 90 days' },
+  { value: '365', label: 'Last year' },
 ]
+
+const PRIORITY_CLASSES = ['P0', 'P1', 'P2', 'P3']
 
 // ============================================
 // HELPERS
 // ============================================
 
-function getSeverityBadgeClass(severity: string): string {
-  return (
-    SEVERITY_BADGE_SOFT[severity.toLowerCase() as SeverityLevel] ??
-    'bg-muted text-muted-foreground border-muted-foreground/20'
-  )
-}
-
-function getPriorityClassBadgeClass(priorityClass: string): string {
-  switch (priorityClass.toUpperCase()) {
-    case 'P0':
-      return 'bg-red-500/10 text-red-500 border-red-500/20'
-    case 'P1':
-      return 'bg-orange-500/10 text-orange-500 border-orange-500/20'
-    case 'P2':
-      return 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
-    case 'P3':
-      return 'bg-blue-500/10 text-blue-500 border-blue-500/20'
-    default:
-      return 'bg-muted text-muted-foreground border-muted-foreground/20'
-  }
+function PriorityChip({ value }: { value: string }) {
+  const pc = value.toUpperCase()
+  if (!PRIORITY_CLASSES.includes(pc)) return <Badge variant="outline">{value}</Badge>
+  return <PriorityClassBadge priorityClass={pc as PriorityClass} />
 }
 
 function formatHours(hours: number | undefined | null): string {
@@ -138,10 +131,10 @@ function formatEpss(score: number | undefined | null): string {
 // SKELETONS
 // ============================================
 
-function StatsRowSkeleton() {
+function StatsRowSkeleton({ count = 4 }: { count?: number }) {
   return (
-    <section className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-      {[1, 2, 3, 4].map((i) => (
+    <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {Array.from({ length: count }).map((_, i) => (
         <Card key={i}>
           <CardHeader className="pb-2">
             <Skeleton className="h-4 w-24" />
@@ -156,21 +149,57 @@ function StatsRowSkeleton() {
   )
 }
 
-function TableSkeleton() {
-  return (
-    <Card>
-      <CardHeader>
-        <Skeleton className="h-5 w-40" />
-        <Skeleton className="h-4 w-60" />
-      </CardHeader>
-      <CardContent className="space-y-2">
-        {[1, 2, 3, 4, 5].map((i) => (
-          <Skeleton key={i} className="h-12 w-full" />
-        ))}
-      </CardContent>
-    </Card>
-  )
-}
+const TOP_RISK_COLUMNS: ColumnDef<TopRisk>[] = [
+  {
+    accessorKey: 'title',
+    enableSorting: false,
+    header: 'Title',
+    cell: ({ row }) => (
+      <span className="block max-w-md truncate text-sm font-medium">{row.original.title}</span>
+    ),
+  },
+  {
+    accessorKey: 'severity',
+    enableSorting: false,
+    header: 'Severity',
+    cell: ({ row }) => <SeverityBadge severity={row.original.severity.toLowerCase() as Severity} />,
+  },
+  {
+    accessorKey: 'priority_class',
+    enableSorting: false,
+    header: 'Priority',
+    cell: ({ row }) => <PriorityChip value={row.original.priority_class} />,
+  },
+  {
+    accessorKey: 'asset_name',
+    enableSorting: false,
+    header: 'Asset',
+    cell: ({ row }) => (
+      <span className="block max-w-xs truncate text-sm text-muted-foreground">
+        {row.original.asset_name}
+      </span>
+    ),
+  },
+  {
+    accessorKey: 'epss_score',
+    enableSorting: false,
+    header: 'EPSS',
+    cell: ({ row }) => (
+      <span className="text-sm tabular-nums">{formatEpss(row.original.epss_score)}</span>
+    ),
+  },
+  {
+    accessorKey: 'is_in_kev',
+    enableSorting: false,
+    header: 'KEV',
+    cell: ({ row }) =>
+      row.original.is_in_kev ? (
+        <Badge variant="destructive">KEV</Badge>
+      ) : (
+        <span className="text-xs text-muted-foreground">—</span>
+      ),
+  },
+]
 
 // ============================================
 // PAGE COMPONENT
@@ -210,378 +239,235 @@ export default function ExecutiveSummaryPage() {
         ? 'positive'
         : 'neutral'
 
-  const slaChangeType: 'positive' | 'negative' | 'neutral' = !summary
-    ? 'neutral'
-    : summary.sla_compliance_pct >= 90
-      ? 'positive'
-      : summary.sla_compliance_pct >= 70
-        ? 'neutral'
-        : 'negative'
-
-  const p0ChangeType: 'positive' | 'negative' | 'neutral' = !summary
-    ? 'neutral'
-    : summary.p0_open === 0
-      ? 'positive'
-      : summary.p0_open > 5
-        ? 'negative'
-        : 'neutral'
-
   return (
     <Main>
       <PageHeader
-        title="Executive Summary"
-        description="High-level view of risk posture, remediation performance, and process health"
-        className="mb-6"
+        title="Executive summary"
+        description="Risk posture, remediation performance and process health at a glance."
       >
-        <div className="flex items-center gap-2 rounded-md border bg-card p-1">
-          {PERIOD_OPTIONS.map((opt) => (
-            <Button
-              key={opt.value}
-              variant={period === opt.value ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setPeriod(opt.value)}
-              className="h-7 px-3"
-            >
-              {opt.label}
-            </Button>
-          ))}
-        </div>
+        <Select value={period} onValueChange={(v) => setPeriod(v as Period)}>
+          <SelectTrigger className="h-9 w-[150px]" aria-label="Period">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {PERIOD_OPTIONS.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </PageHeader>
 
-      {/* Top stat cards */}
-      {summaryLoading ? (
-        <StatsRowSkeleton />
-      ) : (
-        <section className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-          <StatsCard
-            title="Risk Score"
-            value={summary ? formatRiskScore(summary.risk_score_current) : 'N/A'}
-            change={
-              summary && summary.risk_score_change !== 0
-                ? `${summary.risk_score_change > 0 ? '+' : ''}${summary.risk_score_change.toFixed(1)}`
-                : undefined
-            }
-            changeType={riskChangeType}
-            description={summary ? 'vs previous period' : undefined}
-            icon={Activity}
-          />
-          <StatsCard
-            title="Findings Resolved"
-            value={summary?.findings_resolved_period ?? 0}
-            description={summary ? `${summary.findings_new_period} new in period` : undefined}
-            changeType={
-              summary && summary.findings_resolved_period >= summary.findings_new_period
-                ? 'positive'
-                : 'negative'
-            }
-            icon={CheckCircle2}
-          />
-          <StatsCard
-            title="SLA Compliance"
-            value={formatPercent(summary?.sla_compliance_pct)}
-            description={summary ? `${summary.sla_breached} breached` : undefined}
-            changeType={slaChangeType}
-            icon={ShieldCheck}
-          />
-          <StatsCard
-            title="P0 Open"
-            value={summary?.p0_open ?? 0}
-            description={summary ? `${summary.p0_resolved_period} resolved this period` : undefined}
-            changeType={p0ChangeType}
-            icon={ShieldAlert}
-          />
-        </section>
-      )}
-
-      {/* Secondary metrics */}
-      {summary && (
-        <section className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">P1 Open</CardTitle>
-              <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{summary.p1_open}</div>
-              <p className="text-xs text-muted-foreground">
-                {summary.p1_resolved_period} resolved this period
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Crown Jewels at Risk</CardTitle>
-              <Target className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div
-                className={cn(
-                  'text-2xl font-bold',
-                  summary.crown_jewels_at_risk > 0 && 'text-red-500'
-                )}
-              >
-                {summary.crown_jewels_at_risk}
-              </div>
-              <p className="text-xs text-muted-foreground">High-value assets exposed</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">MTTR Critical</CardTitle>
-              <Timer className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{formatHours(summary.mttr_critical_hours)}</div>
-              <p className="text-xs text-muted-foreground">Mean time to remediate</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">MTTR High</CardTitle>
-              <Clock className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{formatHours(summary.mttr_high_hours)}</div>
-              <p className="text-xs text-muted-foreground">Mean time to remediate</p>
-            </CardContent>
-          </Card>
-        </section>
-      )}
-
-      {/* Top Risks Table */}
-      {summaryLoading ? (
-        <div className="mb-6">
-          <TableSkeleton />
-        </div>
-      ) : (
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Top Risks</CardTitle>
-            <CardDescription>
-              Highest priority findings requiring executive attention
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {summary && summary.top_risks.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Title</TableHead>
-                    <TableHead>Severity</TableHead>
-                    <TableHead>Priority</TableHead>
-                    <TableHead>Asset</TableHead>
-                    <TableHead className="text-end">EPSS</TableHead>
-                    <TableHead>KEV</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {summary.top_risks.map((risk, idx) => (
-                    <TableRow key={`${risk.title}-${idx}`}>
-                      <TableCell className="max-w-md truncate font-medium">{risk.title}</TableCell>
-                      <TableCell>
-                        <Badge
-                          variant="outline"
-                          className={cn('capitalize', getSeverityBadgeClass(risk.severity))}
-                        >
-                          {risk.severity}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant="outline"
-                          className={cn(
-                            'font-mono font-bold',
-                            getPriorityClassBadgeClass(risk.priority_class)
-                          )}
-                        >
-                          {risk.priority_class}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {risk.asset_name}
-                      </TableCell>
-                      <TableCell className="text-end font-mono text-sm">
-                        {formatEpss(risk.epss_score)}
-                      </TableCell>
-                      <TableCell>
-                        {risk.is_in_kev ? (
-                          <Badge
-                            variant="outline"
-                            className="bg-red-500/10 text-red-500 border-red-500/20"
-                          >
-                            KEV
-                          </Badge>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">—</span>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            ) : (
-              <EmptyState
-                icon={ShieldCheck}
-                title="No top risks for the selected period."
-                card={false}
-              />
+      {/* Headline numbers */}
+      <div className="mt-5">
+        {summaryLoading ? (
+          <StatsRowSkeleton count={8} />
+        ) : (
+          <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <StatsCard
+              title="Risk score"
+              value={summary ? formatRiskScore(summary.risk_score_current) : 'N/A'}
+              change={
+                summary && summary.risk_score_change !== 0
+                  ? `${summary.risk_score_change > 0 ? '+' : ''}${summary.risk_score_change.toFixed(1)}`
+                  : undefined
+              }
+              changeType={riskChangeType}
+              description={summary ? 'vs previous period' : undefined}
+              icon={Activity}
+            />
+            <StatsCard
+              title="Findings resolved"
+              value={summary?.findings_resolved_period ?? 0}
+              description={summary ? `${summary.findings_new_period} new in period` : undefined}
+              icon={CheckCircle2}
+            />
+            <StatsCard
+              title="SLA compliance"
+              value={formatPercent(summary?.sla_compliance_pct)}
+              description={summary ? `${summary.sla_breached} breached` : undefined}
+              icon={ShieldCheck}
+            />
+            <StatsCard
+              title="P0 open"
+              value={summary?.p0_open ?? 0}
+              valueClassName={summary && summary.p0_open > 0 ? 'text-destructive' : undefined}
+              description={
+                summary ? `${summary.p0_resolved_period} resolved this period` : undefined
+              }
+              icon={ShieldAlert}
+            />
+            {summary && (
+              <>
+                <StatsCard
+                  title="P1 open"
+                  value={summary.p1_open}
+                  description={`${summary.p1_resolved_period} resolved this period`}
+                  icon={AlertTriangle}
+                />
+                <StatsCard
+                  title="Crown jewels at risk"
+                  value={summary.crown_jewels_at_risk}
+                  valueClassName={summary.crown_jewels_at_risk > 0 ? 'text-destructive' : undefined}
+                  description="High-value assets exposed"
+                  icon={Target}
+                />
+                <StatsCard
+                  title="MTTR critical"
+                  value={formatHours(summary.mttr_critical_hours)}
+                  description="Mean time to remediate"
+                  icon={Timer}
+                />
+                <StatsCard
+                  title="MTTR high"
+                  value={formatHours(summary.mttr_high_hours)}
+                  description="Mean time to remediate"
+                  icon={Clock}
+                />
+              </>
             )}
-          </CardContent>
-        </Card>
-      )}
+          </section>
+        )}
+      </div>
+
+      {/* Top risks */}
+      <section className="mt-5 space-y-3">
+        <div>
+          <h2 className="text-base font-semibold">Top risks</h2>
+          <p className="text-sm text-muted-foreground">
+            Highest-priority findings that need executive attention.
+          </p>
+        </div>
+        {summaryLoading ? (
+          <div className="space-y-px overflow-hidden rounded-xl border">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <Skeleton key={i} className="h-11 w-full rounded-none" />
+            ))}
+          </div>
+        ) : summary && summary.top_risks.length > 0 ? (
+          <DataTable
+            columns={TOP_RISK_COLUMNS}
+            data={summary.top_risks}
+            showSearch={false}
+            showColumnToggle={false}
+            showPagination={false}
+            pageSize={summary.top_risks.length}
+            getRowId={(r) => r.title}
+          />
+        ) : (
+          <EmptyState icon={ShieldCheck} title="No top risks for the selected period" />
+        )}
+      </section>
 
       {/* MTTR breakdown */}
-      <div className="mb-6 grid gap-6 lg:grid-cols-2">
+      <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>MTTR by Severity</CardTitle>
+            <CardTitle>MTTR by severity</CardTitle>
             <CardDescription>
-              Average remediation time across the last 90 days
+              Average remediation time over the last 90 days
               {mttr && mttr.sample_size > 0 ? ` (n=${mttr.sample_size})` : ''}
             </CardDescription>
           </CardHeader>
           <CardContent>
             {mttrLoading ? (
-              <div className="space-y-3">
-                {[1, 2, 3, 4].map((i) => (
-                  <Skeleton key={i} className="h-10 w-full" />
-                ))}
-              </div>
+              <Skeleton className="h-40 w-full" />
             ) : mttr && Object.keys(mttr.by_severity).length > 0 ? (
-              <div className="space-y-3">
+              <div className="divide-y">
                 {Object.entries(mttr.by_severity).map(([severity, hours]) => (
-                  <div
-                    key={severity}
-                    className="flex items-center justify-between rounded-md border p-3"
-                  >
-                    <Badge
-                      variant="outline"
-                      className={cn('capitalize', getSeverityBadgeClass(severity))}
-                    >
-                      {severity}
-                    </Badge>
-                    <span className="font-mono text-sm font-medium">{formatHours(hours)}</span>
+                  <div key={severity} className="flex items-center justify-between py-2.5">
+                    <SeverityBadge severity={severity.toLowerCase() as Severity} />
+                    <span className="text-sm font-medium tabular-nums">{formatHours(hours)}</span>
                   </div>
                 ))}
-                <div className="mt-2 flex items-center justify-between border-t pt-3">
+                <div className="flex items-center justify-between py-2.5">
                   <span className="text-sm font-medium">Overall</span>
-                  <span className="font-mono text-sm font-bold">
+                  <span className="text-sm font-semibold tabular-nums">
                     {formatHours(mttr.overall_hours)}
                   </span>
                 </div>
               </div>
             ) : (
-              <p className="py-6 text-center text-sm text-muted-foreground">
-                Not enough resolved findings to calculate MTTR.
-              </p>
+              <EmptyState
+                card={false}
+                className="py-8"
+                icon={Timer}
+                title="Not enough data yet"
+                description="MTTR appears once enough findings have been resolved."
+              />
             )}
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>MTTR by Priority Class</CardTitle>
-            <CardDescription>Average remediation time per priority bucket (P0–P3)</CardDescription>
+            <CardTitle>MTTR by priority class</CardTitle>
+            <CardDescription>Average remediation time per priority class (P0–P3)</CardDescription>
           </CardHeader>
           <CardContent>
             {mttrLoading ? (
-              <div className="space-y-3">
-                {[1, 2, 3, 4].map((i) => (
-                  <Skeleton key={i} className="h-10 w-full" />
-                ))}
-              </div>
+              <Skeleton className="h-40 w-full" />
             ) : mttr && Object.keys(mttr.by_priority_class).length > 0 ? (
-              <div className="space-y-3">
+              <div className="divide-y">
                 {Object.entries(mttr.by_priority_class).map(([priority, hours]) => (
-                  <div
-                    key={priority}
-                    className="flex items-center justify-between rounded-md border p-3"
-                  >
-                    <Badge
-                      variant="outline"
-                      className={cn('font-mono font-bold', getPriorityClassBadgeClass(priority))}
-                    >
-                      {priority}
-                    </Badge>
-                    <span className="font-mono text-sm font-medium">{formatHours(hours)}</span>
+                  <div key={priority} className="flex items-center justify-between py-2.5">
+                    <PriorityChip value={priority} />
+                    <span className="text-sm font-medium tabular-nums">{formatHours(hours)}</span>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="py-6 text-center text-sm text-muted-foreground">
-                No priority class data yet.
-              </p>
+              <EmptyState
+                card={false}
+                className="py-8"
+                icon={Timer}
+                title="No priority class data yet"
+              />
             )}
           </CardContent>
         </Card>
       </div>
 
-      {/* Process Metrics */}
-      {processLoading ? (
-        <StatsRowSkeleton />
-      ) : processMetrics ? (
-        <section className="grid grid-cols-2 gap-4 lg:grid-cols-3">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Approval Avg Time</CardTitle>
-              <Clock className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {formatHours(processMetrics.approval_avg_hours)}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {processMetrics.approval_count} approvals tracked
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Stale Assets</CardTitle>
-              <CalendarClock className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {processMetrics.stale_assets.toLocaleString()}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {formatPercent(processMetrics.stale_assets_pct)} of inventory
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Findings Without Owner</CardTitle>
-              <FileWarning className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div
-                className={cn(
-                  'text-2xl font-bold',
-                  processMetrics.findings_without_owner > 0 && 'text-orange-500'
-                )}
-              >
-                {processMetrics.findings_without_owner.toLocaleString()}
-              </div>
-              <p className="text-xs text-muted-foreground">Need triage assignment</p>
-            </CardContent>
-          </Card>
-          <Card className="lg:col-span-3">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Avg Time to Assign</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {formatHours(processMetrics.avg_time_to_assign_hours)}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Mean time from finding creation to owner assignment
-              </p>
-            </CardContent>
-          </Card>
-        </section>
-      ) : null}
+      {/* Process metrics */}
+      <section className="mt-5 space-y-3">
+        <h2 className="text-base font-semibold">Process health</h2>
+        {processLoading ? (
+          <StatsRowSkeleton />
+        ) : processMetrics ? (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <StatsCard
+              title="Approval avg time"
+              value={formatHours(processMetrics.approval_avg_hours)}
+              description={`${processMetrics.approval_count} approvals tracked`}
+              icon={Clock}
+            />
+            <StatsCard
+              title="Stale assets"
+              value={processMetrics.stale_assets.toLocaleString()}
+              description={`${formatPercent(processMetrics.stale_assets_pct)} of inventory`}
+              icon={CalendarClock}
+            />
+            <StatsCard
+              title="Findings without owner"
+              value={processMetrics.findings_without_owner.toLocaleString()}
+              valueClassName={
+                processMetrics.findings_without_owner > 0 ? 'text-destructive' : undefined
+              }
+              description="Need triage assignment"
+              icon={FileWarning}
+            />
+            <StatsCard
+              title="Avg time to assign"
+              value={formatHours(processMetrics.avg_time_to_assign_hours)}
+              description="From finding creation to owner assignment"
+              icon={Users}
+            />
+          </div>
+        ) : (
+          <EmptyState icon={Users} title="No process metrics yet" />
+        )}
+      </section>
     </Main>
   )
 }
