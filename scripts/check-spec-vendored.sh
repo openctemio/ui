@@ -37,7 +37,7 @@ REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 VENDORED_REL="src/lib/api/openapi/swagger.yaml"
 VENDORED="$REPO_ROOT/$VENDORED_REL"
 API_REF="${API_REF:-develop}"
-API_URL="https://raw.githubusercontent.com/openctemio/api/${API_REF}/api/openapi/swagger.yaml"
+API_REPO="https://github.com/openctemio/api"
 
 if [ ! -f "$VENDORED" ]; then
   echo "check-spec-vendored: $VENDORED_REL is missing." >&2
@@ -56,6 +56,17 @@ if [ -n "${SPEC_SOURCE:-}" ]; then
   cp "$SPEC_SOURCE" "$upstream"
   origin="$SPEC_SOURCE"
 else
+  # Resolve the branch to its commit first and fetch the file at that commit.
+  # raw.githubusercontent.com caches a branch URL for 5 minutes, so right after
+  # an API spec change merged this check compared against the OLD spec and
+  # failed a correct PR. A commit URL is immutable, so it cannot be stale.
+  # ls-remote goes to git, not the rate-limited REST API.
+  if ! API_SHA="$(git ls-remote --exit-code "$API_REPO" "refs/heads/${API_REF}" 2>"$tmpdir/ls.err" | cut -f1)" || [ -z "$API_SHA" ]; then
+    echo "check-spec-vendored: could not resolve openctemio/api@${API_REF}" >&2
+    sed 's/^/  /' "$tmpdir/ls.err" >&2
+    exit 2
+  fi
+  API_URL="https://raw.githubusercontent.com/openctemio/api/${API_SHA}/api/openapi/swagger.yaml"
   # A fetch failure must not read as "in sync" — that is the silently-inert
   # shape this repository has shipped before.
   if ! curl --fail --silent --show-error --location --max-time 60 \
