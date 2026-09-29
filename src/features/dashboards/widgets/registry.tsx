@@ -16,10 +16,32 @@ import { Permission } from '@/lib/permissions'
 import { useTenant } from '@/context/tenant-provider'
 import { useDashboardStats } from '@/features/dashboard'
 import { useFindingsApi } from '@/features/findings/api/use-findings-api'
+import {
+  useExecutiveSummary,
+  useThreatIntelStats,
+  useScanCoverage,
+  useAttackPaths,
+} from '@/features/dashboard/hooks/use-ctem-dashboard'
 
 function useStats() {
   const { currentTenant } = useTenant()
   return useDashboardStats(currentTenant?.id ?? null)
+}
+function useSummary() {
+  const { currentTenant } = useTenant()
+  return useExecutiveSummary(currentTenant?.id ?? null)
+}
+function useThreatIntel() {
+  const { currentTenant } = useTenant()
+  return useThreatIntelStats(currentTenant?.id ?? null)
+}
+function useCoverage() {
+  const { currentTenant } = useTenant()
+  return useScanCoverage(currentTenant?.id ?? null)
+}
+function useAttack() {
+  const { currentTenant } = useTenant()
+  return useAttackPaths(currentTenant?.id ?? null)
 }
 
 const OPEN_EXCLUDE = [
@@ -50,7 +72,7 @@ function StatShell({
   tone = 'default',
 }: {
   title: string
-  value: number
+  value: number | string
   loading?: boolean
   href?: string
   tone?: 'default' | 'danger'
@@ -65,7 +87,9 @@ function StatShell({
           <p
             className={
               'mt-1 text-3xl font-semibold ' +
-              (tone === 'danger' && value > 0 ? 'text-destructive' : '')
+              (tone === 'danger' && typeof value === 'number' && value > 0
+                ? 'text-destructive'
+                : '')
             }
           >
             {value}
@@ -195,6 +219,108 @@ function MyOverdueSlaWidget() {
   )
 }
 
+// ── program widgets (executive summary / threat intel / coverage) ────────────
+
+function RiskScoreWidget() {
+  const { data, isLoading } = useSummary()
+  return (
+    <StatShell
+      title="Risk score"
+      value={Math.round(data?.risk_score_current ?? 0)}
+      loading={isLoading}
+    />
+  )
+}
+
+function SlaComplianceWidget() {
+  const { data, isLoading } = useSummary()
+  return (
+    <StatShell
+      title="SLA compliance"
+      value={`${Math.round(data?.sla_compliance_pct ?? 0)}%`}
+      loading={isLoading}
+    />
+  )
+}
+
+function MttrWidget() {
+  const { data, isLoading } = useSummary()
+  return (
+    <StatShell
+      title="MTTR · critical"
+      value={`${Math.round(data?.mttr_critical_hours ?? 0)}h`}
+      loading={isLoading}
+    />
+  )
+}
+
+function P0OpenWidget() {
+  const { data, isLoading } = useSummary()
+  return (
+    <StatShell
+      title="P0 open"
+      value={data?.p0_open ?? 0}
+      loading={isLoading}
+      tone="danger"
+      href="/findings?priority=P0"
+    />
+  )
+}
+
+function ScanCoverageWidget() {
+  const { data, isLoading } = useCoverage()
+  return (
+    <StatShell
+      title="Scan coverage"
+      value={`${Math.round(data?.coverage_percent ?? 0)}%`}
+      loading={isLoading}
+      href="/scans"
+    />
+  )
+}
+
+function ReachableAssetsWidget() {
+  const { data, isLoading } = useAttack()
+  return (
+    <StatShell
+      title="Assets reachable"
+      value={data?.summary?.reachable_assets ?? 0}
+      loading={isLoading}
+      tone="danger"
+      href="/attack-paths"
+    />
+  )
+}
+
+function ThreatIntelWidget() {
+  const { data, isLoading } = useThreatIntel()
+  const kev = data?.kev?.total_entries ?? 0
+  const epss = data?.epss?.critical_risk_count ?? 0
+  return (
+    <Card className="h-full">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm">Threat intel</CardTitle>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <Skeleton className="h-16 w-full" />
+        ) : (
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <p className="text-2xl font-semibold tabular-nums">{kev}</p>
+              <p className="text-xs text-muted-foreground">KEV entries</p>
+            </div>
+            <div>
+              <p className="text-2xl font-semibold tabular-nums">{epss}</p>
+              <p className="text-xs text-muted-foreground">High EPSS</p>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
 // ── the registry ─────────────────────────────────────────────────────────────
 
 export const WIDGET_REGISTRY: Record<string, WidgetDef> = {
@@ -239,6 +365,48 @@ export const WIDGET_REGISTRY: Record<string, WidgetDef> = {
     component: MyOverdueSlaWidget,
     defaultSize: { w: 3, h: 1 },
     requiredPermission: Permission.FindingsRead,
+  },
+  risk_score: {
+    title: 'Risk score',
+    component: RiskScoreWidget,
+    defaultSize: { w: 3, h: 1 },
+    requiredPermission: Permission.DashboardRead,
+  },
+  sla_compliance: {
+    title: 'SLA compliance',
+    component: SlaComplianceWidget,
+    defaultSize: { w: 3, h: 1 },
+    requiredPermission: Permission.DashboardRead,
+  },
+  mttr_critical: {
+    title: 'MTTR · critical',
+    component: MttrWidget,
+    defaultSize: { w: 3, h: 1 },
+    requiredPermission: Permission.DashboardRead,
+  },
+  p0_open: {
+    title: 'P0 open',
+    component: P0OpenWidget,
+    defaultSize: { w: 3, h: 1 },
+    requiredPermission: Permission.FindingsRead,
+  },
+  scan_coverage: {
+    title: 'Scan coverage',
+    component: ScanCoverageWidget,
+    defaultSize: { w: 3, h: 1 },
+    requiredPermission: Permission.DashboardRead,
+  },
+  reachable_assets: {
+    title: 'Assets reachable',
+    component: ReachableAssetsWidget,
+    defaultSize: { w: 3, h: 1 },
+    requiredPermission: Permission.DashboardRead,
+  },
+  threat_intel: {
+    title: 'Threat intel',
+    component: ThreatIntelWidget,
+    defaultSize: { w: 4, h: 2 },
+    requiredPermission: Permission.DashboardRead,
   },
 }
 
