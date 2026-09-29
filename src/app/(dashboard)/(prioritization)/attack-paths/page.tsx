@@ -228,7 +228,7 @@ export default function AttackPathAnalysisPage() {
                   <div className="flex items-center justify-between">
                     <span className="text-muted-foreground text-sm">Max chain depth</span>
                     <span className="font-semibold tabular-nums">
-                      {summary?.maxDepth ?? 0} hops
+                      {summary?.maxDepth ?? 0} {(summary?.maxDepth ?? 0) === 1 ? 'hop' : 'hops'}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
