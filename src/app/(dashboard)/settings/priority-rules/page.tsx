@@ -17,7 +17,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
-import { Card, CardContent } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import {
   Dialog,
@@ -35,9 +35,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Plus, Pencil, Trash2, Info, X, FlaskConical } from 'lucide-react'
+import { Plus, Pencil, Trash2, Info, X, FlaskConical, AlertCircle, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { get, post, put, del } from '@/lib/api/client'
+import { getErrorMessage } from '@/lib/api/error-handler'
 import { Can, Permission } from '@/lib/permissions'
 import { PriorityClassBadge } from '@/features/findings/components/priority-class-badge'
 import type { PriorityClass } from '@/features/findings/types/finding.types'
@@ -151,7 +152,7 @@ const emptyForm: FormState = {
 }
 
 export default function PriorityRulesPage() {
-  const { data, mutate, isLoading } = useSWR<ListResponse>(
+  const { data, error, mutate, isLoading } = useSWR<ListResponse>(
     '/api/v1/priority-rules',
     (url: string) => get<ListResponse>(url)
   )
@@ -349,7 +350,7 @@ export default function PriorityRulesPage() {
       },
       {
         accessorKey: 'priority_class',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Target Class" />,
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Target class" />,
         cell: ({ row }) => (
           <PriorityClassBadge priorityClass={row.original.priority_class} showTooltip={false} />
         ),
@@ -382,8 +383,8 @@ export default function PriorityRulesPage() {
       },
       {
         accessorKey: 'evaluation_order',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Evaluation Order" />,
-        cell: ({ row }) => row.original.evaluation_order,
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Evaluation order" />,
+        cell: ({ row }) => <span className="tabular-nums">{row.original.evaluation_order}</span>,
       },
       {
         id: 'active',
@@ -514,47 +515,59 @@ export default function PriorityRulesPage() {
   return (
     <Main>
       <PageHeader
-        title="Priority Override Rules"
+        title="Priority rules"
         description="Define rules that override the calculated finding priority based on conditions."
       >
         <Can permission={Permission.PriorityRulesWrite}>
-          <Button onClick={openCreate}>
-            <Plus className="me-2 h-4 w-4" />
-            Create Rule
+          <Button size="sm" onClick={openCreate}>
+            <Plus className="h-4 w-4" />
+            Create rule
           </Button>
         </Can>
       </PageHeader>
 
-      <Alert className="mt-6">
+      <Alert className="mt-5">
         <Info className="h-4 w-4" />
         <AlertTitle>How evaluation works</AlertTitle>
         <AlertDescription>
-          Rules are evaluated in descending order of <strong>Evaluation Order</strong> (higher
+          Rules are evaluated in descending order of <strong>evaluation order</strong> (higher
           wins). The first active rule whose conditions all match sets the finding&apos;s priority
           class. Inactive rules are skipped.
         </AlertDescription>
       </Alert>
 
-      <Card className="mt-6">
-        <CardContent className="p-0">
-          {isLoading ? (
-            <div className="text-center text-muted-foreground py-8">Loading...</div>
-          ) : (
-            <DataTable
-              columns={columns}
-              data={rules}
-              searchPlaceholder="Search rules..."
-              emptyMessage="No priority rules yet"
-              emptyDescription='Click "Create Rule" to add one.'
-            />
-          )}
-        </CardContent>
-      </Card>
+      <div className="mt-5">
+        {error ? (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Failed to load priority rules</AlertTitle>
+            <AlertDescription>
+              <p>{getErrorMessage(error, 'The priority rules request failed.')}</p>
+              <Button variant="outline" size="sm" className="mt-2" onClick={() => void mutate()}>
+                Retry
+              </Button>
+            </AlertDescription>
+          </Alert>
+        ) : isLoading ? (
+          <div className="space-y-2">
+            <Skeleton className="h-9 w-full max-w-sm" />
+            <Skeleton className="h-64 w-full rounded-md" />
+          </div>
+        ) : (
+          <DataTable
+            columns={columns}
+            data={rules}
+            searchPlaceholder="Search rules…"
+            emptyMessage="No priority rules yet"
+            emptyDescription='Click "Create rule" to add one.'
+          />
+        )}
+      </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editingRule ? 'Edit Priority Rule' : 'Create Priority Rule'}</DialogTitle>
+            <DialogTitle>{editingRule ? 'Edit priority rule' : 'Create priority rule'}</DialogTitle>
             <DialogDescription>
               Define conditions that will override the calculated finding priority.
             </DialogDescription>
@@ -582,9 +595,9 @@ export default function PriorityRulesPage() {
               />
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid gap-4 sm:grid-cols-3">
               <div className="grid gap-2">
-                <Label htmlFor="priority_class">Target Priority Class</Label>
+                <Label htmlFor="priority_class">Target priority class</Label>
                 <Select
                   value={form.priority_class}
                   onValueChange={(value) =>
@@ -605,7 +618,7 @@ export default function PriorityRulesPage() {
               </div>
 
               <div className="grid gap-2">
-                <Label htmlFor="evaluation_order">Evaluation Order</Label>
+                <Label htmlFor="evaluation_order">Evaluation order</Label>
                 <Input
                   id="evaluation_order"
                   type="number"
@@ -632,7 +645,7 @@ export default function PriorityRulesPage() {
                 <Label className="text-sm font-semibold">Conditions</Label>
                 <Button type="button" variant="outline" size="sm" onClick={addCondition}>
                   <Plus className="me-1 h-3 w-3" />
-                  Add Condition
+                  Add condition
                 </Button>
               </div>
               {form.conditions.length === 0 ? (
@@ -744,7 +757,8 @@ export default function PriorityRulesPage() {
               Dry run
             </Button>
             <Button onClick={handleSave} disabled={isSaving}>
-              {isSaving ? 'Saving...' : editingRule ? 'Update' : 'Create'}
+              {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
+              {editingRule ? 'Update' : 'Create'}
             </Button>
           </DialogFooter>
         </DialogContent>
