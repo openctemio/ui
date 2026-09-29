@@ -73,7 +73,7 @@ export interface ExposureEvent {
   cve_id?: string
   /** EPSS probability of exploitation in the next 30 days (0..1). */
   epss_score?: number
-  /** EPSS percentile rank (0..1). */
+  /** EPSS percentile rank (0..100). */
   epss_percentile?: number
   /** CVE is in the CISA Known Exploited Vulnerabilities catalog. */
   is_in_kev?: boolean

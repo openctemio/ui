@@ -7,6 +7,7 @@
 
 'use client'
 
+import { formatEpssScore } from '@/lib/epss'
 import * as React from 'react'
 import { useRouter } from 'next/navigation'
 import {
@@ -606,7 +607,7 @@ export function ComponentDetailSheet({ component, open, onOpenChange }: Componen
                             <span>{v.total_finding_count} finding(s)</span>
                           )}
                           {v.epss_score != null && (
-                            <span>EPSS: {(v.epss_score * 100).toFixed(1)}%</span>
+                            <span>EPSS: {formatEpssScore(v.epss_score)}</span>
                           )}
                           {v.fixed_versions.length > 0 && (
                             <span className="ms-auto inline-flex items-center gap-1 text-green-600">

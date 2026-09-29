@@ -13,6 +13,7 @@
  * omits the section.
  */
 
+import { formatEpssScore } from '@/lib/epss'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
@@ -63,7 +64,7 @@ function factorChips(exp: PriorityExplanation): { key: string; label: string; st
   if (typeof f.epss_score === 'number')
     chips.push({
       key: 'epss',
-      label: `EPSS ${(f.epss_score * 100).toFixed(1)}%`,
+      label: `EPSS ${formatEpssScore(f.epss_score)}`,
       strong: f.epss_score >= 0.5,
     })
 
