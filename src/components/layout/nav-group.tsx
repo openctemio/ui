@@ -155,7 +155,7 @@ export function NavClusterLabel({ label }: { label?: string }) {
       className="relative flex h-7 shrink-0 items-end px-1.5 pb-1"
     >
       {label ? (
-        <span className="truncate text-[11px] font-medium tracking-wider text-muted-foreground uppercase transition-opacity group-data-[collapsible=icon]:opacity-0">
+        <span className="truncate text-xs font-medium text-muted-foreground transition-opacity group-data-[collapsible=icon]:opacity-0">
           {label}
         </span>
       ) : null}
@@ -654,7 +654,7 @@ const NavSectionRailMenu = memo(function NavSectionRailMenu({
         </SidebarMenuButton>
       </DropdownMenuTrigger>
       <DropdownMenuContent side="right" align="start" sideOffset={8} className="min-w-52">
-        <DropdownMenuLabel className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
+        <DropdownMenuLabel className="text-xs font-medium text-muted-foreground">
           {label}
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
