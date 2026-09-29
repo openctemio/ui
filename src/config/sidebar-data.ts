@@ -128,6 +128,12 @@ export const sidebarData: SidebarData = {
           icon: ClipboardCheck,
           permission: Permission.FindingsRead,
         },
+        {
+          title: 'Dashboards',
+          url: '/dashboards',
+          icon: LayoutGrid,
+          permission: Permission.DashboardRead,
+        },
       ],
     },
 
