@@ -180,7 +180,8 @@ function DashboardsList({ onOpen }: { onOpen: (id: string) => void }) {
                   <span className="text-xs text-muted-foreground">{d.layout.length} widgets</span>
                   <div className="flex gap-1">
                     <Button size="sm" variant="outline" onClick={() => onOpen(d.id)}>
-                      Open
+                      <Pencil className="me-2 h-4 w-4" />
+                      Edit
                     </Button>
                     {!d.is_default && (
                       <Button
