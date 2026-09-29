@@ -1,9 +1,10 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { Main } from '@/components/layout'
-import { PageHeader } from '@/features/shared'
+import { PageHeader, StatsCard, EmptyState } from '@/features/shared'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
@@ -15,39 +16,39 @@ import {
   GitBranch,
   Shield,
   AlertTriangle,
-  TrendingUp,
-  TrendingDown,
+  AlertCircle,
   Layers,
   Network,
-  Eye,
   Database,
   HardDrive,
   Key,
   Lock,
+  History,
 } from 'lucide-react'
 import { useAttackSurfaceStats } from '@/features/attack-surface'
 import { formatDistanceToNow } from 'date-fns'
-import { LucideIcon } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
-// Asset type to icon mapping
-const assetTypeIcons: Record<string, { icon: LucideIcon; color: string }> = {
-  domain: { icon: Globe, color: 'text-blue-400' },
-  subdomain: { icon: Globe, color: 'text-blue-300' },
-  website: { icon: Layers, color: 'text-purple-400' },
-  service: { icon: Server, color: 'text-green-400' },
-  repository: { icon: GitBranch, color: 'text-orange-400' },
-  cloud: { icon: Cloud, color: 'text-cyan-400' },
-  cloud_account: { icon: Cloud, color: 'text-cyan-400' },
-  host: { icon: Server, color: 'text-slate-400' },
-  container: { icon: Layers, color: 'text-indigo-400' },
-  database: { icon: Database, color: 'text-amber-400' },
-  network: { icon: Shield, color: 'text-teal-400' },
-  storage: { icon: HardDrive, color: 'text-pink-400' },
-  identity: { icon: Key, color: 'text-violet-400' },
-  ip_address: { icon: Globe, color: 'text-emerald-400' },
-  certificate: { icon: Lock, color: 'text-yellow-400' },
-  kubernetes: { icon: Layers, color: 'text-blue-500' },
-  application: { icon: Layers, color: 'text-red-400' },
+// Asset type to icon mapping. Icons stay muted: the type name carries the meaning.
+const assetTypeIcons: Record<string, LucideIcon> = {
+  domain: Globe,
+  subdomain: Globe,
+  website: Layers,
+  service: Server,
+  repository: GitBranch,
+  cloud: Cloud,
+  cloud_account: Cloud,
+  host: Server,
+  container: Layers,
+  database: Database,
+  network: Shield,
+  storage: HardDrive,
+  identity: Key,
+  ip_address: Globe,
+  certificate: Lock,
+  kubernetes: Layers,
+  application: Layers,
 }
 
 // Asset type display names
@@ -57,28 +58,20 @@ const assetTypeNames: Record<string, string> = {
   website: 'Websites',
   service: 'Services',
   repository: 'Repositories',
-  cloud: 'Cloud Assets',
-  cloud_account: 'Cloud Accounts',
+  cloud: 'Cloud assets',
+  cloud_account: 'Cloud accounts',
   host: 'Hosts',
   container: 'Containers',
   database: 'Databases',
   network: 'Networks',
   storage: 'Storage',
   identity: 'Identities',
-  ip_address: 'IP Addresses',
+  ip_address: 'IP addresses',
   certificate: 'Certificates',
   kubernetes: 'Kubernetes',
   application: 'Applications',
-  mobile: 'Mobile Apps',
+  mobile: 'Mobile apps',
   serverless: 'Serverless',
-}
-
-// Risk/criticality config for styling
-const riskConfig: Record<string, { color: string; bgColor: string }> = {
-  critical: { color: 'text-red-400', bgColor: 'bg-red-500/20' },
-  high: { color: 'text-orange-400', bgColor: 'bg-orange-500/20' },
-  medium: { color: 'text-yellow-400', bgColor: 'bg-yellow-500/20' },
-  low: { color: 'text-green-400', bgColor: 'bg-green-500/20' },
 }
 
 // Helper function to format relative time
@@ -90,339 +83,242 @@ function formatRelativeTime(timestamp: string): string {
   }
 }
 
+/** "+3 this week" for the stat caption; nothing when there was no change. */
+function weeklyChange(change: number): string | undefined {
+  if (!change) return undefined
+  return `${change > 0 ? '+' : ''}${change} this week`
+}
+
+function ListRowsSkeleton({ rows }: { rows: number }) {
+  return (
+    <div className="divide-y">
+      {Array.from({ length: rows }).map((_, i) => (
+        <div key={i} className="flex items-center justify-between py-3">
+          <div className="space-y-1.5">
+            <Skeleton className="h-4 w-40" />
+            <Skeleton className="h-3 w-24" />
+          </div>
+          <Skeleton className="h-5 w-20" />
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export default function AttackSurfacePage() {
-  const router = useRouter()
   const { stats, isLoading, error } = useAttackSurfaceStats()
 
-  // Render trend indicator
-  const renderTrend = (change: number, invertColors = false) => {
-    if (change === 0) return null
-    const isPositive = change > 0
-    const TrendIcon = isPositive ? TrendingUp : TrendingDown
-    // For exposures, positive change is bad (red), negative is good (green)
-    // For total assets, positive is usually neutral/good
-    const colorClass = invertColors
-      ? isPositive
-        ? 'text-red-400'
-        : 'text-green-400'
-      : isPositive
-        ? 'text-green-400'
-        : 'text-red-400'
-
-    return (
-      <div className="text-muted-foreground flex items-center gap-1 text-xs">
-        <TrendIcon className={`h-3 w-3 ${colorClass}`} />
-        <span>
-          {isPositive ? '+' : ''}
-          {change} this week
-        </span>
-      </div>
-    )
-  }
+  const breakdown = (stats?.assetBreakdown ?? []).filter((item) => item.total > 0)
+  const exposed = stats?.exposedServicesList ?? []
+  const changes = stats?.recentChanges ?? []
+  const criticalExposures = stats?.criticalExposures || 0
 
   return (
-    <>
-      <Main>
-        <PageHeader
-          title="Attack Surface Overview"
-          description="Visualize and monitor your organization's external attack surface"
-        />
+    <Main>
+      <PageHeader
+        title="Attack surface"
+        description="What your organization exposes, and how it changed this week."
+      />
 
-        {error && (
-          <div className="mt-6 rounded-lg border border-red-200 bg-red-50 p-4 text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-300">
-            Failed to load attack surface data. Please try again.
-          </div>
-        )}
+      {error && (
+        <Alert variant="destructive" className="mt-5">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Failed to load attack surface data</AlertTitle>
+          <AlertDescription>Reload the page to try again.</AlertDescription>
+        </Alert>
+      )}
 
-        {/* Top Stats */}
-        <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription className="flex items-center gap-2">
-                <Layers className="h-4 w-4" />
-                Total Assets
-              </CardDescription>
-              {isLoading ? (
-                <Skeleton className="h-9 w-20" />
-              ) : (
-                <CardTitle className="text-3xl">{stats?.totalAssets || 0}</CardTitle>
-              )}
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <Skeleton className="h-4 w-24" />
-              ) : (
-                renderTrend(stats?.totalAssetsChange || 0)
-              )}
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription className="flex items-center gap-2">
-                <Network className="h-4 w-4" />
-                Exposed Services
-              </CardDescription>
-              {isLoading ? (
-                <Skeleton className="h-9 w-20" />
-              ) : (
-                <CardTitle className="text-3xl text-yellow-500">
-                  {stats?.exposedServices || 0}
-                </CardTitle>
-              )}
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <Skeleton className="h-4 w-24" />
-              ) : (
-                renderTrend(stats?.exposedServicesChange || 0, true)
-              )}
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription className="flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4" />
-                Critical Exposures
-              </CardDescription>
-              {isLoading ? (
-                <Skeleton className="h-9 w-20" />
-              ) : (
-                <CardTitle className="text-3xl text-red-500">
-                  {stats?.criticalExposures || 0}
-                </CardTitle>
-              )}
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <Skeleton className="h-4 w-24" />
-              ) : (
-                renderTrend(stats?.criticalExposuresChange || 0, true)
-              )}
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription className="flex items-center gap-2">
-                <Shield className="h-4 w-4" />
-                Risk Score
-              </CardDescription>
-              {isLoading ? (
-                <Skeleton className="h-9 w-20" />
-              ) : (
-                <CardTitle className="text-3xl text-orange-500">
+      <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {isLoading ? (
+          Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-[118px] rounded-xl" />
+          ))
+        ) : (
+          <>
+            <StatsCard
+              title="Total assets"
+              value={stats?.totalAssets || 0}
+              icon={Layers}
+              description={weeklyChange(stats?.totalAssetsChange || 0)}
+            />
+            <StatsCard
+              title="Exposed services"
+              value={stats?.exposedServices || 0}
+              icon={Network}
+              description={weeklyChange(stats?.exposedServicesChange || 0)}
+            />
+            <StatsCard
+              title="Critical exposures"
+              value={criticalExposures}
+              icon={AlertTriangle}
+              valueClassName={criticalExposures > 0 ? 'text-destructive' : undefined}
+              description={weeklyChange(stats?.criticalExposuresChange || 0)}
+            />
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Risk score</CardTitle>
+                <Shield className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold tabular-nums">
                   {Math.round(stats?.riskScore || 0)}
-                </CardTitle>
-              )}
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <Skeleton className="h-2 w-full" />
-              ) : (
-                <Progress value={stats?.riskScore || 0} className="h-2" />
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="mt-6 grid gap-6 lg:grid-cols-3">
-          {/* Asset Breakdown */}
-          <Card className="lg:col-span-1">
-            <CardHeader>
-              <CardTitle className="text-base">Asset Breakdown</CardTitle>
-              <CardDescription>Distribution by type</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {isLoading
-                ? Array.from({ length: 6 }).map((_, i) => (
-                    <div key={i} className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <Skeleton className="h-5 w-5 rounded" />
-                        <div>
-                          <Skeleton className="h-4 w-20 mb-1" />
-                          <Skeleton className="h-3 w-16" />
-                        </div>
-                      </div>
-                      <Skeleton className="h-5 w-10" />
-                    </div>
-                  ))
-                : (stats?.assetBreakdown ?? [])
-                    .filter((item) => item.total > 0)
-                    .map((item) => {
-                      const typeConfig = assetTypeIcons[item.type] || {
-                        icon: Server,
-                        color: 'text-gray-400',
-                      }
-                      const TypeIcon = typeConfig.icon
-                      return (
-                        <div key={item.type} className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className={typeConfig.color}>
-                              <TypeIcon className="h-5 w-5" />
-                            </div>
-                            <div>
-                              <p className="text-sm font-medium">
-                                {assetTypeNames[item.type] || item.type}
-                              </p>
-                              <p className="text-muted-foreground text-xs">
-                                {item.exposed} exposed
-                              </p>
-                            </div>
-                          </div>
-                          <Badge variant="secondary">{item.total}</Badge>
-                        </div>
-                      )
-                    })}
-              {!isLoading &&
-                (!stats?.assetBreakdown ||
-                  stats.assetBreakdown.filter((item) => item.total > 0).length === 0) && (
-                  <p className="text-muted-foreground text-sm text-center py-4">No assets found</p>
-                )}
-            </CardContent>
-          </Card>
-
-          {/* Exposed Services */}
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-base">Exposed Services</CardTitle>
-                  <CardDescription>
-                    Publicly accessible services requiring attention
-                  </CardDescription>
+                  <span className="ms-1 text-xs font-normal text-muted-foreground">of 100</span>
                 </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => router.push('/attack-surface/external')}
-                >
-                  <Eye className="me-2 h-4 w-4" />
-                  View All
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {isLoading
-                  ? Array.from({ length: 5 }).map((_, i) => (
-                      <div
-                        key={i}
-                        className="flex items-center justify-between rounded-lg border p-3"
-                      >
-                        <div className="flex items-center gap-3">
-                          <Skeleton className="h-10 w-10 rounded-full" />
-                          <div>
-                            <Skeleton className="h-4 w-40 mb-1" />
-                            <Skeleton className="h-3 w-24" />
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <Skeleton className="h-5 w-20" />
-                          <Skeleton className="h-5 w-16" />
-                        </div>
-                      </div>
-                    ))
-                  : stats?.exposedServicesList?.map((service) => {
-                      const risk = riskConfig[service.criticality] || riskConfig.medium
-                      return (
-                        <div
-                          key={service.id}
-                          className="flex items-center justify-between rounded-lg border p-3"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className={`rounded-full p-2 ${risk.bgColor}`}>
-                              <Server className={`h-4 w-4 ${risk.color}`} />
-                            </div>
-                            <div>
-                              <div className="flex flex-wrap items-center gap-2">
-                                <p className="text-sm font-medium">{service.name}</p>
-                                {service.port && (
-                                  <Badge variant="outline" className="text-xs">
-                                    :{service.port}
-                                  </Badge>
-                                )}
-                              </div>
-                              <p className="text-muted-foreground text-xs">
-                                {service.type} - {formatRelativeTime(service.lastSeen)}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <Badge className={`${risk.bgColor} ${risk.color} border-0`}>
-                              {service.findingCount} findings
-                            </Badge>
-                            <Badge
-                              variant={service.exposure === 'public' ? 'destructive' : 'secondary'}
-                              className="text-xs capitalize"
-                            >
-                              {service.exposure}
-                            </Badge>
-                          </div>
-                        </div>
-                      )
-                    })}
-                {!isLoading &&
-                  (!stats?.exposedServicesList || stats.exposedServicesList.length === 0) && (
-                    <p className="text-muted-foreground text-sm text-center py-4">
-                      No exposed services found
-                    </p>
-                  )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+                <Progress value={stats?.riskScore || 0} className="mt-2 h-1.5" />
+              </CardContent>
+            </Card>
+          </>
+        )}
+      </div>
 
-        {/* Recent Changes */}
-        <Card className="mt-6">
+      <div className="mt-5 grid gap-5 lg:grid-cols-3">
+        <Card className="lg:col-span-1">
           <CardHeader>
-            <CardTitle className="text-base">Recent Attack Surface Changes</CardTitle>
-            <CardDescription>Assets added, removed, or modified</CardDescription>
+            <CardTitle className="text-base">Asset breakdown</CardTitle>
+            <CardDescription>Assets by type, with how many are exposed</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {isLoading
-                ? Array.from({ length: 5 }).map((_, i) => (
-                    <div
-                      key={i}
-                      className="flex items-center justify-between rounded-lg border p-3"
-                    >
-                      <div className="flex items-center gap-3">
-                        <Skeleton className="h-5 w-16" />
-                        <Skeleton className="h-4 w-40" />
+            {isLoading ? (
+              <ListRowsSkeleton rows={6} />
+            ) : breakdown.length === 0 ? (
+              <EmptyState
+                icon={Layers}
+                title="No assets yet"
+                description="Assets appear here once discovery or an import adds them."
+                card={false}
+                className="py-8"
+              />
+            ) : (
+              <div className="divide-y">
+                {breakdown.map((item) => {
+                  const TypeIcon = assetTypeIcons[item.type] || Server
+                  return (
+                    <div key={item.type} className="flex items-center justify-between py-2.5">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <TypeIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium">
+                            {assetTypeNames[item.type] || item.type}
+                          </p>
+                          <p className="text-xs text-muted-foreground tabular-nums">
+                            {item.exposed} exposed
+                          </p>
+                        </div>
                       </div>
-                      <Skeleton className="h-3 w-20" />
+                      <span className="text-sm font-medium tabular-nums">{item.total}</span>
                     </div>
-                  ))
-                : stats?.recentChanges?.map((change, idx) => (
-                    <div
-                      key={idx}
-                      className="flex items-center justify-between rounded-lg border p-3"
-                    >
-                      <div className="flex items-center gap-3">
-                        <Badge
-                          className={
-                            change.type === 'added'
-                              ? 'bg-green-500/20 text-green-400 border-0'
-                              : change.type === 'removed'
-                                ? 'bg-red-500/20 text-red-400 border-0'
-                                : 'bg-yellow-500/20 text-yellow-400 border-0'
-                          }
-                        >
-                          {change.type}
-                        </Badge>
-                        <span className="text-sm font-medium">{change.assetName}</span>
-                      </div>
-                      <span className="text-muted-foreground text-xs">
-                        {formatRelativeTime(change.timestamp)}
-                      </span>
-                    </div>
-                  ))}
-              {!isLoading && (!stats?.recentChanges || stats.recentChanges.length === 0) && (
-                <p className="text-muted-foreground text-sm text-center py-4">No recent changes</p>
-              )}
-            </div>
+                  )
+                })}
+              </div>
+            )}
           </CardContent>
         </Card>
-      </Main>
-    </>
+
+        <Card className="lg:col-span-2">
+          <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
+            <div className="space-y-1.5">
+              <CardTitle className="text-base">Exposed services</CardTitle>
+              <CardDescription>Publicly reachable services that need attention</CardDescription>
+            </div>
+            <Button size="sm" variant="outline" asChild>
+              <Link href="/attack-surface/external">View all</Link>
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <ListRowsSkeleton rows={5} />
+            ) : exposed.length === 0 ? (
+              <EmptyState
+                icon={Network}
+                title="No exposed services"
+                description="Nothing publicly reachable has been discovered."
+                card={false}
+                className="py-8"
+              />
+            ) : (
+              <div className="divide-y">
+                {exposed.map((service) => (
+                  <div key={service.id} className="flex items-center justify-between gap-3 py-2.5">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <Server className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="truncate text-sm font-medium">{service.name}</p>
+                          {service.port && (
+                            <span className="font-mono text-xs text-muted-foreground">
+                              :{service.port}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {service.type} · {formatRelativeTime(service.lastSeen)}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <span
+                        className={cn(
+                          'text-xs tabular-nums',
+                          service.findingCount > 0
+                            ? 'font-medium text-destructive'
+                            : 'text-muted-foreground'
+                        )}
+                      >
+                        {service.findingCount} findings
+                      </span>
+                      <Badge
+                        variant={service.exposure === 'public' ? 'destructive' : 'secondary'}
+                        className="capitalize"
+                      >
+                        {service.exposure}
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card className="mt-5">
+        <CardHeader>
+          <CardTitle className="text-base">Recent changes</CardTitle>
+          <CardDescription>Assets added, removed or modified</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <ListRowsSkeleton rows={5} />
+          ) : changes.length === 0 ? (
+            <EmptyState
+              icon={History}
+              title="No recent changes"
+              description="The attack surface has not changed recently."
+              card={false}
+              className="py-8"
+            />
+          ) : (
+            <div className="divide-y">
+              {changes.map((change, idx) => (
+                <div key={idx} className="flex items-center justify-between gap-3 py-2.5">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <Badge
+                      variant={change.type === 'added' ? 'secondary' : 'outline'}
+                      className="w-20 justify-center capitalize"
+                    >
+                      {change.type}
+                    </Badge>
+                    <span className="truncate text-sm font-medium">{change.assetName}</span>
+                  </div>
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    {formatRelativeTime(change.timestamp)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </Main>
   )
 }
