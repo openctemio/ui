@@ -431,11 +431,18 @@ export function AllAssetsInventory() {
       />
 
       <Sheet open={filterSheetOpen} onOpenChange={setFilterSheetOpen}>
-        <SheetContent side="left" className="w-80 overflow-y-auto p-4">
+        <SheetContent side="left" className="w-full gap-0 p-0">
           <SheetHeader className="sr-only">
             <SheetTitle>Asset filters</SheetTitle>
           </SheetHeader>
-          {facetPanel}
+          {/* Top padding gives the sheet's close button its own row, clear of
+              "Clear all"; the list scrolls between it and the footer. */}
+          <div className="flex min-h-0 flex-1 flex-col px-4 pt-14">{facetPanel}</div>
+          <div className="border-t p-4">
+            <Button className="w-full" onClick={() => setFilterSheetOpen(false)}>
+              Show {total.toLocaleString()} {total === 1 ? 'asset' : 'assets'}
+            </Button>
+          </div>
         </SheetContent>
       </Sheet>
     </Main>
