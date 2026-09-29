@@ -113,7 +113,7 @@ export default function RemediationsPage() {
       <SectionTabs
         tabs={[
           { label: 'Tasks', href: '/remediation' },
-          { label: 'Solution Families', href: '/remediations' },
+          { label: 'Solution families', href: '/remediations' },
         ]}
       />
 
