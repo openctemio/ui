@@ -22,6 +22,14 @@ export interface MetricStripItem {
 }
 
 /**
+ * Columns for the tablet grid: up to 4 metrics share one row, more split into
+ * two rows as evenly as possible (5 → 3+2, 7 → 4+3), never a lone metric.
+ */
+export function smColumns(count: number): number {
+  return count <= 4 ? Math.max(count, 1) : Math.min(Math.ceil(count / 2), 4)
+}
+
+/**
  * A page's headline numbers as one quiet strip rather than a row of separate
  * cards — the list below stays the focus. Metrics with `onClick` are quick
  * filters (`aria-pressed` reflects `active`).
@@ -39,11 +47,17 @@ export function MetricStrip({
     <dl
       className={cn(
         // Phones: one horizontally scrollable row (snaps per metric) instead of
-        // a tall 2-column stack. sm: a grid; lg: one row, one column per metric.
-        'no-scrollbar flex snap-x snap-mandatory overflow-x-auto rounded-xl border bg-card sm:grid sm:grid-cols-3 sm:overflow-hidden lg:grid-cols-[repeat(var(--metric-cols),minmax(0,1fr))]',
+        // a tall 2-column stack. sm: a grid balanced so no metric sits alone on
+        // its last row; lg: one row, one column per metric.
+        'no-scrollbar flex snap-x snap-mandatory overflow-x-auto rounded-xl border bg-card sm:grid sm:grid-cols-[repeat(var(--metric-cols-sm),minmax(0,1fr))] sm:overflow-hidden lg:grid-cols-[repeat(var(--metric-cols),minmax(0,1fr))]',
         className
       )}
-      style={{ '--metric-cols': items.length } as React.CSSProperties}
+      style={
+        {
+          '--metric-cols': items.length,
+          '--metric-cols-sm': smColumns(items.length),
+        } as React.CSSProperties
+      }
     >
       {items.map((item) => {
         const numeric = typeof item.value === 'number'
