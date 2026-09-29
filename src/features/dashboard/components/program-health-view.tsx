@@ -19,22 +19,23 @@
 
 import { useMemo, useState } from 'react'
 import { Main } from '@/components/layout'
-import { PageHeader, EmptyState } from '@/features/shared'
+import { PageHeader, EmptyState, MetricStrip } from '@/features/shared'
 import { useTenant } from '@/context/tenant-provider'
 import { usePermissions, Permission } from '@/lib/permissions'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Button } from '@/components/ui/button'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { cn } from '@/lib/utils'
 import { AreaChart, Area, ResponsiveContainer, XAxis, YAxis, Tooltip } from '@/components/charts'
 import { SEVERITY_CHART_COLORS } from '@/lib/severity-colors'
-import {
-  CHART_TOOLTIP_PROPS,
-  STATE_TEXT,
-  STATE_BADGE_SOFT,
-  type CtemState,
-} from '../lib/ctem-colors'
+import { CHART_TOOLTIP_PROPS, STATE_BADGE_SOFT, type CtemState } from '../lib/ctem-colors'
 import {
   useExecutiveSummary,
   useMttrAnalytics,
@@ -73,9 +74,9 @@ import {
 type Period = '30' | '90' | '365'
 
 const PERIOD_OPTIONS: { value: Period; label: string }[] = [
-  { value: '30', label: '30d' },
-  { value: '90', label: '90d' },
-  { value: '365', label: '1y' },
+  { value: '30', label: 'Last 30 days' },
+  { value: '90', label: 'Last 90 days' },
+  { value: '365', label: 'Last year' },
 ]
 
 interface OutcomeMetric {
@@ -115,8 +116,11 @@ function fmtDays(v: number | null): string | null {
   return `${v.toFixed(1)}d`
 }
 
+// A value is coloured only when it is a problem; the status pill carries the
+// rest of the state (on track / watch / not measured).
 function stateTextClass(status: MetricStatus): string {
-  return status === 'pending' ? 'text-muted-foreground' : STATE_TEXT[status as CtemState]
+  if (status === 'pending') return 'text-muted-foreground'
+  return status === 'crit' ? 'text-destructive' : ''
 }
 
 function statusBadgeClass(status: MetricStatus): string {
@@ -133,7 +137,10 @@ function StatusPill({ status }: { status: MetricStatus }) {
   const meta = STATUS_META[status]
   const Icon = meta.icon
   return (
-    <Badge variant="outline" className={cn('gap-1', statusBadgeClass(status))}>
+    <Badge
+      variant="outline"
+      className={cn('shrink-0 gap-1 whitespace-nowrap', statusBadgeClass(status))}
+    >
       <Icon className="h-3 w-3" />
       {meta.label}
     </Badge>
@@ -143,16 +150,18 @@ function StatusPill({ status }: { status: MetricStatus }) {
 function MetricCard({ metric }: { metric: OutcomeMetric }) {
   return (
     <Card className="flex flex-col">
-      <CardHeader className="flex flex-row items-start justify-between gap-2 space-y-0 pb-2">
-        <div>
-          <CardTitle className="text-sm font-medium">{metric.label}</CardTitle>
-          <CardDescription className="mt-1 text-xs">{metric.measures}</CardDescription>
-        </div>
-        <StatusPill status={metric.status} />
+      <CardHeader className="space-y-1 pb-2">
+        <CardTitle className="text-sm font-medium">{metric.label}</CardTitle>
+        <CardDescription className="text-xs">{metric.measures}</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-1 flex-col justify-end">
-        <div className={cn('text-3xl font-bold tabular-nums', stateTextClass(metric.status))}>
-          {metric.display ?? '—'}
+        {/* Value and status share a row that wraps, so the pill never squeezes
+            (or clips, e.g. "Not measured") the title at narrow widths. */}
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className={cn('text-2xl font-bold tabular-nums', stateTextClass(metric.status))}>
+            {metric.display ?? '—'}
+          </span>
+          <StatusPill status={metric.status} />
         </div>
         <p className="mt-1 text-xs text-muted-foreground">
           Target: <span className="font-medium text-foreground">{metric.target}</span>
@@ -326,11 +335,12 @@ export function ProgramHealthView() {
   if (!canRead) {
     return (
       <Main>
-        <PageHeader title="Program Health" className="mb-6" />
+        <PageHeader title="Program health" />
         <EmptyState
+          className="mt-5"
           icon={Lock}
           title="You don’t have access to program metrics."
-          description="Dashboard read permission is required to view Program Health."
+          description="Dashboard read permission is required to view program health."
         />
       </Main>
     )
@@ -341,152 +351,136 @@ export function ProgramHealthView() {
   return (
     <Main>
       <PageHeader
-        title="Program Health"
-        description="CTEM-playbook outcome metrics — is exposure actually going down and getting fixed in time?"
-        className="mb-4"
+        title="Program health"
+        description="Outcome metrics — is risk being retired (urgent things fixed in time, inventory owned, exposure falling), not how much activity there is."
       >
-        <div className="flex items-center gap-2 rounded-md border bg-card p-1">
-          {PERIOD_OPTIONS.map((opt) => (
-            <Button
-              key={opt.value}
-              variant={period === opt.value ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setPeriod(opt.value)}
-              className="h-7 px-3"
-            >
-              {opt.label}
-            </Button>
-          ))}
-        </div>
+        <Select value={period} onValueChange={(v) => setPeriod(v as Period)}>
+          <SelectTrigger className="h-9 w-[150px]" aria-label="Period">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {PERIOD_OPTIONS.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </PageHeader>
 
-      {/* Outcome-vs-activity framing (from the ctem.org guide). */}
-      <Card className="mb-6 border-dashed">
-        <CardContent className="flex items-start gap-3 py-4">
-          <Target className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" />
-          <div className="text-sm text-muted-foreground">
-            <span className="font-medium text-foreground">Lead with outcomes, not volume.</span>{' '}
-            Total findings, scans and tickets measure <em>activity</em> — motion, not value. The
-            scorecard below tracks whether risk is being retired: urgent things fixed in time,
-            inventory owned, exposure falling, fixes that stay fixed. Volume ≠ value.
-          </div>
-        </CardContent>
-      </Card>
+      <div className="mt-5">
+        {loading ? (
+          <ScorecardSkeleton />
+        ) : !hasAnyData ? (
+          <EmptyState
+            icon={ShieldCheck}
+            title="No program data yet"
+            description="Once findings are ingested and remediation begins, outcome metrics populate here."
+          />
+        ) : (
+          <>
+            <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {metrics.map((m) => (
+                <MetricCard key={m.id} metric={m} />
+              ))}
+            </section>
 
-      {loading ? (
-        <ScorecardSkeleton />
-      ) : !hasAnyData ? (
-        <EmptyState
-          icon={ShieldCheck}
-          title="No program data yet."
-          description="Once findings are ingested and remediation begins, outcome metrics populate here."
-        />
-      ) : (
-        <>
-          <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {metrics.map((m) => (
-              <MetricCard key={m.id} metric={m} />
-            ))}
-          </section>
-
-          {/* Exposure-count trend chart (the guide's day-60 down-slope). */}
-          <Card className="mt-6">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Exposure over time</CardTitle>
-              <CardDescription className="text-xs">
-                Open findings across the selected window — a healthy program bends this down.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {trendLoading ? (
-                <Skeleton className="h-48 w-full" />
-              ) : openSeries.length > 1 ? (
-                <div className="h-48 w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={riskTrend} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
-                      <defs>
-                        <linearGradient id="exposureFill" x1="0" y1="0" x2="0" y2="1">
-                          <stop
-                            offset="5%"
-                            stopColor={SEVERITY_CHART_COLORS.info}
-                            stopOpacity={0.35}
-                          />
-                          <stop
-                            offset="95%"
-                            stopColor={SEVERITY_CHART_COLORS.info}
-                            stopOpacity={0}
-                          />
-                        </linearGradient>
-                      </defs>
-                      <XAxis
-                        dataKey="date"
-                        tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }}
-                        tickLine={false}
-                        axisLine={false}
-                        minTickGap={24}
-                      />
-                      <YAxis
-                        tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }}
-                        tickLine={false}
-                        axisLine={false}
-                        width={36}
-                        allowDecimals={false}
-                      />
-                      <Tooltip {...CHART_TOOLTIP_PROPS} />
-                      <Area
-                        type="monotone"
-                        dataKey="findings_open"
-                        name="Open findings"
-                        stroke={SEVERITY_CHART_COLORS.info}
-                        strokeWidth={2}
-                        fill="url(#exposureFill)"
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-              ) : (
-                <p className="py-10 text-center text-sm text-muted-foreground">
-                  Not enough trend history yet — needs at least two risk snapshots.
-                </p>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Activity metrics — deliberately de-emphasised: context, not goals. */}
-          {summary && (
-            <Card className="mt-6 bg-muted/30">
+            {/* Exposure-count trend chart (the guide's day-60 down-slope). */}
+            <Card className="mt-5">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Activity metrics (context, not goals)
-                </CardTitle>
+                <CardTitle className="text-sm font-medium">Exposure over time</CardTitle>
                 <CardDescription className="text-xs">
-                  Volume numbers — useful for context, but not what the program is judged on.
+                  Open findings across the selected window — a healthy program bends this down.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="grid grid-cols-3 gap-4">
-                <div>
-                  <div className="text-2xl font-semibold text-muted-foreground tabular-nums">
-                    {summary.findings_total.toLocaleString()}
+              <CardContent>
+                {trendLoading ? (
+                  <Skeleton className="h-48 w-full" />
+                ) : openSeries.length > 1 ? (
+                  <div className="h-48 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={riskTrend} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
+                        <defs>
+                          <linearGradient id="exposureFill" x1="0" y1="0" x2="0" y2="1">
+                            <stop
+                              offset="5%"
+                              stopColor={SEVERITY_CHART_COLORS.info}
+                              stopOpacity={0.35}
+                            />
+                            <stop
+                              offset="95%"
+                              stopColor={SEVERITY_CHART_COLORS.info}
+                              stopOpacity={0}
+                            />
+                          </linearGradient>
+                        </defs>
+                        <XAxis
+                          dataKey="date"
+                          tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }}
+                          tickLine={false}
+                          axisLine={false}
+                          minTickGap={24}
+                        />
+                        <YAxis
+                          tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }}
+                          tickLine={false}
+                          axisLine={false}
+                          width={36}
+                          allowDecimals={false}
+                        />
+                        <Tooltip {...CHART_TOOLTIP_PROPS} />
+                        <Area
+                          type="monotone"
+                          dataKey="findings_open"
+                          name="Open findings"
+                          stroke={SEVERITY_CHART_COLORS.info}
+                          strokeWidth={2}
+                          fill="url(#exposureFill)"
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
                   </div>
-                  <p className="text-xs text-muted-foreground">Total open findings</p>
-                </div>
-                <div>
-                  <div className="text-2xl font-semibold text-muted-foreground tabular-nums">
-                    {(summary.findings_new_period ?? 0).toLocaleString()}
-                  </div>
-                  <p className="text-xs text-muted-foreground">New this period</p>
-                </div>
-                <div>
-                  <div className="text-2xl font-semibold text-muted-foreground tabular-nums">
-                    {summary.findings_resolved_period.toLocaleString()}
-                  </div>
-                  <p className="text-xs text-muted-foreground">Resolved this period</p>
-                </div>
+                ) : (
+                  <EmptyState
+                    card={false}
+                    className="py-10"
+                    icon={Target}
+                    title="Not enough trend history yet"
+                    description="The chart needs at least two risk snapshots."
+                  />
+                )}
               </CardContent>
             </Card>
-          )}
-        </>
-      )}
+
+            {/* Activity metrics — deliberately de-emphasised: context, not goals. */}
+            {summary && (
+              <section className="mt-5 space-y-3">
+                <div>
+                  <h2 className="text-base font-semibold">Activity (context, not goals)</h2>
+                  <p className="text-sm text-muted-foreground">
+                    Volume numbers — useful for context, but not what the program is judged on.
+                  </p>
+                </div>
+                <MetricStrip
+                  items={[
+                    { key: 'open', label: 'Total open findings', value: summary.findings_total },
+                    {
+                      key: 'new',
+                      label: 'New this period',
+                      value: summary.findings_new_period ?? 0,
+                    },
+                    {
+                      key: 'resolved',
+                      label: 'Resolved this period',
+                      value: summary.findings_resolved_period,
+                    },
+                  ]}
+                />
+              </section>
+            )}
+          </>
+        )}
+      </div>
     </Main>
   )
 }
