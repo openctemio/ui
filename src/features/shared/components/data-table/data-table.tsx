@@ -456,13 +456,15 @@ export function DataTable<TData, TValue>({
                   data-state={row.getIsSelected() && 'selected'}
                   className={cn('group/row', onRowClick && 'cursor-pointer hover:bg-muted/50')}
                   onClick={(e) => {
-                    // Don't trigger row click if clicking on checkbox, button, or dropdown
                     const target = e.target as HTMLElement
-                    const isInteractiveElement =
-                      target.closest('button') ||
-                      target.closest('[role="checkbox"]') ||
-                      target.closest('[data-radix-collection-item]') ||
-                      target.closest('[role="menuitem"]')
+                    // React bubbles events out of portals: a click inside a row's
+                    // open menu, or a dialog opened from it, reaches this handler
+                    // although it is not in the row's DOM. Only real row clicks count.
+                    if (!e.currentTarget.contains(target)) return
+                    // Nor clicks on the row's own controls.
+                    const isInteractiveElement = target.closest(
+                      'button, a[href], input, select, textarea, label, [role="checkbox"], [role="switch"], [role="menuitem"], [data-radix-collection-item]'
+                    )
 
                     if (!isInteractiveElement && onRowClick) {
                       onRowClick(row.original)
