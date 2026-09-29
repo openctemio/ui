@@ -82,7 +82,7 @@ function NavGroupComponent({ title, icon, items }: NavGroupProps) {
   // Ungrouped rows (Dashboard) — plain top-level links, no group heading.
   if (!title) {
     return (
-      <SidebarMenu>
+      <SidebarMenu className="group-data-[collapsible=icon]:items-center">
         {items.map((item) =>
           'items' in item ? null : (
             <SidebarMenuLink
@@ -101,7 +101,7 @@ function NavGroupComponent({ title, icon, items }: NavGroupProps) {
   // heading has nothing to label when the labels are hidden.
   if (state === 'collapsed' && !isMobile) {
     return (
-      <SidebarMenu>
+      <SidebarMenu className="group-data-[collapsible=icon]:items-center">
         <NavSection title={title} icon={icon} items={items} dynamicBadges={dynamicBadges} />
       </SidebarMenu>
     )
