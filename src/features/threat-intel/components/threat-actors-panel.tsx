@@ -79,6 +79,12 @@ function formatDate(iso: string): string {
   return Number.isNaN(d.getTime()) ? '—' : d.toLocaleDateString()
 }
 
+/** "financial_gain" → "Financial gain" (motivation is stored as a slug). */
+function humanize(raw?: string): string {
+  const s = (raw ?? '').replace(/_/g, ' ').trim()
+  return s ? s.charAt(0).toUpperCase() + s.slice(1) : ''
+}
+
 /** Split a comma/newline separated field into a trimmed, non-empty string list. */
 function splitList(raw: string): string[] {
   return raw
@@ -140,7 +146,9 @@ export function ThreatActorsPanel() {
         accessorKey: 'motivation',
         header: 'Motivation',
         cell: ({ row }) => (
-          <span className="text-sm text-muted-foreground">{row.original.motivation || '—'}</span>
+          <span className="text-sm text-muted-foreground">
+            {humanize(row.original.motivation) || '—'}
+          </span>
         ),
       },
       {
@@ -346,7 +354,7 @@ function ThreatActorDetailSheet({
                   <SheetInfoRow label="Aliases">{actor.aliases.join(', ')}</SheetInfoRow>
                 )}
                 {actor.motivation && (
-                  <SheetInfoRow label="Motivation">{actor.motivation}</SheetInfoRow>
+                  <SheetInfoRow label="Motivation">{humanize(actor.motivation)}</SheetInfoRow>
                 )}
                 {actor.sophistication && (
                   <SheetInfoRow label="Sophistication">{actor.sophistication}</SheetInfoRow>
