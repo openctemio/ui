@@ -1,9 +1,10 @@
 'use client'
 
 /**
- * Bulk-action bar for the All-Assets inventory. Appears when ≥1 row is selected
- * and lets an operator apply an action to the whole selection: assign an owner,
- * set criticality, or add a tag. Every mutation is tenant-scoped (it goes
+ * Bulk actions for the All-Assets inventory, in the shared floating
+ * BulkActionBar (it overlays the page, so selecting rows never moves the
+ * table; Escape clears the selection). An operator can apply an action to the
+ * whole selection: assign an owner, set criticality, or add a tag. Every mutation is tenant-scoped (it goes
  * through the shared API client) and gated on `assets:write` by the caller.
  *
  * Writes run in small concurrent batches (mirrors bulkDeleteAssets) with
@@ -17,7 +18,6 @@ import {
   UserPlus,
   ShieldAlert,
   Tag as TagIcon,
-  X,
   User,
   Building2,
   ChevronsUpDown,
@@ -51,6 +51,7 @@ import {
   CommandList,
 } from '@/components/ui/command'
 import useSWR from 'swr'
+import { BulkActionBar } from '@/features/shared'
 import { cn } from '@/lib/utils'
 import { get } from '@/lib/api/client'
 import { getErrorMessage } from '@/lib/api/error-handler'
@@ -277,47 +278,30 @@ export function InventoryBulkBar({ selected, canWrite, onClear, onDone }: BulkBa
     }
   }
 
-  if (count === 0) return null
-
   return (
     <>
-      <div className="flex flex-wrap items-center gap-2 rounded-lg border border-primary/40 bg-primary/5 px-3 py-2">
-        <span className="text-sm font-medium">{count} selected</span>
-        <div className="mx-1 h-4 w-px bg-border" />
+      <BulkActionBar count={count} onClear={onClear} noun="selected">
         {canWrite ? (
           <>
-            <Button variant="outline" size="sm" className="h-8" onClick={() => setDialog('owner')}>
-              <UserPlus className="me-1.5 h-3.5 w-3.5" />
+            <Button variant="ghost" size="sm" onClick={() => setDialog('owner')}>
+              <UserPlus className="me-2 h-4 w-4" />
               Assign owner
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8"
-              onClick={() => setDialog('criticality')}
-            >
-              <ShieldAlert className="me-1.5 h-3.5 w-3.5" />
+            <Button variant="ghost" size="sm" onClick={() => setDialog('criticality')}>
+              <ShieldAlert className="me-2 h-4 w-4" />
               Set criticality
             </Button>
-            <Button variant="outline" size="sm" className="h-8" onClick={() => setDialog('tag')}>
-              <TagIcon className="me-1.5 h-3.5 w-3.5" />
+            <Button variant="ghost" size="sm" onClick={() => setDialog('tag')}>
+              <TagIcon className="me-2 h-4 w-4" />
               Add tag
             </Button>
           </>
         ) : (
-          <span className="text-xs text-muted-foreground">Read-only — assets:write required</span>
+          <span className="whitespace-nowrap px-2 text-xs text-muted-foreground">
+            Read-only: assets:write is needed to change assets
+          </span>
         )}
-        <Button
-          variant="ghost"
-          size="sm"
-          className="ms-auto h-8"
-          onClick={onClear}
-          aria-label="Clear selection"
-        >
-          <X className="me-1.5 h-3.5 w-3.5" />
-          Clear
-        </Button>
-      </div>
+      </BulkActionBar>
 
       {/* Set criticality */}
       <Dialog open={dialog === 'criticality'} onOpenChange={(o) => !o && closeDialog()}>
