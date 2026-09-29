@@ -530,9 +530,10 @@ export default function PriorityRulesPage() {
         <Info className="h-4 w-4" />
         <AlertTitle>How evaluation works</AlertTitle>
         <AlertDescription>
-          Rules are evaluated in descending order of <strong>evaluation order</strong> (higher
-          wins). The first active rule whose conditions all match sets the finding&apos;s priority
-          class. Inactive rules are skipped.
+          Rules are evaluated in descending order of <strong>evaluation order</strong>
+          {' (higher wins). '}
+          The first active rule whose conditions all match sets the finding&apos;s priority class.
+          Inactive rules are skipped.
         </AlertDescription>
       </Alert>
 
