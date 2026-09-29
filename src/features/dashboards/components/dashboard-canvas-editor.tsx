@@ -36,7 +36,15 @@ import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { usePermissions } from '@/lib/permissions'
 import { getErrorMessage } from '@/lib/api/error-handler'
-import { ROW_HEIGHT, widgetColSpan, widgetRowSpan } from '../layout'
+import {
+  ROW_HEIGHT,
+  colSpanFor,
+  columnsClass,
+  gridColumnSpan,
+  normalizeColumns,
+  widgetRowSpan,
+  widthFromSpan,
+} from '../layout'
 import { WIDGET_REGISTRY } from '../widgets/registry'
 import { updateDashboard, useRevalidateDashboards } from '../api/use-dashboards-api'
 import type { Dashboard, DashboardWidget } from '../api/dashboards.types'
@@ -46,12 +54,13 @@ type DraftWidget = DashboardWidget & { uid: string }
 let uidSeq = 0
 const nextUid = () => `w${Date.now().toString(36)}${(uidSeq++).toString(36)}`
 
-const SIZE_OPTIONS: Array<{ label: string; w: number }> = [
-  { label: 'Small', w: 3 },
-  { label: 'Medium', w: 4 },
-  { label: 'Large', w: 6 },
-  { label: 'Full width', w: 12 },
-]
+/** Size options for a dashboard of `cols` columns: span 1 … cols (Full width). */
+function sizeOptions(cols: number): Array<{ label: string; span: number }> {
+  return Array.from({ length: cols }, (_, i) => {
+    const span = i + 1
+    return { span, label: span === cols ? 'Full width' : `${span} column${span > 1 ? 's' : ''}` }
+  })
+}
 
 /**
  * In-place editor for a custom dashboard's widgets. Rendered on the live
@@ -69,6 +78,7 @@ export function DashboardCanvasEditor({
 }) {
   const revalidate = useRevalidateDashboards()
   const { can } = usePermissions()
+  const cols = normalizeColumns(dashboard.columns)
   const [draft, setDraft] = useState<DraftWidget[]>(() =>
     dashboard.layout.map((w) => ({ ...w, uid: nextUid() }))
   )
@@ -103,8 +113,8 @@ export function DashboardCanvasEditor({
     ])
   }
   const removeUid = (uid: string) => setDraft((d) => d.filter((w) => w.uid !== uid))
-  const resize = (uid: string, w: number) =>
-    setDraft((d) => d.map((w0) => (w0.uid === uid ? { ...w0, w } : w0)))
+  const resize = (uid: string, span: number) =>
+    setDraft((d) => d.map((w0) => (w0.uid === uid ? { ...w0, w: widthFromSpan(span, cols) } : w0)))
 
   const onDragEnd = (e: DragEndEvent) => {
     const { active, over } = e
@@ -187,14 +197,15 @@ export function DashboardCanvasEditor({
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
           <SortableContext items={draft.map((w) => w.uid)} strategy={rectSortingStrategy}>
             <div
-              className="grid grid-cols-1 gap-4 md:grid-cols-12"
+              className={cn('grid gap-4', columnsClass(cols))}
               style={{ gridAutoRows: `${ROW_HEIGHT}px` }}
             >
               {draft.map((wg) => (
                 <EditableWidget
                   key={wg.uid}
                   widget={wg}
-                  onResize={(w) => resize(wg.uid, w)}
+                  columns={cols}
+                  onResize={(span) => resize(wg.uid, span)}
                   onRemove={() => removeUid(wg.uid)}
                 />
               ))}
@@ -208,19 +219,22 @@ export function DashboardCanvasEditor({
 
 function EditableWidget({
   widget,
+  columns,
   onResize,
   onRemove,
 }: {
   widget: DraftWidget
-  onResize: (w: number) => void
+  columns: number
+  onResize: (span: number) => void
   onRemove: () => void
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: widget.uid,
   })
   const def = WIDGET_REGISTRY[widget.widget_type]
+  const currentSpan = colSpanFor(widget.w, columns)
   const style: React.CSSProperties = {
-    gridColumn: widgetColSpan(widget.w),
+    gridColumn: gridColumnSpan(currentSpan),
     gridRow: widgetRowSpan(widget.h),
     transform: CSS.Transform.toString(transform),
     transition,
@@ -260,10 +274,10 @@ function EditableWidget({
             <DropdownMenuSub>
               <DropdownMenuSubTrigger>Size</DropdownMenuSubTrigger>
               <DropdownMenuSubContent>
-                {SIZE_OPTIONS.map((s) => (
-                  <DropdownMenuItem key={s.w} onClick={() => onResize(s.w)}>
+                {sizeOptions(columns).map((s) => (
+                  <DropdownMenuItem key={s.span} onClick={() => onResize(s.span)}>
                     <span className="flex-1">{s.label}</span>
-                    {widget.w === s.w && <Check className="h-4 w-4" />}
+                    {currentSpan === s.span && <Check className="h-4 w-4" />}
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuSubContent>
