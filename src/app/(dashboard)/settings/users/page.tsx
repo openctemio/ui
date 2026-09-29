@@ -1109,7 +1109,7 @@ export default function UsersPage() {
                   onValueChange={(v) => setStatusFilter(v as StatusFilter)}
                   className="mb-4"
                 >
-                  <TabsList className="w-max max-w-full overflow-x-auto">
+                  <TabsList className="overflow-x-auto">
                     {statusFilters.map((filter) => (
                       <TabsTrigger key={filter.value} value={filter.value} className="gap-1.5">
                         {filter.label}

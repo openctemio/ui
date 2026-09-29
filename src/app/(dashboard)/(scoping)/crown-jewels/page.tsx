@@ -753,7 +753,7 @@ export default function CrownJewelsPage() {
 
               <SheetBody>
                 <Tabs defaultValue="overview" className="mt-6">
-                  <TabsList className="grid w-full grid-cols-2">
+                  <TabsList>
                     <TabsTrigger value="overview">Overview</TabsTrigger>
                     <TabsTrigger value="dependencies">Dependencies</TabsTrigger>
                   </TabsList>

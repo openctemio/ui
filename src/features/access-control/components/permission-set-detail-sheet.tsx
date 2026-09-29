@@ -356,13 +356,9 @@ export function PermissionSetDetailSheet({
               {/* Tabs */}
               <div className="flex-1 px-6 py-4">
                 <Tabs value={activeTab} onValueChange={setActiveTab}>
-                  <TabsList className="w-full">
-                    <TabsTrigger value="overview" className="flex-1">
-                      Overview
-                    </TabsTrigger>
-                    <TabsTrigger value="permissions" className="flex-1">
-                      Permissions
-                    </TabsTrigger>
+                  <TabsList>
+                    <TabsTrigger value="overview">Overview</TabsTrigger>
+                    <TabsTrigger value="permissions">Permissions</TabsTrigger>
                   </TabsList>
 
                   {/* Overview Tab */}

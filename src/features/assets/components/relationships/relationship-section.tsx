@@ -239,7 +239,7 @@ export function RelationshipSection({
       {/* Tabs for direction filter */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
         <div className="px-4 pt-2">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList>
             <TabsTrigger value="all" className="text-xs">
               All ({relationships.length})
             </TabsTrigger>

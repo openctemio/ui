@@ -136,7 +136,7 @@ export function EditAgentDialog({ open, onOpenChange, agent, onSuccess }: EditAg
         </DialogHeader>
 
         <Tabs defaultValue="settings">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList>
             <TabsTrigger value="settings">Settings</TabsTrigger>
             <TabsTrigger value="tools">
               Tools
