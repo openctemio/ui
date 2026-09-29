@@ -96,10 +96,7 @@ import { MarkFixedDialog } from '@/features/findings/components/mark-fixed-dialo
 import { CreateTicketDialog } from '@/features/findings/components/create-ticket-dialog'
 import { LinkFindingsToRemediationDialog } from '@/features/remediation/components/link-findings-dialog'
 import { PendingReviewTab } from '@/features/findings/components/pending-review-tab'
-import {
-  usePendingVerificationCount,
-  type FindingGroup,
-} from '@/features/findings/api/use-finding-groups'
+import { type FindingGroup } from '@/features/findings/api/use-finding-groups'
 import {
   useFindingsApi,
   useFindingStatsApi,
@@ -528,7 +525,6 @@ function FindingsContent() {
   // OSS where no modules are reported).
   const remediationEnabled = useModuleEnabled('remediation')
   const integrationsEnabled = useModuleEnabled('integrations')
-  const pendingCount = usePendingVerificationCount()
 
   // Statuses hidden from default dashboard view (pentest WIP, not ready for visibility)
   const HIDDEN_STATUSES = useMemo(() => ['draft', 'in_review'], [])
@@ -675,32 +671,12 @@ function FindingsContent() {
     mutate: mutateFindings,
   } = useFindingsApi(apiFilters, { keepPreviousData: true })
 
-  // Metric-strip counts that the stats endpoint does not carry: one-row queries
-  // (per_page 1) read only `total`. Scoped like the stats (asset + hidden WIP).
-  const countScope = useMemo<FindingApiFilters>(
-    () => ({
-      per_page: 1,
-      exclude_statuses: HIDDEN_STATUSES,
-      ...(assetIdFilter ? { asset_id: assetIdFilter } : {}),
-    }),
-    [HIDDEN_STATUSES, assetIdFilter]
-  )
-  const { data: overdueData } = useFindingsApi(
-    // Overdue only means something for findings still open.
-    useMemo(
-      () => ({
-        ...countScope,
-        sla_statuses: OVERDUE_SLA,
-        statuses: OPEN_STATUSES as NonNullable<FindingApiFilters['statuses']>,
-      }),
-      [countScope]
-    )
-  )
-  const { data: kevData } = useFindingsApi(
-    useMemo(() => ({ ...countScope, is_in_kev: true }), [countScope])
-  )
-  const overdueCount = overdueData?.total ?? 0
-  const kevCount = kevData?.total ?? 0
+  // Headline numbers all come from /findings/stats — no per-number list
+  // requests (those pushed a single page load past the per-user read limit).
+  // '—' until the api exposes the field (older api).
+  const overdueCount: number | string = findingStats ? (findingStats.sla_breached ?? '—') : 0
+  const kevCount: number | string = findingStats ? (findingStats.kev_open ?? '—') : 0
+  const pendingCount = findingStats?.by_status?.fix_applied ?? 0
 
   // Initial loading state (only true when we don't have stats yet)
   const isInitialLoading = statsLoading && !findingStats
@@ -1432,8 +1408,13 @@ function FindingsContent() {
       label: 'In CISA KEV',
       value: kevCount,
       tone: 'danger',
-      onClick: () => setKevFilter(kevActive ? 'false' : 'true'),
-      active: kevActive,
+      onClick: () => {
+        // Open AND in KEV — the same scope as the count.
+        const on = kevActive && sameSet(statuses, OPEN_STATUSES)
+        setKevFilter(on ? 'false' : 'true')
+        setStatusParam(on ? [] : OPEN_STATUSES)
+      },
+      active: kevActive && sameSet(statuses, OPEN_STATUSES),
     },
     {
       // The verification queue: fixes claimed by owners, waiting for a
