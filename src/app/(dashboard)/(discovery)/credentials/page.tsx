@@ -552,7 +552,7 @@ export default function CredentialsPage() {
   )
   const statusSelect = (
     <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)}>
-      <SelectTrigger className="w-[140px]" aria-label="Filter by status">
+      <SelectTrigger className="h-9 w-auto min-w-36" aria-label="Filter by status">
         <SelectValue placeholder="Status" />
       </SelectTrigger>
       <SelectContent>
@@ -566,7 +566,7 @@ export default function CredentialsPage() {
   )
   const sourceSelect = (
     <Select value={sourceFilter} onValueChange={(v) => setSourceFilter(v as SourceFilter)}>
-      <SelectTrigger className="w-[140px]" aria-label="Filter by source">
+      <SelectTrigger className="h-9 w-auto min-w-36" aria-label="Filter by source">
         <SelectValue placeholder="Source" />
       </SelectTrigger>
       <SelectContent>
