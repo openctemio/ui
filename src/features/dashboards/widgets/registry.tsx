@@ -57,6 +57,7 @@ type WidgetSize = { w: number; h: number }
 
 export interface WidgetDef {
   title: string
+  description: string
   component: () => ReactNode
   defaultSize: WidgetSize
   requiredPermission?: string
@@ -326,84 +327,98 @@ function ThreatIntelWidget() {
 export const WIDGET_REGISTRY: Record<string, WidgetDef> = {
   findings_by_severity: {
     title: 'Findings by severity',
+    description: 'Open findings broken down by severity',
     component: SeverityBreakdownWidget,
     defaultSize: { w: 4, h: 2 },
     requiredPermission: Permission.DashboardRead,
   },
   open_findings: {
     title: 'Total findings',
+    description: 'Total open findings across the tenant',
     component: OpenFindingsWidget,
     defaultSize: { w: 3, h: 1 },
     requiredPermission: Permission.DashboardRead,
   },
   overdue_sla: {
     title: 'Overdue (SLA)',
+    description: 'Findings past their SLA remediation deadline',
     component: OverdueSlaWidget,
     defaultSize: { w: 3, h: 1 },
     requiredPermission: Permission.DashboardRead,
   },
   assets_total: {
     title: 'Assets',
+    description: 'Total assets in inventory',
     component: AssetsWidget,
     defaultSize: { w: 3, h: 1 },
     requiredPermission: Permission.AssetsRead,
   },
   assigned_to_me: {
     title: 'Assigned to me · open',
+    description: 'Open findings assigned to you',
     component: AssignedToMeWidget,
     defaultSize: { w: 3, h: 1 },
     requiredPermission: Permission.FindingsRead,
   },
   my_critical_high: {
     title: 'My critical / high',
+    description: 'Your critical and high findings',
     component: MyCriticalHighWidget,
     defaultSize: { w: 3, h: 1 },
     requiredPermission: Permission.FindingsRead,
   },
   my_overdue_sla: {
     title: 'My overdue (SLA)',
+    description: 'Your findings past their SLA',
     component: MyOverdueSlaWidget,
     defaultSize: { w: 3, h: 1 },
     requiredPermission: Permission.FindingsRead,
   },
   risk_score: {
     title: 'Risk score',
+    description: 'Current program risk score',
     component: RiskScoreWidget,
     defaultSize: { w: 3, h: 1 },
     requiredPermission: Permission.DashboardRead,
   },
   sla_compliance: {
     title: 'SLA compliance',
+    description: 'Share of findings still within SLA',
     component: SlaComplianceWidget,
     defaultSize: { w: 3, h: 1 },
     requiredPermission: Permission.DashboardRead,
   },
   mttr_critical: {
     title: 'MTTR · critical',
+    description: 'Mean time to remediate critical findings',
     component: MttrWidget,
     defaultSize: { w: 3, h: 1 },
     requiredPermission: Permission.DashboardRead,
   },
   p0_open: {
     title: 'P0 open',
+    description: 'Open P0 — highest-priority findings',
     component: P0OpenWidget,
     defaultSize: { w: 3, h: 1 },
     requiredPermission: Permission.FindingsRead,
   },
   scan_coverage: {
     title: 'Scan coverage',
+    description: 'Share of assets covered by scans',
     component: ScanCoverageWidget,
     defaultSize: { w: 3, h: 1 },
     requiredPermission: Permission.DashboardRead,
   },
   reachable_assets: {
     title: 'Assets reachable',
+    description: 'Assets reachable from an exposed entry point',
     component: ReachableAssetsWidget,
     defaultSize: { w: 3, h: 1 },
     requiredPermission: Permission.DashboardRead,
   },
   threat_intel: {
     title: 'Threat intel',
+    description: 'KEV and high-EPSS exposure context',
     component: ThreatIntelWidget,
     defaultSize: { w: 4, h: 2 },
     requiredPermission: Permission.DashboardRead,
