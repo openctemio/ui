@@ -2,111 +2,23 @@
 
 import { useMemo } from 'react'
 import { Main } from '@/components/layout'
-import {
-  PageHeader,
-  StatsCard,
-  EmptyState,
-  formatRiskScore,
-  getRiskScoreChangeType,
-  getRiskLevel,
-} from '@/features/shared'
+import { PageHeader, StatsCard, EmptyState, formatRiskScore, getRiskLevel } from '@/features/shared'
 import { useDashboardStats } from '@/features/dashboard/hooks/use-dashboard-stats'
 import { useFindingTypeStats } from '@/features/exposures/hooks'
-import { useTenant } from '@/context/tenant-provider'
 import {
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-} from '@/components/charts'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Skeleton } from '@/components/ui/skeleton'
-import { cn } from '@/lib/utils'
+  CATEGORY_CHART_COLORS,
+  ChartCard,
+  ChartEmpty,
+  OverviewSkeleton,
+  OVERVIEW_CHARTS_GRID,
+  OVERVIEW_STATS_GRID,
+  SeverityBars,
+  SeverityShareList,
+  humanize,
+} from '@/features/exposures/components'
+import { useTenant } from '@/context/tenant-provider'
+import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from '@/components/charts'
 import { Settings2, AlertTriangle, Server, Shield } from 'lucide-react'
-
-const SEVERITY_COLORS: Record<string, string> = {
-  critical: '#ef4444',
-  high: '#f97316',
-  medium: '#eab308',
-  low: '#3b82f6',
-  info: '#6b7280',
-}
-
-const SEVERITY_LABELS: Record<string, string> = {
-  critical: 'Critical',
-  high: 'High',
-  medium: 'Medium',
-  low: 'Low',
-  info: 'Info',
-}
-
-const SEVERITY_BADGE_VARIANTS: Record<string, 'destructive' | 'default' | 'secondary' | 'outline'> =
-  {
-    critical: 'destructive',
-    high: 'destructive',
-    medium: 'default',
-    low: 'secondary',
-    info: 'outline',
-  }
-
-const SEVERITY_ORDER = ['critical', 'high', 'medium', 'low', 'info'] as const
-
-const ASSET_TYPE_COLORS = ['#8b5cf6', '#06b6d4', '#10b981', '#f59e0b', '#ec4899', '#6366f1']
-
-function LoadingSkeleton() {
-  return (
-    <>
-      <section className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-        {[1, 2, 3, 4].map((i) => (
-          <Card key={i}>
-            <CardHeader className="pb-2">
-              <Skeleton className="h-4 w-24" />
-            </CardHeader>
-            <CardContent>
-              <Skeleton className="mb-2 h-8 w-16" />
-              <Skeleton className="h-3 w-20" />
-            </CardContent>
-          </Card>
-        ))}
-      </section>
-      <section className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
-        {[1, 2].map((i) => (
-          <Card key={i}>
-            <CardHeader>
-              <Skeleton className="h-5 w-32" />
-              <Skeleton className="h-4 w-48" />
-            </CardHeader>
-            <CardContent>
-              <Skeleton className="h-[300px] w-full" />
-            </CardContent>
-          </Card>
-        ))}
-      </section>
-      <section>
-        <Card>
-          <CardHeader>
-            <Skeleton className="h-5 w-40" />
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {[1, 2, 3, 4, 5].map((i) => (
-                <Skeleton key={i} className="h-14 w-full" />
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </section>
-    </>
-  )
-}
 
 export default function MisconfigurationsPage() {
   const { currentTenant } = useTenant()
@@ -119,134 +31,73 @@ export default function MisconfigurationsPage() {
 
   const criticalCount = typeStats.bySeverity.critical || 0
 
-  const severityBarData = useMemo(() => {
-    return SEVERITY_ORDER.map((severity) => ({
-      name: SEVERITY_LABELS[severity],
-      count: typeStats.bySeverity[severity] || 0,
-      fill: SEVERITY_COLORS[severity],
-    })).filter((d) => d.count > 0)
-  }, [typeStats.bySeverity])
-
-  const assetTypeData = useMemo(() => {
-    const byType = stats.assets.byType || {}
-    return Object.entries(byType)
-      .map(([type, count], index) => ({
-        name: type.charAt(0).toUpperCase() + type.slice(1).replace(/_/g, ' '),
-        value: count,
-        color: ASSET_TYPE_COLORS[index % ASSET_TYPE_COLORS.length],
-      }))
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 8)
-  }, [stats.assets.byType])
-
-  const priorityFixes = useMemo(() => {
-    const total = typeStats.total
-    return SEVERITY_ORDER.map((severity) => {
-      const count = typeStats.bySeverity[severity] || 0
-      const percentage = total > 0 ? (count / total) * 100 : 0
-      return {
-        severity,
-        label: SEVERITY_LABELS[severity],
-        count,
-        percentage,
-        color: SEVERITY_COLORS[severity],
-      }
-    }).filter((item) => item.count > 0)
-  }, [typeStats.bySeverity, typeStats.total])
-
-  const hasData = typeStats.total > 0
+  const assetTypeData = useMemo(
+    () =>
+      Object.entries(stats.assets.byType || {})
+        .map(([type, count], index) => ({
+          name: humanize(type),
+          value: count,
+          color: CATEGORY_CHART_COLORS[index % CATEGORY_CHART_COLORS.length],
+        }))
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 8),
+    [stats.assets.byType]
+  )
 
   return (
     <Main>
       <PageHeader
-        title="Misconfiguration Exposures"
-        description="Identify infrastructure and application misconfigurations"
-        className="mb-6"
+        title="Misconfigurations"
+        description="Infrastructure and application misconfigurations found by IaC scanning, by severity."
       />
 
-      {isLoading ? (
-        <LoadingSkeleton />
-      ) : !hasData ? (
-        <EmptyState
-          icon={Settings2}
-          title="No misconfiguration data available"
-          description="Run configuration scans to identify infrastructure and application misconfigurations."
-        />
-      ) : (
-        <>
-          {/* Stats Row */}
-          <section className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-            <StatsCard title="Total Findings" value={typeStats.total} icon={Settings2} />
-            <StatsCard
-              title="Critical Misconfigs"
-              value={criticalCount}
-              changeType={criticalCount > 0 ? 'negative' : 'positive'}
-              change={criticalCount > 0 ? 'Immediate remediation needed' : 'No critical issues'}
-              icon={AlertTriangle}
-            />
-            <StatsCard
-              title="Asset Coverage"
-              value={stats.assets.total}
-              change={`${Object.keys(stats.assets.byType).length} asset types monitored`}
-              changeType="neutral"
-              icon={Server}
-            />
-            <StatsCard
-              title="Risk Score"
-              value={formatRiskScore(typeStats.riskScore)}
-              changeType={getRiskScoreChangeType(typeStats.riskScore)}
-              change={`${getRiskLevel(typeStats.riskScore).label} risk`}
-              icon={Shield}
-            />
-          </section>
+      <div className="mt-5">
+        {isLoading ? (
+          <OverviewSkeleton />
+        ) : typeStats.total === 0 ? (
+          <EmptyState
+            icon={Settings2}
+            title="No misconfigurations yet"
+            description="Run configuration scans to identify infrastructure and application misconfigurations."
+          />
+        ) : (
+          <div className="space-y-5">
+            <div className={OVERVIEW_STATS_GRID}>
+              <StatsCard title="Total findings" value={typeStats.total} icon={Settings2} />
+              <StatsCard
+                title="Critical misconfigurations"
+                value={criticalCount}
+                valueClassName={criticalCount > 0 ? 'text-destructive' : undefined}
+                description={
+                  criticalCount > 0 ? 'Immediate remediation needed' : 'No critical issues'
+                }
+                icon={AlertTriangle}
+              />
+              <StatsCard
+                title="Asset coverage"
+                value={stats.assets.total}
+                description={`${Object.keys(stats.assets.byType).length} asset types monitored`}
+                icon={Server}
+              />
+              <StatsCard
+                title="Risk score"
+                value={formatRiskScore(typeStats.riskScore)}
+                description={`${getRiskLevel(typeStats.riskScore).label} risk`}
+                icon={Shield}
+              />
+            </div>
 
-          {/* Charts Row */}
-          <section className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
-            {/* Findings by Severity Bar */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Findings by Severity</CardTitle>
-                <CardDescription>
-                  Misconfiguration findings distributed by severity level
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {severityBarData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={severityBarData} barCategoryGap="20%">
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                      <XAxis
-                        dataKey="name"
-                        tick={{ fontSize: 12 }}
-                        tickLine={false}
-                        axisLine={false}
-                      />
-                      <YAxis tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
-                      <Tooltip />
-                      <Bar dataKey="count" radius={[4, 4, 0, 0]} barSize={40}>
-                        {severityBarData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.fill} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="flex h-[300px] items-center justify-center">
-                    <p className="text-muted-foreground">No severity data available</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Asset Type Distribution Pie */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Asset Type Distribution</CardTitle>
-                <CardDescription>
-                  Affected assets by type across {stats.assets.total} total assets
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
+            <div className={OVERVIEW_CHARTS_GRID}>
+              <ChartCard
+                title="Findings by severity"
+                description={`${typeStats.total.toLocaleString()} misconfigurations by severity`}
+              >
+                <SeverityBars bySeverity={typeStats.bySeverity} />
+              </ChartCard>
+              <ChartCard
+                title="Assets by type"
+                description={`Your asset mix across ${stats.assets.total.toLocaleString()} assets`}
+              >
                 {assetTypeData.length > 0 ? (
                   <ResponsiveContainer width="100%" height={300}>
                     <PieChart>
@@ -260,8 +111,8 @@ export default function MisconfigurationsPage() {
                         dataKey="value"
                         label={({ name, value }) => `${name}: ${value}`}
                       >
-                        {assetTypeData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        {assetTypeData.map((entry) => (
+                          <Cell key={entry.name} fill={entry.color} />
                         ))}
                       </Pie>
                       <Tooltip />
@@ -269,64 +120,24 @@ export default function MisconfigurationsPage() {
                     </PieChart>
                   </ResponsiveContainer>
                 ) : (
-                  <div className="flex h-[300px] items-center justify-center">
-                    <p className="text-muted-foreground">No asset type data available</p>
-                  </div>
+                  <ChartEmpty title="No asset type data yet" />
                 )}
-              </CardContent>
-            </Card>
-          </section>
+              </ChartCard>
+            </div>
 
-          {/* Priority Fixes */}
-          <section>
-            <Card>
-              <CardHeader>
-                <CardTitle>Priority Fixes</CardTitle>
-                <CardDescription>
-                  Misconfigurations ranked by severity for prioritized remediation
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {priorityFixes.map((item) => (
-                    <div
-                      key={item.severity}
-                      className="flex items-center gap-4 rounded-lg border p-4"
-                    >
-                      <Badge
-                        variant={SEVERITY_BADGE_VARIANTS[item.severity]}
-                        className="w-20 justify-center"
-                      >
-                        {item.label}
-                      </Badge>
-                      <div className="min-w-0 flex-1">
-                        <div className="mb-1 flex items-center justify-between">
-                          <span className="text-sm font-medium">
-                            {item.count}{' '}
-                            {item.count === 1 ? 'misconfiguration' : 'misconfigurations'}
-                          </span>
-                          <span className="text-sm text-muted-foreground">
-                            {item.percentage.toFixed(1)}%
-                          </span>
-                        </div>
-                        <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-                          <div
-                            className={cn('h-full rounded-full transition-all')}
-                            style={{
-                              width: `${item.percentage}%`,
-                              backgroundColor: item.color,
-                            }}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </section>
-        </>
-      )}
+            <ChartCard
+              title="Priority fixes"
+              description="Misconfigurations by severity, most urgent first"
+            >
+              <SeverityShareList
+                bySeverity={typeStats.bySeverity}
+                total={typeStats.total}
+                noun={['misconfiguration', 'misconfigurations']}
+              />
+            </ChartCard>
+          </div>
+        )}
+      </div>
     </Main>
   )
 }
