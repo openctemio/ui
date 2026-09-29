@@ -1555,8 +1555,6 @@ function FindingsContent() {
   const facetPanelScrollable = <div className="flex min-h-0 flex-1 flex-col">{facetPanel}</div>
 
   const total = findingsResponse?.total ?? 0
-  const rangeStart = total === 0 ? 0 : pagination.pageIndex * pagination.pageSize + 1
-  const rangeEnd = Math.min(total, pagination.pageIndex * pagination.pageSize + findings.length)
   const filterBadge =
     activeCount > 0 ? (
       <span className="ms-1.5 rounded-full bg-primary px-1.5 text-[11px] font-medium tabular-nums text-primary-foreground">
@@ -1672,9 +1670,6 @@ function FindingsContent() {
 
   const toolbarEnd = (
     <>
-      <span className="hidden text-sm tabular-nums text-muted-foreground xl:inline">
-        {total === 0 ? 'No results' : `${rangeStart}–${rangeEnd} of ${total.toLocaleString()}`}
-      </span>
       {groupBySelect}
       {refreshButton}
       {exportMenu}
