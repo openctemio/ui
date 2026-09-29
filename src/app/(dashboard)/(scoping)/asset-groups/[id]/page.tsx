@@ -31,7 +31,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabsContent, TabsList, TabsTrigger, TabsCount } from '@/components/ui/tabs'
 import { Separator } from '@/components/ui/separator'
 import { Checkbox } from '@/components/ui/checkbox'
 import { toast } from 'sonner'
@@ -595,8 +595,12 @@ function AssetGroupDetailContent({ params }: PageProps) {
         <Tabs value={activeTab} onValueChange={handleTabChange}>
           <TabsList>
             <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="assets">Assets ({group.assetCount})</TabsTrigger>
-            <TabsTrigger value="findings">Findings ({group.findingCount})</TabsTrigger>
+            <TabsTrigger value="assets">
+              Assets <TabsCount value={group.assetCount} />
+            </TabsTrigger>
+            <TabsTrigger value="findings">
+              Findings <TabsCount value={group.findingCount} />
+            </TabsTrigger>
           </TabsList>
 
           {/* Overview Tab */}
