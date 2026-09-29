@@ -561,10 +561,11 @@ export function AgentsSection({
 
       <MetricStrip className="mt-5" loading={isLoading} items={metrics} />
 
-      {/* Cloud-hosted platform agents: capacity and queue, separate from yours. */}
-      <PlatformStatsCard className="mt-5" />
-
       <div className="mt-5">{body}</div>
+
+      {/* Cloud-hosted platform agents: capacity and queue, separate from the
+          tenant's own agents listed above, so it follows the table. */}
+      <PlatformStatsCard className="mt-5" />
 
       <Can permission={Permission.AgentsDelete}>
         <BulkActionBar count={selectedIds.length} onClear={clearSelection} noun="agents selected">
