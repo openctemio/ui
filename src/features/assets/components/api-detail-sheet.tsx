@@ -107,17 +107,6 @@ export function ApiDetailSheet({
   // Calculate icon background color from text color
   const iconBgColor = iconColor.replace('text-', 'bg-').replace(/(\d+)$/, '$1/20')
 
-  // Calculate total number of tabs: Overview + extraTabs + Findings
-  const tabCount = 2 + (extraTabs?.length || 0)
-  const tabGridClass =
-    tabCount === 2
-      ? 'grid-cols-2'
-      : tabCount === 3
-        ? 'grid-cols-3'
-        : tabCount === 4
-          ? 'grid-cols-4'
-          : 'grid-cols-3'
-
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
@@ -173,7 +162,7 @@ export function ApiDetailSheet({
 
         {/* Tabs */}
         <Tabs defaultValue="overview" className="px-6 pb-6">
-          <TabsList className={cn('grid w-full mb-4', tabGridClass)}>
+          <TabsList className="mb-4">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             {extraTabs?.map((tab) => (
               <TabsTrigger key={tab.value} value={tab.value}>
