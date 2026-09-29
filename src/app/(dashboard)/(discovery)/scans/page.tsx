@@ -3,36 +3,39 @@
 import * as React from 'react'
 import { useState, useMemo, useCallback, useEffect } from 'react'
 import Link from 'next/link'
-import {
-  ColumnDef,
-  flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  SortingState,
-  useReactTable,
-} from '@tanstack/react-table'
+import type { ColumnDef } from '@tanstack/react-table'
 import { Main } from '@/components/layout'
-import { PageHeader, StatusBadge, RunStatusBadge } from '@/features/shared'
+import {
+  PageHeader,
+  StatusBadge,
+  RunStatusBadge,
+  MetricStrip,
+  type MetricStripItem,
+  DataTable,
+  DataTableColumnHeader,
+  BulkActionBar,
+  FacetPanel,
+  FacetSection,
+  FacetOption,
+  EmptyState,
+  SheetStatCard,
+} from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Switch } from '@/components/ui/switch'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -40,7 +43,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -48,8 +50,9 @@ import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
 import { toast } from 'sonner'
 import {
   Plus,
-  SearchIcon,
-  Filter,
+  Search,
+  ListFilter,
+  PanelLeftClose,
   MoreHorizontal,
   Eye,
   Pause,
@@ -57,16 +60,10 @@ import {
   RefreshCw,
   Trash2,
   XCircle,
-  ArrowUpDown,
-  ChevronLeft,
-  ChevronRight,
-  ChevronsLeft,
-  ChevronsRight,
   Radar,
   CheckCircle,
   Clock,
   AlertTriangle,
-  Activity,
   Target,
   Shield,
   Calendar,
@@ -81,10 +78,12 @@ import {
   FileJson,
   FileSpreadsheet,
 } from 'lucide-react'
+import { useDebounce } from '@/hooks/use-debounce'
+import { SEVERITY_BADGE_SOFT, SEVERITY_DOT_COLORS } from '@/lib/severity-colors'
 import { useUrlFilter } from '@/hooks/use-url-param'
 import { copyToClipboard } from '@/lib/clipboard'
 import { Can, Permission } from '@/lib/permissions'
-import { exportToCSV, exportToJSON } from '@/lib/utils'
+import { cn, exportToCSV, exportToJSON } from '@/lib/utils'
 import {
   useScanConfigs,
   useScanConfigStats,
@@ -137,15 +136,15 @@ const configStatusFilters: { value: ConfigStatusFilter; label: string }[] = [
 ]
 
 const configTypeFilters: { value: ConfigTypeFilter; label: string }[] = [
-  { value: 'all', label: 'All Types' },
+  { value: 'all', label: 'All types' },
   { value: 'workflow', label: 'Workflow' },
-  { value: 'single', label: 'Single Scanner' },
+  { value: 'single', label: 'Single scanner' },
 ]
 
 type ConfigScheduleFilter = ScheduleType | 'all'
 
 const configScheduleFilters: { value: ConfigScheduleFilter; label: string }[] = [
-  { value: 'all', label: 'All Schedules' },
+  { value: 'all', label: 'All schedules' },
   ...SCHEDULE_TYPES.map((type) => ({
     value: type as ScheduleType,
     label: SCHEDULE_TYPE_LABELS[type],
@@ -165,7 +164,7 @@ const runStatusFilters: { value: RunStatusFilter; label: string }[] = [
   { value: 'pending', label: 'Pending' },
   { value: 'completed', label: 'Completed' },
   { value: 'failed', label: 'Failed' },
-  { value: 'timeout', label: 'Timed Out' },
+  { value: 'timeout', label: 'Timed out' },
 ]
 
 // Map API status to UI-friendly status for StatusBadge
@@ -181,6 +180,17 @@ function formatDate(dateString?: string): string {
     hour: '2-digit',
     minute: '2-digit',
   })
+}
+
+/** A run's duration in the largest two units (e.g. "3m 12s"). */
+function formatDuration(ms?: number): string {
+  if (!ms) return '-'
+  const seconds = Math.floor(ms / 1000)
+  const minutes = Math.floor(seconds / 60)
+  const hours = Math.floor(minutes / 60)
+  if (hours > 0) return `${hours}h ${minutes % 60}m`
+  if (minutes > 0) return `${minutes}m ${seconds % 60}s`
+  return `${seconds}s`
 }
 
 /**
@@ -206,21 +216,91 @@ function formatNextRun(nextRunAt?: string): string | null {
 }
 
 // ============================================
+// SHARED LIST PIECES
+// ============================================
+
+const CONFIG_FILTERS_OPEN_KEY = 'openctem:scan-config-filters-open'
+
+/**
+ * Whether the filter panel is open. Closed by default so the table gets the
+ * width; the viewer's choice is remembered per browser (safe to lose).
+ */
+function usePersistentFiltersOpen(key: string): [boolean, (open: boolean) => void] {
+  const [open, setOpenState] = useState(false)
+  useEffect(() => {
+    try {
+      if (window.localStorage.getItem(key) === '1') setOpenState(true)
+    } catch {
+      // storage unavailable — stay closed
+    }
+  }, [key])
+  const setOpen = useCallback(
+    (next: boolean) => {
+      setOpenState(next)
+      try {
+        window.localStorage.setItem(key, next ? '1' : '0')
+      } catch {
+        // best-effort
+      }
+    },
+    [key]
+  )
+  return [open, setOpen]
+}
+
+function SearchBox({
+  value,
+  onChange,
+  placeholder,
+  label,
+}: {
+  value: string
+  onChange: (value: string) => void
+  placeholder: string
+  label: string
+}) {
+  return (
+    <div className="relative min-w-0 flex-1 sm:max-w-sm">
+      <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+      <Input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        aria-label={label}
+        className="h-9 ps-9"
+      />
+    </div>
+  )
+}
+
+/** Shaped like the DataTable it stands in for: toolbar, then rows. */
+function TableSkeleton() {
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2">
+        <Skeleton className="h-9 w-24" />
+        <Skeleton className="h-9 w-72" />
+        <Skeleton className="ms-auto h-9 w-24" />
+      </div>
+      <div className="space-y-2 rounded-md border p-3">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <Skeleton key={i} className="h-10 w-full" />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ============================================
 // MAIN PAGE COMPONENT
 // ============================================
 
 export default function ScansPage() {
-  const [mainTab, setMainTab] = useState<'configurations' | 'runs'>('configurations')
+  // The active tab lives in the URL (`?tab=runs`) so either view can be linked to.
+  const [tabParam, setTabParam] = useUrlFilter('tab', 'configurations')
+  const mainTab: 'configurations' | 'runs' = tabParam === 'runs' ? 'runs' : 'configurations'
   const [dialogOpen, setDialogOpen] = useState(false)
   const [quickScanOpen, setQuickScanOpen] = useState(false)
-
-  // Deep-link support: `/scans?tab=runs` opens directly on the Runs tab.
-  // Read on the client after mount to stay SSR-safe (no Suspense boundary needed).
-  useEffect(() => {
-    if (new URLSearchParams(window.location.search).get('tab') === 'runs') {
-      setMainTab('runs')
-    }
-  }, [])
 
   return (
     <>
@@ -228,33 +308,24 @@ export default function ScansPage() {
       <QuickScanDialog open={quickScanOpen} onOpenChange={setQuickScanOpen} />
       <Main>
         <PageHeader
-          title="Scan Management"
-          description={
-            mainTab === 'configurations'
-              ? 'Manage scheduled and recurring scan configurations'
-              : 'Monitor scan executions and results'
-          }
+          title="Scans"
+          description="Schedule scan configurations and follow every run they produce."
         >
           <Can permission={Permission.ScansWrite} mode="disable">
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setQuickScanOpen(true)}>
-                <Zap className="me-2 h-4 w-4" />
-                Quick Scan
-              </Button>
-              <Button onClick={() => setDialogOpen(true)}>
-                <Plus className="me-2 h-4 w-4" />
-                New Scan
-              </Button>
-            </div>
+            <Button variant="outline" size="sm" onClick={() => setQuickScanOpen(true)}>
+              <Zap className="me-2 h-4 w-4" />
+              Quick scan
+            </Button>
+          </Can>
+          <Can permission={Permission.ScansWrite} mode="disable">
+            <Button size="sm" onClick={() => setDialogOpen(true)}>
+              <Plus className="me-2 h-4 w-4" />
+              New scan
+            </Button>
           </Can>
         </PageHeader>
 
-        {/* Main Tabs: Configurations vs Runs */}
-        <Tabs
-          value={mainTab}
-          onValueChange={(v) => setMainTab(v as 'configurations' | 'runs')}
-          className="mt-6"
-        >
+        <Tabs value={mainTab} onValueChange={setTabParam} className="mt-4">
           <TabsList>
             <TabsTrigger value="configurations" className="gap-2">
               <Settings className="h-4 w-4" />
@@ -266,11 +337,11 @@ export default function ScansPage() {
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="configurations" className="mt-6">
+          <TabsContent value="configurations" className="mt-5">
             <ConfigurationsTab />
           </TabsContent>
 
-          <TabsContent value="runs" className="mt-6">
+          <TabsContent value="runs" className="mt-5">
             <RunsTab />
           </TabsContent>
         </Tabs>
@@ -336,7 +407,7 @@ function StatusToggleCell({ config, onToggle }: StatusToggleCellProps) {
           checked={isActive}
           onCheckedChange={handleToggle}
           disabled={isDisabled || isLoading}
-          className="data-[state=checked]:bg-green-500"
+          aria-label={isActive ? 'Pause scan' : 'Activate scan'}
         />
         {isLoading && (
           <div className="absolute inset-0 flex items-center justify-center">
@@ -346,7 +417,7 @@ function StatusToggleCell({ config, onToggle }: StatusToggleCellProps) {
       </div>
       <span className="text-xs text-muted-foreground min-w-[50px]">
         {isLoading
-          ? 'Saving...'
+          ? 'Saving…'
           : localStatus === 'active'
             ? 'Active'
             : localStatus === 'paused'
@@ -372,7 +443,7 @@ function ConfigActionsCell({ config, onAction }: ConfigActionsCellProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+        <Button variant="ghost" size="sm" className="h-8 w-8 p-0" aria-label="Row actions">
           <MoreHorizontal className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
@@ -380,7 +451,7 @@ function ConfigActionsCell({ config, onAction }: ConfigActionsCellProps) {
         <DropdownMenuItem asChild>
           <Link href={`/scans/${config.id}`} className="flex items-center">
             <Eye className="me-2 h-4 w-4" />
-            View Details
+            View details
           </Link>
         </DropdownMenuItem>
         <Can permission={Permission.ScansWrite}>
@@ -391,7 +462,7 @@ function ConfigActionsCell({ config, onAction }: ConfigActionsCellProps) {
         </Can>
         <DropdownMenuItem onClick={() => onAction('trigger', config)}>
           <Play className="me-2 h-4 w-4" />
-          Trigger Scan
+          Trigger scan
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => onAction('clone', config)}>
           <Copy className="me-2 h-4 w-4" />
@@ -412,7 +483,10 @@ function ConfigActionsCell({ config, onAction }: ConfigActionsCellProps) {
         )}
         <Can permission={Permission.ScansDelete}>
           <DropdownMenuSeparator />
-          <DropdownMenuItem className="text-red-400" onClick={() => onAction('delete', config)}>
+          <DropdownMenuItem
+            className="text-destructive focus:text-destructive"
+            onClick={() => onAction('delete', config)}
+          >
             <Trash2 className="me-2 h-4 w-4" />
             Delete
           </DropdownMenuItem>
@@ -428,11 +502,11 @@ function ConfigActionsCell({ config, onAction }: ConfigActionsCellProps) {
 
 function ConfigurationsTab() {
   const [selectedConfig, setSelectedConfig] = useState<ScanConfig | null>(null)
-  const [sorting, setSorting] = useState<SortingState>([])
-  const [globalFilter, setGlobalFilter] = useState('')
-  // Filters live in the URL so a filtered view is shareable and survives reload
-  // (matching the findings/assets pages). The hook returns a plain string; cast
-  // the tuple so downstream typing stays identical to the old useState.
+  // The whole view lives in the URL so a filtered list can be shared or
+  // bookmarked. The hook returns plain strings; the casts keep the narrower
+  // filter types downstream.
+  const [searchQuery, setSearchQuery] = useUrlFilter('q', '')
+  const debouncedSearch = useDebounce(searchQuery, 300)
   const [statusFilter, setStatusFilter] = useUrlFilter('status', 'all') as [
     ConfigStatusFilter,
     (v: ConfigStatusFilter) => void,
@@ -445,8 +519,18 @@ function ConfigurationsTab() {
     ConfigScheduleFilter,
     (v: ConfigScheduleFilter) => void,
   ]
-  const [tagFilter, setTagFilter] = useState<string>('')
-  const [rowSelection, setRowSelection] = useState({})
+  const [tagFilter, setTagFilter] = useUrlFilter('tag', '')
+  const debouncedTag = useDebounce(tagFilter, 300)
+  // Selection is owned by the DataTable; we mirror the selected ids for the
+  // bulk-action bar and bump the epoch to clear the table's own checkboxes.
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [selectionEpoch, setSelectionEpoch] = useState(0)
+  const clearSelection = useCallback(() => {
+    setSelectedIds([])
+    setSelectionEpoch((e) => e + 1)
+  }, [])
+  const [filtersOpen, setFiltersOpen] = usePersistentFiltersOpen(CONFIG_FILTERS_OPEN_KEY)
+  const [filterSheetOpen, setFilterSheetOpen] = useState(false)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [configToDelete, setConfigToDelete] = useState<ScanConfig | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -461,10 +545,10 @@ function ConfigurationsTab() {
       status: statusFilter !== 'all' ? statusFilter : undefined,
       scan_type: typeFilter !== 'all' ? typeFilter : undefined,
       schedule_type: scheduleFilter !== 'all' ? scheduleFilter : undefined,
-      tags: tagFilter || undefined,
-      search: globalFilter || undefined,
+      tags: debouncedTag || undefined,
+      search: debouncedSearch || undefined,
     }),
-    [statusFilter, typeFilter, scheduleFilter, tagFilter, globalFilter]
+    [statusFilter, typeFilter, scheduleFilter, debouncedTag, debouncedSearch]
   )
 
   // API hooks with stable configuration
@@ -504,18 +588,7 @@ function ConfigurationsTab() {
     }
   }, [configs, selectedConfig])
 
-  // Status counts from stats - memoized with individual deps
-  const statusCounts = useMemo(
-    () => ({
-      all: stats?.total ?? 0,
-      active: stats?.active ?? 0,
-      paused: stats?.paused ?? 0,
-      disabled: stats?.disabled ?? 0,
-    }),
-    [stats?.total, stats?.active, stats?.paused, stats?.disabled]
-  )
-
-  // Total runs count - memoized to prevent recalculation on every render
+  // Total runs across the listed configurations
   const totalRunsCount = useMemo(() => {
     return configs.reduce((sum, c) => sum + c.total_runs, 0)
   }, [configs])
@@ -599,78 +672,26 @@ function ConfigurationsTab() {
     }
   }, [configToDelete])
 
-  // Get selected scan IDs from table
-  const getSelectedScanIds = useCallback((): string[] => {
-    const selectedRows = Object.keys(rowSelection)
-    return selectedRows
-      .map((rowIndex) => configs[parseInt(rowIndex)]?.id)
-      .filter(Boolean) as string[]
-  }, [rowSelection, configs])
-
-  // Bulk action handlers
-  const handleBulkActivate = useCallback(async () => {
-    const scanIds = getSelectedScanIds()
-    if (scanIds.length === 0) return
-
-    try {
-      const result = await bulkActivate({ scan_ids: scanIds })
-      if (result) {
-        toast.success(result.message)
-        setRowSelection({})
-        await invalidateScanConfigsCache()
+  // One runner for the four bulk operations: same guard, toast and cleanup.
+  const runBulk = useCallback(
+    async (
+      op: (arg: { scan_ids: string[] }) => Promise<{ message: string } | undefined>,
+      failure: string
+    ) => {
+      if (selectedIds.length === 0) return
+      try {
+        const result = await op({ scan_ids: selectedIds })
+        if (result) {
+          toast.success(result.message)
+          clearSelection()
+          await invalidateScanConfigsCache()
+        }
+      } catch (error) {
+        toast.error(getErrorMessage(error, failure))
       }
-    } catch (error) {
-      toast.error(getErrorMessage(error, 'Failed to activate selected scans'))
-    }
-  }, [bulkActivate, getSelectedScanIds])
-
-  const handleBulkPause = useCallback(async () => {
-    const scanIds = getSelectedScanIds()
-    if (scanIds.length === 0) return
-
-    try {
-      const result = await bulkPause({ scan_ids: scanIds })
-      if (result) {
-        toast.success(result.message)
-        setRowSelection({})
-        await invalidateScanConfigsCache()
-      }
-    } catch (error) {
-      toast.error(getErrorMessage(error, 'Failed to pause selected scans'))
-    }
-  }, [bulkPause, getSelectedScanIds])
-
-  const handleBulkDisable = useCallback(async () => {
-    const scanIds = getSelectedScanIds()
-    if (scanIds.length === 0) return
-
-    try {
-      const result = await bulkDisable({ scan_ids: scanIds })
-      if (result) {
-        toast.success(result.message)
-        setRowSelection({})
-        await invalidateScanConfigsCache()
-      }
-    } catch (error) {
-      toast.error(getErrorMessage(error, 'Failed to disable selected scans'))
-    }
-  }, [bulkDisable, getSelectedScanIds])
-
-  const handleBulkDelete = useCallback(async () => {
-    const scanIds = getSelectedScanIds()
-    if (scanIds.length === 0) return
-
-    try {
-      const result = await bulkDelete({ scan_ids: scanIds })
-      if (result) {
-        toast.success(result.message)
-        setRowSelection({})
-        await invalidateScanConfigsCache()
-      }
-    } catch (error) {
-      toast.error(getErrorMessage(error, 'Failed to delete selected scans'))
-    }
-  }, [bulkDelete, getSelectedScanIds])
+    },
+    [selectedIds, clearSelection]
+  )
 
   // Table columns - memoized to prevent infinite re-renders
   const columns: ColumnDef<ScanConfig>[] = useMemo(
@@ -699,21 +720,12 @@ function ConfigurationsTab() {
       },
       {
         accessorKey: 'name',
-        header: ({ column }) => (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-            className="-ms-4"
-          >
-            Name
-            <ArrowUpDown className="ms-2 h-4 w-4" />
-          </Button>
-        ),
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Name" />,
         cell: ({ row }) => (
-          <div>
+          <div className="min-w-0">
             <p className="font-medium">{row.original.name}</p>
             {row.original.description && (
-              <p className="text-muted-foreground max-w-[300px] truncate text-xs">
+              <p className="max-w-[300px] truncate text-xs text-muted-foreground">
                 {row.original.description}
               </p>
             )}
@@ -723,6 +735,7 @@ function ConfigurationsTab() {
       {
         accessorKey: 'scan_type',
         header: 'Type',
+        enableSorting: false,
         cell: ({ row }) => (
           <Badge variant="outline">{SCAN_TYPE_LABELS[row.original.scan_type]}</Badge>
         ),
@@ -730,69 +743,51 @@ function ConfigurationsTab() {
       {
         accessorKey: 'status',
         header: 'Status',
+        enableSorting: false,
         cell: ({ row }) => <StatusToggleCell config={row.original} onToggle={handleToggle} />,
       },
       {
-        accessorKey: 'progress',
-        header: 'Progress',
+        id: 'success_rate',
+        accessorFn: (c) => getProgress(c),
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Success rate" />,
         cell: ({ row }) => {
           const progress = getProgress(row.original)
-          const isActive = row.original.status === 'active'
           return (
             <div className="flex items-center gap-2">
-              <Progress
-                value={progress}
-                className={`h-2 w-20 shrink-0 ${isActive ? '[&>div]:animate-pulse' : ''}`}
-              />
-              <span className="text-muted-foreground text-xs w-10 shrink-0">{progress}%</span>
+              <Progress value={progress} className="h-2 w-20 shrink-0" />
+              <span className="w-10 shrink-0 text-xs tabular-nums text-muted-foreground">
+                {progress}%
+              </span>
             </div>
           )
         },
       },
       {
         accessorKey: 'total_runs',
-        header: ({ column }) => (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-            className="-ms-4"
-          >
-            Runs
-            <ArrowUpDown className="ms-2 h-4 w-4" />
-          </Button>
-        ),
-        cell: ({ row }) => <span className="text-sm">{row.original.total_runs}</span>,
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Runs" />,
+        cell: ({ row }) => <span className="text-sm tabular-nums">{row.original.total_runs}</span>,
       },
       {
-        accessorKey: 'findings',
-        header: ({ column }) => (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-            className="-ms-4"
-          >
-            Results
-            <ArrowUpDown className="ms-2 h-4 w-4" />
-          </Button>
-        ),
+        id: 'results',
+        accessorFn: (c) => c.successful_runs,
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Results" />,
         cell: ({ row }) => {
           const config = row.original
           if (config.total_runs === 0) return <span className="text-muted-foreground">-</span>
           return (
-            <div className="flex items-center gap-1">
-              {config.successful_runs > 0 && (
-                <Badge className="bg-green-500 px-1 text-xs">{config.successful_runs}</Badge>
-              )}
+            <span className="text-sm tabular-nums">
+              {config.successful_runs} passed
               {config.failed_runs > 0 && (
-                <Badge className="bg-red-500 px-1 text-xs">{config.failed_runs}</Badge>
+                <span className="text-destructive"> · {config.failed_runs} failed</span>
               )}
-            </div>
+            </span>
           )
         },
       },
       {
         accessorKey: 'schedule_type',
         header: 'Schedule',
+        enableSorting: false,
         cell: ({ row }) => {
           const config = row.original
           const nextRun = formatNextRun(config.next_run_at)
@@ -801,17 +796,11 @@ function ConfigurationsTab() {
           return (
             <div className="flex flex-col">
               <span className="text-sm">{SCHEDULE_TYPE_LABELS[config.schedule_type]}</span>
-              {nextRun && isActive && (
-                <span className="text-xs text-muted-foreground flex items-center gap-1">
+              {nextRun && (isActive || isPaused) && (
+                <span className="flex items-center gap-1 text-xs text-muted-foreground">
                   <Clock className="h-3 w-3" />
                   Next: {nextRun}
-                </span>
-              )}
-              {nextRun && isPaused && (
-                <span className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Clock className="h-3 w-3 opacity-50" />
-                  <span className="opacity-70">Next: {nextRun}</span>
-                  <span className="text-[10px] italic">(if activated)</span>
+                  {isPaused && <span className="opacity-70">(if resumed)</span>}
                 </span>
               )}
             </div>
@@ -820,30 +809,13 @@ function ConfigurationsTab() {
       },
       {
         id: 'actions',
+        enableHiding: false,
         cell: ({ row }) => <ConfigActionsCell config={row.original} onAction={handleAction} />,
       },
     ],
     [getProgress, handleAction, handleToggle]
   )
 
-  const table = useReactTable({
-    data: configs,
-    columns,
-    state: {
-      sorting,
-      globalFilter,
-      rowSelection,
-    },
-    onSortingChange: setSorting,
-    onGlobalFilterChange: setGlobalFilter,
-    onRowSelectionChange: setRowSelection,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-  })
-
-  // Active filters count
   const activeFiltersCount = [
     statusFilter !== 'all',
     typeFilter !== 'all',
@@ -858,403 +830,241 @@ function ConfigurationsTab() {
     setTagFilter('')
   }
 
+  // A status metric toggles its filter; "All" clears it.
+  const toggleStatus = (value: ConfigStatusFilter) =>
+    setStatusFilter(statusFilter === value ? 'all' : value)
+
+  const metrics: MetricStripItem[] = [
+    {
+      key: 'all',
+      label: 'Configurations',
+      value: stats?.total ?? 0,
+      onClick: () => setStatusFilter('all'),
+      active: statusFilter === 'all',
+    },
+    {
+      key: 'active',
+      label: 'Active',
+      value: stats?.active ?? 0,
+      onClick: () => toggleStatus('active'),
+      active: statusFilter === 'active',
+    },
+    {
+      key: 'paused',
+      label: 'Paused',
+      value: stats?.paused ?? 0,
+      onClick: () => toggleStatus('paused'),
+      active: statusFilter === 'paused',
+    },
+    {
+      key: 'disabled',
+      label: 'Disabled',
+      value: stats?.disabled ?? 0,
+      onClick: () => toggleStatus('disabled'),
+      active: statusFilter === 'disabled',
+    },
+    { key: 'runs', label: 'Runs (listed)', value: totalRunsCount },
+  ]
+
+  // Filters are single-valued in the API, so each section behaves like a radio
+  // group: ticking an option replaces the previous one, unticking clears it.
+  const facetPanel = (
+    <FacetPanel activeCount={activeFiltersCount} onClearAll={clearFilters}>
+      <FacetSection title="Status" selectedCount={statusFilter !== 'all' ? 1 : 0}>
+        {configStatusFilters
+          .filter((f) => f.value !== 'all')
+          .map((f) => (
+            <FacetOption
+              key={f.value}
+              label={f.label}
+              checked={statusFilter === f.value}
+              onCheckedChange={(on) => setStatusFilter(on ? f.value : 'all')}
+            />
+          ))}
+      </FacetSection>
+      <FacetSection title="Scan type" selectedCount={typeFilter !== 'all' ? 1 : 0}>
+        {configTypeFilters
+          .filter((f) => f.value !== 'all')
+          .map((f) => (
+            <FacetOption
+              key={f.value}
+              label={f.label}
+              checked={typeFilter === f.value}
+              onCheckedChange={(on) => setTypeFilter(on ? f.value : 'all')}
+            />
+          ))}
+      </FacetSection>
+      <FacetSection title="Schedule" selectedCount={scheduleFilter !== 'all' ? 1 : 0}>
+        {configScheduleFilters
+          .filter((f) => f.value !== 'all')
+          .map((f) => (
+            <FacetOption
+              key={f.value}
+              label={f.label}
+              checked={scheduleFilter === f.value}
+              onCheckedChange={(on) => setScheduleFilter(on ? f.value : 'all')}
+            />
+          ))}
+      </FacetSection>
+      <FacetSection title="Tag" selectedCount={tagFilter ? 1 : 0}>
+        <div className="relative pe-1 pt-1">
+          <Tag className="pointer-events-none absolute start-2.5 top-1/2 mt-0.5 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Filter by tag…"
+            aria-label="Filter by tag"
+            value={tagFilter}
+            onChange={(e) => setTagFilter(e.target.value)}
+            className="h-8 ps-8 text-sm"
+          />
+        </div>
+      </FacetSection>
+    </FacetPanel>
+  )
+
+  const filterBadge =
+    activeFiltersCount > 0 ? (
+      <span className="ms-1.5 rounded-full bg-primary px-1.5 text-[11px] font-medium tabular-nums text-primary-foreground">
+        {activeFiltersCount}
+      </span>
+    ) : null
+
+  const toolbarStart = (
+    <>
+      <Button
+        variant="outline"
+        size="sm"
+        className="hidden h-9 lg:inline-flex"
+        onClick={() => setFiltersOpen(!filtersOpen)}
+        aria-pressed={filtersOpen}
+        aria-controls="scan-config-filters"
+      >
+        {filtersOpen ? <PanelLeftClose className="h-4 w-4" /> : <ListFilter className="h-4 w-4" />}
+        <span className="ms-2">Filters</span>
+        {filterBadge}
+      </Button>
+      <Button
+        variant="outline"
+        size="sm"
+        className="h-9 lg:hidden"
+        onClick={() => setFilterSheetOpen(true)}
+      >
+        <ListFilter className="h-4 w-4" />
+        <span className="ms-2">Filters</span>
+        {filterBadge}
+      </Button>
+      <SearchBox
+        value={searchQuery}
+        onChange={setSearchQuery}
+        placeholder="Search configurations…"
+        label="Search scan configurations"
+      />
+    </>
+  )
+
   return (
     <>
-      {/* Stats Cards */}
-      <div className="grid gap-3 grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
-        {isLoadingStats ? (
-          <>
-            {[1, 2, 3, 4, 5].map((i) => (
-              <Card key={i}>
-                <CardHeader className="pb-2">
-                  <Skeleton className="h-4 w-24" />
-                  <Skeleton className="h-8 w-16 mt-2" />
-                </CardHeader>
-              </Card>
-            ))}
-          </>
-        ) : (
-          <>
-            <Card
-              className="cursor-pointer hover:border-primary transition-colors"
-              onClick={() => setStatusFilter('all')}
-            >
-              <CardHeader className="pb-2">
-                <CardDescription className="flex items-center gap-2">
-                  <Radar className="h-4 w-4" />
-                  Total Configs
-                </CardDescription>
-                <CardTitle className="text-3xl">{statusCounts.all}</CardTitle>
-              </CardHeader>
-            </Card>
-            <Card
-              className={`cursor-pointer hover:border-blue-500 transition-colors ${statusFilter === 'active' ? 'border-blue-500' : ''}`}
-              onClick={() => setStatusFilter('active')}
-            >
-              <CardHeader className="pb-2">
-                <CardDescription className="flex items-center gap-2">
-                  <Activity className="h-4 w-4 text-blue-500" />
-                  Active
-                </CardDescription>
-                <CardTitle className="text-3xl text-blue-500">{statusCounts.active}</CardTitle>
-              </CardHeader>
-            </Card>
-            <Card
-              className={`cursor-pointer hover:border-yellow-500 transition-colors ${statusFilter === 'paused' ? 'border-yellow-500' : ''}`}
-              onClick={() => setStatusFilter('paused')}
-            >
-              <CardHeader className="pb-2">
-                <CardDescription className="flex items-center gap-2">
-                  <Pause className="h-4 w-4 text-yellow-500" />
-                  Paused
-                </CardDescription>
-                <CardTitle className="text-3xl text-yellow-500">{statusCounts.paused}</CardTitle>
-              </CardHeader>
-            </Card>
-            <Card
-              className={`cursor-pointer hover:border-gray-500 transition-colors ${statusFilter === 'disabled' ? 'border-gray-500' : ''}`}
-              onClick={() => setStatusFilter('disabled')}
-            >
-              <CardHeader className="pb-2">
-                <CardDescription className="flex items-center gap-2">
-                  <XCircle className="h-4 w-4 text-gray-500" />
-                  Disabled
-                </CardDescription>
-                <CardTitle className="text-3xl text-gray-500">{statusCounts.disabled}</CardTitle>
-              </CardHeader>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardDescription className="flex items-center gap-2">
-                  <Shield className="h-4 w-4" />
-                  Total Runs
-                </CardDescription>
-                <CardTitle className="text-3xl">{totalRunsCount}</CardTitle>
-              </CardHeader>
-            </Card>
-          </>
+      <MetricStrip loading={isLoadingStats} items={metrics} />
+
+      <div className="mt-5 flex items-start gap-5">
+        {filtersOpen && (
+          <aside
+            id="scan-config-filters"
+            aria-label="Scan configuration filters"
+            className="sticky top-4 hidden h-[calc(100svh-7.5rem)] w-64 shrink-0 flex-col rounded-xl border bg-card p-4 shadow-sm lg:flex"
+          >
+            <div className="flex min-h-0 flex-1 flex-col">{facetPanel}</div>
+          </aside>
         )}
+
+        <div className="min-w-0 flex-1">
+          {isLoadingConfigs && !configsResponse ? (
+            <TableSkeleton />
+          ) : (
+            <DataTable
+              columns={columns}
+              data={configs}
+              showSearch={false}
+              toolbarStart={toolbarStart}
+              getRowId={(c) => c.id}
+              onRowClick={setSelectedConfig}
+              onSelectionChange={(rows) => setSelectedIds(rows.map((c) => c.id))}
+              resetSelectionKey={selectionEpoch}
+              showSelectionCount={false}
+              emptyMessage={
+                activeFiltersCount > 0 || searchQuery
+                  ? 'No configurations match these filters'
+                  : 'No scan configurations yet'
+              }
+              emptyDescription={
+                activeFiltersCount > 0 || searchQuery
+                  ? 'Try removing a filter or clearing the search.'
+                  : 'Create one with New scan to schedule recurring scans.'
+              }
+            />
+          )}
+        </div>
       </div>
 
-      {/* Table Card */}
-      <Card className="mt-6">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Scan Configurations</CardTitle>
-              <CardDescription>Manage scheduled and recurring scans</CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {/* Quick Filter Tabs */}
-          <Tabs
-            value={statusFilter}
-            onValueChange={(v) => setStatusFilter(v as ConfigStatusFilter)}
-            className="mb-4"
+      <BulkActionBar count={selectedIds.length} onClear={clearSelection}>
+        <Button
+          variant="ghost"
+          size="sm"
+          disabled={isBulkOperating}
+          onClick={() => runBulk(bulkActivate, 'Failed to activate selected scans')}
+        >
+          <Play className="me-2 h-4 w-4" />
+          Activate
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          disabled={isBulkOperating}
+          onClick={() => runBulk(bulkPause, 'Failed to pause selected scans')}
+        >
+          <Pause className="me-2 h-4 w-4" />
+          Pause
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          disabled={isBulkOperating}
+          onClick={() => runBulk(bulkDisable, 'Failed to disable selected scans')}
+        >
+          <XCircle className="me-2 h-4 w-4" />
+          Disable
+        </Button>
+        <Can permission={Permission.ScansDelete}>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-destructive hover:text-destructive"
+            disabled={isBulkOperating}
+            onClick={() => runBulk(bulkDelete, 'Failed to delete selected scans')}
           >
-            <TabsList>
-              {configStatusFilters.map((filter) => (
-                <TabsTrigger key={filter.value} value={filter.value} className="gap-1.5">
-                  {filter.label}
-                  <Badge variant="secondary" className="h-5 px-1.5 text-xs">
-                    {statusCounts[filter.value as keyof typeof statusCounts]}
-                  </Badge>
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
+            {isBulkDeleting ? (
+              <Loader2 className="me-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Trash2 className="me-2 h-4 w-4" />
+            )}
+            Delete
+          </Button>
+        </Can>
+      </BulkActionBar>
 
-          {/* Search and Filters */}
-          <div className="flex flex-col gap-4 mb-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="relative flex-1 max-w-sm">
-              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search configurations..."
-                value={globalFilter}
-                onChange={(e) => setGlobalFilter(e.target.value)}
-                className="ps-9"
-              />
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" size="sm" className="gap-2">
-                    <Filter className="h-4 w-4" />
-                    Filters
-                    {activeFiltersCount > 0 && (
-                      <Badge variant="secondary" className="h-5 px-1.5">
-                        {activeFiltersCount}
-                      </Badge>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-72 sm:w-80" align="end">
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h4 className="font-medium">Filters</h4>
-                      {activeFiltersCount > 0 && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-auto p-0 text-muted-foreground hover:text-foreground"
-                          onClick={clearFilters}
-                        >
-                          Clear all
-                        </Button>
-                      )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label className="text-muted-foreground text-xs uppercase">Scan Type</Label>
-                      <div className="flex flex-wrap gap-2">
-                        {configTypeFilters.map((filter) => (
-                          <Badge
-                            key={filter.value}
-                            variant={typeFilter === filter.value ? 'default' : 'outline'}
-                            className="cursor-pointer"
-                            onClick={() => setTypeFilter(filter.value)}
-                          >
-                            {filter.label}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label className="text-muted-foreground text-xs uppercase">
-                        Schedule Type
-                      </Label>
-                      <div className="flex flex-wrap gap-2">
-                        {configScheduleFilters.map((filter) => (
-                          <Badge
-                            key={filter.value}
-                            variant={scheduleFilter === filter.value ? 'default' : 'outline'}
-                            className="cursor-pointer"
-                            onClick={() => setScheduleFilter(filter.value)}
-                          >
-                            {filter.label}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label className="text-muted-foreground text-xs uppercase">Tags</Label>
-                      <div className="relative">
-                        <Tag className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                        <Input
-                          placeholder="Filter by tag..."
-                          value={tagFilter}
-                          onChange={(e) => setTagFilter(e.target.value)}
-                          className="ps-8 h-8 text-sm"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </PopoverContent>
-              </Popover>
-
-              {Object.keys(rowSelection).length > 0 && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" disabled={isBulkOperating}>
-                      {isBulkOperating ? (
-                        <>
-                          <Loader2 className="me-2 h-4 w-4 animate-spin" />
-                          Processing...
-                        </>
-                      ) : (
-                        `${Object.keys(rowSelection).length} selected`
-                      )}
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={handleBulkActivate} disabled={isBulkOperating}>
-                      <Play className="me-2 h-4 w-4" />
-                      Activate Selected
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleBulkPause} disabled={isBulkOperating}>
-                      <Pause className="me-2 h-4 w-4" />
-                      Pause Selected
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleBulkDisable} disabled={isBulkOperating}>
-                      <XCircle className="me-2 h-4 w-4" />
-                      Disable Selected
-                    </DropdownMenuItem>
-                    <Can permission={Permission.ScansDelete}>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        className="text-red-400"
-                        onClick={handleBulkDelete}
-                        disabled={isBulkOperating}
-                      >
-                        <Trash2 className="me-2 h-4 w-4" />
-                        Delete Selected
-                      </DropdownMenuItem>
-                    </Can>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
-            </div>
-          </div>
-
-          {/* Active Filters Display */}
-          {activeFiltersCount > 0 && (
-            <div className="flex flex-wrap items-center gap-2 mb-4">
-              <span className="text-sm text-muted-foreground">Active filters:</span>
-              {typeFilter !== 'all' && (
-                <Badge variant="secondary" className="gap-1">
-                  Type: {configTypeFilters.find((f) => f.value === typeFilter)?.label}
-                  <button
-                    onClick={() => setTypeFilter('all')}
-                    className="ms-1 hover:text-foreground"
-                  >
-                    x
-                  </button>
-                </Badge>
-              )}
-              {scheduleFilter !== 'all' && (
-                <Badge variant="secondary" className="gap-1">
-                  Schedule: {configScheduleFilters.find((f) => f.value === scheduleFilter)?.label}
-                  <button
-                    onClick={() => setScheduleFilter('all')}
-                    className="ms-1 hover:text-foreground"
-                  >
-                    x
-                  </button>
-                </Badge>
-              )}
-              {tagFilter && (
-                <Badge variant="secondary" className="gap-1">
-                  Tag: {tagFilter}
-                  <button onClick={() => setTagFilter('')} className="ms-1 hover:text-foreground">
-                    x
-                  </button>
-                </Badge>
-              )}
-            </div>
-          )}
-
-          {/* Table */}
-          <div className="rounded-md border overflow-x-auto">
-            <Table>
-              <TableHeader>
-                {table.getHeaderGroups().map((headerGroup) => (
-                  <TableRow key={headerGroup.id}>
-                    {headerGroup.headers.map((header) => (
-                      <TableHead key={header.id}>
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(header.column.columnDef.header, header.getContext())}
-                      </TableHead>
-                    ))}
-                  </TableRow>
-                ))}
-              </TableHeader>
-              <TableBody>
-                {isLoadingConfigs ? (
-                  Array.from({ length: 5 }).map((_, i) => (
-                    <TableRow key={i}>
-                      {columns.map((_, j) => (
-                        <TableCell key={j}>
-                          <Skeleton className="h-6 w-full" />
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))
-                ) : table.getRowModel().rows?.length ? (
-                  table.getRowModel().rows.map((row) => (
-                    <TableRow
-                      key={row.id}
-                      data-state={row.getIsSelected() && 'selected'}
-                      className="cursor-pointer"
-                      onClick={(e) => {
-                        // Ignore clicks on interactive elements to prevent popup from opening
-                        const target = e.target as HTMLElement
-                        if (
-                          target.closest('[role="checkbox"]') ||
-                          target.closest('button') ||
-                          target.closest('[role="menu"]') ||
-                          target.closest('[role="menuitem"]') ||
-                          target.closest('[data-radix-popper-content-wrapper]')
-                        ) {
-                          return
-                        }
-                        setSelectedConfig(row.original)
-                      }}
-                    >
-                      {row.getVisibleCells().map((cell) => (
-                        <TableCell key={cell.id}>
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={columns.length} className="h-24 text-center">
-                      No configurations found.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
-
-          {/* Pagination */}
-          <div className="flex items-center justify-between mt-4">
-            <p className="text-sm text-muted-foreground">
-              {table.getFilteredSelectedRowModel().rows.length} of{' '}
-              {table.getFilteredRowModel().rows.length} row(s) selected
-            </p>
-            <div className="flex flex-wrap items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => table.setPageIndex(0)}
-                disabled={!table.getCanPreviousPage()}
-              >
-                <ChevronsLeft className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => table.previousPage()}
-                disabled={!table.getCanPreviousPage()}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <span className="text-sm">
-                Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => table.nextPage()}
-                disabled={!table.getCanNextPage()}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-                disabled={!table.getCanNextPage()}
-              >
-                <ChevronsRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <Sheet open={filterSheetOpen} onOpenChange={setFilterSheetOpen}>
+        <SheetContent side="left" className="w-80 overflow-y-auto p-4">
+          <SheetHeader className="sr-only">
+            <SheetTitle>Scan configuration filters</SheetTitle>
+          </SheetHeader>
+          {facetPanel}
+        </SheetContent>
+      </Sheet>
 
       {/* Config Details Sheet */}
       <Sheet open={!!selectedConfig} onOpenChange={() => setSelectedConfig(null)}>
         <SheetContent className="sm:max-w-xl overflow-y-auto p-0">
           <VisuallyHidden>
-            <SheetTitle>Configuration Details</SheetTitle>
+            <SheetTitle>Configuration details</SheetTitle>
           </VisuallyHidden>
           {selectedConfig && (
             <ConfigDetailSheet
@@ -1273,7 +1083,7 @@ function ConfigurationsTab() {
       <ConfirmDialog
         open={deleteConfirmOpen}
         onOpenChange={setDeleteConfirmOpen}
-        title="Delete Scan Configuration"
+        title="Delete scan configuration"
         desc={
           <>
             Are you sure you want to delete &quot;{configToDelete?.name}&quot;? This action cannot
@@ -1378,15 +1188,7 @@ function ConfigDetailSheet({ config, onClose: _onClose, onDelete }: ConfigDetail
   return (
     <>
       {/* Hero Header */}
-      <div
-        className={`px-6 pt-6 pb-4 ${
-          config.status === 'active'
-            ? 'bg-gradient-to-br from-blue-500/20 via-blue-500/10 to-transparent'
-            : config.status === 'paused'
-              ? 'bg-gradient-to-br from-yellow-500/20 via-yellow-500/10 to-transparent'
-              : 'bg-gradient-to-br from-gray-500/20 via-gray-500/10 to-transparent'
-        }`}
-      >
+      <div className="border-b px-6 pt-6 pb-4">
         {/* Status & Type Row - pe-14 to avoid overlap with close button */}
         <div className="flex items-center justify-between mb-4 pe-14">
           <Badge variant="outline" className="font-medium">
@@ -1405,45 +1207,20 @@ function ConfigDetailSheet({ config, onClose: _onClose, onDelete }: ConfigDetail
 
         {/* Title with icon */}
         <div className="flex items-center gap-3 mb-2">
-          <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-            <Radar className="h-5 w-5 text-primary" />
-          </div>
-          <h2 className="text-xl font-bold line-clamp-2">{config.name}</h2>
+          <Radar className="h-5 w-5 shrink-0 text-muted-foreground" />
+          <h2 className="text-lg font-semibold line-clamp-2">{config.name}</h2>
         </div>
         {config.description && (
-          <p className="text-sm text-muted-foreground ps-[52px]">{config.description}</p>
+          <p className="text-sm text-muted-foreground ps-8">{config.description}</p>
         )}
 
         {/* Progress Bar */}
-        <div className="mt-5 p-4 rounded-xl bg-background/80 backdrop-blur border shadow-sm">
+        <div className="mt-5 rounded-lg border p-4">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium">Success Rate</span>
-            <span
-              className={`text-2xl font-bold ${
-                progress >= 80
-                  ? 'text-green-500'
-                  : progress >= 50
-                    ? 'text-yellow-500'
-                    : progress === 0
-                      ? 'text-muted-foreground'
-                      : 'text-red-500'
-              }`}
-            >
-              {progress}%
-            </span>
+            <span className="text-sm font-medium">Success rate</span>
+            <span className="text-2xl font-semibold tabular-nums">{progress}%</span>
           </div>
-          <Progress
-            value={progress}
-            className={`h-3 ${
-              config.status === 'active'
-                ? '[&>div]:animate-pulse [&>div]:bg-blue-500'
-                : progress >= 80
-                  ? '[&>div]:bg-green-500'
-                  : progress >= 50
-                    ? '[&>div]:bg-yellow-500'
-                    : '[&>div]:bg-red-500'
-            }`}
-          />
+          <Progress value={progress} className="h-2" />
           <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
             <span>{config.total_runs} total runs</span>
             <span>{SCAN_CONFIG_STATUS_LABELS[config.status]}</span>
@@ -1461,7 +1238,7 @@ function ConfigDetailSheet({ config, onClose: _onClose, onDelete }: ConfigDetail
                 disabled={isTriggering || isPausing}
               >
                 {isTriggering ? (
-                  <RefreshCw className="me-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="me-2 h-4 w-4 animate-spin" />
                 ) : (
                   <Play className="me-2 h-4 w-4" />
                 )}
@@ -1475,7 +1252,7 @@ function ConfigDetailSheet({ config, onClose: _onClose, onDelete }: ConfigDetail
                 disabled={isPausing || isTriggering}
               >
                 {isPausing ? (
-                  <RefreshCw className="me-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="me-2 h-4 w-4 animate-spin" />
                 ) : (
                   <Pause className="me-2 h-4 w-4" />
                 )}
@@ -1492,7 +1269,7 @@ function ConfigDetailSheet({ config, onClose: _onClose, onDelete }: ConfigDetail
                 disabled={isActivating || isTriggering}
               >
                 {isActivating ? (
-                  <RefreshCw className="me-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="me-2 h-4 w-4 animate-spin" />
                 ) : (
                   <Play className="me-2 h-4 w-4" />
                 )}
@@ -1506,7 +1283,7 @@ function ConfigDetailSheet({ config, onClose: _onClose, onDelete }: ConfigDetail
                 disabled={isTriggering || isActivating}
               >
                 {isTriggering ? (
-                  <RefreshCw className="me-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="me-2 h-4 w-4 animate-spin" />
                 ) : (
                   <RefreshCw className="me-2 h-4 w-4" />
                 )}
@@ -1522,7 +1299,7 @@ function ConfigDetailSheet({ config, onClose: _onClose, onDelete }: ConfigDetail
               disabled={isActivating}
             >
               {isActivating ? (
-                <RefreshCw className="me-2 h-4 w-4 animate-spin" />
+                <Loader2 className="me-2 h-4 w-4 animate-spin" />
               ) : (
                 <Play className="me-2 h-4 w-4" />
               )}
@@ -1544,44 +1321,29 @@ function ConfigDetailSheet({ config, onClose: _onClose, onDelete }: ConfigDetail
         <TabsContent value="overview" className="space-y-4 mt-0">
           {/* Stats Cards */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div className="rounded-xl border p-4 bg-card">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <Target className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{config.total_runs}</p>
-                  <p className="text-xs text-muted-foreground">Total Runs</p>
-                </div>
-              </div>
-            </div>
-            <div className="rounded-xl border p-4 bg-card">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg bg-green-500/10 flex items-center justify-center">
-                  <CheckCircle className="h-5 w-5 text-green-500" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{config.successful_runs}</p>
-                  <p className="text-xs text-muted-foreground">Successful</p>
-                </div>
-              </div>
-            </div>
+            <SheetStatCard label="Total runs" value={config.total_runs} icon={Target} />
+            <SheetStatCard label="Successful" value={config.successful_runs} icon={CheckCircle} />
           </div>
 
           {/* Results Breakdown */}
           {config.total_runs > 0 && (
             <div className="rounded-xl border p-4 bg-card">
-              <h4 className="text-sm font-medium mb-3">Run Results</h4>
+              <h4 className="text-sm font-medium mb-3">Run results</h4>
               <div className="space-y-2">
                 <div className="flex items-center gap-3">
-                  <div className="h-2 w-2 rounded-full bg-green-500" />
                   <span className="text-sm flex-1">Successful</span>
-                  <span className="font-bold text-green-500">{config.successful_runs}</span>
+                  <span className="font-semibold tabular-nums">{config.successful_runs}</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <div className="h-2 w-2 rounded-full bg-red-500" />
                   <span className="text-sm flex-1">Failed</span>
-                  <span className="font-bold text-red-500">{config.failed_runs}</span>
+                  <span
+                    className={cn(
+                      'font-semibold tabular-nums',
+                      config.failed_runs > 0 && 'text-destructive'
+                    )}
+                  >
+                    {config.failed_runs}
+                  </span>
                 </div>
               </div>
             </div>
@@ -1592,8 +1354,8 @@ function ConfigDetailSheet({ config, onClose: _onClose, onDelete }: ConfigDetail
             <h4 className="text-sm font-medium mb-3">Timeline</h4>
             <div className="space-y-3">
               <div className="flex items-start gap-3">
-                <div className="h-6 w-6 rounded-full bg-green-500/20 flex items-center justify-center mt-0.5">
-                  <CheckCircle className="h-3.5 w-3.5 text-green-500" />
+                <div className="mt-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-muted">
+                  <CheckCircle className="h-3.5 w-3.5 text-muted-foreground" />
                 </div>
                 <div className="flex-1">
                   <p className="text-sm font-medium">Created</p>
@@ -1602,11 +1364,11 @@ function ConfigDetailSheet({ config, onClose: _onClose, onDelete }: ConfigDetail
               </div>
               {config.last_run_at && (
                 <div className="flex items-start gap-3">
-                  <div className="h-6 w-6 rounded-full bg-blue-500/20 flex items-center justify-center mt-0.5">
-                    <Play className="h-3.5 w-3.5 text-blue-500" />
+                  <div className="mt-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-muted">
+                    <Play className="h-3.5 w-3.5 text-muted-foreground" />
                   </div>
                   <div className="flex-1">
-                    <p className="text-sm font-medium">Last Run</p>
+                    <p className="text-sm font-medium">Last run</p>
                     <p className="text-xs text-muted-foreground">
                       {formatDate(config.last_run_at)}
                     </p>
@@ -1615,11 +1377,11 @@ function ConfigDetailSheet({ config, onClose: _onClose, onDelete }: ConfigDetail
               )}
               {config.next_run_at && (
                 <div className="flex items-start gap-3">
-                  <div className="h-6 w-6 rounded-full bg-yellow-500/20 flex items-center justify-center mt-0.5">
-                    <Clock className="h-3.5 w-3.5 text-yellow-500" />
+                  <div className="mt-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-muted">
+                    <Clock className="h-3.5 w-3.5 text-muted-foreground" />
                   </div>
                   <div className="flex-1">
-                    <p className="text-sm font-medium">Next Scheduled</p>
+                    <p className="text-sm font-medium">Next scheduled</p>
                     <p className="text-xs text-muted-foreground">
                       {formatDate(config.next_run_at)}
                     </p>
@@ -1635,7 +1397,7 @@ function ConfigDetailSheet({ config, onClose: _onClose, onDelete }: ConfigDetail
           {/* Scan Type & Schedule */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="rounded-xl border p-4 bg-card">
-              <p className="text-xs text-muted-foreground mb-1">Scan Type</p>
+              <p className="text-xs text-muted-foreground mb-1">Scan type</p>
               <p className="font-medium">{SCAN_TYPE_LABELS[config.scan_type]}</p>
             </div>
             <div className="rounded-xl border p-4 bg-card">
@@ -1646,7 +1408,7 @@ function ConfigDetailSheet({ config, onClose: _onClose, onDelete }: ConfigDetail
 
           {/* Schedule Settings */}
           <div className="rounded-xl border p-4 bg-card">
-            <h4 className="text-sm font-medium mb-3">Schedule Settings</h4>
+            <h4 className="text-sm font-medium mb-3">Schedule settings</h4>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex flex-wrap items-center gap-2">
@@ -1696,7 +1458,7 @@ function ConfigDetailSheet({ config, onClose: _onClose, onDelete }: ConfigDetail
         <TabsContent value="details" className="space-y-4 mt-0">
           {/* Created By */}
           <div className="rounded-xl border p-4 bg-card">
-            <h4 className="text-sm font-medium mb-3">Created By</h4>
+            <h4 className="text-sm font-medium mb-3">Created by</h4>
             <div className="flex items-center gap-3">
               <Avatar className="h-10 w-10">
                 <AvatarFallback>
@@ -1720,7 +1482,7 @@ function ConfigDetailSheet({ config, onClose: _onClose, onDelete }: ConfigDetail
                 {/* Asset Groups */}
                 {config.asset_group_ids && config.asset_group_ids.length > 0 ? (
                   <div>
-                    <span className="text-xs text-muted-foreground">Asset Groups</span>
+                    <span className="text-xs text-muted-foreground">Asset groups</span>
                     <div className="flex flex-wrap gap-1 mt-1">
                       {config.asset_group_ids.map((id) => (
                         <Badge key={id} variant="outline" className="text-xs">
@@ -1731,7 +1493,7 @@ function ConfigDetailSheet({ config, onClose: _onClose, onDelete }: ConfigDetail
                   </div>
                 ) : config.asset_group_id ? (
                   <div>
-                    <span className="text-xs text-muted-foreground">Asset Group</span>
+                    <span className="text-xs text-muted-foreground">Asset group</span>
                     <div className="mt-1">
                       <Badge variant="outline" className="text-xs">
                         {config.asset_group_id.slice(0, 8)}...
@@ -1743,7 +1505,7 @@ function ConfigDetailSheet({ config, onClose: _onClose, onDelete }: ConfigDetail
                 {config.targets && config.targets.length > 0 && (
                   <div>
                     <span className="text-xs text-muted-foreground">
-                      Direct Targets ({config.targets.length})
+                      Direct targets ({config.targets.length})
                     </span>
                     <div className="flex flex-wrap gap-1 mt-1">
                       {config.targets.slice(0, 5).map((target, i) => (
@@ -1765,10 +1527,10 @@ function ConfigDetailSheet({ config, onClose: _onClose, onDelete }: ConfigDetail
 
           {/* Technical Details */}
           <div className="rounded-xl border p-4 bg-card">
-            <h4 className="text-sm font-medium mb-3">Technical Details</h4>
+            <h4 className="text-sm font-medium mb-3">Technical details</h4>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Config ID</span>
+                <span className="text-sm text-muted-foreground">Configuration ID</span>
                 <div className="flex items-center gap-2">
                   <code className="text-xs bg-muted px-2 py-1 rounded truncate max-w-[150px]">
                     {config.id}
@@ -1777,6 +1539,7 @@ function ConfigDetailSheet({ config, onClose: _onClose, onDelete }: ConfigDetail
                     variant="ghost"
                     size="sm"
                     className="h-6 w-6 p-0"
+                    aria-label="Copy ID"
                     onClick={(e) => {
                       e.stopPropagation()
                       copyToClipboard(config.id)
@@ -1792,8 +1555,8 @@ function ConfigDetailSheet({ config, onClose: _onClose, onDelete }: ConfigDetail
 
           {/* Danger Zone */}
           <Can permission={Permission.ScansDelete}>
-            <div className="rounded-xl border border-red-500/30 p-4 bg-red-500/5">
-              <h4 className="text-sm font-medium text-red-500 mb-2">Danger Zone</h4>
+            <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4">
+              <h4 className="text-sm font-medium text-destructive mb-2">Danger zone</h4>
               <p className="text-xs text-muted-foreground mb-3">
                 Permanently delete this configuration and all associated data.
               </p>
@@ -1804,7 +1567,7 @@ function ConfigDetailSheet({ config, onClose: _onClose, onDelete }: ConfigDetail
                 onClick={handleDeleteConfig}
               >
                 <Trash2 className="me-2 h-4 w-4" />
-                Delete Configuration
+                Delete configuration
               </Button>
             </div>
           </Can>
@@ -1827,20 +1590,20 @@ function RunActionsCell({ session, onViewDetails }: RunActionsCellProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+        <Button variant="ghost" size="sm" className="h-8 w-8 p-0" aria-label="Row actions">
           <MoreHorizontal className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem onClick={() => onViewDetails(session)}>
           <Eye className="me-2 h-4 w-4" />
-          View Details
+          View details
         </DropdownMenuItem>
         {session.status === 'completed' && session.findings_total > 0 && (
           <DropdownMenuItem asChild>
             <Link href={`/findings?scan_id=${session.id}`}>
               <Shield className="me-2 h-4 w-4" />
-              View {session.findings_total} Findings
+              View {session.findings_total} findings
             </Link>
           </DropdownMenuItem>
         )}
@@ -1855,10 +1618,12 @@ function RunActionsCell({ session, onViewDetails }: RunActionsCellProps) {
 
 function RunsTab() {
   const [selectedSession, setSelectedSession] = useState<ScanSession | null>(null)
-  const [sorting, setSorting] = useState<SortingState>([])
-  const [globalFilter, setGlobalFilter] = useState('')
-  const [statusFilter, setStatusFilter] = useState<RunStatusFilter>('all')
-  const [rowSelection, setRowSelection] = useState({})
+  // Own URL keys: the Configurations tab already uses `status` and `q`.
+  const [statusFilter, setStatusFilter] = useUrlFilter('run_status', 'all') as [
+    RunStatusFilter,
+    (v: RunStatusFilter) => void,
+  ]
+  const [searchQuery, setSearchQuery] = useUrlFilter('run_q', '')
 
   // API filters
   const apiFilters = useMemo(
@@ -1892,29 +1657,17 @@ function RunsTab() {
     return sessionsResponse?.data ?? []
   }, [sessionsResponse?.data])
 
-  // Filter sessions by search (client-side for better UX)
+  // Filter sessions by search (client-side over the loaded page)
   const filteredSessions = useMemo(() => {
-    if (!globalFilter) return sessions
-    const search = globalFilter.toLowerCase()
+    if (!searchQuery) return sessions
+    const search = searchQuery.toLowerCase()
     return sessions.filter(
       (s) =>
         s.scanner_name.toLowerCase().includes(search) ||
         s.asset_value.toLowerCase().includes(search) ||
         s.asset_type.toLowerCase().includes(search)
     )
-  }, [sessions, globalFilter])
-
-  // Status counts from stats
-  const statusCounts = useMemo(
-    () => ({
-      all: stats?.total ?? 0,
-      running: stats?.by_status?.running ?? 0,
-      completed: stats?.by_status?.completed ?? 0,
-      pending: stats?.by_status?.pending ?? 0,
-      failed: (stats?.by_status?.failed ?? 0) + (stats?.by_status?.timeout ?? 0),
-    }),
-    [stats]
-  )
+  }, [sessions, searchQuery])
 
   // Handlers
   const handleViewDetails = useCallback((session: ScanSession) => {
@@ -1926,6 +1679,8 @@ function RunsTab() {
   // and Retry controls POSTed to non-existent routes and always 404'd, so both
   // have been removed rather than left as dead actions. (The /{id}/retry route
   // that does exist belongs to the notification-outbox group, not scan sessions.)
+  // Row selection went with them: no bulk action exists for runs, so a
+  // checkbox column (and its "N selected" button) did nothing.
 
   // Export handlers
   const handleExportCSV = useCallback(() => {
@@ -1974,44 +1729,13 @@ function RunsTab() {
   const columns: ColumnDef<ScanSession>[] = useMemo(
     () => [
       {
-        id: 'select',
-        header: ({ table }) => (
-          <Checkbox
-            checked={
-              table.getIsAllPageRowsSelected() ||
-              (table.getIsSomePageRowsSelected() && 'indeterminate')
-            }
-            onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-            aria-label="Select all"
-          />
-        ),
-        cell: ({ row }) => (
-          <Checkbox
-            checked={row.getIsSelected()}
-            onCheckedChange={(value) => row.toggleSelected(!!value)}
-            aria-label="Select row"
-          />
-        ),
-        enableSorting: false,
-        enableHiding: false,
-      },
-      {
         accessorKey: 'scanner_name',
-        header: ({ column }) => (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-            className="-ms-4"
-          >
-            Scanner
-            <ArrowUpDown className="ms-2 h-4 w-4" />
-          </Button>
-        ),
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Scanner" />,
         cell: ({ row }) => (
           <div>
             <p className="font-medium">{row.original.scanner_name}</p>
             {row.original.scanner_version && (
-              <p className="text-muted-foreground text-xs">v{row.original.scanner_version}</p>
+              <p className="text-xs text-muted-foreground">v{row.original.scanner_version}</p>
             )}
           </div>
         ),
@@ -2019,47 +1743,51 @@ function RunsTab() {
       {
         accessorKey: 'asset_value',
         header: 'Target',
+        enableSorting: false,
         cell: ({ row }) => (
           <div>
-            <p className="font-medium truncate max-w-[200px]">{row.original.asset_value}</p>
-            <p className="text-muted-foreground text-xs">{row.original.asset_type}</p>
+            <p className="max-w-[200px] truncate font-medium">{row.original.asset_value}</p>
+            <p className="text-xs text-muted-foreground">{row.original.asset_type}</p>
           </div>
         ),
       },
       {
         accessorKey: 'status',
         header: 'Status',
+        enableSorting: false,
         cell: ({ row }) => <RunStatusBadge status={row.original.status} />,
       },
       {
         accessorKey: 'findings_total',
-        header: ({ column }) => (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-            className="-ms-4"
-          >
-            Findings
-            <ArrowUpDown className="ms-2 h-4 w-4" />
-          </Button>
-        ),
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Findings" />,
         cell: ({ row }) => {
           const session = row.original
           if (session.findings_total === 0) {
             return <span className="text-muted-foreground">-</span>
           }
           const severities = session.findings_by_severity ?? {}
+          const rest = (severities.medium ?? 0) + (severities.low ?? 0)
           return (
             <div className="flex items-center gap-1">
               {(severities.critical ?? 0) > 0 && (
-                <Badge className="bg-red-600 px-1.5 text-xs">C {severities.critical}</Badge>
+                <Badge
+                  variant="outline"
+                  className={cn('px-1.5 text-xs tabular-nums', SEVERITY_BADGE_SOFT.critical)}
+                >
+                  C {severities.critical}
+                </Badge>
               )}
               {(severities.high ?? 0) > 0 && (
-                <Badge className="bg-orange-500 px-1.5 text-xs">H {severities.high}</Badge>
+                <Badge
+                  variant="outline"
+                  className={cn('px-1.5 text-xs tabular-nums', SEVERITY_BADGE_SOFT.high)}
+                >
+                  H {severities.high}
+                </Badge>
               )}
-              {((severities.medium ?? 0) > 0 || (severities.low ?? 0) > 0) && (
-                <Badge variant="secondary" className="px-1.5 text-xs">
-                  +{(severities.medium ?? 0) + (severities.low ?? 0)}
+              {rest > 0 && (
+                <Badge variant="secondary" className="px-1.5 text-xs tabular-nums">
+                  +{rest}
                 </Badge>
               )}
             </div>
@@ -2068,50 +1796,32 @@ function RunsTab() {
       },
       {
         accessorKey: 'findings_new',
-        header: 'New',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="New" />,
         cell: ({ row }) => {
           const newFindings = row.original.findings_new
           if (newFindings === 0) return <span className="text-muted-foreground">-</span>
-          return (
-            <Badge variant="destructive" className="px-1.5 text-xs">
-              {newFindings}
-            </Badge>
-          )
+          return <span className="text-sm tabular-nums">{newFindings}</span>
         },
       },
       {
         accessorKey: 'duration_ms',
-        header: 'Duration',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Duration" />,
         cell: ({ row }) => {
           const durationMs = row.original.duration_ms
           if (!durationMs) {
-            return row.original.status === 'running' ? (
-              <span className="text-blue-500 text-xs">Running...</span>
-            ) : (
-              <span className="text-muted-foreground">-</span>
+            return (
+              <span className="text-xs text-muted-foreground">
+                {row.original.status === 'running' ? 'Running…' : '-'}
+              </span>
             )
           }
-          const seconds = Math.floor(durationMs / 1000)
-          const minutes = Math.floor(seconds / 60)
-          const hours = Math.floor(minutes / 60)
-          if (hours > 0)
-            return (
-              <span className="text-sm">
-                {hours}h {minutes % 60}m
-              </span>
-            )
-          if (minutes > 0)
-            return (
-              <span className="text-sm">
-                {minutes}m {seconds % 60}s
-              </span>
-            )
-          return <span className="text-sm">{seconds}s</span>
+          return <span className="text-sm tabular-nums">{formatDuration(durationMs)}</span>
         },
       },
       {
-        accessorKey: 'created_at',
-        header: 'Started',
+        id: 'started',
+        accessorFn: (s) => s.started_at || s.created_at,
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Started" />,
         cell: ({ row }) => (
           <span className="text-sm text-muted-foreground">
             {formatDate(row.original.started_at || row.original.created_at)}
@@ -2120,6 +1830,7 @@ function RunsTab() {
       },
       {
         id: 'actions',
+        enableHiding: false,
         cell: ({ row }) => (
           <RunActionsCell session={row.original} onViewDetails={handleViewDetails} />
         ),
@@ -2128,284 +1839,128 @@ function RunsTab() {
     [handleViewDetails]
   )
 
-  const table = useReactTable({
-    data: filteredSessions,
-    columns,
-    state: {
-      sorting,
-      globalFilter,
-      rowSelection,
+  const toggleStatus = (value: RunStatusFilter) =>
+    setStatusFilter(statusFilter === value ? 'all' : value)
+
+  const metrics: MetricStripItem[] = [
+    {
+      key: 'all',
+      label: 'Runs',
+      value: stats?.total ?? 0,
+      onClick: () => setStatusFilter('all'),
+      active: statusFilter === 'all',
     },
-    onSortingChange: setSorting,
-    onGlobalFilterChange: setGlobalFilter,
-    onRowSelectionChange: setRowSelection,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-  })
+    {
+      key: 'running',
+      label: 'Running',
+      value: stats?.by_status?.running ?? 0,
+      onClick: () => toggleStatus('running'),
+      active: statusFilter === 'running',
+    },
+    {
+      key: 'completed',
+      label: 'Completed',
+      value: stats?.by_status?.completed ?? 0,
+      onClick: () => toggleStatus('completed'),
+      active: statusFilter === 'completed',
+    },
+    {
+      key: 'failed',
+      label: 'Failed',
+      value: stats?.by_status?.failed ?? 0,
+      tone: 'danger',
+      onClick: () => toggleStatus('failed'),
+      active: statusFilter === 'failed',
+    },
+    {
+      key: 'timeout',
+      label: 'Timed out',
+      value: stats?.by_status?.timeout ?? 0,
+      tone: 'danger',
+      onClick: () => toggleStatus('timeout'),
+      active: statusFilter === 'timeout',
+    },
+    { key: 'findings', label: 'Findings', value: stats?.findings_total ?? 0 },
+  ]
+
+  const toolbarStart = (
+    <>
+      <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as RunStatusFilter)}>
+        <SelectTrigger className="h-9 w-auto min-w-36 gap-2" aria-label="Filter runs by status">
+          <ListFilter className="h-4 w-4 text-muted-foreground" />
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {runStatusFilters.map((f) => (
+            <SelectItem key={f.value} value={f.value}>
+              {f.value === 'all' ? 'All statuses' : f.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <SearchBox
+        value={searchQuery}
+        onChange={setSearchQuery}
+        placeholder="Search scanner, target…"
+        label="Search scan runs"
+      />
+    </>
+  )
+
+  const toolbarEnd = (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline" size="sm" className="h-9">
+          <Download className="h-4 w-4 sm:me-2" />
+          <span className="hidden sm:inline">Export</span>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onClick={handleExportCSV}>
+          <FileSpreadsheet className="me-2 h-4 w-4" />
+          Export as CSV
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={handleExportJSON}>
+          <FileJson className="me-2 h-4 w-4" />
+          Export as JSON
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+
+  const filtered = statusFilter !== 'all' || !!searchQuery
 
   return (
     <>
-      {/* Stats Cards */}
-      <div className="grid gap-3 grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
-        {isLoadingStats ? (
-          <>
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <Card key={i}>
-                <CardHeader className="pb-2">
-                  <Skeleton className="h-4 w-24" />
-                  <Skeleton className="h-8 w-16 mt-2" />
-                </CardHeader>
-              </Card>
-            ))}
-          </>
+      <MetricStrip loading={isLoadingStats} items={metrics} />
+
+      <div className="mt-5">
+        {isLoadingSessions && !sessionsResponse ? (
+          <TableSkeleton />
         ) : (
-          <>
-            <Card
-              className="cursor-pointer hover:border-primary transition-colors"
-              onClick={() => setStatusFilter('all')}
-            >
-              <CardHeader className="pb-2">
-                <CardDescription className="flex items-center gap-2">
-                  <Radar className="h-4 w-4" />
-                  Total Runs
-                </CardDescription>
-                <CardTitle className="text-3xl">{statusCounts.all}</CardTitle>
-              </CardHeader>
-            </Card>
-            <Card
-              className={`cursor-pointer hover:border-blue-500 transition-colors ${statusFilter === 'running' ? 'border-blue-500' : ''}`}
-              onClick={() => setStatusFilter('running')}
-            >
-              <CardHeader className="pb-2">
-                <CardDescription className="flex items-center gap-2">
-                  <Activity className="h-4 w-4 text-blue-500" />
-                  Running
-                </CardDescription>
-                <CardTitle className="text-3xl text-blue-500">{statusCounts.running}</CardTitle>
-              </CardHeader>
-            </Card>
-            <Card
-              className={`cursor-pointer hover:border-green-500 transition-colors ${statusFilter === 'completed' ? 'border-green-500' : ''}`}
-              onClick={() => setStatusFilter('completed')}
-            >
-              <CardHeader className="pb-2">
-                <CardDescription className="flex items-center gap-2">
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                  Completed
-                </CardDescription>
-                <CardTitle className="text-3xl text-green-500">{statusCounts.completed}</CardTitle>
-              </CardHeader>
-            </Card>
-            <Card
-              className={`cursor-pointer hover:border-red-500 transition-colors ${statusFilter === 'failed' ? 'border-red-500' : ''}`}
-              onClick={() => setStatusFilter('failed')}
-            >
-              <CardHeader className="pb-2">
-                <CardDescription className="flex items-center gap-2">
-                  <AlertTriangle className="h-4 w-4 text-red-500" />
-                  Failed
-                </CardDescription>
-                <CardTitle className="text-3xl text-red-500">{statusCounts.failed}</CardTitle>
-              </CardHeader>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardDescription className="flex items-center gap-2">
-                  <Shield className="h-4 w-4" />
-                  Total Findings
-                </CardDescription>
-                <CardTitle className="text-3xl">{stats?.findings_total ?? 0}</CardTitle>
-              </CardHeader>
-            </Card>
-          </>
+          <DataTable
+            columns={columns}
+            data={filteredSessions}
+            showSearch={false}
+            toolbarStart={toolbarStart}
+            toolbarEnd={toolbarEnd}
+            getRowId={(s) => s.id}
+            onRowClick={handleViewDetails}
+            emptyMessage={filtered ? 'No runs match these filters' : 'No scan runs yet'}
+            emptyDescription={
+              filtered
+                ? 'Try another status or clear the search.'
+                : 'Runs appear here once a scan configuration or quick scan starts.'
+            }
+          />
         )}
       </div>
-
-      {/* Table Card */}
-      <Card className="mt-6">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Scan Sessions</CardTitle>
-              <CardDescription>Monitor scan executions and results</CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {/* Quick Filter Tabs */}
-          <Tabs
-            value={statusFilter}
-            onValueChange={(v) => setStatusFilter(v as RunStatusFilter)}
-            className="mb-4"
-          >
-            <TabsList>
-              {runStatusFilters.map((filter) => (
-                <TabsTrigger key={filter.value} value={filter.value} className="gap-1.5">
-                  {filter.label}
-                  <Badge variant="secondary" className="h-5 px-1.5 text-xs">
-                    {statusCounts[filter.value as keyof typeof statusCounts] ?? 0}
-                  </Badge>
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
-
-          {/* Search and Export */}
-          <div className="flex flex-col gap-4 mb-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="relative flex-1 max-w-sm">
-              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search scanner, target..."
-                value={globalFilter}
-                onChange={(e) => setGlobalFilter(e.target.value)}
-                className="ps-9"
-              />
-            </div>
-
-            <div className="flex items-center gap-2">
-              {Object.keys(rowSelection).length > 0 && (
-                <Button variant="outline" size="sm">
-                  {Object.keys(rowSelection).length} selected
-                </Button>
-              )}
-
-              {/* Export Dropdown */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="gap-2">
-                    <Download className="h-4 w-4" />
-                    Export
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={handleExportCSV}>
-                    <FileSpreadsheet className="me-2 h-4 w-4" />
-                    Export as CSV
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleExportJSON}>
-                    <FileJson className="me-2 h-4 w-4" />
-                    Export as JSON
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </div>
-
-          {/* Table */}
-          <div className="rounded-md border overflow-x-auto">
-            <Table>
-              <TableHeader>
-                {table.getHeaderGroups().map((headerGroup) => (
-                  <TableRow key={headerGroup.id}>
-                    {headerGroup.headers.map((header) => (
-                      <TableHead key={header.id}>
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(header.column.columnDef.header, header.getContext())}
-                      </TableHead>
-                    ))}
-                  </TableRow>
-                ))}
-              </TableHeader>
-              <TableBody>
-                {isLoadingSessions ? (
-                  Array.from({ length: 5 }).map((_, i) => (
-                    <TableRow key={i}>
-                      {columns.map((_, j) => (
-                        <TableCell key={j}>
-                          <Skeleton className="h-6 w-full" />
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))
-                ) : table.getRowModel().rows?.length ? (
-                  table.getRowModel().rows.map((row) => (
-                    <TableRow
-                      key={row.id}
-                      data-state={row.getIsSelected() && 'selected'}
-                      className="cursor-pointer"
-                      onClick={(e) => {
-                        if (
-                          (e.target as HTMLElement).closest('[role="checkbox"]') ||
-                          (e.target as HTMLElement).closest('button')
-                        ) {
-                          return
-                        }
-                        setSelectedSession(row.original)
-                      }}
-                    >
-                      {row.getVisibleCells().map((cell) => (
-                        <TableCell key={cell.id}>
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={columns.length} className="h-24 text-center">
-                      No scan sessions found.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
-
-          {/* Pagination */}
-          <div className="flex items-center justify-between mt-4">
-            <p className="text-sm text-muted-foreground">
-              {table.getFilteredSelectedRowModel().rows.length} of{' '}
-              {table.getFilteredRowModel().rows.length} row(s) selected
-            </p>
-            <div className="flex flex-wrap items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => table.setPageIndex(0)}
-                disabled={!table.getCanPreviousPage()}
-              >
-                <ChevronsLeft className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => table.previousPage()}
-                disabled={!table.getCanPreviousPage()}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <span className="text-sm">
-                Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount() || 1}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => table.nextPage()}
-                disabled={!table.getCanNextPage()}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-                disabled={!table.getCanNextPage()}
-              >
-                <ChevronsRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Session Details Sheet */}
       <Sheet open={!!selectedSession} onOpenChange={() => setSelectedSession(null)}>
         <SheetContent className="sm:max-w-xl overflow-y-auto p-0">
           <VisuallyHidden>
-            <SheetTitle>Session Details</SheetTitle>
+            <SheetTitle>Run details</SheetTitle>
           </VisuallyHidden>
           {selectedSession && <SessionDetailSheet session={selectedSession} />}
         </SheetContent>
@@ -2444,33 +1999,12 @@ function SessionDetailSheet({ session }: SessionDetailSheetProps) {
             ? 100
             : 0
 
-  // Format duration from ms
-  const formatDurationMs = (ms?: number): string => {
-    if (!ms) return '-'
-    const seconds = Math.floor(ms / 1000)
-    const minutes = Math.floor(seconds / 60)
-    const hours = Math.floor(minutes / 60)
-    if (hours > 0) return `${hours}h ${minutes % 60}m`
-    if (minutes > 0) return `${minutes}m ${seconds % 60}s`
-    return `${seconds}s`
-  }
-
   return (
     <>
       {/* Hero Header */}
-      <div
-        className={`px-6 pt-6 pb-4 ${
-          session.status === 'running'
-            ? 'bg-gradient-to-br from-blue-500/20 via-blue-500/10 to-transparent'
-            : session.status === 'completed'
-              ? 'bg-gradient-to-br from-green-500/20 via-green-500/10 to-transparent'
-              : session.status === 'pending'
-                ? 'bg-gradient-to-br from-yellow-500/20 via-yellow-500/10 to-transparent'
-                : 'bg-gradient-to-br from-red-500/20 via-red-500/10 to-transparent'
-        }`}
-      >
-        {/* Status & Scanner Row */}
-        <div className="flex items-center justify-between mb-3">
+      <div className="border-b px-6 pt-6 pb-4">
+        {/* Status & Scanner Row - pe-14 to avoid overlap with close button */}
+        <div className="flex items-center justify-between mb-3 pe-14">
           <Badge variant="outline" className="font-medium">
             {session.scanner_name}
             {session.scanner_version && ` v${session.scanner_version}`}
@@ -2479,48 +2013,24 @@ function SessionDetailSheet({ session }: SessionDetailSheetProps) {
         </div>
 
         {/* Title */}
-        <h2 className="text-xl font-bold mb-1 truncate">{session.asset_value}</h2>
+        <h2 className="text-lg font-semibold mb-1 truncate">{session.asset_value}</h2>
         <p className="text-sm text-muted-foreground">{session.asset_type}</p>
 
         {/* Progress Bar */}
-        <div className="mt-4 p-4 rounded-xl bg-background/80 backdrop-blur border">
+        <div className="mt-4 rounded-lg border p-4">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium">Status</span>
-            <span
-              className={`text-lg font-bold ${
-                session.status === 'completed'
-                  ? 'text-green-500'
-                  : session.status === 'failed' ||
-                      session.status === 'timeout' ||
-                      session.status === 'canceled'
-                    ? 'text-red-500'
-                    : session.status === 'running'
-                      ? 'text-blue-500'
-                      : 'text-yellow-500'
-              }`}
-            >
-              {SCAN_RUN_STATUS_LABELS[session.status]}
-            </span>
+            <span className="text-sm font-semibold">{SCAN_RUN_STATUS_LABELS[session.status]}</span>
           </div>
           <Progress
             value={progress}
-            className={`h-3 ${
-              session.status === 'running'
-                ? '[&>div]:animate-pulse [&>div]:bg-blue-500'
-                : session.status === 'completed'
-                  ? '[&>div]:bg-green-500'
-                  : session.status === 'failed' ||
-                      session.status === 'timeout' ||
-                      session.status === 'canceled'
-                    ? '[&>div]:bg-red-500'
-                    : '[&>div]:bg-yellow-500'
-            }`}
+            className={cn('h-2', session.status === 'running' && '[&>div]:animate-pulse')}
           />
           <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
             <span>{session.findings_total} findings</span>
             <span>
               {session.duration_ms
-                ? formatDurationMs(session.duration_ms)
+                ? formatDuration(session.duration_ms)
                 : session.status === 'running'
                   ? 'In progress'
                   : '-'}
@@ -2534,7 +2044,7 @@ function SessionDetailSheet({ session }: SessionDetailSheetProps) {
             <Button asChild size="sm" className="flex-1">
               <Link href={`/findings?scan_id=${session.id}`}>
                 <Eye className="me-2 h-4 w-4" />
-                View {session.findings_total} Findings
+                View {session.findings_total} findings
               </Link>
             </Button>
           )}
@@ -2568,72 +2078,40 @@ function SessionDetailSheet({ session }: SessionDetailSheetProps) {
         <TabsContent value="overview" className="space-y-4 mt-0">
           {/* Stats Cards */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div className="rounded-xl border p-4 bg-card">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <Target className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{session.findings_total}</p>
-                  <p className="text-xs text-muted-foreground">Total Findings</p>
-                </div>
-              </div>
-            </div>
-            <div className="rounded-xl border p-4 bg-card">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg bg-orange-500/10 flex items-center justify-center">
-                  <AlertTriangle className="h-5 w-5 text-orange-500" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{session.findings_new}</p>
-                  <p className="text-xs text-muted-foreground">New Findings</p>
-                </div>
-              </div>
-            </div>
+            <SheetStatCard label="Total findings" value={session.findings_total} icon={Target} />
+            <SheetStatCard label="New findings" value={session.findings_new} icon={AlertTriangle} />
           </div>
 
           {/* Findings Breakdown */}
           {session.findings_total > 0 && (
             <div className="rounded-xl border p-4 bg-card">
-              <h4 className="text-sm font-medium mb-3">Findings by Severity</h4>
+              <h4 className="text-sm font-medium mb-3">Findings by severity</h4>
               <div className="space-y-2">
-                <div className="flex items-center gap-3">
-                  <div className="h-2 w-2 rounded-full bg-red-600" />
-                  <span className="text-sm flex-1">Critical</span>
-                  <span className="font-bold text-red-600">{criticalCount}</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="h-2 w-2 rounded-full bg-orange-500" />
-                  <span className="text-sm flex-1">High</span>
-                  <span className="font-bold text-orange-500">{highCount}</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="h-2 w-2 rounded-full bg-yellow-500" />
-                  <span className="text-sm flex-1">Medium</span>
-                  <span className="font-bold text-yellow-500">{mediumCount}</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="h-2 w-2 rounded-full bg-blue-500" />
-                  <span className="text-sm flex-1">Low</span>
-                  <span className="font-bold text-blue-500">{lowCount}</span>
-                </div>
+                {(
+                  [
+                    ['critical', 'Critical', criticalCount],
+                    ['high', 'High', highCount],
+                    ['medium', 'Medium', mediumCount],
+                    ['low', 'Low', lowCount],
+                  ] as const
+                ).map(([level, label, count]) => (
+                  <div key={level} className="flex items-center gap-3">
+                    <div className={cn('h-2 w-2 rounded-full', SEVERITY_DOT_COLORS[level])} />
+                    <span className="text-sm flex-1">{label}</span>
+                    <span className="font-semibold tabular-nums">{count}</span>
+                  </div>
+                ))}
               </div>
             </div>
           )}
 
           {/* Fixed Findings */}
           {session.findings_fixed > 0 && (
-            <div className="rounded-xl border p-4 bg-card border-green-500/30">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg bg-green-500/10 flex items-center justify-center">
-                  <CheckCircle className="h-5 w-5 text-green-500" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-green-500">{session.findings_fixed}</p>
-                  <p className="text-xs text-muted-foreground">Fixed since last scan</p>
-                </div>
-              </div>
-            </div>
+            <SheetStatCard
+              label="Fixed since last scan"
+              value={session.findings_fixed}
+              icon={CheckCircle}
+            />
           )}
 
           {/* Timeline */}
@@ -2641,8 +2119,8 @@ function SessionDetailSheet({ session }: SessionDetailSheetProps) {
             <h4 className="text-sm font-medium mb-3">Timeline</h4>
             <div className="space-y-3">
               <div className="flex items-start gap-3">
-                <div className="h-6 w-6 rounded-full bg-green-500/20 flex items-center justify-center mt-0.5">
-                  <CheckCircle className="h-3.5 w-3.5 text-green-500" />
+                <div className="mt-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-muted">
+                  <CheckCircle className="h-3.5 w-3.5 text-muted-foreground" />
                 </div>
                 <div className="flex-1">
                   <p className="text-sm font-medium">Created</p>
@@ -2651,8 +2129,8 @@ function SessionDetailSheet({ session }: SessionDetailSheetProps) {
               </div>
               {session.started_at && (
                 <div className="flex items-start gap-3">
-                  <div className="h-6 w-6 rounded-full bg-blue-500/20 flex items-center justify-center mt-0.5">
-                    <Play className="h-3.5 w-3.5 text-blue-500" />
+                  <div className="mt-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-muted">
+                    <Play className="h-3.5 w-3.5 text-muted-foreground" />
                   </div>
                   <div className="flex-1">
                     <p className="text-sm font-medium">Started</p>
@@ -2664,15 +2142,11 @@ function SessionDetailSheet({ session }: SessionDetailSheetProps) {
               )}
               {session.completed_at && (
                 <div className="flex items-start gap-3">
-                  <div
-                    className={`h-6 w-6 rounded-full flex items-center justify-center mt-0.5 ${
-                      session.status === 'completed' ? 'bg-green-500/20' : 'bg-red-500/20'
-                    }`}
-                  >
+                  <div className="mt-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-muted">
                     {session.status === 'completed' ? (
-                      <CheckCircle className="h-3.5 w-3.5 text-green-500" />
+                      <CheckCircle className="h-3.5 w-3.5 text-muted-foreground" />
                     ) : (
-                      <XCircle className="h-3.5 w-3.5 text-red-500" />
+                      <XCircle className="h-3.5 w-3.5 text-destructive" />
                     )}
                   </div>
                   <div className="flex-1">
@@ -2693,25 +2167,25 @@ function SessionDetailSheet({ session }: SessionDetailSheetProps) {
         <TabsContent value="findings" className="space-y-4 mt-0">
           {session.findings_total > 0 ? (
             <div className="rounded-xl border p-4 bg-card">
-              <h4 className="text-sm font-medium mb-3">Findings Summary</h4>
+              <h4 className="text-sm font-medium mb-3">Findings summary</h4>
               <p className="text-sm text-muted-foreground mb-4">
                 {session.findings_total} vulnerabilities detected on {session.asset_value}.
                 {session.findings_new > 0 && ` ${session.findings_new} are new.`}
               </p>
-              <Button className="w-full" onClick={() => toast.info('Navigating to findings')}>
-                View All Findings
+              <Button asChild size="sm" className="w-full">
+                <Link href={`/findings?scan_id=${session.id}`}>View all findings</Link>
               </Button>
             </div>
           ) : (
-            <div className="rounded-xl border p-8 bg-card text-center">
-              <Shield className="h-12 w-12 text-green-500 mx-auto mb-3" />
-              <h4 className="font-medium mb-1">No Findings</h4>
-              <p className="text-sm text-muted-foreground">
-                {session.status === 'completed'
-                  ? 'Great news! No vulnerabilities were detected.'
-                  : 'Scan is still in progress or has not started yet.'}
-              </p>
-            </div>
+            <EmptyState
+              icon={Shield}
+              title="No findings"
+              description={
+                session.status === 'completed'
+                  ? 'This run detected no vulnerabilities.'
+                  : 'The run is still in progress or has not started yet.'
+              }
+            />
           )}
         </TabsContent>
 
@@ -2719,7 +2193,7 @@ function SessionDetailSheet({ session }: SessionDetailSheetProps) {
         <TabsContent value="details" className="space-y-4 mt-0">
           {/* Scanner Info */}
           <div className="rounded-xl border p-4 bg-card">
-            <h4 className="text-sm font-medium mb-3">Scanner Information</h4>
+            <h4 className="text-sm font-medium mb-3">Scanner</h4>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Scanner</span>
@@ -2742,10 +2216,10 @@ function SessionDetailSheet({ session }: SessionDetailSheetProps) {
 
           {/* Target Info */}
           <div className="rounded-xl border p-4 bg-card">
-            <h4 className="text-sm font-medium mb-3">Target Information</h4>
+            <h4 className="text-sm font-medium mb-3">Target</h4>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Asset Type</span>
+                <span className="text-sm text-muted-foreground">Asset type</span>
                 <Badge variant="outline" className="capitalize">
                   {session.asset_type}
                 </Badge>
@@ -2775,10 +2249,10 @@ function SessionDetailSheet({ session }: SessionDetailSheetProps) {
 
           {/* Technical Details */}
           <div className="rounded-xl border p-4 bg-card">
-            <h4 className="text-sm font-medium mb-3">Technical Details</h4>
+            <h4 className="text-sm font-medium mb-3">Technical details</h4>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Session ID</span>
+                <span className="text-sm text-muted-foreground">Run ID</span>
                 <div className="flex items-center gap-2">
                   <code className="text-xs bg-muted px-2 py-1 rounded truncate max-w-[150px]">
                     {session.id}
@@ -2787,6 +2261,7 @@ function SessionDetailSheet({ session }: SessionDetailSheetProps) {
                     variant="ghost"
                     size="sm"
                     className="h-6 w-6 p-0"
+                    aria-label="Copy ID"
                     onClick={() => {
                       copyToClipboard(session.id)
                       toast.success('ID copied to clipboard')
@@ -2807,9 +2282,7 @@ function SessionDetailSheet({ session }: SessionDetailSheetProps) {
               {session.duration_ms && (
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Duration</span>
-                  <span className="text-sm font-medium">
-                    {formatDurationMs(session.duration_ms)}
-                  </span>
+                  <span className="text-sm font-medium">{formatDuration(session.duration_ms)}</span>
                 </div>
               )}
             </div>
@@ -2817,12 +2290,13 @@ function SessionDetailSheet({ session }: SessionDetailSheetProps) {
 
           {/* Error Message */}
           {session.error_message && (
-            <div className="rounded-xl border border-red-500/30 p-4 bg-red-500/5">
-              <h4 className="text-sm font-medium text-red-500 mb-2">Error</h4>
-              <p className="text-xs text-muted-foreground font-mono whitespace-pre-wrap">
-                {session.error_message}
-              </p>
-            </div>
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Run failed</AlertTitle>
+              <AlertDescription>
+                <p className="font-mono text-xs whitespace-pre-wrap">{session.error_message}</p>
+              </AlertDescription>
+            </Alert>
           )}
         </TabsContent>
       </Tabs>
