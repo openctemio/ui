@@ -1,125 +1,89 @@
 'use client'
 
 /**
- * Collapsible faceted-filter panel (Kind / Business / Exposure / Lifecycle).
+ * The All-Assets filter panel, built on the shared FacetPanel (the same
+ * controls as Findings). Every facet from `buildFacetGroups` becomes one
+ * foldable section:
+ *  - multi-value facets → a checkbox per value (a search box for long lists);
+ *  - tri-state boolean facets (unset / true / false) → two mutually exclusive
+ *    options, so "Has owner" and "Unowned" are both one click away and ticking
+ *    one replaces the other.
+ * A "Signals" section holds the filters that are not facets (crown jewels,
+ * has findings, stale) and any tags that arrived in the URL, so every filter
+ * counted on the toolbar button can be seen and removed here.
  *
- * Every value shows a LIVE count pulled from /assets/stats. Multi-select facets
- * are checkbox lists (with a search-within box for long lists like business
- * unit / provider / type); boolean facets are tri-state (unset → true → false).
- * Selecting anything resets pagination to page 1 via the parent's onChange.
+ * No per-option counts: the stats counts ignore the other active filters, so
+ * they would disagree with the list. Selecting anything resets to page 1.
  */
 
 import { useState } from 'react'
-import { ChevronDown, Search } from 'lucide-react'
-import { Checkbox } from '@/components/ui/checkbox'
+import { Search } from 'lucide-react'
 import { Input } from '@/components/ui/input'
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
-import { cn } from '@/lib/utils'
-import type { FacetGroup, FacetDef, MultiFacetDef, BoolFacetDef } from '../../lib/inventory-facets'
+import { FacetOption, FacetPanel, FacetSection } from '@/features/shared'
+import {
+  staleBeforeISO,
+  type BoolFacetDef,
+  type FacetGroup,
+  type MultiFacetDef,
+} from '../../lib/inventory-facets'
 import type { AssetStatsData } from '../../hooks/use-assets'
 import type { InventoryFilters } from '../../lib/inventory-url'
 
-/**
- * Render a single facet control (multi-select checkbox list OR tri-state
- * boolean toggle) — the same rendering used inside the sticky rail, the
- * desktop popover bar, and the mobile filter sheet. One source of truth for
- * the facet UI so the three surfaces can never drift apart.
- */
-export function FacetControl({
-  facet,
-  filters,
-  stats,
-  onChange,
-}: {
-  facet: FacetDef
-  filters: InventoryFilters
-  stats: AssetStatsData
-  onChange: (next: InventoryFilters) => void
-}) {
-  return facet.kind === 'multi' ? (
-    <MultiFacet facet={facet} filters={filters} stats={stats} onChange={onChange} />
-  ) : (
-    <BoolFacet facet={facet} filters={filters} stats={stats} onChange={onChange} />
-  )
-}
+/** Sections unfolded by default; the rest start folded (a selection unfolds them). */
+const OPEN_BY_DEFAULT = new Set<string>(['types', 'criticalities', 'hasOwner'])
 
-/** Number of active selections on a facet (array length, or 1 for a set boolean). */
-export function facetActiveCount(facet: FacetDef, filters: InventoryFilters): number {
-  if (facet.kind === 'multi') {
-    return (filters[facet.filterKey as keyof InventoryFilters] as string[] | undefined)?.length ?? 0
-  }
-  return filters[facet.filterKey as keyof InventoryFilters] !== undefined ? 1 : 0
-}
+/** Long value lists get a search box and show only their first values until expanded. */
+const SEARCH_THRESHOLD = 8
+const COLLAPSED_COUNT = 6
 
-interface FacetPanelProps {
+interface InventoryFacetPanelProps {
   groups: FacetGroup[]
   filters: InventoryFilters
   stats: AssetStatsData
   onChange: (next: InventoryFilters) => void
+  activeCount: number
+  onClearAll: () => void
+  className?: string
 }
 
-export function InventoryFacetPanel({ groups, filters, stats, onChange }: FacetPanelProps) {
-  return (
-    <div className="space-y-1">
-      {groups.map((group) => (
-        <FacetGroupBlock
-          key={group.id}
-          group={group}
-          filters={filters}
-          stats={stats}
-          onChange={onChange}
-        />
-      ))}
-    </div>
-  )
-}
-
-function FacetGroupBlock({
-  group,
+export function InventoryFacetPanel({
+  groups,
   filters,
   stats,
   onChange,
-}: {
-  group: FacetGroup
-  filters: InventoryFilters
-  stats: AssetStatsData
-  onChange: (next: InventoryFilters) => void
-}) {
-  const [open, setOpen] = useState(true)
+  activeCount,
+  onClearAll,
+  className,
+}: InventoryFacetPanelProps) {
+  const facets = groups.flatMap((g) => g.facets)
+  // Signals sit right after the "kind" facets: they are what an analyst reaches
+  // for next (crown jewels, assets with findings).
+  const kindCount = groups[0]?.facets.length ?? 0
+
+  const renderFacet = (facet: (typeof facets)[number]) =>
+    facet.kind === 'multi' ? (
+      <MultiFacetSection
+        key={facet.filterKey}
+        facet={facet}
+        filters={filters}
+        stats={stats}
+        onChange={onChange}
+      />
+    ) : (
+      <BoolFacetSection key={facet.filterKey} facet={facet} filters={filters} onChange={onChange} />
+    )
+
   return (
-    <Collapsible open={open} onOpenChange={setOpen} className="border-b pb-2">
-      <CollapsibleTrigger className="flex w-full items-center justify-between py-2 text-sm font-semibold">
-        {group.label}
-        <ChevronDown
-          className={cn('h-4 w-4 text-muted-foreground transition-transform', open && 'rotate-180')}
-        />
-      </CollapsibleTrigger>
-      <CollapsibleContent className="space-y-4 pb-1 pt-1">
-        {group.facets.map((facet) =>
-          facet.kind === 'multi' ? (
-            <MultiFacet
-              key={facet.filterKey}
-              facet={facet}
-              filters={filters}
-              stats={stats}
-              onChange={onChange}
-            />
-          ) : (
-            <BoolFacet
-              key={facet.filterKey}
-              facet={facet}
-              filters={filters}
-              stats={stats}
-              onChange={onChange}
-            />
-          )
-        )}
-      </CollapsibleContent>
-    </Collapsible>
+    <FacetPanel activeCount={activeCount} onClearAll={onClearAll} className={className}>
+      {facets.slice(0, kindCount).map(renderFacet)}
+      <SignalsSection filters={filters} onChange={onChange} />
+      {facets.slice(kindCount).map(renderFacet)}
+      <TagsSection filters={filters} onChange={onChange} />
+    </FacetPanel>
   )
 }
 
-function MultiFacet({
+function MultiFacetSection({
   facet,
   filters,
   stats,
@@ -131,124 +95,203 @@ function MultiFacet({
   onChange: (next: InventoryFilters) => void
 }) {
   const [query, setQuery] = useState('')
-  const counts = facet.counts(stats)
-  const selected =
-    (filters[facet.filterKey as keyof InventoryFilters] as string[] | undefined) ?? []
+  const [expanded, setExpanded] = useState(false)
+  const selected = (filters[facet.filterKey] as string[] | undefined) ?? []
 
-  // Value set: static list keeps enum order; dynamic sorts by count desc.
+  // Static facets keep their enum order; dynamic ones list the values the
+  // tenant actually has (most common first) — the counts only order them.
   let values: string[]
   if (facet.source === 'static') {
-    values = facet.values ?? []
+    values = [...(facet.values ?? [])]
   } else {
+    const counts = facet.counts(stats)
     values = Object.keys(counts).sort((a, b) => (counts[b] ?? 0) - (counts[a] ?? 0))
   }
-  // Always surface an already-selected value even if its live count is 0.
+  // A value selected from the URL stays visible (and removable) even when the
+  // tenant has none of it.
   for (const s of selected) if (!values.includes(s)) values.push(s)
 
-  const filtered = query
-    ? values.filter((v) => (facet.labelFor?.(v) ?? v).toLowerCase().includes(query.toLowerCase()))
-    : values
+  const label = (v: string) => facet.labelFor?.(v) ?? v
+  const long = values.length > SEARCH_THRESHOLD
+  // A long list (e.g. 25 asset types) shows its most common values first and
+  // the rest on demand, so the sections below stay within reach. Selected
+  // values are always shown.
+  const shown = query
+    ? values.filter((v) => label(v).toLowerCase().includes(query.toLowerCase()))
+    : long && !expanded
+      ? values.filter((v, i) => i < COLLAPSED_COUNT || selected.includes(v))
+      : values
+  const hiddenCount = values.length - shown.length
 
   const toggle = (value: string) => {
     const next = selected.includes(value)
       ? selected.filter((v) => v !== value)
       : [...selected, value]
-    onChange({
-      ...filters,
-      [facet.filterKey]: next.length > 0 ? next : undefined,
-      page: 1,
-    })
+    onChange({ ...filters, [facet.filterKey]: next.length > 0 ? next : undefined, page: 1 })
   }
 
   return (
-    <div className="space-y-1.5">
-      <p className="text-xs font-medium text-muted-foreground">{facet.label}</p>
-      {facet.searchable && values.length > 6 && (
-        <div className="relative">
-          <Search className="absolute start-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+    <FacetSection
+      title={facet.label}
+      selectedCount={selected.length}
+      defaultOpen={OPEN_BY_DEFAULT.has(facet.filterKey)}
+    >
+      {facet.searchable && long && (
+        <div className="relative mb-1.5">
+          <Search className="pointer-events-none absolute start-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={`Search ${facet.label.toLowerCase()}…`}
+            aria-label={`Search ${facet.label.toLowerCase()}`}
             className="h-8 ps-7 text-xs"
           />
         </div>
       )}
-      <div className="max-h-52 space-y-0.5 overflow-y-auto pe-1">
-        {filtered.length === 0 && <p className="py-1 text-xs text-muted-foreground">No values</p>}
-        {filtered.map((value) => {
-          const checked = selected.includes(value)
-          const count = counts[value] ?? 0
-          return (
-            <label
-              key={value}
-              className="flex cursor-pointer items-center gap-2 rounded px-1 py-1 hover:bg-accent"
-            >
-              <Checkbox checked={checked} onCheckedChange={() => toggle(value)} />
-              <span className="flex-1 truncate text-sm">{facet.labelFor?.(value) ?? value}</span>
-              <span className="text-xs tabular-nums text-muted-foreground">
-                {count.toLocaleString()}
-              </span>
-            </label>
-          )
-        })}
-      </div>
-    </div>
+      {shown.length === 0 ? (
+        <p className="py-1 text-xs text-muted-foreground">
+          {query ? 'No matches.' : 'None in this workspace yet.'}
+        </p>
+      ) : (
+        shown.map((value) => (
+          <FacetOption
+            key={value}
+            label={label(value)}
+            checked={selected.includes(value)}
+            onCheckedChange={() => toggle(value)}
+          />
+        ))
+      )}
+      {!query && long && (hiddenCount > 0 || expanded) && (
+        <button
+          type="button"
+          onClick={() => setExpanded((e) => !e)}
+          className="px-1.5 pt-1 text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+        >
+          {expanded ? 'Show fewer' : `Show ${hiddenCount} more`}
+        </button>
+      )}
+    </FacetSection>
   )
 }
 
-function BoolFacet({
+function BoolFacetSection({
   facet,
   filters,
-  stats,
   onChange,
 }: {
   facet: BoolFacetDef
   filters: InventoryFilters
-  stats: AssetStatsData
   onChange: (next: InventoryFilters) => void
 }) {
-  const counts = facet.counts(stats)
-  const current = filters[facet.filterKey as keyof InventoryFilters] as boolean | undefined
-
-  const set = (value: boolean) => {
-    // Clicking the active option clears it (back to "any").
-    const next = current === value ? undefined : value
-    onChange({ ...filters, [facet.filterKey]: next, page: 1 })
-  }
-
-  const options: Array<{ value: boolean; label: string; count: number }> = [
-    { value: true, label: facet.trueLabel, count: counts['true'] ?? 0 },
-    { value: false, label: facet.falseLabel, count: counts['false'] ?? 0 },
-  ]
+  const current = filters[facet.filterKey]
+  // Ticking an option selects that value; unticking the selected one returns
+  // the facet to "any".
+  const set = (value: boolean, on: boolean) =>
+    onChange({ ...filters, [facet.filterKey]: on ? value : undefined, page: 1 })
 
   return (
-    <div className="space-y-1.5">
-      <p className="text-xs font-medium text-muted-foreground">{facet.label}</p>
-      <div className="grid grid-cols-2 gap-1.5">
-        {options.map((opt) => {
-          const active = current === opt.value
-          return (
-            <button
-              key={String(opt.value)}
-              type="button"
-              aria-pressed={active}
-              onClick={() => set(opt.value)}
-              className={cn(
-                'flex items-center justify-between gap-1 rounded-md border px-2 py-1.5 text-xs transition-colors',
-                active
-                  ? 'border-primary bg-primary/10 text-primary'
-                  : 'border-border bg-background hover:bg-accent'
-              )}
-            >
-              <span className="truncate">{opt.label}</span>
-              <span className="tabular-nums text-muted-foreground">
-                {opt.count.toLocaleString()}
-              </span>
-            </button>
-          )
-        })}
-      </div>
-    </div>
+    <FacetSection
+      title={facet.label}
+      selectedCount={current === undefined ? 0 : 1}
+      defaultOpen={OPEN_BY_DEFAULT.has(facet.filterKey)}
+    >
+      <FacetOption
+        label={facet.trueLabel}
+        checked={current === true}
+        onCheckedChange={(on) => set(true, on)}
+      />
+      <FacetOption
+        label={facet.falseLabel}
+        checked={current === false}
+        onCheckedChange={(on) => set(false, on)}
+      />
+    </FacetSection>
+  )
+}
+
+/** Filters that are not facets but that the views and metrics can turn on. */
+function SignalsSection({
+  filters,
+  onChange,
+}: {
+  filters: InventoryFilters
+  onChange: (next: InventoryFilters) => void
+}) {
+  const patch = (p: Partial<InventoryFilters>) => onChange({ ...filters, ...p, page: 1 })
+  const selectedCount =
+    (filters.isCrownJewel !== undefined ? 1 : 0) +
+    (filters.hasFindings !== undefined ? 1 : 0) +
+    (filters.lastSeenBefore ? 1 : 0) +
+    (filters.lastSeenAfter ? 1 : 0)
+
+  return (
+    <FacetSection title="Signals" selectedCount={selectedCount} defaultOpen={false}>
+      <FacetOption
+        label="Crown jewels"
+        checked={filters.isCrownJewel === true}
+        onCheckedChange={(on) => patch({ isCrownJewel: on ? true : undefined })}
+      />
+      {/* The negative forms only arrive from a shared link; show them so they
+          can be removed, but do not offer them otherwise. */}
+      {filters.isCrownJewel === false && (
+        <FacetOption
+          label="Not a crown jewel"
+          checked
+          onCheckedChange={() => patch({ isCrownJewel: undefined })}
+        />
+      )}
+      <FacetOption
+        label="Has findings"
+        checked={filters.hasFindings === true}
+        onCheckedChange={(on) => patch({ hasFindings: on ? true : undefined })}
+      />
+      {filters.hasFindings === false && (
+        <FacetOption
+          label="No findings"
+          checked
+          onCheckedChange={() => patch({ hasFindings: undefined })}
+        />
+      )}
+      <FacetOption
+        label="Not seen for 30+ days"
+        checked={!!filters.lastSeenBefore}
+        onCheckedChange={(on) => patch({ lastSeenBefore: on ? staleBeforeISO(30) : undefined })}
+      />
+      {filters.lastSeenAfter && (
+        <FacetOption
+          label="Seen recently"
+          checked
+          onCheckedChange={() => patch({ lastSeenAfter: undefined })}
+        />
+      )}
+    </FacetSection>
+  )
+}
+
+/** Tags have no facet (no tenant tag list to offer); show the ones in the URL. */
+function TagsSection({
+  filters,
+  onChange,
+}: {
+  filters: InventoryFilters
+  onChange: (next: InventoryFilters) => void
+}) {
+  const tags = filters.tags ?? []
+  if (tags.length === 0) return null
+  return (
+    <FacetSection title="Tags" selectedCount={tags.length}>
+      {tags.map((t) => (
+        <FacetOption
+          key={t}
+          label={t}
+          checked
+          onCheckedChange={() => {
+            const next = tags.filter((x) => x !== t)
+            onChange({ ...filters, tags: next.length > 0 ? next : undefined, page: 1 })
+          }}
+        />
+      ))}
+    </FacetSection>
   )
 }

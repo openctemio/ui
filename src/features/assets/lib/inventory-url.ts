@@ -11,6 +11,7 @@
  * of scope here — that is a v2 concern.
  */
 
+import type { SortingState } from '@tanstack/react-table'
 import type { AssetSearchFilters } from '../hooks/use-assets'
 import type { AssetType, Criticality, ExposureLevel, AssetScope } from '../types/asset.types'
 
@@ -158,6 +159,38 @@ export function countActiveFilters(f: InventoryFilters): number {
   if (f.search) n += 1
   if (f.lastSeenBefore || f.lastSeenAfter) n += 1
   return n
+}
+
+/**
+ * Inventory table column id → API sort field (asset AllowedSortFields). A
+ * column absent here is not sortable. The URL keeps the API form ("-risk_score"),
+ * so links made before the columns were renamed still sort the same way.
+ */
+export const SORT_FIELDS: Record<string, string> = {
+  name: 'name',
+  type: 'type',
+  criticality: 'criticality',
+  exposure: 'exposure',
+  risk: 'risk_score',
+  findings: 'finding_count',
+  last_seen: 'last_seen',
+}
+
+/** URL sort ("-risk_score") → table sorting state. Unknown fields are ignored. */
+export function sortToSorting(sort?: string): SortingState {
+  if (!sort) return []
+  const desc = sort.startsWith('-')
+  const field = desc ? sort.slice(1) : sort
+  const id = Object.keys(SORT_FIELDS).find((k) => SORT_FIELDS[k] === field)
+  return id ? [{ id, desc }] : []
+}
+
+/** Table sorting state → URL sort, or undefined when unsorted / not sortable. */
+export function sortingToSort(sorting: SortingState): string | undefined {
+  const first = sorting[0]
+  const field = first ? SORT_FIELDS[first.id] : undefined
+  if (!first || !field) return undefined
+  return first.desc ? `-${field}` : field
 }
 
 // Re-exported so consumers building typed multi-selects don't re-derive them.
