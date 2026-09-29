@@ -18,7 +18,7 @@ export function ExistingModels({ models, selectedId, onOpen }: ExistingModelsPro
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Existing threat models</CardTitle>
+        <CardTitle className="text-base">Threat models</CardTitle>
       </CardHeader>
       <CardContent>
         {models.length === 0 ? (
@@ -52,14 +52,14 @@ export function ExistingModels({ models, selectedId, onOpen }: ExistingModelsPro
                       {m.threats_open > 0 && (
                         <Badge
                           variant="outline"
-                          className="border-red-500/20 bg-red-500/10 text-red-600 dark:text-red-400"
+                          className="border-destructive/30 bg-destructive/10 text-destructive"
                         >
                           {m.threats_open} open
                         </Badge>
                       )}
                       <Badge variant="secondary">{m.threats_total} threats</Badge>
-                      <span className="text-muted-foreground w-14 text-end text-sm tabular-nums">
-                        {coverage}% cov
+                      <span className="text-muted-foreground w-24 text-end text-sm tabular-nums">
+                        {coverage}% covered
                       </span>
                       <ChevronRight className="text-muted-foreground h-4 w-4" />
                     </div>
