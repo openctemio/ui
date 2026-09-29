@@ -15,7 +15,7 @@ import {
 } from '@/features/verified-domains'
 
 const DESCRIPTION =
-  'Prove you own an email domain (via a DNS TXT record) so SSO auto-join can be safely limited to people at domains you control.'
+  'Prove you own an email domain with a DNS TXT record, so SSO auto-join is limited to domains you control.'
 
 function VerifiedDomainsContent() {
   const { data, error, isLoading, mutate } = useVerifiedDomains()
@@ -23,29 +23,31 @@ function VerifiedDomainsContent() {
 
   return (
     <>
-      <PageHeader title="Verified Domains" description={DESCRIPTION}>
+      <PageHeader title="Verified domains" description={DESCRIPTION}>
         <AddDomainDialog onAdded={refresh} />
       </PageHeader>
 
-      {error ? (
-        // Verified domains gate SSO auto-join, so a false "none verified" invites a
-        // wrong conclusion about who can join this tenant. Show the failure instead.
-        <ErrorState title="verified domains" error={error} onRetry={refresh} />
-      ) : isLoading ? (
-        <div className="space-y-3">
-          <Skeleton className="h-20 w-full" />
-          <Skeleton className="h-20 w-full" />
-        </div>
-      ) : !data || data.length === 0 ? (
-        <EmptyState
-          icon={ShieldCheck}
-          title="No verified domains yet"
-          description="Verified domains gate SSO auto-join to people whose email is at a domain you own. Add a domain and publish the DNS TXT record to prove ownership."
-          action={<AddDomainDialog onAdded={refresh} />}
-        />
-      ) : (
-        <VerifiedDomainsList domains={data} onChanged={refresh} />
-      )}
+      <div className="mt-5">
+        {error ? (
+          // Verified domains gate SSO auto-join, so a false "none verified" invites a
+          // wrong conclusion about who can join this tenant. Show the failure instead.
+          <ErrorState title="verified domains" error={error} onRetry={refresh} />
+        ) : isLoading ? (
+          <div className="space-y-3">
+            <Skeleton className="h-9 w-full max-w-sm" />
+            <Skeleton className="h-40 w-full" />
+          </div>
+        ) : !data || data.length === 0 ? (
+          <EmptyState
+            icon={ShieldCheck}
+            title="No verified domains yet"
+            description="Verified domains gate SSO auto-join to people whose email is at a domain you own. Add a domain and publish the DNS TXT record to prove ownership."
+            action={<AddDomainDialog onAdded={refresh} />}
+          />
+        ) : (
+          <VerifiedDomainsList domains={data} onChanged={refresh} />
+        )}
+      </div>
     </>
   )
 }
@@ -57,8 +59,9 @@ export default function VerifiedDomainsPage() {
         permission={Permission.TeamUpdate}
         fallback={
           <>
-            <PageHeader title="Verified Domains" description={DESCRIPTION} />
+            <PageHeader title="Verified domains" description={DESCRIPTION} />
             <EmptyState
+              className="mt-5"
               icon={ShieldAlert}
               title="Admin access required"
               description="Only tenant admins can manage verified domains."

@@ -6,25 +6,14 @@ import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import type { VerifiedDomainStatus } from '../types/verified-domain.types'
 
+// Only a failure is coloured; pending and verified stay neutral.
 const CONFIG: Record<
   VerifiedDomainStatus,
-  { label: string; className: string; icon: typeof Clock }
+  { label: string; variant: 'default' | 'outline' | 'destructive'; icon: typeof Clock }
 > = {
-  pending: {
-    label: 'Pending',
-    className: 'border-0 bg-amber-500/10 text-amber-600 dark:text-amber-400',
-    icon: Clock,
-  },
-  verified: {
-    label: 'Verified',
-    className: 'border-0 bg-green-500/10 text-green-600 dark:text-green-400',
-    icon: CheckCircle2,
-  },
-  failed: {
-    label: 'Failed',
-    className: 'border-0 bg-red-500/10 text-red-600 dark:text-red-400',
-    icon: XCircle,
-  },
+  pending: { label: 'Pending', variant: 'outline', icon: Clock },
+  verified: { label: 'Verified', variant: 'default', icon: CheckCircle2 },
+  failed: { label: 'Failed', variant: 'destructive', icon: XCircle },
 }
 
 export function VerifiedDomainStatusBadge({
@@ -37,7 +26,7 @@ export function VerifiedDomainStatusBadge({
   const config = CONFIG[status] ?? CONFIG.pending
   const Icon = config.icon
   return (
-    <Badge className={cn(config.className, className)}>
+    <Badge variant={config.variant} className={cn(className)}>
       <Icon />
       {config.label}
     </Badge>
