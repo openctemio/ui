@@ -142,7 +142,12 @@ export function ScanProfilesSection() {
                 {profile.is_system && <Badge variant="outline">System</Badge>}
               </div>
               {profile.description && (
-                <p className="truncate text-sm text-muted-foreground">{profile.description}</p>
+                <p
+                  className="max-w-sm truncate text-sm text-muted-foreground"
+                  title={profile.description}
+                >
+                  {profile.description}
+                </p>
               )}
             </div>
           )
