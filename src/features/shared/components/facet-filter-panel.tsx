@@ -28,8 +28,8 @@ export function FacetPanel({
   className?: string
 }) {
   return (
-    <div className={cn('flex flex-col', className)}>
-      <div className="flex h-9 items-center justify-between">
+    <div className={cn('flex min-h-0 flex-col', className)}>
+      <div className="flex h-9 shrink-0 items-center justify-between">
         <p className="text-sm font-semibold">Filters</p>
         <Button
           variant="ghost"
@@ -41,7 +41,9 @@ export function FacetPanel({
           Clear all
         </Button>
       </div>
-      <div className="divide-y border-y">{children}</div>
+      {/* The sections scroll on their own, so the panel can be given a fixed
+          height (e.g. the viewport) whatever the number of filters. */}
+      <div className="min-h-0 flex-1 divide-y overflow-y-auto border-y">{children}</div>
     </div>
   )
 }
