@@ -92,6 +92,12 @@ type NavGroup = {
    * title, e.g. Dashboard) render as plain top-level links and don't need one.
    */
   icon?: React.ElementType
+  /**
+   * Visual cluster the group belongs to. `cycle` marks the five CTEM stages
+   * (Scoping → Mobilization), which the sidebar renders together, in order,
+   * under a "CTEM cycle" label.
+   */
+  cluster?: 'cycle'
   items: NavItem[]
 }
 
