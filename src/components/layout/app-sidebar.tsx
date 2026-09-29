@@ -47,11 +47,14 @@ export function AppSidebar() {
           // Each titled group renders as a collapsible section (icon + label +
           // chevron) that auto-opens when it owns the active route, so the
           // sidebar stays compact — only the relevant section is expanded.
-          <>
+          // One padded column for every group: the same 8px inset in both
+          // states (so rail icons line up with the expanded ones) and an even
+          // gap between sections, which are separate <ul>s.
+          <div className="flex flex-col gap-1 px-2 py-2">
             {filteredSidebarData.navGroups.map((group) => (
               <NavGroup key={group.title} {...group} />
             ))}
-          </>
+          </div>
         )}
       </SidebarContent>
 

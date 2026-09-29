@@ -39,6 +39,7 @@ import {
   type LicensingModule,
 } from '@/features/integrations/api/use-tenant-modules'
 import { useTranslation } from '@/context/i18n-provider'
+import { cn } from '@/lib/utils'
 
 /** Maps a sidebar group title to its i18n key, e.g. "Scoping" → "nav.group.scoping". */
 function groupTitleKey(title: string): string {
@@ -59,6 +60,16 @@ function NavLabel({ title }: { title: string }) {
   const { t } = useTranslation()
   return <>{t(navItemKey(title), title)}</>
 }
+
+/**
+ * Geometry shared by every top-level nav row so the leading icon sits at one size
+ * and one position whether the sidebar is expanded or collapsed to the icon rail:
+ * a 20px glyph with a 6px inset inside a 32px row. The collapsed button is 32px
+ * wide, so 6 + 20 + 6 fills it exactly and the icon is centred on the rail; the
+ * expanded row keeps the same inset, so toggling only hides the labels and the
+ * icons do not move or resize.
+ */
+const NAV_BUTTON_CLASS = 'px-1.5 group-data-[collapsible=icon]:p-1.5! [&>svg:first-child]:size-5'
 
 /**
  * NavGroup — one CTEM section in the sidebar.
@@ -223,7 +234,7 @@ const SidebarMenuLink = memo(function SidebarMenuLink({
       <SidebarMenuItem>
         <SidebarMenuButton
           tooltip={`${item.title} (Coming Soon)`}
-          className="cursor-not-allowed opacity-60"
+          className={cn(NAV_BUTTON_CLASS, 'cursor-not-allowed opacity-60')}
         >
           {item.icon && <item.icon />}
           <span>
@@ -239,7 +250,12 @@ const SidebarMenuLink = memo(function SidebarMenuLink({
 
   return (
     <SidebarMenuItem>
-      <SidebarMenuButton asChild isActive={checkIsActive(pathname, item)} tooltip={item.title}>
+      <SidebarMenuButton
+        asChild
+        isActive={checkIsActive(pathname, item)}
+        tooltip={item.title}
+        className={NAV_BUTTON_CLASS}
+      >
         <Link href={item.url} prefetch={false} onClick={() => setOpenMobile(false)}>
           {item.icon && <item.icon />}
           <span>
@@ -299,7 +315,7 @@ const NavSection = memo(function NavSection({
     <Collapsible asChild defaultOpen={sectionActive} className="group/collapsible">
       <SidebarMenuItem>
         <CollapsibleTrigger asChild>
-          <SidebarMenuButton tooltip={title}>
+          <SidebarMenuButton tooltip={title} className={NAV_BUTTON_CLASS}>
             {SectionIcon && <SectionIcon />}
             <span>{t(groupTitleKey(title), title)}</span>
             <ChevronRight className="ms-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90 rtl:rotate-180" />
@@ -461,7 +477,7 @@ const NavSectionCollapsedDropdown = memo(function NavSectionCollapsedDropdown({
     <SidebarMenuItem>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <SidebarMenuButton tooltip={title} isActive={sectionActive}>
+          <SidebarMenuButton tooltip={title} isActive={sectionActive} className={NAV_BUTTON_CLASS}>
             {SectionIcon && <SectionIcon />}
             <span className="sr-only">{t(groupTitleKey(title), title)}</span>
           </SidebarMenuButton>
