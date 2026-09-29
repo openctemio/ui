@@ -27,7 +27,6 @@ const INLINE_MAP =
 const ALLOWLIST = new Set(
   [
     'app/(dashboard)/(discovery)/assets/[id]/page.tsx',
-    'app/(dashboard)/(discovery)/credentials/page.tsx',
     'app/(dashboard)/(prioritization)/attack-paths/page.tsx',
     'app/(dashboard)/(prioritization)/exposure-chains/page.tsx',
     'app/(dashboard)/settings/modules/page.tsx',

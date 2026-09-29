@@ -108,6 +108,14 @@ interface DataTableProps<TData, TValue> {
    * On by default.
    */
   stickyFirstColumn?: boolean
+  /**
+   * Change this value to clear the table's row selection (the table owns the
+   * checkbox state; clearing only a parent's copy left rows ticked, and the
+   * next tick brought the stale selection back).
+   */
+  resetSelectionKey?: string | number
+  /** Hide the "N of M selected" note, e.g. when a bulk-action bar shows it. */
+  showSelectionCount?: boolean
 }
 
 /** Fixed width of the selection column, so the pinned column after it knows its offset. */
@@ -154,6 +162,8 @@ export function DataTable<TData, TValue>({
   toolbarStart,
   toolbarEnd,
   stickyFirstColumn = true,
+  resetSelectionKey,
+  showSelectionCount = true,
 }: DataTableProps<TData, TValue>) {
   // Which sides of the horizontally-scrolling table have content hidden under
   // the pinned columns — drives the edge shadows.
@@ -274,6 +284,14 @@ export function DataTable<TData, TValue>({
     return () => ro.disconnect()
   }, [measureEdges, data, columnVisibility])
 
+  // Clear the selection whenever the parent bumps resetSelectionKey.
+  const lastResetKey = React.useRef(resetSelectionKey)
+  React.useEffect(() => {
+    if (lastResetKey.current === resetSelectionKey) return
+    lastResetKey.current = resetSelectionKey
+    setRowSelection({})
+  }, [resetSelectionKey])
+
   const selectedCount = table.getFilteredSelectedRowModel().rows.length
   const totalCount = table.getFilteredRowModel().rows.length
 
@@ -337,7 +355,7 @@ export function DataTable<TData, TValue>({
         <div className="ms-auto flex items-center gap-2 shrink-0">
           {toolbarEnd}
           {/* Selection info - hidden on mobile when no selection */}
-          {selectedCount > 0 && (
+          {showSelectionCount && selectedCount > 0 && (
             <span className="text-sm text-muted-foreground hidden sm:inline">
               {selectedCount} of {totalCount} selected
             </span>
