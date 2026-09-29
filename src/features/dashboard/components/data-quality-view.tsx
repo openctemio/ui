@@ -17,14 +17,14 @@
 
 import { useMemo } from 'react'
 import { Main } from '@/components/layout'
-import { PageHeader, EmptyState } from '@/features/shared'
+import { PageHeader, EmptyState, MetricStrip } from '@/features/shared'
 import { useTenant } from '@/context/tenant-provider'
 import { usePermissions, Permission } from '@/lib/permissions'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
-import { STATE_TEXT, STATE_BADGE_SOFT, STATE_BAR, type CtemState } from '../lib/ctem-colors'
+import { STATE_BADGE_SOFT, STATE_BAR, type CtemState } from '../lib/ctem-colors'
 import { useDataQuality } from '../hooks/use-ctem-dashboard'
 import {
   type MetricStatus,
@@ -76,8 +76,11 @@ const STATUS_META: Record<MetricStatus, { label: string; icon: LucideIcon }> = {
 // HELPERS
 // ============================================
 
+// A value is coloured only when it is a problem; the status pill carries the
+// rest of the state (on track / watch / not measured).
 function stateTextClass(status: MetricStatus): string {
-  return status === 'pending' ? 'text-muted-foreground' : STATE_TEXT[status as CtemState]
+  if (status === 'pending') return 'text-muted-foreground'
+  return status === 'crit' ? 'text-destructive' : ''
 }
 
 function statusBadgeClass(status: MetricStatus): string {
@@ -98,7 +101,10 @@ function StatusPill({ status }: { status: MetricStatus }) {
   const meta = STATUS_META[status]
   const Icon = meta.icon
   return (
-    <Badge variant="outline" className={cn('gap-1', statusBadgeClass(status))}>
+    <Badge
+      variant="outline"
+      className={cn('shrink-0 gap-1 whitespace-nowrap', statusBadgeClass(status))}
+    >
       <Icon className="h-3 w-3" />
       {meta.label}
     </Badge>
@@ -109,16 +115,18 @@ function MetricCard({ metric }: { metric: QualityMetric }) {
   const hasBar = metric.bar !== undefined && metric.bar !== null
   return (
     <Card className="flex flex-col">
-      <CardHeader className="flex flex-row items-start justify-between gap-2 space-y-0 pb-2">
-        <div>
-          <CardTitle className="text-sm font-medium">{metric.label}</CardTitle>
-          <CardDescription className="mt-1 text-xs">{metric.measures}</CardDescription>
-        </div>
-        <StatusPill status={metric.status} />
+      <CardHeader className="space-y-1 pb-2">
+        <CardTitle className="text-sm font-medium">{metric.label}</CardTitle>
+        <CardDescription className="text-xs">{metric.measures}</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-1 flex-col justify-end">
-        <div className={cn('text-3xl font-bold tabular-nums', stateTextClass(metric.status))}>
-          {metric.display ?? '—'}
+        {/* Value and status share a row that wraps, so the pill never squeezes
+            (or clips) the title at narrow widths. */}
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className={cn('text-2xl font-bold tabular-nums', stateTextClass(metric.status))}>
+            {metric.display ?? '—'}
+          </span>
+          <StatusPill status={metric.status} />
         </div>
         {hasBar && (
           <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-muted">
@@ -224,11 +232,12 @@ export function DataQualityView() {
   if (!canRead) {
     return (
       <Main>
-        <PageHeader title="Data Quality" className="mb-6" />
+        <PageHeader title="Data quality" />
         <EmptyState
+          className="mt-5"
           icon={Lock}
           title="You don’t have access to data-quality metrics."
-          description="Dashboard read permission is required to view the Data Quality scorecard."
+          description="Dashboard read permission is required to view the data-quality scorecard."
         />
       </Main>
     )
@@ -240,81 +249,54 @@ export function DataQualityView() {
   return (
     <Main>
       <PageHeader
-        title="Data Quality"
-        description="CTEM Discovery data hygiene — is the inventory owned, evidenced and fresh enough to prioritise on?"
-        className="mb-4"
+        title="Data quality"
+        description="Whether the inventory is owned, evidenced and fresh enough to prioritise on — the inputs the rest of the CTEM loop trusts."
       />
 
-      {/* Why this matters — the CTEM framing. */}
-      <Card className="mb-6 border-dashed">
-        <CardContent className="flex items-start gap-3 py-4">
-          <Database className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" />
-          <div className="text-sm text-muted-foreground">
-            <span className="font-medium text-foreground">Prioritisation trusts its inputs.</span>{' '}
-            An unowned asset has nobody to route a fix to, a finding with no evidence can’t be
-            actioned, and a stale inventory silently loses coverage. These are the hygiene metrics
-            the rest of the CTEM loop depends on.
-          </div>
-        </CardContent>
-      </Card>
+      <div className="mt-5">
+        {isLoading ? (
+          <ScorecardSkeleton />
+        ) : !hasData ? (
+          <EmptyState
+            icon={Database}
+            title="No data-quality metrics yet"
+            description="Once assets and findings are ingested, the scorecard populates here."
+          />
+        ) : (
+          <>
+            <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {metrics.map((m) => (
+                <MetricCard key={m.id} metric={m} />
+              ))}
+            </section>
 
-      {isLoading ? (
-        <ScorecardSkeleton />
-      ) : !hasData ? (
-        <EmptyState
-          icon={Database}
-          title="No data-quality metrics yet."
-          description="Once assets and findings are ingested, the scorecard populates here."
-        />
-      ) : (
-        <>
-          <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {metrics.map((m) => (
-              <MetricCard key={m.id} metric={m} />
-            ))}
-          </section>
-
-          {/* Context counts — the denominators behind the rates above. */}
-          <Card className="mt-6 bg-muted/30">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Inventory context
-              </CardTitle>
-              <CardDescription className="text-xs">
-                The scope the rates above are measured over.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            {/* Context counts — the denominators behind the rates above. */}
+            <section className="mt-5 space-y-3">
               <div>
-                <div className="text-2xl font-semibold text-muted-foreground tabular-nums">
-                  {(q?.total_assets ?? 0).toLocaleString()}
-                </div>
-                <p className="text-xs text-muted-foreground">Total assets</p>
+                <h2 className="text-base font-semibold">Inventory context</h2>
+                <p className="text-sm text-muted-foreground">
+                  The scope the rates above are measured over.
+                </p>
               </div>
-              <div>
-                <div className="text-2xl font-semibold text-muted-foreground tabular-nums">
-                  {(q?.total_findings ?? 0).toLocaleString()}
-                </div>
-                <p className="text-xs text-muted-foreground">Total findings</p>
-              </div>
-              <div>
-                <div className="text-2xl font-semibold text-muted-foreground tabular-nums">
-                  {dedupPct ?? '—'}
-                </div>
-                <p className="text-xs text-muted-foreground">Dedup merges (of inventory)</p>
-              </div>
-              <div>
-                <div className="text-2xl font-semibold text-muted-foreground tabular-nums">
-                  {q?.median_last_seen_days != null
-                    ? `${q.median_last_seen_days.toFixed(1)}d`
-                    : '—'}
-                </div>
-                <p className="text-xs text-muted-foreground">Median last-seen (internet-exposed)</p>
-              </div>
-            </CardContent>
-          </Card>
-        </>
-      )}
+              <MetricStrip
+                items={[
+                  { key: 'assets', label: 'Total assets', value: q?.total_assets ?? 0 },
+                  { key: 'findings', label: 'Total findings', value: q?.total_findings ?? 0 },
+                  { key: 'dedup', label: 'Dedup merges (of inventory)', value: dedupPct ?? '—' },
+                  {
+                    key: 'last-seen',
+                    label: 'Median last-seen (internet-exposed)',
+                    value:
+                      q?.median_last_seen_days != null
+                        ? `${q.median_last_seen_days.toFixed(1)}d`
+                        : '—',
+                  },
+                ]}
+              />
+            </section>
+          </>
+        )}
+      </div>
     </Main>
   )
 }
