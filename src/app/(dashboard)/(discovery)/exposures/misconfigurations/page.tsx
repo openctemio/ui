@@ -15,10 +15,14 @@ import {
   SeverityBars,
   SeverityShareList,
   humanize,
+  TypeBreakdownUnavailable,
 } from '@/features/exposures/components'
 import { useTenant } from '@/context/tenant-provider'
+import type { FindingSource } from '@/lib/api/finding-types'
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from '@/components/charts'
 import { Settings2, AlertTriangle, Server, Shield } from 'lucide-react'
+
+const MISCONFIG_SOURCES: FindingSource[] = ['iac']
 
 export default function MisconfigurationsPage() {
   const { currentTenant } = useTenant()
@@ -26,7 +30,10 @@ export default function MisconfigurationsPage() {
   // Org-wide context (asset coverage + asset-type mix) has no per-type variant.
   const { stats, isLoading: dashboardLoading } = useDashboardStats(tenantId)
   // Type-scoped finding stats: misconfigurations come from IaC scanning.
-  const { stats: typeStats, isLoading: typeLoading } = useFindingTypeStats(tenantId, ['iac'])
+  const { stats: typeStats, isLoading: typeLoading } = useFindingTypeStats(
+    tenantId,
+    MISCONFIG_SOURCES
+  )
   const isLoading = dashboardLoading || typeLoading
 
   const criticalCount = typeStats.bySeverity.critical || 0
@@ -59,6 +66,13 @@ export default function MisconfigurationsPage() {
             icon={Settings2}
             title="No misconfigurations yet"
             description="Run configuration scans to identify infrastructure and application misconfigurations."
+          />
+        ) : !typeStats.scoped ? (
+          <TypeBreakdownUnavailable
+            icon={Settings2}
+            total={typeStats.total}
+            noun={['misconfiguration', 'misconfigurations']}
+            sources={MISCONFIG_SOURCES}
           />
         ) : (
           <div className="space-y-5">

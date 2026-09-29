@@ -444,7 +444,7 @@ export function useAddFindingCommentApi(findingId: string) {
 
 import type { FindingStatsResponse } from './finding-api.types'
 
-async function fetchFindingStats(url: string): Promise<FindingStatsResponse> {
+export async function fetchFindingStats(url: string): Promise<FindingStatsResponse> {
   return get<FindingStatsResponse>(url)
 }
 
@@ -455,11 +455,27 @@ async function fetchFindingStats(url: string): Promise<FindingStatsResponse> {
  *  - assetId: scope the counts to a single asset (used by the
  *    /findings page when filtered by `?assetId=…` so the severity
  *    cards reflect the filtered table, not the global tenant counts).
+ *  - sources: scope every count to these finding sources (used by the
+ *    Exposures type pages, which each show one type of finding). An older
+ *    API ignores the param and answers tenant-wide; see
+ *    `useFindingTypeStats` for how that is detected.
  *
  * Add new filters here as the backend grows.
  */
 export interface FindingStatsFilters {
   assetId?: string | null
+  sources?: readonly string[] | null
+}
+
+/** `/api/v1/findings/stats` with the given filters as query params. */
+export function buildFindingStatsUrl(filters?: FindingStatsFilters): string {
+  const params = new URLSearchParams()
+  if (filters?.assetId) params.set('asset_id', filters.assetId)
+  if (filters?.sources && filters.sources.length > 0) {
+    params.set('sources', filters.sources.join(','))
+  }
+  const queryString = params.toString()
+  return queryString ? `/api/v1/findings/stats?${queryString}` : '/api/v1/findings/stats'
 }
 
 /**
@@ -472,10 +488,7 @@ export interface FindingStatsFilters {
 export function useFindingStatsApi(filters?: FindingStatsFilters, config?: SWRConfiguration) {
   const { currentTenant } = useTenant()
 
-  const params = new URLSearchParams()
-  if (filters?.assetId) params.set('asset_id', filters.assetId)
-  const queryString = params.toString()
-  const url = queryString ? `/api/v1/findings/stats?${queryString}` : '/api/v1/findings/stats'
+  const url = buildFindingStatsUrl(filters)
 
   const key = currentTenant ? url : null
 
