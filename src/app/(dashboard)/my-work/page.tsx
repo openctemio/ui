@@ -11,7 +11,14 @@ import { useFindingsApi } from '@/features/findings/api/use-findings-api'
 import type { FindingApiFilters } from '@/features/findings/api/finding-api.types'
 
 // Findings that still need work — exclude every closed/terminal disposition.
-const OPEN_EXCLUDE = ['resolved', 'false_positive', 'accepted', 'duplicate', 'verified', 'accepted_risk']
+const OPEN_EXCLUDE = [
+  'resolved',
+  'false_positive',
+  'accepted',
+  'duplicate',
+  'verified',
+  'accepted_risk',
+]
 
 // "My Work" is the asset-owner/developer landing: a personal view scoped to the
 // findings the current user is responsible for (assignee, asset owner, or member
@@ -94,8 +101,8 @@ export default function MyWorkPage() {
           ) : openTotal === 0 ? (
             <div className="py-10 text-center text-sm text-muted-foreground">
               <ClipboardCheck className="mx-auto mb-2 size-6 opacity-50" />
-              Nothing assigned to you right now. When a finding is assigned to you — or lands
-              on an asset you own — it&apos;ll show up here.
+              Nothing assigned to you right now. When a finding is assigned to you — or lands on an
+              asset you own — it&apos;ll show up here.
             </div>
           ) : (
             <ul className="divide-y">
@@ -145,7 +152,8 @@ function StatCard({
             ) : (
               <p
                 className={
-                  'mt-1 text-2xl font-semibold ' + (tone === 'danger' && value > 0 ? 'text-destructive' : '')
+                  'mt-1 text-2xl font-semibold ' +
+                  (tone === 'danger' && value > 0 ? 'text-destructive' : '')
                 }
               >
                 {value}
