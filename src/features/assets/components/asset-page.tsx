@@ -15,14 +15,6 @@ import {
   DetailField,
   DetailFieldGrid,
 } from '@/features/shared'
-import {
-  PageHeader,
-  StatusBadge,
-  RiskScoreBadge,
-  DetailSection,
-  DetailField,
-  DetailFieldGrid,
-} from '@/features/shared'
 import { AssetDetailSheet, ClassificationBadges } from '@/features/assets'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
