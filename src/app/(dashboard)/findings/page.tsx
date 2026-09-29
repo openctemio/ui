@@ -1617,7 +1617,7 @@ function FindingsContent() {
         <SelectValue />
       </SelectTrigger>
       <SelectContent align="end">
-        <SelectItem value="none">None</SelectItem>
+        <SelectItem value="none">Group</SelectItem>
         {GROUP_BY_DIMENSIONS.map((d) => (
           <SelectItem key={d.value} value={d.value}>
             {GROUP_BY_LABELS[d.value]}
