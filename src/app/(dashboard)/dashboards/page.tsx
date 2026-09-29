@@ -408,7 +408,7 @@ function DashboardDetail({ id, onBack }: { id: string; onBack: () => void }) {
                   </div>
                 )}
                 {def ? (
-                  def.component()
+                  <def.component />
                 ) : (
                   <Card className="h-full">
                     <CardContent className="p-5 text-sm text-muted-foreground">
