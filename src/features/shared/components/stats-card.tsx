@@ -32,8 +32,8 @@ export function StatsCard({
   iconClassName,
 }: StatsCardProps) {
   const changeColors = {
-    positive: 'text-green-500',
-    negative: 'text-red-500',
+    positive: 'text-success',
+    negative: 'text-destructive',
     neutral: 'text-muted-foreground',
   }
 

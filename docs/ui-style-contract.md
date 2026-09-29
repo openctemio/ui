@@ -72,6 +72,12 @@ Every page, top to bottom:
   `text-destructive`, `bg-accent`, …). No palette literals (`text-amber-500`,
   `bg-blue-50`, `#ef4444`) for UI chrome — they break dark mode and the
   palette-drift gate rejects new ones.
+- Status meaning has its own tokens, each with a dark-mode value:
+  `success` (completed, passed), `warning` (pending, at risk, timed out),
+  `info` (running, informational) and `destructive` (failed, errors). Use them
+  as `text-success` or a tint such as `bg-warning/15 text-warning`.
+- Errors that replace content use the shared `ErrorState` (a destructive
+  `Alert` with Retry), never a hand-made red box.
 - Severity: `SeverityBadge` / `src/lib/severity-colors.ts`. Criticality:
   `src/lib/criticality-colors.ts`. Charts: the chart colour sources.
 
