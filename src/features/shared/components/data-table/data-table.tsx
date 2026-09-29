@@ -1,6 +1,7 @@
 'use client'
 
 import * as React from 'react'
+import { cn } from '@/lib/utils'
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -87,7 +88,46 @@ interface DataTableProps<TData, TValue> {
    * (index-keyed selection would mis-mark rows when the page's data swaps).
    */
   getRowId?: (row: TData) => string
+  /**
+   * Server-side sorting (with `manualPagination`): the controlled sort state and
+   * its change handler — the parent maps it to its API's sort parameter. Under
+   * manual pagination without these, columns are not sortable at all: sorting
+   * only the rows on screen would be misleading, and a header that toggles an
+   * arrow without reordering anything is a dead control.
+   */
+  sorting?: SortingState
+  onSortingChange?: (sorting: SortingState) => void
+  /** Rendered at the start of the toolbar (e.g. a filter toggle + search). */
+  toolbarStart?: React.ReactNode
+  /** Rendered at the end of the toolbar, before the column toggle. */
+  toolbarEnd?: React.ReactNode
+  /**
+   * Keep the selection checkbox and the first data column (the row's name) —
+   * and the trailing `actions` column — in view while the table scrolls
+   * sideways, so a row can be identified and acted on at any scroll position.
+   * On by default.
+   */
+  stickyFirstColumn?: boolean
 }
+
+/** Fixed width of the selection column, so the pinned column after it knows its offset. */
+const SELECT_COL_WIDTH = 40
+
+/**
+ * Pinned cells must be opaque (content scrolls underneath), so they repeat the
+ * row's state colours as solid equivalents: the row hover is muted at 50% over
+ * the page background.
+ */
+const PINNED_CELL_CLASS =
+  'sticky z-[1] bg-background group-hover/row:bg-[color-mix(in_oklab,var(--muted)_50%,var(--background))] group-data-[state=selected]/row:bg-muted'
+
+/** Soft edge after the start-pinned columns, shown while content is hidden under them. */
+const PINNED_START_EDGE_CLASS =
+  "after:pointer-events-none after:absolute after:inset-y-0 after:-end-3 after:w-3 after:bg-gradient-to-r after:from-foreground/10 after:to-transparent after:opacity-0 after:transition-opacity after:content-[''] rtl:after:bg-gradient-to-l group-data-[hidden-start=true]/table:after:opacity-100"
+
+/** Soft edge before the end-pinned actions column, shown while content remains to scroll. */
+const PINNED_END_EDGE_CLASS =
+  "before:pointer-events-none before:absolute before:inset-y-0 before:-start-3 before:w-3 before:bg-gradient-to-l before:from-foreground/10 before:to-transparent before:opacity-0 before:transition-opacity before:content-[''] rtl:before:bg-gradient-to-r group-data-[hidden-end=true]/table:before:opacity-100"
 
 export function DataTable<TData, TValue>({
   columns,
@@ -109,8 +149,26 @@ export function DataTable<TData, TValue>({
   pagination,
   onPaginationChange,
   getRowId,
+  sorting: sortingProp,
+  onSortingChange,
+  toolbarStart,
+  toolbarEnd,
+  stickyFirstColumn = true,
 }: DataTableProps<TData, TValue>) {
-  const [sorting, setSorting] = React.useState<SortingState>([])
+  // Which sides of the horizontally-scrolling table have content hidden under
+  // the pinned columns — drives the edge shadows.
+  const tableWrapRef = React.useRef<HTMLDivElement>(null)
+  const [hiddenEdges, setHiddenEdges] = React.useState({ start: false, end: false })
+  const measureEdges = React.useCallback(() => {
+    const el = tableWrapRef.current?.querySelector<HTMLElement>('[data-slot="table-container"]')
+    if (!el) return
+    const x = Math.abs(el.scrollLeft)
+    const next = { start: x > 0, end: el.scrollWidth - el.clientWidth - x > 1 }
+    setHiddenEdges((prev) => (prev.start === next.start && prev.end === next.end ? prev : next))
+  }, [])
+  const [internalSorting, setInternalSorting] = React.useState<SortingState>([])
+  const serverSorting = manualPagination && !!onSortingChange
+  const sorting = serverSorting ? (sortingProp ?? []) : internalSorting
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
   const [rowSelection, setRowSelection] = React.useState({})
@@ -120,7 +178,11 @@ export function DataTable<TData, TValue>({
     data,
     columns,
     ...(getRowId ? { getRowId } : {}),
-    onSortingChange: setSorting,
+    onSortingChange: serverSorting
+      ? (updater) => onSortingChange(typeof updater === 'function' ? updater(sorting) : updater)
+      : setInternalSorting,
+    enableSorting: !manualPagination || serverSorting,
+    enableMultiSort: false,
     onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
     // In manual (server) pagination the parent already fetched exactly one page,
@@ -166,6 +228,52 @@ export function DataTable<TData, TValue>({
     },
   })
 
+  // Pinned columns: the selection checkbox (if first) + the first data column.
+  const visibleColumns = table.getVisibleLeafColumns()
+  const selectColumn = visibleColumns[0]?.id === 'select' ? visibleColumns[0] : undefined
+  const firstDataColumn = visibleColumns.find((c) => c.id !== 'select' && c.id !== 'actions')
+  const pinned = new Map<string, { start: number; last: boolean }>()
+  const actionsPinned =
+    stickyFirstColumn && visibleColumns[visibleColumns.length - 1]?.id === 'actions'
+  if (stickyFirstColumn && firstDataColumn) {
+    if (selectColumn) pinned.set(selectColumn.id, { start: 0, last: false })
+    pinned.set(firstDataColumn.id, { start: selectColumn ? SELECT_COL_WIDTH : 0, last: true })
+  }
+  const pinnedProps = (columnId: string) => {
+    const isSelect = columnId === 'select'
+    const width = isSelect
+      ? { width: SELECT_COL_WIDTH, minWidth: SELECT_COL_WIDTH, maxWidth: SELECT_COL_WIDTH }
+      : {}
+    if (columnId === 'actions' && actionsPinned) {
+      return {
+        className: cn(PINNED_CELL_CLASS, PINNED_END_EDGE_CLASS),
+        style: { insetInlineEnd: 0 },
+      }
+    }
+    const pin = pinned.get(columnId)
+    if (!pin) return { className: undefined, style: isSelect ? width : undefined }
+    return {
+      className: cn(
+        PINNED_CELL_CLASS,
+        pin.last && PINNED_START_EDGE_CLASS,
+        // The pinned name column must leave room for the columns that scroll:
+        // cap it and let long names wrap instead of widening the pin.
+        pin.last && 'max-w-[min(26rem,38vw)] whitespace-normal'
+      ),
+      style: { ...width, insetInlineStart: pin.start },
+    }
+  }
+
+  // Re-measure when the rows, visible columns or container size change.
+  React.useEffect(() => {
+    measureEdges()
+    const el = tableWrapRef.current?.querySelector<HTMLElement>('[data-slot="table-container"]')
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(measureEdges)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [measureEdges, data, columnVisibility])
+
   const selectedCount = table.getFilteredSelectedRowModel().rows.length
   const totalCount = table.getFilteredRowModel().rows.length
 
@@ -183,6 +291,9 @@ export function DataTable<TData, TValue>({
     <div className="space-y-4">
       {/* Toolbar - Search and Column toggle on same row */}
       <div className="flex items-center gap-2">
+        {toolbarStart && (
+          <div className="flex min-w-0 flex-1 items-center gap-2">{toolbarStart}</div>
+        )}
         {/* Search */}
         {showSearch && (
           <div className="relative flex-1 min-w-0 sm:max-w-sm">
@@ -223,7 +334,8 @@ export function DataTable<TData, TValue>({
         )}
 
         {/* Right side actions */}
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="ms-auto flex items-center gap-2 shrink-0">
+          {toolbarEnd}
           {/* Selection info - hidden on mobile when no selection */}
           {selectedCount > 0 && (
             <span className="text-sm text-muted-foreground hidden sm:inline">
@@ -263,14 +375,24 @@ export function DataTable<TData, TValue>({
       </div>
 
       {/* Table */}
-      <div className="rounded-md border overflow-x-auto">
+      <div
+        ref={tableWrapRef}
+        className="group/table rounded-md border overflow-x-auto"
+        data-hidden-start={hiddenEdges.start}
+        data-hidden-end={hiddenEdges.end}
+        // scroll does not bubble, but a capture listener on an ancestor sees the
+        // inner table container's scroll.
+        onScrollCapture={(e) => {
+          if ((e.target as HTMLElement).dataset.slot === 'table-container') measureEdges()
+        }}
+      >
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => {
                   return (
-                    <TableHead key={header.id}>
+                    <TableHead key={header.id} {...pinnedProps(header.column.id)}>
                       {header.isPlaceholder
                         ? null
                         : flexRender(header.column.columnDef.header, header.getContext())}
@@ -286,7 +408,7 @@ export function DataTable<TData, TValue>({
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && 'selected'}
-                  className={onRowClick ? 'cursor-pointer hover:bg-muted/50' : ''}
+                  className={cn('group/row', onRowClick && 'cursor-pointer hover:bg-muted/50')}
                   onClick={(e) => {
                     // Don't trigger row click if clicking on checkbox, button, or dropdown
                     const target = e.target as HTMLElement
@@ -302,7 +424,7 @@ export function DataTable<TData, TValue>({
                   }}
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
+                    <TableCell key={cell.id} {...pinnedProps(cell.column.id)}>
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
                   ))}
