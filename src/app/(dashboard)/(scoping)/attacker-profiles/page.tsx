@@ -4,10 +4,15 @@ import { useMemo, useState } from 'react'
 import type { ColumnDef } from '@tanstack/react-table'
 import useSWR from 'swr'
 import { Main } from '@/components/layout'
-import { PageHeader, EmptyState, DataTable, DataTableColumnHeader } from '@/features/shared'
+import {
+  PageHeader,
+  EmptyState,
+  DataTable,
+  DataTableColumnHeader,
+  DataTableRowActions,
+} from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -234,25 +239,24 @@ export default function AttackerProfilesPage() {
       },
       {
         id: 'actions',
-        header: 'Actions',
         enableSorting: false,
         enableHiding: false,
         cell: ({ row }) => {
           const profile = row.original
+          // Built-in profiles are read-only.
           if (profile.is_default) return null
           return (
-            <div className="text-end">
-              <Can permission={Permission.AttackerProfilesWrite}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setDeleteProfile(profile)}
-                  className="text-destructive"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </Can>
-            </div>
+            <DataTableRowActions
+              actions={[
+                {
+                  label: 'Delete',
+                  icon: Trash2,
+                  onClick: () => setDeleteProfile(profile),
+                  destructive: true,
+                  permission: Permission.AttackerProfilesWrite,
+                },
+              ]}
+            />
           )
         },
       },
@@ -264,46 +268,40 @@ export default function AttackerProfilesPage() {
     <>
       <Main>
         <PageHeader
-          title="Attacker Profiles"
-          description="Define threat actor profiles for exposure assessment"
+          title="Attacker profiles"
+          description="Threat actor profiles that exposure assessment and threat models reason about."
         >
           <Can permission={Permission.AttackerProfilesWrite}>
             <Button size="sm" onClick={() => setIsCreateOpen(true)}>
               <Plus className="me-2 h-4 w-4" />
-              New Profile
+              New profile
             </Button>
           </Can>
         </PageHeader>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>All Profiles</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="space-y-3">
-                {[1, 2, 3].map((i) => (
-                  <Skeleton key={i} className="h-12 w-full" />
-                ))}
-              </div>
-            ) : profiles.length === 0 ? (
-              <EmptyState
-                icon={Target}
-                title="No attacker profiles yet."
-                description="Create one to get started."
-                card={false}
-              />
-            ) : (
-              <DataTable columns={columns} data={profiles} searchPlaceholder="Search profiles..." />
-            )}
-          </CardContent>
-        </Card>
+        <div className="mt-5">
+          {isLoading ? (
+            <div className="space-y-2 rounded-xl border p-3">
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-10 w-full" />
+              ))}
+            </div>
+          ) : profiles.length === 0 ? (
+            <EmptyState
+              icon={Target}
+              title="No attacker profiles yet"
+              description="Create a profile to get started."
+            />
+          ) : (
+            <DataTable columns={columns} data={profiles} searchPlaceholder="Search profiles..." />
+          )}
+        </div>
       </Main>
 
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Create Attacker Profile</DialogTitle>
+            <DialogTitle>New attacker profile</DialogTitle>
             <DialogDescription>Define a new threat actor profile for scoping</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -327,7 +325,7 @@ export default function AttackerProfilesPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="profile_type">Profile Type</Label>
+              <Label htmlFor="profile_type">Profile type</Label>
               <Select
                 value={formData.profile_type}
                 onValueChange={(value) =>
@@ -353,7 +351,7 @@ export default function AttackerProfilesPage() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="network_access">Network Access</Label>
+                <Label htmlFor="network_access">Network access</Label>
                 <Select
                   value={formData.networkAccess}
                   onValueChange={(value) => setFormData({ ...formData, networkAccess: value })}
@@ -371,7 +369,7 @@ export default function AttackerProfilesPage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="credential_level">Credential Level</Label>
+                <Label htmlFor="credential_level">Credential level</Label>
                 <Select
                   value={formData.credentialLevel}
                   onValueChange={(value) => setFormData({ ...formData, credentialLevel: value })}

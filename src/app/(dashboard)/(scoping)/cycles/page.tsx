@@ -7,7 +7,6 @@ import { Main } from '@/components/layout'
 import { PageHeader, EmptyState, DataTable, DataTableColumnHeader } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
@@ -228,12 +227,12 @@ export default function CtemCyclesPage() {
     review: {
       title: 'Move to review?',
       body: 'The cycle will stop accepting new findings into scope and enter the review phase. You can still close it afterwards.',
-      actionLabel: 'Start Review',
+      actionLabel: 'Start review',
     },
     close: {
       title: 'Close this cycle?',
       body: 'Closing is irreversible. The cycle and its scope snapshot become read-only archive data.',
-      actionLabel: 'Close Cycle',
+      actionLabel: 'Close cycle',
     },
   }
 
@@ -262,12 +261,12 @@ export default function CtemCyclesPage() {
       },
       {
         accessorKey: 'start_date',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Start Date" />,
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Start date" />,
         cell: ({ row }) => formatDate(row.original.start_date),
       },
       {
         accessorKey: 'end_date',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="End Date" />,
+        header: ({ column }) => <DataTableColumnHeader column={column} title="End date" />,
         cell: ({ row }) => formatDate(row.original.end_date),
       },
       {
@@ -328,7 +327,7 @@ export default function CtemCyclesPage() {
                   title="Record scope-refinement notes (feedback to next cycle's scope)"
                 >
                   <NotebookPen className="me-1 h-3 w-3" />
-                  Scope Notes
+                  Scope notes
                 </Button>
               )}
               {cycle.status === 'review' && (
@@ -364,92 +363,78 @@ export default function CtemCyclesPage() {
     <>
       <Main>
         <PageHeader
-          title="CTEM Cycles"
-          description="Manage continuous threat exposure management cycles"
+          title="CTEM cycles"
+          description="Plan and run continuous threat exposure management cycles."
         >
           <Button size="sm" onClick={() => setIsCreateOpen(true)}>
             <Plus className="me-2 h-4 w-4" />
-            New Cycle
+            New cycle
           </Button>
         </PageHeader>
 
         {/* CTEM operating rhythm — a lightweight, always-visible reminder of
             the prescribed cadence. Checkpoints are anchored to real dates: the
             weekly/monthly ones to the calendar, the quarterly scope refresh to
-            the active cycle's end date. No scheduler is implied. */}
-        <Card className="mb-4">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <CalendarClock className="h-4 w-4 text-muted-foreground" />
-              Operating rhythm
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-3 sm:grid-cols-3">
-              {CTEM_CADENCE.map((c) => {
-                let when = ''
-                if (c.key === 'weekly') when = formatDate(nextWeekday(1).toISOString())
-                else if (c.key === 'monthly') when = formatDate(firstOfNextMonth().toISOString())
-                else if (c.key === 'quarterly')
-                  when = activeCycle?.end_date ? formatDate(activeCycle.end_date) : ''
-                return (
-                  <div key={c.key} className="rounded-lg border bg-muted/30 p-3">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-sm font-medium">{c.label}</span>
-                      {when && (
-                        <Badge variant="outline" className="text-xs">
-                          {when}
-                        </Badge>
-                      )}
-                    </div>
-                    <p className="mt-1 text-xs text-muted-foreground">{c.detail}</p>
+            the active cycle's end date. No scheduler is implied. One strip with
+            dividers rather than a card of cards. */}
+        <section aria-label="Operating rhythm" className="mt-5">
+          <div className="grid overflow-hidden rounded-xl border bg-card sm:grid-cols-3">
+            {CTEM_CADENCE.map((c) => {
+              let when = ''
+              if (c.key === 'weekly') when = formatDate(nextWeekday(1).toISOString())
+              else if (c.key === 'monthly') when = formatDate(firstOfNextMonth().toISOString())
+              else if (c.key === 'quarterly')
+                when = activeCycle?.end_date ? formatDate(activeCycle.end_date) : ''
+              return (
+                <div key={c.key} className="-ms-px -mt-px border-s border-t px-4 py-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="flex items-center gap-2 text-sm font-medium">
+                      <CalendarClock className="h-4 w-4 text-muted-foreground" />
+                      {c.label}
+                    </span>
+                    {when && <span className="text-xs text-muted-foreground">{when}</span>}
                   </div>
-                )
-              })}
-            </div>
-            {!activeCycle && (
-              <p className="mt-3 text-xs text-muted-foreground">
-                Activate a cycle to anchor the quarterly scope-refresh checkpoint to its end date.
-              </p>
-            )}
-          </CardContent>
-        </Card>
+                  <p className="mt-1 text-xs text-muted-foreground">{c.detail}</p>
+                </div>
+              )
+            })}
+          </div>
+          {!activeCycle && (
+            <p className="mt-2 text-xs text-muted-foreground">
+              Activate a cycle to anchor the quarterly scope-refresh checkpoint to its end date.
+            </p>
+          )}
+        </section>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>All Cycles</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="space-y-3">
-                {[1, 2, 3].map((i) => (
-                  <Skeleton key={i} className="h-12 w-full" />
-                ))}
-              </div>
-            ) : cycles.length === 0 ? (
-              <EmptyState
-                icon={RefreshCw}
-                title="No CTEM cycles yet."
-                description="Create one to get started."
-                card={false}
-              />
-            ) : (
-              <DataTable
-                columns={columns}
-                data={cycles}
-                searchPlaceholder="Search cycles..."
-                emptyMessage="No cycles found"
-                emptyDescription="No cycles match the current search."
-              />
-            )}
-          </CardContent>
-        </Card>
+        <div className="mt-5">
+          {isLoading ? (
+            <div className="space-y-2 rounded-xl border p-3">
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-10 w-full" />
+              ))}
+            </div>
+          ) : cycles.length === 0 ? (
+            <EmptyState
+              icon={RefreshCw}
+              title="No CTEM cycles yet"
+              description="Create a cycle to get started."
+            />
+          ) : (
+            <DataTable
+              columns={columns}
+              data={cycles}
+              searchPlaceholder="Search cycles..."
+              emptyMessage="No cycles found"
+              emptyDescription="No cycles match the current search."
+            />
+          )}
+        </div>
       </Main>
 
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Create CTEM Cycle</DialogTitle>
+            <DialogTitle>New CTEM cycle</DialogTitle>
             <DialogDescription>
               Start a new continuous threat exposure management cycle
             </DialogDescription>
@@ -492,7 +477,7 @@ export default function CtemCyclesPage() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="start_date">Start Date</Label>
+                <Label htmlFor="start_date">Start date</Label>
                 <Input
                   id="start_date"
                   type="date"
@@ -501,7 +486,7 @@ export default function CtemCyclesPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="end_date">End Date</Label>
+                <Label htmlFor="end_date">End date</Label>
                 <Input
                   id="end_date"
                   type="date"
