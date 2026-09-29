@@ -694,7 +694,7 @@ export default function TenantPage() {
         />
 
         <Tabs defaultValue="general" className="mt-6">
-          <TabsList className="w-max max-w-full overflow-x-auto">
+          <TabsList className="overflow-x-auto">
             <TabsTrigger value="general">
               <Building className="me-2 h-4 w-4" />
               General

@@ -49,7 +49,9 @@ function AlertDescription({ className, ...props }: React.ComponentProps<'div'>) 
     <div
       data-slot="alert-description"
       className={cn(
-        'col-start-2 grid justify-items-start gap-1 text-sm [&_p]:leading-relaxed',
+        // Block flow, not grid: as a grid every text run and inline element
+        // (<strong>, <code>, links) became its own row, splitting sentences.
+        'col-start-2 space-y-1 text-sm [&_p]:leading-relaxed',
         className
       )}
       {...props}
