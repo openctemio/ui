@@ -99,12 +99,6 @@ describe('use-findings-api exports', () => {
       expect(mod.useUpdateFindingStatusApi).toBeDefined()
       expect(typeof mod.useUpdateFindingStatusApi).toBe('function')
     })
-
-    it('exports useDeleteFindingApi', async () => {
-      const mod = await import('../use-findings-api')
-      expect(mod.useDeleteFindingApi).toBeDefined()
-      expect(typeof mod.useDeleteFindingApi).toBe('function')
-    })
   })
 
   // ============================================
@@ -177,24 +171,6 @@ describe('use-findings-api exports', () => {
       expect(mod.useAssignFindingApi).toBeDefined()
       expect(typeof mod.useAssignFindingApi).toBe('function')
     })
-
-    it('exports useTriageFindingApi', async () => {
-      const mod = await import('../use-findings-api')
-      expect(mod.useTriageFindingApi).toBeDefined()
-      expect(typeof mod.useTriageFindingApi).toBe('function')
-    })
-
-    it('exports useClassifyFindingApi', async () => {
-      const mod = await import('../use-findings-api')
-      expect(mod.useClassifyFindingApi).toBeDefined()
-      expect(typeof mod.useClassifyFindingApi).toBe('function')
-    })
-
-    it('exports useSetFindingTagsApi', async () => {
-      const mod = await import('../use-findings-api')
-      expect(mod.useSetFindingTagsApi).toBeDefined()
-      expect(typeof mod.useSetFindingTagsApi).toBe('function')
-    })
   })
 
   // ============================================
@@ -202,28 +178,10 @@ describe('use-findings-api exports', () => {
   // ============================================
 
   describe('comment hooks', () => {
-    it('exports useFindingCommentsApi', async () => {
-      const mod = await import('../use-findings-api')
-      expect(mod.useFindingCommentsApi).toBeDefined()
-      expect(typeof mod.useFindingCommentsApi).toBe('function')
-    })
-
     it('exports useAddFindingCommentApi', async () => {
       const mod = await import('../use-findings-api')
       expect(mod.useAddFindingCommentApi).toBeDefined()
       expect(typeof mod.useAddFindingCommentApi).toBe('function')
-    })
-
-    it('exports useUpdateFindingCommentApi', async () => {
-      const mod = await import('../use-findings-api')
-      expect(mod.useUpdateFindingCommentApi).toBeDefined()
-      expect(typeof mod.useUpdateFindingCommentApi).toBe('function')
-    })
-
-    it('exports useDeleteFindingCommentApi', async () => {
-      const mod = await import('../use-findings-api')
-      expect(mod.useDeleteFindingCommentApi).toBeDefined()
-      expect(typeof mod.useDeleteFindingCommentApi).toBe('function')
     })
   })
 
@@ -242,36 +200,6 @@ describe('use-findings-api exports', () => {
       const mod = await import('../use-findings-api')
       expect(mod.invalidateFindingsCache).toBeDefined()
       expect(typeof mod.invalidateFindingsCache).toBe('function')
-    })
-
-    it('exports invalidateVulnerabilitiesCache', async () => {
-      const mod = await import('../use-findings-api')
-      expect(mod.invalidateVulnerabilitiesCache).toBeDefined()
-      expect(typeof mod.invalidateVulnerabilitiesCache).toBe('function')
-    })
-  })
-
-  // ============================================
-  // VULNERABILITY HOOKS
-  // ============================================
-
-  describe('vulnerability hooks', () => {
-    it('exports useVulnerabilitiesApi', async () => {
-      const mod = await import('../use-findings-api')
-      expect(mod.useVulnerabilitiesApi).toBeDefined()
-      expect(typeof mod.useVulnerabilitiesApi).toBe('function')
-    })
-
-    it('exports useVulnerabilityApi', async () => {
-      const mod = await import('../use-findings-api')
-      expect(mod.useVulnerabilityApi).toBeDefined()
-      expect(typeof mod.useVulnerabilityApi).toBe('function')
-    })
-
-    it('exports useVulnerabilityByCveApi', async () => {
-      const mod = await import('../use-findings-api')
-      expect(mod.useVulnerabilityByCveApi).toBeDefined()
-      expect(typeof mod.useVulnerabilityByCveApi).toBe('function')
     })
   })
 })

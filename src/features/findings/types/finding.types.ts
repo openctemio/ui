@@ -238,29 +238,6 @@ export function requiresApproval(status: FindingStatus): boolean {
   return status === 'false_positive' || status === 'accepted' || status === 'accepted_risk'
 }
 
-/**
- * Check if a status is open (needs action)
- */
-export function isOpenStatus(status: FindingStatus): boolean {
-  const category = FINDING_STATUS_CONFIG[status]?.category
-  return category === 'open' || category === 'in_progress'
-}
-
-/**
- * Check if a status is closed (terminal states: resolved, false_positive, accepted, duplicate)
- */
-export function isClosedStatus(status: FindingStatus): boolean {
-  const category = FINDING_STATUS_CONFIG[status]?.category
-  return category === 'closed'
-}
-
-/**
- * Get valid transitions for a status
- */
-export function getValidTransitions(status: FindingStatus): FindingStatus[] {
-  return STATUS_TRANSITIONS[status] || []
-}
-
 // ============================================
 // SEVERITY
 // ============================================
@@ -1120,40 +1097,3 @@ export const APPROVAL_STATUS_CONFIG: Record<
   rejected: { label: 'Rejected', variant: 'destructive' },
   canceled: { label: 'Canceled', variant: 'secondary' },
 }
-
-// ============================================
-// ASSIGNABLE USERS (for dropdowns)
-// ============================================
-
-export const MOCK_USERS: FindingUser[] = [
-  {
-    id: 'usr-001',
-    name: 'Nguyen Van An',
-    email: 'an.nguyen@openctem.io',
-    role: 'analyst',
-  },
-  {
-    id: 'usr-002',
-    name: 'Tran Thi Binh',
-    email: 'binh.tran@openctem.io',
-    role: 'analyst',
-  },
-  {
-    id: 'usr-003',
-    name: 'Le Van Cuong',
-    email: 'cuong.le@openctem.io',
-    role: 'developer',
-  },
-  {
-    id: 'usr-004',
-    name: 'Pham Thi Dung',
-    email: 'dung.pham@openctem.io',
-    role: 'admin',
-  },
-  {
-    id: 'usr-005',
-    name: 'Security Lead',
-    email: 'lead@openctem.io',
-    role: 'admin',
-  },
-]
