@@ -156,7 +156,8 @@ export function AgentTable({
       },
       {
         id: 'type',
-        accessorFn: (a) => AGENT_TYPE_LABELS[a.type],
+        // Older agents can carry a type the UI has no label for; show it raw.
+        accessorFn: (a) => AGENT_TYPE_LABELS[a.type] ?? a.type ?? '—',
         header: ({ column }) => <DataTableColumnHeader column={column} title="Type" />,
         cell: ({ getValue }) => <Badge variant="outline">{getValue<string>()}</Badge>,
       },
