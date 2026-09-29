@@ -32,5 +32,6 @@ export {
   SeverityShareList,
   SeverityTrend,
   StatusBars,
+  TypeBreakdownUnavailable,
   humanize,
 } from './exposure-type-overview'

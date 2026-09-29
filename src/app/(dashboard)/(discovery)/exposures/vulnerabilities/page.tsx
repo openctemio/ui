@@ -12,6 +12,7 @@ import {
   SeverityDonut,
   SeverityTrend,
   StatusBars,
+  TypeBreakdownUnavailable,
 } from '@/features/exposures/components'
 import { useTenant } from '@/context/tenant-provider'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -19,11 +20,12 @@ import { useUrlFilter } from '@/hooks/use-url-param'
 import { Bug, AlertTriangle, Clock, Shield, LayoutGrid, Database, ShieldAlert } from 'lucide-react'
 import { ActiveCVEsTab, VulnerabilityCatalogTab } from '@/features/vulnerabilities'
 import { usePermissions, Permission } from '@/lib/permissions'
+import type { FindingSource } from '@/lib/api/finding-types'
 
 // Vulnerability findings = every CVE/vuln source NOT owned by the specialised
 // sibling pages (code=sast, misconfigurations=iac, secrets=secret). The four
 // pages together partition all finding sources toward the parent aggregate.
-const VULNERABILITY_SOURCES = ['sca', 'dast', 'manual', 'pentest', 'bug_bounty'] as const
+const VULNERABILITY_SOURCES: FindingSource[] = ['sca', 'dast', 'manual', 'pentest', 'bug_bounty']
 
 const TABS = ['overview', 'active', 'catalog'] as const
 
@@ -32,9 +34,10 @@ function OverviewTab() {
   const tenantId = currentTenant?.id || null
   // Org-wide finding trend has no per-type variant.
   const { stats, isLoading: dashboardLoading } = useDashboardStats(tenantId)
-  const { stats: typeStats, isLoading: typeLoading } = useFindingTypeStats(tenantId, [
-    ...VULNERABILITY_SOURCES,
-  ])
+  const { stats: typeStats, isLoading: typeLoading } = useFindingTypeStats(
+    tenantId,
+    VULNERABILITY_SOURCES
+  )
 
   if (dashboardLoading || typeLoading) return <OverviewSkeleton />
 
@@ -47,12 +50,19 @@ function OverviewTab() {
       />
     )
 
+  if (!typeStats.scoped)
+    return (
+      <TypeBreakdownUnavailable
+        icon={Bug}
+        total={typeStats.total}
+        noun={['vulnerability', 'vulnerabilities']}
+        sources={VULNERABILITY_SOURCES}
+      />
+    )
+
   const criticalCount = typeStats.bySeverity.critical || 0
   const highCount = typeStats.bySeverity.high || 0
-  const openCount =
-    (typeStats.byStatus['new'] || 0) +
-    (typeStats.byStatus['triaged'] || 0) +
-    (typeStats.byStatus['in_progress'] || 0)
+  const openCount = typeStats.openCount
 
   return (
     <div className="space-y-5">
