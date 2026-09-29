@@ -5,10 +5,8 @@ import { SecretStoreSection } from '@/features/secret-store'
 
 export default function SecretStorePage() {
   return (
-    <>
-      <Main>
-        <SecretStoreSection />
-      </Main>
-    </>
+    <Main>
+      <SecretStoreSection />
+    </Main>
   )
 }

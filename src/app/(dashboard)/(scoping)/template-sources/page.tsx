@@ -5,10 +5,8 @@ import { TemplateSourcesSection } from '@/features/template-sources'
 
 export default function TemplateSourcesPage() {
   return (
-    <>
-      <Main>
-        <TemplateSourcesSection />
-      </Main>
-    </>
+    <Main>
+      <TemplateSourcesSection />
+    </Main>
   )
 }

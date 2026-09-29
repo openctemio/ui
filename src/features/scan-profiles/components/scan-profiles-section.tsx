@@ -2,45 +2,31 @@
 
 import * as React from 'react'
 import { useState, useMemo, useCallback } from 'react'
-import {
-  Plus,
-  Settings2,
-  AlertCircle,
-  RefreshCw,
-  Loader2,
-  Search,
-  Star,
-  Copy,
-  Pencil,
-  Trash2,
-  Sparkles,
-  ChevronDown,
-} from 'lucide-react'
+import type { ColumnDef } from '@tanstack/react-table'
+import { Plus, Settings2, Star, Copy, Pencil, Trash2, Sparkles, ChevronDown } from 'lucide-react'
 import { toast } from 'sonner'
 import { getErrorMessage } from '@/lib/api/error-handler'
 
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Input } from '@/components/ui/input'
-import { Skeleton } from '@/components/ui/skeleton'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import { ConfirmDialog } from '@/components/confirm-dialog'
+import { RefreshButton, TableSkeleton } from '@/components/list-page-parts'
 
-import { DataTableRowActions, EmptyState, type RowAction } from '@/features/shared'
+import {
+  DataTable,
+  DataTableColumnHeader,
+  DataTableRowActions,
+  EmptyState,
+  ErrorState,
+  PageHeader,
+  type RowAction,
+} from '@/features/shared'
 import { AddScanProfileDialog } from './add-scan-profile-dialog'
 import { EditScanProfileDialog } from './edit-scan-profile-dialog'
 import { CloneScanProfileDialog } from './clone-scan-profile-dialog'
@@ -55,6 +41,9 @@ import {
 import type { ScanProfile } from '@/lib/api/scan-profile-types'
 import { INTENSITY_OPTIONS } from '../schemas/scan-profile-schema'
 
+const getIntensityLabel = (intensity: string) =>
+  INTENSITY_OPTIONS.find((i) => i.value === intensity)?.label || intensity
+
 export function ScanProfilesSection() {
   // Dialog states
   const [addDialogOpen, setAddDialogOpen] = useState(false)
@@ -65,9 +54,6 @@ export function ScanProfilesSection() {
 
   // Selected profile for dialogs
   const [selectedProfile, setSelectedProfile] = useState<ScanProfile | null>(null)
-
-  // Filter states
-  const [searchQuery, setSearchQuery] = useState('')
 
   // API data
   const { data: profilesData, error, isLoading, mutate } = useScanProfiles()
@@ -85,15 +71,6 @@ export function ScanProfilesSection() {
   const { trigger: setDefaultProfile, isMutating: isSettingDefault } = useSetDefaultScanProfile(
     selectedProfile?.id || ''
   )
-
-  // Filter profiles
-  const filteredProfiles = useMemo(() => {
-    if (!searchQuery) return profiles
-    const query = searchQuery.toLowerCase()
-    return profiles.filter(
-      (p) => p.name.toLowerCase().includes(query) || p.description?.toLowerCase().includes(query)
-    )
-  }, [profiles, searchQuery])
 
   // Handlers
   const handleRefresh = useCallback(async () => {
@@ -144,234 +121,184 @@ export function ScanProfilesSection() {
     [setDefaultProfile]
   )
 
-  const getIntensityLabel = (intensity: string) => {
-    return INTENSITY_OPTIONS.find((i) => i.value === intensity)?.label || intensity
-  }
+  const columns = useMemo<ColumnDef<ScanProfile>[]>(
+    () => [
+      {
+        id: 'name',
+        accessorFn: (p) => `${p.name} ${p.description ?? ''}`,
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Name" />,
+        cell: ({ row }) => {
+          const profile = row.original
+          return (
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 font-medium">
+                <span className="truncate">{profile.name}</span>
+                {profile.is_default && (
+                  <Badge variant="secondary" className="gap-1">
+                    <Star className="h-3 w-3 fill-current" />
+                    Default
+                  </Badge>
+                )}
+                {profile.is_system && <Badge variant="outline">System</Badge>}
+              </div>
+              {profile.description && (
+                <p className="truncate text-sm text-muted-foreground">{profile.description}</p>
+              )}
+            </div>
+          )
+        },
+      },
+      {
+        id: 'intensity',
+        accessorKey: 'intensity',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Intensity" />,
+        cell: ({ row }) => (
+          <Badge variant="outline">{getIntensityLabel(row.original.intensity)}</Badge>
+        ),
+      },
+      {
+        id: 'tools',
+        accessorFn: (p) => Object.values(p.tools_config || {}).filter((t) => t.enabled).length,
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Tools" />,
+        cell: ({ getValue }) => (
+          <span className="text-sm tabular-nums text-muted-foreground">
+            {getValue<number>()} enabled
+          </span>
+        ),
+      },
+      {
+        id: 'timeout',
+        accessorKey: 'timeout_seconds',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Timeout" />,
+        cell: ({ row }) => (
+          <span className="text-sm tabular-nums text-muted-foreground">
+            {Math.floor(row.original.timeout_seconds / 60)}m
+          </span>
+        ),
+      },
+      {
+        id: 'actions',
+        enableSorting: false,
+        enableHiding: false,
+        cell: ({ row }) => {
+          const profile = row.original
+          return (
+            <Can permission={[Permission.ScanProfilesWrite, Permission.ScanProfilesDelete]}>
+              <DataTableRowActions
+                actions={[
+                  ...(!profile.is_default
+                    ? ([
+                        {
+                          label: 'Set as default',
+                          icon: Star,
+                          onClick: () => handleSetDefault(profile),
+                          disabled: isSettingDefault,
+                          permission: Permission.ScanProfilesWrite,
+                        },
+                      ] satisfies RowAction[])
+                    : []),
+                  {
+                    label: 'Edit',
+                    icon: Pencil,
+                    onClick: () => handleEditProfile(profile),
+                    permission: Permission.ScanProfilesWrite,
+                  },
+                  {
+                    label: 'Clone',
+                    icon: Copy,
+                    onClick: () => handleCloneProfile(profile),
+                    permission: Permission.ScanProfilesWrite,
+                  },
+                  ...(!profile.is_system
+                    ? ([
+                        {
+                          label: 'Delete',
+                          icon: Trash2,
+                          onClick: () => handleDeleteClick(profile),
+                          destructive: true,
+                          separatorBefore: true,
+                          permission: Permission.ScanProfilesDelete,
+                        },
+                      ] satisfies RowAction[])
+                    : []),
+                ]}
+              />
+            </Can>
+          )
+        },
+      },
+    ],
+    [handleSetDefault, handleEditProfile, handleCloneProfile, handleDeleteClick, isSettingDefault]
+  )
 
-  const getEnabledToolsCount = (profile: ScanProfile) => {
-    return Object.values(profile.tools_config || {}).filter((t) => t.enabled).length
-  }
+  const addMenu = (
+    <Can permission={Permission.ScanProfilesWrite}>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button size="sm">
+            <Plus className="h-4 w-4" />
+            Add profile
+            <ChevronDown className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onClick={() => setAddDialogOpen(true)}>
+            <Plus className="me-2 h-4 w-4" />
+            Create custom profile
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setPresetDialogOpen(true)}>
+            <Sparkles className="me-2 h-4 w-4" />
+            Add preset profile
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </Can>
+  )
 
+  let body: React.ReactNode
   if (error) {
-    return (
-      <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-4">
-        <div className="flex items-center gap-2 text-red-500">
-          <AlertCircle className="h-4 w-4" />
-          <span className="text-sm font-medium">Failed to load scan profiles</span>
-        </div>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {error instanceof Error ? error.message : 'An unexpected error occurred'}
-        </p>
-        <Button variant="outline" size="sm" className="mt-2" onClick={handleRefresh}>
-          <RefreshCw className="me-2 h-4 w-4" />
-          Retry
-        </Button>
-      </div>
+    body = <ErrorState title="scan profiles" error={error} onRetry={handleRefresh} />
+  } else if (isLoading) {
+    body = <TableSkeleton rows={4} />
+  } else if (profiles.length === 0) {
+    body = (
+      <EmptyState
+        icon={Settings2}
+        title="No scan profiles"
+        description="Create a profile to define reusable scan configurations."
+        action={
+          <Can permission={Permission.ScanProfilesWrite}>
+            <Button size="sm" onClick={() => setAddDialogOpen(true)}>
+              <Plus className="h-4 w-4" />
+              Create profile
+            </Button>
+          </Can>
+        }
+      />
+    )
+  } else {
+    body = (
+      <DataTable
+        columns={columns}
+        data={profiles}
+        getRowId={(p) => p.id}
+        searchPlaceholder="Search profiles…"
+        toolbarEnd={<RefreshButton onClick={handleRefresh} loading={isLoading} />}
+        emptyMessage="No profiles match your search"
+      />
     )
   }
 
   return (
     <>
-      <div className="space-y-6">
-        {/* Main Content Card */}
-        <Card>
-          <CardHeader>
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                  <Settings2 className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                  <CardTitle>Scan Profiles</CardTitle>
-                  <CardDescription>Reusable scan configurations with tool settings</CardDescription>
-                </div>
-                {!isLoading && profiles.length > 0 && (
-                  <Badge variant="secondary" className="ms-2 h-5 px-1.5 text-xs">
-                    {profiles.length}
-                  </Badge>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                <Button variant="ghost" size="sm" onClick={handleRefresh} disabled={isLoading}>
-                  {isLoading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <RefreshCw className="h-4 w-4" />
-                  )}
-                </Button>
-                <Can permission={Permission.ScanProfilesWrite}>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button>
-                        <Plus className="me-2 h-4 w-4" />
-                        Add Profile
-                        <ChevronDown className="ms-2 h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => setAddDialogOpen(true)}>
-                        <Plus className="me-2 h-4 w-4" />
-                        Create Custom Profile
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setPresetDialogOpen(true)}>
-                        <Sparkles className="me-2 h-4 w-4" />
-                        Add Preset Profile
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </Can>
-              </div>
-            </div>
-          </CardHeader>
+      <PageHeader
+        title="Scan profiles"
+        description="Reusable scan configurations: which tools run, how intensively, and for how long."
+      >
+        {addMenu}
+      </PageHeader>
 
-          <CardContent>
-            {/* Search */}
-            <div className="mb-4">
-              <div className="relative max-w-md">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder="Search profiles..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="ps-9"
-                />
-              </div>
-            </div>
-
-            {/* Content */}
-            {isLoading ? (
-              <div className="space-y-3">
-                {[...Array(3)].map((_, i) => (
-                  <div key={i} className="flex items-center gap-4 rounded-lg border p-4">
-                    <Skeleton className="h-10 w-10 rounded-lg" />
-                    <div className="flex-1 space-y-2">
-                      <Skeleton className="h-4 w-48" />
-                      <Skeleton className="h-3 w-32" />
-                    </div>
-                    <Skeleton className="h-8 w-20" />
-                  </div>
-                ))}
-              </div>
-            ) : filteredProfiles.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Intensity</TableHead>
-                    <TableHead>Tools</TableHead>
-                    <TableHead>Timeout</TableHead>
-                    <TableHead className="w-[100px]">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredProfiles.map((profile) => (
-                    <TableRow key={profile.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <div>
-                            <div className="flex items-center gap-2 font-medium">
-                              {profile.name}
-                              {profile.is_default && (
-                                <Badge variant="secondary" className="gap-1">
-                                  <Star className="h-3 w-3 fill-current" />
-                                  Default
-                                </Badge>
-                              )}
-                              {profile.is_system && <Badge variant="outline">System</Badge>}
-                            </div>
-                            {profile.description && (
-                              <p className="text-sm text-muted-foreground">{profile.description}</p>
-                            )}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{getIntensityLabel(profile.intensity)}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-sm text-muted-foreground">
-                          {getEnabledToolsCount(profile)} enabled
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-sm text-muted-foreground">
-                          {Math.floor(profile.timeout_seconds / 60)}m
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <Can
-                          permission={[Permission.ScanProfilesWrite, Permission.ScanProfilesDelete]}
-                        >
-                          <DataTableRowActions
-                            actions={[
-                              ...(!profile.is_default
-                                ? ([
-                                    {
-                                      label: 'Set as Default',
-                                      icon: Star,
-                                      onClick: () => handleSetDefault(profile),
-                                      disabled: isSettingDefault,
-                                      permission: Permission.ScanProfilesWrite,
-                                    },
-                                  ] satisfies RowAction[])
-                                : []),
-                              {
-                                label: 'Edit',
-                                icon: Pencil,
-                                onClick: () => handleEditProfile(profile),
-                                permission: Permission.ScanProfilesWrite,
-                              },
-                              {
-                                label: 'Clone',
-                                icon: Copy,
-                                onClick: () => handleCloneProfile(profile),
-                                permission: Permission.ScanProfilesWrite,
-                              },
-                              ...(!profile.is_system
-                                ? ([
-                                    {
-                                      label: 'Delete',
-                                      icon: Trash2,
-                                      onClick: () => handleDeleteClick(profile),
-                                      destructive: true,
-                                      separatorBefore: true,
-                                      permission: Permission.ScanProfilesDelete,
-                                    },
-                                  ] satisfies RowAction[])
-                                : []),
-                            ]}
-                          />
-                        </Can>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            ) : (
-              <EmptyState
-                card={false}
-                icon={Settings2}
-                title="No Scan Profiles Found"
-                description={
-                  searchQuery
-                    ? 'No profiles match your search criteria.'
-                    : 'Create a profile to define reusable scan configurations.'
-                }
-                action={
-                  !searchQuery ? (
-                    <Can permission={Permission.ScanProfilesWrite}>
-                      <Button onClick={() => setAddDialogOpen(true)}>
-                        <Plus className="me-2 h-4 w-4" />
-                        Create Your First Profile
-                      </Button>
-                    </Can>
-                  ) : undefined
-                }
-              />
-            )}
-          </CardContent>
-        </Card>
-      </div>
+      <div className="mt-5">{body}</div>
 
       {/* Dialogs */}
       <AddScanProfileDialog
