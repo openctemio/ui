@@ -43,7 +43,9 @@ export function FacetPanel({
       </div>
       {/* The sections scroll on their own, so the panel can be given a fixed
           height (e.g. the viewport) whatever the number of filters. */}
-      <div className="min-h-0 flex-1 divide-y overflow-y-auto border-y">{children}</div>
+      <div className="no-scrollbar min-h-0 flex-1 divide-y overflow-y-auto border-y">
+        {children}
+      </div>
     </div>
   )
 }

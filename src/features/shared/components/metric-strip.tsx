@@ -50,7 +50,7 @@ export function MetricStrip({
         const body = (
           <>
             <dt className="truncate text-xs text-muted-foreground">{item.label}</dt>
-            <dd className="mt-1">
+            <dd className="mt-0.5">
               {loading ? (
                 <Skeleton className="h-7 w-14" />
               ) : (
@@ -70,7 +70,7 @@ export function MetricStrip({
           </>
         )
         const cellClass = cn(
-          '-ms-px -mt-px border-s border-t px-4 py-3 text-start',
+          '-ms-px -mt-px border-s border-t px-4 py-2.5 text-start',
           item.active && 'bg-accent'
         )
         return item.onClick ? (

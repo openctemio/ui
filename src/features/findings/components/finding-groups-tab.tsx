@@ -40,7 +40,11 @@ const EMPTY_GROUP_STATS: FindingGroupStats = {
   progress_pct: 0,
 }
 
-const DIMENSIONS: { value: GroupByDimension; label: string; icon: typeof BarChart3 }[] = [
+export const GROUP_BY_DIMENSIONS: {
+  value: GroupByDimension
+  label: string
+  icon: typeof BarChart3
+}[] = [
   { value: 'cve_id', label: 'By CVE', icon: ShieldAlert },
   { value: 'asset_id', label: 'By Asset', icon: Server },
   { value: 'owner_id', label: 'By Owner', icon: User },
@@ -51,18 +55,36 @@ const DIMENSIONS: { value: GroupByDimension; label: string; icon: typeof BarChar
 ]
 
 interface FindingGroupsTabProps {
+  /** Omit to hide the per-group View button (rather than render a dead one). */
   onViewFindings?: (groupKey: string, groupType: string) => void
   onMarkFixed?: (group: FindingGroup) => void
+  /**
+   * Embedded mode (the Findings page's "Group by"): the page owns the grouping
+   * dimension and the filters, so the tab's own dimension picker and
+   * "Show only mine" toggle are hidden.
+   */
+  dimension?: GroupByDimension
+  filters?: { severities?: string; statuses?: string; sources?: string; assignedToMe?: boolean }
 }
 
-export function FindingGroupsTab({ onViewFindings, onMarkFixed }: FindingGroupsTabProps) {
-  const [dimension, setDimension] = useState<GroupByDimension>('cve_id')
-  const [showOnlyMine, setShowOnlyMine] = useState(false)
+export function FindingGroupsTab({
+  onViewFindings,
+  onMarkFixed,
+  dimension: dimensionProp,
+  filters,
+}: FindingGroupsTabProps) {
+  const embedded = dimensionProp !== undefined
+  const [ownDimension, setDimension] = useState<GroupByDimension>('cve_id')
+  const dimension = dimensionProp ?? ownDimension
+  const [ownOnlyMine, setShowOnlyMine] = useState(false)
+  const showOnlyMine = embedded ? !!filters?.assignedToMe : ownOnlyMine
   const [autoAssignOpen, setAutoAssignOpen] = useState(false)
 
   const { data, error, isLoading, mutate } = useFindingGroups({
     group_by: dimension,
-    statuses: 'new,confirmed,in_progress,fix_applied,resolved',
+    statuses: filters?.statuses || 'new,confirmed,in_progress,fix_applied,resolved',
+    severities: filters?.severities || undefined,
+    sources: filters?.sources || undefined,
     assigned_to_me: showOnlyMine,
   })
 
@@ -70,10 +92,10 @@ export function FindingGroupsTab({ onViewFindings, onMarkFixed }: FindingGroupsT
 
   return (
     <div className="space-y-4">
-      {/* Dimension Selector */}
-      <div className="flex flex-wrap items-center gap-2">
+      {/* Dimension Selector (the page provides its own when embedded) */}
+      <div className={embedded ? 'hidden' : 'flex flex-wrap items-center gap-2'}>
         <div className="flex gap-1 overflow-x-auto no-scrollbar">
-          {DIMENSIONS.map(({ value, label, icon: Icon }) => (
+          {GROUP_BY_DIMENSIONS.map(({ value, label, icon: Icon }) => (
             <Button
               key={value}
               variant={dimension === value ? 'default' : 'outline'}
@@ -233,13 +255,15 @@ function FindingGroupCard({ group, onViewFindings, onMarkFixed }: FindingGroupCa
 
           {/* Actions */}
           <div className="flex items-center gap-2 shrink-0">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onViewFindings?.(group.group_key, group.group_type)}
-            >
-              View
-            </Button>
+            {onViewFindings && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onViewFindings(group.group_key, group.group_type)}
+              >
+                View
+              </Button>
+            )}
             {stats.in_progress > 0 && (
               <Button size="sm" onClick={() => onMarkFixed?.(group)}>
                 Mark Fixed
