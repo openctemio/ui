@@ -6,7 +6,7 @@ import { ComingSoonPage } from '@/features/shared'
 export default function CICDIntegrationPage() {
   return (
     <ComingSoonPage
-      title="CI/CD Integration"
+      title="CI/CD integration"
       description="Integrate security scanning into your CI/CD pipelines and gate deployments on findings."
       icon={GitBranch}
       features={[
