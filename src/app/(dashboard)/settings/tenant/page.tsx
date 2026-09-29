@@ -295,6 +295,7 @@ export default function TenantPage() {
     ip_whitelist: '',
     allowed_domains: '',
     email_verification_mode: 'auto' as 'auto' | 'always' | 'never',
+    restricted_data_scope: false,
   })
 
   const [apiForm, setApiForm] = useState({
@@ -359,6 +360,7 @@ export default function TenantPage() {
         allowed_domains: (settings.security.allowed_domains || []).join('\n'),
         email_verification_mode:
           (settings.security.email_verification_mode as 'auto' | 'always' | 'never') || 'auto',
+        restricted_data_scope: settings.security.restricted_data_scope || false,
       })
       setApiForm({
         api_key_enabled: settings.api.api_key_enabled || false,
@@ -604,6 +606,7 @@ export default function TenantPage() {
         ip_whitelist: ipWhitelist,
         allowed_domains: allowedDomains,
         email_verification_mode: securityForm.email_verification_mode,
+        restricted_data_scope: securityForm.restricted_data_scope,
       })
       if (result) {
         mutate(result)
@@ -1064,6 +1067,27 @@ export default function TenantPage() {
                     checked={securityForm.mfa_required}
                     onCheckedChange={(checked) =>
                       setSecurityForm({ ...securityForm, mfa_required: checked })
+                    }
+                    disabled={!canManageSecurityAndAPI}
+                  />
+                </div>
+
+                <Separator />
+
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label>Restricted data scope</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Non-admins see only the assets they&apos;re assigned (directly or via a
+                      team) and their findings. When off, a user with no assignment sees
+                      everything. Assign members to teams with their assets before turning
+                      this on, or they&apos;ll see nothing.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={securityForm.restricted_data_scope}
+                    onCheckedChange={(checked) =>
+                      setSecurityForm({ ...securityForm, restricted_data_scope: checked })
                     }
                     disabled={!canManageSecurityAndAPI}
                   />
