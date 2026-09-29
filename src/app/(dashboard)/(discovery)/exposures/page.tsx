@@ -386,7 +386,7 @@ export default function ExposuresPage() {
 
   const toolbarStart = (
     <>
-      <div className="relative min-w-0 flex-1 sm:max-w-sm">
+      <div className="relative min-w-40 flex-1 sm:max-w-sm">
         <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           value={searchQuery}
@@ -482,8 +482,8 @@ export default function ExposuresPage() {
         onClick={handleExport}
         disabled={isExporting || exposuresLoading || total === 0}
       >
-        <Download className="h-4 w-4 md:me-2" />
-        <span className="hidden md:inline">{isExporting ? 'Exporting…' : 'Export'}</span>
+        <Download className="h-4 w-4 xl:me-2" />
+        <span className="sr-only xl:not-sr-only">{isExporting ? 'Exporting…' : 'Export'}</span>
       </Button>
     </>
   )
