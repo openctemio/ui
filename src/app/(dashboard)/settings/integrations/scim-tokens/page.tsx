@@ -5,12 +5,14 @@ import type { ColumnDef } from '@tanstack/react-table'
 import { Main } from '@/components/layout'
 import {
   PageHeader,
+  StackedCell,
   EmptyState,
   DataTable,
   DataTableColumnHeader,
   ErrorState,
+  MetricStrip,
+  type MetricStripItem,
 } from '@/features/shared'
-import { StatsCard } from '@/features/shared/components/stats-card'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -26,7 +28,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { ConfirmDialog } from '@/components/confirm-dialog'
-import { KeyRound, Plus, ShieldCheck, Ban, Copy, Check, Link2 } from 'lucide-react'
+import { KeyRound, Plus, Ban, Copy, Check } from 'lucide-react'
 import {
   useScimTokens,
   useCreateScimToken,
@@ -43,11 +45,9 @@ function isActive(t: ScimToken): boolean {
 
 function StatusBadge({ t }: { t: ScimToken }) {
   if (!isActive(t)) {
-    return <Badge className="border-0 bg-red-500/10 text-red-600 dark:text-red-400">Revoked</Badge>
+    return <Badge variant="secondary">Revoked</Badge>
   }
-  return (
-    <Badge className="border-0 bg-green-500/10 text-green-600 dark:text-green-400">Active</Badge>
-  )
+  return <Badge variant="default">Active</Badge>
 }
 
 // ─────────────────────────────────────────────────────────
@@ -138,7 +138,7 @@ function RevealTokenDialog({ value, onClose }: { value: string; onClose: () => v
         <div className="bg-muted flex items-center gap-2 rounded-md p-3">
           <code className="flex-1 break-all text-xs">{value}</code>
           <Button size="icon" variant="ghost" onClick={copy} title="Copy">
-            {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+            {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
           </Button>
         </div>
         <DialogFooter>
@@ -171,12 +171,9 @@ function ScimEndpointCard() {
     }
   }
   return (
-    <Card className="mt-6">
+    <Card className="mt-5">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Link2 className="h-5 w-5" />
-          SCIM endpoint
-        </CardTitle>
+        <CardTitle>SCIM endpoint</CardTitle>
         <CardDescription>
           Configure your identity provider (Okta, Microsoft Entra ID, etc.) with this base URL and a
           token below. Authentication uses an HTTP bearer token.
@@ -186,7 +183,7 @@ function ScimEndpointCard() {
         <div className="bg-muted flex items-center gap-2 rounded-md p-3">
           <code className="flex-1 break-all text-xs">{baseURL || '…'}</code>
           <Button size="icon" variant="ghost" onClick={copy} title="Copy" disabled={!baseURL}>
-            {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+            {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
           </Button>
         </div>
       </CardContent>
@@ -221,7 +218,8 @@ function TokenActionsCell({ t, onChanged }: { t: ScimToken; onChanged: () => voi
           size="icon"
           onClick={() => setRevokeOpen(true)}
           title="Revoke"
-          className="text-red-500 hover:text-red-600"
+          aria-label={`Revoke ${t.name}`}
+          className="text-destructive hover:text-destructive"
         >
           <Ban className="h-4 w-4" />
         </Button>
@@ -246,15 +244,11 @@ function TokenActionsCell({ t, onChanged }: { t: ScimToken; onChanged: () => voi
 
 function LoadingSkeleton() {
   return (
-    <Main>
-      <Skeleton className="mb-6 h-8 w-48" />
-      <div className="grid gap-4 md:grid-cols-3">
-        {Array.from({ length: 3 }).map((_, i) => (
-          <Skeleton key={i} className="h-24 rounded-lg" />
-        ))}
-      </div>
-      <Skeleton className="mt-6 h-64 rounded-lg" />
-    </Main>
+    <div className="mt-5 space-y-5">
+      <Skeleton className="h-16 w-full rounded-xl" />
+      <Skeleton className="h-28 w-full rounded-xl" />
+      <Skeleton className="h-64 w-full rounded-lg" />
+    </div>
   )
 }
 
@@ -276,12 +270,7 @@ export default function ScimTokensPage() {
         header: ({ column }) => <DataTableColumnHeader column={column} title="Name" />,
         cell: ({ row }) => {
           const t = row.original
-          return (
-            <>
-              <div className="font-medium">{t.name}</div>
-              <code className="text-muted-foreground text-xs">{t.prefix}…</code>
-            </>
-          )
+          return <StackedCell primary={t.name} secondary={<code>{t.prefix}…</code>} />
         },
       },
       {
@@ -311,7 +300,7 @@ export default function ScimTokensPage() {
       },
       {
         id: 'actions',
-        header: 'Actions',
+        header: '',
         enableSorting: false,
         enableHiding: false,
         cell: ({ row }) => <TokenActionsCell t={row.original} onChanged={() => mutate()} />,
@@ -320,20 +309,17 @@ export default function ScimTokensPage() {
     [mutate]
   )
 
-  if (isLoading) return <LoadingSkeleton />
-  // Don't render a failed read as "No SCIM tokens yet" with zeroed stats.
-  if (error)
-    return (
-      <Main>
-        <ErrorState title="SCIM tokens" error={error} onRetry={() => void mutate()} />
-      </Main>
-    )
+  const metrics: MetricStripItem[] = [
+    { key: 'total', label: 'Total tokens', value: stats.total },
+    { key: 'active', label: 'Active tokens', value: stats.active },
+    { key: 'revoked', label: 'Revoked tokens', value: stats.revoked },
+  ]
 
   return (
     <Main>
       <PageHeader
-        title="SCIM Provisioning"
-        description="Automate user provisioning and deprovisioning from your identity provider"
+        title="SCIM provisioning"
+        description="Automate user provisioning and deprovisioning from your identity provider."
       >
         <Button size="sm" onClick={() => setGenOpen(true)}>
           <Plus className="me-2 h-4 w-4" />
@@ -341,59 +327,44 @@ export default function ScimTokensPage() {
         </Button>
       </PageHeader>
 
-      <div className="mt-6 grid gap-4 md:grid-cols-3">
-        <StatsCard
-          title="Total tokens"
-          value={stats.total}
-          icon={KeyRound}
-          description="All tokens"
-        />
-        <StatsCard
-          title="Active tokens"
-          value={stats.active}
-          icon={ShieldCheck}
-          changeType={stats.active > 0 ? 'positive' : 'neutral'}
-          description="Currently valid"
-        />
-        <StatsCard
-          title="Revoked"
-          value={stats.revoked}
-          icon={Ban}
-          description="No longer usable"
-        />
-      </div>
+      {isLoading ? (
+        <LoadingSkeleton />
+      ) : error ? (
+        // Don't render a failed read as "No SCIM tokens yet" with zeroed stats.
+        <div className="mt-5">
+          <ErrorState title="SCIM tokens" error={error} onRetry={() => void mutate()} />
+        </div>
+      ) : (
+        <>
+          <MetricStrip className="mt-5" items={metrics} />
 
-      <ScimEndpointCard />
+          <ScimEndpointCard />
 
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <KeyRound className="h-5 w-5" />
-            SCIM tokens
-          </CardTitle>
-          <CardDescription>
-            Each token authenticates your identity provider for SCIM 2.0 user provisioning.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {tokens.length === 0 ? (
-            <EmptyState
-              icon={KeyRound}
-              title="No SCIM tokens yet"
-              description="Generate a token to connect your identity provider for automated user provisioning."
-              card={false}
-              action={
-                <Button size="sm" onClick={() => setGenOpen(true)}>
-                  <Plus className="me-2 h-4 w-4" />
-                  Generate token
-                </Button>
-              }
-            />
-          ) : (
-            <DataTable columns={columns} data={tokens} searchPlaceholder="Search tokens..." />
-          )}
-        </CardContent>
-      </Card>
+          <div className="mt-5">
+            {tokens.length === 0 ? (
+              <EmptyState
+                icon={KeyRound}
+                title="No SCIM tokens yet"
+                description="Generate a token to connect your identity provider for automated user provisioning."
+                action={
+                  <Button size="sm" onClick={() => setGenOpen(true)}>
+                    <Plus className="me-2 h-4 w-4" />
+                    Generate token
+                  </Button>
+                }
+              />
+            ) : (
+              <DataTable
+                columns={columns}
+                data={tokens}
+                getRowId={(t) => t.id}
+                searchPlaceholder="Search tokens..."
+                showSelectionCount={false}
+              />
+            )}
+          </div>
+        </>
+      )}
 
       <GenerateTokenDialog
         open={genOpen}
