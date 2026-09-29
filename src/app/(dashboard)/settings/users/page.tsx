@@ -1,18 +1,15 @@
 'use client'
 
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
-import {
-  ColumnDef,
-  flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  SortingState,
-  useReactTable,
-} from '@tanstack/react-table'
+import type { ColumnDef } from '@tanstack/react-table'
 import { Main } from '@/components/layout'
-import { PageHeader, DataTablePagination, EmptyState } from '@/features/shared'
+import {
+  PageHeader,
+  DataTable,
+  DataTableColumnHeader,
+  DataTableRowActions,
+  MetricStrip,
+} from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -20,15 +17,14 @@ import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
 import {
   Dialog,
@@ -56,16 +52,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
 import { toast } from 'sonner'
 import {
-  Users,
   UserPlus,
   Shield,
-  Clock,
   CheckCircle,
   Mail,
   MoreHorizontal,
@@ -73,16 +65,16 @@ import {
   Trash2,
   Send,
   Ban,
-  ArrowUpDown,
   Search as SearchIcon,
-  Filter,
   Eye,
   Pencil,
   Activity,
   Calendar,
   Loader2,
   AlertCircle,
+  RefreshCw,
 } from 'lucide-react'
+import { useUrlFilter } from '@/hooks/use-url-param'
 import { useTenant } from '@/context/tenant-provider'
 import {
   useMembers,
@@ -114,13 +106,13 @@ type RoleFilter = 'all' | MemberRole
 
 // Static config
 const statusFilters: { value: StatusFilter; label: string }[] = [
-  { value: 'all', label: 'All' },
+  { value: 'all', label: 'All statuses' },
   { value: 'active', label: 'Active' },
   { value: 'suspended', label: 'Suspended' },
 ]
 
 const roleFilters: { value: RoleFilter; label: string }[] = [
-  { value: 'all', label: 'All Roles' },
+  { value: 'all', label: 'All roles' },
   { value: 'owner', label: 'Owner' },
   { value: 'admin', label: 'Admin' },
   { value: 'member', label: 'Member' },
@@ -161,23 +153,29 @@ const formatLastActive = (lastLoginAt?: string) => {
   return formatDate(lastLoginAt)
 }
 
-// Get role color based on type
-const getRoleColor = (role: Role) => {
-  if (role.is_system) {
-    switch (role.slug) {
-      case 'owner':
-        return 'bg-red-500/20 text-red-400'
-      case 'admin':
-        return 'bg-purple-500/20 text-purple-400'
-      case 'member':
-        return 'bg-blue-500/20 text-blue-400'
-      case 'viewer':
-        return 'bg-gray-500/20 text-gray-400'
-      default:
-        return 'bg-gray-500/20 text-gray-400'
-    }
-  }
-  return 'bg-green-500/20 text-green-400' // Custom roles
+// Role chips are neutral: a role is a label, not a state, so it gets no colour of
+// its own (the old per-role palette read as severity and broke in dark mode).
+const getRoleColor = (role: Role) =>
+  role.is_system ? 'bg-secondary text-secondary-foreground' : 'bg-muted text-foreground'
+
+const MEMBER_STATUS_LABEL: Record<string, string> = {
+  active: 'Active',
+  suspended: 'Suspended',
+}
+
+function MemberStatusBadge({ status }: { status: string }) {
+  const label =
+    MEMBER_STATUS_LABEL[status] ??
+    STATUS_DISPLAY[status as keyof typeof STATUS_DISPLAY]?.label ??
+    status
+  return (
+    <Badge
+      variant={status === 'active' ? 'secondary' : 'outline'}
+      className={status === 'suspended' ? 'border-destructive/40 text-destructive' : undefined}
+    >
+      {label}
+    </Badge>
+  )
 }
 
 // Helper to convert MemberRBACRole to Role-like object for styling
@@ -256,7 +254,7 @@ function UserRolesDetailCard({
   return (
     <div className="rounded-xl border bg-card p-4">
       <div className="flex items-center justify-between mb-3">
-        <h4 className="text-sm font-medium">Assigned Roles</h4>
+        <h4 className="text-sm font-medium">Assigned roles</h4>
         {onManageRoles && (
           <Can permission={Permission.RolesWrite}>
             <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={onManageRoles}>
@@ -386,19 +384,8 @@ function EditUserRolesDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader className="pb-4 border-b">
-          <DialogTitle className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-              <Shield className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <span className="block">Manage Roles</span>
-              {member && (
-                <span className="block text-sm font-normal text-muted-foreground mt-0.5">
-                  {member.name}
-                </span>
-              )}
-            </div>
-          </DialogTitle>
+          <DialogTitle>Manage roles</DialogTitle>
+          {member && <DialogDescription>{member.name}</DialogDescription>}
         </DialogHeader>
 
         <div className="py-4">
@@ -414,9 +401,7 @@ function EditUserRolesDialog({
               {systemRoles.length > 0 && (
                 <div>
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                      System Roles
-                    </span>
+                    <span className="text-xs font-medium text-muted-foreground">System roles</span>
                     <div className="flex-1 h-px bg-border" />
                   </div>
                   <div className="space-y-2">
@@ -470,9 +455,7 @@ function EditUserRolesDialog({
               {customRoles.length > 0 && (
                 <div>
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                      Custom Roles
-                    </span>
+                    <span className="text-xs font-medium text-muted-foreground">Custom roles</span>
                     <div className="flex-1 h-px bg-border" />
                   </div>
                   <div className="space-y-2">
@@ -562,7 +545,7 @@ function EditUserRolesDialog({
             ) : (
               <CheckCircle className="me-2 h-4 w-4" />
             )}
-            Save Changes
+            Save changes
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -641,10 +624,16 @@ export default function UsersPage() {
       }
     }
   }, [pendingRolesEdit, selectedMember])
-  const [sorting, setSorting] = useState<SortingState>([])
-  const [globalFilter, setGlobalFilter] = useState('')
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
-  const [roleFilter, setRoleFilter] = useState<RoleFilter>('all')
+  // Search and filters live in the URL so a filtered member list can be linked to.
+  const [searchQuery, setSearchQuery] = useUrlFilter('q', '')
+  const [statusParam, setStatusFilter] = useUrlFilter('status', 'all')
+  const [roleParam, setRoleFilter] = useUrlFilter('role', 'all')
+  const statusFilter: StatusFilter = statusFilters.some((f) => f.value === statusParam)
+    ? (statusParam as StatusFilter)
+    : 'all'
+  const roleFilter: RoleFilter = roleFilters.some((f) => f.value === roleParam)
+    ? (roleParam as RoleFilter)
+    : 'all'
   const [inviteForm, setInviteForm] = useState({
     email: '',
     roleIds: [] as string[], // RBAC roles to assign when user joins
@@ -679,32 +668,21 @@ export default function UsersPage() {
       data = data.filter((member) => member.role === roleFilter)
     }
 
-    return data
-  }, [members, statusFilter, roleFilter])
-
-  // Calculate stats from local data (avoids extra /stats API call)
-  const stats = useMemo(() => {
-    const activeMembersCount = members.filter((m) => m.status === 'active').length
-
-    // Count unique roles across all members
-    const roleSet = new Set<string>()
-    members.forEach((member) => {
-      if (member.rbac_roles) {
-        member.rbac_roles.forEach((role) => roleSet.add(role.id))
-      }
-    })
-
-    return {
-      total_members: members.length,
-      active_members: activeMembersCount,
-      pending_invites: invitations.length,
-      role_counts: Object.fromEntries([...roleSet].map((id) => [id, 1])), // Just need the count of unique roles
+    const q = searchQuery.trim().toLowerCase()
+    if (q) {
+      data = data.filter(
+        (member) =>
+          member.name?.toLowerCase().includes(q) ||
+          member.email?.toLowerCase().includes(q) ||
+          member.rbac_roles?.some((r) => r.name.toLowerCase().includes(q))
+      )
     }
-  }, [members, invitations])
 
-  // Status counts from members (for tabs).
-  // Pending invitations are listed in their own section above the table
-  // and are not represented in this tab strip.
+    return data
+  }, [members, statusFilter, roleFilter, searchQuery])
+
+  // Status counts from members (for the metric strip). Pending invitations are
+  // listed in their own section below the table.
   const statusCounts: Record<StatusFilter, number> = useMemo(
     () => ({
       all: members.length,
@@ -719,16 +697,7 @@ export default function UsersPage() {
   const columns: ColumnDef<MemberWithUser>[] = [
     {
       accessorKey: 'name',
-      header: ({ column }) => (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-          className="-ms-4"
-        >
-          User
-          <ArrowUpDown className="ms-2 h-4 w-4" />
-        </Button>
-      ),
+      header: ({ column }) => <DataTableColumnHeader column={column} title="User" />,
       cell: ({ row }) => (
         <div className="flex items-center gap-3">
           <Avatar className="h-8 w-8">
@@ -744,20 +713,21 @@ export default function UsersPage() {
     {
       accessorKey: 'role',
       header: 'Roles',
+      enableSorting: false,
       cell: ({ row }) => {
         return <UserRolesCell userId={row.original.user_id} />
       },
     },
     {
       accessorKey: 'joined_at',
-      header: 'Joined',
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Joined" />,
       cell: ({ row }) => (
         <span className="text-muted-foreground text-sm">{formatDate(row.original.joined_at)}</span>
       ),
     },
     {
       accessorKey: 'last_login_at',
-      header: 'Last Active',
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Last active" />,
       cell: ({ row }) => (
         <span className="text-muted-foreground text-sm">
           {formatLastActive(row.original.last_login_at)}
@@ -766,20 +736,13 @@ export default function UsersPage() {
     },
     {
       accessorKey: 'status',
-      header: 'Status',
-      cell: ({ row }) => {
-        const statusDisplay = STATUS_DISPLAY[row.original.status]
-        return (
-          <Badge
-            className={`${statusDisplay?.bgColor || 'bg-gray-500/20'} ${statusDisplay?.color || 'text-gray-400'} border-0`}
-          >
-            {statusDisplay?.label || row.original.status}
-          </Badge>
-        )
-      },
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
+      cell: ({ row }) => <MemberStatusBadge status={row.original.status} />,
     },
     {
       id: 'actions',
+      enableSorting: false,
+      enableHiding: false,
       cell: ({ row }) => {
         const member = row.original
         const isOwner = member.role === 'owner'
@@ -787,14 +750,19 @@ export default function UsersPage() {
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0"
+                aria-label={`Actions for ${member.name || member.email}`}
+              >
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
               <DropdownMenuItem onClick={() => setSelectedMember(member)}>
                 <Eye className="me-2 h-4 w-4" />
-                View Details
+                View details
               </DropdownMenuItem>
               {!isOwner && (
                 <>
@@ -806,14 +774,13 @@ export default function UsersPage() {
                       }}
                     >
                       <Pencil className="me-2 h-4 w-4" />
-                      Change Role
+                      Change roles
                     </DropdownMenuItem>
                   </Can>
                   <Can permission={Permission.MembersManage} minRole="admin">
                     <DropdownMenuSeparator />
                     {member.status === 'suspended' ? (
                       <DropdownMenuItem
-                        className="text-green-500"
                         onClick={async () => {
                           if (!tenantSlug) return
                           try {
@@ -833,7 +800,6 @@ export default function UsersPage() {
                       </DropdownMenuItem>
                     ) : (
                       <DropdownMenuItem
-                        className="text-orange-500"
                         onSelect={(e) => {
                           // Open confirmation dialog instead of firing
                           // immediately. onSelect lets the dropdown close
@@ -847,7 +813,7 @@ export default function UsersPage() {
                       </DropdownMenuItem>
                     )}
                     <DropdownMenuItem
-                      className="text-red-400"
+                      variant="destructive"
                       onSelect={(e) => {
                         // Open confirmation instead of firing immediately.
                         // onSelect lets the dropdown close cleanly first.
@@ -856,7 +822,7 @@ export default function UsersPage() {
                       }}
                     >
                       <Trash2 className="me-2 h-4 w-4" />
-                      Remove Member
+                      Remove member
                     </DropdownMenuItem>
                   </Can>
                 </>
@@ -867,21 +833,6 @@ export default function UsersPage() {
       },
     },
   ]
-
-  const table = useReactTable({
-    data: filteredData,
-    columns,
-    state: {
-      sorting,
-      globalFilter,
-    },
-    onSortingChange: setSorting,
-    onGlobalFilterChange: setGlobalFilter,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-  })
 
   // Actions
   // Confirm and execute the pending removal. Called from the AlertDialog
@@ -956,503 +907,296 @@ export default function UsersPage() {
     }
   }
 
-  // Active filters count
-  const activeFiltersCount = [roleFilter !== 'all'].filter(Boolean).length
-
-  const clearFilters = () => {
-    setRoleFilter('all')
-    setStatusFilter('all')
+  // Pending invitations table. Actions are the per-row menu like every other list.
+  type Invitation = (typeof invitations)[number]
+  const copyInviteLink = async (invitation: Invitation) => {
+    if (!invitation.token) {
+      toast.error('Invitation token not available')
+      return
+    }
+    const inviteLink = `${window.location.origin}/invitations/${invitation.token}`
+    const ok = await copyToClipboard(inviteLink)
+    if (ok) {
+      toast.success('Invitation link copied to clipboard')
+    } else {
+      toast.error('Failed to copy link')
+    }
   }
+  const resendInvite = async (invitation: Invitation) => {
+    if (!tenantSlug) return
+    try {
+      await fetcherWithOptions(tenantEndpoints.resendInvitation(tenantSlug, invitation.id), {
+        method: 'POST',
+      })
+      toast.success('Invitation email resent')
+    } catch {
+      toast.error('Failed to resend invitation')
+    }
+  }
+  const cancelInvite = async (invitation: Invitation) => {
+    if (!tenantSlug) return
+    try {
+      await fetcherWithOptions(tenantEndpoints.deleteInvitation(tenantSlug, invitation.id), {
+        method: 'DELETE',
+      })
+      toast.success('Invitation cancelled')
+      refreshData()
+    } catch {
+      toast.error('Failed to cancel invitation')
+    }
+  }
+
+  const invitationColumns: ColumnDef<Invitation>[] = [
+    {
+      accessorKey: 'email',
+      header: 'Email',
+      enableSorting: false,
+      cell: ({ row }) => <span className="font-medium">{row.original.email}</span>,
+    },
+    {
+      id: 'roles',
+      header: 'Roles',
+      enableSorting: false,
+      cell: ({ row }) => {
+        const invitation = row.original
+        // Role names from role_ids (resolved when the role list is loaded).
+        const invitedRoles = (invitation.role_ids || [])
+          .map((id) => availableRolesForInvite.find((r) => r.id === id))
+          .filter((r): r is NonNullable<typeof r> => r != null)
+        if (invitedRoles.length > 0) {
+          return (
+            <div className="flex flex-wrap items-center gap-1">
+              {invitedRoles.slice(0, 2).map((role) => (
+                <Badge key={role.id} className={`${getRoleColor(role)} border-0 text-xs`}>
+                  {role.name}
+                </Badge>
+              ))}
+              {invitedRoles.length > 2 && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Badge variant="secondary" className="text-xs cursor-pointer">
+                      +{invitedRoles.length - 2}
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {invitedRoles
+                      .slice(2)
+                      .map((r) => r.name)
+                      .join(', ')}
+                  </TooltipContent>
+                </Tooltip>
+              )}
+            </div>
+          )
+        }
+        /* Invitations created before the RBAC role picker carry only the
+           legacy `role` field ("member", "admin", ...) with empty role_ids —
+           show that rather than a confusing "No roles". */
+        return (
+          <Badge variant="secondary" className="text-xs capitalize">
+            {invitation.role || 'No roles'}
+          </Badge>
+        )
+      },
+    },
+    {
+      accessorKey: 'expires_at',
+      header: 'Expires',
+      enableSorting: false,
+      cell: ({ row }) => {
+        const daysUntilExpiry = Math.ceil(
+          (new Date(row.original.expires_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+        )
+        const isExpiringSoon = daysUntilExpiry <= 3 && daysUntilExpiry > 0
+        const isExpired = daysUntilExpiry <= 0
+        return (
+          <span
+            className={`text-sm ${isExpired || isExpiringSoon ? 'text-destructive' : 'text-muted-foreground'}`}
+          >
+            {isExpired
+              ? 'Expired'
+              : isExpiringSoon
+                ? `In ${daysUntilExpiry} day${daysUntilExpiry > 1 ? 's' : ''}`
+                : formatDate(row.original.expires_at)}
+          </span>
+        )
+      },
+    },
+    {
+      id: 'actions',
+      enableSorting: false,
+      enableHiding: false,
+      cell: ({ row }) => (
+        <DataTableRowActions
+          actions={[
+            {
+              label: 'Copy invitation link',
+              icon: Link,
+              onClick: () => copyInviteLink(row.original),
+            },
+            { label: 'Resend email', icon: Send, onClick: () => resendInvite(row.original) },
+            {
+              label: 'Cancel invitation',
+              icon: Trash2,
+              destructive: true,
+              separatorBefore: true,
+              onClick: () => cancelInvite(row.original),
+            },
+          ]}
+        />
+      ),
+    },
+  ]
+
+  const toggleStatus = (next: StatusFilter) => setStatusFilter(statusFilter === next ? 'all' : next)
+
+  const toolbarStart = (
+    <>
+      <div className="relative min-w-0 flex-1 sm:max-w-sm">
+        <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          placeholder="Search users..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="ps-9"
+          aria-label="Search users"
+        />
+      </div>
+      <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v)}>
+        <SelectTrigger className="h-9 w-[140px]" aria-label="Status">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {statusFilters.map((f) => (
+            <SelectItem key={f.value} value={f.value}>
+              {f.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Select value={roleFilter} onValueChange={(v) => setRoleFilter(v)}>
+        <SelectTrigger className="h-9 w-[130px]" aria-label="Membership role">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {roleFilters.map((f) => (
+            <SelectItem key={f.value} value={f.value}>
+              {f.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </>
+  )
 
   return (
     <MemberRolesContext.Provider value={memberRolesMap}>
       <Main>
         <PageHeader
-          title="User Management"
-          description="Manage team members and access permissions"
+          title="Users"
+          description="Members of this workspace, their roles and pending invitations."
         >
           <Can permission={Permission.MembersInvite} minRole="admin" mode="disable">
-            <Button onClick={() => setInviteDialogOpen(true)}>
+            <Button size="sm" onClick={() => setInviteDialogOpen(true)}>
               <UserPlus className="me-2 h-4 w-4" />
-              Invite User
+              Invite user
             </Button>
           </Can>
         </PageHeader>
 
-        {/* Loading State */}
-        {membersLoading && (
-          <div className="mt-6 flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          </div>
-        )}
-
-        {/* Error State */}
-        {membersError && !membersLoading && (
-          <div className="mt-6 flex flex-col items-center justify-center py-12 gap-4">
-            <AlertCircle className="h-12 w-12 text-red-400" />
-            <p className="text-muted-foreground">Failed to load members</p>
-            <Button variant="outline" onClick={refreshData}>
-              Try Again
-            </Button>
-          </div>
-        )}
-
-        {/* Stats */}
-        {!membersLoading && !membersError && (
+        {membersError && !membersLoading ? (
+          <Alert variant="destructive" className="mt-5">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Failed to load members</AlertTitle>
+            <AlertDescription>
+              <p>The member list could not be loaded.</p>
+              <Button variant="outline" size="sm" className="mt-2" onClick={refreshData}>
+                <RefreshCw className="me-2 h-4 w-4" />
+                Retry
+              </Button>
+            </AlertDescription>
+          </Alert>
+        ) : (
           <>
-            <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-              <Card
-                className="cursor-pointer hover:border-primary transition-colors"
-                onClick={() => setStatusFilter('all')}
-              >
-                <CardHeader className="pb-2">
-                  <CardDescription className="flex items-center gap-2">
-                    <Users className="h-4 w-4" />
-                    Total Members
-                  </CardDescription>
-                  <CardTitle className="text-3xl">{stats.total_members}</CardTitle>
-                </CardHeader>
-              </Card>
-              <Card
-                className={`cursor-pointer hover:border-green-500 transition-colors ${statusFilter === 'active' ? 'border-green-500' : ''}`}
-                onClick={() => setStatusFilter('active')}
-              >
-                <CardHeader className="pb-2">
-                  <CardDescription className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                    Active
-                  </CardDescription>
-                  <CardTitle className="text-3xl text-green-500">{stats.active_members}</CardTitle>
-                </CardHeader>
-              </Card>
-              <Card
-                className="cursor-pointer hover:border-yellow-500 transition-colors"
-                onClick={() => {
-                  // Scroll to Pending Invitations section
-                  document
-                    .getElementById('pending-invitations')
-                    ?.scrollIntoView({ behavior: 'smooth' })
-                }}
-              >
-                <CardHeader className="pb-2">
-                  <CardDescription className="flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-yellow-500" />
-                    Pending Invites
-                  </CardDescription>
-                  <CardTitle className="text-3xl text-yellow-500">
-                    {stats.pending_invites}
-                  </CardTitle>
-                </CardHeader>
-              </Card>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardDescription className="flex items-center gap-2">
-                    <Shield className="h-4 w-4" />
-                    Roles
-                  </CardDescription>
-                  <CardTitle className="text-3xl">
-                    {Object.keys(stats.role_counts).length || 4}
-                  </CardTitle>
-                </CardHeader>
-              </Card>
+            <MetricStrip
+              className="mt-5"
+              loading={membersLoading}
+              items={[
+                {
+                  key: 'all',
+                  label: 'Members',
+                  value: statusCounts.all,
+                  onClick: () => setStatusFilter('all'),
+                  active: statusFilter === 'all',
+                },
+                {
+                  key: 'active',
+                  label: 'Active',
+                  value: statusCounts.active,
+                  onClick: () => toggleStatus('active'),
+                  active: statusFilter === 'active',
+                },
+                {
+                  key: 'suspended',
+                  label: 'Suspended',
+                  value: statusCounts.suspended,
+                  onClick: () => toggleStatus('suspended'),
+                  active: statusFilter === 'suspended',
+                },
+                {
+                  key: 'invites',
+                  label: 'Pending invitations',
+                  value: invitations.length,
+                  onClick: () =>
+                    document
+                      .getElementById('pending-invitations')
+                      ?.scrollIntoView({ behavior: 'smooth' }),
+                },
+              ]}
+            />
+
+            <div className="mt-5">
+              {membersLoading ? (
+                <div className="space-y-2">
+                  <Skeleton className="h-9 w-full max-w-sm" />
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <Skeleton key={i} className="h-12 w-full" />
+                  ))}
+                </div>
+              ) : (
+                /*
+                  No selection column: the old bulk "Resend / Deactivate /
+                  Delete" actions fired toasts without calling any API. Per-row
+                  actions are the supported way to suspend / remove a member.
+                */
+                <DataTable
+                  columns={columns}
+                  data={filteredData}
+                  getRowId={(m) => m.id}
+                  showSearch={false}
+                  showColumnToggle={false}
+                  toolbarStart={toolbarStart}
+                  onRowClick={(m) => setSelectedMember(m)}
+                  emptyMessage="No users match these filters"
+                />
+              )}
             </div>
 
-            {/* Pending Invitations Banner - shown only when there are pending invites */}
-            {invitations.length > 0 && (
-              <div className="mt-6 rounded-lg border border-yellow-500/30 bg-yellow-500/5 p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="rounded-full bg-yellow-500/20 p-2">
-                      <Clock className="h-4 w-4 text-yellow-500" />
-                    </div>
-                    <div>
-                      <p className="font-medium">
-                        {invitations.length} pending invitation{invitations.length > 1 ? 's' : ''}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {invitations
-                          .map((inv) => inv.email)
-                          .slice(0, 2)
-                          .join(', ')}
-                        {invitations.length > 2 && ` and ${invitations.length - 2} more`}
-                      </p>
-                    </div>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      const section = document.getElementById('pending-invitations')
-                      section?.scrollIntoView({ behavior: 'smooth' })
-                    }}
-                  >
-                    View All
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {/* Users Table - Primary Content */}
-            <Card className="mt-6">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-base">Team Members</CardTitle>
-                    <CardDescription>Manage user access and permissions</CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {/* Quick Filter Tabs */}
-                <Tabs
-                  value={statusFilter}
-                  onValueChange={(v) => setStatusFilter(v as StatusFilter)}
-                  className="mb-4"
-                >
-                  <TabsList className="overflow-x-auto">
-                    {statusFilters.map((filter) => (
-                      <TabsTrigger key={filter.value} value={filter.value} className="gap-1.5">
-                        {filter.label}
-                        <Badge variant="secondary" className="h-5 px-1.5 text-xs">
-                          {statusCounts[filter.value]}
-                        </Badge>
-                      </TabsTrigger>
-                    ))}
-                  </TabsList>
-                </Tabs>
-
-                {/* Search and Filters */}
-                <div className="flex flex-col gap-4 mb-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="relative flex-1 max-w-sm">
-                    <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Search users..."
-                      value={globalFilter}
-                      onChange={(e) => setGlobalFilter(e.target.value)}
-                      className="ps-9"
-                    />
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" size="sm" className="gap-2">
-                          <Filter className="h-4 w-4" />
-                          Filters
-                          {activeFiltersCount > 0 && (
-                            <Badge variant="secondary" className="h-5 px-1.5">
-                              {activeFiltersCount}
-                            </Badge>
-                          )}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-72 sm:w-80" align="end">
-                        <div className="space-y-4">
-                          <div className="flex items-center justify-between">
-                            <h4 className="font-medium">Filters</h4>
-                            {activeFiltersCount > 0 && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-auto p-0 text-muted-foreground hover:text-foreground"
-                                onClick={clearFilters}
-                              >
-                                Clear all
-                              </Button>
-                            )}
-                          </div>
-
-                          <div className="space-y-2">
-                            <Label className="text-muted-foreground text-xs uppercase">Role</Label>
-                            <div className="flex flex-wrap gap-2">
-                              {roleFilters.map((filter) => (
-                                <Badge
-                                  key={filter.value}
-                                  variant={roleFilter === filter.value ? 'default' : 'outline'}
-                                  className="cursor-pointer"
-                                  onClick={() => setRoleFilter(filter.value)}
-                                >
-                                  {filter.label}
-                                </Badge>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-                      </PopoverContent>
-                    </Popover>
-
-                    {/*
-                      Bulk actions dropdown was removed: the previous version
-                      rendered "Resend Invites / Deactivate / Delete" buttons
-                      that fired toast.success() without calling any API.
-                      Selecting 50 users and clicking "Delete" did nothing but
-                      lie to the operator. Per-row actions in the dropdown on
-                      each table row are the supported way to suspend / remove
-                      a member; bulk endpoints can come back when there's a
-                      real implementation behind them.
-                    */}
-                  </div>
-                </div>
-
-                {/* Active Filters Display */}
-                {activeFiltersCount > 0 && (
-                  <div className="flex flex-wrap items-center gap-2 mb-4">
-                    <span className="text-sm text-muted-foreground">Active filters:</span>
-                    {roleFilter !== 'all' && (
-                      <Badge variant="secondary" className="gap-1">
-                        Role: {roleFilter}
-                        <button
-                          onClick={() => setRoleFilter('all')}
-                          className="ms-1 hover:text-foreground"
-                        >
-                          x
-                        </button>
-                      </Badge>
-                    )}
-                  </div>
-                )}
-
-                {/* Table */}
-                <div className="rounded-md border overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      {table.getHeaderGroups().map((headerGroup) => (
-                        <TableRow key={headerGroup.id}>
-                          {headerGroup.headers.map((header) => (
-                            <TableHead key={header.id}>
-                              {header.isPlaceholder
-                                ? null
-                                : flexRender(header.column.columnDef.header, header.getContext())}
-                            </TableHead>
-                          ))}
-                        </TableRow>
-                      ))}
-                    </TableHeader>
-                    <TableBody>
-                      {table.getRowModel().rows?.length ? (
-                        table.getRowModel().rows.map((row) => (
-                          <TableRow
-                            key={row.id}
-                            data-state={row.getIsSelected() && 'selected'}
-                            className="cursor-pointer"
-                            onClick={(e) => {
-                              if (
-                                (e.target as HTMLElement).closest('[role="checkbox"]') ||
-                                (e.target as HTMLElement).closest('button')
-                              ) {
-                                return
-                              }
-                              setSelectedMember(row.original)
-                            }}
-                          >
-                            {row.getVisibleCells().map((cell) => (
-                              <TableCell key={cell.id}>
-                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                              </TableCell>
-                            ))}
-                          </TableRow>
-                        ))
-                      ) : (
-                        <TableRow>
-                          <TableCell colSpan={columns.length} className="h-24 text-center">
-                            No users found.
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-
-                {/* Pagination */}
-                <DataTablePagination table={table} />
-              </CardContent>
-            </Card>
-
             {/* Pending Invitations Section */}
-            <Card className="mt-6" id="pending-invitations">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-base">Pending Invitations</CardTitle>
-                    <CardDescription>Invitations waiting to be accepted</CardDescription>
-                  </div>
-                  <Can permission={Permission.MembersInvite} minRole="admin" mode="disable">
-                    <Button size="sm" variant="outline" onClick={() => setInviteDialogOpen(true)}>
-                      <UserPlus className="me-2 h-4 w-4" />
-                      Invite
-                    </Button>
-                  </Can>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {invitations.length === 0 ? (
-                  <EmptyState
-                    card={false}
-                    icon={Mail}
-                    title="No pending invitations"
-                    description="Invite someone to join your team"
-                  />
-                ) : (
-                  invitations.map((invitation) => {
-                    // Get role names from role_ids
-                    const invitedRoles = (invitation.role_ids || [])
-                      .map((id) => availableRolesForInvite.find((r) => r.id === id))
-                      .filter(Boolean)
-
-                    // Check if expiring soon (within 3 days)
-                    const expiresAt = new Date(invitation.expires_at)
-                    const now = new Date()
-                    const daysUntilExpiry = Math.ceil(
-                      (expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
-                    )
-                    const isExpiringSoon = daysUntilExpiry <= 3 && daysUntilExpiry > 0
-                    const isExpired = daysUntilExpiry <= 0
-
-                    return (
-                      <div
-                        key={invitation.id}
-                        className="flex items-center justify-between rounded-lg border p-3 hover:bg-muted/50 transition-colors"
-                      >
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-10 w-10">
-                            <AvatarFallback className="text-sm bg-yellow-500/20 text-yellow-500">
-                              {invitation.email.substring(0, 2).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="font-medium">{invitation.email}</p>
-                            <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
-                              {invitedRoles.length > 0 ? (
-                                <>
-                                  {invitedRoles.slice(0, 2).map(
-                                    (role) =>
-                                      role && (
-                                        <Badge
-                                          key={role.id}
-                                          className={`${getRoleColor(role)} border-0 text-xs`}
-                                        >
-                                          {role.name}
-                                        </Badge>
-                                      )
-                                  )}
-                                  {invitedRoles.length > 2 && (
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <Badge
-                                          variant="secondary"
-                                          className="text-xs cursor-pointer"
-                                        >
-                                          +{invitedRoles.length - 2}
-                                        </Badge>
-                                      </TooltipTrigger>
-                                      <TooltipContent>
-                                        {invitedRoles
-                                          .slice(2)
-                                          .filter((r): r is NonNullable<typeof r> => r != null)
-                                          .map((r) => r.name)
-                                          .join(', ')}
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  )}
-                                </>
-                              ) : invitation.role ? (
-                                /* Fallback for invitations created before
-                                   the RBAC role picker was added — they
-                                   have the legacy `role` field ("member",
-                                   "admin", etc.) but an empty role_ids
-                                   array. Show the legacy role so the admin
-                                   sees SOMETHING meaningful instead of the
-                                   confusing "No roles" badge. */
-                                <Badge className="bg-gray-500/20 text-gray-400 border-0 text-xs capitalize">
-                                  {invitation.role}
-                                </Badge>
-                              ) : (
-                                <Badge className="bg-gray-500/20 text-gray-400 border-0 text-xs">
-                                  No roles
-                                </Badge>
-                              )}
-                              <span
-                                className={`text-xs ms-1 ${isExpiringSoon ? 'text-orange-500' : isExpired ? 'text-red-500' : 'text-muted-foreground'}`}
-                              >
-                                {isExpired
-                                  ? 'Expired'
-                                  : isExpiringSoon
-                                    ? `Expires in ${daysUntilExpiry} day${daysUntilExpiry > 1 ? 's' : ''}`
-                                    : `Expires ${formatDate(invitation.expires_at)}`}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex flex-wrap items-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-muted-foreground hover:text-foreground"
-                            title="Copy invitation link"
-                            onClick={async () => {
-                              if (!invitation.token) {
-                                toast.error('Invitation token not available')
-                                return
-                              }
-                              const inviteLink = `${window.location.origin}/invitations/${invitation.token}`
-                              const ok = await copyToClipboard(inviteLink)
-                              if (ok) {
-                                toast.success('Invitation link copied to clipboard')
-                              } else {
-                                toast.error('Failed to copy link')
-                              }
-                            }}
-                          >
-                            <Link className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-muted-foreground hover:text-foreground"
-                            title="Resend invitation email"
-                            onClick={async () => {
-                              if (!tenantSlug) return
-                              try {
-                                await fetcherWithOptions(
-                                  tenantEndpoints.resendInvitation(tenantSlug, invitation.id),
-                                  { method: 'POST' }
-                                )
-                                toast.success('Invitation email resent')
-                              } catch {
-                                toast.error('Failed to resend invitation')
-                              }
-                            }}
-                          >
-                            <Send className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-red-400 hover:text-red-500 hover:bg-red-500/10"
-                            title="Cancel invitation"
-                            onClick={async () => {
-                              if (!tenantSlug) return
-                              try {
-                                await fetcherWithOptions(
-                                  tenantEndpoints.deleteInvitation(tenantSlug, invitation.id),
-                                  { method: 'DELETE' }
-                                )
-                                toast.success('Invitation cancelled')
-                                refreshData()
-                              } catch {
-                                toast.error('Failed to cancel invitation')
-                              }
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    )
-                  })
-                )}
-              </CardContent>
-            </Card>
+            {invitations.length > 0 && (
+              <section id="pending-invitations" className="mt-5 scroll-mt-4">
+                <h2 className="mb-3 text-base font-semibold">Pending invitations</h2>
+                <DataTable
+                  columns={invitationColumns}
+                  data={invitations}
+                  getRowId={(inv) => inv.id}
+                  showSearch={false}
+                  showColumnToggle={false}
+                  showPagination={invitations.length > 10}
+                  emptyMessage="No pending invitations"
+                />
+              </section>
+            )}
           </>
         )}
       </Main>
@@ -1461,7 +1205,7 @@ export default function UsersPage() {
       <Sheet open={!!selectedMember} onOpenChange={() => setSelectedMember(null)}>
         <SheetContent className="sm:max-w-md p-0 overflow-y-auto">
           <VisuallyHidden>
-            <SheetTitle>Member Details</SheetTitle>
+            <SheetTitle>Member details</SheetTitle>
           </VisuallyHidden>
           {selectedMember && (
             <div className="flex flex-col h-full">
@@ -1469,39 +1213,15 @@ export default function UsersPage() {
               <div className="px-6 pt-14 pb-6 bg-gradient-to-b from-muted/50 to-background">
                 {/* Avatar & Basic Info */}
                 <div className="flex flex-col items-center text-center">
-                  <div className="relative">
-                    <Avatar className="h-20 w-20 ring-4 ring-background shadow-lg">
-                      <AvatarFallback className="text-2xl bg-primary/10 text-primary">
-                        {getInitials(selectedMember.name)}
-                      </AvatarFallback>
-                    </Avatar>
-                    {/* Online indicator */}
-                    {selectedMember.status === 'active' && (
-                      <span className="absolute bottom-1 right-1 h-4 w-4 rounded-full bg-green-500 ring-2 ring-background" />
-                    )}
-                  </div>
+                  <Avatar className="h-20 w-20 ring-4 ring-background shadow-lg">
+                    <AvatarFallback className="text-2xl bg-primary/10 text-primary">
+                      {getInitials(selectedMember.name)}
+                    </AvatarFallback>
+                  </Avatar>
                   <h2 className="mt-4 text-xl font-semibold">{selectedMember.name}</h2>
                   <p className="text-sm text-muted-foreground">{selectedMember.email}</p>
-                  {/* Status Badge */}
-                  <div
-                    className={`mt-2 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${STATUS_DISPLAY[selectedMember.status]?.bgColor} ${STATUS_DISPLAY[selectedMember.status]?.color}`}
-                  >
-                    {/*
-                      Members loaded from the API only ever carry "active"
-                      or "suspended" — pending invitations are rendered in a
-                      separate section, never as MemberWithUser. The dot
-                      colour matches the badge palette in STATUS_DISPLAY.
-                    */}
-                    <span
-                      className={`h-1.5 w-1.5 rounded-full ${
-                        selectedMember.status === 'active'
-                          ? 'bg-green-400'
-                          : selectedMember.status === 'suspended'
-                            ? 'bg-orange-400'
-                            : 'bg-gray-400'
-                      }`}
-                    />
-                    {STATUS_DISPLAY[selectedMember.status]?.label}
+                  <div className="mt-2">
+                    <MemberStatusBadge status={selectedMember.status} />
                   </div>
                 </div>
               </div>
@@ -1519,7 +1239,7 @@ export default function UsersPage() {
                   </div>
                   <div className="p-3 rounded-xl bg-muted/50 text-center">
                     <Activity className="h-5 w-5 mx-auto text-muted-foreground mb-1" />
-                    <p className="text-xs text-muted-foreground">Last Active</p>
+                    <p className="text-xs text-muted-foreground">Last active</p>
                     <p className="text-sm font-semibold mt-0.5">
                       {formatLastActive(selectedMember.last_login_at)}
                     </p>
@@ -1556,7 +1276,7 @@ export default function UsersPage() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="w-full justify-center text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                      className="w-full justify-center text-destructive hover:bg-destructive/10 hover:text-destructive"
                       onClick={() => {
                         // Two-step: close the sheet, then open the
                         // confirmation dialog. The AlertDialog has its own
@@ -1567,7 +1287,7 @@ export default function UsersPage() {
                       }}
                     >
                       <Trash2 className="me-2 h-4 w-4" />
-                      Remove from Team
+                      Remove from team
                     </Button>
                   </div>
                 )}
@@ -1581,12 +1301,7 @@ export default function UsersPage() {
       <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <div className="rounded-full bg-primary/10 p-2">
-                <UserPlus className="h-5 w-5 text-primary" />
-              </div>
-              Invite Team Member
-            </DialogTitle>
+            <DialogTitle>Invite user</DialogTitle>
             <DialogDescription>
               Send an invitation email to add a new member to your team.
             </DialogDescription>
@@ -1596,7 +1311,7 @@ export default function UsersPage() {
             {/* Email Input */}
             <div className="space-y-2">
               <Label htmlFor="invite-email" className="text-sm font-medium">
-                Email Address
+                Email address
               </Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -1615,7 +1330,7 @@ export default function UsersPage() {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <Label className="text-sm font-medium">Assign Roles</Label>
+                  <Label className="text-sm font-medium">Assign roles</Label>
                   <p className="text-xs text-muted-foreground">
                     Select roles to define permissions for this user
                   </p>
@@ -1639,8 +1354,8 @@ export default function UsersPage() {
                   {systemRolesForInvite.length > 0 && (
                     <div>
                       <div className="flex items-center gap-2 mb-2">
-                        <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
-                          System Roles
+                        <span className="text-xs font-medium text-muted-foreground">
+                          System roles
                         </span>
                         <div className="flex-1 h-px bg-border" />
                       </div>
@@ -1696,8 +1411,8 @@ export default function UsersPage() {
                   {customRolesForInvite.length > 0 && (
                     <div>
                       <div className="flex items-center gap-2 mb-2">
-                        <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
-                          Custom Roles
+                        <span className="text-xs font-medium text-muted-foreground">
+                          Custom roles
                         </span>
                         <div className="flex-1 h-px bg-border" />
                       </div>
@@ -1784,7 +1499,7 @@ export default function UsersPage() {
               ) : (
                 <Send className="me-2 h-4 w-4" />
               )}
-              Send Invitation
+              Send invitation
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1812,10 +1527,7 @@ export default function UsersPage() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <Ban className="h-5 w-5 text-orange-500" />
-              Suspend member?
-            </AlertDialogTitle>
+            <AlertDialogTitle>Suspend member?</AlertDialogTitle>
             <AlertDialogDescription>
               {suspendConfirmMember && (
                 <>
@@ -1840,7 +1552,7 @@ export default function UsersPage() {
                 void handleConfirmSuspend()
               }}
               disabled={isSuspending}
-              className="bg-orange-500 text-white hover:bg-orange-600 focus:ring-orange-500"
+              className="bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20"
             >
               {isSuspending ? (
                 <>
@@ -1864,12 +1576,7 @@ export default function UsersPage() {
         onOpenChange={(open) => {
           if (!open && !isRemoving) setRemoveConfirmMember(null)
         }}
-        title={
-          <span className="flex items-center gap-2">
-            <Trash2 className="h-5 w-5 text-red-500" />
-            Remove member from team?
-          </span>
-        }
+        title="Remove member from team?"
         desc={
           <>
             {removeConfirmMember && (

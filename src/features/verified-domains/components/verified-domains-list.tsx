@@ -2,21 +2,28 @@
 
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { ChevronDown, RefreshCw, Trash2 } from 'lucide-react'
+import type { ColumnDef } from '@tanstack/react-table'
+import { FileText, RefreshCw, Trash2 } from 'lucide-react'
 
-import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
 import { ConfirmDialog } from '@/components/confirm-dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { DataTable } from '@/features/shared/components/data-table'
+import { DataTableRowActions } from '@/features/shared/components/data-table-row-actions'
 import { RelativeTime } from '@/features/shared/components/relative-time'
-import { cn } from '@/lib/utils'
 import { getErrorMessage } from '@/lib/api/error-handler'
 import { useDeleteVerifiedDomain, useVerifyDomain } from '../api/use-verified-domains'
 import type { VerifiedDomain } from '../types/verified-domain.types'
 import { DnsInstructions } from './dns-instructions'
 import { VerifiedDomainStatusBadge } from './verified-domain-status-badge'
 
-function DomainRow({ domain, onChanged }: { domain: VerifiedDomain; onChanged: () => void }) {
-  const [expanded, setExpanded] = useState(false)
+function DomainActions({ domain, onChanged }: { domain: VerifiedDomain; onChanged: () => void }) {
+  const [dnsOpen, setDnsOpen] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const { trigger: verify, isMutating: isVerifying } = useVerifyDomain()
   const { trigger: remove, isMutating: isDeleting } = useDeleteVerifiedDomain()
@@ -31,7 +38,7 @@ function DomainRow({ domain, onChanged }: { domain: VerifiedDomain; onChanged: (
         toast.success(`${domain.domain} verified`)
       } else {
         toast.info(`Still pending — the TXT record for ${domain.domain} was not found yet.`)
-        setExpanded(true)
+        if (domain.instructions) setDnsOpen(true)
       }
     } catch (e) {
       toast.error(getErrorMessage(e, 'Verification failed'))
@@ -50,67 +57,45 @@ function DomainRow({ domain, onChanged }: { domain: VerifiedDomain; onChanged: (
   }
 
   return (
-    <Card>
-      <CardContent className="space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            {hasInstructions ? (
-              <Button
-                type="button"
-                size="icon"
-                variant="ghost"
-                aria-label={expanded ? 'Hide DNS record' : 'Show DNS record'}
-                aria-expanded={expanded}
-                onClick={() => setExpanded((v) => !v)}
-              >
-                <ChevronDown
-                  className={cn('h-4 w-4 transition-transform', expanded && 'rotate-180')}
-                />
-              </Button>
-            ) : (
-              <span className="w-9" aria-hidden />
-            )}
-            <div>
-              <p className="font-medium">{domain.domain}</p>
-              <p className="text-muted-foreground text-xs">
-                {domain.status === 'verified' && domain.verified_at ? (
-                  <>
-                    Verified <RelativeTime date={domain.verified_at} className="text-xs" />
-                  </>
-                ) : domain.last_checked_at ? (
-                  <>
-                    Last checked <RelativeTime date={domain.last_checked_at} className="text-xs" />
-                  </>
-                ) : (
-                  <>
-                    Added <RelativeTime date={domain.created_at} className="text-xs" />
-                  </>
-                )}
-              </p>
-            </div>
-          </div>
+    <>
+      <DataTableRowActions
+        actions={[
+          ...(hasInstructions
+            ? [{ label: 'Show DNS record', icon: FileText, onClick: () => setDnsOpen(true) }]
+            : []),
+          ...(domain.status !== 'verified'
+            ? [
+                {
+                  label: isVerifying ? 'Checking…' : 'Verify now',
+                  icon: RefreshCw,
+                  onClick: () => void handleVerify(),
+                  disabled: isVerifying,
+                },
+              ]
+            : []),
+          {
+            label: 'Remove',
+            icon: Trash2,
+            onClick: () => setConfirmOpen(true),
+            destructive: true,
+            separatorBefore: true,
+          },
+        ]}
+      />
 
-          <div className="flex items-center gap-2">
-            <VerifiedDomainStatusBadge status={domain.status} />
-            {domain.status !== 'verified' && (
-              <Button size="sm" variant="outline" onClick={handleVerify} disabled={isVerifying}>
-                <RefreshCw className={cn('me-1.5 h-3.5 w-3.5', isVerifying && 'animate-spin')} />
-                {isVerifying ? 'Checking…' : 'Verify now'}
-              </Button>
-            )}
-            <Button
-              size="icon"
-              variant="ghost"
-              aria-label={`Remove ${domain.domain}`}
-              onClick={() => setConfirmOpen(true)}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-
-        {expanded && domain.instructions && <DnsInstructions instructions={domain.instructions} />}
-      </CardContent>
+      {domain.instructions && (
+        <Dialog open={dnsOpen} onOpenChange={setDnsOpen}>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>DNS record for {domain.domain}</DialogTitle>
+              <DialogDescription>
+                Publish this TXT record, then choose Verify now.
+              </DialogDescription>
+            </DialogHeader>
+            <DnsInstructions instructions={domain.instructions} />
+          </DialogContent>
+        </Dialog>
+      )}
 
       <ConfirmDialog
         open={confirmOpen}
@@ -122,8 +107,16 @@ function DomainRow({ domain, onChanged }: { domain: VerifiedDomain; onChanged: (
         isLoading={isDeleting}
         handleConfirm={handleDelete}
       />
-    </Card>
+    </>
   )
+}
+
+function lastActivity(domain: VerifiedDomain): { label: string; date: string } {
+  if (domain.status === 'verified' && domain.verified_at) {
+    return { label: 'Verified', date: domain.verified_at }
+  }
+  if (domain.last_checked_at) return { label: 'Last checked', date: domain.last_checked_at }
+  return { label: 'Added', date: domain.created_at }
 }
 
 export function VerifiedDomainsList({
@@ -133,11 +126,44 @@ export function VerifiedDomainsList({
   domains: VerifiedDomain[]
   onChanged: () => void
 }) {
+  const columns: ColumnDef<VerifiedDomain>[] = [
+    {
+      accessorKey: 'domain',
+      header: 'Domain',
+      cell: ({ row }) => <span className="font-medium">{row.original.domain}</span>,
+    },
+    {
+      accessorKey: 'status',
+      header: 'Status',
+      cell: ({ row }) => <VerifiedDomainStatusBadge status={row.original.status} />,
+    },
+    {
+      id: 'activity',
+      header: 'Last activity',
+      accessorFn: (d) => lastActivity(d).date,
+      cell: ({ row }) => {
+        const { label, date } = lastActivity(row.original)
+        return (
+          <span className="text-sm text-muted-foreground">
+            {label} <RelativeTime date={date} />
+          </span>
+        )
+      },
+    },
+    {
+      id: 'actions',
+      enableSorting: false,
+      cell: ({ row }) => <DomainActions domain={row.original} onChanged={onChanged} />,
+    },
+  ]
+
   return (
-    <div className="space-y-3">
-      {domains.map((domain) => (
-        <DomainRow key={domain.id} domain={domain} onChanged={onChanged} />
-      ))}
-    </div>
+    <DataTable
+      columns={columns}
+      data={domains}
+      getRowId={(d) => d.id}
+      searchPlaceholder="Search domains..."
+      showSelectionCount={false}
+    />
   )
 }

@@ -1,22 +1,22 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
+import type { ColumnDef, SortingState } from '@tanstack/react-table'
 import { Main } from '@/components/layout'
-import { PageHeader } from '@/features/shared'
+import {
+  PageHeader,
+  DataTable,
+  DataTableColumnHeader,
+  EmptyState,
+  MetricStrip,
+  SeverityBadge,
+} from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
 import {
   Select,
@@ -27,30 +27,12 @@ import {
 } from '@/components/ui/select'
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
 import {
-  History,
   Search as SearchIcon,
   RefreshCw,
-  ChevronLeft,
-  ChevronRight,
-  ChevronsLeft,
-  ChevronsRight,
   AlertCircle,
   CheckCircle,
-  XCircle,
-  ShieldAlert,
   ShieldX,
-  User,
-  Users,
-  Settings,
-  Key,
-  Mail,
-  Building,
-  Calendar,
-  Activity,
-  Loader2,
   Copy,
-  ScrollText,
-  ArrowUpDown,
 } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
@@ -64,10 +46,16 @@ import {
   RESULT_DISPLAY,
   SEVERITY_DISPLAY,
   formatAction,
-  getActionCategory,
 } from '@/features/organization'
 import { copyToClipboard } from '@/lib/clipboard'
 import { Permission, useHasPermission } from '@/lib/permissions'
+import { useDebounce } from '@/hooks/use-debounce'
+import { useUrlFilter } from '@/hooks/use-url-param'
+
+const PAGE_SIZES = [10, 20, 30, 50, 100]
+const SORTABLE = ['logged_at', 'action', 'resource_type', 'result', 'severity']
+const RESULT_OPTIONS: AuditResult[] = ['success', 'failure', 'denied']
+const SEVERITY_OPTIONS: AuditSeverity[] = ['info', 'low', 'medium', 'high', 'critical']
 
 // Helper functions
 const formatDate = (dateString: string) => {
@@ -100,595 +88,388 @@ const formatRelativeTime = (dateString: string) => {
   return formatDate(dateString)
 }
 
-const getActionIcon = (action: string) => {
-  const category = getActionCategory(action)
-  switch (category) {
-    case 'user':
-      return User
-    case 'member':
-      return Users
-    case 'invitation':
-      return Mail
-    case 'tenant':
-      return Building
-    case 'settings':
-      return Settings
-    case 'auth':
-      return Key
-    case 'permission':
-      return ShieldAlert
-    default:
-      return Activity
-  }
-}
-
-const getResultIcon = (result: AuditResult) => {
-  switch (result) {
-    case 'success':
-      return CheckCircle
-    case 'failure':
-      return XCircle
-    case 'denied':
-      return ShieldAlert
-    default:
-      return AlertCircle
-  }
+/** Result as a token-coloured badge: only a problem (failure / denied) is red. */
+function ResultBadge({ result }: { result: AuditResult }) {
+  const label = RESULT_DISPLAY[result]?.label ?? result
+  if (result === 'failure') return <Badge variant="destructive">{label}</Badge>
+  if (result === 'denied')
+    return (
+      <Badge variant="outline" className="border-destructive/40 text-destructive">
+        {label}
+      </Badge>
+    )
+  return <Badge variant="secondary">{label}</Badge>
 }
 
 export default function AuditLogPage() {
   // Permission check
   const hasAuditPermission = useHasPermission(Permission.AuditRead)
 
-  // Filters state
-  const [filters, setFilters] = useState<AuditLogFilters>({
-    page: 0,
-    per_page: 20,
-  })
-  const [searchTerm, setSearchTerm] = useState('')
+  // The whole view lives in the URL so a filtered slice of the log can be shared.
+  const [searchTerm, setSearchTerm] = useUrlFilter('q', '')
+  const [resultParam, setResultParam] = useUrlFilter('result', 'all')
+  const [severityParam, setSeverityParam] = useUrlFilter('severity', 'all')
+  const [hideSystemParam, setHideSystemParam] = useUrlFilter('hide_system', 'false')
+  const [sortParam, setSortParam] = useUrlFilter('sort', '')
+  const [pageParam, setPageParam] = useUrlFilter('page', '1')
+  const [perPageParam, setPerPageParam] = useUrlFilter('per_page', '20')
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null)
 
-  // Build filters with search
-  const activeFilters = useMemo(
+  const debouncedSearch = useDebounce(searchTerm, 300)
+
+  const pagination = useMemo(
     () => ({
-      ...filters,
-      search: searchTerm || undefined,
+      pageIndex: Math.max(0, (parseInt(pageParam, 10) || 1) - 1),
+      pageSize: PAGE_SIZES.includes(parseInt(perPageParam, 10)) ? parseInt(perPageParam, 10) : 20,
     }),
-    [filters, searchTerm]
+    [pageParam, perPageParam]
+  )
+  const setPagination = useCallback(
+    (next: { pageIndex: number; pageSize: number }) => {
+      setPageParam(String(next.pageIndex + 1))
+      setPerPageParam(String(next.pageSize))
+    },
+    [setPageParam, setPerPageParam]
+  )
+
+  // `sort=field:dir` in the URL ↔ the table's sorting state.
+  const sorting = useMemo<SortingState>(() => {
+    const [id, dir] = sortParam.split(':')
+    return SORTABLE.includes(id) ? [{ id, desc: dir !== 'asc' }] : []
+  }, [sortParam])
+  const handleSortingChange = useCallback(
+    (next: SortingState) => {
+      const s = next[0]
+      setSortParam(s ? `${s.id}:${s.desc ? 'desc' : 'asc'}` : '')
+      setPageParam('1')
+    },
+    [setSortParam, setPageParam]
+  )
+
+  const resultFilter = RESULT_OPTIONS.includes(resultParam as AuditResult)
+    ? (resultParam as AuditResult)
+    : undefined
+  const severityFilter = SEVERITY_OPTIONS.includes(severityParam as AuditSeverity)
+    ? (severityParam as AuditSeverity)
+    : undefined
+  const hideSystem = hideSystemParam === 'true'
+
+  // Build API filters (page is 0-based on the wire, as before)
+  const activeFilters = useMemo<AuditLogFilters>(
+    () => ({
+      page: pagination.pageIndex,
+      per_page: pagination.pageSize,
+      search: debouncedSearch || undefined,
+      result: resultFilter ? [resultFilter] : undefined,
+      severity: severityFilter ? [severityFilter] : undefined,
+      exclude_system: hideSystem || undefined,
+      sort_by: sorting[0]?.id,
+      sort_order: sorting[0] ? (sorting[0].desc ? 'desc' : 'asc') : undefined,
+    }),
+    [pagination, debouncedSearch, resultFilter, severityFilter, hideSystem, sorting]
   )
 
   // Fetch data (tenant is extracted from JWT token by backend)
   // Only fetch if user has permission
-  const { logs, total, page, totalPages, isLoading, isError, mutate } = useAuditLogs(
+  const { logs, total, isLoading, isError, error, mutate } = useAuditLogs(
     hasAuditPermission ? activeFilters : undefined
   )
   const { stats, isLoading: statsLoading } = useAuditStats()
 
+  const columns = useMemo<ColumnDef<AuditLog>[]>(
+    () => [
+      {
+        id: 'logged_at',
+        accessorKey: 'timestamp',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Time" />,
+        cell: ({ row }) => (
+          <div className="flex flex-col whitespace-nowrap">
+            <span className="text-sm font-medium">
+              {formatRelativeTime(row.original.timestamp)}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              {formatTime(row.original.timestamp)}
+            </span>
+          </div>
+        ),
+      },
+      {
+        id: 'action',
+        accessorKey: 'action',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Action" />,
+        cell: ({ row }) => <span className="text-sm">{formatAction(row.original.action)}</span>,
+      },
+      {
+        id: 'actor',
+        header: 'Actor',
+        enableSorting: false,
+        cell: ({ row }) => (
+          <div className="flex items-center gap-2">
+            <Avatar className="h-7 w-7">
+              <AvatarFallback className="text-xs">
+                {row.original.actor_email?.substring(0, 2).toUpperCase() || '?'}
+              </AvatarFallback>
+            </Avatar>
+            <span className="text-sm truncate max-w-[180px]">
+              {row.original.actor_email || 'System'}
+            </span>
+          </div>
+        ),
+      },
+      {
+        id: 'resource_type',
+        accessorKey: 'resource_type',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Resource" />,
+        cell: ({ row }) => (
+          <div className="flex flex-col">
+            <span className="text-sm">
+              {row.original.resource_name || row.original.resource_id}
+            </span>
+            <span className="text-xs text-muted-foreground">{row.original.resource_type}</span>
+          </div>
+        ),
+      },
+      {
+        id: 'result',
+        accessorKey: 'result',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Result" />,
+        cell: ({ row }) => <ResultBadge result={row.original.result} />,
+      },
+      {
+        id: 'severity',
+        accessorKey: 'severity',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Severity" />,
+        cell: ({ row }) => <SeverityBadge severity={row.original.severity} />,
+      },
+    ],
+    []
+  )
+
   // Access denied page
   if (!hasAuditPermission) {
     return (
-      <>
-        <Main>
-          <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-            <div className="rounded-full bg-red-100 p-4 dark:bg-red-900/20">
-              <ShieldX className="h-12 w-12 text-red-500" />
-            </div>
-            <h2 className="text-xl font-semibold">Access Denied</h2>
-            <p className="text-muted-foreground text-center max-w-md">
-              You don&apos;t have permission to view audit logs. Please contact your administrator
-              to request access.
-            </p>
-          </div>
-        </Main>
-      </>
+      <Main>
+        <PageHeader title="Audit log" description="Activity history and security events." />
+        <EmptyState
+          className="mt-5"
+          icon={ShieldX}
+          title="Access denied"
+          description="You don't have permission to view audit logs. Ask your administrator for access."
+        />
+      </Main>
     )
   }
 
-  // Filter options
-  const resultOptions: AuditResult[] = ['success', 'failure', 'denied']
-  const severityOptions: AuditSeverity[] = ['info', 'low', 'medium', 'high', 'critical']
-
-  // Active filters count
-  const activeFiltersCount = [
-    filters.result?.length,
-    filters.severity?.length,
-    filters.action?.length,
-  ].filter(Boolean).length
+  const activeFiltersCount = [resultFilter, severityFilter, hideSystem, searchTerm].filter(
+    Boolean
+  ).length
 
   const clearFilters = () => {
-    setFilters({ page: 0, per_page: 20 })
     setSearchTerm('')
+    setResultParam('all')
+    setSeverityParam('all')
+    setHideSystemParam('false')
+    setPageParam('1')
   }
 
-  // Pagination
-  const goToPage = (newPage: number) => {
-    setFilters({ ...filters, page: newPage })
-  }
+  const toolbarStart = (
+    <>
+      <div className="relative min-w-0 flex-1 sm:max-w-sm">
+        <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          placeholder="Search by actor, action, resource..."
+          value={searchTerm}
+          onChange={(e) => {
+            setSearchTerm(e.target.value)
+            setPageParam('1')
+          }}
+          className="ps-9"
+          aria-label="Search audit log"
+        />
+      </div>
+      <Select
+        value={resultFilter ?? 'all'}
+        onValueChange={(value) => {
+          setResultParam(value)
+          setPageParam('1')
+        }}
+      >
+        <SelectTrigger className="h-9 w-[130px]" aria-label="Result">
+          <SelectValue placeholder="Result" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All results</SelectItem>
+          {RESULT_OPTIONS.map((result) => (
+            <SelectItem key={result} value={result}>
+              {RESULT_DISPLAY[result].label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Select
+        value={severityFilter ?? 'all'}
+        onValueChange={(value) => {
+          setSeverityParam(value)
+          setPageParam('1')
+        }}
+      >
+        <SelectTrigger className="h-9 w-[140px]" aria-label="Severity">
+          <SelectValue placeholder="Severity" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All severities</SelectItem>
+          {SEVERITY_OPTIONS.map((severity) => (
+            <SelectItem key={severity} value={severity}>
+              {SEVERITY_DISPLAY[severity].label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      {activeFiltersCount > 0 && (
+        <Button variant="ghost" size="sm" onClick={clearFilters}>
+          Clear
+        </Button>
+      )}
+    </>
+  )
+
+  const toolbarEnd = (
+    <>
+      <div className="hidden items-center gap-2 md:flex">
+        <Switch
+          id="exclude-system"
+          checked={hideSystem}
+          onCheckedChange={(checked) => {
+            setHideSystemParam(checked ? 'true' : 'false')
+            setPageParam('1')
+          }}
+        />
+        <Label
+          htmlFor="exclude-system"
+          className="cursor-pointer whitespace-nowrap text-sm font-normal"
+          title="Hide events performed by the system itself"
+        >
+          Hide system
+        </Label>
+      </div>
+      <Button
+        variant="outline"
+        size="sm"
+        className="h-9"
+        onClick={() => mutate()}
+        aria-label="Refresh"
+      >
+        <RefreshCw className="h-4 w-4" />
+      </Button>
+    </>
+  )
 
   return (
     <>
       <Main>
-        <PageHeader title="Audit Log" description="View activity history and security events">
-          <Button variant="outline" onClick={() => mutate()}>
-            <RefreshCw className="me-2 h-4 w-4" />
-            Refresh
-          </Button>
-        </PageHeader>
+        <PageHeader title="Audit log" description="Activity history and security events." />
 
-        {/* Stats Cards */}
-        <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription className="flex items-center gap-2">
-                <History className="h-4 w-4" />
-                Total Events (7 days)
-              </CardDescription>
-              <CardTitle className="text-3xl">
-                {statsLoading ? <Skeleton className="h-9 w-16" /> : (stats?.total_logs ?? 0)}
-              </CardTitle>
-            </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription className="flex items-center gap-2">
-                <CheckCircle className="h-4 w-4 text-green-500" />
-                Successful
-              </CardDescription>
-              <CardTitle className="text-3xl text-green-500">
-                {statsLoading ? (
-                  <Skeleton className="h-9 w-16" />
-                ) : (
-                  (stats?.logs_by_result?.success ?? 0)
-                )}
-              </CardTitle>
-            </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription className="flex items-center gap-2">
-                <XCircle className="h-4 w-4 text-red-500" />
-                Failed
-              </CardDescription>
-              <CardTitle className="text-3xl text-red-500">
-                {statsLoading ? (
-                  <Skeleton className="h-9 w-16" />
-                ) : (
-                  (stats?.logs_by_result?.failure ?? 0)
-                )}
-              </CardTitle>
-            </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription className="flex items-center gap-2">
-                <ShieldAlert className="h-4 w-4 text-orange-500" />
-                Denied
-              </CardDescription>
-              <CardTitle className="text-3xl text-orange-500">
-                {statsLoading ? (
-                  <Skeleton className="h-9 w-16" />
-                ) : (
-                  (stats?.logs_by_result?.denied ?? 0)
-                )}
-              </CardTitle>
-            </CardHeader>
-          </Card>
-        </div>
+        <MetricStrip
+          className="mt-5"
+          loading={statsLoading}
+          items={[
+            { key: 'total', label: 'Events (7 days)', value: stats?.total_logs ?? 0 },
+            {
+              key: 'success',
+              label: 'Successful',
+              value: stats?.logs_by_result?.success ?? 0,
+            },
+            {
+              key: 'failure',
+              label: 'Failed',
+              value: stats?.logs_by_result?.failure ?? 0,
+              tone: 'danger',
+            },
+            {
+              key: 'denied',
+              label: 'Denied',
+              value: stats?.logs_by_result?.denied ?? 0,
+              tone: 'danger',
+            },
+          ]}
+        />
 
-        {/* Audit Log Table */}
-        <Card className="mt-6">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-base">Activity History</CardTitle>
-                <CardDescription>{total} events found</CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {/* Search and Filters */}
-            <div className="flex flex-col gap-4 mb-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="relative flex-1 max-w-sm">
-                <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search by actor, action, resource..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="ps-9"
-                />
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2">
-                {/* System Event Filter */}
-                <div className="flex items-center space-x-2 border rounded-md px-3 py-2 bg-background">
-                  <Switch
-                    id="exclude-system"
-                    checked={filters.exclude_system}
-                    onCheckedChange={(checked) =>
-                      setFilters({ ...filters, exclude_system: checked, page: 0 })
-                    }
-                  />
-                  <Label htmlFor="exclude-system" className="text-sm font-normal cursor-pointer">
-                    Exclude System
-                  </Label>
-                </div>
-
-                {/* Result Filter */}
-                <Select
-                  value={filters.result?.[0] || 'all'}
-                  onValueChange={(value) =>
-                    setFilters({
-                      ...filters,
-                      result: value === 'all' ? undefined : [value as AuditResult],
-                      page: 0,
-                    })
-                  }
-                >
-                  <SelectTrigger className="w-32">
-                    <SelectValue placeholder="Result" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Results</SelectItem>
-                    {resultOptions.map((result) => (
-                      <SelectItem key={result} value={result}>
-                        {RESULT_DISPLAY[result].label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                {/* Severity Filter */}
-                <Select
-                  value={filters.severity?.[0] || 'all'}
-                  onValueChange={(value) =>
-                    setFilters({
-                      ...filters,
-                      severity: value === 'all' ? undefined : [value as AuditSeverity],
-                      page: 0,
-                    })
-                  }
-                >
-                  <SelectTrigger className="w-32">
-                    <SelectValue placeholder="Severity" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Severity</SelectItem>
-                    {severityOptions.map((severity) => (
-                      <SelectItem key={severity} value={severity}>
-                        {SEVERITY_DISPLAY[severity].label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                {activeFiltersCount > 0 && (
-                  <Button variant="ghost" size="sm" onClick={clearFilters}>
-                    Clear
-                  </Button>
-                )}
-              </div>
-            </div>
-
-            {/* Loading State */}
-            {isLoading && (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-              </div>
-            )}
-
-            {/* Error State */}
-            {isError && !isLoading && (
-              <div className="flex flex-col items-center justify-center py-12 gap-4">
-                <AlertCircle className="h-12 w-12 text-red-400" />
-                <p className="text-muted-foreground">Failed to load audit logs</p>
-                <Button variant="outline" onClick={() => mutate()}>
-                  Try Again
+        <div className="mt-5">
+          {isError && !isLoading ? (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Failed to load audit logs</AlertTitle>
+              <AlertDescription>
+                <p>{error instanceof Error ? error.message : 'An unexpected error occurred.'}</p>
+                <Button variant="outline" size="sm" className="mt-2" onClick={() => mutate()}>
+                  <RefreshCw className="me-2 h-4 w-4" />
+                  Retry
                 </Button>
-              </div>
-            )}
-
-            {/* Table */}
-            {!isLoading && !isError && (
-              <>
-                <div className="rounded-md border overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead
-                          className="w-[180px] cursor-pointer hover:bg-muted/50 transition-colors"
-                          onClick={() => {
-                            const isAsc =
-                              filters.sort_by === 'logged_at' && filters.sort_order === 'asc'
-                            setFilters({
-                              ...filters,
-                              sort_by: 'logged_at',
-                              sort_order: isAsc ? 'desc' : 'asc',
-                            })
-                          }}
-                        >
-                          <div className="flex items-center gap-1">
-                            Time
-                            {filters.sort_by === 'logged_at' && (
-                              <ArrowUpDown
-                                className={`h-3 w-3 ${filters.sort_order === 'asc' ? 'rotate-180' : ''}`}
-                              />
-                            )}
-                            {!filters.sort_by && <ArrowUpDown className="h-3 w-3 opacity-50" />}
-                          </div>
-                        </TableHead>
-                        <TableHead>
-                          <div className="flex items-center gap-1">Actor</div>
-                        </TableHead>
-                        <TableHead
-                          className="cursor-pointer hover:bg-muted/50 transition-colors"
-                          onClick={() => {
-                            const isAsc =
-                              filters.sort_by === 'action' && filters.sort_order === 'asc'
-                            setFilters({
-                              ...filters,
-                              sort_by: 'action',
-                              sort_order: isAsc ? 'desc' : 'asc',
-                            })
-                          }}
-                        >
-                          <div className="flex items-center gap-1">
-                            Action
-                            {filters.sort_by === 'action' && (
-                              <ArrowUpDown
-                                className={`h-3 w-3 ${filters.sort_order === 'asc' ? 'rotate-180' : ''}`}
-                              />
-                            )}
-                          </div>
-                        </TableHead>
-                        <TableHead
-                          className="cursor-pointer hover:bg-muted/50 transition-colors"
-                          onClick={() => {
-                            const isAsc =
-                              filters.sort_by === 'resource_type' && filters.sort_order === 'asc'
-                            setFilters({
-                              ...filters,
-                              sort_by: 'resource_type',
-                              sort_order: isAsc ? 'desc' : 'asc',
-                            })
-                          }}
-                        >
-                          <div className="flex items-center gap-1">
-                            Resource
-                            {filters.sort_by === 'resource_type' && (
-                              <ArrowUpDown
-                                className={`h-3 w-3 ${filters.sort_order === 'asc' ? 'rotate-180' : ''}`}
-                              />
-                            )}
-                          </div>
-                        </TableHead>
-                        <TableHead
-                          className="w-[100px] cursor-pointer hover:bg-muted/50 transition-colors"
-                          onClick={() => {
-                            const isAsc =
-                              filters.sort_by === 'result' && filters.sort_order === 'asc'
-                            setFilters({
-                              ...filters,
-                              sort_by: 'result',
-                              sort_order: isAsc ? 'desc' : 'asc',
-                            })
-                          }}
-                        >
-                          <div className="flex items-center gap-1">
-                            Result
-                            {filters.sort_by === 'result' && (
-                              <ArrowUpDown
-                                className={`h-3 w-3 ${filters.sort_order === 'asc' ? 'rotate-180' : ''}`}
-                              />
-                            )}
-                          </div>
-                        </TableHead>
-                        <TableHead
-                          className="w-[100px] cursor-pointer hover:bg-muted/50 transition-colors"
-                          onClick={() => {
-                            const isAsc =
-                              filters.sort_by === 'severity' && filters.sort_order === 'asc'
-                            setFilters({
-                              ...filters,
-                              sort_by: 'severity',
-                              sort_order: isAsc ? 'desc' : 'asc',
-                            })
-                          }}
-                        >
-                          <div className="flex items-center gap-1">
-                            Severity
-                            {filters.sort_by === 'severity' && (
-                              <ArrowUpDown
-                                className={`h-3 w-3 ${filters.sort_order === 'asc' ? 'rotate-180' : ''}`}
-                              />
-                            )}
-                          </div>
-                        </TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {logs.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={6} className="h-24 text-center">
-                            No audit logs found
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        logs.map((log) => {
-                          const ActionIcon = getActionIcon(log.action)
-                          const ResultIcon = getResultIcon(log.result)
-                          const resultDisplay = RESULT_DISPLAY[log.result]
-                          const severityDisplay = SEVERITY_DISPLAY[log.severity]
-
-                          return (
-                            <TableRow
-                              key={log.id}
-                              className="cursor-pointer hover:bg-muted/50"
-                              onClick={() => setSelectedLog(log)}
-                            >
-                              <TableCell>
-                                <div className="flex flex-col">
-                                  <span className="text-sm font-medium">
-                                    {formatRelativeTime(log.timestamp)}
-                                  </span>
-                                  <span className="text-xs text-muted-foreground">
-                                    {formatTime(log.timestamp)}
-                                  </span>
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex flex-wrap items-center gap-2">
-                                  <Avatar className="h-7 w-7">
-                                    <AvatarFallback className="text-xs">
-                                      {log.actor_email?.substring(0, 2).toUpperCase() || '?'}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                  <span className="text-sm truncate max-w-[150px]">
-                                    {log.actor_email || 'System'}
-                                  </span>
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex flex-wrap items-center gap-2">
-                                  <ActionIcon className="h-4 w-4 text-muted-foreground" />
-                                  <span className="text-sm">{formatAction(log.action)}</span>
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex flex-col">
-                                  <span className="text-sm">
-                                    {log.resource_name || log.resource_id}
-                                  </span>
-                                  <span className="text-xs text-muted-foreground">
-                                    {log.resource_type}
-                                  </span>
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <Badge
-                                  className={`${resultDisplay.bgColor} ${resultDisplay.color} border-0 gap-1`}
-                                >
-                                  <ResultIcon className="h-3 w-3" />
-                                  {resultDisplay.label}
-                                </Badge>
-                              </TableCell>
-                              <TableCell>
-                                <Badge
-                                  className={`${severityDisplay.bgColor} ${severityDisplay.color} border-0`}
-                                >
-                                  {severityDisplay.label}
-                                </Badge>
-                              </TableCell>
-                            </TableRow>
-                          )
-                        })
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-
-                {/* Pagination */}
-                <div className="flex items-center justify-between mt-4">
-                  <p className="text-sm text-muted-foreground">
-                    Showing {logs.length} of {total} events
-                  </p>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => goToPage(0)}
-                      disabled={page === 0}
-                    >
-                      <ChevronsLeft className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => goToPage(page - 1)}
-                      disabled={page === 0}
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                    </Button>
-                    <span className="text-sm">
-                      Page {page + 1} of {totalPages || 1}
-                    </span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => goToPage(page + 1)}
-                      disabled={page >= totalPages - 1}
-                    >
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => goToPage(totalPages - 1)}
-                      disabled={page >= totalPages - 1}
-                    >
-                      <ChevronsRight className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
+              </AlertDescription>
+            </Alert>
+          ) : isLoading && logs.length === 0 ? (
+            <div className="space-y-2">
+              <Skeleton className="h-9 w-full max-w-sm" />
+              {Array.from({ length: 8 }).map((_, i) => (
+                <Skeleton key={i} className="h-12 w-full" />
+              ))}
+            </div>
+          ) : (
+            <DataTable
+              columns={columns}
+              data={logs}
+              getRowId={(log) => log.id}
+              showSearch={false}
+              showColumnToggle={false}
+              toolbarStart={toolbarStart}
+              toolbarEnd={toolbarEnd}
+              onRowClick={(log) => setSelectedLog(log)}
+              manualPagination
+              rowCount={total}
+              pagination={pagination}
+              onPaginationChange={setPagination}
+              pageSizeOptions={PAGE_SIZES}
+              sorting={sorting}
+              onSortingChange={handleSortingChange}
+              emptyMessage="No audit events found"
+              emptyDescription={
+                activeFiltersCount > 0
+                  ? 'Try adjusting your search or filters.'
+                  : 'Events appear here as people and systems act in this workspace.'
+              }
+            />
+          )}
+        </div>
       </Main>
 
       {/* Audit Log Detail Sheet */}
       <Sheet open={!!selectedLog} onOpenChange={() => setSelectedLog(null)}>
         <SheetContent className="sm:max-w-2xl overflow-y-auto p-0 gap-0">
           <VisuallyHidden>
-            <SheetTitle>Audit Log Details</SheetTitle>
+            <SheetTitle>Audit log details</SheetTitle>
           </VisuallyHidden>
           {selectedLog && (
             <div className="flex flex-col h-full">
-              {/* Header - Clean Design */}
-              <div className="ps-6 pe-16 py-6 border-b bg-muted/10">
+              <div className="ps-6 pe-16 py-6 border-b">
                 <div className="flex items-start justify-between gap-4">
                   <div className="space-y-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      {(() => {
-                        const Icon = getResultIcon(selectedLog.result)
-                        return (
-                          <Icon
-                            className={`h-5 w-5 ${RESULT_DISPLAY[selectedLog.result].color.replace(
-                              'text-',
-                              'text-opacity-90 text-'
-                            )}`}
-                          />
-                        )
-                      })()}
-                      <h2 className="text-xl font-semibold leading-none">
-                        {formatAction(selectedLog.action)}
-                      </h2>
-                    </div>
+                    <h2 className="text-lg font-semibold leading-tight">
+                      {formatAction(selectedLog.action)}
+                    </h2>
                     <p className="text-sm text-muted-foreground">{selectedLog.message}</p>
                   </div>
                   <div className="flex flex-col items-end gap-2">
-                    <Badge
-                      variant="outline"
-                      className={`${RESULT_DISPLAY[selectedLog.result].color} border-current/20 bg-transparent`}
-                    >
-                      {RESULT_DISPLAY[selectedLog.result].label}
-                    </Badge>
-                    <Badge
-                      variant="outline"
-                      className={`${SEVERITY_DISPLAY[selectedLog.severity].color} border-current/20 bg-transparent`}
-                    >
-                      {SEVERITY_DISPLAY[selectedLog.severity].label}
-                    </Badge>
+                    <ResultBadge result={selectedLog.result} />
+                    <SeverityBadge severity={selectedLog.severity} />
                   </div>
                 </div>
               </div>
 
-              <div className="p-6 space-y-8">
-                {/* 2-Column Grid for High-Level Info */}
-                <div className="grid grid-cols-2 gap-6">
+              <div className="p-6 space-y-6">
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                   {/* Actor */}
                   <div>
-                    <h4 className="text-xs font-semibold uppercase text-muted-foreground mb-3 flex items-center gap-2">
-                      <User className="h-3.5 w-3.5" /> Actor
-                    </h4>
+                    <h4 className="text-sm font-medium text-muted-foreground mb-2">Actor</h4>
                     <div className="flex items-center gap-3">
                       <Avatar className="h-10 w-10 border">
                         <AvatarFallback className="bg-muted">
@@ -703,11 +484,9 @@ export default function AuditLogPage() {
                           {selectedLog.actor_email || 'System'}
                         </p>
                         {selectedLog.actor_ip && (
-                          <div className="flex items-center gap-1.5 mt-0.5">
-                            <span className="text-xs text-muted-foreground font-mono bg-muted/50 px-1.5 py-0.5 rounded">
-                              {selectedLog.actor_ip}
-                            </span>
-                          </div>
+                          <span className="mt-0.5 inline-block rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-muted-foreground">
+                            {selectedLog.actor_ip}
+                          </span>
                         )}
                       </div>
                     </div>
@@ -715,9 +494,7 @@ export default function AuditLogPage() {
 
                   {/* Timestamp */}
                   <div>
-                    <h4 className="text-xs font-semibold uppercase text-muted-foreground mb-3 flex items-center gap-2">
-                      <Calendar className="h-3.5 w-3.5" /> Timestamp
-                    </h4>
+                    <h4 className="text-sm font-medium text-muted-foreground mb-2">Timestamp</h4>
                     <div className="space-y-0.5">
                       <p className="font-medium text-sm">
                         {new Date(selectedLog.timestamp).toLocaleString(undefined, {
@@ -727,7 +504,7 @@ export default function AuditLogPage() {
                           day: 'numeric',
                         })}
                       </p>
-                      <p className="text-xs text-muted-foreground font-mono">
+                      <p className="text-xs text-muted-foreground tabular-nums">
                         {new Date(selectedLog.timestamp).toLocaleTimeString()}
                       </p>
                     </div>
@@ -736,27 +513,23 @@ export default function AuditLogPage() {
 
                 {/* Resource Info */}
                 <div>
-                  <h4 className="text-xs font-semibold uppercase text-muted-foreground mb-3 flex items-center gap-2">
-                    <Settings className="h-3.5 w-3.5" /> Resource
-                  </h4>
-                  <div className="rounded-lg border bg-card text-card-foreground shadow-sm">
-                    <div className="flex flex-col divide-y">
-                      <div className="flex items-center justify-between p-3 text-sm">
-                        <span className="text-muted-foreground">Type</span>
-                        <span className="font-medium">{selectedLog.resource_type}</span>
-                      </div>
-                      <div className="flex items-center justify-between p-3 text-sm">
-                        <span className="text-muted-foreground">Name</span>
-                        <span className="font-medium">{selectedLog.resource_name || '-'}</span>
-                      </div>
-                      <div className="flex items-center justify-between p-3 text-sm">
-                        <span className="text-muted-foreground">ID</span>
-                        <div className="flex items-center gap-2">
-                          <code className="text-xs font-mono bg-muted px-2 py-0.5 rounded">
-                            {selectedLog.resource_id}
-                          </code>
-                          <CopyButton value={selectedLog.resource_id} />
-                        </div>
+                  <h4 className="text-sm font-medium text-muted-foreground mb-2">Resource</h4>
+                  <div className="rounded-lg border divide-y">
+                    <div className="flex items-center justify-between p-3 text-sm">
+                      <span className="text-muted-foreground">Type</span>
+                      <span className="font-medium">{selectedLog.resource_type}</span>
+                    </div>
+                    <div className="flex items-center justify-between p-3 text-sm">
+                      <span className="text-muted-foreground">Name</span>
+                      <span className="font-medium">{selectedLog.resource_name || '-'}</span>
+                    </div>
+                    <div className="flex items-center justify-between p-3 text-sm">
+                      <span className="text-muted-foreground">ID</span>
+                      <div className="flex items-center gap-2">
+                        <code className="text-xs font-mono bg-muted px-2 py-0.5 rounded">
+                          {selectedLog.resource_id}
+                        </code>
+                        <CopyButton value={selectedLog.resource_id} />
                       </div>
                     </div>
                   </div>
@@ -766,9 +539,7 @@ export default function AuditLogPage() {
                 {selectedLog.changes?.field_changes &&
                   Object.keys(selectedLog.changes.field_changes).length > 0 && (
                     <div>
-                      <h4 className="text-xs font-semibold uppercase text-muted-foreground mb-3 flex items-center gap-2">
-                        <Activity className="h-3.5 w-3.5" /> Changes
-                      </h4>
+                      <h4 className="text-sm font-medium text-muted-foreground mb-2">Changes</h4>
                       <div className="rounded-lg border divide-y">
                         {Object.entries(selectedLog.changes.field_changes).map(
                           ([field, change]) => (
@@ -780,11 +551,11 @@ export default function AuditLogPage() {
                                 {field}
                               </span>
                               <div className="flex items-center gap-2 flex-wrap">
-                                <span className="inline-flex items-center rounded-md bg-red-50 px-2 py-1 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-600/10 dark:bg-red-400/10 dark:text-red-400 mb-1 sm:mb-0">
+                                <span className="inline-flex items-center rounded-md bg-muted px-2 py-1 text-xs text-muted-foreground line-through">
                                   {String(change.old)}
                                 </span>
                                 <span className="text-muted-foreground">→</span>
-                                <span className="inline-flex items-center rounded-md bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/10 dark:bg-green-400/10 dark:text-green-400">
+                                <span className="inline-flex items-center rounded-md bg-accent px-2 py-1 text-xs font-medium text-accent-foreground">
                                   {String(change.new)}
                                 </span>
                               </div>
@@ -798,13 +569,11 @@ export default function AuditLogPage() {
                 {/* Metadata */}
                 {selectedLog.metadata && Object.keys(selectedLog.metadata).length > 0 && (
                   <div>
-                    <h4 className="text-xs font-semibold uppercase text-muted-foreground mb-3 flex items-center gap-2">
-                      <ScrollText className="h-3.5 w-3.5" /> Metadata
-                    </h4>
-                    <div className="rounded-lg border bg-muted/30 p-4">
+                    <h4 className="text-sm font-medium text-muted-foreground mb-2">Metadata</h4>
+                    <div className="rounded-lg border p-4">
                       <dl className="grid grid-cols-1 gap-x-4 gap-y-4 sm:grid-cols-2">
                         {Object.entries(selectedLog.metadata).map(([key, value]) => (
-                          <div key={key} className="sm:col-span-1">
+                          <div key={key}>
                             <dt className="text-xs font-medium text-muted-foreground mb-1">
                               {key}
                             </dt>
@@ -855,7 +624,7 @@ function CopyButton({ value }: { value: string }) {
       aria-label={copied ? 'Copied' : 'Copy value'}
     >
       {copied ? (
-        <CheckCircle className="h-3 w-3 text-green-500" />
+        <CheckCircle className="h-3 w-3 text-muted-foreground" />
       ) : (
         <Copy className="h-3 w-3 text-muted-foreground" />
       )}
