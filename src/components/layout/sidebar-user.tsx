@@ -11,7 +11,7 @@
  * Note: Full account/settings menu is in ProfileDropdown (header)
  */
 
-import { useEffect, useState } from 'react'
+import { useDisplayUser, type DisplayUser } from '@/hooks/use-display-user'
 import Link from 'next/link'
 import { ChevronsUpDown, LogOut, Settings } from 'lucide-react'
 import useDialogState from '@/hooks/use-dialog-state'
@@ -32,12 +32,7 @@ import {
 } from '@/components/ui/sidebar'
 import { SignOutDialog } from '@/components/sign-out-dialog'
 
-interface UserData {
-  id: string
-  name: string
-  email: string
-  avatar?: string
-}
+type UserData = DisplayUser
 
 interface SidebarUserProps {
   /**
@@ -49,21 +44,7 @@ interface SidebarUserProps {
 export function SidebarUser({ initialUser }: SidebarUserProps) {
   const { isMobile } = useSidebar()
   const [open, setOpen] = useDialogState()
-  const [user, setUser] = useState<UserData | null>(initialUser || null)
-
-  // Try to get user from sessionStorage on mount (for local auth) - syncing with external storage
-  useEffect(() => {
-    if (!user) {
-      try {
-        const storedUser = sessionStorage.getItem('app_user')
-        if (storedUser) {
-          setUser(JSON.parse(storedUser))
-        }
-      } catch {
-        // Ignore sessionStorage errors
-      }
-    }
-  }, [user])
+  const user = useDisplayUser(initialUser)
 
   // Don't render if no user
   if (!user) {
@@ -87,7 +68,7 @@ export function SidebarUser({ initialUser }: SidebarUserProps) {
             <DropdownMenuTrigger asChild>
               <SidebarMenuButton
                 size="lg"
-                className="ps-0 data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                className="ps-0 group-data-[collapsible=icon]:h-12! data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
               >
                 <Avatar className="h-8 w-8 rounded-lg">
                   <AvatarImage src={user.avatar} alt={user.name} />
