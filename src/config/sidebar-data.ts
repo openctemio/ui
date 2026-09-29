@@ -128,6 +128,17 @@ export const sidebarData: SidebarData = {
           icon: ClipboardCheck,
           permission: Permission.FindingsRead,
         },
+        // The central work object — one click from anywhere, next to the views
+        // built on it (Dashboard, My Work), not buried under Insights.
+        {
+          title: 'Findings',
+          url: '/findings',
+          icon: FileWarning,
+          // Badge is dynamically fetched from dashboard stats - see useDynamicBadges hook
+          // Approvals accessible via button in findings page (not sidebar - keeps sidebar lean)
+          permission: Permission.FindingsRead,
+          module: 'findings',
+        },
       ],
     },
 
@@ -139,6 +150,7 @@ export const sidebarData: SidebarData = {
     {
       title: 'Scoping',
       icon: Goal,
+      cluster: 'cycle',
       items: [
         {
           title: 'Attack Surface',
@@ -228,6 +240,7 @@ export const sidebarData: SidebarData = {
     {
       title: 'Discovery',
       icon: Telescope,
+      cluster: 'cycle',
       items: [
         {
           title: 'Scans',
@@ -335,6 +348,7 @@ export const sidebarData: SidebarData = {
     {
       title: 'Prioritization',
       icon: ListOrdered,
+      cluster: 'cycle',
       items: [
         {
           title: 'Exposure Chains',
@@ -402,6 +416,7 @@ export const sidebarData: SidebarData = {
     {
       title: 'Validation',
       icon: FlaskConical,
+      cluster: 'cycle',
       items: [
         {
           title: 'Penetration Testing',
@@ -478,6 +493,7 @@ export const sidebarData: SidebarData = {
     {
       title: 'Mobilization',
       icon: Rocket,
+      cluster: 'cycle',
       items: [
         {
           // One nav item; the two related views (Tasks / Solution Families) are
@@ -556,15 +572,6 @@ export const sidebarData: SidebarData = {
           icon: ShieldCheck,
           permission: Permission.DashboardRead,
           module: 'ctem_maturity',
-        },
-        {
-          title: 'Findings',
-          url: '/findings',
-          icon: FileWarning,
-          // Badge is dynamically fetched from dashboard stats - see useDynamicBadges hook
-          // Approvals accessible via button in findings page (not sidebar - keeps sidebar lean)
-          permission: Permission.FindingsRead,
-          module: 'findings',
         },
         {
           title: 'Reports',

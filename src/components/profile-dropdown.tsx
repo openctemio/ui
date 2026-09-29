@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useDisplayUser } from '@/hooks/use-display-user'
 import Link from 'next/link'
 import { Bell, Building2, History, LogOut, Settings, Shield, User, Users } from 'lucide-react'
 import useDialogState from '@/hooks/use-dialog-state'
@@ -19,28 +19,9 @@ import {
 import { SignOutDialog } from '@/components/sign-out-dialog'
 import { LanguageSwitcher } from '@/components/language-switcher'
 
-interface UserData {
-  id: string
-  name: string
-  email: string
-  avatar?: string
-}
-
 export function ProfileDropdown() {
   const [open, setOpen] = useDialogState()
-  const [user, setUser] = useState<UserData | null>(null)
-
-  // Get user from sessionStorage on mount
-  useEffect(() => {
-    try {
-      const storedUser = sessionStorage.getItem('app_user')
-      if (storedUser) {
-        setUser(JSON.parse(storedUser))
-      }
-    } catch {
-      // Ignore sessionStorage errors
-    }
-  }, [])
+  const user = useDisplayUser()
 
   // Generate initials from name or email
   const initials = user?.name
