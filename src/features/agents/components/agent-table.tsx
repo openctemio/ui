@@ -1,42 +1,12 @@
 'use client'
 
+import type * as React from 'react'
 import { useMemo } from 'react'
-import {
-  ColumnDef,
-  flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  SortingState,
-  useReactTable,
-} from '@tanstack/react-table'
-import { Button } from '@/components/ui/button'
+import type { ColumnDef } from '@tanstack/react-table'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Progress } from '@/components/ui/progress'
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import {
-  ArrowUpDown,
-  ChevronLeft,
-  ChevronRight,
-  ChevronsLeft,
-  ChevronsRight,
-  MoreHorizontal,
   Eye,
   Settings,
   KeyRound,
@@ -46,52 +16,97 @@ import {
   AlertCircle,
   Power,
   PowerOff,
-  Globe,
-  Zap,
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { Can, Permission } from '@/lib/permissions'
+import { Permission } from '@/lib/permissions'
+import {
+  DataTable,
+  DataTableColumnHeader,
+  DataTableRowActions,
+  type RowAction,
+} from '@/features/shared'
 
 import type { Agent } from '@/lib/api/agent-types'
-import { AgentTypeIcon, AGENT_TYPE_LABELS, AGENT_TYPE_COLORS } from './agent-type-icon'
+import { AgentTypeIcon, AGENT_TYPE_LABELS } from './agent-type-icon'
 
 interface AgentTableProps {
   agents: Agent[]
-  sorting: SortingState
-  onSortingChange: (sorting: SortingState) => void
-  globalFilter: string
-  rowSelection: Record<string, boolean>
-  onRowSelectionChange: (selection: Record<string, boolean>) => void
   onViewAgent: (agent: Agent) => void
   onEditAgent: (agent: Agent) => void
   onActivateAgent: (agent: Agent) => void
   onDeactivateAgent: (agent: Agent) => void
   onDeleteAgent: (agent: Agent) => void
   onRegenerateKey: (agent: Agent) => void
+  /** Selected rows, for the page's bulk-action bar. */
+  onSelectionChange?: (agents: Agent[]) => void
+  /** Bump to clear the selection (e.g. after a bulk delete). */
+  resetSelectionKey?: number
+  toolbarStart?: React.ReactNode
+  toolbarEnd?: React.ReactNode
+  emptyMessage?: string
 }
 
-// Check if agent is online using the health field from backend
-function _isAgentOnline(agent: Agent): boolean {
-  if (agent.status !== 'active') return false
-  return agent.health === 'online'
+/**
+ * Admin status first (disabled / revoked), then heartbeat health. Only an
+ * error is coloured; online carries a check icon, everything else is muted.
+ */
+function AgentStatusBadge({ agent }: { agent: Agent }) {
+  if (agent.status === 'disabled' || agent.status === 'revoked') {
+    return (
+      <Badge variant="secondary" className="gap-1">
+        <XCircle className="h-3.5 w-3.5" />
+        {agent.status === 'disabled' ? 'Disabled' : 'Revoked'}
+      </Badge>
+    )
+  }
+  if (agent.health === 'error') {
+    return (
+      <Badge variant="destructive" className="gap-1">
+        <AlertCircle className="h-3.5 w-3.5" />
+        Error
+      </Badge>
+    )
+  }
+  if (agent.health === 'online') {
+    return (
+      <Badge variant="outline" className="gap-1">
+        <CheckCircle className="h-3.5 w-3.5" />
+        Online
+      </Badge>
+    )
+  }
+  return (
+    <Badge variant="secondary" className="gap-1">
+      <XCircle className="h-3.5 w-3.5" />
+      Offline
+    </Badge>
+  )
+}
+
+function UsageCell({ percent }: { percent: number }) {
+  return (
+    <div className="flex w-24 items-center gap-2">
+      <span className="w-8 text-xs tabular-nums">{percent.toFixed(0)}%</span>
+      <Progress value={percent} className="h-1.5 flex-1" />
+    </div>
+  )
 }
 
 export function AgentTable({
   agents,
-  sorting,
-  onSortingChange,
-  globalFilter,
-  rowSelection,
-  onRowSelectionChange,
   onViewAgent,
   onEditAgent,
   onActivateAgent,
   onDeactivateAgent,
   onDeleteAgent,
   onRegenerateKey,
+  onSelectionChange,
+  resetSelectionKey,
+  toolbarStart,
+  toolbarEnd,
+  emptyMessage = 'No agents match these filters',
 }: AgentTableProps) {
-  const columns: ColumnDef<Agent>[] = useMemo(() => {
-    const baseColumns: ColumnDef<Agent>[] = [
+  const columns = useMemo<ColumnDef<Agent>[]>(
+    () => [
       {
         id: 'select',
         header: ({ table }) => (
@@ -109,366 +124,149 @@ export function AgentTable({
             checked={row.getIsSelected()}
             onCheckedChange={(value) => row.toggleSelected(!!value)}
             aria-label="Select row"
+            onClick={(e) => e.stopPropagation()}
           />
         ),
         enableSorting: false,
+        enableHiding: false,
       },
       {
-        accessorKey: 'name',
-        header: ({ column }) => (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-            className="-ms-4"
-          >
-            Agent
-            <ArrowUpDown className="ms-2 h-4 w-4" />
-          </Button>
-        ),
+        id: 'name',
+        accessorFn: (a) =>
+          `${a.name} ${a.description ?? ''} ${a.hostname ?? ''} ${a.ip_address ?? ''}`,
+        sortingFn: (a, b) => a.original.name.localeCompare(b.original.name),
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Agent" />,
         cell: ({ row }) => {
           const agent = row.original
+          const host = agent.ip_address || agent.hostname
           return (
-            <div className="flex items-center gap-3">
-              <AgentTypeIcon type={agent.type} className="h-5 w-5" />
-              <div>
-                <p className="font-medium">{agent.name}</p>
-                <p className="text-xs text-muted-foreground">
-                  {agent.ip_address || agent.hostname || 'No host info'}
-                </p>
+            <div className="flex min-w-0 items-center gap-3">
+              <AgentTypeIcon type={agent.type} className="h-5 w-5 shrink-0" />
+              <div className="min-w-0">
+                <p className="truncate font-medium">{agent.name}</p>
+                {host ? (
+                  <p className="truncate font-mono text-xs text-muted-foreground">{host}</p>
+                ) : (
+                  <p className="text-xs text-muted-foreground">No host info</p>
+                )}
               </div>
             </div>
           )
         },
       },
       {
-        accessorKey: 'type',
-        header: 'Type',
-        cell: ({ row }) => {
-          const agent = row.original
-          return (
-            <Badge variant="outline" className={AGENT_TYPE_COLORS[agent.type]}>
-              {AGENT_TYPE_LABELS[agent.type]}
-            </Badge>
-          )
-        },
+        id: 'type',
+        accessorFn: (a) => AGENT_TYPE_LABELS[a.type],
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Type" />,
+        cell: ({ getValue }) => <Badge variant="outline">{getValue<string>()}</Badge>,
       },
       {
-        accessorKey: 'status',
-        header: 'Status',
-        cell: ({ row }) => {
-          const agent = row.original
-
-          // Check admin status first
-          if (agent.status === 'disabled') {
-            return (
-              <Badge className="bg-gray-500 text-white gap-1">
-                <XCircle className="h-3.5 w-3.5" />
-                Disabled
-              </Badge>
-            )
-          }
-
-          if (agent.status === 'revoked') {
-            return (
-              <Badge className="bg-gray-600 text-white gap-1">
-                <XCircle className="h-3.5 w-3.5" />
-                Revoked
-              </Badge>
-            )
-          }
-
-          // For active agents, show health status
-          if (agent.health === 'error') {
-            return (
-              <Badge className="bg-red-500 text-white gap-1">
-                <AlertCircle className="h-3.5 w-3.5" />
-                Error
-              </Badge>
-            )
-          }
-
-          if (agent.health === 'online') {
-            return (
-              <Badge className="bg-green-500 text-white gap-1">
-                <CheckCircle className="h-3.5 w-3.5" />
-                Online
-              </Badge>
-            )
-          }
-
-          // offline or unknown
-          return (
-            <Badge className="bg-gray-400 text-white gap-1">
-              <XCircle className="h-3.5 w-3.5" />
-              Offline
-            </Badge>
-          )
-        },
+        id: 'status',
+        accessorFn: (a) => (a.status === 'active' ? a.health : a.status),
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
+        cell: ({ row }) => <AgentStatusBadge agent={row.original} />,
       },
-    ]
-
-    // Add remaining columns
-    baseColumns.push(
       {
         id: 'activeJobs',
-        header: ({ column }) => (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-            className="-ms-4"
-          >
-            Active Jobs
-            <ArrowUpDown className="ms-2 h-4 w-4" />
-          </Button>
-        ),
-        cell: ({ row }) => {
-          const agent = row.original
-          const activeJobs = agent.active_jobs || 0
-          return (
-            <span className="flex items-center gap-1.5 text-sm font-medium">
-              <Zap
-                className={cn(
-                  'h-4 w-4',
-                  activeJobs > 0 ? 'text-amber-500 fill-amber-500/20' : 'text-gray-400'
-                )}
-              />
-              {activeJobs}
-            </span>
-          )
-        },
+        accessorFn: (a) => a.active_jobs || 0,
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Active jobs" />,
+        cell: ({ getValue }) => <span className="text-sm tabular-nums">{getValue<number>()}</span>,
       },
       {
         id: 'cpuUsage',
-        header: 'CPU',
-        cell: ({ row }) => {
-          const agent = row.original
-          const cpuPercent = agent.cpu_percent || 0
-          return (
-            <div className="flex items-center gap-2 w-24">
-              <span className="text-xs w-8">{cpuPercent.toFixed(0)}%</span>
-              <Progress value={cpuPercent} className="h-1.5 flex-1" />
-            </div>
-          )
-        },
+        accessorFn: (a) => a.cpu_percent || 0,
+        header: ({ column }) => <DataTableColumnHeader column={column} title="CPU" />,
+        cell: ({ getValue }) => <UsageCell percent={getValue<number>()} />,
       },
       {
         id: 'memoryUsage',
-        header: 'Memory',
-        cell: ({ row }) => {
-          const agent = row.original
-          const memoryPercent = agent.memory_percent || 0
-          return (
-            <div className="flex items-center gap-2 w-24">
-              <span className="text-xs w-8">{memoryPercent.toFixed(0)}%</span>
-              <Progress value={memoryPercent} className="h-1.5 flex-1" />
-            </div>
-          )
-        },
+        accessorFn: (a) => a.memory_percent || 0,
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Memory" />,
+        cell: ({ getValue }) => <UsageCell percent={getValue<number>()} />,
       },
       {
-        accessorKey: 'version',
+        id: 'version',
+        accessorFn: (a) => a.version ?? '',
+        enableSorting: false,
         header: 'Version',
         cell: ({ row }) => (
-          <span className="font-mono text-sm text-muted-foreground">
+          <span className="font-mono text-xs text-muted-foreground">
             {row.original.version ? `v${row.original.version}` : '—'}
           </span>
         ),
       },
       {
         id: 'region',
-        header: 'Region',
-        cell: ({ row }) => {
-          const agent = row.original
-          const region = agent.region || agent.labels?.region || agent.labels?.env || 'local'
-          return (
-            <span className="flex items-center gap-1 text-sm">
-              <Globe className="h-3 w-3 text-muted-foreground" />
-              {region}
-            </span>
-          )
-        },
+        accessorFn: (a) => a.region || a.labels?.region || a.labels?.env || 'local',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Region" />,
+        cell: ({ getValue }) => <span className="text-sm">{getValue<string>()}</span>,
       },
       {
         id: 'actions',
+        enableSorting: false,
+        enableHiding: false,
         cell: ({ row }) => {
           const agent = row.original
-
-          return (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => onViewAgent(agent)}>
-                  <Eye className="me-2 h-4 w-4" />
-                  View Details
-                </DropdownMenuItem>
-                <Can permission={Permission.AgentsWrite}>
-                  <DropdownMenuItem onClick={() => onEditAgent(agent)}>
-                    <Settings className="me-2 h-4 w-4" />
-                    Edit
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => onRegenerateKey(agent)}>
-                    <KeyRound className="me-2 h-4 w-4" />
-                    Regenerate API Key
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  {agent.status === 'disabled' || agent.status === 'revoked' ? (
-                    <DropdownMenuItem
-                      onClick={() => onActivateAgent(agent)}
-                      className="text-green-500"
-                    >
-                      <Power className="me-2 h-4 w-4" />
-                      Activate
-                    </DropdownMenuItem>
-                  ) : agent.status === 'active' ? (
-                    <DropdownMenuItem
-                      onClick={() => onDeactivateAgent(agent)}
-                      className="text-amber-500"
-                    >
-                      <PowerOff className="me-2 h-4 w-4" />
-                      Deactivate
-                    </DropdownMenuItem>
-                  ) : null}
-                </Can>
-                <Can permission={Permission.AgentsDelete}>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem className="text-red-500" onClick={() => onDeleteAgent(agent)}>
-                    <Trash2 className="me-2 h-4 w-4" />
-                    Delete
-                  </DropdownMenuItem>
-                </Can>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )
+          const actions: RowAction[] = [
+            { label: 'View details', icon: Eye, onClick: () => onViewAgent(agent) },
+            {
+              label: 'Edit',
+              icon: Settings,
+              onClick: () => onEditAgent(agent),
+              permission: Permission.AgentsWrite,
+            },
+            {
+              label: 'Regenerate API key',
+              icon: KeyRound,
+              onClick: () => onRegenerateKey(agent),
+              permission: Permission.AgentsWrite,
+            },
+          ]
+          if (agent.status === 'disabled' || agent.status === 'revoked') {
+            actions.push({
+              label: 'Activate',
+              icon: Power,
+              onClick: () => onActivateAgent(agent),
+              separatorBefore: true,
+              permission: Permission.AgentsWrite,
+            })
+          } else if (agent.status === 'active') {
+            actions.push({
+              label: 'Deactivate',
+              icon: PowerOff,
+              onClick: () => onDeactivateAgent(agent),
+              separatorBefore: true,
+              permission: Permission.AgentsWrite,
+            })
+          }
+          actions.push({
+            label: 'Delete',
+            icon: Trash2,
+            onClick: () => onDeleteAgent(agent),
+            destructive: true,
+            separatorBefore: true,
+            permission: Permission.AgentsDelete,
+          })
+          return <DataTableRowActions actions={actions} />
         },
-      }
-    )
-
-    return baseColumns
-  }, [onViewAgent, onEditAgent, onActivateAgent, onDeactivateAgent, onDeleteAgent, onRegenerateKey])
-
-  const table = useReactTable({
-    data: agents,
-    columns,
-    state: { sorting, globalFilter, rowSelection },
-    onSortingChange: (updater) => {
-      const newSorting = typeof updater === 'function' ? updater(sorting) : updater
-      onSortingChange(newSorting)
-    },
-    onRowSelectionChange: (updater) => {
-      const newSelection = typeof updater === 'function' ? updater(rowSelection) : updater
-      onRowSelectionChange(newSelection)
-    },
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-  })
+      },
+    ],
+    [onViewAgent, onEditAgent, onActivateAgent, onDeactivateAgent, onDeleteAgent, onRegenerateKey]
+  )
 
   return (
-    <div>
-      {/* Table */}
-      <div className="overflow-x-auto rounded-md border">
-        <Table>
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id}>
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(header.column.columnDef.header, header.getContext())}
-                  </TableHead>
-                ))}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && 'selected'}
-                  className="cursor-pointer"
-                  onClick={(e) => {
-                    // Don't trigger row click for checkboxes, buttons, menu items, or links
-                    if (
-                      (e.target as HTMLElement).closest('[role="checkbox"]') ||
-                      (e.target as HTMLElement).closest('[role="menuitem"]') ||
-                      (e.target as HTMLElement).closest('[data-radix-collection-item]') ||
-                      (e.target as HTMLElement).closest('button') ||
-                      (e.target as HTMLElement).closest('a')
-                    ) {
-                      return
-                    }
-                    onViewAgent(row.original)
-                  }}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center">
-                  No agents found.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
-
-      {/* Pagination */}
-      <div className="mt-4 flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
-          {table.getFilteredSelectedRowModel().rows.length} of{' '}
-          {table.getFilteredRowModel().rows.length} row(s) selected
-        </p>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.setPageIndex(0)}
-            disabled={!table.getCanPreviousPage()}
-          >
-            <ChevronsLeft className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <span className="text-sm">
-            Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-            disabled={!table.getCanNextPage()}
-          >
-            <ChevronsRight className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-    </div>
+    <DataTable
+      columns={columns}
+      data={agents}
+      getRowId={(a) => a.id}
+      showSearch={false}
+      onRowClick={onViewAgent}
+      onSelectionChange={onSelectionChange}
+      resetSelectionKey={resetSelectionKey}
+      showSelectionCount={false}
+      toolbarStart={toolbarStart}
+      toolbarEnd={toolbarEnd}
+      emptyMessage={emptyMessage}
+    />
   )
 }

@@ -5,10 +5,8 @@ import { AgentsSection } from '@/features/agents'
 
 export default function AgentsPage() {
   return (
-    <>
-      <Main>
-        <AgentsSection />
-      </Main>
-    </>
+    <Main>
+      <AgentsSection />
+    </Main>
   )
 }
