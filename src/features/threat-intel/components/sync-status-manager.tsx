@@ -56,22 +56,14 @@ const sourceConfig: Record<
  */
 export function SyncStatusManager({ statuses, onRefresh, className }: SyncStatusManagerProps) {
   // One card, one row per source (divided) — not a bordered box per source
-  // nested inside the card.
+  // nested inside the card. No refresh button here: the page header has one.
   return (
     <Card className={className}>
-      <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
-        <div>
-          <CardTitle>Data sync</CardTitle>
-          <CardDescription>
-            Turn each threat-intelligence feed on or off, or sync it now.
-          </CardDescription>
-        </div>
-        {onRefresh && (
-          <Button variant="outline" size="sm" onClick={onRefresh}>
-            <RefreshCw className="h-4 w-4 sm:me-2" />
-            <span className="hidden sm:inline">Refresh</span>
-          </Button>
-        )}
+      <CardHeader>
+        <CardTitle>Data sync</CardTitle>
+        <CardDescription>
+          Turn each threat-intelligence feed on or off, or sync it now.
+        </CardDescription>
       </CardHeader>
       <CardContent>
         {statuses.length === 0 ? (
