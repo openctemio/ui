@@ -1536,36 +1536,47 @@ function FindingsContent() {
   const facetPanelScrollable = <div className="flex min-h-0 flex-1 flex-col">{facetPanel}</div>
 
   const total = findingsResponse?.total ?? 0
-  const filterBadge =
+
+  // Icon-only filter toggle; the active-filter count sits on its corner.
+  const filterCountDot =
     activeCount > 0 ? (
-      <span className="ms-1.5 rounded-full bg-primary px-1.5 text-[11px] font-medium tabular-nums text-primary-foreground">
+      <span className="absolute -end-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-medium tabular-nums text-primary-foreground">
         {activeCount}
       </span>
     ) : null
-
+  const filterLabel = activeCount > 0 ? `Filters (${activeCount} active)` : 'Filters'
   const filterButtons = (
     <>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="outline"
+            size="icon"
+            className="relative hidden h-9 w-9 lg:inline-flex"
+            onClick={() => setFiltersOpen((o) => !o)}
+            aria-pressed={filtersOpen}
+            aria-controls="finding-filters"
+            aria-label={filterLabel}
+          >
+            {filtersOpen ? (
+              <PanelLeftClose className="h-4 w-4" />
+            ) : (
+              <ListFilter className="h-4 w-4" />
+            )}
+            {filterCountDot}
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>{filtersOpen ? 'Hide filters' : 'Show filters'}</TooltipContent>
+      </Tooltip>
       <Button
         variant="outline"
-        size="sm"
-        className="hidden h-9 lg:inline-flex"
-        onClick={() => setFiltersOpen((o) => !o)}
-        aria-pressed={filtersOpen}
-        aria-controls="finding-filters"
-      >
-        {filtersOpen ? <PanelLeftClose className="h-4 w-4" /> : <ListFilter className="h-4 w-4" />}
-        <span className="ms-2">Filters</span>
-        {filterBadge}
-      </Button>
-      <Button
-        variant="outline"
-        size="sm"
-        className="h-9 lg:hidden"
+        size="icon"
+        className="relative h-9 w-9 lg:hidden"
         onClick={() => setFilterSheetOpen(true)}
+        aria-label={filterLabel}
       >
         <ListFilter className="h-4 w-4" />
-        <span className="ms-2">Filters</span>
-        {filterBadge}
+        {filterCountDot}
       </Button>
     </>
   )
