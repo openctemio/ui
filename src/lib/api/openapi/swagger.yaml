@@ -6859,9 +6859,18 @@ definitions:
           format: int64
           type: integer
         type: object
+      epss_high_open:
+        description: open findings with EPSS >= 0.10
+        type: integer
+      kev_open:
+        description: open findings whose CVE is in CISA KEV
+        type: integer
       open_count:
         type: integer
       resolved_count:
+        type: integer
+      sla_breached:
+        description: open findings past their SLA (overdue/exceeded)
         type: integer
       total:
         type: integer
