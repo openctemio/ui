@@ -7,7 +7,7 @@
 
 import useSWR, { type SWRConfiguration, type KeyedMutator } from 'swr'
 import useSWRMutation from 'swr/mutation'
-import { get, post, put, patch, del } from './client'
+import { get, post, put, del } from './client'
 import {
   securityEndpoints,
   type AssetFilters,
@@ -243,73 +243,6 @@ export function useLicenseStats(config?: SWRConfiguration) {
     ...defaultConfig,
     ...config,
   })
-}
-
-// ============================================
-// FINDING HOOKS
-// ============================================
-
-export function useFindings(filters?: FindingFilters, config?: SWRConfiguration) {
-  const endpoint = securityEndpoints.findings.list(filters)
-  return useSWR<PaginatedResponse<unknown>>(endpoint, fetcher, {
-    ...defaultConfig,
-    ...config,
-  })
-}
-
-export function useFinding(findingId: string | null, config?: SWRConfiguration) {
-  const endpoint = findingId ? securityEndpoints.findings.get(findingId) : null
-  return useSWR(endpoint, fetcher, {
-    ...defaultConfig,
-    ...config,
-  })
-}
-
-export function useFindingStats(config?: SWRConfiguration) {
-  const endpoint = securityEndpoints.findings.stats()
-  return useSWR(endpoint, fetcher, {
-    ...defaultConfig,
-    ...config,
-  })
-}
-
-export function useFindingsBySeverity(
-  severity: string,
-  filters?: FindingFilters,
-  config?: SWRConfiguration
-) {
-  const endpoint = securityEndpoints.findings.bySeverity(severity, filters)
-  return useSWR<PaginatedResponse<unknown>>(endpoint, fetcher, {
-    ...defaultConfig,
-    ...config,
-  })
-}
-
-export function useCreateFinding() {
-  return useSWRMutation(securityEndpoints.findings.create(), (url, { arg }: { arg: unknown }) =>
-    post(url, arg)
-  )
-}
-
-export function useUpdateFinding(findingId: string) {
-  return useSWRMutation(
-    securityEndpoints.findings.update(findingId),
-    (url, { arg }: { arg: unknown }) => put(url, arg)
-  )
-}
-
-export function useUpdateFindingStatus(findingId: string) {
-  return useSWRMutation(
-    securityEndpoints.findings.updateStatus(findingId),
-    (url, { arg }: { arg: { status: string } }) => patch(url, arg)
-  )
-}
-
-export function useAssignFinding(findingId: string) {
-  return useSWRMutation(
-    securityEndpoints.findings.assign(findingId),
-    (url, { arg }: { arg: { assigneeId: string } }) => patch(url, arg)
-  )
 }
 
 // ============================================

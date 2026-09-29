@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
-import { MetricStrip } from '../metric-strip'
+import { MetricStrip, smColumns } from '../metric-strip'
 
 describe('MetricStrip', () => {
   it('renders each label and a locale-formatted value', () => {
@@ -46,6 +46,12 @@ describe('MetricStrip', () => {
     expect(onClick).toHaveBeenCalledTimes(1)
     // Non-clickable metrics are not buttons.
     expect(screen.queryByRole('button', { name: /total/i })).not.toBeInTheDocument()
+  })
+
+  it('balances the tablet grid so no metric is left alone on a row', () => {
+    const cols = [1, 2, 3, 4, 5, 6, 7, 8].map(smColumns)
+    expect(cols).toEqual([1, 2, 3, 4, 3, 3, 4, 4])
+    for (let n = 2; n <= 8; n++) expect(n % smColumns(n)).not.toBe(1)
   })
 
   it('shows skeletons instead of values while loading', () => {
