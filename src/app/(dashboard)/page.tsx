@@ -12,6 +12,7 @@ import {
   Trash2,
   Pencil,
   RefreshCw,
+  SlidersHorizontal,
 } from 'lucide-react'
 import { useSWRConfig } from 'swr'
 
@@ -32,6 +33,7 @@ import { getErrorMessage } from '@/lib/api/error-handler'
 import { CtemDashboard } from '@/features/dashboard/components/ctem-dashboard'
 import { ClassicDashboard } from '@/features/dashboard/components/classic-dashboard'
 import { DashboardCanvas } from '@/features/dashboards/components/dashboard-canvas'
+import { DashboardCanvasEditor } from '@/features/dashboards/components/dashboard-canvas-editor'
 import {
   useMyDashboards,
   useRevalidateDashboards,
@@ -58,6 +60,7 @@ export default function Dashboard() {
   const [active, setActive] = useState<string>('ctem')
   const [restored, setRestored] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
+  const [customizing, setCustomizing] = useState(false)
 
   // Refresh all — re-fetch every dashboard/finding/stats query on the page (the
   // widgets self-fetch via SWR, so revalidating their keys refreshes the view).
@@ -102,6 +105,7 @@ export default function Dashboard() {
 
   const choose = (key: string) => {
     setActive(key)
+    setCustomizing(false)
     try {
       window.localStorage.setItem(STORAGE_KEY, key)
     } catch {
@@ -206,14 +210,12 @@ export default function Dashboard() {
                 {activeCustom && (
                   <>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem asChild>
-                      <Link href="/dashboards">
-                        <Plus className="me-2 h-4 w-4" /> Add widget
-                      </Link>
+                    <DropdownMenuItem onClick={() => setCustomizing(true)}>
+                      <SlidersHorizontal className="me-2 h-4 w-4" /> Customize widgets
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
                       <Link href="/dashboards">
-                        <Pencil className="me-2 h-4 w-4" /> Edit “{activeCustom.name}”
+                        <Pencil className="me-2 h-4 w-4" /> Edit details
                       </Link>
                     </DropdownMenuItem>
                     {!activeCustom.is_default && (
@@ -239,7 +241,11 @@ export default function Dashboard() {
         ) : active === 'classic' ? (
           <ClassicDashboard />
         ) : activeCustom ? (
-          <DashboardCanvas layout={activeCustom.layout} />
+          customizing ? (
+            <DashboardCanvasEditor dashboard={activeCustom} onExit={() => setCustomizing(false)} />
+          ) : (
+            <DashboardCanvas layout={activeCustom.layout} columns={activeCustom.columns} />
+          )
         ) : (
           // Active id no longer exists (e.g. deleted elsewhere) — fall back.
           <CtemDashboard />
