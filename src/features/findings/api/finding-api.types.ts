@@ -308,49 +308,6 @@ export interface ApiFinding {
   misconfig_cause?: string
 }
 
-/**
- * Vulnerability entity from API (global CVE database)
- */
-export interface ApiVulnerability {
-  id: string
-  cve_id: string
-  aliases?: string[]
-  title: string
-  description?: string
-  severity: Severity
-  cvss_score?: number
-  cvss_vector?: string
-  epss_score?: number
-  epss_percentile?: number
-  cisa_kev?: {
-    date_added: string
-    due_date: string
-    ransomware_use?: string
-    notes?: string
-    is_past_due: boolean
-  }
-  exploit_available: boolean
-  exploit_maturity: string
-  references?: Array<{
-    type: string
-    url: string
-  }>
-  affected_versions?: Array<{
-    ecosystem: string
-    package: string
-    introduced?: string
-    fixed?: string
-  }>
-  fixed_versions?: string[]
-  remediation?: string
-  published_at?: string
-  modified_at?: string
-  status: string
-  risk_score: number
-  created_at: string
-  updated_at: string
-}
-
 // ============================================
 // List Response Types
 // ============================================
@@ -364,15 +321,6 @@ export interface PaginationLinks {
 
 export interface ApiFindingListResponse {
   data: ApiFinding[]
-  total: number
-  page: number
-  per_page: number
-  total_pages: number
-  links?: PaginationLinks
-}
-
-export interface ApiVulnerabilityListResponse {
-  data: ApiVulnerability[]
   total: number
   page: number
   per_page: number
@@ -420,22 +368,6 @@ export interface AssignFindingInput {
   comment?: string
 }
 
-export interface TriageFindingInput {
-  reason?: string // Optional reason for confirming the finding
-}
-
-export interface ClassifyFindingInput {
-  cve_id?: string
-  cwe_ids?: string[]
-  owasp_ids?: string[]
-  cvss_score?: number
-  cvss_vector?: string
-}
-
-export interface SetFindingTagsInput {
-  tags: string[]
-}
-
 // ============================================
 // Comment Types
 // ============================================
@@ -454,16 +386,7 @@ export interface ApiFindingComment {
   updated_at?: string
 }
 
-export interface ApiFindingCommentListResponse {
-  data: ApiFindingComment[]
-  total: number
-}
-
 export interface AddCommentInput {
-  content: string
-}
-
-export interface UpdateCommentInput {
   content: string
 }
 
@@ -504,19 +427,6 @@ export interface FindingApiFilters {
   finding_ids?: string[]
   /** Sort spec, e.g. 'priority_class,severity,-created_at'. */
   sort?: string
-  page?: number
-  per_page?: number
-}
-
-export interface VulnerabilityApiFilters {
-  cve_ids?: string[]
-  severities?: Severity[]
-  exploit_available?: boolean
-  cisa_kev_only?: boolean
-  statuses?: string[]
-  min_cvss?: number
-  max_cvss?: number
-  min_epss?: number
   page?: number
   per_page?: number
 }

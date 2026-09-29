@@ -12,7 +12,7 @@
  * import { useUsers, useCreateUser } from '@/lib/api'
  *
  * // Import security platform hooks
- * import { useAssets, useFindings, useScans } from '@/lib/api'
+ * import { useAssets, useScans } from '@/lib/api'
  *
  * // Import endpoints
  * import { endpoints, securityEndpoints } from '@/lib/api'
@@ -263,16 +263,6 @@ export {
   useEcosystemStats,
   useLicenseStats,
 
-  // Finding hooks
-  useFindings,
-  useFinding,
-  useFindingStats,
-  useFindingsBySeverity,
-  useCreateFinding,
-  useUpdateFinding,
-  useUpdateFindingStatus,
-  useAssignFinding,
-
   // Scan hooks
   useScans,
   useScan,
@@ -369,28 +359,8 @@ export {
 } from './scan-types'
 
 // ============================================
-// FINDING HOOKS (with typed responses)
+// FINDING TYPES
 // ============================================
-
-export {
-  // Finding list/detail hooks
-  useFindings as useFindingsTyped,
-  useAssetFindings,
-  useFinding as useFindingTyped,
-  useFindingComments,
-
-  // Finding mutation hooks
-  useCreateFinding as useCreateFindingTyped,
-  useUpdateFindingStatus as useUpdateFindingStatusTyped,
-  useDeleteFinding as useDeleteFindingTyped,
-  useAddFindingComment,
-  useDeleteFindingComment,
-
-  // Cache utilities
-  findingKeys,
-  invalidateFindingsCache,
-  invalidateAssetFindingsCache,
-} from './finding-hooks'
 
 export type {
   Finding as FindingTyped,
