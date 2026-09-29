@@ -100,9 +100,7 @@ export function ThreatModelTable({
         header: 'Attack path',
         enableSorting: false,
         cell: ({ row }) => (
-          <span className="text-muted-foreground font-mono text-xs">
-            {pathLabel(row.original, nameFor)}
-          </span>
+          <span className="text-muted-foreground text-xs">{pathLabel(row.original, nameFor)}</span>
         ),
       },
       {
@@ -174,7 +172,7 @@ export function ThreatModelTable({
         accessorKey: 'score',
         header: ({ column }) => <DataTableColumnHeader column={column} title="Score" />,
         cell: ({ row }) => (
-          <span className="font-mono text-sm tabular-nums">{row.original.score.toFixed(1)}</span>
+          <span className="text-sm tabular-nums">{row.original.score.toFixed(1)}</span>
         ),
       },
       {
@@ -199,94 +197,97 @@ export function ThreatModelTable({
 
   const setFilter = (patch: Partial<ThreatFilters>) => onFiltersChange({ ...filters, ...patch })
 
-  return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-3">
-        <Select
-          value={filters.status}
-          onValueChange={(v) => setFilter({ status: v as ThreatFilters['status'] })}
+  const filtersOn =
+    filters.status !== ALL ||
+    filters.tactic !== ALL ||
+    filters.attacker !== ALL ||
+    filters.technique !== ALL
+
+  // The filters sit in the table toolbar rather than a row of their own above it.
+  const toolbarStart = (
+    <div className="flex min-w-0 flex-wrap items-center gap-2">
+      <Select
+        value={filters.status}
+        onValueChange={(v) => setFilter({ status: v as ThreatFilters['status'] })}
+      >
+        <SelectTrigger className="h-9 w-auto max-w-52" aria-label="Filter by status">
+          <SelectValue placeholder="Status" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value={ALL}>All statuses</SelectItem>
+          {statuses.map((s) => (
+            <SelectItem key={s} value={s} className="capitalize">
+              {getThreatStatusStyle(s as Threat['status']).label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      <Select value={filters.tactic} onValueChange={(v) => setFilter({ tactic: v })}>
+        <SelectTrigger className="h-9 w-auto max-w-52" aria-label="Filter by tactic">
+          <SelectValue placeholder="Tactic" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value={ALL}>All tactics</SelectItem>
+          {tactics.map((t) => (
+            <SelectItem key={t} value={t}>
+              {t}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      <Select value={filters.attacker} onValueChange={(v) => setFilter({ attacker: v })}>
+        <SelectTrigger className="h-9 w-auto max-w-52" aria-label="Filter by attacker">
+          <SelectValue placeholder="Attacker" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value={ALL}>All attackers</SelectItem>
+          {attackers.map(([id, name]) => (
+            <SelectItem key={id} value={id}>
+              {name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      <Select value={filters.technique} onValueChange={(v) => setFilter({ technique: v })}>
+        <SelectTrigger className="h-9 w-auto max-w-52" aria-label="Filter by technique">
+          <SelectValue placeholder="Technique" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value={ALL}>All techniques</SelectItem>
+          {techniques.map(([id, label]) => (
+            <SelectItem key={id} value={id}>
+              {label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      {filtersOn && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-9"
+          onClick={() =>
+            onFiltersChange({ status: ALL, tactic: ALL, attacker: ALL, technique: ALL })
+          }
         >
-          <SelectTrigger className="w-[150px]" aria-label="Filter by status">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL}>All statuses</SelectItem>
-            {statuses.map((s) => (
-              <SelectItem key={s} value={s} className="capitalize">
-                {getThreatStatusStyle(s as Threat['status']).label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Select value={filters.tactic} onValueChange={(v) => setFilter({ tactic: v })}>
-          <SelectTrigger className="w-[180px]" aria-label="Filter by tactic">
-            <SelectValue placeholder="Tactic" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL}>All tactics</SelectItem>
-            {tactics.map((t) => (
-              <SelectItem key={t} value={t}>
-                {t}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Select value={filters.attacker} onValueChange={(v) => setFilter({ attacker: v })}>
-          <SelectTrigger className="w-[210px]" aria-label="Filter by attacker">
-            <SelectValue placeholder="Attacker" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL}>All attackers</SelectItem>
-            {attackers.map(([id, name]) => (
-              <SelectItem key={id} value={id}>
-                {name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Select value={filters.technique} onValueChange={(v) => setFilter({ technique: v })}>
-          <SelectTrigger className="w-[240px]" aria-label="Filter by technique">
-            <SelectValue placeholder="Technique" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL}>All techniques</SelectItem>
-            {techniques.map(([id, label]) => (
-              <SelectItem key={id} value={id}>
-                {label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        {(filters.status !== ALL ||
-          filters.tactic !== ALL ||
-          filters.attacker !== ALL ||
-          filters.technique !== ALL) && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() =>
-              onFiltersChange({ status: ALL, tactic: ALL, attacker: ALL, technique: ALL })
-            }
-          >
-            Clear filters
-          </Button>
-        )}
-
-        <span className="text-muted-foreground ms-auto text-sm">
-          {filtered.length} of {threats.length} threats
-        </span>
-      </div>
-
-      <DataTable
-        columns={columns}
-        data={filtered}
-        showSearch={false}
-        emptyMessage="No threats match the current filters."
-      />
+          Clear filters
+        </Button>
+      )}
     </div>
+  )
+
+  return (
+    <DataTable
+      columns={columns}
+      data={filtered}
+      showSearch={false}
+      toolbarStart={toolbarStart}
+      emptyMessage="No threats match these filters"
+      emptyDescription="Clear the filters to see every threat."
+    />
   )
 }
