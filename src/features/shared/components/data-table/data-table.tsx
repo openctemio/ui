@@ -2,9 +2,12 @@
 
 import * as React from 'react'
 import { cn } from '@/lib/utils'
+import { useIsMobile } from '@/hooks/use-mobile'
 import {
   ColumnDef,
   ColumnFiltersState,
+  type Header,
+  type Row,
   SortingState,
   VisibilityState,
   flexRender,
@@ -122,6 +125,12 @@ interface DataTableProps<TData, TValue> {
    * only the pinned name readable. Pagination stays the same.
    */
   mobileRow?: (row: TData) => React.ReactNode
+  /**
+   * Without `mobileRow`, rows still render as cards below `md`, built from the
+   * columns (first column as title, the next few as fields). Set false to keep
+   * the scrolling table on phones.
+   */
+  mobileCards?: boolean
 }
 
 /** Fixed width of the selection column, so the pinned column after it knows its offset. */
@@ -142,6 +151,106 @@ const PINNED_START_EDGE_CLASS =
 /** Soft edge before the end-pinned actions column, shown while content remains to scroll. */
 const PINNED_END_EDGE_CLASS =
   "before:pointer-events-none before:absolute before:inset-y-0 before:-start-3 before:w-3 before:bg-gradient-to-l before:from-foreground/10 before:to-transparent before:opacity-0 before:transition-opacity before:content-[''] rtl:before:bg-gradient-to-r group-data-[hidden-end=true]/table:before:opacity-100"
+
+/** Columns the automatic phone card treats as controls rather than fields. */
+const CONTROL_COLUMN_IDS = new Set(['select', 'actions'])
+/** Fields shown under the title on an automatic phone card. */
+const MOBILE_CARD_FIELDS = 4
+
+/**
+ * A column's readable label for the phone card: `meta.label`, a string
+ * header, or the `title` of a `DataTableColumnHeader` header; else its id.
+ */
+function columnLabel<TData>(header: Header<TData, unknown>): string {
+  const def = header.column.columnDef
+  const metaLabel = (def.meta as { label?: unknown } | undefined)?.label
+  if (typeof metaLabel === 'string') return metaLabel
+  if (typeof def.header === 'string') return def.header
+  if (typeof def.header === 'function') {
+    try {
+      const el = def.header(header.getContext())
+      if (React.isValidElement<{ title?: unknown }>(el) && typeof el.props.title === 'string') {
+        return el.props.title
+      }
+    } catch {
+      // A header that needs React context cannot be read here; fall through.
+    }
+  }
+  const id = header.column.id.replace(/[_.-]+/g, ' ').trim()
+  return id.charAt(0).toUpperCase() + id.slice(1)
+}
+
+/**
+ * Phone layout for a table with no `mobileRow`: the first data column is the
+ * title, the next few become label/value fields, and the row's checkbox and
+ * actions stay reachable. Built from the same cells, so it needs no per-page code.
+ */
+function AutoMobileCard<TData>({
+  row,
+  labels,
+  onRowClick,
+}: {
+  row: Row<TData>
+  labels: Map<string, string>
+  onRowClick?: (row: TData) => void
+}) {
+  const cells = row.getVisibleCells()
+  const select = cells.find((c) => c.column.id === 'select')
+  const actions = cells.find((c) => c.column.id === 'actions')
+  const [title, ...rest] = cells.filter((c) => !CONTROL_COLUMN_IDS.has(c.column.id))
+  const fields = rest.slice(0, MOBILE_CARD_FIELDS)
+  return (
+    <div
+      data-state={row.getIsSelected() ? 'selected' : undefined}
+      className={cn(
+        'flex items-start gap-3 px-3 py-3 data-[state=selected]:bg-muted',
+        onRowClick && 'cursor-pointer hover:bg-muted/50'
+      )}
+      onClick={(e) => {
+        const target = e.target as HTMLElement
+        if (!e.currentTarget.contains(target)) return
+        if (target.closest(INTERACTIVE_SELECTOR)) return
+        onRowClick?.(row.original)
+      }}
+    >
+      {select && (
+        <div className="pt-0.5">
+          {flexRender(select.column.columnDef.cell, select.getContext())}
+        </div>
+      )}
+      <div className="min-w-0 flex-1">
+        {title && (
+          <div className="min-w-0 text-sm font-medium [overflow-wrap:anywhere]">
+            {flexRender(title.column.columnDef.cell, title.getContext())}
+          </div>
+        )}
+        {fields.length > 0 && (
+          <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-2">
+            {fields.map((cell) => (
+              <div key={cell.id} className="min-w-0">
+                <dt className="truncate text-xs text-muted-foreground">
+                  {labels.get(cell.column.id)}
+                </dt>
+                <dd className="mt-0.5 min-w-0 text-sm [overflow-wrap:anywhere] [&_[data-slot=badge]]:max-w-full [&_[data-slot=badge]]:whitespace-normal">
+                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        )}
+      </div>
+      {actions && (
+        <div className="-me-1 shrink-0">
+          {flexRender(actions.column.columnDef.cell, actions.getContext())}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** Elements inside a row that act on their own instead of opening the row. */
+const INTERACTIVE_SELECTOR =
+  'button, a[href], input, select, textarea, label, [role="checkbox"], [role="switch"], [role="menuitem"], [data-radix-collection-item]'
 
 export function DataTable<TData, TValue>({
   columns,
@@ -171,7 +280,12 @@ export function DataTable<TData, TValue>({
   resetSelectionKey,
   showSelectionCount = true,
   mobileRow,
+  mobileCards = true,
 }: DataTableProps<TData, TValue>) {
+  // Cards replace the table on phones. Decided in JS rather than by hiding one
+  // with CSS, so only one of the two is ever rendered.
+  const isPhone = useIsMobile()
+  const phoneCards = isPhone && (!!mobileRow || mobileCards)
   // Which sides of the horizontally-scrolling table have content hidden under
   // the pinned columns — drives the edge shadows.
   const tableWrapRef = React.useRef<HTMLDivElement>(null)
@@ -245,6 +359,14 @@ export function DataTable<TData, TValue>({
     },
   })
 
+  // Field labels for the automatic phone cards.
+  const mobileLabels = new Map<string, string>()
+  if (phoneCards && !mobileRow) {
+    for (const header of table.getFlatHeaders()) {
+      mobileLabels.set(header.column.id, columnLabel(header as Header<TData, unknown>))
+    }
+  }
+
   // Pinned columns: the selection checkbox (if first) + the first data column.
   const visibleColumns = table.getVisibleLeafColumns()
   const selectColumn = visibleColumns[0]?.id === 'select' ? visibleColumns[0] : undefined
@@ -314,14 +436,17 @@ export function DataTable<TData, TValue>({
 
   return (
     <div className="space-y-4">
-      {/* Toolbar - Search and Column toggle on same row */}
-      <div className="flex items-center gap-2">
+      {/* Toolbar: one row where it fits; on narrow screens filters wrap onto a
+          second row rather than squeezing the search box to a few letters. */}
+      <div className="flex flex-wrap items-center gap-2">
         {toolbarStart && (
-          <div className="flex min-w-0 flex-1 items-center gap-2">{toolbarStart}</div>
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2 [&>.relative:has(input)]:min-w-36">
+            {toolbarStart}
+          </div>
         )}
         {/* Search */}
         {showSearch && (
-          <div className="relative flex-1 min-w-0 sm:max-w-sm">
+          <div className="relative min-w-36 flex-1 sm:max-w-sm">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder={searchPlaceholder}
@@ -372,11 +497,7 @@ export function DataTable<TData, TValue>({
           {showColumnToggle && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className={cn('h-9', mobileRow && 'hidden md:inline-flex')}
-                >
+                <Button variant="outline" size="sm" className={cn('h-9', phoneCards && 'hidden')}>
                   <SlidersHorizontal className="h-4 w-4 sm:me-2" />
                   <span className="hidden sm:inline">Columns</span>
                 </Button>
@@ -403,10 +524,23 @@ export function DataTable<TData, TValue>({
         </div>
       </div>
 
-      {mobileRow && (
-        <div className="divide-y rounded-md border md:hidden">
+      {phoneCards && (
+        <div className="divide-y rounded-md border">
           {table.getRowModel().rows.length ? (
-            table.getRowModel().rows.map((row) => <div key={row.id}>{mobileRow(row.original)}</div>)
+            table
+              .getRowModel()
+              .rows.map((row) =>
+                mobileRow ? (
+                  <div key={row.id}>{mobileRow(row.original)}</div>
+                ) : (
+                  <AutoMobileCard
+                    key={row.id}
+                    row={row}
+                    labels={mobileLabels}
+                    onRowClick={onRowClick}
+                  />
+                )
+              )
           ) : (
             <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
               <Inbox className="h-10 w-10 text-muted-foreground/50" />
@@ -420,10 +554,7 @@ export function DataTable<TData, TValue>({
       {/* Table */}
       <div
         ref={tableWrapRef}
-        className={cn(
-          'group/table rounded-md border overflow-x-auto',
-          mobileRow && 'hidden md:block'
-        )}
+        className={cn('group/table rounded-md border overflow-x-auto', phoneCards && 'hidden')}
         data-hidden-start={hiddenEdges.start}
         data-hidden-end={hiddenEdges.end}
         // scroll does not bubble, but a capture listener on an ancestor sees the
@@ -456,13 +587,13 @@ export function DataTable<TData, TValue>({
                   data-state={row.getIsSelected() && 'selected'}
                   className={cn('group/row', onRowClick && 'cursor-pointer hover:bg-muted/50')}
                   onClick={(e) => {
-                    // Don't trigger row click if clicking on checkbox, button, or dropdown
                     const target = e.target as HTMLElement
-                    const isInteractiveElement =
-                      target.closest('button') ||
-                      target.closest('[role="checkbox"]') ||
-                      target.closest('[data-radix-collection-item]') ||
-                      target.closest('[role="menuitem"]')
+                    // React bubbles events out of portals: a click inside a row's
+                    // open menu, or a dialog opened from it, reaches this handler
+                    // although it is not in the row's DOM. Only real row clicks count.
+                    if (!e.currentTarget.contains(target)) return
+                    // Nor clicks on the row's own controls.
+                    const isInteractiveElement = target.closest(INTERACTIVE_SELECTOR)
 
                     if (!isInteractiveElement && onRowClick) {
                       onRowClick(row.original)
