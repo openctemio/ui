@@ -231,7 +231,7 @@ function AutoMobileCard<TData>({
                 <dt className="truncate text-xs text-muted-foreground">
                   {labels.get(cell.column.id)}
                 </dt>
-                <dd className="mt-0.5 min-w-0 text-sm [overflow-wrap:anywhere]">
+                <dd className="mt-0.5 min-w-0 text-sm [overflow-wrap:anywhere] [&_[data-slot=badge]]:max-w-full [&_[data-slot=badge]]:whitespace-normal">
                   {flexRender(cell.column.columnDef.cell, cell.getContext())}
                 </dd>
               </div>
