@@ -362,6 +362,16 @@ export const sidebarData: SidebarData = {
           module: 'iocs',
         },
         {
+          // Detect & Respond — tenant-wide IOC match feed showing runtime
+          // detections that fired and which findings auto-reopened. Same `iocs`
+          // module so the toggle gates it end-to-end.
+          title: 'Detections',
+          url: '/threat-intel/detections',
+          icon: Radar,
+          permission: Permission.ThreatIntelRead,
+          module: 'iocs',
+        },
+        {
           title: 'Business Impact',
           url: '/business-impact',
           icon: Building2,

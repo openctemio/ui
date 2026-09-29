@@ -290,6 +290,12 @@ export const routePermissions: Record<string, RoutePermissionConfig> = {
     permission: Permission.ThreatIntelRead,
     module: Module.Iocs,
   },
+  // Detections (Detect & Respond) — tenant-wide IOC match feed. Same `iocs`
+  // module + threat_intel:read as the catalogue; backend gates /api/v1/iocs/matches.
+  '/threat-intel/detections': {
+    permission: Permission.ThreatIntelRead,
+    module: Module.Iocs,
+  },
   '/threat-intel/**': {
     permission: Permission.VulnerabilitiesRead,
     module: Module.ThreatIntel,
