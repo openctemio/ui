@@ -38,7 +38,7 @@ function CopyableUrl({ label, url }: { label: string; url: string }) {
     <div className="space-y-1">
       <Label className="text-muted-foreground text-xs">{label}</Label>
       <div className="flex items-center gap-2">
-        <code className="bg-muted flex-1 truncate rounded px-2 py-1 text-xs">{url}</code>
+        <code className="bg-muted min-w-0 flex-1 truncate rounded px-2 py-1 text-xs">{url}</code>
         <Button
           type="button"
           size="icon"
@@ -174,7 +174,7 @@ export default function SamlSettingsPage() {
             <Skeleton className="h-64 w-full" />
           </div>
         ) : (
-          <div className="grid gap-5 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
             <div className="space-y-5 lg:col-span-2">
               <Card>
                 <CardHeader>
