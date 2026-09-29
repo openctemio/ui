@@ -35,7 +35,7 @@ export function DashboardCanvas({ layout }: { layout: DashboardWidget[] }) {
             className="min-w-0"
           >
             {def ? (
-              def.component()
+              <def.component />
             ) : (
               <Card className="h-full">
                 <CardContent className="p-5 text-sm text-muted-foreground">
