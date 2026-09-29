@@ -7,6 +7,7 @@ import { Plus, ChevronDown, Check, Star, LayoutGrid, Settings2, Trash2, Pencil }
 import { Main } from '@/components/layout'
 import { Button } from '@/components/ui/button'
 import { PageHeader } from '@/features/shared'
+// (Run scan removed from the dashboard header — kept clean; scans live in the Scans nav.)
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,7 +17,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { toast } from 'sonner'
-import { Can, Permission } from '@/lib/permissions'
 import { getErrorMessage } from '@/lib/api/error-handler'
 import { CtemDashboard } from '@/features/dashboard/components/ctem-dashboard'
 import { ClassicDashboard } from '@/features/dashboard/components/classic-dashboard'
@@ -109,15 +109,6 @@ export default function Dashboard() {
           description="Continuous threat exposure — what's exploitable now, and what to do about it."
         >
           <div className="flex items-center gap-2">
-            <Can permission={Permission.ScansWrite} mode="disable">
-              <Button asChild size="sm">
-                <Link href="/scans">
-                  <Plus className="me-2 h-4 w-4" />
-                  Run scan
-                </Link>
-              </Button>
-            </Can>
-
             {/* Switch Dashboard */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
