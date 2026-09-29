@@ -1732,19 +1732,30 @@ function FindingsContent() {
         <>
           <MetricStrip className="mt-5" loading={isInitialLoading} items={metrics} />
 
-          <div className="mt-5 flex items-start gap-5">
-            {filtersOpen && (
+          <div className="mt-5 flex items-start">
+            {/* Always mounted so opening and closing can animate: the slot's
+                width (and the gap after it) eases between 0 and the card's
+                width while the card fades, and the table beside it resizes in
+                step. The card keeps its own width, so its contents never
+                reflow mid-animation. */}
+            <div
+              inert={!filtersOpen}
+              className={cn(
+                'sticky top-4 hidden shrink-0 overflow-hidden transition-[width,margin-inline-end,opacity] duration-300 ease-in-out motion-reduce:transition-none lg:block',
+                filtersOpen ? 'me-5 w-64 opacity-100' : 'me-0 w-0 opacity-0'
+              )}
+            >
               <aside
                 id="finding-filters"
                 aria-label="Finding filters"
                 // A self-contained floating card, as tall as the viewport and
                 // pinned while the page scrolls: its length no longer depends
                 // on the table's, and long filter lists scroll inside it.
-                className="sticky top-4 hidden h-[calc(100svh-7.5rem)] w-64 shrink-0 flex-col rounded-xl border bg-card p-4 shadow-sm lg:flex"
+                className="flex h-[calc(100svh-7.5rem)] w-64 flex-col rounded-xl border bg-card p-4 shadow-sm"
               >
                 {facetPanelScrollable}
               </aside>
-            )}
+            </div>
 
             <div className="min-w-0 flex-1 space-y-3">
               {contextChips.length > 0 && (
