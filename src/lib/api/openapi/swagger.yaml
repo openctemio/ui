@@ -3469,6 +3469,8 @@ definitions:
         type: integer
       business_unit:
         type: string
+      business_unit_id:
+        type: string
       cloud_count:
         type: integer
       created_at:
@@ -3565,6 +3567,14 @@ definitions:
         description: Timestamps
         type: string
       id:
+        type: string
+      impact_availability:
+        type: string
+      impact_confidentiality:
+        description: 'CTEM Scoping: CIA impact rating (low | moderate | high; empty
+          = not rated)'
+        type: string
+      impact_integrity:
         type: string
       is_internet_accessible:
         type: boolean
@@ -3711,11 +3721,40 @@ definitions:
     type: object
   internal_infra_http_handler.AssetStatsResponse:
     properties:
+      by_business_unit:
+        additionalProperties:
+          type: integer
+        type: object
+      by_control_plane:
+        additionalProperties:
+          type: integer
+        type: object
       by_criticality:
         additionalProperties:
           type: integer
         type: object
+      by_data_classification:
+        additionalProperties:
+          type: integer
+        description: CTEM inventory facet counts.
+        type: object
+      by_environment:
+        additionalProperties:
+          type: integer
+        type: object
       by_exposure:
+        additionalProperties:
+          type: integer
+        type: object
+      by_has_owner:
+        additionalProperties:
+          type: integer
+        type: object
+      by_internet_accessible:
+        additionalProperties:
+          type: integer
+        type: object
+      by_provider:
         additionalProperties:
           type: integer
         type: object
@@ -3843,6 +3882,14 @@ definitions:
         description: Timestamps
         type: string
       id:
+        type: string
+      impact_availability:
+        type: string
+      impact_confidentiality:
+        description: 'CTEM Scoping: CIA impact rating (low | moderate | high; empty
+          = not rated)'
+        type: string
+      impact_integrity:
         type: string
       is_internet_accessible:
         type: boolean
@@ -5226,6 +5273,13 @@ definitions:
         type: boolean
       message_template:
         type: string
+      metadata:
+        additionalProperties: {}
+        description: |-
+          Metadata holds non-sensitive provider-specific config (e.g. Splunk HEC
+          hec_url / index / sourcetype). The credential (token/URL) still goes in
+          Credentials; only non-secret routing config belongs here.
+        type: object
       min_interval_minutes:
         type: integer
       name:
@@ -5239,6 +5293,7 @@ definitions:
         - telegram
         - webhook
         - email
+        - splunk
         type: string
     required:
     - auth_type
@@ -6268,11 +6323,25 @@ definitions:
         type: string
       created_at:
         type: string
+      ctem_id:
+        type: string
+      cve_id:
+        type: string
       description:
         type: string
       details:
         additionalProperties: {}
         type: object
+      effective_criticality:
+        description: |-
+          CTEM enrichment (read-time, additive). Present only when an enricher is
+          wired and the exposure has a linked asset (criticality/reachability) or a
+          CVE in its details (EPSS/KEV).
+        type: string
+      epss_percentile:
+        type: number
+      epss_score:
+        type: number
       event_type:
         type: string
       fingerprint:
@@ -6281,8 +6350,16 @@ definitions:
         type: string
       id:
         type: string
+      is_in_kev:
+        type: boolean
+      is_internet_accessible:
+        type: boolean
+      kev_due_date:
+        type: string
       last_seen_at:
         type: string
+      on_attack_path:
+        type: boolean
       resolution_notes:
         type: string
       resolved_at:
@@ -6401,6 +6478,11 @@ definitions:
     type: object
   internal_infra_http_handler.FindingRemediationResponse:
     properties:
+      alternative_fixes:
+        description: Other acceptable remediations
+        items:
+          type: string
+        type: array
       auto_fixable:
         description: Whether the fix can be auto-applied
         type: boolean
@@ -6417,6 +6499,9 @@ definitions:
         allOf:
         - $ref: '#/definitions/internal_infra_http_handler.FixRegexResponse'
         description: Regex-based fix pattern
+      preferred_fix:
+        description: 'CTEM Mobilization: engineering-grade work-item fields.'
+        type: string
       recommendation:
         description: Human-readable guidance
         type: string
@@ -6430,6 +6515,12 @@ definitions:
         items:
           type: string
         type: array
+      success_criteria:
+        description: Definition of done
+        type: string
+      verification_method:
+        description: How a fix is checked
+        type: string
     type: object
   internal_infra_http_handler.FindingResponse:
     properties:
@@ -6863,7 +6954,10 @@ definitions:
         description: open findings with EPSS >= 0.10
         type: integer
       kev_open:
-        description: open findings whose CVE is in CISA KEV
+        description: |-
+          Risk posture over OPEN findings (same scope as the rest: tenant, data
+          scope and optional asset_id). Already computed by the stats query; the
+          UI previously fired a separate list request per number to get them.
         type: integer
       open_count:
         type: integer
@@ -9689,6 +9783,14 @@ definitions:
         type: string
       exposure:
         type: string
+      impact_availability:
+        type: string
+      impact_confidentiality:
+        description: 'CTEM Scoping: CIA impact rating (low | moderate | high). Empty
+          string clears.'
+        type: string
+      impact_integrity:
+        type: string
       name:
         maxLength: 255
         minLength: 1
@@ -9916,6 +10018,12 @@ definitions:
         type: boolean
       message_template:
         type: string
+      metadata:
+        additionalProperties: {}
+        description: |-
+          Metadata, when non-nil, replaces the integration's non-sensitive
+          provider config (e.g. Splunk HEC hec_url / index / sourcetype).
+        type: object
       min_interval_minutes:
         type: integer
       name:
@@ -12505,6 +12613,50 @@ paths:
         in: query
         name: has_findings
         type: boolean
+      - description: Filter crown-jewel assets
+        in: query
+        name: is_crown_jewel
+        type: boolean
+      - description: Filter by sub_type
+        in: query
+        name: sub_type
+        type: string
+      - description: Filter by business unit membership (comma-separated UUIDs)
+        in: query
+        name: business_unit_ids
+        type: string
+      - description: Filter assets with (true) / without (false) an assigned owner
+        in: query
+        name: has_owner
+        type: boolean
+      - description: 'Filter by data classification (comma-separated: public,internal,confidential,restricted,secret)'
+        in: query
+        name: data_classifications
+        type: string
+      - description: Filter assets that are a control-plane dependency
+        in: query
+        name: is_control_plane
+        type: boolean
+      - description: Filter internet-reachable assets
+        in: query
+        name: is_internet_accessible
+        type: boolean
+      - description: 'Filter by environment (comma-separated: production,staging,development,testing,dr)'
+        in: query
+        name: environments
+        type: string
+      - description: Filter by provider/source (comma-separated)
+        in: query
+        name: providers
+        type: string
+      - description: Filter assets last seen at/after this time (RFC3339 or YYYY-MM-DD)
+        in: query
+        name: last_seen_after
+        type: string
+      - description: Filter assets last seen at/before this time (RFC3339 or YYYY-MM-DD)
+        in: query
+        name: last_seen_before
+        type: string
       - description: Sort field (e.g., -created_at, name, -risk_score)
         in: query
         name: sort
@@ -16882,10 +17034,19 @@ paths:
         parameter scopes the stats to a single asset (used by the Findings
         page when filtered by `?assetId=…` so the severity cards match the
         filtered table instead of showing global tenant counts).
+        Optional sources query parameter (comma-separated, same values and
+        validation as the list endpoint's sources filter) scopes every
+        number to those sources; the Exposures type pages use it to get
+        their counts in one request instead of walking the list.
       parameters:
       - description: Restrict stats to a single asset
         in: query
         name: asset_id
+        type: string
+      - description: Restrict stats to these finding sources (comma-separated, max
+          25)
+        in: query
+        name: sources
         type: string
       produces:
       - application/json
@@ -16894,6 +17055,12 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/internal_infra_http_handler.FindingStatsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "401":
           description: Unauthorized
           schema:

@@ -14,9 +14,13 @@ import {
   SeverityDonut,
   SeverityTrend,
   humanize,
+  TypeBreakdownUnavailable,
 } from '@/features/exposures/components'
 import { useTenant } from '@/context/tenant-provider'
+import type { FindingSource } from '@/lib/api/finding-types'
 import { FileCode, AlertTriangle, Flame, GitBranch } from 'lucide-react'
+
+const CODE_SOURCES: FindingSource[] = ['sast']
 
 export default function CodeVulnerabilitiesPage() {
   const { currentTenant } = useTenant()
@@ -24,7 +28,7 @@ export default function CodeVulnerabilitiesPage() {
   // Org-wide context (repository coverage, asset mix, trend) has no per-type variant.
   const { stats, isLoading: dashboardLoading } = useDashboardStats(tenantId)
   // Type-scoped finding stats: code vulnerabilities come from static analysis.
-  const { stats: typeStats, isLoading: typeLoading } = useFindingTypeStats(tenantId, ['sast'])
+  const { stats: typeStats, isLoading: typeLoading } = useFindingTypeStats(tenantId, CODE_SOURCES)
   const isLoading = dashboardLoading || typeLoading
 
   const criticalCount = typeStats.bySeverity.critical || 0
@@ -56,6 +60,13 @@ export default function CodeVulnerabilitiesPage() {
             icon={FileCode}
             title="No code vulnerabilities yet"
             description="Configure static analysis scanners to detect code-level security vulnerabilities."
+          />
+        ) : !typeStats.scoped ? (
+          <TypeBreakdownUnavailable
+            icon={FileCode}
+            total={typeStats.total}
+            noun={['code finding', 'code findings']}
+            sources={CODE_SOURCES}
           />
         ) : (
           <div className="space-y-5">

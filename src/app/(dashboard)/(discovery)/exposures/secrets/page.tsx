@@ -12,9 +12,13 @@ import {
   SeverityDonut,
   SeverityShareList,
   StatusBars,
+  TypeBreakdownUnavailable,
 } from '@/features/exposures/components'
 import { useTenant } from '@/context/tenant-provider'
+import type { FindingSource } from '@/lib/api/finding-types'
 import { Lock, AlertTriangle, GitBranch, Shield } from 'lucide-react'
+
+const SECRET_SOURCES: FindingSource[] = ['secret']
 
 export default function SecretsExposurePage() {
   const { currentTenant } = useTenant()
@@ -22,7 +26,7 @@ export default function SecretsExposurePage() {
   // Org-wide context (repository scan coverage) has no per-type variant.
   const { stats, isLoading: dashboardLoading } = useDashboardStats(tenantId)
   // Type-scoped finding stats: exposed secrets/credentials.
-  const { stats: typeStats, isLoading: typeLoading } = useFindingTypeStats(tenantId, ['secret'])
+  const { stats: typeStats, isLoading: typeLoading } = useFindingTypeStats(tenantId, SECRET_SOURCES)
   const isLoading = dashboardLoading || typeLoading
 
   const criticalCount = typeStats.bySeverity.critical || 0
@@ -43,6 +47,13 @@ export default function SecretsExposurePage() {
             icon={Lock}
             title="No secret exposures yet"
             description="Configure secret scanning to detect exposed credentials in your codebase."
+          />
+        ) : !typeStats.scoped ? (
+          <TypeBreakdownUnavailable
+            icon={Lock}
+            total={typeStats.total}
+            noun={['secret', 'secrets']}
+            sources={SECRET_SOURCES}
           />
         ) : (
           <div className="space-y-5">

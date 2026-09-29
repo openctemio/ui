@@ -8,6 +8,7 @@
  */
 
 import type { ReactNode } from 'react'
+import Link from 'next/link'
 import type { LucideIcon } from 'lucide-react'
 import { BarChart3 } from 'lucide-react'
 import {
@@ -25,6 +26,7 @@ import {
   XAxis,
   YAxis,
 } from '@/components/charts'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState, SeverityBadge, type Severity } from '@/features/shared'
@@ -89,6 +91,38 @@ export function OverviewSkeleton() {
         ))}
       </div>
     </div>
+  )
+}
+
+/**
+ * Shown when the API ignored the `sources` filter on `/findings/stats` (a server
+ * older than that filter): its breakdowns are tenant-wide, so rather than pass
+ * them off as this type's, show the exact per-type total and hand off to the
+ * Findings list, which filters by source server-side.
+ */
+export function TypeBreakdownUnavailable({
+  icon,
+  total,
+  noun,
+  sources,
+}: {
+  icon: LucideIcon
+  total: number
+  /** Singular and plural, e.g. ['secret', 'secrets']. */
+  noun: [string, string]
+  sources: readonly string[]
+}) {
+  return (
+    <EmptyState
+      icon={icon}
+      title={`${total.toLocaleString()} ${total === 1 ? noun[0] : noun[1]}`}
+      description="The severity and status breakdown for this type needs a newer API version. The findings list shows them in full."
+      action={
+        <Button asChild variant="outline" size="sm">
+          <Link href={`/findings?sources=${sources.join(',')}`}>View in findings</Link>
+        </Button>
+      }
+    />
   )
 }
 
