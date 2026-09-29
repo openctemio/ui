@@ -54,7 +54,7 @@ const PRIMARY_FILTER_KEYS: string[] = [
 const TRIGGER_LABELS: Record<string, string> = {
   types: 'Type',
   criticalities: 'Criticality',
-  hasOwner: 'Owner',
+  hasOwner: 'Ownership',
   exposures: 'Exposure',
   dataClassifications: 'Data classification',
 }

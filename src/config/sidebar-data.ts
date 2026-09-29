@@ -122,6 +122,12 @@ export const sidebarData: SidebarData = {
           icon: LayoutDashboard,
           permission: Permission.DashboardRead,
         },
+        {
+          title: 'My Work',
+          url: '/my-work',
+          icon: ClipboardCheck,
+          permission: Permission.FindingsRead,
+        },
       ],
     },
 
