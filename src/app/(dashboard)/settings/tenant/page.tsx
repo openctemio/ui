@@ -1078,10 +1078,10 @@ export default function TenantPage() {
                   <div className="space-y-0.5">
                     <Label>Restricted data scope</Label>
                     <p className="text-sm text-muted-foreground">
-                      Non-admins see only the assets they&apos;re assigned (directly or via a
-                      team) and their findings. When off, a user with no assignment sees
-                      everything. Assign members to teams with their assets before turning
-                      this on, or they&apos;ll see nothing.
+                      Non-admins see only the assets they&apos;re assigned (directly or via a team)
+                      and their findings. When off, a user with no assignment sees everything.
+                      Assign members to teams with their assets before turning this on, or
+                      they&apos;ll see nothing.
                     </p>
                   </div>
                   <Switch
