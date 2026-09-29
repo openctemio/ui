@@ -1,12 +1,11 @@
 // Exposure Event Components
-export {
-  ExposureStatsCards,
-  ExposureSeverityBreakdown,
-  ExposureStateBreakdown,
-  ExposureTrendIndicator,
-} from './exposure-stats-cards'
+export { ExposureSeverityBreakdown, ExposureStateBreakdown } from './exposure-stats-cards'
 
-export { ExposureTable } from './exposure-table'
+export {
+  getExposureColumns,
+  EXPOSURE_STATE_BADGE,
+  EXPOSURE_EVENT_TYPE_LABELS,
+} from './exposure-table'
 
 export {
   ExposureThreatPills,
@@ -19,3 +18,19 @@ export {
   ExposureQuickActions,
   ExposureBulkActions,
 } from './exposure-state-actions'
+
+export {
+  ChartCard,
+  ChartEmpty,
+  OverviewSkeleton,
+  OVERVIEW_STATS_GRID,
+  OVERVIEW_CHARTS_GRID,
+  CATEGORY_CHART_COLORS,
+  RankedBarList,
+  SeverityBars,
+  SeverityDonut,
+  SeverityShareList,
+  SeverityTrend,
+  StatusBars,
+  humanize,
+} from './exposure-type-overview'
