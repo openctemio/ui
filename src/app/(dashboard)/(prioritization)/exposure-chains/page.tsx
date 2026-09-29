@@ -6,14 +6,10 @@ import { Main } from '@/components/layout'
 import { PageHeader, StatsCard, EmptyState } from '@/features/shared'
 import { useExposureChains, PathGraph } from '@/features/attack-surface'
 import type { ExposureChain, PathGraphPath, PathGraphNode } from '@/features/attack-surface'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { CRITICALITY_CHART_COLORS } from '@/lib/criticality-colors'
+import { Button } from '@/components/ui/button'
 import { Route, ShieldAlert, ShieldCheck, Globe, ArrowRight, Network, Target } from 'lucide-react'
-
-// The "all clear" success hue reuses the shared criticality token (low = green =
-// good), so no hardcoded palette class is introduced for the safe state.
-const SAFE_COLOR = CRITICALITY_CHART_COLORS.low
 
 // ============================================================
 // Map an exposure chain onto the generic path-graph model.
@@ -56,7 +52,7 @@ function chainToPath(chain: ExposureChain, maxScore: number): PathGraphPath {
 function LoadingSkeleton() {
   return (
     <>
-      <section className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <section className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[1, 2, 3, 4].map((i) => (
           <Card key={i}>
             <CardHeader className="pb-2">
@@ -69,7 +65,7 @@ function LoadingSkeleton() {
           </Card>
         ))}
       </section>
-      <Card>
+      <Card className="mt-5">
         <CardHeader>
           <Skeleton className="h-5 w-48" />
           <Skeleton className="h-4 w-64" />
@@ -97,13 +93,12 @@ function NoRelationshipData() {
       title="No relationship data yet"
       description="Exposure chains are built from asset relationships. Add relationships between your assets so we can trace paths from internet-facing entry points to assets carrying KEV or critical findings."
       action={
-        <Link
-          href="/assets"
-          className="bg-primary text-primary-foreground hover:bg-primary/90 mt-6 inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium"
-        >
-          Go to Assets
-          <ArrowRight className="h-4 w-4" />
-        </Link>
+        <Button size="sm" asChild>
+          <Link href="/assets">
+            Go to assets
+            <ArrowRight className="ms-2 h-4 w-4" />
+          </Link>
+        </Button>
       }
     />
   )
@@ -131,9 +126,8 @@ export default function ExposureChainsPage() {
   return (
     <Main>
       <PageHeader
-        title="Exposure Chains"
-        description="Concrete attack paths from internet-facing entry points to assets carrying KEV or critical findings — ranked by urgency"
-        className="mb-6"
+        title="Exposure chains"
+        description="Attack paths from internet-facing entry points to assets with KEV or critical findings, ranked by urgency."
       />
 
       {isLoading ? (
@@ -143,77 +137,64 @@ export default function ExposureChainsPage() {
       ) : (
         <>
           {/* Stats row */}
-          <section className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <section className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <StatsCard
-              title="Entry Points"
+              title="Entry points"
               value={summary?.entryPoints ?? 0}
               icon={Globe}
               description="Internet-facing assets"
-              changeType={summary && summary.entryPoints > 0 ? 'negative' : 'positive'}
             />
             <StatsCard
-              title="Targets at Risk"
+              title="Targets at risk"
               value={summary?.targetsAtRisk ?? 0}
+              valueClassName={(summary?.targetsAtRisk ?? 0) > 0 ? 'text-destructive' : undefined}
               icon={ShieldAlert}
               description="Reachable KEV/critical assets"
-              changeType={summary && summary.targetsAtRisk > 0 ? 'negative' : 'positive'}
             />
             <StatsCard
-              title="Exposure Chains"
+              title="Exposure chains"
               value={summary?.totalChains ?? 0}
               icon={Route}
               description="Entry-point to dangerous asset"
-              changeType={summary && summary.totalChains > 0 ? 'negative' : 'positive'}
             />
             <StatsCard
               title="Shown"
               value={chains.length}
               icon={Target}
               description="Top chains by urgency"
-              changeType="neutral"
             />
           </section>
 
           {/* Main: ranked chains + explainer */}
-          <section className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-            <div className="lg:col-span-2">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Route className="h-5 w-5" />
-                    Chains Ranked by Urgency
-                  </CardTitle>
-                  <CardDescription>
-                    Each chain is the shortest path from a public entry point to an asset with open
-                    KEV or critical findings. Hover to trace a path; click any node to open that
-                    asset&apos;s findings. Break the top chains first.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <PathGraph
-                    paths={paths}
-                    empty={
-                      <div className="flex h-48 flex-col items-center justify-center text-center">
-                        <ShieldCheck className="mb-3 h-10 w-10" style={{ color: SAFE_COLOR }} />
-                        <p className="font-medium" style={{ color: SAFE_COLOR }}>
-                          No exposure chains found
-                        </p>
-                        <p className="text-muted-foreground mt-1 text-sm">
-                          No internet-facing entry point currently reaches an asset with KEV or
-                          critical findings via tracked relationships.
-                        </p>
-                      </div>
-                    }
+          <section className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-3">
+            {/* The ranked list is a column of bordered chain rows, so it sits under a
+                section heading rather than inside another card. */}
+            <section className="space-y-3 lg:col-span-2">
+              <div>
+                <h2 className="text-base font-semibold">Chains ranked by urgency</h2>
+                <p className="text-sm text-muted-foreground">
+                  Each chain is the shortest path from a public entry point to an asset with open
+                  KEV or critical findings. Hover to trace a path; click any node to open that
+                  asset&apos;s findings. Break the top chains first.
+                </p>
+              </div>
+              <PathGraph
+                paths={paths}
+                empty={
+                  <EmptyState
+                    icon={ShieldCheck}
+                    title="No exposure chains"
+                    description="No internet-facing entry point reaches an asset with KEV or critical findings through tracked relationships."
                   />
-                </CardContent>
-              </Card>
-            </div>
+                }
+              />
+            </section>
 
             {/* Sidebar explainer */}
-            <div className="flex flex-col gap-6">
-              <Card className="bg-muted/30">
+            <div className="flex flex-col gap-5">
+              <Card>
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-sm">How Chains Are Built</CardTitle>
+                  <CardTitle className="text-sm">How chains are built</CardTitle>
                 </CardHeader>
                 <CardContent className="text-muted-foreground space-y-2 text-xs">
                   <p>

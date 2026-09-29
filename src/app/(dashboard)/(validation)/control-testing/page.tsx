@@ -1,8 +1,15 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import type { ColumnDef } from '@tanstack/react-table'
 import { Main } from '@/components/layout'
-import { PageHeader, StatsCard } from '@/features/shared'
+import {
+  PageHeader,
+  StatsCard,
+  DataTable,
+  DataTableColumnHeader,
+  EmptyState,
+} from '@/features/shared'
 import { ValidationCoverageCard } from '@/features/validation/components/validation-coverage-card'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -28,24 +35,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import {
-  ShieldCheck,
-  CheckCircle,
-  XCircle,
-  MinusCircle,
-  Clock,
-  AlertTriangle,
-  Plus,
-  FlaskConical,
-} from 'lucide-react'
+import { ShieldCheck, CheckCircle, XCircle, Plus, FlaskConical, Percent } from 'lucide-react'
 import {
   useControlTests,
   useControlTestStats,
@@ -65,32 +55,29 @@ import { mutate } from 'swr'
 // Status config
 // ─────────────────────────────────────────────────────────
 
-const statusConfig: Record<string, { icon: React.ReactNode; color: string; bgColor: string }> = {
-  pass: {
-    icon: <CheckCircle className="h-4 w-4" />,
-    color: 'text-green-600 dark:text-green-400',
-    bgColor: 'bg-green-500/20',
-  },
-  fail: {
-    icon: <XCircle className="h-4 w-4" />,
-    color: 'text-red-600 dark:text-red-400',
-    bgColor: 'bg-red-500/20',
-  },
-  partial: {
-    icon: <AlertTriangle className="h-4 w-4" />,
-    color: 'text-yellow-600 dark:text-yellow-400',
-    bgColor: 'bg-yellow-500/20',
-  },
-  untested: {
-    icon: <Clock className="h-4 w-4" />,
-    color: 'text-gray-500 dark:text-gray-400',
-    bgColor: 'bg-gray-500/20',
-  },
-  not_applicable: {
-    icon: <MinusCircle className="h-4 w-4" />,
-    color: 'text-slate-500 dark:text-slate-400',
-    bgColor: 'bg-slate-500/20',
-  },
+// Theme tokens only: a failed control is the one state worth colouring.
+function ControlStatusBadge({ status }: { status: string }) {
+  const label = status.replace(/_/g, ' ')
+  if (status === 'pass')
+    return (
+      <Badge variant="secondary" className="capitalize">
+        {label}
+      </Badge>
+    )
+  return (
+    <Badge
+      variant="outline"
+      className={
+        status === 'fail'
+          ? 'capitalize text-destructive'
+          : status === 'partial'
+            ? 'capitalize'
+            : 'capitalize text-muted-foreground'
+      }
+    >
+      {label}
+    </Badge>
+  )
 }
 
 const riskColors: Record<string, string> = { ...SEVERITY_BADGE_SOFT }
@@ -107,13 +94,15 @@ function FrameworkCard({ stats }: { stats: FrameworkStats }) {
     <Card>
       <CardHeader className="pb-2">
         <CardDescription>{stats.framework}</CardDescription>
-        <CardTitle className="text-2xl">{passRate}%</CardTitle>
+        <CardTitle className="text-2xl font-semibold tabular-nums">{passRate}% passing</CardTitle>
       </CardHeader>
       <CardContent>
-        <Progress value={passRate} className="h-2 mb-2" />
-        <div className="flex gap-2 text-xs text-muted-foreground">
-          <span className="text-green-600">{stats.passed} pass</span>
-          <span className="text-red-600">{stats.failed} fail</span>
+        <Progress value={passRate} className="mb-2 h-2" />
+        <div className="flex gap-3 text-xs tabular-nums text-muted-foreground">
+          <span>{stats.passed} pass</span>
+          <span className={stats.failed > 0 ? 'text-destructive' : undefined}>
+            {stats.failed} fail
+          </span>
           <span>{stats.untested} untested</span>
         </div>
       </CardContent>
@@ -134,122 +123,147 @@ interface MitreCoverage {
   simulationCount: number
 }
 
-function MitreCoverageTable({ coverage }: { coverage: MitreCoverage[] }) {
-  if (coverage.length === 0) return null
-
-  return (
-    <Card className="mt-6">
-      <CardHeader>
-        <CardTitle className="text-base">MITRE ATT&CK Coverage</CardTitle>
-        <CardDescription>
-          Detection and prevention rates per technique from simulations
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Technique</TableHead>
-              <TableHead>Tactic</TableHead>
-              <TableHead>Detection Rate</TableHead>
-              <TableHead>Prevention Rate</TableHead>
-              <TableHead>Simulations</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {coverage.map((c) => (
-              <TableRow key={c.techniqueId}>
-                <TableCell>
-                  <div>
-                    <p className="font-medium text-sm">{c.techniqueName || c.techniqueId}</p>
-                    <p className="text-muted-foreground text-xs font-mono">{c.techniqueId}</p>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <Badge variant="outline" className="text-xs capitalize">
-                    {c.tactic.replace(/_/g, ' ')}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    <Progress value={c.detectionRate} className="h-1.5 w-20" />
-                    <span className="text-xs text-muted-foreground">{c.detectionRate}%</span>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    <Progress value={c.preventionRate} className="h-1.5 w-20" />
-                    <span className="text-xs text-muted-foreground">{c.preventionRate}%</span>
-                  </div>
-                </TableCell>
-                <TableCell className="text-sm text-muted-foreground">{c.simulationCount}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
-  )
-}
+const mitreColumns: ColumnDef<MitreCoverage>[] = [
+  {
+    accessorKey: 'techniqueName',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Technique" />,
+    cell: ({ row }) => (
+      <div>
+        <p className="text-sm font-medium">
+          {row.original.techniqueName || row.original.techniqueId}
+        </p>
+        <p className="font-mono text-xs text-muted-foreground">{row.original.techniqueId}</p>
+      </div>
+    ),
+  },
+  {
+    accessorKey: 'tactic',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Tactic" />,
+    cell: ({ row }) => (
+      <Badge variant="outline" className="capitalize">
+        {row.original.tactic.replace(/_/g, ' ')}
+      </Badge>
+    ),
+  },
+  {
+    accessorKey: 'detectionRate',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Detection rate" />,
+    cell: ({ row }) => (
+      <div className="flex items-center gap-2">
+        <Progress value={row.original.detectionRate} className="h-1.5 w-20" />
+        <span className="text-xs tabular-nums text-muted-foreground">
+          {row.original.detectionRate}%
+        </span>
+      </div>
+    ),
+  },
+  {
+    accessorKey: 'preventionRate',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Prevention rate" />,
+    cell: ({ row }) => (
+      <div className="flex items-center gap-2">
+        <Progress value={row.original.preventionRate} className="h-1.5 w-20" />
+        <span className="text-xs tabular-nums text-muted-foreground">
+          {row.original.preventionRate}%
+        </span>
+      </div>
+    ),
+  },
+  {
+    accessorKey: 'simulationCount',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Simulations" />,
+    cell: ({ row }) => (
+      <span className="text-sm tabular-nums text-muted-foreground">
+        {row.original.simulationCount}
+      </span>
+    ),
+  },
+]
 
 // ─────────────────────────────────────────────────────────
-// Control test row
+// Control tests table
 // ─────────────────────────────────────────────────────────
 
-function ControlTestRow({ ct }: { ct: ControlTest }) {
-  const config = statusConfig[ct.status] ?? statusConfig.untested
+/** The row's "Record result" action; owns its dialog so each row opens its own. */
+function RecordResultAction({ ct }: { ct: ControlTest }) {
   const [recordOpen, setRecordOpen] = useState(false)
-
   return (
-    <TableRow>
-      <TableCell>
-        <div>
-          <p className="font-medium">{ct.name}</p>
-          <p className="text-muted-foreground text-xs">{ct.control_id}</p>
-        </div>
-      </TableCell>
-      <TableCell>
-        <Badge variant="outline" className="text-xs">
-          {ct.framework}
-        </Badge>
-      </TableCell>
-      <TableCell>
-        <Badge variant="outline" className="text-xs">
-          {ct.category || '-'}
-        </Badge>
-      </TableCell>
-      <TableCell>
-        <Badge className={`${riskColors[ct.risk_level] ?? ''} border-0 text-xs`}>
-          {ct.risk_level}
-        </Badge>
-      </TableCell>
-      <TableCell>
-        <Badge className={`${config.bgColor} ${config.color} border-0`}>
-          {config.icon}
-          <span className="ms-1 capitalize">{ct.status.replace(/_/g, ' ')}</span>
-        </Badge>
-      </TableCell>
-      <TableCell className="text-muted-foreground text-sm">
-        {ct.last_tested_at ? new Date(ct.last_tested_at).toLocaleDateString() : 'Never'}
-      </TableCell>
-      <TableCell className="text-end">
-        <Can permission={Permission.PentestWrite}>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="cursor-pointer"
-            onClick={() => setRecordOpen(true)}
-            aria-label={`Record a test result for ${ct.name}`}
-          >
-            <FlaskConical className="size-4" />
-            <span className="ms-1 hidden sm:inline">Record result</span>
-          </Button>
-          <RecordResultDialog ct={ct} open={recordOpen} onOpenChange={setRecordOpen} />
-        </Can>
-      </TableCell>
-    </TableRow>
+    <Can permission={Permission.PentestWrite}>
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => setRecordOpen(true)}
+        aria-label={`Record a test result for ${ct.name}`}
+      >
+        <FlaskConical className="size-4" />
+        <span className="ms-1 hidden sm:inline">Record result</span>
+      </Button>
+      <RecordResultDialog ct={ct} open={recordOpen} onOpenChange={setRecordOpen} />
+    </Can>
   )
 }
+
+const controlColumns: ColumnDef<ControlTest>[] = [
+  {
+    accessorKey: 'name',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Control" />,
+    cell: ({ row }) => (
+      <div>
+        <p className="font-medium">{row.original.name}</p>
+        <p className="text-xs text-muted-foreground">{row.original.control_id}</p>
+      </div>
+    ),
+  },
+  {
+    accessorKey: 'framework',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Framework" />,
+    cell: ({ row }) => <Badge variant="outline">{row.original.framework}</Badge>,
+  },
+  {
+    accessorKey: 'category',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Category" />,
+    cell: ({ row }) =>
+      row.original.category ? (
+        <Badge variant="outline">{row.original.category}</Badge>
+      ) : (
+        <span className="text-muted-foreground">—</span>
+      ),
+  },
+  {
+    accessorKey: 'risk_level',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Risk" />,
+    cell: ({ row }) => (
+      <Badge
+        variant="outline"
+        className={`capitalize ${riskColors[row.original.risk_level] ?? ''}`}
+      >
+        {row.original.risk_level}
+      </Badge>
+    ),
+  },
+  {
+    accessorKey: 'status',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
+    cell: ({ row }) => <ControlStatusBadge status={row.original.status} />,
+  },
+  {
+    accessorKey: 'last_tested_at',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Last tested" />,
+    cell: ({ row }) => (
+      <span className="text-sm text-muted-foreground">
+        {row.original.last_tested_at
+          ? new Date(row.original.last_tested_at).toLocaleDateString()
+          : 'Never'}
+      </span>
+    ),
+  },
+  {
+    id: 'actions',
+    enableSorting: false,
+    enableHiding: false,
+    cell: ({ row }) => <RecordResultAction ct={row.original} />,
+  },
+]
 
 // ─────────────────────────────────────────────────────────
 // Record test result dialog
@@ -460,7 +474,7 @@ function CreateControlTestDialog({ open, onOpenChange, onSuccess }: CreateContro
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Add Control Test</DialogTitle>
+          <DialogTitle>Add control test</DialogTitle>
           <DialogDescription>
             Create a new control test to track security control effectiveness.
           </DialogDescription>
@@ -598,32 +612,15 @@ function CreateControlTestDialog({ open, onOpenChange, onSuccess }: CreateContro
 function LoadingSkeleton() {
   return (
     <Main>
-      <Skeleton className="mb-6 h-8 w-48" />
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <Skeleton className="h-8 w-48" />
+      <Skeleton className="mt-2 h-4 w-96 max-w-full" />
+      <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {Array.from({ length: 4 }).map((_, i) => (
-          <Skeleton key={i} className="h-28 rounded-lg" />
+          <Skeleton key={i} className="h-28 rounded-xl" />
         ))}
       </div>
-      <Skeleton className="mt-6 h-96 rounded-lg" />
+      <Skeleton className="mt-5 h-96 rounded-xl" />
     </Main>
-  )
-}
-
-function EmptyState({ onAdd }: { onAdd: () => void }) {
-  return (
-    <div className="flex flex-col items-center justify-center py-16">
-      <div className="bg-muted flex h-16 w-16 items-center justify-center rounded-full mb-4">
-        <ShieldCheck className="h-8 w-8 text-muted-foreground" />
-      </div>
-      <h3 className="font-semibold mb-1">No Control Tests Yet</h3>
-      <p className="text-muted-foreground text-sm mb-4">
-        Create control tests to track security control effectiveness across frameworks.
-      </p>
-      <Button size="sm" onClick={onAdd}>
-        <Plus className="me-2 h-4 w-4" />
-        Add Control Test
-      </Button>
-    </div>
   )
 }
 
@@ -693,79 +690,84 @@ export default function ControlTestingPage() {
   return (
     <Main>
       <PageHeader
-        title="Control Testing"
-        description="Track and validate security control effectiveness across compliance frameworks"
+        title="Control testing"
+        description="Track whether your security controls pass their tests, framework by framework."
       >
         <Button size="sm" onClick={() => setDialogOpen(true)}>
-          <Plus className="me-2 h-4 w-4" />
-          Add Control Test
+          <Plus className="h-4 w-4 sm:me-2" />
+          <span className="hidden sm:inline">Add control test</span>
         </Button>
       </PageHeader>
 
-      {/* Summary Stats */}
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatsCard title="Total Controls" value={summaryStats.total} />
-        <StatsCard title="Passed" value={summaryStats.passed} valueClassName="text-green-600" />
-        <StatsCard title="Failed" value={summaryStats.failed} valueClassName="text-red-600" />
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Coverage</CardDescription>
-            <CardTitle className="text-3xl">{summaryStats.coveragePct}%</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <Progress value={summaryStats.coveragePct} className="h-1.5" />
-          </CardContent>
-        </Card>
+      <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatsCard title="Controls" value={summaryStats.total} icon={ShieldCheck} />
+        <StatsCard title="Passed" value={summaryStats.passed} icon={CheckCircle} />
+        <StatsCard
+          title="Failed"
+          value={summaryStats.failed}
+          icon={XCircle}
+          valueClassName={summaryStats.failed > 0 ? 'text-destructive' : undefined}
+        />
+        <StatsCard
+          title="Coverage"
+          value={`${summaryStats.coveragePct}%`}
+          icon={Percent}
+          description={`${summaryStats.untested} untested`}
+        />
       </div>
 
       {/* Validation coverage KPI: how much exposure has been re-checked. */}
-      <div className="mt-6">
+      <div className="mt-5">
         <ValidationCoverageCard />
       </div>
 
-      {/* Framework Breakdown */}
       {frameworkStats.length > 0 && (
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {frameworkStats.map((fw) => (
             <FrameworkCard key={fw.framework} stats={fw} />
           ))}
         </div>
       )}
 
-      {/* MITRE ATT&CK Coverage from simulations — only when attack_simulation is enabled */}
-      {simulationEnabled && <MitreCoverageTable coverage={mitreCoverage} />}
+      {/* MITRE ATT&CK coverage from simulations — only when attack_simulation is enabled */}
+      {simulationEnabled && mitreCoverage.length > 0 && (
+        <section className="mt-5 space-y-3">
+          <div>
+            <h2 className="text-base font-semibold">MITRE ATT&CK coverage</h2>
+            <p className="text-sm text-muted-foreground">
+              Detection and prevention rates per technique, from simulations.
+            </p>
+          </div>
+          <DataTable
+            columns={mitreColumns}
+            data={mitreCoverage}
+            searchPlaceholder="Search techniques…"
+          />
+        </section>
+      )}
 
-      {/* Control Tests Table */}
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle className="text-base">Security Controls</CardTitle>
-          <CardDescription>All control tests across frameworks</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {controlTests.length === 0 ? (
-            <EmptyState onAdd={() => setDialogOpen(true)} />
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Control</TableHead>
-                  <TableHead>Framework</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Risk</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Last Tested</TableHead>
-                  <TableHead className="w-px text-end">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {controlTests.map((ct) => (
-                  <ControlTestRow key={ct.id} ct={ct} />
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+      <section className="mt-5 space-y-3">
+        <h2 className="text-base font-semibold">Security controls</h2>
+        {controlTests.length === 0 ? (
+          <EmptyState
+            icon={ShieldCheck}
+            title="No control tests yet"
+            description="Add control tests to track security control effectiveness across frameworks."
+            action={
+              <Button size="sm" onClick={() => setDialogOpen(true)}>
+                <Plus className="me-2 h-4 w-4" />
+                Add control test
+              </Button>
+            }
+          />
+        ) : (
+          <DataTable
+            columns={controlColumns}
+            data={controlTests}
+            searchPlaceholder="Search controls…"
+          />
+        )}
+      </section>
 
       <CreateControlTestDialog
         open={dialogOpen}
