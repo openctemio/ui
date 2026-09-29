@@ -722,8 +722,6 @@ export default function CredentialsPage() {
         open={!!selectedCredential && !editDialogOpen}
         onOpenChange={(open) => !open && setSelectedCredential(null)}
         icon={KeyRound}
-        iconColor="text-destructive"
-        gradientFrom="from-destructive/20"
         onEdit={() => selectedCredential && handleOpenEdit(selectedCredential)}
         onDelete={() => {
           if (selectedCredential) {

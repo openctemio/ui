@@ -21,6 +21,7 @@ import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 import { EmptyState } from '@/features/shared'
+import { SEVERITY_BADGE_SOFT, SEVERITY_TEXT_COLORS } from '@/lib/severity-colors'
 
 import type { AssetFinding } from '../types/asset.types'
 import { useAssetFindingsApi } from '@/features/findings/api/use-findings-api'
@@ -32,41 +33,17 @@ interface AssetFindingsProps {
   className?: string
 }
 
-const severityConfig: Record<
-  AssetFinding['severity'],
-  { label: string; color: string; bgColor: string; icon: React.ElementType }
-> = {
-  critical: {
-    label: 'Critical',
-    color: 'text-red-700',
-    bgColor: 'bg-red-100',
-    icon: AlertCircle,
-  },
-  high: {
-    label: 'High',
-    color: 'text-orange-700',
-    bgColor: 'bg-orange-100',
-    icon: AlertTriangle,
-  },
-  medium: {
-    label: 'Medium',
-    color: 'text-yellow-700',
-    bgColor: 'bg-yellow-100',
-    icon: AlertTriangle,
-  },
-  low: {
-    label: 'Low',
-    color: 'text-blue-700',
-    bgColor: 'bg-blue-100',
-    icon: Info,
-  },
-  info: {
-    label: 'Info',
-    color: 'text-gray-700',
-    bgColor: 'bg-gray-100',
-    icon: Info,
-  },
-}
+// Colours come from the shared severity source (dark-mode aware).
+const severityConfig: Record<AssetFinding['severity'], { label: string; icon: React.ElementType }> =
+  {
+    critical: { label: 'Critical', icon: AlertCircle },
+    high: { label: 'High', icon: AlertTriangle },
+    medium: { label: 'Medium', icon: AlertTriangle },
+    low: { label: 'Low', icon: Info },
+    info: { label: 'Info', icon: Info },
+  }
+
+const SUMMARY_LEVELS = ['critical', 'high', 'medium', 'low'] as const
 
 const typeConfig: Record<AssetFinding['type'], { label: string; icon: React.ElementType }> = {
   vulnerability: { label: 'Vulnerability', icon: Bug },
@@ -81,10 +58,10 @@ const statusConfig: Record<
   { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }
 > = {
   open: { label: 'Open', variant: 'destructive' },
-  in_progress: { label: 'In Progress', variant: 'default' },
+  in_progress: { label: 'In progress', variant: 'default' },
   resolved: { label: 'Resolved', variant: 'secondary' },
   accepted: { label: 'Accepted', variant: 'outline' },
-  false_positive: { label: 'False Positive', variant: 'outline' },
+  false_positive: { label: 'False positive', variant: 'outline' },
 }
 
 /**
@@ -174,7 +151,7 @@ export function AssetFindings({ assetId, className }: AssetFindingsProps) {
         <Separator />
         <div className="space-y-3">
           {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="p-4 rounded-lg border bg-card">
+            <div key={i} className="py-3">
               <div className="flex items-start gap-3">
                 <Skeleton className="h-8 w-8 rounded-lg" />
                 <div className="flex-1 space-y-2">
@@ -207,7 +184,7 @@ export function AssetFindings({ assetId, className }: AssetFindingsProps) {
       <EmptyState
         card={false}
         icon={Shield}
-        title="No Findings"
+        title="No findings"
         description="This asset has no security findings."
         className={className}
       />
@@ -216,116 +193,89 @@ export function AssetFindings({ assetId, className }: AssetFindingsProps) {
 
   return (
     <div className={cn('space-y-4', className)}>
-      {/* Severity Summary */}
+      {/* Severity summary */}
       <div className="flex flex-wrap gap-2">
-        {severityCounts.critical > 0 && (
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-100 text-red-700 text-sm font-medium">
-            <AlertCircle className="h-3.5 w-3.5" />
-            {severityCounts.critical} Critical
-          </div>
-        )}
-        {severityCounts.high > 0 && (
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-orange-100 text-orange-700 text-sm font-medium">
-            <AlertTriangle className="h-3.5 w-3.5" />
-            {severityCounts.high} High
-          </div>
-        )}
-        {severityCounts.medium > 0 && (
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-yellow-100 text-yellow-900 text-sm font-medium">
-            <AlertTriangle className="h-3.5 w-3.5" />
-            {severityCounts.medium} Medium
-          </div>
-        )}
-        {severityCounts.low > 0 && (
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-100 text-blue-700 text-sm font-medium">
-            <Info className="h-3.5 w-3.5" />
-            {severityCounts.low} Low
-          </div>
-        )}
+        {SUMMARY_LEVELS.filter((level) => severityCounts[level] > 0).map((level) => {
+          const Icon = severityConfig[level].icon
+          return (
+            <Badge
+              key={level}
+              variant="outline"
+              className={cn('gap-1.5 font-medium tabular-nums', SEVERITY_BADGE_SOFT[level])}
+            >
+              <Icon className="h-3.5 w-3.5" />
+              {severityCounts[level]} {severityConfig[level].label}
+            </Badge>
+          )
+        })}
       </div>
 
-      <Separator />
+      {/* Findings list — flat rows separated by dividers (no card per row).
+          The sheet's tab body is the scroll container. */}
+      <ul className="divide-y border-y">
+        {findings.map((finding) => {
+          const severity = severityConfig[finding.severity]
+          const type = typeConfig[finding.type]
+          const status = statusConfig[finding.status]
+          const SeverityIcon = severity.icon
+          const TypeIcon = type.icon
 
-      {/* Findings List
-          Renders inline (no fixed-height ScrollArea wrapper). The parent
-          SheetContent already has overflow-y-auto, so the whole sheet
-          scrolls as one — that prevents the previous bug where a fixed
-          h-[400px] ScrollArea created dead empty space below the list
-          when there were only a few findings, AND prevented nested
-          scroll containers when there were many. */}
-      <div>
-        <div className="space-y-3">
-          {findings.map((finding) => {
-            const severity = severityConfig[finding.severity]
-            const type = typeConfig[finding.type]
-            const status = statusConfig[finding.status]
-            const SeverityIcon = severity.icon
-            const TypeIcon = type.icon
-
-            return (
-              <div
-                key={finding.id}
-                className="p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
+          return (
+            <li key={finding.id}>
+              <Link
+                href={`/findings/${finding.id}`}
+                className="focus-visible:ring-ring flex items-start gap-3 py-3 transition-colors hover:bg-accent/50 focus-visible:ring-2 focus-visible:outline-none"
               >
-                <div className="flex items-start gap-3">
-                  <div className={cn('p-2 rounded-lg', severity.bgColor)}>
-                    <SeverityIcon className={cn('h-4 w-4', severity.color)} />
+                <SeverityIcon
+                  className={cn('mt-0.5 h-4 w-4 shrink-0', SEVERITY_TEXT_COLORS[finding.severity])}
+                  aria-label={severity.label}
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h4 className="text-sm font-medium break-words">{finding.title}</h4>
+                    <Badge variant={status.variant} className="text-xs">
+                      {status.label}
+                    </Badge>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h4 className="font-medium text-sm">{finding.title}</h4>
-                      <Badge variant={status.variant} className="text-xs">
-                        {status.label}
-                      </Badge>
-                    </div>
-                    <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                  {finding.description && finding.description !== finding.title && (
+                    <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
                       {finding.description}
                     </p>
+                  )}
 
-                    {/* Metadata */}
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-xs text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <TypeIcon className="h-3 w-3" />
-                        <span>{type.label}</span>
-                      </div>
-                      {finding.cveId && (
-                        <span className="font-mono text-red-600">{finding.cveId}</span>
-                      )}
-                      {finding.cvssScore && (
-                        <span className="font-medium">CVSS: {finding.cvssScore}</span>
-                      )}
-                      {finding.rule && <span className="font-mono">{finding.rule}</span>}
-                      <span>First seen: {new Date(finding.firstSeen).toLocaleDateString()}</span>
-                    </div>
-
-                    {/* Remediation Preview */}
-                    {finding.remediation && (
-                      <div className="mt-2 p-2 rounded bg-muted/50 text-xs">
-                        <span className="font-medium">Remediation: </span>
-                        <span className="text-muted-foreground">{finding.remediation}</span>
-                      </div>
-                    )}
+                  {/* Metadata */}
+                  <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1">
+                      <TypeIcon className="h-3 w-3" />
+                      {type.label}
+                    </span>
+                    {finding.cveId && <span className="font-mono">{finding.cveId}</span>}
+                    {finding.cvssScore && <span>CVSS {finding.cvssScore}</span>}
+                    {finding.rule && <span className="font-mono break-all">{finding.rule}</span>}
+                    <span>First seen {new Date(finding.firstSeen).toLocaleDateString()}</span>
                   </div>
 
-                  {/* Action */}
-                  <Link href={`/findings/${finding.id}`}>
-                    <Button variant="ghost" size="icon" className="shrink-0">
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                  </Link>
+                  {/* Remediation preview */}
+                  {finding.remediation && (
+                    <p className="mt-2 line-clamp-2 rounded bg-muted/50 p-2 text-xs">
+                      <span className="font-medium">Remediation: </span>
+                      <span className="text-muted-foreground">{finding.remediation}</span>
+                    </p>
+                  )}
                 </div>
-              </div>
-            )
-          })}
-        </div>
-      </div>
+                <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+              </Link>
+            </li>
+          )
+        })}
+      </ul>
 
       {/* View All Link */}
-      <div className="pt-2 border-t">
+      <div>
         <Link href={`/findings?assetId=${assetId}`}>
           <Button variant="outline" className="w-full">
             <FileWarning className="me-2 h-4 w-4" />
-            View All Findings ({response?.total ?? findings.length})
+            View all findings ({response?.total ?? findings.length})
             <ChevronRight className="ms-2 h-4 w-4" />
           </Button>
         </Link>

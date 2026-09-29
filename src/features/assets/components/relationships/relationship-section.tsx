@@ -23,7 +23,7 @@ import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger, TabsCount } from '@/components/ui/tabs'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { cn } from '@/lib/utils'
-import { EmptyState } from '@/features/shared'
+import { EmptyState, DetailSection } from '@/features/shared'
 import type {
   AssetRelationship,
   RelationshipDirection,
@@ -159,7 +159,7 @@ export function RelationshipSection({
 
   if (isLoading) {
     return (
-      <div className={cn('rounded-xl border p-6 bg-card', className)}>
+      <div className={cn('py-8', className)}>
         <div className="flex flex-col items-center justify-center text-center">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mb-3" />
           <p className="text-sm text-muted-foreground">Loading relationships...</p>
@@ -170,17 +170,17 @@ export function RelationshipSection({
 
   if (relationships.length === 0) {
     return (
-      <div className={cn('rounded-xl border p-6 bg-card', className)}>
+      <div className={cn('py-4', className)}>
         <EmptyState
           card={false}
           icon={Link2}
-          title="No Relationships"
+          title="No relationships"
           description="This asset has no relationships with other assets yet."
           action={
             onAddClick && (
               <Button size="sm" onClick={onAddClick}>
                 <Plus className="me-2 h-4 w-4" />
-                Add Relationship
+                Add relationship
               </Button>
             )
           }
@@ -190,11 +190,14 @@ export function RelationshipSection({
   }
 
   return (
-    <div className={cn('rounded-xl border bg-card', className)}>
+    <div className={cn('min-w-0 space-y-2', className)}>
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b">
-        <div className="flex items-center gap-3">
-          <h4 className="text-sm font-medium">Relationships</h4>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <h3 className="flex items-center gap-2 text-sm font-semibold">
+            <Link2 className="h-4 w-4" />
+            Relationships
+          </h3>
           <Badge variant="secondary" className="text-xs">
             {relationships.length}
           </Badge>
@@ -238,7 +241,7 @@ export function RelationshipSection({
 
       {/* Tabs for direction filter */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
-        <div className="px-4 pt-2">
+        <div>
           <TabsList>
             <TabsTrigger value="all" className="text-xs">
               All <TabsCount value={relationships.length} />
@@ -256,7 +259,7 @@ export function RelationshipSection({
 
         <TabsContent value={activeTab} className="m-0">
           {viewMode === 'graph' ? (
-            <div className="p-4">
+            <div className="py-3">
               <RelationshipGraphView
                 graph={graphData}
                 centralNodeId={currentAssetId}
@@ -264,7 +267,7 @@ export function RelationshipSection({
               />
             </div>
           ) : (
-            <ScrollArea style={{ maxHeight }} className="p-4">
+            <ScrollArea style={{ maxHeight }} className="py-3">
               {viewMode === 'list' ? (
                 <div className="space-y-2">
                   {filteredRelationships.map((rel) => (
@@ -308,12 +311,12 @@ export function RelationshipSection({
       </Tabs>
 
       {/* Quick stats footer */}
-      <div className="flex items-center justify-between px-4 py-2 border-t text-xs text-muted-foreground">
+      <div className="flex items-center justify-between border-t pt-2 text-xs text-muted-foreground">
         <span>
           {outgoing.length} outgoing, {incoming.length} incoming
         </span>
         <span>
-          Avg. Impact:{' '}
+          Avg. impact:{' '}
           {(
             relationships.reduce((sum, r) => sum + r.impactWeight, 0) / relationships.length
           ).toFixed(1)}
@@ -357,34 +360,28 @@ export function RelationshipPreview({
 
   if (relationships.length === 0) {
     return (
-      <div className={cn('rounded-lg border p-3 bg-card', className)}>
-        <div className="flex items-center gap-2 text-muted-foreground">
-          <Link2 className="h-4 w-4" />
-          <span className="text-sm">No relationships</span>
-        </div>
-      </div>
+      <DetailSection title="Relationships" icon={Link2} className={className}>
+        <p className="text-sm text-muted-foreground">No relationships</p>
+      </DetailSection>
     )
   }
 
   return (
-    <div className={cn('rounded-lg border bg-card', className)}>
-      <div className="flex items-center justify-between p-3 border-b">
-        <div className="flex items-center gap-2">
-          <Link2 className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm font-medium">Relationships</span>
-          <Badge variant="secondary" className="text-xs">
-            {relationships.length}
-          </Badge>
-        </div>
-        {onViewAll && (
+    <DetailSection
+      title="Relationships"
+      icon={Link2}
+      count={relationships.length}
+      className={className}
+      actions={
+        onViewAll && (
           <Button variant="ghost" size="sm" onClick={onViewAll} className="h-7 text-xs">
-            View All
+            View all
             <ChevronRight className="ms-1 h-3 w-3" />
           </Button>
-        )}
-      </div>
-
-      <div className="p-3 space-y-2">
+        )
+      }
+    >
+      <div className="space-y-2">
         {/* Mini graph */}
         <MiniGraph graph={graphData} centralNodeId={currentAssetId} />
 
@@ -403,9 +400,9 @@ export function RelationshipPreview({
               className="flex items-center gap-2 w-full p-2 rounded hover:bg-accent/50 transition-colors text-start"
             >
               {isOutgoing ? (
-                <ArrowRight className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+                <ArrowRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
               ) : (
-                <ArrowLeft className="h-3.5 w-3.5 text-green-500 shrink-0" />
+                <ArrowLeft className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
               )}
               <span className="text-xs text-muted-foreground shrink-0">
                 {isOutgoing ? label.direct : label.inverse}
@@ -434,6 +431,6 @@ export function RelationshipPreview({
           </button>
         )}
       </div>
-    </div>
+    </DetailSection>
   )
 }

@@ -28,19 +28,26 @@ import { Badge } from '@/components/ui/badge'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { CRITICALITY_BADGE_SOFT } from '@/lib/criticality-colors'
-import { IMPACT_RATING_BADGE_SOFT } from '@/lib/impact-colors'
 import type { AssetScope, ExposureLevel, Criticality, ImpactRating } from '../types'
 import {
   ASSET_SCOPE_LABELS,
   ASSET_SCOPE_DESCRIPTIONS,
-  ASSET_SCOPE_COLORS,
   EXPOSURE_LEVEL_LABELS,
   EXPOSURE_LEVEL_DESCRIPTIONS,
-  EXPOSURE_LEVEL_COLORS,
   CRITICALITY_LABELS,
   CRITICALITY_DESCRIPTIONS,
   IMPACT_RATING_LABELS,
 } from '../types'
+
+// Scope, exposure, CIA and control-plane are descriptive, not a risk scale, so
+// they render as neutral outline badges (icon + label). Only criticality keeps a
+// colour, from the shared criticality source.
+const NEUTRAL_BADGE = 'gap-1 border font-medium text-foreground'
+const NEUTRAL_ICON = 'text-muted-foreground'
+
+function sizeClass(size: 'sm' | 'md') {
+  return size === 'sm' ? 'text-xs px-1.5 py-0' : 'text-xs px-2 py-0.5'
+}
 
 // Scope icons
 const SCOPE_ICONS: Record<AssetScope, React.ElementType> = {
@@ -84,24 +91,13 @@ export function AssetScopeBadge({
   size = 'md',
   className,
 }: AssetScopeBadgeProps) {
-  const colors = ASSET_SCOPE_COLORS[scope]
   const Icon = SCOPE_ICONS[scope]
   const label = ASSET_SCOPE_LABELS[scope]
   const description = ASSET_SCOPE_DESCRIPTIONS[scope]
 
   const badge = (
-    <Badge
-      variant="outline"
-      className={cn(
-        'gap-1 font-medium border',
-        colors.bg,
-        colors.text,
-        colors.border,
-        size === 'sm' ? 'text-xs px-1.5 py-0' : 'text-xs px-2 py-0.5',
-        className
-      )}
-    >
-      {showIcon && <Icon className={size === 'sm' ? 'h-3 w-3' : 'h-3.5 w-3.5'} />}
+    <Badge variant="outline" className={cn(NEUTRAL_BADGE, sizeClass(size), className)}>
+      {showIcon && <Icon className={cn(NEUTRAL_ICON, size === 'sm' ? 'h-3 w-3' : 'h-3.5 w-3.5')} />}
       {label}
     </Badge>
   )
@@ -136,24 +132,13 @@ export function ExposureBadge({
   size = 'md',
   className,
 }: ExposureBadgeProps) {
-  const colors = EXPOSURE_LEVEL_COLORS[exposure]
   const Icon = EXPOSURE_ICONS[exposure]
   const label = EXPOSURE_LEVEL_LABELS[exposure]
   const description = EXPOSURE_LEVEL_DESCRIPTIONS[exposure]
 
   const badge = (
-    <Badge
-      variant="outline"
-      className={cn(
-        'gap-1 font-medium border',
-        colors.bg,
-        colors.text,
-        colors.border,
-        size === 'sm' ? 'text-xs px-1.5 py-0' : 'text-xs px-2 py-0.5',
-        className
-      )}
-    >
-      {showIcon && <Icon className={size === 'sm' ? 'h-3 w-3' : 'h-3.5 w-3.5'} />}
+    <Badge variant="outline" className={cn(NEUTRAL_BADGE, sizeClass(size), className)}>
+      {showIcon && <Icon className={cn(NEUTRAL_ICON, size === 'sm' ? 'h-3 w-3' : 'h-3.5 w-3.5')} />}
       {label}
     </Badge>
   )
@@ -198,7 +183,7 @@ export function CriticalityBadge({
       className={cn(
         'gap-1 font-medium border',
         CRITICALITY_BADGE_SOFT[criticality],
-        size === 'sm' ? 'text-xs px-1.5 py-0' : 'text-xs px-2 py-0.5',
+        sizeClass(size),
         className
       )}
     >
@@ -326,15 +311,8 @@ export function CIABadges({
           return (
             <Tooltip key={d.key} delayDuration={200}>
               <TooltipTrigger asChild>
-                <Badge
-                  variant="outline"
-                  className={cn(
-                    'gap-1 font-medium border',
-                    IMPACT_RATING_BADGE_SOFT[rating],
-                    size === 'sm' ? 'text-xs px-1.5 py-0' : 'text-xs px-2 py-0.5'
-                  )}
-                >
-                  <span className="font-semibold">{d.letter}</span>
+                <Badge variant="outline" className={cn(NEUTRAL_BADGE, sizeClass(size))}>
+                  <span className="font-semibold text-muted-foreground">{d.letter}</span>
                   {IMPACT_RATING_LABELS[rating]}
                 </Badge>
               </TooltipTrigger>
@@ -373,17 +351,9 @@ export function ControlPlaneBadge({
   className,
 }: ControlPlaneBadgeProps) {
   const badge = (
-    <Badge
-      variant="outline"
-      className={cn(
-        'gap-1 font-medium border',
-        'bg-purple-500/10 text-purple-500 border-purple-500/20 dark:bg-purple-900/30 dark:text-purple-400', // palette-ok: distinct control-plane accent (not a severity/status color)
-        size === 'sm' ? 'text-xs px-1.5 py-0' : 'text-xs px-2 py-0.5',
-        className
-      )}
-    >
-      <Network className={size === 'sm' ? 'h-3 w-3' : 'h-3.5 w-3.5'} />
-      Control Plane
+    <Badge variant="outline" className={cn(NEUTRAL_BADGE, sizeClass(size), className)}>
+      <Network className={cn(NEUTRAL_ICON, size === 'sm' ? 'h-3 w-3' : 'h-3.5 w-3.5')} />
+      Control plane
     </Badge>
   )
 
