@@ -6,7 +6,7 @@ import { Main } from '@/components/layout'
 import { PageHeader, StatsCard, EmptyState } from '@/features/shared'
 import { useExposureChains, PathGraph } from '@/features/attack-surface'
 import type { ExposureChain, PathGraphPath, PathGraphNode } from '@/features/attack-surface'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { Route, ShieldAlert, ShieldCheck, Globe, ArrowRight, Network, Target } from 'lucide-react'
@@ -167,31 +167,28 @@ export default function ExposureChainsPage() {
 
           {/* Main: ranked chains + explainer */}
           <section className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-3">
-            <div className="lg:col-span-2">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Chains ranked by urgency</CardTitle>
-                  <CardDescription>
-                    Each chain is the shortest path from a public entry point to an asset with open
-                    KEV or critical findings. Hover to trace a path; click any node to open that
-                    asset&apos;s findings. Break the top chains first.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <PathGraph
-                    paths={paths}
-                    empty={
-                      <EmptyState
-                        card={false}
-                        icon={ShieldCheck}
-                        title="No exposure chains"
-                        description="No internet-facing entry point reaches an asset with KEV or critical findings through tracked relationships."
-                      />
-                    }
+            {/* The ranked list is a column of bordered chain rows, so it sits under a
+                section heading rather than inside another card. */}
+            <section className="space-y-3 lg:col-span-2">
+              <div>
+                <h2 className="text-base font-semibold">Chains ranked by urgency</h2>
+                <p className="text-sm text-muted-foreground">
+                  Each chain is the shortest path from a public entry point to an asset with open
+                  KEV or critical findings. Hover to trace a path; click any node to open that
+                  asset&apos;s findings. Break the top chains first.
+                </p>
+              </div>
+              <PathGraph
+                paths={paths}
+                empty={
+                  <EmptyState
+                    icon={ShieldCheck}
+                    title="No exposure chains"
+                    description="No internet-facing entry point reaches an asset with KEV or critical findings through tracked relationships."
                   />
-                </CardContent>
-              </Card>
-            </div>
+                }
+              />
+            </section>
 
             {/* Sidebar explainer */}
             <div className="flex flex-col gap-5">

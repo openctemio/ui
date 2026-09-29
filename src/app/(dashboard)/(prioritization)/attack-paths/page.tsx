@@ -194,31 +194,28 @@ export default function AttackPathAnalysisPage() {
           {/* Main content: ranked path graph + entry points sidebar */}
           <section className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-3">
             {/* Ranked assets */}
-            <div className="lg:col-span-2">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Assets ranked by attack-path score</CardTitle>
-                  <CardDescription>
-                    Score = reachable entry points x risk score x criticality weight. Hover to trace
-                    a path; click a node to open the asset&apos;s findings. Fixing the top-ranked
-                    assets breaks the most attack paths.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <PathGraph
-                    paths={paths}
-                    empty={
-                      <EmptyState
-                        card={false}
-                        icon={ShieldCheck}
-                        title="No reachable internal assets"
-                        description="Your entry points do not reach any internal asset through tracked relationships."
-                      />
-                    }
+            {/* The ranked list is a column of bordered chain rows, so it sits under a
+                section heading rather than inside another card. */}
+            <section className="space-y-3 lg:col-span-2">
+              <div>
+                <h2 className="text-base font-semibold">Assets ranked by attack-path score</h2>
+                <p className="text-sm text-muted-foreground">
+                  Score = reachable entry points x risk score x criticality weight. Hover to trace a
+                  path; click a node to open the asset&apos;s findings. Fixing the top-ranked assets
+                  breaks the most attack paths.
+                </p>
+              </div>
+              <PathGraph
+                paths={paths}
+                empty={
+                  <EmptyState
+                    icon={ShieldCheck}
+                    title="No reachable internal assets"
+                    description="Your entry points do not reach any internal asset through tracked relationships."
                   />
-                </CardContent>
-              </Card>
-            </div>
+                }
+              />
+            </section>
 
             {/* Sidebar: entry points + extra stats */}
             <div className="flex flex-col gap-5">
