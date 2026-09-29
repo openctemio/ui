@@ -13,7 +13,7 @@
 
 import { useMemo, useState, type ReactNode } from 'react'
 import type { ColumnDef } from '@tanstack/react-table'
-import { Globe, MinusCircle, Package, User, Users } from 'lucide-react'
+import { ChevronRight, Globe, MinusCircle, Package, User, Users } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { DataTable, DataTableColumnHeader, RiskScoreBadge } from '@/features/shared'
@@ -268,6 +268,44 @@ export function InventoryTable({
         resetSelectionKey={resetSelectionKey}
         showSelectionCount={false}
         onRowClick={setSelectedAsset}
+        mobileRow={(a) => {
+          const typeLabel = ASSET_TYPE_LABELS[a.type] ?? a.type
+          const context = a.groupName || a.description
+          return (
+            <button
+              type="button"
+              onClick={() => setSelectedAsset(a)}
+              className="flex w-full items-start gap-3 px-3 py-3 text-start transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <Package className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+              <div className="min-w-0 flex-1">
+                <p className="line-clamp-2 break-all text-sm font-medium">{a.name}</p>
+                <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                  {typeLabel}
+                  {context && ` · ${context}`}
+                </p>
+                <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                  <CriticalityBadge criticality={a.criticality} size="sm" showTooltip={false} />
+                  {/* Most assets are active; say so only when one is not. */}
+                  {a.status !== 'active' && (
+                    <AssetStatusBadge
+                      status={a.status}
+                      daysSinceLastSeen={daysSinceISO(a.lastSeen)}
+                      snoozedUntil={a.lifecyclePausedUntil}
+                    />
+                  )}
+                  {a.riskScore > 0 && <RiskScoreBadge score={a.riskScore} size="sm" />}
+                  {a.findingCount > 0 && (
+                    <Badge variant="secondary" className="h-5 px-1.5 text-[10px] tabular-nums">
+                      {a.findingCount} {a.findingCount === 1 ? 'finding' : 'findings'}
+                    </Badge>
+                  )}
+                </div>
+              </div>
+              <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground" />
+            </button>
+          )
+        }}
         emptyMessage="No assets match these filters"
         emptyDescription={
           hasFilters ? 'Try removing a filter or clearing them all.' : 'No assets yet.'

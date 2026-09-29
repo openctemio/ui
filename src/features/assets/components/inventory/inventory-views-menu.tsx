@@ -48,14 +48,21 @@ export function InventoryViewsMenu({ filters, onToggle }: InventoryViewsMenuProp
             the current value, with a muted leading icon. */}
         <Button
           variant="outline"
-          className="h-9 w-auto min-w-36 justify-between gap-2 px-3 font-normal"
+          // Icon-only below sm, so the search box keeps its room on phones.
+          className="relative h-9 w-auto justify-between gap-2 px-3 font-normal sm:min-w-36"
           aria-label={active.length > 0 ? `Views (${triggerLabel})` : 'Views'}
         >
           <span className="flex min-w-0 items-center gap-2">
             <Bookmark className="h-4 w-4 shrink-0 text-muted-foreground" />
-            <span className="max-w-40 truncate">{triggerLabel}</span>
+            <span className="hidden max-w-40 truncate sm:inline">{triggerLabel}</span>
           </span>
           <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
+          {active.length > 0 && (
+            // The label is hidden on phones; the count says a view is on.
+            <span className="absolute -end-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-medium tabular-nums text-primary-foreground sm:hidden">
+              {active.length}
+            </span>
+          )}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-60">
