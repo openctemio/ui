@@ -344,8 +344,12 @@ export default function AuditLogPage() {
             setPageParam('1')
           }}
         />
-        <Label htmlFor="exclude-system" className="cursor-pointer text-sm font-normal">
-          Hide system events
+        <Label
+          htmlFor="exclude-system"
+          className="cursor-pointer whitespace-nowrap text-sm font-normal"
+          title="Hide events performed by the system itself"
+        >
+          Hide system
         </Label>
       </div>
       <Button
