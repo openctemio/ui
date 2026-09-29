@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useCallback, useEffect } from 'react'
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useUrlParams, useUrlFilter, useUrlFilterList } from '@/hooks/use-url-param'
@@ -9,21 +9,33 @@ import {
   groupFindingSourcesByCategory,
 } from '@/features/config/api/finding-source-api'
 import { useDebounce } from '@/hooks/use-debounce'
-import { ColumnDef } from '@tanstack/react-table'
+import type { ColumnDef, SortingState } from '@tanstack/react-table'
 import { Main } from '@/components/layout'
-import { PageHeader, SeverityBadge, DataTable, DataTableColumnHeader } from '@/features/shared'
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import {
+  PageHeader,
+  SeverityBadge,
+  DataTable,
+  DataTableColumnHeader,
+  MetricStrip,
+  type MetricStripItem,
+  FacetPanel,
+  FacetSection,
+  FacetOption,
+  FacetToggle,
+  FacetGroupLabel,
+} from '@/features/shared'
+import { Input } from '@/components/ui/input'
+import { cn } from '@/lib/utils'
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { SEVERITY_DOT_COLORS } from '@/lib/severity-colors'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   DropdownMenu,
-  DropdownMenuCheckboxItem,
   DropdownMenuContent,
-  DropdownMenuGroup,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
@@ -49,6 +61,9 @@ import {
   AlertOctagon,
   Ticket,
   Wrench,
+  ListFilter,
+  PanelLeftClose,
+  Search,
 } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import {
@@ -78,11 +93,7 @@ import {
   invalidateFindingsCache,
 } from '@/features/findings/api/use-findings-api'
 import { ConfirmDialog } from '@/components/confirm-dialog'
-import type {
-  ApiFinding,
-  FindingApiFilters,
-  Severity as ApiSeverity,
-} from '@/features/findings/api/finding-api.types'
+import type { ApiFinding, FindingApiFilters } from '@/features/findings/api/finding-api.types'
 import type { Finding, FindingStatus, FindingUser } from '@/features/findings'
 import type { Severity } from '@/features/shared/types'
 import { toast } from 'sonner'
@@ -247,37 +258,82 @@ function transformApiToUiFinding(api: ApiFinding): Finding {
 // Loading Skeleton
 // ============================================
 
-function FindingsLoadingSkeleton() {
+const SEVERITY_VALUES = ['critical', 'high', 'medium', 'low', 'info'] as const
+type FacetSeverity = (typeof SEVERITY_VALUES)[number]
+const PAGE_SIZES = [10, 20, 30, 50, 100]
+const FILTERS_OPEN_KEY = 'openctem:findings-filters-open'
+const SEVERITY_LABELS: Record<FacetSeverity, string> = {
+  critical: 'Critical',
+  high: 'High',
+  medium: 'Medium',
+  low: 'Low',
+  info: 'Info',
+}
+const OPEN_STATUSES = ['new', 'confirmed', 'in_progress', 'fix_applied', 'remediation', 'retest']
+const STATUS_GROUPS = [
+  { label: 'Open', values: OPEN_STATUSES },
+  {
+    label: 'Closed',
+    values: ['resolved', 'verified', 'false_positive', 'accepted', 'accepted_risk'],
+  },
+  { label: 'Pentest workflow', values: ['draft', 'in_review'] },
+]
+const OVERDUE_SLA = ['overdue', 'exceeded']
+const SLA_OPTIONS: SLAStatus[] = ['overdue', 'exceeded', 'warning', 'on_track', 'not_applicable']
+const PRIORITY_OPTIONS = [
+  { value: 'P0', hint: 'Act now' },
+  { value: 'P1', hint: 'High' },
+  { value: 'P2', hint: 'Medium' },
+  { value: 'P3', hint: 'Low' },
+]
+
+/** First-load placeholder shaped like the toolbar + table it stands in for. */
+function FindingsTableSkeleton() {
   return (
-    <div className="space-y-4">
-      <div className="grid gap-3 sm:gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-5">
-        {[...Array(5)].map((_, i) => (
-          <Card key={i}>
-            <CardHeader className="pb-2">
-              <Skeleton className="h-4 w-16 mb-2" />
-              <Skeleton className="h-8 w-12" />
-            </CardHeader>
-          </Card>
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <Skeleton className="h-9 w-24" />
+        <Skeleton className="h-9 w-72" />
+        <Skeleton className="ms-auto h-9 w-24" />
+      </div>
+      <div className="space-y-2 rounded-md border p-3">
+        {Array.from({ length: 8 }).map((_, i) => (
+          <Skeleton key={i} className="h-10 w-full" />
         ))}
       </div>
-      <Card className="mt-6">
-        <CardContent className="pt-6">
-          <div className="space-y-3">
-            {[...Array(5)].map((_, i) => (
-              <div key={i} className="flex items-center gap-4">
-                <Skeleton className="h-4 w-4" />
-                <Skeleton className="h-4 flex-1" />
-                <Skeleton className="h-6 w-16" />
-                <Skeleton className="h-4 w-12" />
-                <Skeleton className="h-4 w-24" />
-                <Skeleton className="h-6 w-20" />
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
     </div>
   )
+}
+
+/**
+ * Table columns the API can sort by (FindingAllowedSortFields), keyed by column
+ * id. Title, location and SLA have no server sort field, so those headers are
+ * plain text rather than a control that reorders only the rows on screen.
+ * `invert`: the API ranks critical / P0 first on *ascending* order, while the
+ * table's "descending" means most important first.
+ */
+const SORTABLE_COLUMNS: Record<string, { api: string; invert?: boolean }> = {
+  severity: { api: 'severity', invert: true },
+  priorityClass: { api: 'priority_class', invert: true },
+  source: { api: 'source' },
+  status: { api: 'status' },
+  createdAt: { api: 'created_at' },
+}
+
+/** `?sort=severity.desc` → table sorting state. */
+function parseSortParam(value: string): SortingState {
+  const [id, dir] = value.split('.')
+  return id && SORTABLE_COLUMNS[id] ? [{ id, desc: dir !== 'asc' }] : []
+}
+
+/** Table sorting → API `sort` (newest first as the tie-breaker). */
+function toApiSort(sorting: SortingState): string | undefined {
+  const first = sorting[0]
+  const col = first ? SORTABLE_COLUMNS[first.id] : undefined
+  if (!first || !col) return undefined
+  const ascending = col.invert ? first.desc : !first.desc
+  const primary = `${ascending ? '' : '-'}${col.api}`
+  return col.api === 'created_at' ? primary : `${primary},-created_at`
 }
 
 export default function FindingsPage() {
@@ -300,12 +356,15 @@ function FindingsContent() {
   // Filters live in the URL so a view can be linked to. "The criticals from our
   // VA scanner" should be a link someone can paste, not a sequence of clicks to
   // reproduce.
-  const [severityTab, setSeverityTab] = useUrlFilter('severity', 'all')
+  // Severity / status / priority are multi-select lists (comma-separated). A
+  // legacy single value (?severity=critical, ?priority=P0 from dashboard links)
+  // parses as a one-item list, so old links keep working; 'all' is ignored.
+  const [severityParam, setSeverityParam] = useUrlFilterList('severity')
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [findingToDelete, setFindingToDelete] = useState<Finding | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
-  const [statusFilter, setStatusFilter] = useUrlFilter('status', 'all')
+  const [statusParam, setStatusParam] = useUrlFilterList('status')
   // Multiple sources at once: "everything from code scanning" is one question,
   // and it spans sast and secret. Comma-separated, matching what the API takes.
   const [sourceFilter, setSourceFilter] = useUrlFilterList('sources')
@@ -317,7 +376,7 @@ function FindingsContent() {
   //  - `kev`      : boolean flag → is_in_kev
   //  - `reachable`: boolean flag → is_reachable
   //  - `sla_status`: multi-select list → sla_status
-  const [priorityFilter, setPriorityFilter] = useUrlFilter('priority', 'all')
+  const [priorityParam, setPriorityParam] = useUrlFilterList('priority')
   const [kevFilter, setKevFilter] = useUrlFilter('kev', 'false')
   const [reachableFilter, setReachableFilter] = useUrlFilter('reachable', 'false')
   const [slaFilter, setSlaFilter] = useUrlFilterList('sla_status')
@@ -332,29 +391,90 @@ function FindingsContent() {
   // single `priority` param (e.g. /findings?priority=kev). Treat those as the new
   // boolean flags on read so old links keep working, and migrate the URL to the
   // new param shape once so every subsequent interaction is clean.
-  const kevActive = kevFilter === 'true' || priorityFilter === 'kev'
-  const reachableActive = reachableFilter === 'true' || priorityFilter === 'reachable'
-  const priorityClass =
-    priorityFilter === 'all' || priorityFilter === 'kev' || priorityFilter === 'reachable'
-      ? null
-      : priorityFilter
+  const kevActive = kevFilter === 'true' || priorityParam.includes('kev')
+  const reachableActive = reachableFilter === 'true' || priorityParam.includes('reachable')
+  const severities = useMemo(
+    () =>
+      severityParam.filter((v): v is FacetSeverity =>
+        (SEVERITY_VALUES as readonly string[]).includes(v)
+      ),
+    [severityParam]
+  )
+  const statuses = useMemo(() => statusParam.filter((v) => v !== 'all'), [statusParam])
+  const priorityClasses = useMemo(
+    () => priorityParam.filter((v) => /^p[0-3]$/i.test(v)).map((v) => v.toUpperCase()),
+    [priorityParam]
+  )
 
   useEffect(() => {
-    if (priorityFilter === 'kev') {
-      setKevFilter('true')
-      setPriorityFilter('all')
-    } else if (priorityFilter === 'reachable') {
-      setReachableFilter('true')
-      setPriorityFilter('all')
+    if (priorityParam.includes('kev')) setKevFilter('true')
+    if (priorityParam.includes('reachable')) setReachableFilter('true')
+    if (priorityParam.includes('kev') || priorityParam.includes('reachable')) {
+      setPriorityParam((prev) => prev.filter((v) => v !== 'kev' && v !== 'reachable'))
     }
-  }, [priorityFilter, setKevFilter, setReachableFilter, setPriorityFilter])
+  }, [priorityParam, setKevFilter, setReachableFilter, setPriorityParam])
   // Debounce so typing doesn't fire a backend list request per keystroke.
   const debouncedSearch = useDebounce(searchQuery, 300)
   // Server-side pagination state. The list is fetched one page at a time from
   // the API (was: fetch first 100 + client-paginate, which capped the table at
   // 100 rows even when the tenant had thousands of findings).
-  const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 20 })
-  const [mainTab, setMainTab] = useState<'findings' | 'groups' | 'pending'>('findings')
+  // The whole view is in the URL — tab, page, page size and sort as well as
+  // filters — so any screen of this list can be shared or bookmarked.
+  const [pageParam, setPageParam] = useUrlFilter('page', '1')
+  const [perPageParam, setPerPageParam] = useUrlFilter('per_page', '20')
+  const pagination = useMemo(
+    () => ({
+      pageIndex: Math.max(0, (parseInt(pageParam, 10) || 1) - 1),
+      pageSize: PAGE_SIZES.includes(parseInt(perPageParam, 10)) ? parseInt(perPageParam, 10) : 20,
+    }),
+    [pageParam, perPageParam]
+  )
+  const setPagination = useCallback(
+    (next: { pageIndex: number; pageSize: number }) => {
+      setPageParam(next.pageIndex === 0 ? '1' : String(next.pageIndex + 1))
+      setPerPageParam(String(next.pageSize))
+    },
+    [setPageParam, setPerPageParam]
+  )
+  const [tabParam, setTabParam] = useUrlFilter('tab', 'findings')
+  const mainTab = (['findings', 'groups', 'pending'] as const).includes(
+    tabParam as 'findings' | 'groups' | 'pending'
+  )
+    ? (tabParam as 'findings' | 'groups' | 'pending')
+    : 'findings'
+  const [sortParam, setSortParam] = useUrlFilter('sort', '')
+  const sorting = useMemo<SortingState>(() => parseSortParam(sortParam), [sortParam])
+  const handleSortingChange = useCallback(
+    (next: SortingState) => {
+      const first = next[0]
+      setSortParam(
+        first && SORTABLE_COLUMNS[first.id] ? `${first.id}.${first.desc ? 'desc' : 'asc'}` : ''
+      )
+    },
+    [setSortParam]
+  )
+  // Filter panel: closed by default so the table gets the width; the viewer's
+  // choice is remembered (a per-browser convenience, safe to lose).
+  const [filtersOpen, setFiltersOpenState] = useState(false)
+  useEffect(() => {
+    try {
+      if (window.localStorage.getItem(FILTERS_OPEN_KEY) === '1') setFiltersOpenState(true)
+    } catch {
+      // storage unavailable — stay closed
+    }
+  }, [])
+  const setFiltersOpen = useCallback((next: boolean | ((open: boolean) => boolean)) => {
+    setFiltersOpenState((prev) => {
+      const value = typeof next === 'function' ? next(prev) : next
+      try {
+        window.localStorage.setItem(FILTERS_OPEN_KEY, value ? '1' : '0')
+      } catch {
+        // best-effort
+      }
+      return value
+    })
+  }, [])
+  const [filterSheetOpen, setFilterSheetOpen] = useState(false)
   const [markFixedGroup, setMarkFixedGroup] = useState<FindingGroup | null>(null)
   const [ticketFinding, setTicketFinding] = useState<Finding | null>(null)
   // Findings selected to spin up (or join) a remediation task. Non-null = dialog open.
@@ -399,20 +519,6 @@ function FindingsContent() {
     return map
   }, [sourceGroups])
 
-  const sourceLabel = useMemo(() => {
-    if (sourceFilter.length === 0) return 'All'
-    // Name the group when the selection is exactly one, so "Code Scanning" reads
-    // better than "SAST +1".
-    const match = sourceGroups.find(
-      (g) =>
-        g.codes.length === sourceFilter.length && g.codes.every((c) => sourceFilter.includes(c))
-    )
-    if (match) return match.label
-    const [first, ...rest] = sourceFilter
-    const firstLabel = sourceLabelByCode.get(first) ?? first.toUpperCase()
-    return rest.length > 0 ? `${firstLabel} +${rest.length}` : firstLabel
-  }, [sourceFilter, sourceGroups, sourceLabelByCode])
-
   const toggleSource = useCallback(
     (code: string) => {
       // Functional update, not a read of `sourceFilter` from render scope: two
@@ -433,22 +539,6 @@ function FindingsContent() {
     [setSlaFilter]
   )
 
-  // Summarise the stacked CTEM signals in the Priority button. "P0 + KEV" reads
-  // as one composite filter, which is the whole point of making them stackable.
-  const priorityLabel = useMemo(() => {
-    const parts: string[] = []
-    if (priorityClass) parts.push(priorityClass.toUpperCase())
-    if (kevActive) parts.push('KEV')
-    if (reachableActive) parts.push('Reachable')
-    return parts.length > 0 ? parts.join(' + ') : 'All'
-  }, [priorityClass, kevActive, reachableActive])
-
-  const slaLabel = useMemo(() => {
-    if (slaFilter.length === 0) return 'All'
-    if (slaFilter.length === 1) return SLA_STATUS_LABELS[slaFilter[0] as SLAStatus] ?? slaFilter[0]
-    return `${slaFilter.length} selected`
-  }, [slaFilter])
-
   const apiFilters = useMemo((): FindingApiFilters => {
     const filters: FindingApiFilters = {
       page: pagination.pageIndex + 1,
@@ -457,13 +547,9 @@ function FindingsContent() {
     if (assetIdFilter) filters.asset_id = assetIdFilter
     if (sourceIdFilter) filters.source_id = sourceIdFilter
     if (scanIdFilter) filters.scan_id = scanIdFilter
-    if (severityTab !== 'all') {
-      filters.severities = [severityTab as ApiSeverity]
-    }
-    if (statusFilter !== 'all') {
-      filters.statuses = [
-        statusFilter as FindingApiFilters['statuses'] extends (infer U)[] ? U : never,
-      ]
+    if (severities.length > 0) filters.severities = severities
+    if (statuses.length > 0) {
+      filters.statuses = statuses as NonNullable<FindingApiFilters['statuses']>
     } else {
       // Default: exclude draft/in_review (pentest WIP not ready for dashboard)
       filters.exclude_statuses = HIDDEN_STATUSES
@@ -477,7 +563,9 @@ function FindingsContent() {
     // CTEM prioritization filters (RFC-017) — independent and stackable. Each
     // applies together (AND), mirroring how the backend FindingFilter combines
     // PriorityClasses + IsInKEV + IsReachable + SLAStatuses.
-    if (priorityClass) filters.priority_classes = [priorityClass]
+    if (priorityClasses.length > 0) filters.priority_classes = priorityClasses
+    const apiSort = toApiSort(sorting)
+    if (apiSort) filters.sort = apiSort
     if (kevActive) filters.is_in_kev = true
     if (reachableActive) filters.is_reachable = true
     if (mineActive) filters.assigned_to_me = true
@@ -487,10 +575,10 @@ function FindingsContent() {
     assetIdFilter,
     sourceIdFilter,
     scanIdFilter,
-    severityTab,
-    statusFilter,
+    severities,
+    statuses,
     sourceFilter,
-    priorityClass,
+    priorityClasses,
     kevActive,
     reachableActive,
     mineActive,
@@ -498,25 +586,34 @@ function FindingsContent() {
     debouncedSearch,
     HIDDEN_STATUSES,
     pagination,
+    sorting,
   ])
 
   // Any filter change resets to the first page — otherwise a user on page 8 of
   // "All" who picks a filter with only 2 pages would sit on an empty page.
-  useEffect(() => {
-    setPagination((p) => (p.pageIndex === 0 ? p : { ...p, pageIndex: 0 }))
-  }, [
+  // Keyed on the filter *values*, so the first render (reading a shared link
+  // with ?page=3) is not reset — only a later filter change is.
+  const filterKey = [
     assetIdFilter,
     sourceIdFilter,
     scanIdFilter,
-    severityTab,
-    statusFilter,
-    sourceFilter,
-    priorityClass,
+    severities.join(),
+    statuses.join(),
+    sourceFilter.join(),
+    priorityClasses.join(),
     kevActive,
     reachableActive,
-    slaFilter,
+    mineActive,
+    slaFilter.join(),
     debouncedSearch,
-  ])
+    sortParam,
+  ].join('|')
+  const lastFilterKey = useRef(filterKey)
+  useEffect(() => {
+    if (lastFilterKey.current === filterKey) return
+    lastFilterKey.current = filterKey
+    setPageParam('1')
+  }, [filterKey, setPageParam])
 
   // Fetch finding stats. Pass `assetId` so the severity cards reflect
   // the filtered table when the user navigates here from an asset
@@ -538,13 +635,37 @@ function FindingsContent() {
     error,
     isLoading: findingsLoading,
     mutate: mutateFindings,
-  } = useFindingsApi(apiFilters)
+  } = useFindingsApi(apiFilters, { keepPreviousData: true })
+
+  // Metric-strip counts that the stats endpoint does not carry: one-row queries
+  // (per_page 1) read only `total`. Scoped like the stats (asset + hidden WIP).
+  const countScope = useMemo<FindingApiFilters>(
+    () => ({
+      per_page: 1,
+      exclude_statuses: HIDDEN_STATUSES,
+      ...(assetIdFilter ? { asset_id: assetIdFilter } : {}),
+    }),
+    [HIDDEN_STATUSES, assetIdFilter]
+  )
+  const { data: overdueData } = useFindingsApi(
+    // Overdue only means something for findings still open.
+    useMemo(
+      () => ({
+        ...countScope,
+        sla_statuses: OVERDUE_SLA,
+        statuses: OPEN_STATUSES as NonNullable<FindingApiFilters['statuses']>,
+      }),
+      [countScope]
+    )
+  )
+  const { data: kevData } = useFindingsApi(
+    useMemo(() => ({ ...countScope, is_in_kev: true }), [countScope])
+  )
+  const overdueCount = overdueData?.total ?? 0
+  const kevCount = kevData?.total ?? 0
 
   // Initial loading state (only true when we don't have stats yet)
   const isInitialLoading = statsLoading && !findingStats
-
-  // Table loading state (for showing loading indicator in table)
-  const isTableLoading = findingsLoading
 
   // Transform API data to UI format
   const findings = useMemo(() => {
@@ -869,6 +990,7 @@ function FindingsContent() {
       },
       {
         accessorKey: 'title',
+        enableSorting: false,
         header: ({ column }) => <DataTableColumnHeader column={column} title="Title" />,
         cell: ({ row }) => {
           // Use hasDataFlow flag from API (populated via subquery in list view)
@@ -982,6 +1104,7 @@ function FindingsContent() {
       },
       {
         id: 'asset',
+        enableSorting: false,
         accessorFn: (row) => row.assets[0]?.name || '-',
         header: ({ column }) => <DataTableColumnHeader column={column} title="Location" />,
         cell: ({ row }) => {
@@ -1026,6 +1149,7 @@ function FindingsContent() {
       },
       {
         accessorKey: 'slaStatus',
+        enableSorting: false,
         header: ({ column }) => <DataTableColumnHeader column={column} title="Due / SLA" />,
         cell: ({ row }) => {
           const status = row.original.slaStatus
@@ -1155,531 +1279,520 @@ function FindingsContent() {
     )
   }
 
+  // ---- Filter model shared by the facet panel, the chips and the metrics ----
+  const setSeverities = (next: string[]) => setSeverityParam(next)
+  const toggleIn = (list: string[], value: string) =>
+    list.includes(value) ? list.filter((v) => v !== value) : [...list, value]
+  const sameSet = (a: string[], b: string[]) =>
+    a.length === b.length && a.every((v) => b.includes(v))
+
+  // A plain function, not useCallback: this block sits below the early `error`
+  // return, so a hook here would be conditional.
+  const clearAllFilters = () => {
+    setSeverityParam([])
+    setStatusParam([])
+    setPriorityParam([])
+    setKevFilter('false')
+    setReachableFilter('false')
+    setSlaFilter([])
+    setSourceFilter([])
+    setMineFilter('false')
+    setSearchQuery('')
+  }
+
+  const statusLabel = (v: string) =>
+    FINDING_STATUS_CONFIG[v as FindingStatus]?.label ??
+    v.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase())
+
+  const activeChips: { key: string; label: string; onRemove: () => void }[] = [
+    ...(mineActive
+      ? [{ key: 'mine', label: 'Assigned to me', onRemove: () => setMineFilter('false') }]
+      : []),
+    ...severities.map((v) => ({
+      key: `sev-${v}`,
+      label: SEVERITY_LABELS[v],
+      onRemove: () => setSeverityParam((p) => p.filter((x) => x !== v)),
+    })),
+    ...statuses.map((v) => ({
+      key: `st-${v}`,
+      label: statusLabel(v),
+      onRemove: () => setStatusParam((p) => p.filter((x) => x !== v)),
+    })),
+    ...priorityClasses.map((v) => ({
+      key: `pr-${v}`,
+      label: v,
+      onRemove: () => setPriorityParam((p) => p.filter((x) => x.toUpperCase() !== v)),
+    })),
+    ...(kevActive
+      ? [{ key: 'kev', label: 'In CISA KEV', onRemove: () => setKevFilter('false') }]
+      : []),
+    ...(reachableActive
+      ? [{ key: 'reach', label: 'Reachable', onRemove: () => setReachableFilter('false') }]
+      : []),
+    ...slaFilter.map((v) => ({
+      key: `sla-${v}`,
+      label: `SLA: ${SLA_STATUS_LABELS[v as SLAStatus] ?? v}`,
+      onRemove: () => toggleSla(v),
+    })),
+    ...sourceFilter.map((v) => ({
+      key: `src-${v}`,
+      label: sourceLabelByCode.get(v) ?? v.toUpperCase(),
+      onRemove: () => toggleSource(v),
+    })),
+  ]
+  const activeCount = activeChips.length
+
+  const metrics: MetricStripItem[] = [
+    {
+      key: 'total',
+      label: 'All findings',
+      value: stats.total,
+      onClick: clearAllFilters,
+      active: activeCount === 0,
+    },
+    {
+      key: 'open',
+      label: 'Open',
+      value: findingStats?.open_count ?? 0,
+      onClick: () => setStatusParam(sameSet(statuses, OPEN_STATUSES) ? [] : OPEN_STATUSES),
+      active: sameSet(statuses, OPEN_STATUSES),
+    },
+    {
+      key: 'critical',
+      label: 'Critical',
+      value: stats.bySeverity.critical,
+      tone: 'danger',
+      onClick: () => setSeverities(sameSet(severities, ['critical']) ? [] : ['critical']),
+      active: sameSet(severities, ['critical']),
+    },
+    {
+      key: 'high',
+      label: 'High',
+      value: stats.bySeverity.high,
+      onClick: () => setSeverities(sameSet(severities, ['high']) ? [] : ['high']),
+      active: sameSet(severities, ['high']),
+    },
+    {
+      key: 'overdue',
+      label: 'Overdue SLA',
+      value: overdueCount,
+      tone: 'danger',
+      onClick: () => {
+        // Open AND past due — the same scope as the count.
+        const on = sameSet(slaFilter, OVERDUE_SLA) && sameSet(statuses, OPEN_STATUSES)
+        setSlaFilter(on ? [] : OVERDUE_SLA)
+        setStatusParam(on ? [] : OPEN_STATUSES)
+      },
+      active: sameSet(slaFilter, OVERDUE_SLA) && sameSet(statuses, OPEN_STATUSES),
+    },
+    {
+      key: 'kev',
+      label: 'In CISA KEV',
+      value: kevCount,
+      tone: 'danger',
+      onClick: () => setKevFilter(kevActive ? 'false' : 'true'),
+      active: kevActive,
+    },
+  ]
+
+  const facetPanel = (
+    <FacetPanel activeCount={activeCount} onClearAll={clearAllFilters}>
+      <FacetToggle
+        label="Assigned to me"
+        description="Yours, on assets you own, or your team's"
+        checked={mineActive}
+        onCheckedChange={(v) => setMineFilter(v ? 'true' : 'false')}
+      />
+      <FacetSection title="Severity" selectedCount={severities.length}>
+        {SEVERITY_VALUES.map((v) => (
+          <FacetOption
+            key={v}
+            label={SEVERITY_LABELS[v]}
+            checked={severities.includes(v)}
+            onCheckedChange={() => setSeverities(toggleIn(severities, v))}
+            adornment={
+              <span className={cn('size-2 shrink-0 rounded-full', SEVERITY_DOT_COLORS[v])} />
+            }
+          />
+        ))}
+      </FacetSection>
+      <FacetSection
+        title="Priority"
+        selectedCount={priorityClasses.length + (kevActive ? 1 : 0) + (reachableActive ? 1 : 0)}
+      >
+        {PRIORITY_OPTIONS.map((o) => (
+          <FacetOption
+            key={o.value}
+            label={
+              <>
+                {o.value} <span className="text-muted-foreground">· {o.hint}</span>
+              </>
+            }
+            checked={priorityClasses.includes(o.value)}
+            onCheckedChange={() => setPriorityParam(toggleIn(priorityClasses, o.value))}
+          />
+        ))}
+        <FacetGroupLabel>Threat signals</FacetGroupLabel>
+        <FacetOption
+          label="In CISA KEV"
+          checked={kevActive}
+          onCheckedChange={(v) => setKevFilter(v ? 'true' : 'false')}
+        />
+        <FacetOption
+          label="Reachable"
+          checked={reachableActive}
+          onCheckedChange={(v) => setReachableFilter(v ? 'true' : 'false')}
+        />
+      </FacetSection>
+      <FacetSection title="Status" selectedCount={statuses.length}>
+        {STATUS_GROUPS.map((g) => (
+          <div key={g.label}>
+            <FacetGroupLabel
+              onSelectAll={() => setStatusParam(Array.from(new Set([...statuses, ...g.values])))}
+            >
+              {g.label}
+            </FacetGroupLabel>
+            {g.values.map((v) => (
+              <FacetOption
+                key={v}
+                label={statusLabel(v)}
+                checked={statuses.includes(v)}
+                onCheckedChange={() => setStatusParam(toggleIn(statuses, v))}
+              />
+            ))}
+          </div>
+        ))}
+      </FacetSection>
+      <FacetSection title="SLA" selectedCount={slaFilter.length} defaultOpen={false}>
+        {SLA_OPTIONS.map((v) => (
+          <FacetOption
+            key={v}
+            label={SLA_STATUS_LABELS[v]}
+            checked={slaFilter.includes(v)}
+            onCheckedChange={() => toggleSla(v)}
+          />
+        ))}
+      </FacetSection>
+      <FacetSection title="Source" selectedCount={sourceFilter.length} defaultOpen={false}>
+        {sourceGroups.length === 0 ? (
+          <p className="py-1 text-xs text-muted-foreground">No sources yet.</p>
+        ) : (
+          sourceGroups.map((g) => (
+            <div key={g.code}>
+              <FacetGroupLabel
+                onSelectAll={() =>
+                  setSourceFilter(Array.from(new Set([...sourceFilter, ...g.codes])))
+                }
+              >
+                {g.label}
+              </FacetGroupLabel>
+              {g.options.map((o) => (
+                <FacetOption
+                  key={o.value}
+                  label={o.label}
+                  checked={sourceFilter.includes(o.value)}
+                  onCheckedChange={() => toggleSource(o.value)}
+                />
+              ))}
+            </div>
+          ))
+        )}
+      </FacetSection>
+    </FacetPanel>
+  )
+
+  const total = findingsResponse?.total ?? 0
+  const rangeStart = total === 0 ? 0 : pagination.pageIndex * pagination.pageSize + 1
+  const rangeEnd = Math.min(total, pagination.pageIndex * pagination.pageSize + findings.length)
+  const filterBadge =
+    activeCount > 0 ? (
+      <span className="ms-1.5 rounded-full bg-primary px-1.5 text-[11px] font-medium tabular-nums text-primary-foreground">
+        {activeCount}
+      </span>
+    ) : null
+
+  const toolbarStart = (
+    <>
+      <Button
+        variant="outline"
+        size="sm"
+        className="hidden h-9 lg:inline-flex"
+        onClick={() => setFiltersOpen((o) => !o)}
+        aria-pressed={filtersOpen}
+        aria-controls="finding-filters"
+      >
+        {filtersOpen ? <PanelLeftClose className="h-4 w-4" /> : <ListFilter className="h-4 w-4" />}
+        <span className="ms-2">Filters</span>
+        {filterBadge}
+      </Button>
+      <Button
+        variant="outline"
+        size="sm"
+        className="h-9 lg:hidden"
+        onClick={() => setFilterSheetOpen(true)}
+      >
+        <ListFilter className="h-4 w-4" />
+        <span className="ms-2">Filters</span>
+        {filterBadge}
+      </Button>
+      <div className="relative min-w-0 flex-1 sm:max-w-sm">
+        <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search title, CVE, rule or location…"
+          aria-label="Search findings"
+          className="h-9 ps-9"
+        />
+      </div>
+    </>
+  )
+
+  const toolbarEnd = (
+    <>
+      <span className="hidden text-sm tabular-nums text-muted-foreground xl:inline">
+        {total === 0 ? 'No results' : `${rangeStart}–${rangeEnd} of ${total.toLocaleString()}`}
+      </span>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-9 w-9"
+            onClick={handleRefresh}
+            disabled={statsLoading || findingsLoading}
+            aria-label="Refresh"
+          >
+            <RefreshCw
+              className={cn('h-4 w-4', (statsLoading || findingsLoading) && 'animate-spin')}
+            />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>Refresh</TooltipContent>
+      </Tooltip>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline" size="sm" className="h-9">
+            <Download className="h-4 w-4 md:me-2" />
+            <span className="hidden md:inline">Export</span>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onClick={() => handleExport('CSV')}>Export as CSV</DropdownMenuItem>
+          <DropdownMenuItem onClick={() => handleExport('JSON')}>Export as JSON</DropdownMenuItem>
+          <DropdownMenuItem disabled>Export as PDF report</DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </>
+  )
+
+  // Filters that arrive from elsewhere (an asset, a source, a scan) are context,
+  // not facets — always shown. Facet chips only when the panel is not visible.
+  const contextChips = [
+    assetIdFilter && { key: 'asset', label: `Asset ${assetIdFilter.slice(0, 8)}…` },
+    sourceIdFilter && { key: 'source', label: `Source ${sourceIdFilter.slice(0, 8)}…` },
+    scanIdFilter && { key: 'scan', label: `Scan ${scanIdFilter.slice(0, 8)}…` },
+  ].filter(Boolean) as { key: string; label: string }[]
+
   return (
     <>
       <Main>
         <PageHeader
-          title="Security Findings"
-          description={
-            isInitialLoading
-              ? 'Loading findings...'
-              : `${stats.total} total findings - ${stats.overdueCount} open`
-          }
+          title="Findings"
+          description="Every exposure found across your assets — triage, assign and track each one to closure."
         >
-          <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" size="sm" asChild>
             <Link href="/findings/approvals">
-              <Button variant="outline" size="sm">
-                <ClipboardList className="h-4 w-4 sm:me-2" />
-                <span className="hidden sm:inline">Approvals</span>
-              </Button>
+              <ClipboardList className="h-4 w-4 sm:me-2" />
+              <span className="hidden sm:inline">Approvals</span>
             </Link>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleRefresh}
-              disabled={statsLoading || findingsLoading}
-            >
-              {statsLoading || findingsLoading ? (
-                <Loader2 className="me-2 h-4 w-4 animate-spin" />
-              ) : (
-                <RefreshCw className="me-2 h-4 w-4" />
-              )}
-              Refresh
+          </Button>
+          {hasPermission('findings:write') && (
+            <Button size="sm" onClick={() => setCreateDialogOpen(true)}>
+              <Plus className="h-4 w-4 sm:me-2" />
+              <span className="hidden sm:inline">Add finding</span>
             </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <Download className="me-2 h-4 w-4" />
-                  Export
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handleExport('CSV')}>
-                  Export as CSV
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('JSON')}>
-                  Export as JSON
-                </DropdownMenuItem>
-                <DropdownMenuItem disabled>Export as PDF Report</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            {hasPermission('findings:write') && (
-              <Button size="sm" onClick={() => setCreateDialogOpen(true)}>
-                <Plus className="h-4 w-4 sm:me-2" />
-                <span className="hidden sm:inline">Add Finding</span>
-              </Button>
-            )}
-          </div>
+          )}
         </PageHeader>
 
-        {/* Active scan filter badge */}
-        {scanIdFilter && (
-          <div className="mt-4 flex items-center gap-2">
-            <Badge variant="secondary" className="gap-1.5">
-              <Filter className="h-3 w-3" />
-              Scan: {scanIdFilter.slice(0, 8)}…
-              <button
-                type="button"
-                onClick={() => router.push('/findings')}
-                className="ms-1 rounded-sm hover:bg-background/50"
-                aria-label="Clear scan filter"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            </Badge>
-            <span className="text-muted-foreground text-xs">
-              Showing findings from this scan only
-            </span>
-          </div>
-        )}
-
-        {/* Main Tab Selector */}
-        <div className="mt-4">
-          <Tabs value={mainTab} onValueChange={(v) => setMainTab(v as typeof mainTab)}>
-            <TabsList>
-              <TabsTrigger value="findings">All Findings</TabsTrigger>
-              <TabsTrigger value="groups">Groups</TabsTrigger>
-              <TabsTrigger value="pending" className="relative">
-                Pending Review
-                {pendingCount > 0 && (
-                  <Badge variant="destructive" className="ms-1.5 h-5 min-w-[20px] px-1 text-[10px]">
-                    {pendingCount}
-                  </Badge>
-                )}
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
+        <Tabs value={mainTab} onValueChange={setTabParam} className="mt-4">
+          <TabsList variant="line">
+            <TabsTrigger value="findings">All findings</TabsTrigger>
+            <TabsTrigger value="groups">Groups</TabsTrigger>
+            <TabsTrigger value="pending">
+              Pending review
+              {pendingCount > 0 && (
+                <span className="rounded-full bg-destructive px-1.5 text-[11px] font-medium tabular-nums text-destructive-foreground">
+                  {pendingCount}
+                </span>
+              )}
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
 
         {mainTab === 'groups' && (
-          <div className="mt-4">
+          <div className="mt-5">
             <FindingGroupsTab onMarkFixed={(group) => setMarkFixedGroup(group)} />
           </div>
         )}
 
         {mainTab === 'pending' && (
-          <div className="mt-4">
+          <div className="mt-5">
             <PendingReviewTab />
           </div>
         )}
 
-        {mainTab !== 'findings' ? null : (
+        {mainTab === 'findings' && (
           <>
-            {/* Active Filter Indicators */}
-            {(assetIdFilter || sourceIdFilter) && (
-              <div className="mt-4 flex items-center gap-2 flex-wrap">
-                <Filter className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">Filtered by:</span>
-                {assetIdFilter && (
-                  <Badge variant="secondary" className="gap-1.5">
-                    Asset: {assetIdFilter.slice(0, 8)}...
-                    <button
-                      onClick={clearFilters}
-                      className="ms-0.5 rounded-full hover:bg-muted-foreground/20"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </Badge>
-                )}
-                {sourceIdFilter && (
-                  <Badge variant="secondary" className="gap-1.5">
-                    Source: {sourceIdFilter.slice(0, 8)}...
-                    <button
-                      onClick={clearFilters}
-                      className="ms-0.5 rounded-full hover:bg-muted-foreground/20"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </Badge>
-                )}
-              </div>
-            )}
+            <MetricStrip className="mt-5" loading={isInitialLoading} items={metrics} />
 
-            {/* Filter Bar */}
-            <div className="mt-4 flex flex-wrap items-center gap-2">
-              <div className="flex-1 min-w-[200px] max-w-sm">
-                <input
-                  type="text"
-                  placeholder="Search findings..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                />
-              </div>
-              <Button
-                variant={mineActive ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setMineFilter(mineActive ? 'false' : 'true')}
-                aria-pressed={mineActive}
-                title="Show only findings assigned to me or on assets I own"
-              >
-                <UserPlus className="me-2 h-4 w-4" />
-                Assigned to me
-              </Button>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <Filter className="me-2 h-4 w-4" />
-                    Status:{' '}
-                    {statusFilter === 'all'
-                      ? 'All'
-                      : FINDING_STATUS_CONFIG[statusFilter as FindingStatus]?.label || statusFilter}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuItem onClick={() => setStatusFilter('all')}>All</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setStatusFilter('new')}>New</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setStatusFilter('confirmed')}>
-                    Confirmed
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setStatusFilter('in_progress')}>
-                    In Progress
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setStatusFilter('fix_applied')}>
-                    Fix Applied
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setStatusFilter('resolved')}>
-                    Resolved
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setStatusFilter('false_positive')}>
-                    False Positive
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setStatusFilter('accepted')}>
-                    Accepted
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => setStatusFilter('draft')}>
-                    Draft
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setStatusFilter('in_review')}>
-                    In Review
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setStatusFilter('remediation')}>
-                    Remediation
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setStatusFilter('retest')}>
-                    Retest
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setStatusFilter('verified')}>
-                    Verified
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setStatusFilter('accepted_risk')}>
-                    Accepted Risk
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <Filter className="me-2 h-4 w-4" />
-                    Source: {sourceLabel}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="max-h-96 overflow-y-auto">
-                  <DropdownMenuItem onClick={() => setSourceFilter([])}>
-                    All sources
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  {sourceGroups.length === 0 ? (
-                    <DropdownMenuItem disabled>No sources available</DropdownMenuItem>
-                  ) : (
-                    sourceGroups.map((group) => (
-                      <DropdownMenuGroup key={group.code}>
-                        <DropdownMenuLabel
-                          className="cursor-pointer text-xs font-medium hover:underline"
-                          onClick={() => setSourceFilter(group.codes)}
+            {/* Stretch (not items-start): the filter column runs the full height of
+                the list with its divider, so it reads as part of the table rather
+                than a panel floating beside it. */}
+            <div className="mt-5 flex gap-5">
+              {filtersOpen && (
+                <aside
+                  id="finding-filters"
+                  aria-label="Finding filters"
+                  className="hidden w-60 shrink-0 border-e pe-5 lg:block"
+                >
+                  {facetPanel}
+                </aside>
+              )}
+
+              <div className="min-w-0 flex-1 space-y-3">
+                {(contextChips.length > 0 || activeCount > 0) && (
+                  <div
+                    className={cn(
+                      'flex flex-wrap items-center gap-1.5',
+                      contextChips.length === 0 && filtersOpen && 'lg:hidden'
+                    )}
+                  >
+                    {contextChips.map((c) => (
+                      <Badge key={c.key} variant="secondary" className="gap-1.5">
+                        <Filter className="h-3 w-3" />
+                        {c.label}
+                        <button
+                          type="button"
+                          onClick={clearFilters}
+                          className="rounded-sm hover:bg-background/60"
+                          aria-label={`Clear ${c.key} filter`}
                         >
-                          {group.label}
-                        </DropdownMenuLabel>
-                        {group.options.map((opt) => (
-                          <DropdownMenuCheckboxItem
-                            key={opt.value}
-                            checked={sourceFilter.includes(opt.value)}
-                            onCheckedChange={() => toggleSource(opt.value)}
-                            onSelect={(e) => e.preventDefault()}
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    ))}
+                    <span className={cn('contents', filtersOpen && 'lg:hidden')}>
+                      {activeChips.map((c) => (
+                        <Badge key={c.key} variant="outline" className="gap-1.5 font-normal">
+                          {c.label}
+                          <button
+                            type="button"
+                            onClick={c.onRemove}
+                            className="rounded-sm hover:bg-accent"
+                            aria-label={`Remove ${c.label} filter`}
                           >
-                            {opt.label}
-                          </DropdownMenuCheckboxItem>
-                        ))}
-                      </DropdownMenuGroup>
-                    ))
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <Filter className="me-2 h-4 w-4" />
-                    Priority: {priorityLabel}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  {/* Priority class — a single P0–P3 selection. */}
-                  <DropdownMenuLabel className="text-xs">Priority class</DropdownMenuLabel>
-                  <DropdownMenuItem onClick={() => setPriorityFilter('all')}>
-                    All classes
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setPriorityFilter('P0')}>
-                    P0 — Critical / Act now
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setPriorityFilter('P1')}>
-                    P1 — High
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setPriorityFilter('P2')}>
-                    P2 — Medium
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setPriorityFilter('P3')}>
-                    P3 — Low
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  {/* CTEM signals — checkboxes so they stack with the class AND each
-                      other (P0 ∧ KEV ∧ reachable is one query). */}
-                  <DropdownMenuLabel className="text-xs">Threat signals</DropdownMenuLabel>
-                  <DropdownMenuCheckboxItem
-                    checked={kevActive}
-                    onCheckedChange={(v) => setKevFilter(v ? 'true' : 'false')}
-                    onSelect={(e) => e.preventDefault()}
-                  >
-                    In CISA KEV
-                  </DropdownMenuCheckboxItem>
-                  <DropdownMenuCheckboxItem
-                    checked={reachableActive}
-                    onCheckedChange={(v) => setReachableFilter(v ? 'true' : 'false')}
-                    onSelect={(e) => e.preventDefault()}
-                  >
-                    Reachable
-                  </DropdownMenuCheckboxItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <Filter className="me-2 h-4 w-4" />
-                    SLA: {slaLabel}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuItem onClick={() => setSlaFilter([])}>All</DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  {(
-                    ['overdue', 'exceeded', 'warning', 'on_track', 'not_applicable'] as SLAStatus[]
-                  ).map((s) => (
-                    <DropdownMenuCheckboxItem
-                      key={s}
-                      checked={slaFilter.includes(s)}
-                      onCheckedChange={() => toggleSla(s)}
-                      onSelect={(e) => e.preventDefault()}
-                    >
-                      {SLA_STATUS_LABELS[s]}
-                    </DropdownMenuCheckboxItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
+                            <X className="h-3 w-3" />
+                          </button>
+                        </Badge>
+                      ))}
+                      {activeCount > 0 && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 px-2 text-xs"
+                          onClick={clearAllFilters}
+                        >
+                          Clear all
+                        </Button>
+                      )}
+                    </span>
+                  </div>
+                )}
+
+                {selectedCount > 0 && (
+                  <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-muted/50 px-3 py-2">
+                    <span className="text-sm font-medium">{selectedCount} selected</span>
+                    <div className="ms-auto flex flex-wrap items-center gap-2">
+                      <AssigneeSelect
+                        placeholder="Assign to…"
+                        onChange={(user) => {
+                          if (user) void handleBulkAssign(user.id)
+                        }}
+                      />
+                      {hasPermission('findings:remediation:write') && remediationEnabled && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openRemediationFor(selectedFindings)}
+                        >
+                          <Wrench className="me-2 h-4 w-4" />
+                          Create remediation task
+                        </Button>
+                      )}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" size="sm">
+                            <Flag className="me-2 h-4 w-4" />
+                            Change status
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent>
+                          <DropdownMenuItem onClick={() => handleBulkStatusChange('confirmed')}>
+                            Confirmed
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleBulkStatusChange('in_progress')}>
+                            In Progress
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleBulkStatusChange('resolved')}>
+                            Resolved
+                          </DropdownMenuItem>
+                          {/* false_positive requires the per-finding approval flow, so it is
+                              intentionally not offered as a bulk action. */}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                      <Button variant="ghost" size="sm" onClick={() => setSelectedFindingIds([])}>
+                        Clear selection
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {!findingsResponse && findingsLoading ? (
+                  <FindingsTableSkeleton />
+                ) : (
+                  <DataTable
+                    columns={columns}
+                    data={findings}
+                    showSearch={false}
+                    toolbarStart={toolbarStart}
+                    toolbarEnd={toolbarEnd}
+                    getRowId={(f) => f.id}
+                    manualPagination
+                    rowCount={total}
+                    pagination={pagination}
+                    onPaginationChange={setPagination}
+                    pageSizeOptions={PAGE_SIZES}
+                    sorting={sorting}
+                    onSortingChange={handleSortingChange}
+                    onSelectionChange={(rows) => setSelectedFindingIds(rows.map((f) => f.id))}
+                    emptyMessage="No findings match these filters"
+                    emptyDescription={
+                      activeCount > 0 ? 'Try removing a filter or clearing them all.' : undefined
+                    }
+                  />
+                )}
+              </div>
             </div>
 
-            {/* Active stackable filters — one removable badge per signal so the
-                AND-stacking is visible ("P0 + KEV + Overdue" is three chips), and
-                each can be cleared independently. "Clear all" resets every param. */}
-            {(priorityClass || kevActive || reachableActive || slaFilter.length > 0) && (
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                <span className="text-muted-foreground text-xs">Active:</span>
-                {priorityClass && (
-                  <Badge variant="secondary" className="gap-1.5">
-                    {priorityClass.toUpperCase()}
-                    <button
-                      type="button"
-                      onClick={() => setPriorityFilter('all')}
-                      className="ms-0.5 rounded-full hover:bg-muted-foreground/20"
-                      aria-label="Clear priority class filter"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </Badge>
-                )}
-                {kevActive && (
-                  <Badge variant="secondary" className="gap-1.5">
-                    KEV
-                    <button
-                      type="button"
-                      onClick={() => setKevFilter('false')}
-                      className="ms-0.5 rounded-full hover:bg-muted-foreground/20"
-                      aria-label="Clear KEV filter"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </Badge>
-                )}
-                {reachableActive && (
-                  <Badge variant="secondary" className="gap-1.5">
-                    Reachable
-                    <button
-                      type="button"
-                      onClick={() => setReachableFilter('false')}
-                      className="ms-0.5 rounded-full hover:bg-muted-foreground/20"
-                      aria-label="Clear reachable filter"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </Badge>
-                )}
-                {slaFilter.map((s) => (
-                  <Badge key={s} variant="secondary" className="gap-1.5">
-                    {SLA_STATUS_LABELS[s as SLAStatus] ?? s}
-                    <button
-                      type="button"
-                      onClick={() => toggleSla(s)}
-                      className="ms-0.5 rounded-full hover:bg-muted-foreground/20"
-                      aria-label={`Clear ${s} SLA filter`}
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </Badge>
-                ))}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 px-2 text-xs"
-                  onClick={clearFilters}
-                >
-                  Clear all
-                </Button>
-              </div>
-            )}
-
-            {/* Bulk Actions Bar - Shows when items selected */}
-            {selectedCount > 0 && (
-              <Card className="mt-4 border-primary">
-                <CardContent className="flex items-center justify-between py-3">
-                  <span className="text-sm font-medium">{selectedCount} finding(s) selected</span>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <AssigneeSelect
-                      placeholder="Assign to…"
-                      onChange={(user) => {
-                        if (user) void handleBulkAssign(user.id)
-                      }}
-                    />
-                    {hasPermission('findings:remediation:write') && remediationEnabled && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openRemediationFor(selectedFindings)}
-                      >
-                        <Wrench className="me-2 h-4 w-4" />
-                        Create remediation task
-                      </Button>
-                    )}
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="sm">
-                          <Flag className="me-2 h-4 w-4" />
-                          Change Status
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent>
-                        <DropdownMenuItem onClick={() => handleBulkStatusChange('confirmed')}>
-                          Confirmed
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleBulkStatusChange('in_progress')}>
-                          In Progress
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleBulkStatusChange('resolved')}>
-                          Resolved
-                        </DropdownMenuItem>
-                        {/* false_positive requires the per-finding approval flow, so it is
-                            intentionally not offered as a bulk action. */}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                    <Button variant="outline" size="sm" onClick={() => setSelectedFindingIds([])}>
-                      Clear Selection
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {isInitialLoading ? (
-              <div className="mt-6">
-                <FindingsLoadingSkeleton />
-              </div>
-            ) : (
-              <>
-                {/* Severity stat-cards removed — the counts already live in the
-                    severity filter tabs below, so showing them twice was noise. */}
-
-                {/* Tabs with DataTable */}
-                <Tabs value={severityTab} onValueChange={setSeverityTab} className="mt-6">
-                  {/* Scroll container with fade indicator on mobile */}
-                  <div className="relative sm:static">
-                    <div className="overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
-                      <TabsList className="h-auto w-max">
-                        <TabsTrigger value="all" className="text-xs sm:text-sm shrink-0">
-                          All ({stats.total})
-                        </TabsTrigger>
-                        <TabsTrigger value="critical" className="text-xs sm:text-sm shrink-0">
-                          <span className="hidden sm:inline">Critical</span>
-                          <span className="sm:hidden">Crit</span>
-                          <span className="ms-1">({stats.bySeverity.critical})</span>
-                        </TabsTrigger>
-                        <TabsTrigger value="high" className="text-xs sm:text-sm shrink-0">
-                          High ({stats.bySeverity.high})
-                        </TabsTrigger>
-                        <TabsTrigger value="medium" className="text-xs sm:text-sm shrink-0">
-                          <span className="hidden sm:inline">Medium</span>
-                          <span className="sm:hidden">Med</span>
-                          <span className="ms-1">({stats.bySeverity.medium})</span>
-                        </TabsTrigger>
-                        <TabsTrigger value="low" className="text-xs sm:text-sm shrink-0">
-                          Low ({stats.bySeverity.low})
-                        </TabsTrigger>
-                      </TabsList>
-                    </div>
-                    {/* Fade indicator for scrollable content on mobile */}
-                    <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-background to-transparent pointer-events-none sm:hidden" />
-                  </div>
-
-                  <TabsContent value={severityTab}>
-                    <Card className="mt-4">
-                      <CardContent className="pt-6">
-                        {isTableLoading ? (
-                          <div className="space-y-3">
-                            {[...Array(5)].map((_, i) => (
-                              <div key={i} className="flex items-center gap-4">
-                                <Skeleton className="h-4 w-4" />
-                                <Skeleton className="h-4 flex-1" />
-                                <Skeleton className="h-6 w-16" />
-                                <Skeleton className="h-4 w-12" />
-                                <Skeleton className="h-4 w-24" />
-                                <Skeleton className="h-6 w-20" />
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <DataTable
-                            columns={columns}
-                            data={findings}
-                            showSearch={false}
-                            getRowId={(f) => f.id}
-                            manualPagination
-                            rowCount={findingsResponse?.total ?? 0}
-                            pagination={pagination}
-                            onPaginationChange={setPagination}
-                            onSelectionChange={(rows) =>
-                              setSelectedFindingIds(rows.map((f) => f.id))
-                            }
-                            emptyMessage="No findings found"
-                            emptyDescription={
-                              findings.length === 0
-                                ? 'No security findings match your search criteria'
-                                : undefined
-                            }
-                          />
-                        )}
-                      </CardContent>
-                    </Card>
-                  </TabsContent>
-                </Tabs>
-              </>
-            )}
+            <Sheet open={filterSheetOpen} onOpenChange={setFilterSheetOpen}>
+              <SheetContent side="left" className="w-80 overflow-y-auto p-4">
+                <SheetHeader className="sr-only">
+                  <SheetTitle>Finding filters</SheetTitle>
+                </SheetHeader>
+                {facetPanel}
+              </SheetContent>
+            </Sheet>
           </>
         )}
       </Main>
