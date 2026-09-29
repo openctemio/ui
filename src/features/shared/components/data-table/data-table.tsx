@@ -116,6 +116,12 @@ interface DataTableProps<TData, TValue> {
   resetSelectionKey?: string | number
   /** Hide the "N of M selected" note, e.g. when a bulk-action bar shows it. */
   showSelectionCount?: boolean
+  /**
+   * Phone layout: below `md` each row renders through this as a stacked card
+   * instead of the table — a many-column table squeezed to phone width leaves
+   * only the pinned name readable. Pagination stays the same.
+   */
+  mobileRow?: (row: TData) => React.ReactNode
 }
 
 /** Fixed width of the selection column, so the pinned column after it knows its offset. */
@@ -164,6 +170,7 @@ export function DataTable<TData, TValue>({
   stickyFirstColumn = true,
   resetSelectionKey,
   showSelectionCount = true,
+  mobileRow,
 }: DataTableProps<TData, TValue>) {
   // Which sides of the horizontally-scrolling table have content hidden under
   // the pinned columns — drives the edge shadows.
@@ -365,7 +372,11 @@ export function DataTable<TData, TValue>({
           {showColumnToggle && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="h-9">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className={cn('h-9', mobileRow && 'hidden md:inline-flex')}
+                >
                   <SlidersHorizontal className="h-4 w-4 sm:me-2" />
                   <span className="hidden sm:inline">Columns</span>
                 </Button>
@@ -392,10 +403,27 @@ export function DataTable<TData, TValue>({
         </div>
       </div>
 
+      {mobileRow && (
+        <div className="divide-y rounded-md border md:hidden">
+          {table.getRowModel().rows.length ? (
+            table.getRowModel().rows.map((row) => <div key={row.id}>{mobileRow(row.original)}</div>)
+          ) : (
+            <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
+              <Inbox className="h-10 w-10 text-muted-foreground/50" />
+              <p className="text-sm font-medium">{emptyMessage}</p>
+              <p className="text-xs text-muted-foreground">{emptyDescription}</p>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Table */}
       <div
         ref={tableWrapRef}
-        className="group/table rounded-md border overflow-x-auto"
+        className={cn(
+          'group/table rounded-md border overflow-x-auto',
+          mobileRow && 'hidden md:block'
+        )}
         data-hidden-start={hiddenEdges.start}
         data-hidden-end={hiddenEdges.end}
         // scroll does not bubble, but a capture listener on an ancestor sees the
