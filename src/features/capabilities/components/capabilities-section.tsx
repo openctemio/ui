@@ -17,8 +17,7 @@ import { getErrorMessage } from '@/lib/api/error-handler'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Badge } from '@/components/ui/badge'
+import { Tabs, TabsList, TabsTrigger, TabsCount } from '@/components/ui/tabs'
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -377,15 +376,11 @@ export function CapabilitiesSection() {
         <TabsList>
           <TabsTrigger value="platform">
             Platform
-            <Badge variant="secondary" className="ms-1.5 tabular-nums">
-              {platformCount}
-            </Badge>
+            <TabsCount value={platformCount} />
           </TabsTrigger>
           <TabsTrigger value="custom">
             Custom
-            <Badge variant="secondary" className="ms-1.5 tabular-nums">
-              {customCount}
-            </Badge>
+            <TabsCount value={customCount} />
           </TabsTrigger>
         </TabsList>
       </Tabs>

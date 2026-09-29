@@ -36,7 +36,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabsContent, TabsList, TabsTrigger, TabsCount } from '@/components/ui/tabs'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
 import { useDebounce } from '@/hooks/use-debounce'
@@ -2766,17 +2766,13 @@ export default function RepositoryDetailPage() {
               <TabsTrigger value="branches" className="gap-2">
                 <GitBranch className="h-4 w-4" />
                 Branches
-                <Badge variant="secondary" className="ms-1 h-5 px-1.5">
-                  {branches.length}
-                </Badge>
+                <TabsCount value={branches.length} />
               </TabsTrigger>
             )}
             <TabsTrigger value="findings" className="gap-2">
               <Shield className="h-4 w-4" />
               Findings
-              <Badge variant="secondary" className="ms-1 h-5 px-1.5">
-                {findings.length}
-              </Badge>
+              <TabsCount value={findings.length} />
             </TabsTrigger>
             <TabsTrigger value="activity" className="gap-2">
               <History className="h-4 w-4" />

@@ -149,4 +149,36 @@ function TabsContent({ className, ...props }: React.ComponentProps<typeof TabsPr
   )
 }
 
-export { Tabs, TabsList, TabsTrigger, TabsContent }
+/**
+ * The count shown in a tab ("Findings 12"). One look everywhere: a quiet pill
+ * that follows the tab's own state. `tone="danger"` turns it red only while
+ * the value is a positive number, the same rule as MetricStrip: a zero is good
+ * news and stays neutral. Pass a string (e.g. "…") while loading; null/undefined
+ * renders nothing.
+ */
+function TabsCount({
+  value,
+  tone = 'default',
+  className,
+}: {
+  value: number | string | null | undefined
+  tone?: 'default' | 'danger'
+  className?: string
+}) {
+  if (value == null) return null
+  const alarming = tone === 'danger' && typeof value === 'number' && value > 0
+  return (
+    <span
+      data-slot="tabs-count"
+      className={cn(
+        'inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-[11px] font-medium leading-none tabular-nums text-muted-foreground',
+        alarming && 'bg-destructive/10 text-destructive',
+        className
+      )}
+    >
+      {typeof value === 'number' ? value.toLocaleString() : value}
+    </span>
+  )
+}
+
+export { Tabs, TabsList, TabsTrigger, TabsContent, TabsCount }
