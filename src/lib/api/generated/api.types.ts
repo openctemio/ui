@@ -3230,6 +3230,28 @@ export interface paths {
           max_risk_score?: number
           /** @description Filter by whether asset has findings */
           has_findings?: boolean
+          /** @description Filter crown-jewel assets */
+          is_crown_jewel?: boolean
+          /** @description Filter by sub_type */
+          sub_type?: string
+          /** @description Filter by business unit membership (comma-separated UUIDs) */
+          business_unit_ids?: string
+          /** @description Filter assets with (true) / without (false) an assigned owner */
+          has_owner?: boolean
+          /** @description Filter by data classification (comma-separated: public,internal,confidential,restricted,secret) */
+          data_classifications?: string
+          /** @description Filter assets that are a control-plane dependency */
+          is_control_plane?: boolean
+          /** @description Filter internet-reachable assets */
+          is_internet_accessible?: boolean
+          /** @description Filter by environment (comma-separated: production,staging,development,testing,dr) */
+          environments?: string
+          /** @description Filter by provider/source (comma-separated) */
+          providers?: string
+          /** @description Filter assets last seen at/after this time (RFC3339 or YYYY-MM-DD) */
+          last_seen_after?: string
+          /** @description Filter assets last seen at/before this time (RFC3339 or YYYY-MM-DD) */
+          last_seen_before?: string
           /** @description Sort field (e.g., -created_at, name, -risk_score) */
           sort?: string
           /** @description Page number */
@@ -10883,12 +10905,18 @@ export interface paths {
      *     parameter scopes the stats to a single asset (used by the Findings
      *     page when filtered by `?assetId=…` so the severity cards match the
      *     filtered table instead of showing global tenant counts).
+     *     Optional sources query parameter (comma-separated, same values and
+     *     validation as the list endpoint's sources filter) scopes every
+     *     number to those sources; the Exposures type pages use it to get
+     *     their counts in one request instead of walking the list.
      */
     get: {
       parameters: {
         query?: {
           /** @description Restrict stats to a single asset */
           asset_id?: string
+          /** @description Restrict stats to these finding sources (comma-separated, max 25) */
+          sources?: string
         }
         header?: never
         path?: never
@@ -10903,6 +10931,17 @@ export interface paths {
           }
           content: {
             'application/json': components['schemas']['internal_infra_http_handler.FindingStatsResponse']
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': {
+              [key: string]: string
+            }
           }
         }
         /** @description Unauthorized */
@@ -26526,6 +26565,7 @@ export interface components {
     'internal_infra_http_handler.AssetGroupResponse': {
       asset_count?: number
       business_unit?: string
+      business_unit_id?: string
       cloud_count?: number
       created_at?: string
       credential_count?: number
@@ -26576,6 +26616,10 @@ export interface components {
       /** @description Timestamps */
       first_seen?: string
       id?: string
+      impact_availability?: string
+      /** @description CTEM Scoping: CIA impact rating (low | moderate | high; empty = not rated) */
+      impact_confidentiality?: string
+      impact_integrity?: string
       is_internet_accessible?: boolean
       last_seen?: string
       last_synced_at?: string
@@ -26657,10 +26701,32 @@ export interface components {
       total?: number
     }
     'internal_infra_http_handler.AssetStatsResponse': {
+      by_business_unit?: {
+        [key: string]: number
+      }
+      by_control_plane?: {
+        [key: string]: number
+      }
       by_criticality?: {
         [key: string]: number
       }
+      /** @description CTEM inventory facet counts. */
+      by_data_classification?: {
+        [key: string]: number
+      }
+      by_environment?: {
+        [key: string]: number
+      }
       by_exposure?: {
+        [key: string]: number
+      }
+      by_has_owner?: {
+        [key: string]: number
+      }
+      by_internet_accessible?: {
+        [key: string]: number
+      }
+      by_provider?: {
         [key: string]: number
       }
       by_scope?: {
@@ -26735,6 +26801,10 @@ export interface components {
       /** @description Timestamps */
       first_seen?: string
       id?: string
+      impact_availability?: string
+      /** @description CTEM Scoping: CIA impact rating (low | moderate | high; empty = not rated) */
+      impact_confidentiality?: string
+      impact_integrity?: string
       is_internet_accessible?: boolean
       last_seen?: string
       last_synced_at?: string
@@ -27355,10 +27425,18 @@ export interface components {
       enabled_severities?: string[]
       include_details?: boolean
       message_template?: string
+      /**
+       * @description Metadata holds non-sensitive provider-specific config (e.g. Splunk HEC
+       *     hec_url / index / sourcetype). The credential (token/URL) still goes in
+       *     Credentials; only non-secret routing config belongs here.
+       */
+      metadata?: {
+        [key: string]: unknown
+      }
       min_interval_minutes?: number
       name: string
       /** @enum {string} */
-      provider: 'slack' | 'teams' | 'telegram' | 'webhook' | 'email'
+      provider: 'slack' | 'teams' | 'telegram' | 'webhook' | 'email' | 'splunk'
     }
     'internal_infra_http_handler.CreatePermissionSetRequest': {
       description?: string
@@ -27786,15 +27864,29 @@ export interface components {
     'internal_infra_http_handler.ExposureResponse': {
       asset_id?: string
       created_at?: string
+      ctem_id?: string
+      cve_id?: string
       description?: string
       details?: {
         [key: string]: unknown
       }
+      /**
+       * @description CTEM enrichment (read-time, additive). Present only when an enricher is
+       *     wired and the exposure has a linked asset (criticality/reachability) or a
+       *     CVE in its details (EPSS/KEV).
+       */
+      effective_criticality?: string
+      epss_percentile?: number
+      epss_score?: number
       event_type?: string
       fingerprint?: string
       first_seen_at?: string
       id?: string
+      is_in_kev?: boolean
+      is_internet_accessible?: boolean
+      kev_due_date?: string
       last_seen_at?: string
+      on_attack_path?: boolean
       resolution_notes?: string
       resolved_at?: string
       resolved_by?: string
@@ -27862,6 +27954,8 @@ export interface components {
       total?: number
     }
     'internal_infra_http_handler.FindingRemediationResponse': {
+      /** @description Other acceptable remediations */
+      alternative_fixes?: string[]
       /** @description Whether the fix can be auto-applied */
       auto_fixable?: boolean
       /** @description trivial, low, medium, high */
@@ -27872,12 +27966,18 @@ export interface components {
       fix_code?: string
       /** @description Regex-based fix pattern */
       fix_regex?: components['schemas']['internal_infra_http_handler.FixRegexResponse']
+      /** @description CTEM Mobilization: engineering-grade work-item fields. */
+      preferred_fix?: string
       /** @description Human-readable guidance */
       recommendation?: string
       /** @description Reference URLs */
       references?: string[]
       /** @description Step-by-step instructions */
       steps?: string[]
+      /** @description Definition of done */
+      success_criteria?: string
+      /** @description How a fix is checked */
+      verification_method?: string
     }
     'internal_infra_http_handler.FindingResponse': {
       /** @description Full asset info */
@@ -28099,7 +28199,11 @@ export interface components {
       }
       /** @description open findings with EPSS >= 0.10 */
       epss_high_open?: number
-      /** @description open findings whose CVE is in CISA KEV */
+      /**
+       * @description Risk posture over OPEN findings (same scope as the rest: tenant, data
+       *     scope and optional asset_id). Already computed by the stats query; the
+       *     UI previously fired a separate list request per number to get them.
+       */
       kev_open?: number
       open_count?: number
       resolved_count?: number
@@ -29588,6 +29692,10 @@ export interface components {
       criticality?: string
       description?: string
       exposure?: string
+      impact_availability?: string
+      /** @description CTEM Scoping: CIA impact rating (low | moderate | high). Empty string clears. */
+      impact_confidentiality?: string
+      impact_integrity?: string
       name?: string
       owner_ref?: string
       properties?: {
@@ -29683,6 +29791,13 @@ export interface components {
       enabled_severities?: string[]
       include_details?: boolean
       message_template?: string
+      /**
+       * @description Metadata, when non-nil, replaces the integration's non-sensitive
+       *     provider config (e.g. Splunk HEC hec_url / index / sourcetype).
+       */
+      metadata?: {
+        [key: string]: unknown
+      }
       min_interval_minutes?: number
       name?: string
     }
