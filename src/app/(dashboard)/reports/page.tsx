@@ -20,11 +20,11 @@ export default function ReportsPage() {
   return (
     <Main>
       <PageHeader
-        title="Security Reports"
-        description="Schedule recurring digests and export the executive summary"
+        title="Reports"
+        description="Schedule recurring digests and export the executive summary."
       />
 
-      <div className="mt-6 space-y-6">
+      <div className="mt-5 space-y-5">
         <ExecutiveSummarySection />
         <ReportSchedulesSection />
       </div>

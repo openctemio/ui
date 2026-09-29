@@ -167,7 +167,7 @@ export function NewScheduleDialog({ onCreate }: NewScheduleDialogProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button>
+        <Button size="sm">
           <Plus className="h-4 w-4" />
           New schedule
         </Button>
