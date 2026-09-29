@@ -11,11 +11,19 @@
 
 import { useMemo, useState } from 'react'
 import type { ColumnDef } from '@tanstack/react-table'
-import { Plus, Eye, Trash2, Users, Loader2, ExternalLink } from 'lucide-react'
+import {
+  Plus,
+  Eye,
+  Trash2,
+  Users,
+  Loader2,
+  ExternalLink,
+  AlertCircle,
+  RefreshCw,
+} from 'lucide-react'
 import { toast } from 'sonner'
 
 import {
-  PageHeader,
   DataTable,
   DataTableColumnHeader,
   DataTableRowActions,
@@ -32,6 +40,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Sheet, SheetContent } from '@/components/ui/sheet'
 import {
   Dialog,
@@ -148,7 +157,7 @@ export function ThreatActorsPanel() {
       },
       {
         accessorKey: 'mitre_group_id',
-        header: 'MITRE Group',
+        header: 'MITRE group',
         cell: ({ row }) =>
           row.original.mitre_group_id ? (
             <span className="font-mono text-xs">{row.original.mitre_group_id}</span>
@@ -197,35 +206,26 @@ export function ThreatActorsPanel() {
     )
   }
 
+  // The type filter and "Add actor" live in the table toolbar: this panel is a
+  // tab of the Threat intelligence page, whose header is the page's only one.
+  const typeSelect = (
+    <Select value={typeFilter} onValueChange={setTypeFilter}>
+      <SelectTrigger className="h-9 w-40" aria-label="Filter by actor type">
+        <SelectValue placeholder="All types" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value={ALL}>All types</SelectItem>
+        {ACTOR_TYPES.map((t) => (
+          <SelectItem key={t} value={t}>
+            {ACTOR_TYPE_LABELS[t]}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  )
+
   return (
     <div className="space-y-4">
-      <PageHeader
-        title="Threat Actors"
-        description="Adversary groups tracked for this tenant — motivations, TTPs and MITRE mapping."
-      >
-        <div className="flex items-center gap-3">
-          <Select value={typeFilter} onValueChange={setTypeFilter}>
-            <SelectTrigger className="w-[170px]">
-              <SelectValue placeholder="All types" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL}>All types</SelectItem>
-              {ACTOR_TYPES.map((t) => (
-                <SelectItem key={t} value={t}>
-                  {ACTOR_TYPE_LABELS[t]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Can permission={Permission.ThreatIntelWrite} mode="disable">
-            <Button onClick={() => setCreateOpen(true)}>
-              <Plus className="me-2 h-4 w-4" />
-              Add Actor
-            </Button>
-          </Can>
-        </div>
-      </PageHeader>
-
       {isLoading ? (
         <div className="space-y-2">
           {Array.from({ length: 5 }).map((_, i) => (
@@ -233,19 +233,36 @@ export function ThreatActorsPanel() {
           ))}
         </div>
       ) : error ? (
-        <EmptyState
-          icon={Users}
-          title="Failed to load threat actors"
-          description={getErrorMessage(error, 'Please try again.')}
-        />
+        <Alert variant="destructive">
+          <AlertCircle />
+          <AlertTitle>Failed to load threat actors</AlertTitle>
+          <AlertDescription>
+            <p>{getErrorMessage(error, 'Please try again.')}</p>
+            <Button variant="outline" size="sm" className="mt-2" onClick={() => mutate()}>
+              <RefreshCw className="me-2 h-4 w-4" />
+              Retry
+            </Button>
+          </AlertDescription>
+        </Alert>
       ) : (
         <DataTable
           columns={columns}
           data={actors}
-          searchPlaceholder="Search actors..."
+          searchPlaceholder="Search actors…"
           emptyMessage="No threat actors"
           emptyDescription="Add an adversary group to start tracking it."
           onRowClick={(row) => setSelectedId(row.id)}
+          toolbarEnd={
+            <>
+              {typeSelect}
+              <Can permission={Permission.ThreatIntelWrite} mode="disable">
+                <Button size="sm" className="h-9" onClick={() => setCreateOpen(true)}>
+                  <Plus className="h-4 w-4 sm:me-2" />
+                  <span className="hidden sm:inline">Add actor</span>
+                </Button>
+              </Can>
+            </>
+          }
         />
       )}
 
@@ -473,7 +490,7 @@ function CreateThreatActorDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Add Threat Actor</DialogTitle>
+          <DialogTitle>Add threat actor</DialogTitle>
           <DialogDescription>Track a new adversary group for this tenant.</DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-2">
@@ -536,7 +553,7 @@ function CreateThreatActorDialog({
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="ta-mitre">MITRE Group ID</Label>
+              <Label htmlFor="ta-mitre">MITRE group ID</Label>
               <Input
                 id="ta-mitre"
                 value={mitreId}
@@ -561,7 +578,7 @@ function CreateThreatActorDialog({
           </Button>
           <Button onClick={handleSubmit} disabled={submitting}>
             {submitting && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
-            Add Actor
+            Add actor
           </Button>
         </DialogFooter>
       </DialogContent>
