@@ -492,6 +492,10 @@ export interface FindingApiFilters {
   priority_classes?: string[] // e.g. ['P0','P1']
   is_in_kev?: boolean
   is_reachable?: boolean
+  /** "Assigned to / owned by me" — findings where the current user is the
+   *  assignee, owns the asset, or is a member of an assigned group. Sent as
+   *  `assigned_to_me=true`. Backs the My Work view. */
+  assigned_to_me?: boolean
   /** SLA status filter — sent as `sla_status` (comma-separated). Backend accepts
    *  on_track | warning | overdue | exceeded | not_applicable. */
   sla_statuses?: string[]

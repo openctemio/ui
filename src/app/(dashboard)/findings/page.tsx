@@ -322,6 +322,11 @@ function FindingsContent() {
   const [reachableFilter, setReachableFilter] = useUrlFilter('reachable', 'false')
   const [slaFilter, setSlaFilter] = useUrlFilterList('sla_status')
   const [searchQuery, setSearchQuery] = useUrlFilter('q', '')
+  // "Assigned to me" / My Work: findings the current user is the assignee of,
+  // owns the asset of, or is a member of an assigned group. Independent, stackable
+  // with the CTEM signals; the backend resolves the user from the token.
+  const [mineFilter, setMineFilter] = useUrlFilter('mine', 'false')
+  const mineActive = mineFilter === 'true'
 
   // Backward-compat: legacy deep links modelled KEV / reachable as *values* of the
   // single `priority` param (e.g. /findings?priority=kev). Treat those as the new
@@ -475,6 +480,7 @@ function FindingsContent() {
     if (priorityClass) filters.priority_classes = [priorityClass]
     if (kevActive) filters.is_in_kev = true
     if (reachableActive) filters.is_reachable = true
+    if (mineActive) filters.assigned_to_me = true
     if (slaFilter.length > 0) filters.sla_statuses = slaFilter
     return filters
   }, [
@@ -487,6 +493,7 @@ function FindingsContent() {
     priorityClass,
     kevActive,
     reachableActive,
+    mineActive,
     slaFilter,
     debouncedSearch,
     HIDDEN_STATUSES,
@@ -1299,6 +1306,16 @@ function FindingsContent() {
                   className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 />
               </div>
+              <Button
+                variant={mineActive ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setMineFilter(mineActive ? 'false' : 'true')}
+                aria-pressed={mineActive}
+                title="Show only findings assigned to me or on assets I own"
+              >
+                <UserPlus className="me-2 h-4 w-4" />
+                Assigned to me
+              </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="sm">
