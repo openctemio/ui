@@ -467,7 +467,7 @@ export default function ExceptionsPage() {
             >
               <div className="relative sm:static">
                 <div className="overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
-                  <TabsList className="h-auto w-max">
+                  <TabsList>
                     <TabsTrigger value="all" className="text-xs sm:text-sm shrink-0">
                       All ({counts.all})
                     </TabsTrigger>

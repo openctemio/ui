@@ -240,7 +240,7 @@ export function AgentDetailSheet({
 
         {/* Content */}
         <Tabs defaultValue="overview" className="px-6 pb-6">
-          <TabsList className="mb-4 grid w-full grid-cols-5">
+          <TabsList className="mb-4">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="analytics">
               <BarChart3 className="me-1 h-3 w-3" />

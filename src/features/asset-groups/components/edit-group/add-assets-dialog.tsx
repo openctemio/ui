@@ -458,7 +458,7 @@ export function AddAssetsDialog({
         <div className="flex-1 min-h-0 overflow-hidden">
           <Tabs defaultValue="select" className="h-full flex flex-col">
             <div className="px-6 pt-4 shrink-0">
-              <TabsList className="grid w-full grid-cols-2">
+              <TabsList>
                 <TabsTrigger value="select" className="gap-2">
                   <ListChecks className="h-4 w-4" />
                   Select Existing

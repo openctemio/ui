@@ -165,7 +165,7 @@ export function ContainerDetailSheet<T extends ContainerAsset>({
         {/* Content */}
         {showFindingsTab ? (
           <Tabs defaultValue="overview" className="px-6 pb-6">
-            <TabsList className="grid w-full grid-cols-2 mb-4">
+            <TabsList className="mb-4">
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="findings">Findings ({findingCount})</TabsTrigger>
             </TabsList>

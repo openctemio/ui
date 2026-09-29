@@ -588,13 +588,9 @@ export default function FindingDetailPage() {
             {/* Tabs — order and visibility driven by source layout */}
             <Tabs defaultValue={orderedTabs[0]} className="flex min-h-0 flex-1 flex-col">
               <div className="flex-shrink-0 border-b px-3 sm:px-6 overflow-x-auto no-scrollbar">
-                <TabsList className="h-auto gap-2 sm:gap-4 rounded-none bg-transparent p-0 w-max min-w-full">
+                <TabsList className="h-11 min-w-full border-b-0">
                   {orderedTabs.map((tab) => (
-                    <TabsTrigger
-                      key={tab}
-                      value={tab}
-                      className="rounded-none border-b-2 border-transparent bg-transparent px-1 sm:px-0 pb-3 pt-3 text-sm sm:text-base whitespace-nowrap shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
-                    >
+                    <TabsTrigger key={tab} value={tab}>
                       {tab === 'overview' && 'Overview'}
                       {tab === 'evidence' && (
                         <>
