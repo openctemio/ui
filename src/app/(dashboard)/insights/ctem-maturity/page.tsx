@@ -20,9 +20,10 @@
  */
 
 import Link from 'next/link'
-import { ArrowLeft, ShieldOff, GaugeCircle } from 'lucide-react'
+import { AlertCircle, ArrowLeft, RefreshCw, ShieldOff, GaugeCircle } from 'lucide-react'
 import { Main } from '@/components/layout'
 import { PageHeader } from '@/features/shared'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -34,7 +35,7 @@ import { StageCoverageCard } from '@/features/ctem-maturity/components/stage-cov
 
 function LoadingState() {
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <Card>
         <CardHeader>
           <Skeleton className="h-5 w-48" />
@@ -50,7 +51,7 @@ function LoadingState() {
           </div>
         </CardContent>
       </Card>
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <Skeleton className="h-72 w-full" />
         <Skeleton className="h-72 w-full" />
       </div>
@@ -60,30 +61,24 @@ function LoadingState() {
 
 function ModuleDisabledState() {
   return (
-    <div className="flex flex-col items-center justify-center py-20 text-center">
-      <div className="bg-muted rounded-full p-4">
-        <ShieldOff className="text-muted-foreground h-8 w-8" />
-      </div>
-      <h2 className="mt-4 text-lg font-semibold">Module not enabled</h2>
-      <p className="text-muted-foreground mt-2 max-w-md text-sm">
-        The CTEM cycles module is not enabled for your organization, so program maturity is not
-        available.
-      </p>
-      <p className="text-muted-foreground mt-1 text-xs">
-        Contact your administrator to enable this module.
-      </p>
-      <Link href="/dashboard" className="mt-6">
-        <Button variant="outline">
-          <ArrowLeft className="me-2 h-4 w-4" />
-          Back to dashboard
+    <EmptyState
+      icon={ShieldOff}
+      title="Module not enabled"
+      description="The CTEM cycles module is not enabled for your organization, so program maturity is not available. Contact your administrator to enable it."
+      action={
+        <Button variant="outline" size="sm" asChild>
+          <Link href="/dashboard">
+            <ArrowLeft className="me-2 h-4 w-4" />
+            Back to dashboard
+          </Link>
         </Button>
-      </Link>
-    </div>
+      }
+    />
   )
 }
 
 export default function CTEMMaturityPage() {
-  const { data, error, isLoading } = useCtemMaturity()
+  const { data, error, isLoading, mutate } = useCtemMaturity()
 
   const status = (error as { statusCode?: number } | undefined)?.statusCode
 
@@ -96,11 +91,17 @@ export default function CTEMMaturityPage() {
     // Any other error: surface a non-crashing message.
     if (error && !data) {
       return (
-        <EmptyState
-          icon={GaugeCircle}
-          title="Couldn't load maturity"
-          description="The maturity aggregator is temporarily unavailable. Try again shortly."
-        />
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Couldn&apos;t load maturity</AlertTitle>
+          <AlertDescription className="flex flex-wrap items-center gap-3">
+            <span>The maturity aggregator is temporarily unavailable.</span>
+            <Button variant="outline" size="sm" onClick={() => mutate()}>
+              <RefreshCw className="me-2 h-4 w-4" />
+              Retry
+            </Button>
+          </AlertDescription>
+        </Alert>
       )
     }
 
@@ -116,9 +117,9 @@ export default function CTEMMaturityPage() {
     }
 
     return (
-      <div className="space-y-6">
+      <div className="space-y-5">
         <MaturityBreakdownCard maturity={data.maturity} />
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
           <MaturityTrendCard trend={data} />
           <StageCoverageCard coverage={data.maturity.ctem_stage_coverage} />
         </div>
@@ -130,9 +131,9 @@ export default function CTEMMaturityPage() {
     <Main>
       <PageHeader
         title="CTEM maturity"
-        description="Backend-computed program maturity — a transparent, weighted composite across your closed CTEM cycles."
+        description="Program maturity as a transparent, weighted composite across your closed CTEM cycles."
       />
-      {body}
+      <div className="mt-5">{body}</div>
     </Main>
   )
 }
