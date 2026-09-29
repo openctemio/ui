@@ -1,15 +1,22 @@
 'use client'
 
 import { useCallback, useMemo, useState } from 'react'
-import Link from 'next/link'
-import { Shield, Plus, Send, Trash2, Loader2, ArrowLeft, CheckCircle, XCircle } from 'lucide-react'
+import type { ColumnDef } from '@tanstack/react-table'
+import { Shield, Plus, Send, Trash2, Loader2, CheckCircle, XCircle } from 'lucide-react'
 import { Main } from '@/components/layout'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { toast } from 'sonner'
 import { csrfFetch } from '@/lib/api/client'
@@ -21,6 +28,14 @@ import {
   invalidateNotificationIntegrationsCache,
 } from '@/features/integrations'
 import type { Integration } from '@/features/integrations'
+import {
+  DataTable,
+  DataTableRowActions,
+  EmptyState,
+  ErrorState,
+  PageHeader,
+  StackedCell,
+} from '@/features/shared'
 
 const META = (i: Integration, k: string): string => {
   const v = i.metadata?.[k]
@@ -38,7 +53,7 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export default function SIEMIntegrationPage() {
-  const { data, isLoading, mutate } = useNotificationIntegrationsApi()
+  const { data, error, isLoading, mutate } = useNotificationIntegrationsApi()
   const { trigger: createIntegration, isMutating: creating } = useCreateNotificationIntegrationApi()
 
   const splunkIntegrations = useMemo(
@@ -121,176 +136,183 @@ export default function SIEMIntegrationPage() {
     }
   }, [deleteTarget, mutate])
 
+  const endpointSummary = (integration: Integration) =>
+    [
+      META(integration, 'hec_url'),
+      META(integration, 'index') && `index: ${META(integration, 'index')}`,
+      META(integration, 'sourcetype') && `sourcetype: ${META(integration, 'sourcetype')}`,
+    ]
+      .filter(Boolean)
+      .join(' · ')
+
+  const columns: ColumnDef<Integration>[] = [
+    {
+      accessorKey: 'name',
+      header: 'Name',
+      cell: ({ row }) => (
+        <StackedCell primary={row.original.name} secondary={row.original.status_message} truncate />
+      ),
+    },
+    {
+      id: 'endpoint',
+      header: 'HEC endpoint',
+      accessorFn: (i) => endpointSummary(i),
+      cell: ({ row }) => (
+        <span className="text-sm text-muted-foreground">{endpointSummary(row.original)}</span>
+      ),
+    },
+    {
+      accessorKey: 'status',
+      header: 'Status',
+      cell: ({ row }) => <StatusBadge status={row.original.status} />,
+    },
+    {
+      id: 'actions',
+      enableSorting: false,
+      cell: ({ row }) => (
+        <DataTableRowActions
+          actions={[
+            {
+              label: testingId === row.original.id ? 'Sending test…' : 'Send test event',
+              icon: Send,
+              onClick: () => void handleTest(row.original),
+              disabled: testingId === row.original.id,
+              permission: Permission.IntegrationsManage,
+            },
+            {
+              label: 'Delete',
+              icon: Trash2,
+              onClick: () => setDeleteTarget(row.original),
+              destructive: true,
+              separatorBefore: true,
+              permission: Permission.IntegrationsManage,
+            },
+          ]}
+        />
+      ),
+    },
+  ]
+
+  const closeForm = () => {
+    setShowForm(false)
+    resetForm()
+  }
+
   return (
     <Main>
-      <div className="mb-6">
-        <Button variant="ghost" size="sm" asChild className="mb-2 -ml-2">
-          <Link href="/settings/integrations">
-            <ArrowLeft className="size-4" /> Integrations
-          </Link>
-        </Button>
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="rounded-lg bg-muted p-2">
-              <Shield className="size-6" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-semibold tracking-tight">SIEM Integration</h1>
-              <p className="text-muted-foreground max-w-2xl text-sm">
-                Forward findings, exposures, scans, and SLA breaches to Splunk via the HTTP Event
-                Collector (HEC) for centralized monitoring and correlation.
-              </p>
-            </div>
+      <PageHeader
+        title="SIEM"
+        description="Forward findings, exposures, scans and SLA breaches to Splunk through the HTTP Event Collector (HEC)."
+      >
+        <Can permission={Permission.IntegrationsManage}>
+          <Button size="sm" onClick={() => setShowForm(true)}>
+            <Plus className="me-2 h-4 w-4" />
+            Add Splunk HEC
+          </Button>
+        </Can>
+      </PageHeader>
+
+      <div className="mt-5">
+        {error ? (
+          <ErrorState title="SIEM integrations" error={error} onRetry={() => void mutate()} />
+        ) : isLoading ? (
+          <div className="space-y-3">
+            <Skeleton className="h-9 w-full max-w-sm" />
+            <Skeleton className="h-48 w-full" />
           </div>
-          <Can permission={Permission.IntegrationsManage}>
-            <Button onClick={() => setShowForm((v) => !v)} disabled={showForm}>
-              <Plus className="size-4" /> Add Splunk HEC
-            </Button>
-          </Can>
-        </div>
+        ) : splunkIntegrations.length === 0 ? (
+          <EmptyState
+            icon={Shield}
+            title="No SIEM integrations yet"
+            description="Add a Splunk HTTP Event Collector to start forwarding security events to your SIEM."
+            action={
+              <Can permission={Permission.IntegrationsManage}>
+                <Button size="sm" onClick={() => setShowForm(true)}>
+                  <Plus className="me-2 h-4 w-4" />
+                  Add Splunk HEC
+                </Button>
+              </Can>
+            }
+          />
+        ) : (
+          <DataTable
+            columns={columns}
+            data={splunkIntegrations}
+            getRowId={(i) => i.id}
+            searchPlaceholder="Search integrations..."
+            showSelectionCount={false}
+          />
+        )}
       </div>
 
-      {showForm && (
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="text-base">New Splunk HEC integration</CardTitle>
-            <CardDescription>
-              The HEC token is stored encrypted. The endpoint, index, and sourcetype are
+      <Dialog open={showForm} onOpenChange={(open) => (open ? setShowForm(true) : closeForm())}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>New Splunk HEC integration</DialogTitle>
+            <DialogDescription>
+              The HEC token is stored encrypted. The endpoint, index and sourcetype are
               non-sensitive routing config.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="siem-name">Name</Label>
-                <Input
-                  id="siem-name"
-                  placeholder="Production Splunk"
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="siem-url">HEC endpoint URL</Label>
-                <Input
-                  id="siem-url"
-                  placeholder="https://splunk.example.com:8088"
-                  value={form.hecUrl}
-                  onChange={(e) => setForm({ ...form, hecUrl: e.target.value })}
-                />
-              </div>
-              <div className="space-y-1.5 sm:col-span-2">
-                <Label htmlFor="siem-token">HEC token</Label>
-                <Input
-                  id="siem-token"
-                  type="password"
-                  placeholder="00000000-0000-0000-0000-000000000000"
-                  value={form.token}
-                  onChange={(e) => setForm({ ...form, token: e.target.value })}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="siem-index">Index (optional)</Label>
-                <Input
-                  id="siem-index"
-                  placeholder="main"
-                  value={form.index}
-                  onChange={(e) => setForm({ ...form, index: e.target.value })}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="siem-sourcetype">Sourcetype (optional)</Label>
-                <Input
-                  id="siem-sourcetype"
-                  placeholder="openctem:notification"
-                  value={form.sourcetype}
-                  onChange={(e) => setForm({ ...form, sourcetype: e.target.value })}
-                />
-              </div>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="siem-name">Name</Label>
+              <Input
+                id="siem-name"
+                placeholder="Production Splunk"
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+              />
             </div>
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowForm(false)
-                  resetForm()
-                }}
-              >
-                Cancel
-              </Button>
-              <Button onClick={() => void handleCreate()} disabled={creating}>
-                {creating && <Loader2 className="size-4 animate-spin" />}
-                Create integration
-              </Button>
+            <div className="space-y-1.5">
+              <Label htmlFor="siem-url">HEC endpoint URL</Label>
+              <Input
+                id="siem-url"
+                placeholder="https://splunk.example.com:8088"
+                value={form.hecUrl}
+                onChange={(e) => setForm({ ...form, hecUrl: e.target.value })}
+              />
             </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {isLoading ? (
-        <div className="space-y-3">
-          <Skeleton className="h-24 w-full" />
-          <Skeleton className="h-24 w-full" />
-        </div>
-      ) : splunkIntegrations.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center gap-2 py-12 text-center">
-            <Shield className="text-muted-foreground size-8" />
-            <p className="font-medium">No SIEM integrations yet</p>
-            <p className="text-muted-foreground max-w-sm text-sm">
-              Add a Splunk HTTP Event Collector to start forwarding security events to your SIEM.
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-3">
-          {splunkIntegrations.map((integration) => (
-            <Card key={integration.id}>
-              <CardContent className="flex flex-wrap items-center justify-between gap-4 py-4">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="truncate font-medium">{integration.name}</span>
-                    <StatusBadge status={integration.status} />
-                  </div>
-                  <p className="text-muted-foreground truncate text-sm">
-                    {META(integration, 'hec_url')}
-                    {META(integration, 'index') && ` · index: ${META(integration, 'index')}`}
-                    {META(integration, 'sourcetype') &&
-                      ` · sourcetype: ${META(integration, 'sourcetype')}`}
-                  </p>
-                  {integration.status_message && (
-                    <p className="text-muted-foreground mt-0.5 text-xs">
-                      {integration.status_message}
-                    </p>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  <Can permission={Permission.IntegrationsManage}>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => void handleTest(integration)}
-                      disabled={testingId === integration.id}
-                    >
-                      {testingId === integration.id ? (
-                        <Loader2 className="size-4 animate-spin" />
-                      ) : (
-                        <Send className="size-4" />
-                      )}
-                      Test
-                    </Button>
-                  </Can>
-                  <Can permission={Permission.IntegrationsManage}>
-                    <Button variant="ghost" size="sm" onClick={() => setDeleteTarget(integration)}>
-                      <Trash2 className="size-4" />
-                    </Button>
-                  </Can>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label htmlFor="siem-token">HEC token</Label>
+              <Input
+                id="siem-token"
+                type="password"
+                placeholder="00000000-0000-0000-0000-000000000000"
+                value={form.token}
+                onChange={(e) => setForm({ ...form, token: e.target.value })}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="siem-index">Index (optional)</Label>
+              <Input
+                id="siem-index"
+                placeholder="main"
+                value={form.index}
+                onChange={(e) => setForm({ ...form, index: e.target.value })}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="siem-sourcetype">Sourcetype (optional)</Label>
+              <Input
+                id="siem-sourcetype"
+                placeholder="openctem:notification"
+                value={form.sourcetype}
+                onChange={(e) => setForm({ ...form, sourcetype: e.target.value })}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={closeForm}>
+              Cancel
+            </Button>
+            <Button onClick={() => void handleCreate()} disabled={creating}>
+              {creating && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
+              Create integration
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <ConfirmDialog
         open={!!deleteTarget}
