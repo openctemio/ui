@@ -24,6 +24,7 @@ import { AlertOctagon, Globe, Route, ShieldAlert, TrendingUp } from 'lucide-reac
 import { Badge } from '@/components/ui/badge'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
+import { formatEpssPercentile, formatEpssScore } from '@/lib/epss'
 import {
   CRITICALITY_BADGE_LIGHT,
   CRITICALITY_LABELS,
@@ -37,11 +38,6 @@ function asCriticalityLevel(value?: string): CriticalityLevel | null {
     return value as CriticalityLevel
   }
   return null
-}
-
-/** EPSS is a 0..1 probability; render as a percentage. */
-function formatEpss(score: number): string {
-  return `${(score * 100).toFixed(1)}%`
 }
 
 /** True when the exposure carries at least one CTEM signal worth surfacing. */
@@ -102,7 +98,7 @@ export function ExposureThreatPills({ exposure, className }: ExposureThreatPills
             <TooltipTrigger asChild>
               <Badge variant="secondary" className="gap-0.5 px-1.5 py-0 text-[10px]">
                 <TrendingUp className="h-2.5 w-2.5" />
-                EPSS {formatEpss(exposure.epss_score as number)}
+                EPSS {formatEpssScore(exposure.epss_score)}
               </Badge>
             </TooltipTrigger>
             <TooltipContent side="top" className="max-w-xs text-xs">
@@ -224,10 +220,10 @@ export function ExposureSecurityContext({ exposure, className }: ExposureSecurit
         {showEpss && (
           <Row label="EPSS">
             <span className="text-sm font-medium">
-              {formatEpss(exposure.epss_score as number)}
+              {formatEpssScore(exposure.epss_score)}
               {showPercentile && (
                 <span className="ms-1 font-normal text-muted-foreground">
-                  ({((exposure.epss_percentile as number) * 100).toFixed(0)}th pct)
+                  ({formatEpssPercentile(exposure.epss_percentile, 0)} pct)
                 </span>
               )}
             </span>

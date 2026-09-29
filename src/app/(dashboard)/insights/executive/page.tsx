@@ -1,5 +1,6 @@
 'use client'
 
+import { formatEpssScore } from '@/lib/epss'
 import { useState } from 'react'
 import useSWR from 'swr'
 import type { ColumnDef } from '@tanstack/react-table'
@@ -123,8 +124,7 @@ function formatPercent(pct: number | undefined | null): string {
 }
 
 function formatEpss(score: number | undefined | null): string {
-  if (score === undefined || score === null || Number.isNaN(score)) return 'N/A'
-  return `${(score * 100).toFixed(2)}%`
+  return formatEpssScore(score, 2, 'N/A')
 }
 
 // ============================================

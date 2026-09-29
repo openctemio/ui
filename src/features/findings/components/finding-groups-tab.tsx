@@ -1,5 +1,6 @@
 'use client'
 
+import { formatEpssScore } from '@/lib/epss'
 import { useState } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -236,7 +237,7 @@ function FindingGroupCard({ group, onViewFindings, onMarkFixed }: FindingGroupCa
                     <span>CVSS {String(group.metadata.cvss_score)}</span>
                   )}
                   {group.metadata?.epss_score && (
-                    <span>EPSS {(Number(group.metadata.epss_score) * 100).toFixed(1)}%</span>
+                    <span>EPSS {formatEpssScore(Number(group.metadata.epss_score))}</span>
                   )}
                 </>
               )}

@@ -8,6 +8,7 @@
 
 'use client'
 
+import { formatEpssScore } from '@/lib/epss'
 import * as React from 'react'
 import type { ColumnDef } from '@tanstack/react-table'
 import { AlertCircle, RefreshCw, Server, ShieldAlert, Zap } from 'lucide-react'
@@ -133,7 +134,7 @@ const COLUMNS: ColumnDef<ActiveCVE>[] = [
     enableSorting: false,
     cell: ({ row }) => (
       <div className="text-end text-sm tabular-nums">
-        {row.original.epss_score != null ? `${(row.original.epss_score * 100).toFixed(1)}%` : '—'}
+        {formatEpssScore(row.original.epss_score)}
       </div>
     ),
   },
