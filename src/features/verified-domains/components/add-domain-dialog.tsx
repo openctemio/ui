@@ -61,8 +61,8 @@ export function AddDomainDialog({ onAdded }: { onAdded: () => void }) {
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button>
-          <Plus className="me-1.5 h-4 w-4" />
+        <Button size="sm">
+          <Plus className="me-2 h-4 w-4" />
           Add domain
         </Button>
       </DialogTrigger>
