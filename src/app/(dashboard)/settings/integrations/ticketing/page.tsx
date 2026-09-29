@@ -2,9 +2,18 @@
 
 import { useState } from 'react'
 import { Main } from '@/components/layout'
-import { PageHeader, EmptyState } from '@/features/shared'
-import { StatsCard } from '@/features/shared/components/stats-card'
-import { Card, CardContent } from '@/components/ui/card'
+import type { ColumnDef } from '@tanstack/react-table'
+import {
+  PageHeader,
+  EmptyState,
+  ErrorState,
+  DataTable,
+  DataTableRowActions,
+  MetricStrip,
+  RelativeTime,
+  StackedCell,
+  type MetricStripItem,
+} from '@/features/shared'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -25,18 +34,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import {
-  Ticket,
-  Plus,
-  Clock,
-  Settings,
-  AlertTriangle,
-  RefreshCw,
-  Link2,
-  ExternalLink,
-  Route,
-  X,
-} from 'lucide-react'
+import { Ticket, Plus, Settings, RefreshCw, ExternalLink, Route, X } from 'lucide-react'
 import { RoutingRulesDialog } from '@/features/integrations/components/routing-rules-dialog'
 import { Switch } from '@/components/ui/switch'
 import {
@@ -84,38 +82,20 @@ function getProjectKey(integration: Integration): string {
 // ─────────────────────────────────────────────────────────
 
 function StatusBadge({ status }: { status: IntegrationStatus }) {
-  const config: Record<IntegrationStatus, { className: string; label: string }> = {
-    connected: {
-      className: 'bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20',
-      label: 'Connected',
-    },
-    disconnected: {
-      className: 'bg-muted text-muted-foreground',
-      label: 'Not Connected',
-    },
-    error: {
-      className: 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20',
-      label: 'Error',
-    },
-    pending: {
-      className: 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-500/20',
-      label: 'Pending',
-    },
-    expired: {
-      className: 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20',
-      label: 'Expired',
-    },
-    disabled: {
-      className: 'bg-muted text-muted-foreground',
-      label: 'Disabled',
-    },
+  // Only a problem (error / expired) is coloured; other states stay neutral.
+  const config: Record<
+    IntegrationStatus,
+    { variant: 'default' | 'secondary' | 'destructive' | 'outline'; label: string }
+  > = {
+    connected: { variant: 'default', label: 'Connected' },
+    disconnected: { variant: 'secondary', label: 'Not connected' },
+    error: { variant: 'destructive', label: 'Error' },
+    pending: { variant: 'outline', label: 'Pending' },
+    expired: { variant: 'destructive', label: 'Expired' },
+    disabled: { variant: 'secondary', label: 'Disabled' },
   }
-  const { className, label } = config[status] ?? config.disconnected
-  return (
-    <Badge variant="outline" className={className}>
-      {label}
-    </Badge>
-  )
+  const { variant, label } = config[status] ?? config.disconnected
+  return <Badge variant={variant}>{label}</Badge>
 }
 
 // ─────────────────────────────────────────────────────────
@@ -463,8 +443,15 @@ function ConfigureTicketingDialog({
 // Integration card
 // ─────────────────────────────────────────────────────────
 
-function TicketingIntegrationCard({ integration }: { integration: Integration }) {
-  const projectKey = getProjectKey(integration)
+function hostnameOf(url: string): string {
+  try {
+    return new URL(url).hostname
+  } catch {
+    return url
+  }
+}
+
+function TicketingRowActions({ integration }: { integration: Integration }) {
   const [configOpen, setConfigOpen] = useState(false)
   const [routingOpen, setRoutingOpen] = useState(false)
 
@@ -484,86 +471,36 @@ function TicketingIntegrationCard({ integration }: { integration: Integration })
     }
   }
 
+  const jiraReady = integration.provider === 'jira' && integration.status === 'connected'
+
   return (
-    <Card>
-      <CardContent className="pt-6">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex-1 space-y-2 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="font-semibold truncate">{integration.name}</h3>
-              <StatusBadge status={integration.status} />
-            </div>
-
-            <div className="flex items-center gap-3 flex-wrap">
-              <Badge variant="secondary" className="text-xs">
-                {getProviderLabel(integration.provider)}
-              </Badge>
-              {projectKey !== '-' && (
-                <span className="text-muted-foreground text-xs">Project: {projectKey}</span>
-              )}
-              {integration.base_url && (
-                <a
-                  href={integration.base_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-muted-foreground hover:text-foreground flex items-center gap-1 text-xs"
-                >
-                  <ExternalLink className="h-3 w-3" />
-                  {new URL(integration.base_url).hostname}
-                </a>
-              )}
-            </div>
-
-            {integration.description && (
-              <p className="text-muted-foreground text-xs line-clamp-1">
-                {integration.description}
-              </p>
-            )}
-
-            {integration.last_sync_at && (
-              <span className="text-muted-foreground flex items-center gap-1 text-xs">
-                <Clock className="h-3 w-3" />
-                Last sync: {new Date(integration.last_sync_at).toLocaleString()}
-              </span>
-            )}
-          </div>
-
-          <div className="flex items-center gap-1 shrink-0">
-            {integration.status === 'connected' && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleSync}
-                disabled={isSyncing}
-                title="Sync now"
-              >
-                <RefreshCw className={`me-2 h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
-                Sync
-              </Button>
-            )}
-            <Button
-              variant="outline"
-              size="sm"
-              title="Routing rules"
-              disabled={integration.provider !== 'jira' || integration.status !== 'connected'}
-              onClick={() => setRoutingOpen(true)}
-            >
-              <Route className="me-2 h-4 w-4" />
-              Routing
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              title="Configure"
-              disabled={integration.provider !== 'jira' || integration.status !== 'connected'}
-              onClick={() => setConfigOpen(true)}
-            >
-              <Settings className="me-2 h-4 w-4" />
-              Configure
-            </Button>
-          </div>
-        </div>
-      </CardContent>
+    <>
+      <DataTableRowActions
+        actions={[
+          ...(integration.status === 'connected'
+            ? [
+                {
+                  label: isSyncing ? 'Syncing…' : 'Sync now',
+                  icon: RefreshCw,
+                  onClick: () => void handleSync(),
+                  disabled: isSyncing,
+                },
+              ]
+            : []),
+          {
+            label: 'Routing rules',
+            icon: Route,
+            onClick: () => setRoutingOpen(true),
+            disabled: !jiraReady,
+          },
+          {
+            label: 'Configure',
+            icon: Settings,
+            onClick: () => setConfigOpen(true),
+            disabled: !jiraReady,
+          },
+        ]}
+      />
 
       {/* Mount-on-open so each dialog re-seeds its useState from the freshly
           revalidated `integration` prop every time it opens (otherwise the
@@ -583,9 +520,66 @@ function TicketingIntegrationCard({ integration }: { integration: Integration })
           onOpenChange={setRoutingOpen}
         />
       )}
-    </Card>
+    </>
   )
 }
+
+const columns: ColumnDef<Integration>[] = [
+  {
+    accessorKey: 'name',
+    header: 'Name',
+    cell: ({ row }) => (
+      <StackedCell primary={row.original.name} secondary={row.original.description} truncate />
+    ),
+  },
+  {
+    id: 'provider',
+    header: 'Provider',
+    accessorFn: (i) => getProviderLabel(i.provider),
+    cell: ({ getValue }) => <Badge variant="outline">{getValue<string>()}</Badge>,
+  },
+  {
+    id: 'project',
+    header: 'Default project',
+    accessorFn: (i) => getProjectKey(i),
+    cell: ({ getValue }) => <span className="text-sm">{getValue<string>()}</span>,
+  },
+  {
+    id: 'host',
+    header: 'Host',
+    accessorFn: (i) => (i.base_url ? hostnameOf(i.base_url) : ''),
+    cell: ({ row }) =>
+      row.original.base_url ? (
+        <a
+          href={row.original.base_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+        >
+          <ExternalLink className="h-3 w-3" />
+          {hostnameOf(row.original.base_url)}
+        </a>
+      ) : (
+        <span className="text-sm text-muted-foreground">—</span>
+      ),
+  },
+  {
+    accessorKey: 'status',
+    header: 'Status',
+    cell: ({ row }) => <StatusBadge status={row.original.status} />,
+  },
+  {
+    id: 'last_sync',
+    header: 'Last sync',
+    accessorFn: (i) => i.last_sync_at ?? '',
+    cell: ({ row }) => <RelativeTime date={row.original.last_sync_at} />,
+  },
+  {
+    id: 'actions',
+    enableSorting: false,
+    cell: ({ row }) => <TicketingRowActions integration={row.original} />,
+  },
+]
 
 // ─────────────────────────────────────────────────────────
 // Connect Jira dialog
@@ -782,24 +776,6 @@ function ConnectJiraDialog({ open, onOpenChange, onSuccess }: ConnectJiraDialogP
 // Skeletons & empty state
 // ─────────────────────────────────────────────────────────
 
-function LoadingSkeleton() {
-  return (
-    <Main>
-      <Skeleton className="mb-6 h-8 w-56" />
-      <div className="grid gap-4 md:grid-cols-4">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <Skeleton key={i} className="h-24 rounded-lg" />
-        ))}
-      </div>
-      <div className="mt-6 space-y-4">
-        {Array.from({ length: 2 }).map((_, i) => (
-          <Skeleton key={i} className="h-36 rounded-lg" />
-        ))}
-      </div>
-    </Main>
-  )
-}
-
 // ─────────────────────────────────────────────────────────
 // Page
 // ─────────────────────────────────────────────────────────
@@ -809,6 +785,7 @@ export default function TicketingIntegrationPage() {
 
   const {
     data: integrationsData,
+    error,
     isLoading,
     mutate: reloadIntegrations,
   } = useIntegrationsApi({ category: 'ticketing', per_page: 50 })
@@ -823,62 +800,67 @@ export default function TicketingIntegrationPage() {
     (c) => c.status === 'pending' || c.status === 'disconnected'
   ).length
 
-  if (isLoading) return <LoadingSkeleton />
+  const metrics: MetricStripItem[] = [
+    { key: 'total', label: 'Connections', value: connections.length },
+    { key: 'connected', label: 'Connected', value: connected },
+    { key: 'attention', label: 'Needs attention', value: needsAttention, tone: 'danger' },
+    { key: 'pending', label: 'Pending', value: pending },
+  ]
 
   return (
     <Main>
       <PageHeader
-        title="Ticketing Integration"
-        description="Connect with ticketing systems for automated remediation tracking"
+        title="Ticketing"
+        description="Connect ticketing systems to create and track remediation tickets automatically."
       >
         <Button size="sm" onClick={() => setDialogOpen(true)}>
           <Plus className="me-2 h-4 w-4" />
-          Add Connection
+          Add connection
         </Button>
       </PageHeader>
 
-      {/* Summary stats — derived from real connection status */}
-      <div className="mt-6 grid gap-4 md:grid-cols-3">
-        <StatsCard
-          title="Connected Systems"
-          value={connected}
-          icon={Link2}
-          changeType={connected > 0 ? 'positive' : 'neutral'}
-          description={`of ${connections.length} configured`}
-        />
-        <StatsCard
-          title="Needs Attention"
-          value={needsAttention}
-          icon={AlertTriangle}
-          changeType={needsAttention > 0 ? 'negative' : 'neutral'}
-          description="Error or expired"
-        />
-        <StatsCard title="Pending" value={pending} icon={Clock} description="Awaiting first sync" />
-      </div>
-
-      {/* Connections list */}
-      <div className="mt-6">
-        <h2 className="mb-4 text-lg font-semibold">Ticketing Connections</h2>
-        {connections.length === 0 ? (
-          <EmptyState
-            icon={Ticket}
-            title="No Ticketing Systems Connected"
-            description="Connect a ticketing system to automatically create and track remediation tickets."
-            action={
-              <Button size="sm" onClick={() => setDialogOpen(true)}>
-                <Plus className="me-2 h-4 w-4" />
-                Connect Ticketing System
-              </Button>
-            }
+      {error ? (
+        <div className="mt-5">
+          <ErrorState
+            title="ticketing connections"
+            error={error}
+            onRetry={() => void reloadIntegrations()}
           />
-        ) : (
-          <div className="space-y-4">
-            {connections.map((conn) => (
-              <TicketingIntegrationCard key={conn.id} integration={conn} />
-            ))}
+        </div>
+      ) : (
+        <>
+          <MetricStrip className="mt-5" loading={isLoading} items={metrics} />
+
+          <div className="mt-5">
+            {isLoading ? (
+              <div className="space-y-3">
+                <Skeleton className="h-9 w-full max-w-sm" />
+                <Skeleton className="h-48 w-full" />
+              </div>
+            ) : connections.length === 0 ? (
+              <EmptyState
+                icon={Ticket}
+                title="No ticketing systems connected"
+                description="Connect a ticketing system to automatically create and track remediation tickets."
+                action={
+                  <Button size="sm" onClick={() => setDialogOpen(true)}>
+                    <Plus className="me-2 h-4 w-4" />
+                    Add connection
+                  </Button>
+                }
+              />
+            ) : (
+              <DataTable
+                columns={columns}
+                data={connections}
+                getRowId={(c) => c.id}
+                searchPlaceholder="Search connections..."
+                showSelectionCount={false}
+              />
+            )}
           </div>
-        )}
-      </div>
+        </>
+      )}
 
       <ConnectJiraDialog
         open={dialogOpen}

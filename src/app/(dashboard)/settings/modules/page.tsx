@@ -2,11 +2,12 @@
 
 import { useState, useCallback, useMemo } from 'react'
 import { Main } from '@/components/layout'
-import { PageHeader } from '@/features/shared'
+import { MetricStrip, PageHeader } from '@/features/shared'
 import { useTenant } from '@/context/tenant-provider'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import {
@@ -29,7 +30,8 @@ import {
   ArrowDownRight,
   ArrowUpRight,
   AlertTriangle,
-  SlidersHorizontal,
+  Loader2,
+  AlertCircle,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useSWRConfig } from 'swr'
@@ -102,11 +104,14 @@ const PHASE_GROUPS: { key: string; label: string; categories: string[] }[] = [
   { key: 'settings', label: 'Settings & Integrations', categories: ['settings', 'platform'] },
 ]
 
+const PAGE_DESCRIPTION =
+  'Pick the products your team runs and fine-tune individual features; nothing here is destructive.'
+
 export default function ModuleManagementPage() {
   const { currentTenant } = useTenant()
   const tenantId = currentTenant?.id
 
-  const { modules, summary, isLoading, mutate } = useTenantModules(tenantId)
+  const { modules, summary, isLoading, error, mutate } = useTenantModules(tenantId)
   const { updateModules, isUpdating } = useUpdateTenantModules(tenantId)
   const { resetModules, isResetting } = useResetTenantModules(tenantId)
   const { edges: dependencyEdges } = useModuleDependencyGraph(tenantId)
@@ -336,16 +341,32 @@ export default function ModuleManagementPage() {
   const pendingEnabled = Object.values(pendingChanges).filter(Boolean).length
   const pendingDisabled = Object.values(pendingChanges).filter((v) => !v).length
 
+  if (error && !modules.length) {
+    return (
+      <Main>
+        <PageHeader title="Modules" description={PAGE_DESCRIPTION} />
+        <Alert variant="destructive" className="mt-5">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Failed to load modules</AlertTitle>
+          <AlertDescription>
+            <p>{getErrorMessage(error, 'The modules request failed.')}</p>
+            <Button variant="outline" size="sm" className="mt-2" onClick={() => void mutate()}>
+              Retry
+            </Button>
+          </AlertDescription>
+        </Alert>
+      </Main>
+    )
+  }
+
   if (isLoading) {
     return (
       <Main>
-        <PageHeader
-          title="Module Management"
-          description="Configure which modules are available for your organization"
-        />
-        <div className="space-y-4">
+        <PageHeader title="Modules" description={PAGE_DESCRIPTION} />
+        <Skeleton className="mt-5 h-[68px] w-full rounded-xl" />
+        <div className="mt-5 space-y-5">
           {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} className="h-32 w-full" />
+            <Skeleton key={i} className="h-32 w-full rounded-xl" />
           ))}
         </div>
       </Main>
@@ -354,43 +375,38 @@ export default function ModuleManagementPage() {
 
   return (
     <Main>
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0 flex-1">
-          <PageHeader
-            title="Modules"
-            description="Turn OpenCTEM into exactly the platform your team needs. Pick the products you run — everything else stays out of the way. Nothing here is destructive; change it anytime."
-          />
-        </div>
+      <PageHeader title="Modules" description={PAGE_DESCRIPTION}>
         <Can permission={Permission.TeamUpdate}>
           <Button
             variant="outline"
             size="sm"
             onClick={() => setShowResetDialog(true)}
             disabled={isResetting}
-            className="mt-1 shrink-0"
           >
-            <RotateCcw className="me-2 h-4 w-4" />
-            Reset to Defaults
+            <RotateCcw className="h-4 w-4" />
+            Reset to defaults
           </Button>
         </Can>
-      </div>
+      </PageHeader>
 
-      {/* Summary Cards */}
       {summary && (
-        <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
-          <SummaryCard label="Total Modules" value={summary.total} />
-          <SummaryCard
-            label="Enabled"
-            value={summary.enabled + pendingEnabled - pendingDisabled}
-            variant="success"
-          />
-          <SummaryCard
-            label="Disabled"
-            value={summary.disabled - pendingEnabled + pendingDisabled}
-            variant="muted"
-          />
-          <SummaryCard label="Core (Always On)" value={summary.core} variant="info" />
-        </div>
+        <MetricStrip
+          className="mt-5"
+          items={[
+            { key: 'total', label: 'Total modules', value: summary.total },
+            {
+              key: 'enabled',
+              label: 'Enabled',
+              value: summary.enabled + pendingEnabled - pendingDisabled,
+            },
+            {
+              key: 'disabled',
+              label: 'Disabled',
+              value: summary.disabled - pendingEnabled + pendingDisabled,
+            },
+            { key: 'core', label: 'Core (always on)', value: summary.core },
+          ]}
+        />
       )}
 
       {/* Products — the single control for module packaging. Pick the large
@@ -402,7 +418,7 @@ export default function ModuleManagementPage() {
         <BundleSubscriptionCard tenantId={tenantId} onChanged={() => mutate()} />
       </Can>
 
-      <div className={`mt-6 space-y-4 ${isDirty ? 'pb-20' : ''}`}>
+      <div className="mt-5 space-y-5">
         {/* Core Modules - Collapsed by default */}
         {coreModules.length > 0 && (
           <Card>
@@ -417,10 +433,10 @@ export default function ModuleManagementPage() {
                   ) : (
                     <ChevronRight className="h-4 w-4 text-muted-foreground" />
                   )}
-                  <CardTitle className="text-base">Core Modules</CardTitle>
+                  <CardTitle className="text-base">Core modules</CardTitle>
                   <Badge variant="secondary" className="text-xs gap-1">
                     <Lock className="h-3 w-3" />
-                    Always On
+                    Always on
                   </Badge>
                   <Badge variant="outline" className="text-xs">
                     {coreModules.length}
@@ -457,16 +473,15 @@ export default function ModuleManagementPage() {
           <Card>
             <CardHeader className="py-3">
               <div className="flex items-center gap-2">
-                <SlidersHorizontal className="h-4 w-4 text-muted-foreground" />
                 <CardTitle className="text-base">Fine-tune features</CardTitle>
                 <Badge variant="outline" className="text-xs">
                   {featureModules.length}
                 </Badge>
               </div>
-              <p className="text-xs text-muted-foreground mt-1">
+              <CardDescription>
                 Individual feature toggles, grouped by CTEM phase and layered on top of your
                 products. Turn anything on or off — dependencies are checked when you save.
-              </p>
+              </CardDescription>
             </CardHeader>
             <CardContent className="pt-0 space-y-2.5">
               {groupedFeatures.map((group) => {
@@ -516,27 +531,31 @@ export default function ModuleManagementPage() {
         )}
       </div>
 
-      {/* Sticky Save Bar */}
+      {/* Deliberate deviation from the settings-form model (Save in the page
+          header): this page is a long list of toggles, and a header button
+          scrolls out of view while the admin works far down the list — a toggle
+          that looks applied but was never saved is the failure to avoid. So the
+          Save sits in a bar pinned to the bottom of the content column, shown
+          only while there are unsaved changes. */}
       {isDirty && (
         <Can permission={Permission.TeamUpdate}>
-          <div className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background p-4 shadow-lg">
-            <div className="mx-auto flex max-w-5xl items-center justify-between">
-              <div className="text-sm text-muted-foreground">
-                {pendingEnabled > 0 && (
-                  <span className="text-green-600 me-3">+{pendingEnabled} enabling</span>
-                )}
-                {pendingDisabled > 0 && (
-                  <span className="text-red-600">-{pendingDisabled} disabling</span>
-                )}
-              </div>
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={handleDiscard}>
-                  Discard
-                </Button>
-                <Button onClick={handleSave} disabled={isUpdating}>
-                  {isUpdating ? 'Saving...' : 'Save Changes'}
-                </Button>
-              </div>
+          <div className="sticky bottom-4 z-10 mt-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-card px-4 py-3 shadow-lg">
+            <div className="text-sm tabular-nums text-muted-foreground">
+              {[
+                pendingEnabled > 0 && `${pendingEnabled} to enable`,
+                pendingDisabled > 0 && `${pendingDisabled} to disable`,
+              ]
+                .filter(Boolean)
+                .join(' · ')}
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={handleDiscard}>
+                Discard
+              </Button>
+              <Button size="sm" onClick={handleSave} disabled={isUpdating}>
+                {isUpdating && <Loader2 className="h-4 w-4 animate-spin" />}
+                Save changes
+              </Button>
             </div>
           </div>
         </Can>
@@ -549,7 +568,7 @@ export default function ModuleManagementPage() {
         <AlertDialogContent className="max-w-lg">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              <AlertTriangle className="h-5 w-5 text-muted-foreground" />
               {depConflict?.action === 'disable'
                 ? `Cannot disable "${depConflict.module_name}"`
                 : `Cannot enable "${depConflict?.module_name ?? ''}"`}
@@ -574,15 +593,12 @@ export default function ModuleManagementPage() {
                 </div>
                 <ul className="mt-2 space-y-1.5">
                   {depConflict.blockers?.map((b) => (
-                    <li
-                      key={b.module_id}
-                      className="rounded border border-amber-200 bg-amber-50/50 px-3 py-2"
-                    >
+                    <li key={b.module_id} className="rounded-md border bg-muted/40 px-3 py-2">
                       <div className="flex items-center justify-between gap-2">
-                        <div className="font-medium text-amber-900">{b.name}</div>
-                        <code className="text-[10px] text-amber-700/60">{b.module_id}</code>
+                        <div className="font-medium">{b.name}</div>
+                        <code className="text-xs text-muted-foreground">{b.module_id}</code>
                       </div>
-                      <div className="text-xs text-amber-800/80 mt-0.5">{b.reason}</div>
+                      <div className="mt-0.5 text-xs text-muted-foreground">{b.reason}</div>
                     </li>
                   ))}
                 </ul>
@@ -598,15 +614,12 @@ export default function ModuleManagementPage() {
                 </div>
                 <ul className="mt-2 space-y-1.5">
                   {depConflict.required?.map((r) => (
-                    <li
-                      key={r.module_id}
-                      className="rounded border border-amber-200 bg-amber-50/50 px-3 py-2"
-                    >
+                    <li key={r.module_id} className="rounded-md border bg-muted/40 px-3 py-2">
                       <div className="flex items-center justify-between gap-2">
-                        <div className="font-medium text-amber-900">{r.name}</div>
-                        <code className="text-[10px] text-amber-700/60">{r.module_id}</code>
+                        <div className="font-medium">{r.name}</div>
+                        <code className="text-xs text-muted-foreground">{r.module_id}</code>
                       </div>
-                      <div className="text-xs text-amber-800/80 mt-0.5">{r.reason}</div>
+                      <div className="mt-0.5 text-xs text-muted-foreground">{r.reason}</div>
                     </li>
                   ))}
                 </ul>
@@ -628,9 +641,9 @@ export default function ModuleManagementPage() {
       <ConfirmDialog
         open={showResetDialog}
         onOpenChange={setShowResetDialog}
-        title="Reset Modules to Defaults"
+        title="Reset modules to defaults"
         desc="This will enable all modules for your organization. Any modules you previously disabled will be re-enabled. This action cannot be undone."
-        confirmText={isResetting ? 'Resetting...' : 'Reset All'}
+        confirmText="Reset all"
         isLoading={isResetting}
         handleConfirm={() => void handleReset()}
       />
@@ -692,17 +705,17 @@ function ModuleRow({
               </Badge>
             )}
             {mod.release_status === 'beta' && (
-              <Badge variant="outline" className="text-xs text-blue-600 border-blue-300">
+              <Badge variant="outline" className="text-xs">
                 Beta
               </Badge>
             )}
             {mod.release_status === 'coming_soon' && (
-              <Badge variant="outline" className="text-xs text-amber-600 border-amber-300">
-                Coming Soon
+              <Badge variant="outline" className="text-xs text-muted-foreground">
+                Coming soon
               </Badge>
             )}
             {hasPendingChange && (
-              <Badge variant="outline" className="text-xs text-orange-600 border-orange-300">
+              <Badge variant="secondary" className="text-xs">
                 Modified
               </Badge>
             )}
@@ -711,7 +724,7 @@ function ModuleRow({
             {hardRequires.length > 0 && (
               <Badge
                 variant="outline"
-                className="text-[10px] px-1.5 py-0 gap-0.5 text-sky-700 border-sky-300"
+                className="gap-0.5 px-1.5 py-0 text-[10px] text-muted-foreground"
                 title={`Requires: ${hardRequires.map((e) => moduleNames[e.to] ?? e.to).join(', ')}`}
               >
                 <ArrowUpRight className="h-2.5 w-2.5" />
@@ -721,7 +734,7 @@ function ModuleRow({
             {hardRequiredBy.length > 0 && (
               <Badge
                 variant="outline"
-                className="text-[10px] px-1.5 py-0 gap-0.5 text-purple-700 border-purple-300"
+                className="gap-0.5 px-1.5 py-0 text-[10px] text-muted-foreground"
                 title={`Required by: ${hardRequiredBy
                   .map((e) => moduleNames[e.from] ?? e.from)
                   .join(', ')}`}
@@ -800,23 +813,17 @@ function SubModuleRow({
         <CornerDownRight className="h-3 w-3 shrink-0" />
         <span className={!effectiveEnabled ? 'line-through opacity-60' : ''}>{sub.name}</span>
         {sub.release_status === 'beta' && (
-          <Badge variant="outline" className="text-[10px] px-1 py-0 text-blue-600 border-blue-300">
+          <Badge variant="outline" className="px-1 py-0 text-[10px]">
             Beta
           </Badge>
         )}
         {isComingSoon && (
-          <Badge
-            variant="outline"
-            className="text-[10px] px-1 py-0 text-amber-600 border-amber-300"
-          >
+          <Badge variant="outline" className="px-1 py-0 text-[10px] text-muted-foreground">
             Soon
           </Badge>
         )}
         {hasPendingChange && !isComingSoon && (
-          <Badge
-            variant="outline"
-            className="text-[10px] px-1 py-0 text-orange-600 border-orange-300"
-          >
+          <Badge variant="secondary" className="px-1 py-0 text-[10px]">
             Modified
           </Badge>
         )}
@@ -829,31 +836,5 @@ function SubModuleRow({
         aria-label={`Toggle ${sub.name}`}
       />
     </div>
-  )
-}
-
-function SummaryCard({
-  label,
-  value,
-  variant = 'default',
-}: {
-  label: string
-  value: number
-  variant?: 'default' | 'success' | 'muted' | 'info'
-}) {
-  const colorClasses = {
-    default: 'text-foreground',
-    success: 'text-green-600',
-    muted: 'text-muted-foreground',
-    info: 'text-blue-600',
-  }
-
-  return (
-    <Card>
-      <CardContent className="p-4">
-        <p className="text-xs text-muted-foreground">{label}</p>
-        <p className={`text-2xl font-bold ${colorClasses[variant]}`}>{value}</p>
-      </CardContent>
-    </Card>
   )
 }

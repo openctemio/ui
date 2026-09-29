@@ -2,13 +2,13 @@
 
 import { useMemo, useState } from 'react'
 import type { ColumnDef } from '@tanstack/react-table'
-import { Plus, Pencil, Trash2, ShieldCheck, Timer } from 'lucide-react'
+import { AlertCircle, Plus, Pencil, Trash2, ShieldCheck, Timer } from 'lucide-react'
 
 import { Main } from '@/components/layout'
 import { PageHeader, DataTable, DataTableColumnHeader, EmptyState } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent } from '@/components/ui/card'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Can, Permission } from '@/lib/permissions'
@@ -52,7 +52,7 @@ function WindowCells({ policy }: { policy: SlaPolicy }) {
 }
 
 export default function SlaPoliciesPage() {
-  const { data, isLoading } = useSlaPoliciesApi()
+  const { data, error, isLoading, mutate } = useSlaPoliciesApi()
   const policies = useMemo(() => data?.data ?? [], [data])
 
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -176,26 +176,34 @@ export default function SlaPoliciesPage() {
   return (
     <Main>
       <PageHeader
-        title="SLA Policies"
+        title="SLA policies"
         description="Define per-severity remediation windows that drive finding SLA deadlines."
       >
         <Can permission={Permission.SLAWrite}>
-          <Button onClick={openCreate}>
-            <Plus className="me-2 h-4 w-4" />
-            New Policy
+          <Button size="sm" onClick={openCreate}>
+            <Plus className="h-4 w-4" />
+            New policy
           </Button>
         </Can>
       </PageHeader>
 
-      <div className="mt-6">
-        {isLoading ? (
-          <Card>
-            <CardContent className="space-y-3 py-6">
-              {[1, 2, 3].map((i) => (
-                <Skeleton key={i} className="h-12 w-full" />
-              ))}
-            </CardContent>
-          </Card>
+      <div className="mt-5">
+        {error ? (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Failed to load SLA policies</AlertTitle>
+            <AlertDescription>
+              <p>{getErrorMessage(error, 'The SLA policies request failed.')}</p>
+              <Button variant="outline" size="sm" className="mt-2" onClick={() => void mutate()}>
+                Retry
+              </Button>
+            </AlertDescription>
+          </Alert>
+        ) : isLoading ? (
+          <div className="space-y-2">
+            <Skeleton className="h-9 w-full max-w-sm" />
+            <Skeleton className="h-64 w-full rounded-md" />
+          </div>
         ) : policies.length === 0 ? (
           <EmptyState
             icon={Timer}
@@ -203,9 +211,9 @@ export default function SlaPoliciesPage() {
             description="Create a policy to set remediation deadlines by severity. The default policy applies to every asset without a specific one."
             action={
               <Can permission={Permission.SLAWrite}>
-                <Button onClick={openCreate}>
-                  <Plus className="me-2 h-4 w-4" />
-                  New Policy
+                <Button size="sm" onClick={openCreate}>
+                  <Plus className="h-4 w-4" />
+                  New policy
                 </Button>
               </Can>
             }
@@ -215,7 +223,7 @@ export default function SlaPoliciesPage() {
             columns={columns}
             data={policies}
             searchKey="name"
-            searchPlaceholder="Search policies..."
+            searchPlaceholder="Search policies…"
             pageSize={10}
           />
         )}

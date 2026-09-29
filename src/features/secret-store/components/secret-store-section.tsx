@@ -2,13 +2,11 @@
 
 import * as React from 'react'
 import { useState, useMemo, useCallback } from 'react'
+import type { ColumnDef } from '@tanstack/react-table'
 import {
   Plus,
   KeyRound,
   AlertCircle,
-  RefreshCw,
-  Loader2,
-  Search,
   Pencil,
   Trash2,
   GitBranch,
@@ -16,7 +14,6 @@ import {
   Key,
   Lock,
   Terminal,
-  Clock,
   AlertTriangle,
 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -24,21 +21,17 @@ import { getErrorMessage } from '@/lib/api/error-handler'
 
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Input } from '@/components/ui/input'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import { ConfirmDialog } from '@/components/confirm-dialog'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { RefreshButton, TableSkeleton } from '@/components/list-page-parts'
 
-import { DataTableRowActions, EmptyState } from '@/features/shared'
+import {
+  DataTable,
+  DataTableColumnHeader,
+  DataTableRowActions,
+  EmptyState,
+  ErrorState,
+  PageHeader,
+} from '@/features/shared'
 import { AddCredentialDialog } from './add-credential-dialog'
 import { EditCredentialDialog } from './edit-credential-dialog'
 import { Can, Permission } from '@/lib/permissions'
@@ -81,17 +74,13 @@ function CredentialStatusBadge({ credential }: { credential: SecretStoreCredenti
   }
   if (isCredentialExpiringSoon(credential)) {
     return (
-      <Badge variant="outline" className="gap-1 border-yellow-500 text-yellow-600">
+      <Badge variant="secondary" className="gap-1">
         <AlertTriangle className="h-3 w-3" />
-        Expiring Soon
+        Expiring soon
       </Badge>
     )
   }
-  return (
-    <Badge variant="outline" className="gap-1 border-green-500 text-green-600">
-      Active
-    </Badge>
-  )
+  return <Badge variant="outline">Active</Badge>
 }
 
 export function SecretStoreSection() {
@@ -102,9 +91,6 @@ export function SecretStoreSection() {
 
   // Selected credential for dialogs
   const [selectedCredential, setSelectedCredential] = useState<SecretStoreCredential | null>(null)
-
-  // Filter states
-  const [searchQuery, setSearchQuery] = useState('')
 
   // API data
   const { data: credentialsData, error, isLoading, mutate } = useSecretStoreCredentials()
@@ -117,18 +103,6 @@ export function SecretStoreSection() {
   const { trigger: deleteCredential, isMutating: isDeleting } = useDeleteSecretStoreCredential(
     selectedCredential?.id || ''
   )
-
-  // Filter credentials
-  const filteredCredentials = useMemo(() => {
-    if (!searchQuery) return credentials
-    const query = searchQuery.toLowerCase()
-    return credentials.filter(
-      (c) =>
-        c.name.toLowerCase().includes(query) ||
-        c.description?.toLowerCase().includes(query) ||
-        c.credential_type.toLowerCase().includes(query)
-    )
-  }, [credentials, searchQuery])
 
   // Handlers
   const handleRefresh = useCallback(async () => {
@@ -160,200 +134,135 @@ export function SecretStoreSection() {
     }
   }, [selectedCredential, deleteCredential])
 
+  const columns = useMemo<ColumnDef<SecretStoreCredential>[]>(
+    () => [
+      {
+        id: 'name',
+        accessorFn: (c) => `${c.name} ${c.description ?? ''}`,
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Credential" />,
+        cell: ({ row }) => {
+          const credential = row.original
+          const Icon = CREDENTIAL_TYPE_ICONS[credential.credential_type] || Key
+          return (
+            <div className="flex min-w-0 items-center gap-3">
+              <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <div className="min-w-0">
+                <div className="truncate font-medium">{credential.name}</div>
+                {credential.description && (
+                  <p
+                    className="max-w-xs truncate text-sm text-muted-foreground"
+                    title={credential.description}
+                  >
+                    {credential.description}
+                  </p>
+                )}
+              </div>
+            </div>
+          )
+        },
+      },
+      {
+        id: 'type',
+        accessorFn: (c) => CREDENTIAL_TYPE_DISPLAY_NAMES[c.credential_type],
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Type" />,
+        cell: ({ getValue }) => <Badge variant="outline">{getValue<string>()}</Badge>,
+      },
+      {
+        id: 'status',
+        enableSorting: false,
+        header: 'Status',
+        cell: ({ row }) => <CredentialStatusBadge credential={row.original} />,
+      },
+      {
+        id: 'last_used',
+        accessorFn: (c) => c.last_used_at ?? '',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Last used" />,
+        cell: ({ row }) => (
+          <span className="text-sm text-muted-foreground">
+            {formatLastUsed(row.original.last_used_at)}
+          </span>
+        ),
+      },
+      {
+        id: 'actions',
+        enableSorting: false,
+        enableHiding: false,
+        cell: ({ row }) => (
+          <Can permission={Permission.CredentialsWrite}>
+            <DataTableRowActions
+              actions={[
+                {
+                  label: 'Edit',
+                  icon: Pencil,
+                  onClick: () => handleEditCredential(row.original),
+                  permission: Permission.CredentialsWrite,
+                },
+                {
+                  label: 'Delete',
+                  icon: Trash2,
+                  onClick: () => handleDeleteClick(row.original),
+                  destructive: true,
+                  separatorBefore: true,
+                  permission: Permission.CredentialsWrite,
+                },
+              ]}
+            />
+          </Can>
+        ),
+      },
+    ],
+    [handleEditCredential, handleDeleteClick]
+  )
+
+  let body: React.ReactNode
   if (error) {
-    return (
-      <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-4">
-        <div className="flex items-center gap-2 text-red-500">
-          <AlertCircle className="h-4 w-4" />
-          <span className="text-sm font-medium">Failed to load credentials</span>
-        </div>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {error instanceof Error ? error.message : 'An unexpected error occurred'}
-        </p>
-        <Button variant="outline" size="sm" className="mt-2" onClick={handleRefresh}>
-          <RefreshCw className="me-2 h-4 w-4" />
-          Retry
-        </Button>
-      </div>
+    body = <ErrorState title="credentials" error={error} onRetry={handleRefresh} />
+  } else if (isLoading) {
+    body = <TableSkeleton rows={3} />
+  } else if (credentials.length === 0) {
+    body = (
+      <EmptyState
+        icon={KeyRound}
+        title="No credentials"
+        description="Add credentials to authenticate with template sources."
+        action={
+          <Can permission={Permission.CredentialsWrite}>
+            <Button size="sm" onClick={() => setAddDialogOpen(true)}>
+              <Plus className="h-4 w-4" />
+              Add credential
+            </Button>
+          </Can>
+        }
+      />
+    )
+  } else {
+    body = (
+      <DataTable
+        columns={columns}
+        data={credentials}
+        getRowId={(c) => c.id}
+        searchPlaceholder="Search credentials…"
+        toolbarEnd={<RefreshButton onClick={handleRefresh} loading={isLoading} />}
+        emptyMessage="No credentials match your search"
+      />
     )
   }
 
   return (
     <>
-      <div className="space-y-6">
-        <Card>
-          <CardHeader>
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                  <KeyRound className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                  <CardTitle>Secret Store</CardTitle>
-                  <CardDescription>
-                    Securely store credentials for template sources (Git tokens, AWS keys, etc.)
-                  </CardDescription>
-                </div>
-                {!isLoading && credentials.length > 0 && (
-                  <Badge variant="secondary" className="ms-2 h-5 px-1.5 text-xs">
-                    {credentials.length}
-                  </Badge>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                <Button variant="ghost" size="sm" onClick={handleRefresh} disabled={isLoading}>
-                  {isLoading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <RefreshCw className="h-4 w-4" />
-                  )}
-                </Button>
-                <Can permission={Permission.CredentialsWrite}>
-                  <Button onClick={() => setAddDialogOpen(true)}>
-                    <Plus className="me-2 h-4 w-4" />
-                    Add Credential
-                  </Button>
-                </Can>
-              </div>
-            </div>
-          </CardHeader>
+      <PageHeader
+        title="Secret store"
+        description="Encrypted credentials that template sources use to authenticate (Git tokens, cloud keys and more)."
+      >
+        <Can permission={Permission.CredentialsWrite}>
+          <Button size="sm" onClick={() => setAddDialogOpen(true)}>
+            <Plus className="h-4 w-4" />
+            Add credential
+          </Button>
+        </Can>
+      </PageHeader>
 
-          <CardContent>
-            {/* Search */}
-            <div className="mb-4">
-              <div className="relative max-w-md">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder="Search credentials..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="ps-9"
-                />
-              </div>
-            </div>
-
-            {/* Content */}
-            {isLoading ? (
-              <div className="space-y-3">
-                {[...Array(3)].map((_, i) => (
-                  <div key={i} className="flex items-center gap-4 rounded-lg border p-4">
-                    <Skeleton className="h-10 w-10 rounded-lg" />
-                    <div className="flex-1 space-y-2">
-                      <Skeleton className="h-4 w-48" />
-                      <Skeleton className="h-3 w-32" />
-                    </div>
-                    <Skeleton className="h-8 w-20" />
-                  </div>
-                ))}
-              </div>
-            ) : filteredCredentials.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Credential</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Last Used</TableHead>
-                    <TableHead className="w-[100px]">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredCredentials.map((credential) => {
-                    const Icon = CREDENTIAL_TYPE_ICONS[credential.credential_type] || Key
-                    return (
-                      <TableRow key={credential.id}>
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted">
-                              <Icon className="h-4 w-4 text-muted-foreground" />
-                            </div>
-                            <div>
-                              <div className="font-medium">{credential.name}</div>
-                              {credential.description && (
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <p className="max-w-[200px] truncate text-sm text-muted-foreground">
-                                        {credential.description}
-                                      </p>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      <p>{credential.description}</p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                              )}
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">
-                            {CREDENTIAL_TYPE_DISPLAY_NAMES[credential.credential_type]}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <CredentialStatusBadge credential={credential} />
-                        </TableCell>
-                        <TableCell>
-                          <span className="flex items-center gap-1 text-sm text-muted-foreground">
-                            <Clock className="h-3 w-3" />
-                            {formatLastUsed(credential.last_used_at)}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <Can
-                            permission={[Permission.CredentialsWrite, Permission.CredentialsWrite]}
-                          >
-                            <DataTableRowActions
-                              actions={[
-                                {
-                                  label: 'Edit',
-                                  icon: Pencil,
-                                  onClick: () => handleEditCredential(credential),
-                                  permission: Permission.CredentialsWrite,
-                                },
-                                {
-                                  label: 'Delete',
-                                  icon: Trash2,
-                                  onClick: () => handleDeleteClick(credential),
-                                  destructive: true,
-                                  separatorBefore: true,
-                                  permission: Permission.CredentialsWrite,
-                                },
-                              ]}
-                            />
-                          </Can>
-                        </TableCell>
-                      </TableRow>
-                    )
-                  })}
-                </TableBody>
-              </Table>
-            ) : (
-              <EmptyState
-                card={false}
-                icon={KeyRound}
-                title="No Credentials Found"
-                description={
-                  searchQuery
-                    ? 'No credentials match your search criteria.'
-                    : 'Add credentials to authenticate with template sources.'
-                }
-                action={
-                  !searchQuery ? (
-                    <Can permission={Permission.CredentialsWrite}>
-                      <Button onClick={() => setAddDialogOpen(true)}>
-                        <Plus className="me-2 h-4 w-4" />
-                        Add Your First Credential
-                      </Button>
-                    </Can>
-                  ) : undefined
-                }
-              />
-            )}
-          </CardContent>
-        </Card>
-      </div>
+      <div className="mt-5">{body}</div>
 
       {/* Dialogs */}
       <AddCredentialDialog
@@ -375,7 +284,7 @@ export function SecretStoreSection() {
       <ConfirmDialog
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
-        title="Delete Credential"
+        title="Delete credential"
         desc={
           <>
             Are you sure you want to delete <strong>{selectedCredential?.name}</strong>? Template

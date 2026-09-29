@@ -1,36 +1,22 @@
 'use client'
 
 import { useState, useMemo, useCallback, useEffect } from 'react'
-import {
-  ColumnDef,
-  flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  SortingState,
-  useReactTable,
-} from '@tanstack/react-table'
+import type { ColumnDef } from '@tanstack/react-table'
 import { Main } from '@/components/layout'
 import {
   PageHeader,
-  DataTablePagination,
+  DataTable,
+  DataTableColumnHeader,
   DataTableRowActions,
+  EmptyState,
+  MetricStrip,
   type RowAction,
 } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   Dialog,
   DialogContent,
@@ -40,50 +26,44 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { toast } from 'sonner'
 import { Can, Permission } from '@/lib/permissions'
 import {
   Plus,
   Shield,
   Trash2,
-  ArrowUpDown,
   Search as SearchIcon,
   Eye,
   Pencil,
   Loader2,
   AlertCircle,
-  Crown,
-  ShieldCheck,
-  User,
-  Lock,
-  Key,
-  Database,
+  RefreshCw,
 } from 'lucide-react'
 import { useSWRConfig } from 'swr'
 import {
   useRoles,
   useDeleteRole,
   type Role,
-  getRoleConfig,
   CreateRoleSheet,
   RoleDetailSheet,
   EditRoleSheet,
   filterPermissionsByTenantModules,
 } from '@/features/access-control'
 import { useTenantModules } from '@/features/integrations/api/use-tenant-modules'
+import { useUrlFilter } from '@/hooks/use-url-param'
 
 type TypeFilter = 'all' | 'system' | 'custom'
 
-const typeFilters: { value: TypeFilter; label: string; icon: React.ReactNode }[] = [
-  { value: 'all', label: 'All Roles', icon: <Shield className="h-4 w-4" /> },
-  { value: 'system', label: 'System', icon: <Lock className="h-4 w-4" /> },
-  { value: 'custom', label: 'Custom', icon: <Key className="h-4 w-4" /> },
+const typeFilters: { value: TypeFilter; label: string }[] = [
+  { value: 'all', label: 'All types' },
+  { value: 'system', label: 'System' },
+  { value: 'custom', label: 'Custom' },
 ]
 
 const formatDate = (dateString: string) => {
@@ -92,23 +72,6 @@ const formatDate = (dateString: string) => {
     month: 'short',
     day: 'numeric',
   })
-}
-
-// Get icon for role based on slug
-const getRoleIcon = (slug: string, isSystem: boolean) => {
-  if (!isSystem) return Key
-  switch (slug) {
-    case 'owner':
-      return Crown
-    case 'admin':
-      return ShieldCheck
-    case 'member':
-      return User
-    case 'viewer':
-      return Eye
-    default:
-      return Shield
-  }
 }
 
 export default function RolesPage() {
@@ -134,10 +97,10 @@ export default function RolesPage() {
   const [pendingEditRole, setPendingEditRole] = useState<Role | null>(null) // For transition from detail to edit
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [roleToDelete, setRoleToDelete] = useState<Role | null>(null)
-  const [sorting, setSorting] = useState<SortingState>([])
-  const [globalFilter, setGlobalFilter] = useState('')
-  const [typeFilter, setTypeFilter] = useState<TypeFilter>('all')
-  const [rowSelection, setRowSelection] = useState({})
+  const [searchQuery, setSearchQuery] = useUrlFilter('q', '')
+  const [typeParam, setTypeFilter] = useUrlFilter('type', 'all')
+  const typeFilter: TypeFilter =
+    typeParam === 'system' || typeParam === 'custom' ? typeParam : 'all'
 
   // Handle transition from detail sheet to edit sheet
   // When detail sheet closes and there's a pending edit, open the edit sheet
@@ -177,8 +140,18 @@ export default function RolesPage() {
       data = data.filter((role) => !role.is_system)
     }
 
+    const q = searchQuery.trim().toLowerCase()
+    if (q) {
+      data = data.filter(
+        (role) =>
+          role.name.toLowerCase().includes(q) ||
+          role.slug.toLowerCase().includes(q) ||
+          role.description?.toLowerCase().includes(q)
+      )
+    }
+
     return data
-  }, [roles, typeFilter])
+  }, [roles, typeFilter, searchQuery])
 
   // Type counts
   const typeCounts = useMemo(
@@ -193,127 +166,79 @@ export default function RolesPage() {
   // Table columns
   const columns: ColumnDef<Role>[] = [
     {
-      id: 'select',
-      header: ({ table }) => (
-        <Checkbox
-          checked={
-            table.getIsAllPageRowsSelected() ||
-            (table.getIsSomePageRowsSelected() && 'indeterminate')
-          }
-          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-          aria-label="Select all"
-        />
-      ),
-      cell: ({ row }) => (
-        <Checkbox
-          checked={row.getIsSelected()}
-          onCheckedChange={(value) => row.toggleSelected(!!value)}
-          aria-label="Select row"
-          disabled={row.original.is_system}
-        />
-      ),
-      enableSorting: false,
-      enableHiding: false,
-    },
-    {
       accessorKey: 'name',
-      header: ({ column }) => (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-          className="-ms-4"
-        >
-          Role
-          <ArrowUpDown className="ms-2 h-4 w-4" />
-        </Button>
-      ),
-      cell: ({ row }) => {
-        const config = getRoleConfig(row.original.slug, row.original.is_system)
-        const Icon = getRoleIcon(row.original.slug, row.original.is_system)
-        return (
-          <div className="flex items-center gap-3">
-            <div className={`p-2 rounded-lg ${config.bgColor}`}>
-              <Icon className={`h-4 w-4 ${config.color}`} />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <p className="font-medium">{row.original.name}</p>
-                {row.original.is_system && (
-                  <Badge variant="outline" className="text-xs">
-                    System
-                  </Badge>
-                )}
-              </div>
-              {row.original.description && (
-                <p className="text-muted-foreground text-xs line-clamp-1">
-                  {row.original.description}
-                </p>
-              )}
-            </div>
-          </div>
-        )
-      },
-    },
-    {
-      accessorKey: 'permission_count',
-      header: 'Permissions',
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Role" />,
       cell: ({ row }) => (
-        <div className="flex items-center gap-2">
-          <Shield className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm">{getFilteredPermissionCount(row.original)}</span>
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <p className="font-medium">{row.original.name}</p>
+            {row.original.is_system && (
+              <Badge variant="outline" className="text-xs">
+                System
+              </Badge>
+            )}
+          </div>
+          {row.original.description && (
+            <p className="text-muted-foreground text-xs line-clamp-1">{row.original.description}</p>
+          )}
         </div>
       ),
     },
     {
+      accessorKey: 'permission_count',
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Permissions" />,
+      cell: ({ row }) => (
+        <span className="text-sm tabular-nums">{getFilteredPermissionCount(row.original)}</span>
+      ),
+    },
+    {
       accessorKey: 'has_full_data_access',
-      header: 'Data Access',
+      header: 'Data access',
+      enableSorting: false,
       cell: ({ row }) => (
         <Badge
           variant={row.original.has_full_data_access ? 'default' : 'secondary'}
           className="text-xs"
         >
-          {row.original.has_full_data_access ? (
-            <>
-              <Database className="me-1 h-3 w-3" />
-              Full Access
-            </>
-          ) : (
-            'Group-based'
-          )}
+          {row.original.has_full_data_access ? 'Full access' : 'Team-based'}
         </Badge>
       ),
     },
     {
       accessorKey: 'hierarchy_level',
-      header: 'Level',
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Level" />,
       cell: ({ row }) => (
-        <span className="text-muted-foreground text-sm">{row.original.hierarchy_level}</span>
+        <span className="text-muted-foreground text-sm tabular-nums">
+          {row.original.hierarchy_level}
+        </span>
       ),
     },
     {
       accessorKey: 'created_at',
-      header: 'Created',
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Created" />,
       cell: ({ row }) => (
         <span className="text-muted-foreground text-sm">{formatDate(row.original.created_at)}</span>
       ),
     },
     {
       id: 'actions',
+      enableSorting: false,
+      enableHiding: false,
       cell: ({ row }) => {
         const role = row.original
 
         const actions: RowAction[] = [
-          { label: 'View Details', icon: Eye, onClick: () => setSelectedRole(role) },
+          { label: 'View details', icon: Eye, onClick: () => setSelectedRole(role) },
           ...(!role.is_system
             ? [
                 {
-                  label: 'Edit Role',
+                  label: 'Edit role',
                   icon: Pencil,
                   permission: Permission.RolesWrite,
                   onClick: () => setEditRole(role),
                 },
                 {
-                  label: 'Delete Role',
+                  label: 'Delete role',
                   icon: Trash2,
                   destructive: true,
                   separatorBefore: true,
@@ -331,23 +256,6 @@ export default function RolesPage() {
       },
     },
   ]
-
-  const table = useReactTable({
-    data: filteredData,
-    columns,
-    state: {
-      sorting,
-      globalFilter,
-      rowSelection,
-    },
-    onSortingChange: setSorting,
-    onGlobalFilterChange: setGlobalFilter,
-    onRowSelectionChange: setRowSelection,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-  })
 
   // Actions
   const handleDeleteRole = async () => {
@@ -371,231 +279,128 @@ export default function RolesPage() {
     }
   }
 
-  // Active filters count
-  const activeFiltersCount = [typeFilter !== 'all'].filter(Boolean).length
-
-  const clearFilters = () => {
-    setTypeFilter('all')
-  }
+  const toggleType = (next: TypeFilter) => setTypeFilter(typeFilter === next ? 'all' : next)
 
   return (
     <>
       <Main>
         <PageHeader
           title="Roles"
-          description="Manage roles and their permissions. Users can have multiple roles."
+          description="Roles bundle permissions; a user can hold several roles."
         >
           <Can permission={Permission.RolesWrite}>
-            <Button onClick={() => setCreateSheetOpen(true)}>
+            <Button size="sm" onClick={() => setCreateSheetOpen(true)}>
               <Plus className="me-2 h-4 w-4" />
-              Create Role
+              Create role
             </Button>
           </Can>
         </PageHeader>
 
-        {/* Loading State */}
-        {isLoading && (
-          <div className="mt-6 flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          </div>
-        )}
-
-        {/* Error State */}
-        {isError && !isLoading && (
-          <div className="mt-6 flex flex-col items-center justify-center py-12 gap-4">
-            <AlertCircle className="h-12 w-12 text-red-400" />
-            <p className="text-muted-foreground">Failed to load roles</p>
-            <Button variant="outline" onClick={refreshData}>
-              Try Again
-            </Button>
-          </div>
-        )}
-
-        {/* Content */}
-        {!isLoading && !isError && (
+        {isError && !isLoading ? (
+          <Alert variant="destructive" className="mt-5">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Failed to load roles</AlertTitle>
+            <AlertDescription>
+              <p>The role list could not be loaded.</p>
+              <Button variant="outline" size="sm" className="mt-2" onClick={refreshData}>
+                <RefreshCw className="me-2 h-4 w-4" />
+                Retry
+              </Button>
+            </AlertDescription>
+          </Alert>
+        ) : (
           <>
-            {/* Stats */}
-            <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <Card
-                className={`cursor-pointer hover:border-primary transition-colors ${typeFilter === 'all' ? 'border-primary' : ''}`}
-                onClick={() => setTypeFilter('all')}
-              >
-                <CardHeader className="pb-2">
-                  <CardDescription className="flex items-center gap-2">
-                    <Shield className="h-4 w-4" />
-                    Total Roles
-                  </CardDescription>
-                  <CardTitle className="text-3xl">{typeCounts.all}</CardTitle>
-                </CardHeader>
-              </Card>
-              <Card
-                className={`cursor-pointer hover:border-blue-500 transition-colors ${typeFilter === 'system' ? 'border-blue-500' : ''}`}
-                onClick={() => setTypeFilter('system')}
-              >
-                <CardHeader className="pb-2">
-                  <CardDescription className="flex items-center gap-2">
-                    <Lock className="h-4 w-4 text-blue-500" />
-                    System Roles
-                  </CardDescription>
-                  <CardTitle className="text-3xl text-blue-500">{typeCounts.system}</CardTitle>
-                </CardHeader>
-              </Card>
-              <Card
-                className={`cursor-pointer hover:border-purple-500 transition-colors ${typeFilter === 'custom' ? 'border-purple-500' : ''}`}
-                onClick={() => setTypeFilter('custom')}
-              >
-                <CardHeader className="pb-2">
-                  <CardDescription className="flex items-center gap-2">
-                    <Key className="h-4 w-4 text-purple-500" />
-                    Custom Roles
-                  </CardDescription>
-                  <CardTitle className="text-3xl text-purple-500">{typeCounts.custom}</CardTitle>
-                </CardHeader>
-              </Card>
-            </div>
+            <MetricStrip
+              className="mt-5"
+              loading={isLoading}
+              items={[
+                {
+                  key: 'all',
+                  label: 'Roles',
+                  value: typeCounts.all,
+                  onClick: () => setTypeFilter('all'),
+                  active: typeFilter === 'all',
+                },
+                {
+                  key: 'system',
+                  label: 'System roles',
+                  value: typeCounts.system,
+                  onClick: () => toggleType('system'),
+                  active: typeFilter === 'system',
+                },
+                {
+                  key: 'custom',
+                  label: 'Custom roles',
+                  value: typeCounts.custom,
+                  onClick: () => toggleType('custom'),
+                  active: typeFilter === 'custom',
+                },
+              ]}
+            />
 
-            {/* Roles Table */}
-            <Card className="mt-6">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-base">All Roles</CardTitle>
-                    <CardDescription>Manage roles and their permissions</CardDescription>
-                  </div>
+            <div className="mt-5">
+              {isLoading ? (
+                <div className="space-y-2">
+                  <Skeleton className="h-9 w-full max-w-sm" />
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Skeleton key={i} className="h-12 w-full" />
+                  ))}
                 </div>
-              </CardHeader>
-              <CardContent>
-                {/* Quick Filter Tabs */}
-                <Tabs
-                  value={typeFilter}
-                  onValueChange={(v) => setTypeFilter(v as TypeFilter)}
-                  className="mb-4"
-                >
-                  <TabsList className="overflow-x-auto">
-                    {typeFilters.map((filter) => (
-                      <TabsTrigger key={filter.value} value={filter.value} className="gap-1.5">
-                        {filter.icon}
-                        {filter.label}
-                        <Badge variant="secondary" className="h-5 px-1.5 text-xs">
-                          {typeCounts[filter.value]}
-                        </Badge>
-                      </TabsTrigger>
-                    ))}
-                  </TabsList>
-                </Tabs>
-
-                {/* Search and Filters */}
-                <div className="flex flex-col gap-4 mb-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="relative flex-1 max-w-sm">
-                    <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Search roles..."
-                      value={globalFilter}
-                      onChange={(e) => setGlobalFilter(e.target.value)}
-                      className="ps-9"
-                    />
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-2">
-                    {activeFiltersCount > 0 && (
-                      <Button variant="ghost" size="sm" onClick={clearFilters}>
-                        Clear filters
+              ) : roles.length === 0 ? (
+                <EmptyState
+                  icon={Shield}
+                  title="No roles yet"
+                  description="Create a role to grant a set of permissions to users."
+                  action={
+                    <Can permission={Permission.RolesWrite}>
+                      <Button size="sm" onClick={() => setCreateSheetOpen(true)}>
+                        <Plus className="me-2 h-4 w-4" />
+                        Create role
                       </Button>
-                    )}
-
-                    {Object.keys(rowSelection).length > 0 && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="outline" size="sm">
-                            {Object.keys(rowSelection).length} selected
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            className="text-red-400"
-                            onClick={() => toast.info('Bulk delete not implemented yet')}
-                          >
-                            <Trash2 className="me-2 h-4 w-4" />
-                            Delete Selected
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
-                  </div>
-                </div>
-
-                {/* Table */}
-                <div className="rounded-md border overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      {table.getHeaderGroups().map((headerGroup) => (
-                        <TableRow key={headerGroup.id}>
-                          {headerGroup.headers.map((header) => (
-                            <TableHead key={header.id}>
-                              {header.isPlaceholder
-                                ? null
-                                : flexRender(header.column.columnDef.header, header.getContext())}
-                            </TableHead>
+                    </Can>
+                  }
+                />
+              ) : (
+                <DataTable
+                  columns={columns}
+                  data={filteredData}
+                  getRowId={(r) => r.id}
+                  showSearch={false}
+                  showColumnToggle={false}
+                  onRowClick={(r) => setSelectedRole(r)}
+                  toolbarStart={
+                    <>
+                      <div className="relative min-w-0 flex-1 sm:max-w-sm">
+                        <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                          placeholder="Search roles..."
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          className="ps-9"
+                          aria-label="Search roles"
+                        />
+                      </div>
+                      <Select
+                        value={typeFilter}
+                        onValueChange={(v) => setTypeFilter(v as TypeFilter)}
+                      >
+                        <SelectTrigger className="h-9 w-[130px]" aria-label="Role type">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {typeFilters.map((f) => (
+                            <SelectItem key={f.value} value={f.value}>
+                              {f.label}
+                            </SelectItem>
                           ))}
-                        </TableRow>
-                      ))}
-                    </TableHeader>
-                    <TableBody>
-                      {table.getRowModel().rows?.length ? (
-                        table.getRowModel().rows.map((row) => (
-                          <TableRow
-                            key={row.id}
-                            data-state={row.getIsSelected() && 'selected'}
-                            className="cursor-pointer"
-                            onClick={(e) => {
-                              if (
-                                (e.target as HTMLElement).closest('[role="checkbox"]') ||
-                                (e.target as HTMLElement).closest('button')
-                              ) {
-                                return
-                              }
-                              setSelectedRole(row.original)
-                            }}
-                          >
-                            {row.getVisibleCells().map((cell) => (
-                              <TableCell key={cell.id}>
-                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                              </TableCell>
-                            ))}
-                          </TableRow>
-                        ))
-                      ) : (
-                        <TableRow>
-                          <TableCell colSpan={columns.length} className="h-24 text-center">
-                            {roles.length === 0 ? (
-                              <div className="flex flex-col items-center gap-2">
-                                <Shield className="h-8 w-8 text-muted-foreground/50" />
-                                <p className="text-muted-foreground">No roles yet</p>
-                                <Can permission={Permission.RolesWrite}>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => setCreateSheetOpen(true)}
-                                  >
-                                    <Plus className="me-2 h-4 w-4" />
-                                    Create your first role
-                                  </Button>
-                                </Can>
-                              </div>
-                            ) : (
-                              'No roles found.'
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-
-                {/* Pagination */}
-                <DataTablePagination table={table} />
-              </CardContent>
-            </Card>
+                        </SelectContent>
+                      </Select>
+                    </>
+                  }
+                  emptyMessage="No roles match these filters"
+                />
+              )}
+            </div>
           </>
         )}
       </Main>
@@ -639,10 +444,7 @@ export default function RolesPage() {
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-red-500">
-              <Trash2 className="h-5 w-5" />
-              Delete Role
-            </DialogTitle>
+            <DialogTitle>Delete role</DialogTitle>
             <DialogDescription>
               Are you sure you want to delete the role &quot;{roleToDelete?.name}&quot;? This action
               cannot be undone. Users with this role will lose its permissions.
@@ -651,7 +453,7 @@ export default function RolesPage() {
 
           <DialogFooter className="gap-2 sm:gap-0">
             <Button
-              variant="ghost"
+              variant="outline"
               onClick={() => {
                 setDeleteDialogOpen(false)
                 setRoleToDelete(null)
@@ -665,7 +467,7 @@ export default function RolesPage() {
               ) : (
                 <Trash2 className="me-2 h-4 w-4" />
               )}
-              Delete Role
+              Delete role
             </Button>
           </DialogFooter>
         </DialogContent>
