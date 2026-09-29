@@ -73,6 +73,7 @@ import {
   Search,
   ArrowLeft,
   Layers,
+  ChevronRight,
 } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import {
@@ -96,10 +97,7 @@ import { MarkFixedDialog } from '@/features/findings/components/mark-fixed-dialo
 import { CreateTicketDialog } from '@/features/findings/components/create-ticket-dialog'
 import { LinkFindingsToRemediationDialog } from '@/features/remediation/components/link-findings-dialog'
 import { PendingReviewTab } from '@/features/findings/components/pending-review-tab'
-import {
-  usePendingVerificationCount,
-  type FindingGroup,
-} from '@/features/findings/api/use-finding-groups'
+import { type FindingGroup } from '@/features/findings/api/use-finding-groups'
 import {
   useFindingsApi,
   useFindingStatsApi,
@@ -528,7 +526,6 @@ function FindingsContent() {
   // OSS where no modules are reported).
   const remediationEnabled = useModuleEnabled('remediation')
   const integrationsEnabled = useModuleEnabled('integrations')
-  const pendingCount = usePendingVerificationCount()
 
   // Statuses hidden from default dashboard view (pentest WIP, not ready for visibility)
   const HIDDEN_STATUSES = useMemo(() => ['draft', 'in_review'], [])
@@ -675,32 +672,12 @@ function FindingsContent() {
     mutate: mutateFindings,
   } = useFindingsApi(apiFilters, { keepPreviousData: true })
 
-  // Metric-strip counts that the stats endpoint does not carry: one-row queries
-  // (per_page 1) read only `total`. Scoped like the stats (asset + hidden WIP).
-  const countScope = useMemo<FindingApiFilters>(
-    () => ({
-      per_page: 1,
-      exclude_statuses: HIDDEN_STATUSES,
-      ...(assetIdFilter ? { asset_id: assetIdFilter } : {}),
-    }),
-    [HIDDEN_STATUSES, assetIdFilter]
-  )
-  const { data: overdueData } = useFindingsApi(
-    // Overdue only means something for findings still open.
-    useMemo(
-      () => ({
-        ...countScope,
-        sla_statuses: OVERDUE_SLA,
-        statuses: OPEN_STATUSES as NonNullable<FindingApiFilters['statuses']>,
-      }),
-      [countScope]
-    )
-  )
-  const { data: kevData } = useFindingsApi(
-    useMemo(() => ({ ...countScope, is_in_kev: true }), [countScope])
-  )
-  const overdueCount = overdueData?.total ?? 0
-  const kevCount = kevData?.total ?? 0
+  // Headline numbers all come from /findings/stats — no per-number list
+  // requests (those pushed a single page load past the per-user read limit).
+  // '—' until the api exposes the field (older api).
+  const overdueCount: number | string = findingStats ? (findingStats.sla_breached ?? '—') : 0
+  const kevCount: number | string = findingStats ? (findingStats.kev_open ?? '—') : 0
+  const pendingCount = findingStats?.by_status?.fix_applied ?? 0
 
   // Initial loading state (only true when we don't have stats yet)
   const isInitialLoading = statsLoading && !findingStats
@@ -1432,8 +1409,13 @@ function FindingsContent() {
       label: 'In CISA KEV',
       value: kevCount,
       tone: 'danger',
-      onClick: () => setKevFilter(kevActive ? 'false' : 'true'),
-      active: kevActive,
+      onClick: () => {
+        // Open AND in KEV — the same scope as the count.
+        const on = kevActive && sameSet(statuses, OPEN_STATUSES)
+        setKevFilter(on ? 'false' : 'true')
+        setStatusParam(on ? [] : OPEN_STATUSES)
+      },
+      active: kevActive && sameSet(statuses, OPEN_STATUSES),
     },
     {
       // The verification queue: fixes claimed by owners, waiting for a
@@ -1555,38 +1537,47 @@ function FindingsContent() {
   const facetPanelScrollable = <div className="flex min-h-0 flex-1 flex-col">{facetPanel}</div>
 
   const total = findingsResponse?.total ?? 0
-  const rangeStart = total === 0 ? 0 : pagination.pageIndex * pagination.pageSize + 1
-  const rangeEnd = Math.min(total, pagination.pageIndex * pagination.pageSize + findings.length)
-  const filterBadge =
+
+  // Icon-only filter toggle; the active-filter count sits on its corner.
+  const filterCountDot =
     activeCount > 0 ? (
-      <span className="ms-1.5 rounded-full bg-primary px-1.5 text-[11px] font-medium tabular-nums text-primary-foreground">
+      <span className="absolute -end-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-medium tabular-nums text-primary-foreground">
         {activeCount}
       </span>
     ) : null
-
+  const filterLabel = activeCount > 0 ? `Filters (${activeCount} active)` : 'Filters'
   const filterButtons = (
     <>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="outline"
+            size="icon"
+            className="relative hidden h-9 w-9 lg:inline-flex"
+            onClick={() => setFiltersOpen((o) => !o)}
+            aria-pressed={filtersOpen}
+            aria-controls="finding-filters"
+            aria-label={filterLabel}
+          >
+            {filtersOpen ? (
+              <PanelLeftClose className="h-4 w-4" />
+            ) : (
+              <ListFilter className="h-4 w-4" />
+            )}
+            {filterCountDot}
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>{filtersOpen ? 'Hide filters' : 'Show filters'}</TooltipContent>
+      </Tooltip>
       <Button
         variant="outline"
-        size="sm"
-        className="hidden h-9 lg:inline-flex"
-        onClick={() => setFiltersOpen((o) => !o)}
-        aria-pressed={filtersOpen}
-        aria-controls="finding-filters"
-      >
-        {filtersOpen ? <PanelLeftClose className="h-4 w-4" /> : <ListFilter className="h-4 w-4" />}
-        <span className="ms-2">Filters</span>
-        {filterBadge}
-      </Button>
-      <Button
-        variant="outline"
-        size="sm"
-        className="h-9 lg:hidden"
+        size="icon"
+        className="relative h-9 w-9 lg:hidden"
         onClick={() => setFilterSheetOpen(true)}
+        aria-label={filterLabel}
       >
         <ListFilter className="h-4 w-4" />
-        <span className="ms-2">Filters</span>
-        {filterBadge}
+        {filterCountDot}
       </Button>
     </>
   )
@@ -1612,9 +1603,11 @@ function FindingsContent() {
         setGroupParam(v === 'none' ? '' : v)
       }}
     >
-      <SelectTrigger className="h-9 w-auto min-w-36 gap-2" aria-label="Group findings">
+      <SelectTrigger className="h-9 w-auto gap-2 sm:min-w-36" aria-label="Group findings">
         <Layers className="h-4 w-4 text-muted-foreground" />
-        <SelectValue />
+        <span className="hidden sm:inline">
+          <SelectValue />
+        </span>
       </SelectTrigger>
       <SelectContent align="end">
         <SelectItem value="none">Group</SelectItem>
@@ -1672,9 +1665,6 @@ function FindingsContent() {
 
   const toolbarEnd = (
     <>
-      <span className="hidden text-sm tabular-nums text-muted-foreground xl:inline">
-        {total === 0 ? 'No results' : `${rangeStart}–${rangeEnd} of ${total.toLocaleString()}`}
-      </span>
       {groupBySelect}
       {refreshButton}
       {exportMenu}
@@ -1745,19 +1735,30 @@ function FindingsContent() {
         <>
           <MetricStrip className="mt-5" loading={isInitialLoading} items={metrics} />
 
-          <div className="mt-5 flex items-start gap-5">
-            {filtersOpen && (
+          <div className="mt-5 flex items-start">
+            {/* Always mounted so opening and closing can animate: the slot's
+                width (and the gap after it) eases between 0 and the card's
+                width while the card fades, and the table beside it resizes in
+                step. The card keeps its own width, so its contents never
+                reflow mid-animation. */}
+            <div
+              inert={!filtersOpen}
+              className={cn(
+                'sticky top-4 hidden shrink-0 overflow-hidden transition-[width,margin-inline-end,opacity] duration-300 ease-in-out motion-reduce:transition-none lg:block',
+                filtersOpen ? 'me-5 w-64 opacity-100' : 'me-0 w-0 opacity-0'
+              )}
+            >
               <aside
                 id="finding-filters"
                 aria-label="Finding filters"
                 // A self-contained floating card, as tall as the viewport and
                 // pinned while the page scrolls: its length no longer depends
                 // on the table's, and long filter lists scroll inside it.
-                className="sticky top-4 hidden h-[calc(100svh-7.5rem)] w-64 shrink-0 flex-col rounded-xl border bg-card p-4 shadow-sm lg:flex"
+                className="flex h-[calc(100svh-7.5rem)] w-64 flex-col rounded-xl border bg-card p-4 shadow-sm"
               >
                 {facetPanelScrollable}
               </aside>
-            )}
+            </div>
 
             <div className="min-w-0 flex-1 space-y-3">
               {contextChips.length > 0 && (
@@ -1826,6 +1827,37 @@ function FindingsContent() {
                   onSortingChange={handleSortingChange}
                   onSelectionChange={(rows) => setSelectedFindingIds(rows.map((f) => f.id))}
                   resetSelectionKey={selectionEpoch}
+                  mobileRow={(f) => (
+                    <button
+                      type="button"
+                      onClick={() => handleRowClick(f)}
+                      className="flex w-full items-start gap-3 px-3 py-3 text-start transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      <SeverityBadge severity={f.severity} className="mt-0.5 shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <p className="line-clamp-2 text-sm font-medium">{f.title}</p>
+                        {(f.cve || f.scanner) && (
+                          <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                            {f.cve && <span className="font-mono">{f.cve}</span>}
+                            {f.cve && f.scanner && ' · '}
+                            {f.scanner}
+                          </p>
+                        )}
+                        <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                          {f.priorityClass && (
+                            <PriorityClassBadge priorityClass={f.priorityClass} />
+                          )}
+                          <FindingStatusBadge status={f.status} />
+                          {f.isInKev && (
+                            <Badge variant="destructive" className="h-5 px-1.5 text-[10px]">
+                              KEV
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                      <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground" />
+                    </button>
+                  )}
                   showSelectionCount={false}
                   emptyMessage="No findings match these filters"
                   emptyDescription={
@@ -1885,11 +1917,16 @@ function FindingsContent() {
           </BulkActionBar>
 
           <Sheet open={filterSheetOpen} onOpenChange={setFilterSheetOpen}>
-            <SheetContent side="left" className="w-80 overflow-y-auto p-4">
+            <SheetContent side="left" className="w-full gap-0 p-0">
               <SheetHeader className="sr-only">
                 <SheetTitle>Finding filters</SheetTitle>
               </SheetHeader>
-              {facetPanel}
+              <div className="flex min-h-0 flex-1 flex-col px-4 pt-14">{facetPanel}</div>
+              <div className="border-t p-4">
+                <Button className="w-full" onClick={() => setFilterSheetOpen(false)}>
+                  Show {total.toLocaleString()} {total === 1 ? 'finding' : 'findings'}
+                </Button>
+              </div>
             </SheetContent>
           </Sheet>
         </>

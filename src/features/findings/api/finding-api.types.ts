@@ -532,4 +532,8 @@ export interface FindingStatsResponse {
   by_source: Record<string, number>
   open_count: number
   resolved_count: number
+  /** Open findings in CISA KEV / with EPSS >= 0.10 / past SLA (api >= #530). */
+  kev_open?: number
+  epss_high_open?: number
+  sla_breached?: number
 }

@@ -21,11 +21,13 @@ export function PageHeader({ title, description, children, className }: PageHead
   return (
     <div
       className={cn(
-        'flex min-w-0 flex-col gap-4 sm:flex-row sm:items-start sm:justify-between',
+        'flex min-w-0 flex-wrap items-start justify-between gap-x-4 gap-y-3',
         className
       )}
     >
-      <div className="min-w-0 flex-1">
+      {/* basis-60: on a phone the title and a couple of icon actions share a
+          row; wider actions wrap onto their own line instead of squeezing. */}
+      <div className="min-w-0 flex-1 basis-60">
         <h1 className="text-2xl font-bold tracking-tight text-balance">{title}</h1>
         {description && (
           <div className="mt-1 max-w-3xl text-sm text-muted-foreground text-pretty">
@@ -33,9 +35,7 @@ export function PageHeader({ title, description, children, className }: PageHead
           </div>
         )}
       </div>
-      {children && (
-        <div className="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end">{children}</div>
-      )}
+      {children && <div className="flex shrink-0 flex-wrap items-center gap-2">{children}</div>}
     </div>
   )
 }

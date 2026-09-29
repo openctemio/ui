@@ -28097,8 +28097,14 @@ export interface components {
       by_status?: {
         [key: string]: number
       }
+      /** @description open findings with EPSS >= 0.10 */
+      epss_high_open?: number
+      /** @description open findings whose CVE is in CISA KEV */
+      kev_open?: number
       open_count?: number
       resolved_count?: number
+      /** @description open findings past their SLA (overdue/exceeded) */
+      sla_breached?: number
       total?: number
     }
     'internal_infra_http_handler.FindingTrendPoint': {
