@@ -146,7 +146,11 @@ export function TeamSwitcher() {
     return (
       <SidebarMenu>
         <SidebarMenuItem>
-          <SidebarMenuButton size="lg" className="ps-0" disabled>
+          <SidebarMenuButton
+            size="lg"
+            className="ps-0 group-data-[collapsible=icon]:h-12!"
+            disabled
+          >
             <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary/50 animate-pulse">
               <Loader2 className="size-4 animate-spin text-sidebar-primary-foreground/50" />
             </div>
@@ -167,7 +171,7 @@ export function TeamSwitcher() {
         <SidebarMenuItem>
           <SidebarMenuButton
             size="lg"
-            className="ps-0"
+            className="ps-0 group-data-[collapsible=icon]:h-12!"
             onClick={() => router.push('/settings/tenant/create')}
           >
             <div className="flex aspect-square size-8 items-center justify-center rounded-lg border border-dashed">
@@ -199,7 +203,7 @@ export function TeamSwitcher() {
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton
               size="lg"
-              className="ps-0 data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+              className="ps-0 group-data-[collapsible=icon]:h-12! data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
               disabled={isTransitioning}
             >
               <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 shrink-0 items-center justify-center rounded-lg">

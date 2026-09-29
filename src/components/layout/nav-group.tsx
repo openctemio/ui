@@ -1,10 +1,9 @@
 'use client'
 
-import { type ReactNode, type ElementType, useMemo, memo } from 'react'
+import { type ReactNode, type ElementType, useId, useMemo, useState, memo } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { ChevronRight } from 'lucide-react'
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import {
   SidebarMenu,
   SidebarMenuButton,
@@ -75,7 +74,101 @@ function NavLabel({ title }: { title: string }) {
  * collapse animation (and the rail's freshly-mounted section triggers start from
  * the middle of the wide menu).
  */
-const NAV_BUTTON_CLASS = 'px-1.5 group-data-[collapsible=icon]:p-1.5! [&>svg:first-child]:size-5'
+const NAV_BUTTON_CLASS = cn(
+  'px-1.5 group-data-[collapsible=icon]:p-1.5! [&>svg:first-child]:size-5 [&>svg]:stroke-[1.75]',
+  // Quiet at rest, full ink on hover and for the current page / the section
+  // that owns it (`data-current`), so where you are reads at a glance even with
+  // the section folded.
+  'text-sidebar-foreground/80 [&>svg:first-child]:text-muted-foreground',
+  'hover:[&>svg:first-child]:text-sidebar-accent-foreground',
+  'data-[active=true]:[&>svg:first-child]:text-sidebar-accent-foreground',
+  'data-[current=true]:font-medium data-[current=true]:text-sidebar-foreground data-[current=true]:[&>svg:first-child]:text-sidebar-foreground',
+  // Rail: everything but the icon (label, badge, chevron) goes at once, so a
+  // label is never half-clipped while the sidebar animates.
+  'group-data-[collapsible=icon]:[&>:not(svg:first-child)]:opacity-0'
+)
+
+/** Second-level rows: smaller and lighter than their section header. */
+const SUB_BUTTON_CLASS = cn(
+  'h-auto min-h-7 w-full py-1 text-[13px] text-sidebar-foreground/80 [&>svg]:stroke-[1.75]',
+  '[&>svg:first-child]:text-muted-foreground hover:[&>svg:first-child]:text-sidebar-accent-foreground',
+  'data-[active=true]:font-medium data-[active=true]:[&>svg:first-child]:text-sidebar-accent-foreground',
+  // Stay laid out while the parent collapse animates shut on the rail.
+  'group-data-[collapsible=icon]:flex'
+)
+
+/**
+ * The guide rail under a section: its 1px line sits under the parent icon's
+ * centre (6px inset + 10px half-icon), and its rows start where the parent's
+ * label starts. No end margin or padding, so every level runs to the same right
+ * edge instead of losing ~24px of label room per level of nesting.
+ */
+const SUB_MENU_CLASS =
+  'ms-[15px] me-0 pe-0 translate-x-0 gap-0.5 py-1 group-data-[collapsible=icon]:flex'
+
+/**
+ * Sub-row label: wraps to a second line rather than truncating, so a long name
+ * ("Assignment Rules", "SCIM Provisioning") stays readable in the narrow rail.
+ * `!` beats the sub-button's own `[&>span:last-child]:truncate`.
+ */
+const SUB_LABEL_CLASS = 'flex-1 whitespace-normal! text-start leading-snug text-pretty'
+
+/**
+ * Height-animated disclosure (grid-rows 0fr↔1fr). The content stays mounted so
+ * the same element animates both an accordion toggle and the rail collapse,
+ * instead of popping in or out; it is `inert` while closed.
+ */
+function AnimatedCollapse({
+  open,
+  id,
+  children,
+}: {
+  open: boolean
+  id?: string
+  children: ReactNode
+}) {
+  return (
+    <div
+      id={id}
+      inert={!open}
+      className={cn(
+        // Linear 200ms: the same curve as the sidebar's own width animation, so a
+        // rail collapse reads as one motion rather than two competing ones.
+        'grid transition-[grid-template-rows,opacity] duration-200 ease-linear motion-reduce:transition-none',
+        open ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
+      )}
+    >
+      <div className="min-h-0 overflow-hidden">{children}</div>
+    </div>
+  )
+}
+
+/**
+ * A quiet label (or a plain divider when unlabelled) between clusters of nav
+ * rows. It keeps the same height in both sidebar states — on the rail the text
+ * fades out and a hairline shows instead — so nothing below it moves.
+ */
+export function NavClusterLabel({ label }: { label?: string }) {
+  return (
+    <div
+      role={label ? undefined : 'separator'}
+      className="relative flex h-7 shrink-0 items-end px-1.5 pb-1"
+    >
+      {label ? (
+        <span className="truncate text-[11px] font-medium tracking-wider text-muted-foreground uppercase transition-opacity group-data-[collapsible=icon]:opacity-0">
+          {label}
+        </span>
+      ) : null}
+      <span
+        aria-hidden
+        className={cn(
+          'absolute inset-x-1.5 top-1/2 h-px bg-sidebar-border transition-opacity',
+          label && 'opacity-0 group-data-[collapsible=icon]:opacity-100'
+        )}
+      />
+    </div>
+  )
+}
 
 /**
  * NavGroup — one CTEM section in the sidebar.
@@ -298,52 +391,79 @@ const NavSection = memo(function NavSection({
   dynamicBadges: DynamicBadges
 }) {
   const { state, isMobile } = useSidebar()
+  const rail = state === 'collapsed' && !isMobile
   const pathname = usePathname()
   const { t } = useTranslation()
+  const contentId = useId()
+  const label = t(groupTitleKey(title), title)
 
   const sectionActive = useMemo(() => sectionHasActiveRoute(pathname, items), [pathname, items])
+  const activeLeafUrl = useMemo(
+    () =>
+      activeSubItemUrl(
+        pathname,
+        items.filter((i): i is NavLink => !('items' in i))
+      ),
+    [pathname, items]
+  )
 
-  // Collapsed icon-rail (desktop): render as an icon that opens a dropdown of
-  // the section's items (with sub-menus for nested subsections).
-  if (state === 'collapsed' && !isMobile) {
-    return (
-      <NavSectionCollapsedDropdown
-        title={title}
-        icon={SectionIcon}
-        items={items}
-        sectionActive={sectionActive}
-        dynamicBadges={dynamicBadges}
-      />
-    )
+  // Open by default when the section owns the current page, and re-open when the
+  // user navigates into it; leaving a section never forces it shut.
+  const [open, setOpen] = useState(sectionActive)
+  const [prevActive, setPrevActive] = useState(sectionActive)
+  if (sectionActive !== prevActive) {
+    setPrevActive(sectionActive)
+    if (sectionActive) setOpen(true)
   }
 
   return (
-    <Collapsible asChild defaultOpen={sectionActive} className="group/collapsible">
-      <SidebarMenuItem>
-        <CollapsibleTrigger asChild>
-          <SidebarMenuButton tooltip={title} className={NAV_BUTTON_CLASS}>
-            {SectionIcon && <SectionIcon />}
-            <span>{t(groupTitleKey(title), title)}</span>
-            <ChevronRight className="ms-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90 rtl:rotate-180" />
-          </SidebarMenuButton>
-        </CollapsibleTrigger>
-        <CollapsibleContent className="CollapsibleContent">
-          <SidebarMenuSub>
-            {items.map((item) =>
-              'items' in item ? (
-                <NavSubCollapsible key={item.title} item={item} dynamicBadges={dynamicBadges} />
-              ) : (
-                <NavSubLeaf
-                  key={`${item.title}-${String(item.url)}`}
-                  item={item}
-                  dynamicBadges={dynamicBadges}
-                />
-              )
+    <SidebarMenuItem>
+      {rail ? (
+        <NavSectionRailMenu
+          label={label}
+          icon={SectionIcon}
+          items={items}
+          sectionActive={sectionActive}
+          dynamicBadges={dynamicBadges}
+        />
+      ) : (
+        <SidebarMenuButton
+          tooltip={label}
+          aria-expanded={open}
+          aria-controls={contentId}
+          data-current={sectionActive}
+          onClick={() => setOpen((o) => !o)}
+          className={NAV_BUTTON_CLASS}
+        >
+          {SectionIcon && <SectionIcon />}
+          <span>{label}</span>
+          <ChevronRight
+            className={cn(
+              'ms-auto size-4 text-muted-foreground transition-transform duration-200 motion-reduce:transition-none rtl:rotate-180',
+              open && 'rotate-90 rtl:rotate-90'
             )}
-          </SidebarMenuSub>
-        </CollapsibleContent>
-      </SidebarMenuItem>
-    </Collapsible>
+          />
+        </SidebarMenuButton>
+      )}
+      {/* Same element in both states, so collapsing the rail animates the open
+          section shut instead of dropping it (and jumping the rows below). */}
+      <AnimatedCollapse id={contentId} open={open && !rail}>
+        <SidebarMenuSub className={SUB_MENU_CLASS}>
+          {items.map((item) =>
+            'items' in item ? (
+              <NavSubCollapsible key={item.title} item={item} dynamicBadges={dynamicBadges} />
+            ) : (
+              <NavSubLeaf
+                key={`${item.title}-${String(item.url)}`}
+                item={item}
+                dynamicBadges={dynamicBadges}
+                active={item.url === activeLeafUrl}
+              />
+            )
+          )}
+        </SidebarMenuSub>
+      </AnimatedCollapse>
+    </SidebarMenuItem>
   )
 })
 
@@ -356,9 +476,22 @@ NavSection.displayName = 'NavSection'
 const NavSubLeaf = memo(function NavSubLeaf({
   item,
   dynamicBadges,
+  nested = false,
+  active,
 }: {
   item: NavLink
   dynamicBadges: DynamicBadges
+  /**
+   * Third level (inside a subsection). These rows are text-only: their icons
+   * mostly repeat the parent's, and dropping them gives the label back ~24px.
+   */
+  nested?: boolean
+  /**
+   * Whether this row is the current page. Siblings are resolved together by the
+   * parent (longest matching url wins), so an "Overview" at `/exposures` does not
+   * light up alongside `/exposures/misconfigurations`.
+   */
+  active?: boolean
 }) {
   const pathname = usePathname()
   const { setOpenMobile } = useSidebar()
@@ -369,9 +502,9 @@ const NavSubLeaf = memo(function NavSubLeaf({
   if (isComingSoon) {
     return (
       <SidebarMenuSubItem>
-        <SidebarMenuSubButton className="cursor-not-allowed opacity-60">
-          {item.icon && <item.icon className="shrink-0" />}
-          <span className="flex-1 truncate">
+        <SidebarMenuSubButton className={cn(SUB_BUTTON_CLASS, 'cursor-not-allowed opacity-60')}>
+          {!nested && item.icon && <item.icon className="shrink-0" />}
+          <span className={SUB_LABEL_CLASS}>
             <NavLabel title={item.title} />
           </span>
           {releaseStatusBadge && (
@@ -384,10 +517,14 @@ const NavSubLeaf = memo(function NavSubLeaf({
 
   return (
     <SidebarMenuSubItem>
-      <SidebarMenuSubButton asChild isActive={checkIsActive(pathname, item)}>
+      <SidebarMenuSubButton
+        asChild
+        isActive={active ?? checkIsActive(pathname, item)}
+        className={SUB_BUTTON_CLASS}
+      >
         <Link href={item.url} prefetch={false} onClick={() => setOpenMobile(false)}>
-          {item.icon && <item.icon className="shrink-0" />}
-          <span className="flex-1 truncate">
+          {!nested && item.icon && <item.icon className="shrink-0" />}
+          <span className={SUB_LABEL_CLASS}>
             <NavLabel title={item.title} />
           </span>
           {releaseStatusBadge ? (
@@ -419,102 +556,131 @@ const NavSubCollapsible = memo(function NavSubCollapsible({
   const pathname = usePathname()
   const { subModules } = useTenantModules()
   const releaseStatusBadge = getReleaseStatusBadge(item.releaseStatus)
+  const contentId = useId()
 
   const filteredItems = useFilteredSubItems(item.items, item.module, subModules)
   const activeSubUrl = useMemo(
     () => activeSubItemUrl(pathname, filteredItems),
     [pathname, filteredItems]
   )
+  const hasActive = activeSubUrl !== undefined
+
+  const [open, setOpen] = useState(hasActive)
+  const [prevActive, setPrevActive] = useState(hasActive)
+  if (hasActive !== prevActive) {
+    setPrevActive(hasActive)
+    if (hasActive) setOpen(true)
+  }
 
   return (
-    <Collapsible asChild defaultOpen={activeSubUrl !== undefined} className="group/subcollapsible">
-      <SidebarMenuSubItem>
-        <CollapsibleTrigger asChild>
-          <SidebarMenuSubButton asChild className="cursor-pointer">
-            <button type="button">
-              {item.icon && <item.icon className="shrink-0" />}
-              <span className="flex-1 truncate">
-                <NavLabel title={item.title} />
-              </span>
-              {releaseStatusBadge && (
-                <NavBadge variant={releaseStatusBadge.variant}>{releaseStatusBadge.text}</NavBadge>
-              )}
-              <ChevronRight className="ms-auto size-3.5 shrink-0 transition-transform duration-200 group-data-[state=open]/subcollapsible:rotate-90 rtl:rotate-180" />
-            </button>
-          </SidebarMenuSubButton>
-        </CollapsibleTrigger>
-        <CollapsibleContent>
-          <SidebarMenuSub>
-            {filteredItems.map((sub) => (
-              <NavSubLeaf key={sub.title} item={sub} dynamicBadges={dynamicBadges} />
-            ))}
-          </SidebarMenuSub>
-        </CollapsibleContent>
-      </SidebarMenuSubItem>
-    </Collapsible>
+    <SidebarMenuSubItem>
+      <SidebarMenuSubButton asChild className={cn(SUB_BUTTON_CLASS, 'cursor-pointer')}>
+        <button
+          type="button"
+          aria-expanded={open}
+          aria-controls={contentId}
+          data-active={hasActive && !open}
+          onClick={() => setOpen((o) => !o)}
+        >
+          {item.icon && <item.icon className="shrink-0" />}
+          <span className={SUB_LABEL_CLASS}>
+            <NavLabel title={item.title} />
+          </span>
+          {releaseStatusBadge && (
+            <NavBadge variant={releaseStatusBadge.variant}>{releaseStatusBadge.text}</NavBadge>
+          )}
+          <ChevronRight
+            className={cn(
+              'ms-auto size-3.5 shrink-0 text-muted-foreground transition-transform duration-200 motion-reduce:transition-none rtl:rotate-180',
+              open && 'rotate-90 rtl:rotate-90'
+            )}
+          />
+        </button>
+      </SidebarMenuSubButton>
+      <AnimatedCollapse id={contentId} open={open}>
+        <SidebarMenuSub className={SUB_MENU_CLASS}>
+          {filteredItems.map((sub) => (
+            <NavSubLeaf
+              key={sub.title}
+              item={sub}
+              dynamicBadges={dynamicBadges}
+              nested
+              active={sub.url === activeSubUrl}
+            />
+          ))}
+        </SidebarMenuSub>
+      </AnimatedCollapse>
+    </SidebarMenuSubItem>
   )
 })
 
 NavSubCollapsible.displayName = 'NavSubCollapsible'
 
 /**
- * NavSectionCollapsedDropdown - the icon-rail representation of a section.
+ * NavSectionRailMenu - the icon-rail representation of a section.
  * The section header becomes an icon button; its whole tree lives in a
  * dropdown (nested subsections become dropdown sub-menus) so nothing is lost
  * when the sidebar is collapsed.
  */
-const NavSectionCollapsedDropdown = memo(function NavSectionCollapsedDropdown({
-  title,
+const NavSectionRailMenu = memo(function NavSectionRailMenu({
+  label,
   icon: SectionIcon,
   items,
   sectionActive,
   dynamicBadges,
 }: {
-  title: string
+  label: string
   icon?: ElementType
   items: NavItem[]
   sectionActive: boolean
   dynamicBadges: DynamicBadges
 }) {
   const pathname = usePathname()
-  const { t } = useTranslation()
+  const activeLeafUrl = activeSubItemUrl(
+    pathname,
+    items.filter((i): i is NavLink => !('items' in i))
+  )
 
   return (
-    <SidebarMenuItem>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <SidebarMenuButton tooltip={title} isActive={sectionActive} className={NAV_BUTTON_CLASS}>
-            {SectionIcon && <SectionIcon />}
-            <span className="sr-only">{t(groupTitleKey(title), title)}</span>
-          </SidebarMenuButton>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent side="right" align="start" sideOffset={4} className="min-w-48">
-          <DropdownMenuLabel>{t(groupTitleKey(title), title)}</DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          {items.map((item) =>
-            'items' in item ? (
-              <CollapsedDropdownSubsection
-                key={item.title}
-                item={item}
-                pathname={pathname}
-                dynamicBadges={dynamicBadges}
-              />
-            ) : (
-              <CollapsedDropdownLeaf
-                key={`${item.title}-${String(item.url)}`}
-                item={item}
-                pathname={pathname}
-                dynamicBadges={dynamicBadges}
-              />
-            )
-          )}
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </SidebarMenuItem>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <SidebarMenuButton
+          tooltip={label}
+          aria-label={label}
+          isActive={sectionActive}
+          className={NAV_BUTTON_CLASS}
+        >
+          {SectionIcon && <SectionIcon />}
+        </SidebarMenuButton>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent side="right" align="start" sideOffset={8} className="min-w-52">
+        <DropdownMenuLabel className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
+          {label}
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        {items.map((item) =>
+          'items' in item ? (
+            <CollapsedDropdownSubsection
+              key={item.title}
+              item={item}
+              pathname={pathname}
+              dynamicBadges={dynamicBadges}
+            />
+          ) : (
+            <CollapsedDropdownLeaf
+              key={`${item.title}-${String(item.url)}`}
+              item={item}
+              dynamicBadges={dynamicBadges}
+              active={item.url === activeLeafUrl}
+            />
+          )
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 })
 
-NavSectionCollapsedDropdown.displayName = 'NavSectionCollapsedDropdown'
+NavSectionRailMenu.displayName = 'NavSectionRailMenu'
 
 /** A section's nested subsection rendered as a dropdown sub-menu (rail mode). */
 function CollapsedDropdownSubsection({
@@ -528,6 +694,7 @@ function CollapsedDropdownSubsection({
 }) {
   const { subModules } = useTenantModules()
   const filteredItems = useFilteredSubItems(item.items, item.module, subModules)
+  const activeUrl = activeSubItemUrl(pathname, filteredItems)
 
   return (
     <DropdownMenuSub>
@@ -541,8 +708,8 @@ function CollapsedDropdownSubsection({
             <CollapsedDropdownLeaf
               key={`${sub.title}-${String(sub.url)}`}
               item={sub}
-              pathname={pathname}
               dynamicBadges={dynamicBadges}
+              active={sub.url === activeUrl}
             />
           ))}
         </DropdownMenuSubContent>
@@ -554,12 +721,12 @@ function CollapsedDropdownSubsection({
 /** A leaf link rendered as a dropdown item (rail mode). */
 function CollapsedDropdownLeaf({
   item,
-  pathname,
   dynamicBadges,
+  active,
 }: {
   item: NavLink
-  pathname: string
   dynamicBadges: DynamicBadges
+  active: boolean
 }) {
   const badge = getBadgeValue(dynamicBadges, item.url as string, item.badge)
   const releaseStatusBadge = getReleaseStatusBadge(item.releaseStatus)
@@ -579,11 +746,7 @@ function CollapsedDropdownLeaf({
 
   return (
     <DropdownMenuItem asChild>
-      <Link
-        href={item.url}
-        prefetch={false}
-        className={checkIsActive(pathname, item) ? 'bg-secondary' : ''}
-      >
+      <Link href={item.url} prefetch={false} className={cn(active && 'bg-accent font-medium')}>
         {item.icon && <item.icon />}
         <span className="max-w-52 text-wrap">{item.title}</span>
         {releaseStatusBadge ? (
