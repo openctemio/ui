@@ -3,12 +3,12 @@
 import { useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import type { ColumnDef } from '@tanstack/react-table'
-import { AlertOctagon, AlertTriangle, Clock, CheckCircle2, Timer } from 'lucide-react'
+import { CheckCircle2, Timer } from 'lucide-react'
 
 import { Main } from '@/components/layout'
 import {
   PageHeader,
-  StatsCard,
+  MetricStrip,
   DataTable,
   DataTableColumnHeader,
   EmptyState,
@@ -41,23 +41,6 @@ const OPEN_FINDINGS_FILTER = {
   // than paginating the whole finding set.
   per_page: 100,
   page: 1,
-}
-
-function StatCardSkeletons() {
-  return (
-    <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-      {[1, 2, 3, 4].map((i) => (
-        <Card key={i}>
-          <CardHeader className="pb-2">
-            <Skeleton className="h-4 w-24" />
-          </CardHeader>
-          <CardContent>
-            <Skeleton className="h-8 w-16" />
-          </CardContent>
-        </Card>
-      ))}
-    </div>
-  )
 }
 
 export default function SlaBreachBoardPage() {
@@ -98,11 +81,6 @@ export default function SlaBreachBoardPage() {
   const columns = useMemo<ColumnDef<ApiFinding>[]>(
     () => [
       {
-        accessorKey: 'severity',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Severity" />,
-        cell: ({ row }) => <SeverityBadge severity={row.original.severity} />,
-      },
-      {
         accessorKey: 'title',
         header: ({ column }) => <DataTableColumnHeader column={column} title="Finding" />,
         cell: ({ row }) => (
@@ -110,6 +88,11 @@ export default function SlaBreachBoardPage() {
             {row.original.title || row.original.message}
           </span>
         ),
+      },
+      {
+        accessorKey: 'severity',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Severity" />,
+        cell: ({ row }) => <SeverityBadge severity={row.original.severity} />,
       },
       {
         id: 'asset',
@@ -153,122 +136,113 @@ export default function SlaBreachBoardPage() {
   return (
     <Main>
       <PageHeader
-        title="SLA Compliance"
+        title="SLA compliance"
         description="Open findings tracked against their remediation SLA deadlines."
       />
 
-      {isLoading ? (
-        <div className="mt-6 space-y-6">
-          <StatCardSkeletons />
-          <Skeleton className="h-64 w-full" />
-        </div>
-      ) : (
-        <div className="mt-6 space-y-6">
-          <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-            <StatsCard
-              title="SLA Exceeded"
-              value={counts.exceeded}
-              icon={AlertOctagon}
-              valueClassName={counts.exceeded > 0 ? 'text-destructive' : undefined}
-              description="Well past deadline"
-            />
-            <StatsCard
-              title="Overdue"
-              value={counts.overdue}
-              icon={AlertTriangle}
-              valueClassName={counts.overdue > 0 ? 'text-destructive' : undefined}
-              description="Past deadline"
-            />
-            <StatsCard
-              title="Warning"
-              value={counts.warning}
-              icon={Clock}
-              description="Approaching deadline"
-            />
-            <StatsCard
-              title="On Track"
-              value={counts.on_track}
-              icon={CheckCircle2}
-              description="Within SLA"
-            />
-          </section>
+      <MetricStrip
+        className="mt-5"
+        loading={isLoading}
+        items={[
+          {
+            key: 'exceeded',
+            label: 'SLA exceeded',
+            value: counts.exceeded,
+            hint: 'well past deadline',
+            tone: 'danger',
+          },
+          {
+            key: 'overdue',
+            label: 'Overdue',
+            value: counts.overdue,
+            hint: 'past deadline',
+            tone: 'danger',
+          },
+          { key: 'warning', label: 'Warning', value: counts.warning, hint: 'due soon' },
+          { key: 'on_track', label: 'On track', value: counts.on_track, hint: 'within SLA' },
+        ]}
+      />
 
-          <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Breaches by severity</CardTitle>
-                <CardDescription>Overdue and exceeded findings, by severity.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {breachBySeverity.length === 0 ? (
-                  <p className="py-6 text-center text-sm text-muted-foreground">
-                    No breached findings.
-                  </p>
-                ) : (
-                  <div className="space-y-3">
-                    {breachBySeverity.map(({ sev, count }) => (
-                      <div key={sev} className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={cn('h-2.5 w-2.5 rounded-full', SEVERITY_DOT_COLORS[sev])}
-                          />
-                          <span className="text-sm capitalize">{sev}</span>
-                        </div>
-                        <span className="text-sm font-medium tabular-nums">{count}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Aging of breaches</CardTitle>
-                <CardDescription>How long breached findings have been past due.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {agingCounts.map(({ bucket, count }) => (
-                    <div key={bucket.label} className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">{bucket.label}</span>
-                      <span className="text-sm font-medium tabular-nums">{count}</span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </section>
-
-          <section className="space-y-2">
-            <div>
-              <h2 className="text-lg font-semibold">Breached findings</h2>
-              <p className="text-sm text-muted-foreground">
-                Overdue and exceeded open findings. Scored from the top {loadedTotal} of{' '}
-                {serverTotal} open findings by priority — a server-side{' '}
-                <code className="text-xs">?sla_status=</code> filter is a planned follow-up so the
-                board can cover the full set.
-              </p>
-            </div>
-            {breached.length === 0 ? (
+      <section className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Breaches by severity</CardTitle>
+            <CardDescription>Overdue and exceeded findings, by severity.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <Skeleton className="h-24 w-full" />
+            ) : breachBySeverity.length === 0 ? (
               <EmptyState
-                icon={Timer}
-                title="No SLA breaches"
-                description="No open findings are past their remediation deadline in the current scope."
+                card={false}
+                className="py-6"
+                icon={CheckCircle2}
+                title="No breached findings"
               />
             ) : (
-              <DataTable
-                columns={columns}
-                data={breached}
-                searchKey="title"
-                searchPlaceholder="Search findings..."
-                pageSize={10}
-                onRowClick={(row) => router.push(`/findings/${row.id}`)}
-              />
+              <div className="space-y-3">
+                {breachBySeverity.map(({ sev, count }) => (
+                  <div key={sev} className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className={cn('h-2.5 w-2.5 rounded-full', SEVERITY_DOT_COLORS[sev])} />
+                      <span className="text-sm capitalize">{sev}</span>
+                    </div>
+                    <span className="text-sm font-medium tabular-nums">{count}</span>
+                  </div>
+                ))}
+              </div>
             )}
-          </section>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Aging of breaches</CardTitle>
+            <CardDescription>How long breached findings have been past due.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <Skeleton className="h-24 w-full" />
+            ) : (
+              <div className="space-y-3">
+                {agingCounts.map(({ bucket, count }) => (
+                  <div key={bucket.label} className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">{bucket.label}</span>
+                    <span className="text-sm font-medium tabular-nums">{count}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </section>
+
+      <section className="mt-5 space-y-3">
+        <div>
+          <h2 className="text-base font-semibold">Breached findings</h2>
+          <p className="text-sm text-muted-foreground">
+            Scored from the top {loadedTotal} of {serverTotal} open findings by priority.
+          </p>
         </div>
-      )}
+        {isLoading ? (
+          <Skeleton className="h-64 w-full" />
+        ) : breached.length === 0 ? (
+          <EmptyState
+            icon={Timer}
+            title="No SLA breaches"
+            description="No open findings are past their remediation deadline in the current scope."
+          />
+        ) : (
+          <DataTable
+            columns={columns}
+            data={breached}
+            searchKey="title"
+            searchPlaceholder="Search findings..."
+            pageSize={10}
+            onRowClick={(row) => router.push(`/findings/${row.id}`)}
+          />
+        )}
+      </section>
     </Main>
   )
 }
