@@ -73,6 +73,7 @@ import {
   Search,
   ArrowLeft,
   Layers,
+  ChevronRight,
 } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import {
@@ -1602,9 +1603,11 @@ function FindingsContent() {
         setGroupParam(v === 'none' ? '' : v)
       }}
     >
-      <SelectTrigger className="h-9 w-auto min-w-36 gap-2" aria-label="Group findings">
+      <SelectTrigger className="h-9 w-auto gap-2 sm:min-w-36" aria-label="Group findings">
         <Layers className="h-4 w-4 text-muted-foreground" />
-        <SelectValue />
+        <span className="hidden sm:inline">
+          <SelectValue />
+        </span>
       </SelectTrigger>
       <SelectContent align="end">
         <SelectItem value="none">Group</SelectItem>
@@ -1824,6 +1827,37 @@ function FindingsContent() {
                   onSortingChange={handleSortingChange}
                   onSelectionChange={(rows) => setSelectedFindingIds(rows.map((f) => f.id))}
                   resetSelectionKey={selectionEpoch}
+                  mobileRow={(f) => (
+                    <button
+                      type="button"
+                      onClick={() => handleRowClick(f)}
+                      className="flex w-full items-start gap-3 px-3 py-3 text-start transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      <SeverityBadge severity={f.severity} className="mt-0.5 shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <p className="line-clamp-2 text-sm font-medium">{f.title}</p>
+                        {(f.cve || f.scanner) && (
+                          <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                            {f.cve && <span className="font-mono">{f.cve}</span>}
+                            {f.cve && f.scanner && ' · '}
+                            {f.scanner}
+                          </p>
+                        )}
+                        <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                          {f.priorityClass && (
+                            <PriorityClassBadge priorityClass={f.priorityClass} />
+                          )}
+                          <FindingStatusBadge status={f.status} />
+                          {f.isInKev && (
+                            <Badge variant="destructive" className="h-5 px-1.5 text-[10px]">
+                              KEV
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                      <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground" />
+                    </button>
+                  )}
                   showSelectionCount={false}
                   emptyMessage="No findings match these filters"
                   emptyDescription={
@@ -1883,11 +1917,16 @@ function FindingsContent() {
           </BulkActionBar>
 
           <Sheet open={filterSheetOpen} onOpenChange={setFilterSheetOpen}>
-            <SheetContent side="left" className="w-80 overflow-y-auto p-4">
+            <SheetContent side="left" className="w-full gap-0 p-0">
               <SheetHeader className="sr-only">
                 <SheetTitle>Finding filters</SheetTitle>
               </SheetHeader>
-              {facetPanel}
+              <div className="flex min-h-0 flex-1 flex-col px-4 pt-14">{facetPanel}</div>
+              <div className="border-t p-4">
+                <Button className="w-full" onClick={() => setFilterSheetOpen(false)}>
+                  Show {total.toLocaleString()} {total === 1 ? 'finding' : 'findings'}
+                </Button>
+              </div>
             </SheetContent>
           </Sheet>
         </>

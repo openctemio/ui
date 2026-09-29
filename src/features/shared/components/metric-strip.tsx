@@ -38,8 +38,9 @@ export function MetricStrip({
   return (
     <dl
       className={cn(
-        // One row on large screens with exactly as many columns as metrics.
-        'grid grid-cols-2 overflow-hidden rounded-xl border bg-card sm:grid-cols-3 lg:grid-cols-[repeat(var(--metric-cols),minmax(0,1fr))]',
+        // Phones: one horizontally scrollable row (snaps per metric) instead of
+        // a tall 2-column stack. sm: a grid; lg: one row, one column per metric.
+        'no-scrollbar flex snap-x snap-mandatory overflow-x-auto rounded-xl border bg-card sm:grid sm:grid-cols-3 sm:overflow-hidden lg:grid-cols-[repeat(var(--metric-cols),minmax(0,1fr))]',
         className
       )}
       style={{ '--metric-cols': items.length } as React.CSSProperties}
@@ -70,7 +71,7 @@ export function MetricStrip({
           </>
         )
         const cellClass = cn(
-          '-ms-px -mt-px border-s border-t px-4 py-2.5 text-start',
+          '-ms-px -mt-px min-w-32 shrink-0 snap-start border-s border-t px-4 py-2.5 text-start sm:min-w-0',
           item.active && 'bg-accent'
         )
         return item.onClick ? (
