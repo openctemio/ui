@@ -415,7 +415,7 @@ export function RoleDetailSheet({
         {/* Tabs */}
         <Tabs defaultValue="permissions" className="flex-1 flex flex-col min-h-0">
           <div className="px-6 pt-2 shrink-0">
-            <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsList>
               <TabsTrigger value="permissions" className="gap-2">
                 <Shield className="h-4 w-4" />
                 Permissions

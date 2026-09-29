@@ -305,7 +305,7 @@ export function ComponentDetailSheet({ component, open, onOpenChange }: Componen
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="px-6 pb-6">
-          <TabsList className="grid w-full grid-cols-3 mb-4">
+          <TabsList className="mb-4">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="vulnerabilities" className="gap-1">
               CVEs

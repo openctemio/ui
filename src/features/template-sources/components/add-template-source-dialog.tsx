@@ -299,7 +299,7 @@ export function AddTemplateSourceDialog({
                 value={sourceType}
                 onValueChange={(v) => handleSourceTypeChange(v as SourceType)}
               >
-                <TabsList className="grid w-full grid-cols-3">
+                <TabsList>
                   {(['git', 's3', 'http'] as SourceType[]).map((type) => {
                     const Icon = SOURCE_TYPE_ICONS[type]
                     return (

@@ -339,19 +339,11 @@ export function GroupDetailSheet({ groupId, open, onOpenChange, onUpdate }: Grou
               {/* Tabs */}
               <div className="flex-1 px-6 py-4">
                 <Tabs value={activeTab} onValueChange={setActiveTab}>
-                  <TabsList className="w-full">
-                    <TabsTrigger value="overview" className="flex-1">
-                      Overview
-                    </TabsTrigger>
-                    <TabsTrigger value="members" className="flex-1">
-                      Members
-                    </TabsTrigger>
-                    <TabsTrigger value="assets" className="flex-1">
-                      Assets
-                    </TabsTrigger>
-                    <TabsTrigger value="scope-rules" className="flex-1">
-                      Scope Rules
-                    </TabsTrigger>
+                  <TabsList>
+                    <TabsTrigger value="overview">Overview</TabsTrigger>
+                    <TabsTrigger value="members">Members</TabsTrigger>
+                    <TabsTrigger value="assets">Assets</TabsTrigger>
+                    <TabsTrigger value="scope-rules">Scope Rules</TabsTrigger>
                   </TabsList>
 
                   <TabsContent value="overview">

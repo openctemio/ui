@@ -255,7 +255,7 @@ export default function ScansPage() {
           onValueChange={(v) => setMainTab(v as 'configurations' | 'runs')}
           className="mt-6"
         >
-          <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsList>
             <TabsTrigger value="configurations" className="gap-2">
               <Settings className="h-4 w-4" />
               Configurations
@@ -1534,7 +1534,7 @@ function ConfigDetailSheet({ config, onClose: _onClose, onDelete }: ConfigDetail
 
       {/* Content with Tabs */}
       <Tabs defaultValue="overview" className="px-6 pb-6">
-        <TabsList className="grid w-full grid-cols-3 mb-4">
+        <TabsList className="mb-4">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="config">Configuration</TabsTrigger>
           <TabsTrigger value="details">Details</TabsTrigger>
@@ -2558,7 +2558,7 @@ function SessionDetailSheet({ session }: SessionDetailSheetProps) {
 
       {/* Content with Tabs */}
       <Tabs defaultValue="overview" className="px-6 pb-6">
-        <TabsList className="grid w-full grid-cols-3 mb-4">
+        <TabsList className="mb-4">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="findings">Findings</TabsTrigger>
           <TabsTrigger value="details">Details</TabsTrigger>

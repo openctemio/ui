@@ -422,7 +422,7 @@ export function ToolsSection({ onToolSelect, selectedToolId }: ToolsSectionProps
                   onValueChange={(v) => setCategoryFilter(v as CategoryFilter)}
                   className="w-full"
                 >
-                  <TabsList className="inline-flex w-max gap-1 overflow-x-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-muted">
+                  <TabsList>
                     <TabsTrigger value="all">All</TabsTrigger>
                     {categoryOptions.map((cat) => (
                       <TabsTrigger

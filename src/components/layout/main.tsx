@@ -33,7 +33,10 @@ export const Main = forwardRef<HTMLElement, MainProps>(
         ref={ref}
         data-layout={fixed ? 'fixed' : 'auto'}
         className={cn(
-          'px-4 py-6 overflow-x-hidden sm:px-6 lg:px-8',
+          // overflow-x: clip, not hidden — hidden forces overflow-y to auto,
+          // which made <Main> a (never-scrolling) scroll container and broke
+          // position: sticky for everything inside a page.
+          'px-4 py-6 overflow-x-clip sm:px-6 lg:px-8',
           fixed && 'flex flex-col flex-grow overflow-hidden',
           !fluid && 'w-full mx-auto',
           className

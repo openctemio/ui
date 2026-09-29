@@ -141,7 +141,7 @@ export function AgentConfigDialog({ open, onOpenChange, agent, apiKey }: AgentCo
 
         {!loading && !fetchError && (
           <Tabs defaultValue="yaml" className="flex-1 overflow-hidden flex flex-col">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList>
               <TabsTrigger value="yaml">YAML</TabsTrigger>
               <TabsTrigger value="env">Env Vars</TabsTrigger>
               <TabsTrigger value="docker">Docker</TabsTrigger>

@@ -181,7 +181,7 @@ export function AddAssetsStep({ data, onChange, ungroupedAssets }: AddAssetsStep
 
       {/* Tabs */}
       <Tabs defaultValue="select" className="flex-1 flex flex-col">
-        <TabsList className="grid w-full grid-cols-2 mb-4">
+        <TabsList className="mb-4">
           <TabsTrigger value="select" className="gap-2">
             <ListChecks className="h-4 w-4" />
             Select Existing
