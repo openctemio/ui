@@ -68,6 +68,12 @@ function NavLabel({ title }: { title: string }) {
  * wide, so 6 + 20 + 6 fills it exactly and the icon is centred on the rail; the
  * expanded row keeps the same inset, so toggling only hides the labels and the
  * icons do not move or resize.
+ *
+ * The menus deliberately do NOT centre their buttons in the rail (`items-center`):
+ * the column padding already makes the collapsed menu exactly 32px wide, and
+ * centring inside a menu that is still shrinking made the icons slide during the
+ * collapse animation (and the rail's freshly-mounted section triggers start from
+ * the middle of the wide menu).
  */
 const NAV_BUTTON_CLASS = 'px-1.5 group-data-[collapsible=icon]:p-1.5! [&>svg:first-child]:size-5'
 
@@ -89,7 +95,7 @@ function NavGroupComponent({ title, icon, items }: NavGroupProps) {
   // Ungrouped rows (Dashboard) — plain top-level links, no group heading.
   if (!title) {
     return (
-      <SidebarMenu className="group-data-[collapsible=icon]:items-center">
+      <SidebarMenu>
         {items.map((item) =>
           'items' in item ? null : (
             <SidebarMenuLink
@@ -110,7 +116,7 @@ function NavGroupComponent({ title, icon, items }: NavGroupProps) {
   // list. In the collapsed icon-rail NavSection flips to a dropdown flyout so
   // the whole tree is still reachable from the icon.
   return (
-    <SidebarMenu className="group-data-[collapsible=icon]:items-center">
+    <SidebarMenu>
       <NavSection title={title} icon={icon} items={items} dynamicBadges={dynamicBadges} />
     </SidebarMenu>
   )
