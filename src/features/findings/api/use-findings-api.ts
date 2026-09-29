@@ -10,27 +10,19 @@
 
 import useSWR, { type SWRConfiguration } from 'swr'
 import useSWRMutation from 'swr/mutation'
-import { get, post, patch, put, del } from '@/lib/api/client'
+import { get, post, patch } from '@/lib/api/client'
 import { handleApiError } from '@/lib/api/error-handler'
 import { useTenant } from '@/context/tenant-provider'
 import type {
   ApiFinding,
   ApiFindingListResponse,
   ApiFindingComment,
-  ApiFindingCommentListResponse,
-  ApiVulnerability,
-  ApiVulnerabilityListResponse,
   FindingApiFilters,
-  VulnerabilityApiFilters,
   CreateFindingInput,
   UpdateFindingStatusInput,
   UpdateFindingSeverityInput,
   AssignFindingInput,
-  TriageFindingInput,
-  ClassifyFindingInput,
-  SetFindingTagsInput,
   AddCommentInput,
-  UpdateCommentInput,
 } from './finding-api.types'
 import type { ApiApproval, ApprovalStatus } from '../types/finding.types'
 
@@ -131,33 +123,6 @@ function buildAssetFindingsEndpoint(
   return queryString ? `${baseUrl}?${queryString}` : baseUrl
 }
 
-function buildVulnerabilitiesEndpoint(filters?: VulnerabilityApiFilters): string {
-  const baseUrl = '/api/v1/vulnerabilities'
-
-  if (!filters) return baseUrl
-
-  const params = new URLSearchParams()
-
-  if (filters.page) params.set('page', String(filters.page))
-  if (filters.per_page) params.set('per_page', String(filters.per_page))
-  if (filters.exploit_available !== undefined) {
-    params.set('exploit_available', String(filters.exploit_available))
-  }
-  if (filters.cisa_kev_only !== undefined) {
-    params.set('cisa_kev_only', String(filters.cisa_kev_only))
-  }
-  if (filters.min_cvss !== undefined) params.set('min_cvss', String(filters.min_cvss))
-  if (filters.max_cvss !== undefined) params.set('max_cvss', String(filters.max_cvss))
-  if (filters.min_epss !== undefined) params.set('min_epss', String(filters.min_epss))
-
-  if (filters.cve_ids?.length) params.set('cve_ids', filters.cve_ids.join(','))
-  if (filters.severities?.length) params.set('severities', filters.severities.join(','))
-  if (filters.statuses?.length) params.set('statuses', filters.statuses.join(','))
-
-  const queryString = params.toString()
-  return queryString ? `${baseUrl}?${queryString}` : baseUrl
-}
-
 // ============================================
 // FETCHER FUNCTIONS
 // ============================================
@@ -168,14 +133,6 @@ async function fetchFindings(url: string): Promise<ApiFindingListResponse> {
 
 async function fetchFinding(url: string): Promise<ApiFinding> {
   return get<ApiFinding>(url)
-}
-
-async function fetchVulnerabilities(url: string): Promise<ApiVulnerabilityListResponse> {
-  return get<ApiVulnerabilityListResponse>(url)
-}
-
-async function fetchVulnerability(url: string): Promise<ApiVulnerability> {
-  return get<ApiVulnerability>(url)
 }
 
 // ============================================
@@ -244,43 +201,6 @@ export function useAssetFindingsApi(
 }
 
 // ============================================
-// VULNERABILITY HOOKS (Global CVE Database)
-// ============================================
-
-/**
- * Fetch vulnerabilities from global CVE database
- */
-export function useVulnerabilitiesApi(
-  filters?: VulnerabilityApiFilters,
-  config?: SWRConfiguration
-) {
-  const key = buildVulnerabilitiesEndpoint(filters)
-
-  return useSWR<ApiVulnerabilityListResponse>(key, fetchVulnerabilities, {
-    ...defaultConfig,
-    ...config,
-  })
-}
-
-/**
- * Fetch a single vulnerability by ID
- */
-export function useVulnerabilityApi(vulnerabilityId: string | null, config?: SWRConfiguration) {
-  const key = vulnerabilityId ? `/api/v1/vulnerabilities/${vulnerabilityId}` : null
-
-  return useSWR<ApiVulnerability>(key, fetchVulnerability, { ...defaultConfig, ...config })
-}
-
-/**
- * Fetch a vulnerability by CVE ID
- */
-export function useVulnerabilityByCveApi(cveId: string | null, config?: SWRConfiguration) {
-  const key = cveId ? `/api/v1/vulnerabilities/cve/${cveId}` : null
-
-  return useSWR<ApiVulnerability>(key, fetchVulnerability, { ...defaultConfig, ...config })
-}
-
-// ============================================
 // MUTATION HOOKS
 // ============================================
 
@@ -310,21 +230,6 @@ export function useUpdateFindingStatusApi(findingId: string) {
     currentTenant && findingId ? `${buildFindingEndpoint(findingId)}/status` : null,
     async (url: string, { arg }: { arg: UpdateFindingStatusInput }) => {
       return patch<ApiFinding>(url, arg)
-    }
-  )
-}
-
-/**
- * Delete a finding
- */
-export function useDeleteFindingApi(findingId: string) {
-  const { currentTenant } = useTenant()
-
-  // Ensure user has a tenant before making requests
-  return useSWRMutation(
-    currentTenant && findingId ? buildFindingEndpoint(findingId) : null,
-    async (url: string) => {
-      return del<void>(url)
     }
   )
 }
@@ -365,48 +270,6 @@ export function useUnassignFindingApi(findingId: string) {
 
   return useSWRMutation(
     currentTenant && findingId ? `${buildFindingEndpoint(findingId)}/unassign` : null,
-    async (url: string) => {
-      return post<ApiFinding>(url, {})
-    }
-  )
-}
-
-/**
- * Triage finding (accept, reject, defer)
- */
-export function useTriageFindingApi(findingId: string) {
-  const { currentTenant } = useTenant()
-
-  return useSWRMutation(
-    currentTenant && findingId ? `${buildFindingEndpoint(findingId)}/triage` : null,
-    async (url: string, { arg }: { arg: TriageFindingInput }) => {
-      return patch<ApiFinding>(url, arg)
-    }
-  )
-}
-
-/**
- * Classify finding (CVE, CWE, OWASP)
- */
-export function useClassifyFindingApi(findingId: string) {
-  const { currentTenant } = useTenant()
-
-  return useSWRMutation(
-    currentTenant && findingId ? `${buildFindingEndpoint(findingId)}/classify` : null,
-    async (url: string, { arg }: { arg: ClassifyFindingInput }) => {
-      return patch<ApiFinding>(url, arg)
-    }
-  )
-}
-
-/**
- * Verify finding resolution
- */
-export function useVerifyFindingApi(findingId: string) {
-  const { currentTenant } = useTenant()
-
-  return useSWRMutation(
-    currentTenant && findingId ? `${buildFindingEndpoint(findingId)}/verify` : null,
     async (url: string) => {
       return post<ApiFinding>(url, {})
     }
@@ -524,20 +387,6 @@ export function useFindingValidationEvidenceApi(
 }
 
 /**
- * Set finding tags
- */
-export function useSetFindingTagsApi(findingId: string) {
-  const { currentTenant } = useTenant()
-
-  return useSWRMutation(
-    currentTenant && findingId ? `${buildFindingEndpoint(findingId)}/tags` : null,
-    async (url: string, { arg }: { arg: SetFindingTagsInput }) => {
-      return put<ApiFinding>(url, arg)
-    }
-  )
-}
-
-/**
  * Input for creating an external ticket from a finding. `project_key` is
  * optional — when omitted the backend routes to the tenant's configured default
  * project / routing rules. `provider` defaults to "jira" server-side.
@@ -575,21 +424,6 @@ export function useCreateFindingTicketApi(findingId: string) {
 // COMMENT HOOKS
 // ============================================
 
-async function fetchComments(url: string): Promise<ApiFindingCommentListResponse> {
-  return get<ApiFindingCommentListResponse>(url)
-}
-
-/**
- * Fetch comments for a finding
- */
-export function useFindingCommentsApi(findingId: string | null, config?: SWRConfiguration) {
-  const { currentTenant } = useTenant()
-
-  const key = currentTenant && findingId ? `${buildFindingEndpoint(findingId)}/comments` : null
-
-  return useSWR<ApiFindingCommentListResponse>(key, fetchComments, { ...defaultConfig, ...config })
-}
-
 /**
  * Add comment to a finding
  */
@@ -600,38 +434,6 @@ export function useAddFindingCommentApi(findingId: string) {
     currentTenant && findingId ? `${buildFindingEndpoint(findingId)}/comments` : null,
     async (url: string, { arg }: { arg: AddCommentInput }) => {
       return post<ApiFindingComment>(url, arg)
-    }
-  )
-}
-
-/**
- * Update a comment
- */
-export function useUpdateFindingCommentApi(findingId: string, commentId: string) {
-  const { currentTenant } = useTenant()
-
-  return useSWRMutation(
-    currentTenant && findingId && commentId
-      ? `${buildFindingEndpoint(findingId)}/comments/${commentId}`
-      : null,
-    async (url: string, { arg }: { arg: UpdateCommentInput }) => {
-      return patch<ApiFindingComment>(url, arg)
-    }
-  )
-}
-
-/**
- * Delete a comment
- */
-export function useDeleteFindingCommentApi(findingId: string, commentId: string) {
-  const { currentTenant } = useTenant()
-
-  return useSWRMutation(
-    currentTenant && findingId && commentId
-      ? `${buildFindingEndpoint(findingId)}/comments/${commentId}`
-      : null,
-    async (url: string) => {
-      return del<void>(url)
     }
   )
 }
@@ -690,16 +492,6 @@ export function useFindingStatsApi(filters?: FindingStatsFilters, config?: SWRCo
 export async function invalidateFindingsCache() {
   const { mutate } = await import('swr')
   await mutate((key) => typeof key === 'string' && key.includes('/findings'), undefined, {
-    revalidate: true,
-  })
-}
-
-/**
- * Invalidate vulnerabilities cache
- */
-export async function invalidateVulnerabilitiesCache() {
-  const { mutate } = await import('swr')
-  await mutate((key) => typeof key === 'string' && key.includes('/vulnerabilities'), undefined, {
     revalidate: true,
   })
 }
