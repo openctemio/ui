@@ -3,8 +3,7 @@
 import React from 'react'
 import { toast } from 'sonner'
 import { useSWRConfig } from 'swr'
-import { AlertCircle, PlayCircle, Save } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { AlertCircle, PlayCircle } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
@@ -26,8 +25,22 @@ import {
 import { updateAssetLifecycleSettings } from '../api'
 import { DryRunDialog } from './dry-run-dialog'
 
+/** What the page header needs to render the form's Save action. */
+export interface LifecycleFormStatus {
+  dirty: boolean
+  submitting: boolean
+}
+
 interface LifecycleSettingsFormProps {
   initial: AssetLifecycleSettings
+  /**
+   * The form's DOM id, so the page header's Save button can submit it with
+   * `form={formId}` — settings pages keep their one Save in the header.
+   */
+  formId: string
+  onStatusChange?: (status: LifecycleFormStatus) => void
+  dryRunOpen: boolean
+  onDryRunOpenChange: (open: boolean) => void
 }
 
 type FormState = {
@@ -92,12 +105,23 @@ function validate(form: FormState): string | null {
   return null
 }
 
-export function LifecycleSettingsForm({ initial }: LifecycleSettingsFormProps) {
+export function LifecycleSettingsForm({
+  initial,
+  formId,
+  onStatusChange,
+  dryRunOpen,
+  onDryRunOpenChange,
+}: LifecycleSettingsFormProps) {
   const { currentTenant } = useTenant()
   const { mutate } = useSWRConfig()
   const [form, setForm] = React.useState<FormState>(() => toFormState(initial))
+  const [baseline, setBaseline] = React.useState<FormState>(() => toFormState(initial))
   const [submitting, setSubmitting] = React.useState(false)
-  const [dryRunOpen, setDryRunOpen] = React.useState(false)
+
+  const dirty = JSON.stringify(form) !== JSON.stringify(baseline)
+  React.useEffect(() => {
+    onStatusChange?.({ dirty, submitting })
+  }, [dirty, submitting, onStatusChange])
 
   const needsDryRun = form.enabled && !form.dry_run_completed_at
   const dryRunDone = !!form.dry_run_completed_at
@@ -127,6 +151,7 @@ export function LifecycleSettingsForm({ initial }: LifecycleSettingsFormProps) {
       const saved = await updateAssetLifecycleSettings(currentTenant.id, toPayload(form))
       toast.success('Lifecycle settings saved')
       setForm(toFormState(saved))
+      setBaseline(toFormState(saved))
       void mutate(`/api/v1/tenants/${currentTenant.id}/settings/asset-lifecycle`, saved, false)
     } catch (err) {
       toast.error(getErrorMessage(err))
@@ -139,10 +164,11 @@ export function LifecycleSettingsForm({ initial }: LifecycleSettingsFormProps) {
     // Backend stamps DryRunCompletedAt server-side on success; reflect
     // it locally so the enable toggle unlocks without a full refetch.
     setForm((s) => ({ ...s, dry_run_completed_at: timestamp }))
+    setBaseline((s) => ({ ...s, dry_run_completed_at: timestamp }))
   }
 
   return (
-    <form className="space-y-6" onSubmit={handleSubmit}>
+    <form id={formId} className="space-y-5" onSubmit={handleSubmit}>
       <Card>
         <CardHeader>
           <div className="flex items-start justify-between gap-4">
@@ -166,7 +192,7 @@ export function LifecycleSettingsForm({ initial }: LifecycleSettingsFormProps) {
             </div>
           </div>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-4">
           {needsDryRun && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
@@ -187,7 +213,7 @@ export function LifecycleSettingsForm({ initial }: LifecycleSettingsFormProps) {
             </Alert>
           )}
 
-          <div className="grid gap-6 md:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <div className="space-y-2">
               <Label htmlFor="stale-threshold">Stale threshold (days)</Label>
               <Input
@@ -290,25 +316,9 @@ export function LifecycleSettingsForm({ initial }: LifecycleSettingsFormProps) {
         </CardContent>
       </Card>
 
-      <div className="flex items-center justify-between">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => setDryRunOpen(true)}
-          disabled={submitting || !currentTenant}
-        >
-          <PlayCircle className="me-2 h-4 w-4" />
-          Run dry-run
-        </Button>
-        <Button type="submit" disabled={submitting || !currentTenant}>
-          <Save className="me-2 h-4 w-4" />
-          Save settings
-        </Button>
-      </div>
-
       <DryRunDialog
         open={dryRunOpen}
-        onOpenChange={setDryRunOpen}
+        onOpenChange={onDryRunOpenChange}
         onSuccess={handleDryRunSuccess}
       />
     </form>
