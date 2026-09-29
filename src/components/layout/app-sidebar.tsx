@@ -44,9 +44,9 @@ export function AppSidebar() {
             ))}
           </div>
         ) : (
-          // Each group owns its own <SidebarGroup> + heading so the section
-          // names read as quiet labels over always-visible items, rather than
-          // as rows the user must click to reveal what is inside.
+          // Each titled group renders as a collapsible section (icon + label +
+          // chevron) that auto-opens when it owns the active route, so the
+          // sidebar stays compact — only the relevant section is expanded.
           <>
             {filteredSidebarData.navGroups.map((group) => (
               <NavGroup key={group.title} {...group} />

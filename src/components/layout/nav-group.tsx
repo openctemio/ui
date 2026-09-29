@@ -6,8 +6,6 @@ import { usePathname } from 'next/navigation'
 import { ChevronRight } from 'lucide-react'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import {
-  SidebarGroup,
-  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -76,8 +74,6 @@ function NavLabel({ title }: { title: string }) {
  */
 function NavGroupComponent({ title, icon, items }: NavGroupProps) {
   const dynamicBadges = useDynamicBadges()
-  const { state, isMobile } = useSidebar()
-  const { t } = useTranslation()
 
   // Ungrouped rows (Dashboard) — plain top-level links, no group heading.
   if (!title) {
@@ -96,37 +92,16 @@ function NavGroupComponent({ title, icon, items }: NavGroupProps) {
     )
   }
 
-  // Collapsed icon-rail keeps the old behaviour: one icon per section that opens
-  // a dropdown of its items. A rail cannot show 60+ icons legibly, and a group
-  // heading has nothing to label when the labels are hidden.
-  if (state === 'collapsed' && !isMobile) {
-    return (
-      <SidebarMenu className="group-data-[collapsible=icon]:items-center">
-        <NavSection title={title} icon={icon} items={items} dynamicBadges={dynamicBadges} />
-      </SidebarMenu>
-    )
-  }
-
-  // Expanded: the section name is a quiet heading, not a control, and every item
-  // is visible. Nothing is one click away behind an accordion the user has to
-  // discover and re-open, and the shape of the product is readable at a glance.
+  // Every titled CTEM section renders as a collapsible header (icon + label +
+  // chevron) that auto-opens when it owns the active route and stays collapsed
+  // otherwise — so the sidebar shows the product's shape at the top level and
+  // only the relevant section's items expand, instead of one long always-open
+  // list. In the collapsed icon-rail NavSection flips to a dropdown flyout so
+  // the whole tree is still reachable from the icon.
   return (
-    <SidebarGroup className="py-0">
-      <SidebarGroupLabel>{t(groupTitleKey(title), title)}</SidebarGroupLabel>
-      <SidebarMenu>
-        {items.map((item) =>
-          'items' in item ? (
-            <NavSubCollapsible key={item.title} item={item} dynamicBadges={dynamicBadges} />
-          ) : (
-            <SidebarMenuLink
-              key={`${item.title}-${String(item.url)}`}
-              item={item}
-              dynamicBadges={dynamicBadges}
-            />
-          )
-        )}
-      </SidebarMenu>
-    </SidebarGroup>
+    <SidebarMenu className="group-data-[collapsible=icon]:items-center">
+      <NavSection title={title} icon={icon} items={items} dynamicBadges={dynamicBadges} />
+    </SidebarMenu>
   )
 }
 
