@@ -169,7 +169,10 @@ export default function NotificationsPage() {
     return f
   }, [severityFilter, readFilter])
 
-  const { data, isLoading, error } = useNotificationsApi(page, PER_PAGE, filters)
+  // The full list is on screen here, so keep it fresh while the page is open.
+  const { data, isLoading, error } = useNotificationsApi(page, PER_PAGE, filters, {
+    refreshInterval: 60000,
+  })
   const { data: unreadData } = useUnreadCountApi()
 
   const notifications = data?.data ?? []

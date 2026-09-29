@@ -116,9 +116,13 @@ export function useNotificationsApi(
   page = 1,
   perPage = 20,
   filters?: NotificationListFilters,
-  config?: SWRConfiguration
+  config?: SWRConfiguration & {
+    /** Fetch only while true (e.g. the bell's list only while its popover is open). */
+    enabled?: boolean
+  }
 ) {
   const { currentTenant } = useTenant()
+  const { enabled = true, ...swrConfig } = config ?? {}
 
   const params = new URLSearchParams()
   params.set('page', String(page))
@@ -127,13 +131,16 @@ export function useNotificationsApi(
   if (filters?.type) params.set('type', filters.type)
   if (filters?.is_read !== undefined) params.set('is_read', String(filters.is_read))
 
-  const key = currentTenant ? `${notificationEndpoints.list()}?${params.toString()}` : null
+  const key =
+    currentTenant && enabled ? `${notificationEndpoints.list()}?${params.toString()}` : null
 
+  // No polling by default: new notifications arrive over the tenant WebSocket,
+  // and a list nobody is looking at does not need refreshing. Callers that show
+  // the list continuously (the notifications page) opt into a refresh interval.
   return useSWR<NotificationListResponse>(key, fetchNotificationList, {
     ...defaultConfig,
-    revalidateOnFocus: true,
-    refreshInterval: 30000, // Poll every 30s as fallback
-    ...config,
+    keepPreviousData: true,
+    ...swrConfig,
   })
 }
 
@@ -145,10 +152,11 @@ export function useUnreadCountApi(config?: SWRConfiguration) {
 
   const key = currentTenant ? notificationEndpoints.unreadCount() : null
 
+  // The badge is kept live by the tenant WebSocket (the bell revalidates on a
+  // notification event); this slow poll is only a fallback for a dropped socket.
   return useSWR<UnreadCountResponse>(key, fetchUnreadCount, {
     ...defaultConfig,
-    revalidateOnFocus: true,
-    refreshInterval: 30000, // Poll every 30s
+    refreshInterval: 120000,
     ...config,
   })
 }

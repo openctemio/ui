@@ -144,7 +144,7 @@ export function NotificationBell() {
     data: notificationsData,
     isLoading,
     mutate: mutateNotifications,
-  } = useNotificationsApi(1, 20)
+  } = useNotificationsApi(1, 20, undefined, { enabled: open })
   const { data: unreadData, mutate: mutateUnreadCount } = useUnreadCountApi()
 
   const notifications = notificationsData?.data ?? []
@@ -157,11 +157,12 @@ export function NotificationBell() {
       (data: Record<string, unknown>) => {
         // Only revalidate when the WebSocket event is a notification
         if (data?.type === 'notification') {
-          mutateNotifications()
           mutateUnreadCount()
+          // The list is only fetched while the popover is open.
+          if (open) mutateNotifications()
         }
       },
-      [mutateNotifications, mutateUnreadCount]
+      [open, mutateNotifications, mutateUnreadCount]
     ),
   })
 
