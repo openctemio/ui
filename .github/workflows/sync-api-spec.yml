@@ -48,7 +48,10 @@ jobs:
           API_TOKEN: ${{ secrets.API_SYNC_TOKEN }}
         run: |
           set -euo pipefail
-          URL="https://raw.githubusercontent.com/openctemio/api/develop/api/openapi/swagger.yaml"
+          # Fetch at the resolved commit: the branch URL on raw.githubusercontent.com
+          # is cached for 5 minutes and can serve the previous spec.
+          SHA="$(git ls-remote --exit-code https://github.com/openctemio/api refs/heads/develop | cut -f1)"
+          URL="https://raw.githubusercontent.com/openctemio/api/${SHA}/api/openapi/swagger.yaml"
           AUTH=()
           [ -n "${API_TOKEN:-}" ] && AUTH=(-H "Authorization: Bearer ${API_TOKEN}")
           curl -fsSL "${AUTH[@]}" "$URL" -o src/lib/api/openapi/swagger.yaml
