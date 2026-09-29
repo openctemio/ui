@@ -17,6 +17,9 @@ export interface DashboardWidget {
 export interface Dashboard {
   id: string
   name: string
+  description?: string
+  /** Layout column structure (1..4 equal columns). Defaults to 2. */
+  columns?: number
   is_default: boolean
   layout: DashboardWidget[]
   created_at?: string
@@ -29,10 +32,14 @@ export interface DashboardListResponse {
 
 export interface CreateDashboardInput {
   name: string
+  description?: string
+  columns?: number
   layout: DashboardWidget[]
 }
 
 export interface UpdateDashboardInput {
   name: string
+  description?: string
+  columns?: number
   layout: DashboardWidget[]
 }

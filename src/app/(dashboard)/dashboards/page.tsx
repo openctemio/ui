@@ -1,34 +1,21 @@
 'use client'
 
-import { useMemo, useState } from 'react'
-import {
-  ArrowLeft,
-  Plus,
-  Star,
-  Trash2,
-  X,
-  ChevronUp,
-  ChevronDown,
-  LayoutGrid,
-  Pencil,
-} from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { ArrowLeft, Plus, Star, Trash2, Pencil, LayoutGrid, ExternalLink } from 'lucide-react'
 import { Main } from '@/components/layout'
 import { PageHeader } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import { toast } from 'sonner'
-import { usePermissions } from '@/lib/permissions'
+import { cn } from '@/lib/utils'
 import { getErrorMessage } from '@/lib/api/error-handler'
-import { WIDGET_REGISTRY } from '@/features/dashboards/widgets/registry'
 import { DASHBOARD_TEMPLATES, templateLayout } from '@/features/dashboards/templates'
+import { widthForColumns, DASHBOARD_VIEW_STORAGE_KEY } from '@/features/dashboards/layout'
 import {
   useMyDashboards,
   useMyDashboard,
@@ -40,47 +27,79 @@ import {
 } from '@/features/dashboards/api/use-dashboards-api'
 import type { DashboardWidget } from '@/features/dashboards/api/dashboards.types'
 
-const SIZE_OPTIONS: Array<{ label: string; w: number }> = [
-  { label: 'S', w: 3 },
-  { label: 'M', w: 4 },
-  { label: 'L', w: 6 },
-  { label: 'Full', w: 12 },
+/**
+ * Dashboards manage surface (RFC-021). A dashboard here is a *container* — its
+ * name, description and column layout. Editing the actual widgets (add / remove /
+ * drag / resize) happens on the live dashboard view, not on this page. Users pick
+ * a template or a blank, then shape each dashboard's identity + layout here and
+ * open it to populate it.
+ */
+export default function DashboardsPage() {
+  const [editId, setEditId] = useState<string | null>(null)
+
+  if (editId) {
+    return <DashboardEditForm id={editId} onBack={() => setEditId(null)} />
+  }
+  return <DashboardsList onEdit={setEditId} />
+}
+
+// ── Column-layout picker options ─────────────────────────────────────────────
+
+const LAYOUT_OPTIONS: Array<{ cols: number; label: string }> = [
+  { cols: 1, label: '1 column' },
+  { cols: 2, label: '2 columns' },
+  { cols: 3, label: '3 columns' },
+  { cols: 4, label: '4 columns' },
 ]
 
-function colSpan(w: number): string {
-  const clamped = Math.max(2, Math.min(12, w))
-  return `span ${clamped} / span ${clamped}`
+function LayoutPreview({ cols, active }: { cols: number; active: boolean }) {
+  return (
+    <div
+      className={cn(
+        'flex h-16 w-24 items-stretch gap-1 rounded-md border-2 p-1.5 transition-colors',
+        active ? 'border-primary bg-primary/5' : 'border-border bg-muted/40 hover:border-primary/40'
+      )}
+    >
+      {Array.from({ length: cols }).map((_, i) => (
+        <div
+          key={i}
+          className={cn('flex-1 rounded-sm', active ? 'bg-primary/70' : 'bg-muted-foreground/30')}
+        />
+      ))}
+    </div>
+  )
 }
 
-export default function DashboardsPage() {
-  const [openId, setOpenId] = useState<string | null>(null)
+// ── List + template gallery ──────────────────────────────────────────────────
 
-  if (openId) {
-    return <DashboardDetail id={openId} onBack={() => setOpenId(null)} />
-  }
-  return <DashboardsList onOpen={setOpenId} />
-}
-
-// ── List + gallery ────────────────────────────────────────────────────────────
-
-function DashboardsList({ onOpen }: { onOpen: (id: string) => void }) {
+function DashboardsList({ onEdit }: { onEdit: (id: string) => void }) {
+  const router = useRouter()
   const { data, isLoading } = useMyDashboards()
   const revalidate = useRevalidateDashboards()
   const [busy, setBusy] = useState(false)
   const saved = data?.data ?? []
 
-  const createFrom = async (name: string, layout: DashboardWidget[]) => {
+  const createFrom = async (name: string, layout: DashboardWidget[], columns = 2) => {
     setBusy(true)
     try {
-      const d = await createDashboard({ name, layout })
+      const d = await createDashboard({ name, layout, columns })
       await revalidate()
       toast.success(`Created "${name}"`)
-      onOpen(d.id)
+      onEdit(d.id)
     } catch (e) {
       toast.error(getErrorMessage(e))
     } finally {
       setBusy(false)
     }
+  }
+
+  const openView = (id: string) => {
+    try {
+      window.localStorage.setItem(DASHBOARD_VIEW_STORAGE_KEY, id)
+    } catch {
+      // best-effort — the view falls back to its own resolution
+    }
+    router.push('/')
   }
 
   const remove = async (id: string, name: string) => {
@@ -150,7 +169,7 @@ function DashboardsList({ onOpen }: { onOpen: (id: string) => void }) {
         {isLoading ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {Array.from({ length: 3 }).map((_, i) => (
-              <Skeleton key={i} className="h-24 w-full" />
+              <Skeleton key={i} className="h-28 w-full" />
             ))}
           </div>
         ) : saved.length === 0 ? (
@@ -165,7 +184,7 @@ function DashboardsList({ onOpen }: { onOpen: (id: string) => void }) {
                   <CardTitle className="flex items-center gap-2 text-base">
                     <button
                       className="truncate text-start hover:underline"
-                      onClick={() => onOpen(d.id)}
+                      onClick={() => openView(d.id)}
                     >
                       {d.name}
                     </button>
@@ -175,13 +194,20 @@ function DashboardsList({ onOpen }: { onOpen: (id: string) => void }) {
                       </Badge>
                     )}
                   </CardTitle>
+                  {d.description ? (
+                    <CardDescription className="line-clamp-2">{d.description}</CardDescription>
+                  ) : null}
                 </CardHeader>
                 <CardContent className="mt-auto flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">{d.layout.length} widgets</span>
+                  <span className="text-xs text-muted-foreground">
+                    {d.layout.length} widgets · {d.columns ?? 2} cols
+                  </span>
                   <div className="flex gap-1">
-                    <Button size="sm" variant="outline" onClick={() => onOpen(d.id)}>
-                      <Pencil className="me-2 h-4 w-4" />
-                      Edit
+                    <Button size="sm" onClick={() => openView(d.id)}>
+                      <ExternalLink className="me-2 h-4 w-4" /> Open
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => onEdit(d.id)}>
+                      <Pencil className="me-2 h-4 w-4" /> Edit
                     </Button>
                     {!d.is_default && (
                       <Button
@@ -212,44 +238,59 @@ function DashboardsList({ onOpen }: { onOpen: (id: string) => void }) {
   )
 }
 
-// ── Detail + edit ─────────────────────────────────────────────────────────────
+// ── Edit form: name + description + layout only ──────────────────────────────
 
-function DashboardDetail({ id, onBack }: { id: string; onBack: () => void }) {
+function DashboardEditForm({ id, onBack }: { id: string; onBack: () => void }) {
+  const router = useRouter()
   const { data, isLoading } = useMyDashboard(id)
   const revalidate = useRevalidateDashboards()
-  const { can } = usePermissions()
-  const [editing, setEditing] = useState(false)
-  const [draft, setDraft] = useState<DashboardWidget[] | null>(null)
+
+  const [name, setName] = useState('')
+  const [description, setDescription] = useState('')
+  const [columns, setColumns] = useState(2)
+  const [ready, setReady] = useState(false)
   const [saving, setSaving] = useState(false)
 
-  const widgets = editing && draft ? draft : (data?.layout ?? [])
+  useEffect(() => {
+    if (ready || isLoading || !data) return
+    setName(data.name)
+    setDescription(data.description ?? '')
+    setColumns(data.columns ?? 2)
+    setReady(true)
+  }, [ready, isLoading, data])
 
-  // Catalog of widgets the viewer is allowed to add.
-  const catalog = useMemo(
-    () =>
-      Object.entries(WIDGET_REGISTRY).filter(
-        ([, def]) => !def.requiredPermission || can(def.requiredPermission)
-      ),
-    [can]
-  )
+  const currentColumns = data?.columns ?? 2
+  const widgetCount = data?.layout.length ?? 0
 
-  const startEdit = () => {
-    setDraft(data?.layout ? [...data.layout] : [])
-    setEditing(true)
-  }
-  const cancelEdit = () => {
-    setEditing(false)
-    setDraft(null)
-  }
-  const save = async () => {
-    if (!data || !draft) return
+  const submit = async (thenOpen: boolean) => {
+    if (!data) return
+    const trimmed = name.trim()
+    if (!trimmed) {
+      toast.error('Name is required')
+      return
+    }
     setSaving(true)
     try {
-      await updateDashboard(id, { name: data.name, layout: draft })
+      // Re-pick a layout only restructures widget widths; leave the widgets
+      // untouched when the column count is unchanged so any view-side sizing
+      // survives an edit of just the name or description.
+      const layout: DashboardWidget[] =
+        columns !== currentColumns
+          ? data.layout.map((wg) => ({ ...wg, w: widthForColumns(columns) }))
+          : data.layout
+      await updateDashboard(id, { name: trimmed, description: description.trim(), columns, layout })
       await revalidate()
-      setEditing(false)
-      setDraft(null)
       toast.success('Dashboard saved')
+      if (thenOpen) {
+        try {
+          window.localStorage.setItem(DASHBOARD_VIEW_STORAGE_KEY, id)
+        } catch {
+          // best-effort
+        }
+        router.push('/')
+      } else {
+        onBack()
+      }
     } catch (e) {
       toast.error(getErrorMessage(e))
     } finally {
@@ -257,34 +298,13 @@ function DashboardDetail({ id, onBack }: { id: string; onBack: () => void }) {
     }
   }
 
-  const addWidget = (wt: string) => {
-    const def = WIDGET_REGISTRY[wt].defaultSize
-    setDraft((d) => [
-      ...(d ?? []),
-      { widget_type: wt, x: 0, y: d?.length ?? 0, w: def.w, h: def.h },
-    ])
-  }
-  const removeAt = (i: number) => setDraft((d) => (d ?? []).filter((_, idx) => idx !== i))
-  const move = (i: number, dir: -1 | 1) =>
-    setDraft((d) => {
-      if (!d) return d
-      const j = i + dir
-      if (j < 0 || j >= d.length) return d
-      const next = [...d]
-      ;[next[i], next[j]] = [next[j], next[i]]
-      return next
-    })
-  const resize = (i: number, w: number) =>
-    setDraft((d) => (d ?? []).map((wg, idx) => (idx === i ? { ...wg, w } : wg)))
-
-  if (isLoading) {
+  if (isLoading || !ready) {
     return (
       <Main>
         <Skeleton className="h-9 w-48" />
-        <div className="mt-6 grid grid-cols-12 gap-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="col-span-3 h-28" />
-          ))}
+        <div className="mx-auto mt-6 w-full max-w-3xl space-y-4">
+          <Skeleton className="h-40 w-full" />
+          <Skeleton className="h-32 w-full" />
         </div>
       </Main>
     )
@@ -306,122 +326,99 @@ function DashboardDetail({ id, onBack }: { id: string; onBack: () => void }) {
   return (
     <Main>
       <PageHeader
-        title={data.name}
-        description={editing ? 'Editing — add, remove, reorder and resize widgets.' : undefined}
+        title="Edit dashboard"
+        description="Set the name, description and column layout. Add and arrange widgets on the dashboard itself."
       >
         <div className="flex gap-2">
-          <Button variant="ghost" onClick={editing ? cancelEdit : onBack}>
-            <ArrowLeft className="me-2 h-4 w-4" /> {editing ? 'Cancel' : 'Back'}
+          <Button variant="ghost" onClick={onBack}>
+            <ArrowLeft className="me-2 h-4 w-4" /> Back
           </Button>
-          {editing ? (
-            <>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline">
-                    <Plus className="me-2 h-4 w-4" /> Add widget
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  {catalog.length === 0 ? (
-                    <DropdownMenuItem disabled>No widgets available</DropdownMenuItem>
-                  ) : (
-                    catalog.map(([wt, def]) => (
-                      <DropdownMenuItem key={wt} onClick={() => addWidget(wt)}>
-                        {def.title}
-                      </DropdownMenuItem>
-                    ))
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
-              <Button onClick={save} disabled={saving}>
-                Save
-              </Button>
-            </>
-          ) : (
-            <Button variant="outline" onClick={startEdit}>
-              <Pencil className="me-2 h-4 w-4" /> Edit
-            </Button>
-          )}
+          <Button variant="outline" disabled={saving} onClick={() => submit(true)}>
+            <ExternalLink className="me-2 h-4 w-4" /> Save &amp; open
+          </Button>
+          <Button disabled={saving} onClick={() => submit(false)}>
+            {saving ? 'Saving…' : 'Save'}
+          </Button>
         </div>
       </PageHeader>
 
-      {widgets.length === 0 ? (
-        <div className="mt-6 rounded-lg border border-dashed py-12 text-center text-sm text-muted-foreground">
-          {editing
-            ? 'Add your first widget with “Add widget” above.'
-            : 'This dashboard is empty. Click Edit to add widgets.'}
-        </div>
-      ) : (
-        <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-12">
-          {widgets.map((wg, i) => {
-            const def = WIDGET_REGISTRY[wg.widget_type]
-            return (
-              <div
-                key={`${wg.widget_type}-${i}`}
-                style={{ gridColumn: colSpan(wg.w) }}
-                className="min-w-0"
-              >
-                {editing && (
-                  <div className="mb-1 flex items-center gap-1">
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-6 w-6"
-                      title="Move up"
-                      onClick={() => move(i, -1)}
-                    >
-                      <ChevronUp className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-6 w-6"
-                      title="Move down"
-                      onClick={() => move(i, 1)}
-                    >
-                      <ChevronDown className="h-3.5 w-3.5" />
-                    </Button>
-                    <div className="flex gap-0.5">
-                      {SIZE_OPTIONS.map((s) => (
-                        <button
-                          key={s.label}
-                          onClick={() => resize(i, s.w)}
-                          className={
-                            'rounded px-1.5 text-[11px] ' +
-                            (wg.w === s.w
-                              ? 'bg-primary text-primary-foreground'
-                              : 'text-muted-foreground hover:bg-muted')
-                          }
-                        >
-                          {s.label}
-                        </button>
-                      ))}
-                    </div>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="ms-auto h-6 w-6"
-                      title="Remove"
-                      onClick={() => removeAt(i)}
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                )}
-                {def ? (
-                  <def.component />
-                ) : (
-                  <Card className="h-full">
-                    <CardContent className="p-5 text-sm text-muted-foreground">
-                      Unknown widget: {wg.widget_type}
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
-            )
-          })}
-        </div>
-      )}
+      <div className="mx-auto mt-2 w-full max-w-3xl space-y-6">
+        {/* General */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">General</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-1.5">
+              <label htmlFor="dash-name" className="text-sm font-medium">
+                Name <span className="text-destructive">*</span>
+              </label>
+              <Input
+                id="dash-name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                maxLength={100}
+                placeholder="e.g. Executive overview"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label htmlFor="dash-desc" className="text-sm font-medium">
+                Description
+              </label>
+              <Textarea
+                id="dash-desc"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                maxLength={500}
+                rows={3}
+                placeholder="What is this dashboard for? (optional)"
+              />
+              <p className="text-xs text-muted-foreground">{description.length}/500</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Layout */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Layout</CardTitle>
+            <CardDescription>
+              How many columns the dashboard is arranged in. Changing this re-flows the existing
+              widgets.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-3">
+              {LAYOUT_OPTIONS.map((opt) => (
+                <button
+                  key={opt.cols}
+                  type="button"
+                  onClick={() => setColumns(opt.cols)}
+                  className="flex flex-col items-center gap-1.5"
+                  aria-pressed={columns === opt.cols}
+                  title={opt.label}
+                >
+                  <LayoutPreview cols={opt.cols} active={columns === opt.cols} />
+                  <span
+                    className={cn(
+                      'text-xs',
+                      columns === opt.cols ? 'font-medium text-foreground' : 'text-muted-foreground'
+                    )}
+                  >
+                    {opt.cols}
+                  </span>
+                </button>
+              ))}
+            </div>
+            {columns !== currentColumns && widgetCount > 0 && (
+              <p className="mt-3 text-xs text-muted-foreground">
+                {widgetCount} widget{widgetCount === 1 ? '' : 's'} will be resized to fit {columns}{' '}
+                column{columns === 1 ? '' : 's'}.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </Main>
   )
 }
