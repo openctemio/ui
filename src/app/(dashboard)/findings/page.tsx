@@ -110,7 +110,7 @@ import type { Severity } from '@/features/shared/types'
 import { toast } from 'sonner'
 import { copyToClipboard } from '@/lib/clipboard'
 import { getErrorMessage } from '@/lib/api/error-handler'
-import { patch, post, del, csrfFetch } from '@/lib/api/client'
+import { patch, post, csrfFetch } from '@/lib/api/client'
 import { usePermissions } from '@/context/permission-provider'
 import { useModuleEnabled } from '@/features/integrations/api/use-tenant-modules'
 
@@ -546,14 +546,6 @@ function FindingsContent() {
     }))
   }, [sourceCatalog?.data])
 
-  const sourceLabelByCode = useMemo(() => {
-    const map = new Map<string, string>()
-    for (const g of sourceGroups) {
-      for (const o of g.options) map.set(o.value, o.label)
-    }
-    return map
-  }, [sourceGroups])
-
   const toggleSource = useCallback(
     (code: string) => {
       // Functional update, not a read of `sourceFilter` from render scope: two
@@ -868,7 +860,7 @@ function FindingsContent() {
         await post(`/api/v1/findings/${findingId}/assign`, { user_id: assignee.id })
         toast.success(`Assigned to ${assignee.name}`)
       } else {
-        await del(`/api/v1/findings/${findingId}/assign`)
+        await post(`/api/v1/findings/${findingId}/unassign`, {})
         toast.info('Finding unassigned')
       }
       mutateFindings()
@@ -1319,43 +1311,15 @@ function FindingsContent() {
     FINDING_STATUS_CONFIG[v as FindingStatus]?.label ??
     v.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase())
 
-  const activeChips: { key: string; label: string; onRemove: () => void }[] = [
-    ...(mineActive
-      ? [{ key: 'mine', label: 'Assigned to me', onRemove: () => setMineFilter('false') }]
-      : []),
-    ...severities.map((v) => ({
-      key: `sev-${v}`,
-      label: SEVERITY_LABELS[v],
-      onRemove: () => setSeverityParam((p) => p.filter((x) => x !== v)),
-    })),
-    ...statuses.map((v) => ({
-      key: `st-${v}`,
-      label: statusLabel(v),
-      onRemove: () => setStatusParam((p) => p.filter((x) => x !== v)),
-    })),
-    ...priorityClasses.map((v) => ({
-      key: `pr-${v}`,
-      label: v,
-      onRemove: () => setPriorityParam((p) => p.filter((x) => x.toUpperCase() !== v)),
-    })),
-    ...(kevActive
-      ? [{ key: 'kev', label: 'In CISA KEV', onRemove: () => setKevFilter('false') }]
-      : []),
-    ...(reachableActive
-      ? [{ key: 'reach', label: 'Reachable', onRemove: () => setReachableFilter('false') }]
-      : []),
-    ...slaFilter.map((v) => ({
-      key: `sla-${v}`,
-      label: `SLA: ${SLA_STATUS_LABELS[v as SLAStatus] ?? v}`,
-      onRemove: () => toggleSla(v),
-    })),
-    ...sourceFilter.map((v) => ({
-      key: `src-${v}`,
-      label: sourceLabelByCode.get(v) ?? v.toUpperCase(),
-      onRemove: () => toggleSource(v),
-    })),
-  ]
-  const activeCount = activeChips.length
+  const activeCount =
+    Number(mineActive) +
+    severities.length +
+    statuses.length +
+    priorityClasses.length +
+    Number(kevActive) +
+    Number(reachableActive) +
+    slaFilter.length +
+    sourceFilter.length
 
   const metrics: MetricStripItem[] = [
     {
