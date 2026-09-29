@@ -39,7 +39,7 @@ export function ScopePicker({
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Generate a threat model</CardTitle>
+          <CardTitle className="text-base">Generate a threat model</CardTitle>
         </CardHeader>
         <CardContent>
           <EmptyState
@@ -61,7 +61,7 @@ export function ScopePicker({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Generate a threat model</CardTitle>
+        <CardTitle className="text-base">Generate a threat model</CardTitle>
         <CardDescription>
           Pick a crown-jewel asset to build (or refresh) its derived threat model from attacker
           profiles and attack paths.
@@ -83,7 +83,7 @@ export function ScopePicker({
                 {crownJewels.map((cj) => (
                   <SelectItem key={cj.id} value={cj.id}>
                     <span className="flex items-center gap-2">
-                      <Crown className="h-3.5 w-3.5 text-amber-500" />
+                      <Crown className="h-3.5 w-3.5 text-muted-foreground" />
                       {cj.name}
                       {cj.criticality && (
                         <span className="text-muted-foreground text-xs capitalize">
@@ -110,7 +110,7 @@ export function ScopePicker({
               ) : (
                 <Sparkles className="me-2 h-4 w-4" />
               )}
-              {isGenerating ? 'Generating…' : 'Generate / Refresh'}
+              {isGenerating ? 'Generating…' : 'Generate'}
             </Button>
           </Can>
         </div>
