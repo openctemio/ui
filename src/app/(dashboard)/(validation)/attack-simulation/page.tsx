@@ -5,27 +5,18 @@ import type { ColumnDef } from '@tanstack/react-table'
 import { Main } from '@/components/layout'
 import {
   PageHeader,
-  StatsCard,
+  MetricStrip,
+  type MetricStripItem,
   DataTable,
   DataTableColumnHeader,
   StackedCell,
+  EmptyState,
 } from '@/features/shared'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { Skeleton } from '@/components/ui/skeleton'
-import {
-  Swords,
-  Play,
-  CheckCircle,
-  XCircle,
-  Clock,
-  Shield,
-  AlertTriangle,
-  Plus,
-  Target,
-} from 'lucide-react'
+import { Swords, Play, Plus } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   useSimulations,
@@ -33,65 +24,35 @@ import {
   type Simulation,
 } from '@/features/simulation/api/use-simulation-api'
 
-const statusConfig: Record<string, { icon: React.ReactNode; color: string; bgColor: string }> = {
-  draft: {
-    icon: <Clock className="h-4 w-4" />,
-    color: 'text-gray-400',
-    bgColor: 'bg-gray-500/20',
-  },
-  active: {
-    icon: <Play className="h-4 w-4" />,
-    color: 'text-blue-400',
-    bgColor: 'bg-blue-500/20',
-  },
-  completed: {
-    icon: <CheckCircle className="h-4 w-4" />,
-    color: 'text-green-400',
-    bgColor: 'bg-green-500/20',
-  },
-  paused: {
-    icon: <AlertTriangle className="h-4 w-4" />,
-    color: 'text-yellow-400',
-    bgColor: 'bg-yellow-500/20',
-  },
-}
-
-const resultConfig: Record<string, string> = {
-  detected: 'bg-green-500/20 text-green-400',
-  prevented: 'bg-blue-500/20 text-blue-400',
-  bypassed: 'bg-red-500/20 text-red-400',
-  partial: 'bg-yellow-500/20 text-yellow-400',
-  error: 'bg-gray-500/20 text-gray-400',
-}
-
-function EmptyState() {
+// Theme tokens only: a bypass is the one outcome worth colouring.
+function ResultBadge({ result }: { result: string }) {
+  if (!result) return <span className="text-xs text-muted-foreground">—</span>
+  const bypassed = result === 'bypassed'
   return (
-    <div className="flex flex-col items-center justify-center py-16">
-      <div className="bg-muted flex h-16 w-16 items-center justify-center rounded-full mb-4">
-        <Swords className="h-8 w-8 text-muted-foreground" />
-      </div>
-      <h3 className="font-semibold mb-1">No Simulations Yet</h3>
-      <p className="text-muted-foreground text-sm mb-4">
-        Create your first attack simulation to validate security controls.
-      </p>
-      <Button size="sm" disabled title="Simulation creation is coming soon">
-        <Plus className="me-2 h-4 w-4" />
-        Create Simulation
-      </Button>
-    </div>
+    <Badge
+      variant={bypassed ? 'outline' : 'secondary'}
+      className={bypassed ? 'capitalize text-destructive' : 'capitalize'}
+    >
+      {result}
+    </Badge>
+  )
+}
+
+function StatusBadge({ status }: { status: string }) {
+  return (
+    <Badge variant={status === 'active' ? 'default' : 'secondary'} className="capitalize">
+      {status || 'draft'}
+    </Badge>
   )
 }
 
 function LoadingSkeleton() {
   return (
     <Main>
-      <Skeleton className="mb-6 h-8 w-64" />
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <Skeleton key={i} className="h-24 rounded-lg" />
-        ))}
-      </div>
-      <Skeleton className="mt-6 h-96 rounded-lg" />
+      <Skeleton className="h-8 w-64" />
+      <Skeleton className="mt-2 h-4 w-96 max-w-full" />
+      <Skeleton className="mt-5 h-16 rounded-xl" />
+      <Skeleton className="mt-5 h-96 rounded-xl" />
     </Main>
   )
 }
@@ -157,7 +118,7 @@ export default function AttackSimulationPage() {
       },
       {
         accessorKey: 'last_run_at',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Last Run" />,
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Last run" />,
         cell: ({ row }) => (
           <span className="text-muted-foreground text-sm">
             {row.original.last_run_at
@@ -168,42 +129,26 @@ export default function AttackSimulationPage() {
       },
       {
         accessorKey: 'detection_rate',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Detection Rate" />,
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Detection rate" />,
         cell: ({ row }) => (
           <div className="flex flex-wrap items-center gap-2">
             <Progress value={row.original.detection_rate} className="h-2 w-16" />
-            <span className="text-sm">{Math.round(row.original.detection_rate)}%</span>
+            <span className="text-sm tabular-nums">{Math.round(row.original.detection_rate)}%</span>
           </div>
         ),
       },
       {
         accessorKey: 'last_result',
         header: ({ column }) => <DataTableColumnHeader column={column} title="Result" />,
-        cell: ({ row }) => {
-          const result = resultConfig[row.original.last_result] ?? ''
-          return row.original.last_result ? (
-            <Badge className={`${result} border-0`}>{row.original.last_result}</Badge>
-          ) : (
-            <span className="text-muted-foreground text-xs">-</span>
-          )
-        },
+        cell: ({ row }) => <ResultBadge result={row.original.last_result} />,
       },
       {
         accessorKey: 'status',
         header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
-        cell: ({ row }) => {
-          const status = statusConfig[row.original.status] ?? statusConfig.draft
-          return (
-            <Badge className={`${status.bgColor} ${status.color} border-0`}>
-              {status.icon}
-              <span className="ms-1 capitalize">{row.original.status}</span>
-            </Badge>
-          )
-        },
+        cell: ({ row }) => <StatusBadge status={row.original.status} />,
       },
       {
         id: 'actions',
-        header: 'Actions',
         enableSorting: false,
         enableHiding: false,
         cell: ({ row }) => (
@@ -230,100 +175,45 @@ export default function AttackSimulationPage() {
 
   const simulations = data?.data ?? []
 
+  const metrics: MetricStripItem[] = [
+    { key: 'total', label: 'Simulations', value: stats.total },
+    { key: 'active', label: 'Active', value: stats.active },
+    { key: 'caught', label: 'Detected or prevented', value: stats.completed },
+    { key: 'bypassed', label: 'Bypassed', value: stats.failed, tone: 'danger' },
+    { key: 'rate', label: 'Avg detection rate', value: `${Math.round(stats.avgDetection)}%` },
+  ]
+
   return (
     <Main>
       <PageHeader
-        title="Breach & Attack Simulation"
-        description="Validate security controls against real-world attack techniques"
+        title="Attack simulation"
+        description="Run MITRE ATT&CK-mapped attack techniques to check that your controls catch them."
       >
         <Button size="sm" disabled title="Simulation creation is coming soon">
-          <Plus className="me-2 h-4 w-4" />
-          New Simulation
+          <Plus className="h-4 w-4 sm:me-2" />
+          <span className="hidden sm:inline">New simulation</span>
         </Button>
       </PageHeader>
 
-      {/* Stats */}
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatsCard title="Total Simulations" value={stats.total} icon={Swords} />
-        <StatsCard
-          title="Detected / Prevented"
-          value={stats.completed}
-          valueClassName="text-green-600"
-          icon={CheckCircle}
-        />
-        <StatsCard
-          title="Bypassed"
-          value={stats.failed}
-          valueClassName="text-red-600"
-          icon={XCircle}
-        />
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription className="flex items-center gap-2">
-              <Shield className="h-4 w-4" />
-              Avg Detection Rate
-            </CardDescription>
-            <CardTitle className="text-3xl">{Math.round(stats.avgDetection)}%</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Progress value={stats.avgDetection} className="h-2" />
-          </CardContent>
-        </Card>
+      <MetricStrip className="mt-5" items={metrics} />
+
+      <div className="mt-5">
+        {simulations.length === 0 ? (
+          <EmptyState
+            icon={Swords}
+            title="No simulations yet"
+            description="Simulations appear here once they are created for this tenant."
+          />
+        ) : (
+          <DataTable
+            columns={columns}
+            data={simulations}
+            searchPlaceholder="Search simulations…"
+            emptyMessage="No simulations match"
+            emptyDescription="Try a different search."
+          />
+        )}
       </div>
-
-      {/* Simulations Table */}
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle className="text-base">Attack Simulations</CardTitle>
-          <CardDescription>MITRE ATT&CK mapped simulation campaigns</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {simulations.length === 0 ? (
-            <EmptyState />
-          ) : (
-            <DataTable
-              columns={columns}
-              data={simulations}
-              searchPlaceholder="Search simulations..."
-            />
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Quick Actions */}
-      <Card className="mt-6">
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <CardTitle className="text-base">Quick Simulations</CardTitle>
-            <Badge variant="secondary">Coming soon</Badge>
-          </div>
-          <CardDescription>
-            Common attack scenarios — one-click runs are coming soon
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-            {[
-              { name: 'Phishing Test', icon: Target, desc: 'Email-based attack' },
-              { name: 'Ransomware Sim', icon: AlertTriangle, desc: 'Encryption attack' },
-              { name: 'Network Scan', icon: Shield, desc: 'Port discovery' },
-              { name: 'Data Leak Test', icon: Swords, desc: 'Exfiltration attempt' },
-            ].map((action) => (
-              <Card key={action.name} className="opacity-60" aria-disabled="true">
-                <CardContent className="flex items-center gap-3 p-4">
-                  <div className="bg-primary/10 flex h-10 w-10 items-center justify-center rounded-lg">
-                    <action.icon className="text-primary h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">{action.name}</p>
-                    <p className="text-muted-foreground text-xs">{action.desc}</p>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
     </Main>
   )
 }

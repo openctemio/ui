@@ -14,7 +14,7 @@
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import type { ColumnDef } from '@tanstack/react-table'
-import { Plus, Eye, Trash2, ShieldAlert, Loader2 } from 'lucide-react'
+import { Plus, Eye, Trash2, ShieldAlert, Loader2, AlertCircle, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 
 import {
@@ -33,6 +33,7 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Sheet, SheetContent } from '@/components/ui/sheet'
 import {
   Dialog,
@@ -110,17 +111,17 @@ export function IOCsPanel() {
   const columns = useMemo<ColumnDef<IOC>[]>(
     () => [
       {
-        accessorKey: 'type',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Type" />,
-        cell: ({ row }) => (
-          <Badge variant="outline">{IOC_TYPE_LABELS[row.original.type] ?? row.original.type}</Badge>
-        ),
-      },
-      {
         accessorKey: 'value',
         header: ({ column }) => <DataTableColumnHeader column={column} title="Value" />,
         cell: ({ row }) => (
           <span className="font-mono text-xs break-all">{row.original.value}</span>
+        ),
+      },
+      {
+        accessorKey: 'type',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Type" />,
+        cell: ({ row }) => (
+          <Badge variant="outline">{IOC_TYPE_LABELS[row.original.type] ?? row.original.type}</Badge>
         ),
       },
       {
@@ -151,7 +152,7 @@ export function IOCsPanel() {
       },
       {
         accessorKey: 'last_seen_at',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Last Seen" />,
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Last seen" />,
         cell: ({ row }) => (
           <span className="text-sm text-muted-foreground">
             {formatDate(row.original.last_seen_at)}
@@ -190,67 +191,79 @@ export function IOCsPanel() {
     )
   }
 
+  const filterSelects = (
+    <>
+      <Select value={typeFilter} onValueChange={setTypeFilter}>
+        <SelectTrigger className="h-9 w-36" aria-label="Filter by type">
+          <SelectValue placeholder="All types" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value={ALL}>All types</SelectItem>
+          {IOC_TYPES.map((t) => (
+            <SelectItem key={t} value={t}>
+              {IOC_TYPE_LABELS[t]}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Select value={statusFilter} onValueChange={setStatusFilter}>
+        <SelectTrigger className="h-9 w-36" aria-label="Filter by status">
+          <SelectValue placeholder="All statuses" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value={ALL}>All statuses</SelectItem>
+          <SelectItem value="active">Active</SelectItem>
+          <SelectItem value="inactive">Inactive</SelectItem>
+        </SelectContent>
+      </Select>
+    </>
+  )
+
   return (
-    <div className="space-y-4">
+    <>
       <PageHeader
-        title="Indicators of Compromise"
-        description="Tenant IOC catalogue correlated against runtime telemetry to auto-reopen findings."
+        title="Indicators of compromise"
+        description="Indicators correlated against runtime telemetry to reopen the findings they belong to."
       >
-        <div className="flex flex-wrap items-center gap-3">
-          <Select value={typeFilter} onValueChange={setTypeFilter}>
-            <SelectTrigger className="w-[150px]">
-              <SelectValue placeholder="All types" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL}>All types</SelectItem>
-              {IOC_TYPES.map((t) => (
-                <SelectItem key={t} value={t}>
-                  {IOC_TYPE_LABELS[t]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[140px]">
-              <SelectValue placeholder="All statuses" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL}>All statuses</SelectItem>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="inactive">Inactive</SelectItem>
-            </SelectContent>
-          </Select>
-          <Can permission={Permission.ThreatIntelWrite} mode="disable">
-            <Button onClick={() => setCreateOpen(true)}>
-              <Plus className="me-2 h-4 w-4" />
-              Add IOC
-            </Button>
-          </Can>
-        </div>
+        <Can permission={Permission.ThreatIntelWrite} mode="disable">
+          <Button size="sm" onClick={() => setCreateOpen(true)}>
+            <Plus className="h-4 w-4 sm:me-2" />
+            <span className="hidden sm:inline">Add IOC</span>
+          </Button>
+        </Can>
       </PageHeader>
 
-      {isLoading ? (
-        <div className="space-y-2">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Skeleton key={i} className="h-12 w-full" />
-          ))}
-        </div>
-      ) : error ? (
-        <EmptyState
-          icon={ShieldAlert}
-          title="Failed to load indicators"
-          description={getErrorMessage(error, 'Please try again.')}
-        />
-      ) : (
-        <DataTable
-          columns={columns}
-          data={iocs}
-          searchPlaceholder="Search indicators..."
-          emptyMessage="No indicators"
-          emptyDescription="Add an indicator of compromise to start correlating runtime telemetry."
-          onRowClick={(row) => setSelectedId(row.id)}
-        />
-      )}
+      <div className="mt-5">
+        {isLoading ? (
+          <div className="space-y-2">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} className="h-12 w-full" />
+            ))}
+          </div>
+        ) : error ? (
+          <Alert variant="destructive">
+            <AlertCircle />
+            <AlertTitle>Failed to load indicators</AlertTitle>
+            <AlertDescription>
+              <p>{getErrorMessage(error, 'Please try again.')}</p>
+              <Button variant="outline" size="sm" className="mt-2" onClick={() => mutate()}>
+                <RefreshCw className="me-2 h-4 w-4" />
+                Retry
+              </Button>
+            </AlertDescription>
+          </Alert>
+        ) : (
+          <DataTable
+            columns={columns}
+            data={iocs}
+            searchPlaceholder="Search indicators…"
+            emptyMessage="No indicators"
+            emptyDescription="Add an indicator of compromise to start correlating runtime telemetry."
+            onRowClick={(row) => setSelectedId(row.id)}
+            toolbarEnd={filterSelects}
+          />
+        )}
+      </div>
 
       <IOCDetailSheet
         ioc={selected}
@@ -272,7 +285,7 @@ export function IOCsPanel() {
           mutate()
         }}
       />
-    </div>
+    </>
   )
 }
 
@@ -438,7 +451,7 @@ function CreateIOCDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Add Indicator</DialogTitle>
+          <DialogTitle>Add indicator</DialogTitle>
           <DialogDescription>
             Add an IOC to correlate against runtime telemetry. The value must match the selected
             type&apos;s format.
