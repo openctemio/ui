@@ -3,7 +3,8 @@
 import useSWR from 'swr'
 import { get } from '@/lib/api/client'
 import { Badge } from '@/components/ui/badge'
-import { GitMerge, ArrowRight, Clock } from 'lucide-react'
+import { GitMerge, ArrowRight, Clock, History } from 'lucide-react'
+import { DetailSection } from '@/features/shared'
 
 interface MergeLogEntry {
   id: string
@@ -36,16 +37,15 @@ export function AssetMergeHistory({ assetId }: AssetMergeHistoryProps) {
   if (!entries || entries.length === 0) return null
 
   return (
-    <div className="space-y-2">
-      <p className="text-xs font-medium text-muted-foreground">Identity History</p>
+    <DetailSection title="Identity history" icon={History} count={entries.length}>
       <div className="space-y-2">
         {entries.map((entry) => (
           <div key={entry.id} className="flex items-start gap-2 text-xs">
             <div className="mt-0.5 shrink-0">
               {entry.action === 'merge' ? (
-                <GitMerge className="h-3.5 w-3.5 text-blue-500" />
+                <GitMerge className="h-3.5 w-3.5 text-muted-foreground" />
               ) : (
-                <ArrowRight className="h-3.5 w-3.5 text-amber-500" />
+                <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
               )}
             </div>
             <div className="min-w-0 flex-1">
@@ -76,7 +76,7 @@ export function AssetMergeHistory({ assetId }: AssetMergeHistoryProps) {
           </div>
         ))}
       </div>
-    </div>
+    </DetailSection>
   )
 }
 

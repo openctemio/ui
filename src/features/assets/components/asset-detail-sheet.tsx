@@ -8,15 +8,21 @@
 'use client'
 
 import * as React from 'react'
-import { Link2 } from 'lucide-react'
+import { FileText, UserRound } from 'lucide-react'
 import { toast } from 'sonner'
 import { copyToClipboard } from '@/lib/clipboard'
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
-import { cn } from '@/lib/utils'
-import { SheetDetailToolbar } from '@/features/shared'
+import {
+  SheetDetailToolbar,
+  DetailSheetHeader,
+  DetailSections,
+  DetailSection,
+  DetailField,
+  DetailFieldGrid,
+} from '@/features/shared'
 import { AssetStatusBadge, LifecycleSnoozeMenu } from '@/features/asset-lifecycle'
 import { AssetFindings } from './asset-findings'
 import {
@@ -49,13 +55,16 @@ interface AssetDetailSheetProps<T extends Asset> {
   /** Icon component to display in header */
   icon: React.ElementType
 
-  /** Icon color class (e.g., "text-blue-500") */
-  iconColor: string
+  /**
+   * @deprecated Ignored. The header icon sits in a neutral tile; per-type
+   * colours are gone (they rendered a solid white tile in dark mode).
+   */
+  iconColor?: string
 
-  /** Gradient start color class (e.g., "from-blue-500/20") */
-  gradientFrom: string
+  /** @deprecated Ignored. The sheet header no longer has a gradient. */
+  gradientFrom?: string
 
-  /** Gradient via color class (optional, e.g., "via-blue-500/10") */
+  /** @deprecated Ignored. The sheet header no longer has a gradient. */
   gradientVia?: string
 
   /** Callback when Edit button is clicked */
@@ -142,6 +151,14 @@ function daysSinceLastSeen(iso?: string | null): number | undefined {
   return Math.floor(diffMs / (1000 * 60 * 60 * 24))
 }
 
+function TabCount({ value }: { value: number }) {
+  return (
+    <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] leading-none font-semibold tabular-nums">
+      {value}
+    </span>
+  )
+}
+
 // ============================================
 // Component
 // ============================================
@@ -151,9 +168,6 @@ export function AssetDetailSheet<T extends Asset>({
   open,
   onOpenChange,
   icon: Icon,
-  iconColor,
-  gradientFrom,
-  gradientVia = 'via-transparent',
   onEdit,
   onDelete,
   canEdit = true,
@@ -183,53 +197,24 @@ export function AssetDetailSheet<T extends Asset>({
 
   if (!asset) return null
 
-  // Calculate icon background color from text color
-  const iconBgColor = iconColor.replace('text-', 'bg-').replace(/(\d+)$/, '$1/20')
-
   // Determine if we should show relationships
   const hasRelationships = relationships.length > 0
-  const shouldShowRelationshipTab = true
   const shouldShowRelationshipPreview = showRelationshipPreview ?? hasRelationships
 
-  // Calculate total number of tabs
-  const tabCount =
-    1 +
-    (showFindingsTab ? 1 : 0) +
-    (showDetailsTab ? 1 : 0) +
-    (extraTabs?.length || 0) +
-    (shouldShowRelationshipTab ? 1 : 0)
-  // Mobile: horizontally scrollable flex strip — every tab keeps its
-  // natural width (text + badge fit without colliding) and the user
-  // swipes left/right to reveal more. Previously the tabs used a
-  // grid-cols-N layout that crammed 5 columns into a ~360px viewport,
-  // making labels overlap (Owner|Relations|Findings ran together).
-  //
-  // Tablet+: switch back to a fixed grid where every tab is the same
-  // width — looks balanced when there's actual horizontal room.
-  const tabGridClass =
-    tabCount === 2
-      ? 'sm:grid-cols-2'
-      : tabCount === 3
-        ? 'sm:grid-cols-3'
-        : tabCount === 4
-          ? 'sm:grid-cols-4'
-          : tabCount === 5
-            ? 'sm:grid-cols-5'
-            : 'sm:grid-cols-3'
+  // Every tab body scrolls on its own below the pinned header + tab strip.
+  const tabBody = 'mt-0 flex-1 min-h-0 overflow-y-auto px-4 pt-4 pb-6 sm:px-6'
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       {/* The shell is a flex column with no own scroll. The header and the
           tab strip are shrink-0 (pinned), and only the active TabsContent
-          scrolls. This replaces the previous "scroll the whole sheet"
-          behaviour where the header + tabs scrolled out of view together
-          with the body content. */}
+          scrolls. Layout follows the Finding details drawer. */}
       <SheetContent
-        className="sm:max-w-xl flex flex-col p-0 overflow-hidden [&>button]:hidden"
+        className="flex w-full flex-col overflow-hidden p-0 sm:max-w-xl [&>button]:hidden"
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <VisuallyHidden>
-          <SheetTitle>{assetTypeName} Details</SheetTitle>
+          <SheetTitle>{assetTypeName} details</SheetTitle>
           <SheetDescription>
             {assetTypeName} detail panel for {asset.name}. Use the tabs to view stats, findings,
             owners, relationships and metadata.
@@ -238,12 +223,9 @@ export function AssetDetailSheet<T extends Asset>({
 
         {/* Header — pinned at the top */}
         <TooltipProvider>
-          <div
-            className={cn('bg-gradient-to-br to-transparent shrink-0', gradientFrom, gradientVia)}
-          >
-            {/* Toolbar: title left, actions right */}
+          <div className="shrink-0">
             <SheetDetailToolbar
-              title={`${assetTypeName} Details`}
+              title={`${assetTypeName} details`}
               onClose={() => onOpenChange(false)}
               onEdit={canEdit ? onEdit : undefined}
               onCopyId={() => {
@@ -252,179 +234,124 @@ export function AssetDetailSheet<T extends Asset>({
               }}
             />
 
-            <div className="px-6 pb-4">
-              <div className="flex items-center gap-3 mb-3">
-                <div
-                  className={cn(
-                    'h-12 w-12 rounded-xl flex items-center justify-center',
-                    iconBgColor
-                  )}
-                >
-                  <Icon className={cn('h-6 w-6', iconColor)} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h2 className="text-xl font-bold break-words" title={asset.name}>
-                    {asset.name}
-                  </h2>
-                  <p className="text-sm text-muted-foreground truncate">
-                    {subtitle || asset.groupName}
-                  </p>
-                </div>
+            {/* Classification badges — scope/exposure/criticality plus the
+                CTEM Scoping register signals (control-plane flag + CIA
+                business-impact ratings), so the edit → verify loop is closed
+                (api #467). Lifecycle snooze shows on every asset so operators
+                can pause the worker during known offline windows. */}
+            <DetailSheetHeader
+              icon={Icon}
+              title={asset.name}
+              subtitle={subtitle || asset.groupName}
+              status={
                 <AssetStatusBadge
                   status={asset.status}
                   daysSinceLastSeen={daysSinceLastSeen(asset.lastSeen)}
                 />
-              </div>
-
-              {/* Classification Badges — scope/exposure/criticality plus the
-                  CTEM Scoping register signals (control-plane flag + CIA
-                  business-impact ratings). These were editable but never shown
-                  read-only, so the edit → verify loop was broken (api #467). */}
-              <div className="flex flex-wrap items-center gap-2 mb-2">
-                <ClassificationBadges
-                  scope={asset.scope}
-                  exposure={asset.exposure}
-                  criticality={asset.criticality}
-                  size="md"
-                  showTooltips
-                />
-                {asset.isControlPlane && <ControlPlaneBadge size="md" />}
-                <CIABadges
-                  confidentiality={asset.impactConfidentiality}
-                  integrity={asset.impactIntegrity}
-                  availability={asset.impactAvailability}
-                  size="md"
-                />
-              </div>
-
-              {/* Quick Actions (secondary buttons below header).
-                  Lifecycle snooze shows on every asset so operators
-                  can proactively pause the worker during known
-                  offline windows (rack migrations, planned
-                  maintenance) — not only after the asset has been
-                  flagged stale. The reactivate-on-snooze auto-flag
-                  inside the menu only fires when status warrants it. */}
-              <div className="flex flex-wrap gap-2 mt-4">
-                {quickActions}
-                <LifecycleSnoozeMenu
-                  assetID={asset.id}
-                  isStaleOrInactive={asset.status === 'stale' || asset.status === 'inactive'}
-                />
-              </div>
-            </div>
+              }
+              badges={
+                <>
+                  <ClassificationBadges
+                    scope={asset.scope}
+                    exposure={asset.exposure}
+                    criticality={asset.criticality}
+                    size="md"
+                    showTooltips
+                    className="flex-wrap"
+                  />
+                  {asset.isControlPlane && <ControlPlaneBadge size="md" />}
+                  <CIABadges
+                    confidentiality={asset.impactConfidentiality}
+                    integrity={asset.impactIntegrity}
+                    availability={asset.impactAvailability}
+                    size="md"
+                    className="flex-wrap"
+                  />
+                </>
+              }
+              actions={
+                <>
+                  {quickActions}
+                  <LifecycleSnoozeMenu
+                    assetID={asset.id}
+                    isStaleOrInactive={asset.status === 'stale' || asset.status === 'inactive'}
+                  />
+                </>
+              }
+              className="pb-2"
+            />
           </div>
         </TooltipProvider>
 
-        {/* Tabs — flex-1 + min-h-0 lets the Tabs region take all the
-            remaining vertical space below the header. The TabsList is
-            pinned (shrink-0), and each TabsContent grows + scrolls
-            independently. min-h-0 is critical: without it, flex-1 inside
-            a flex column will refuse to shrink below its content height,
-            and you get the original "scroll the whole sheet" behaviour. */}
+        {/* Tabs — flex-1 + min-h-0 lets the Tabs region take the remaining
+            height; the default line TabsList scrolls horizontally on phones. */}
         <Tabs
           value={activeTab}
           onValueChange={setActiveTab}
-          className="flex flex-col flex-1 min-h-0 px-6 pb-6"
+          className="flex min-h-0 flex-1 flex-col gap-0"
         >
-          {/* Mobile: flex with horizontal scroll. The TabsList itself is
-              wrapped so the scroll-shadow can sit just inside the sheet
-              edges. whitespace-nowrap on each trigger keeps multi-word
-              labels from wrapping. sm: switches back to a fixed grid. */}
-          <div className="-mx-6 px-6 mb-4 shrink-0 overflow-x-auto no-scrollbar sm:mx-0 sm:px-0">
-            <TabsList
-              className={cn('inline-flex w-max gap-1 sm:grid sm:w-full sm:gap-0', tabGridClass)}
-            >
-              <TabsTrigger value="overview" className="whitespace-nowrap">
-                Overview
-              </TabsTrigger>
+          <div className="shrink-0 px-4 sm:px-6">
+            <TabsList>
+              <TabsTrigger value="overview">Overview</TabsTrigger>
               {extraTabs?.map((tab) => (
-                <TabsTrigger key={tab.value} value={tab.value} className="whitespace-nowrap">
+                <TabsTrigger key={tab.value} value={tab.value}>
                   {tab.label}
                 </TabsTrigger>
               ))}
-              {shouldShowRelationshipTab && (
-                <TabsTrigger value="relationships" className="gap-1 whitespace-nowrap">
-                  <Link2 className="h-3.5 w-3.5" />
-                  Relations
-                  {relationships.length > 0 && (
-                    <span className="ms-1 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-semibold leading-none">
-                      {relationships.length}
-                    </span>
-                  )}
-                </TabsTrigger>
-              )}
+              <TabsTrigger value="relationships">
+                Relations
+                {relationships.length > 0 && <TabCount value={relationships.length} />}
+              </TabsTrigger>
               {showFindingsTab && (
-                <TabsTrigger value="findings" className="gap-1 whitespace-nowrap">
+                <TabsTrigger value="findings">
                   Findings
-                  {asset.findingCount > 0 && (
-                    <span className="ms-1 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-semibold leading-none">
-                      {asset.findingCount}
-                    </span>
-                  )}
+                  {asset.findingCount > 0 && <TabCount value={asset.findingCount} />}
                 </TabsTrigger>
               )}
-              {showDetailsTab && (
-                <TabsTrigger value="details" className="whitespace-nowrap">
-                  Details
-                </TabsTrigger>
-              )}
+              {showDetailsTab && <TabsTrigger value="details">Details</TabsTrigger>}
             </TabsList>
           </div>
 
-          {/* Overview Tab — flex-1 + min-h-0 + overflow-y-auto so this
-              tab body scrolls inside the sheet shell instead of growing
-              the whole sheet. Each TabsContent below applies the same
-              pattern. */}
-          <TabsContent
-            value="overview"
-            className="space-y-4 mt-0 flex-1 min-h-0 overflow-y-auto pe-1"
-          >
-            {statsContent}
+          <TabsContent value="overview" className={tabBody}>
+            <DetailSections>
+              {statsContent}
 
-            {/* Description + Owner Reference — top-level Asset fields that
-                are NOT part of per-type metadata. The form lets users edit
-                these but the previous version of the sheet never displayed
-                them, so the workflow was broken (edit → can't verify). */}
-            {(asset.description || asset.ownerRef) && (
-              <div className="rounded-xl border bg-card p-4 space-y-3">
-                {asset.description && (
-                  <div>
-                    <p className="text-xs text-muted-foreground">Description</p>
-                    <p className="text-sm mt-0.5 whitespace-pre-wrap">{asset.description}</p>
-                  </div>
-                )}
-                {asset.ownerRef && (
-                  <div>
-                    <p className="text-xs text-muted-foreground">Owner Reference</p>
-                    <p className="text-sm mt-0.5 font-medium">{asset.ownerRef}</p>
-                  </div>
-                )}
-              </div>
-            )}
+              {/* Description + owner reference — top-level Asset fields that
+                  are not part of per-type metadata. */}
+              {asset.description && (
+                <DetailSection title="Description" icon={FileText}>
+                  <p className="text-sm leading-relaxed whitespace-pre-wrap text-muted-foreground">
+                    {asset.description}
+                  </p>
+                </DetailSection>
+              )}
+              {asset.ownerRef && (
+                <DetailSection title="Ownership" icon={UserRound}>
+                  <DetailFieldGrid>
+                    <DetailField label="Owner reference">{asset.ownerRef}</DetailField>
+                  </DetailFieldGrid>
+                </DetailSection>
+              )}
 
-            {overviewContent}
+              {overviewContent}
 
-            {/* Relationship Preview in Overview */}
-            {shouldShowRelationshipPreview && (
-              <RelationshipPreview
-                relationships={relationships}
-                currentAssetId={asset.id}
-                onViewAll={() => setActiveTab('relationships')}
-                onAssetClick={onNavigateToAsset}
-                maxItems={3}
-              />
-            )}
+              {shouldShowRelationshipPreview && (
+                <RelationshipPreview
+                  relationships={relationships}
+                  currentAssetId={asset.id}
+                  onViewAll={() => setActiveTab('relationships')}
+                  onAssetClick={onNavigateToAsset}
+                  maxItems={3}
+                />
+              )}
 
-            <TagsSection tags={asset.tags} suggestions={tagSuggestions} onSave={onUpdateTags} />
+              <TagsSection tags={asset.tags} suggestions={tagSuggestions} onSave={onUpdateTags} />
+            </DetailSections>
           </TabsContent>
 
           {/* Extra Tabs — same flex-1 + scroll pattern as Overview */}
           {extraTabs?.map((tab) => (
-            <TabsContent
-              key={tab.value}
-              value={tab.value}
-              className="mt-0 flex-1 min-h-0 overflow-y-auto pe-1"
-            >
+            <TabsContent key={tab.value} value={tab.value} className={tabBody}>
               {tab.content}
             </TabsContent>
           ))}
@@ -433,38 +360,37 @@ export function AssetDetailSheet<T extends Asset>({
               Edit / Delete dialogs internally. The only callback we
               forward is onNavigateToAsset because the sheet itself
               cannot swap its own selectedAsset. */}
-          {shouldShowRelationshipTab && (
-            <TabsContent value="relationships" className="mt-0 flex-1 min-h-0 overflow-y-auto pe-1">
-              <AssetRelationshipsTab
-                assetId={asset.id}
-                sourceAsset={{ id: asset.id, name: asset.name, type: asset.type }}
-                onNavigateToAsset={onNavigateToAsset}
-              />
-            </TabsContent>
-          )}
+          <TabsContent value="relationships" className={tabBody}>
+            <AssetRelationshipsTab
+              assetId={asset.id}
+              sourceAsset={{ id: asset.id, name: asset.name, type: asset.type }}
+              onNavigateToAsset={onNavigateToAsset}
+            />
+          </TabsContent>
 
           {/* Findings Tab */}
           {showFindingsTab && (
-            <TabsContent value="findings" className="mt-0 flex-1 min-h-0 overflow-y-auto pe-1">
+            <TabsContent value="findings" className={tabBody}>
               <AssetFindings assetId={asset.id} assetName={asset.name} />
             </TabsContent>
           )}
 
           {/* Details Tab */}
           {showDetailsTab && (
-            <TabsContent
-              value="details"
-              className="space-y-4 mt-0 flex-1 min-h-0 overflow-y-auto pe-1"
-            >
-              <TimelineSection
-                firstSeen={asset.firstSeen}
-                lastSeen={asset.lastSeen}
-                createdAt={asset.createdAt}
-                updatedAt={asset.updatedAt}
-              />
-              <TechnicalDetailsSection id={asset.id} type={asset.type} groupId={asset.groupId} />
-              <AssetMergeHistory assetId={asset.id} />
-              {canDelete && <DangerZoneSection onDelete={onDelete} assetTypeName={assetTypeName} />}
+            <TabsContent value="details" className={tabBody}>
+              <DetailSections>
+                <TimelineSection
+                  firstSeen={asset.firstSeen}
+                  lastSeen={asset.lastSeen}
+                  createdAt={asset.createdAt}
+                  updatedAt={asset.updatedAt}
+                />
+                <TechnicalDetailsSection id={asset.id} type={asset.type} groupId={asset.groupId} />
+                <AssetMergeHistory assetId={asset.id} />
+                {canDelete && (
+                  <DangerZoneSection onDelete={onDelete} assetTypeName={assetTypeName} />
+                )}
+              </DetailSections>
             </TabsContent>
           )}
         </Tabs>

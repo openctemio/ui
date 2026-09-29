@@ -317,8 +317,6 @@ export function InventoryTable({
         open={!!selectedAsset}
         onOpenChange={(open) => !open && setSelectedAsset(null)}
         icon={Package}
-        iconColor="text-primary"
-        gradientFrom="from-primary/20"
         assetTypeName="Asset"
         // Inventory is a read-only lens: edit/delete happen on the per-type
         // pages, so the sheet's danger-zone actions are gated off here.
