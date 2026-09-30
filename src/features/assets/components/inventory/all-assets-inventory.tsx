@@ -386,6 +386,7 @@ export function AllAssetsInventory({ viewSwitcher }: { viewSwitcher?: ReactNode 
             <InventoryTableSkeleton />
           ) : (
             <InventoryTable
+              onAssetUpdated={() => void mutate()}
               assets={assets}
               total={total}
               page={page}

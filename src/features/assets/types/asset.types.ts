@@ -1025,6 +1025,23 @@ export interface Asset {
   isControlPlane?: boolean
   riskScore: number // 0-100, calculated from criticality, exposure, and findings
   findingCount: number
+  /** Open findings per severity (assets.finding_severity_counts). */
+  findingSeverityCounts?: Partial<Record<'critical' | 'high' | 'medium' | 'low' | 'info', number>>
+  /** Parent asset, e.g. the domain of a subdomain. */
+  parentId?: string
+  /** ID in the source system (cloud provider, SCM, scanner). */
+  externalId?: string
+  /** How the asset entered the inventory: agent, integration, manual, import... */
+  discoverySource?: string
+  /** Tool that discovered it, e.g. "gitleaks", "subfinder". */
+  discoveryTool?: string
+  discoveredAt?: string
+  complianceScope?: string[]
+  dataClassification?: string
+  piiDataExposed?: boolean
+  phiDataExposed?: boolean
+  syncStatus?: string
+  lastSyncedAt?: string
   groupId?: string // Optional - asset can be ungrouped
   groupName?: string
   provider?: string // SCM provider or asset source (github, gitlab, etc.)
