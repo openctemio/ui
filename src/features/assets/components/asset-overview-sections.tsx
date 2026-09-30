@@ -140,7 +140,7 @@ export function OwnershipSection({ asset, onManageOwners }: OwnershipSectionProp
         </DetailFieldGrid>
       ) : (
         <p className="flex items-center gap-2 text-sm text-muted-foreground">
-          <AlertTriangle className="h-4 w-4 shrink-0 text-amber-500" />
+          <AlertTriangle className="h-4 w-4 shrink-0 text-warning" />
           No owner assigned. Findings on this asset have no one to be routed to.
         </p>
       )}
@@ -236,7 +236,7 @@ export function DiscoverySection({ asset }: { asset: Asset }) {
         </DetailField>
       </DetailFieldGrid>
       {isStale && (
-        <p className="mt-3 flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400">
+        <p className="mt-3 flex items-center gap-2 text-sm text-warning">
           <AlertTriangle className="h-4 w-4 shrink-0" />
           Not observed for {staleDays} days. Its findings may be out of date; rescan to confirm.
         </p>
