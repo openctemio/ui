@@ -10,6 +10,9 @@ import {
   exposureTrendDelta,
   exposureTrendState,
   downgradeState,
+  formatDurationHours,
+  formatRatePct,
+  countCaption,
 } from '../program-health'
 
 describe('remediationCompletionPct', () => {
@@ -114,5 +117,36 @@ describe('downgradeState', () => {
     expect(downgradeState(55, 40)).toBe('warn')
     expect(downgradeState(5, 40)).toBe('crit')
     expect(downgradeState(80, 40)).toBe('crit')
+  })
+})
+
+describe('program metrics formatters', () => {
+  it('render "not measurable" (null / undefined / NaN) as null, never 0', () => {
+    expect(formatDurationHours(null)).toBeNull()
+    expect(formatDurationHours(undefined)).toBeNull()
+    expect(formatDurationHours(Number.NaN)).toBeNull()
+    expect(formatRatePct(null)).toBeNull()
+    expect(formatRatePct(undefined)).toBeNull()
+  })
+  it('keep a real zero as zero', () => {
+    expect(formatDurationHours(0)).toBe('0 h')
+    expect(formatRatePct(0)).toBe('0%')
+  })
+  it('show hours under 48 h and days from 48 h', () => {
+    expect(formatDurationHours(9)).toBe('9 h')
+    expect(formatDurationHours(16.5)).toBe('16.5 h')
+    expect(formatDurationHours(47.96)).toBe('48 h')
+    expect(formatDurationHours(48)).toBe('2 d')
+    expect(formatDurationHours(36 * 24 + 12)).toBe('36.5 d')
+  })
+  it('format rates to one decimal', () => {
+    expect(formatRatePct(75)).toBe('75%')
+    expect(formatRatePct(100 / 3)).toBe('33.3%')
+    expect(formatRatePct(100)).toBe('100%')
+  })
+  it('pluralise counts', () => {
+    expect(countCaption(1, 'asset')).toBe('1 asset')
+    expect(countCaption(4, 'asset')).toBe('4 assets')
+    expect(countCaption(undefined, 'finding')).toBe('0 findings')
   })
 })

@@ -43,6 +43,7 @@ import {
   useRiskTrend,
   useValidationCoverage,
 } from '../hooks/use-ctem-dashboard'
+import { ProgramMetricsSection } from './program-metrics-section'
 import {
   type MetricStatus,
   remediationCompletionPct,
@@ -384,6 +385,8 @@ export function ProgramHealthView() {
                 <MetricCard key={m.id} metric={m} />
               ))}
             </section>
+
+            <ProgramMetricsSection tenantId={tenantId} days={Number(period)} />
 
             {/* Exposure-count trend chart (the guide's day-60 down-slope). */}
             <Card className="mt-5">

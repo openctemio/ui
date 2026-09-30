@@ -17,6 +17,7 @@ import {
   useExecutiveSummary,
   useScanCoverage,
   useCtemMaturityTrend,
+  useProgramMetrics,
 } from '../use-ctem-dashboard'
 
 // Fresh SWR cache per test so a null key in one test can't be served a cached hit.
@@ -33,6 +34,13 @@ describe('use-ctem-dashboard wiring', () => {
     renderHook(() => useRiskTrend('t1', 90), { wrapper })
     await waitFor(() =>
       expect(mockGet).toHaveBeenCalledWith('/api/v1/dashboard/risk-trend?days=90')
+    )
+  })
+
+  it('fetches program-metrics with the days window', async () => {
+    renderHook(() => useProgramMetrics('t1', 30), { wrapper })
+    await waitFor(() =>
+      expect(mockGet).toHaveBeenCalledWith('/api/v1/dashboard/program-metrics?days=30')
     )
   })
 

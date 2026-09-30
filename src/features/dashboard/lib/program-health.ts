@@ -113,3 +113,38 @@ export function downgradeState(
   if (pct >= 10 && pct <= 55) return 'warn'
   return 'crit'
 }
+
+// ============================================
+// CTEM program metrics (GET /dashboard/program-metrics)
+// ============================================
+//
+// The API returns null for a metric with no qualifying sample. These helpers
+// keep that distinction: null / undefined → null (the card shows "—"), and a
+// real 0 stays "0 h" / "0%". Nothing here turns "no data" into 0 or 100%.
+
+/** One decimal, without a trailing ".0" (12 → "12", 9.25 → "9.3"). */
+function oneDecimal(v: number): string {
+  return String(Number(v.toFixed(1)))
+}
+
+/**
+ * Format a duration given in hours: under 48 h as hours, otherwise as days.
+ * Returns null when the value is not measurable.
+ */
+export function formatDurationHours(hours: number | null | undefined): string | null {
+  if (hours === null || hours === undefined || !Number.isFinite(hours) || hours < 0) return null
+  if (hours < 48) return `${oneDecimal(hours)} h`
+  return `${oneDecimal(hours / 24)} d`
+}
+
+/** Format a 0–100 rate. Returns null when the value is not measurable. */
+export function formatRatePct(pct: number | null | undefined): string | null {
+  if (pct === null || pct === undefined || !Number.isFinite(pct)) return null
+  return `${oneDecimal(pct)}%`
+}
+
+/** "n of m" style caption; pluralises the noun. */
+export function countCaption(n: number | null | undefined, noun: string): string {
+  const count = n ?? 0
+  return `${count.toLocaleString()} ${noun}${count === 1 ? '' : 's'}`
+}
