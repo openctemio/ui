@@ -20,7 +20,7 @@ import {
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabsContent, TabsList, TabsTrigger, TabsCount } from '@/components/ui/tabs'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { cn } from '@/lib/utils'
 import { EmptyState } from '@/features/shared'
@@ -241,15 +241,15 @@ export function RelationshipSection({
         <div className="px-4 pt-2">
           <TabsList>
             <TabsTrigger value="all" className="text-xs">
-              All ({relationships.length})
+              All <TabsCount value={relationships.length} />
             </TabsTrigger>
             <TabsTrigger value="outgoing" className="text-xs">
               <ArrowRight className="me-1 h-3 w-3" />
-              Outgoing ({outgoing.length})
+              Outgoing <TabsCount value={outgoing.length} />
             </TabsTrigger>
             <TabsTrigger value="incoming" className="text-xs">
               <ArrowLeft className="me-1 h-3 w-3" />
-              Incoming ({incoming.length})
+              Incoming <TabsCount value={incoming.length} />
             </TabsTrigger>
           </TabsList>
         </div>

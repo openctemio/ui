@@ -30,7 +30,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabsContent, TabsList, TabsTrigger, TabsCount } from '@/components/ui/tabs'
 import { Separator } from '@/components/ui/separator'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
@@ -309,19 +309,11 @@ export function ComponentDetailSheet({ component, open, onOpenChange }: Componen
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="vulnerabilities" className="gap-1">
               CVEs
-              {distinctCveCount > 0 && (
-                <Badge variant="destructive" className="h-5 px-1.5 text-xs ms-1">
-                  {distinctCveCount}
-                </Badge>
-              )}
+              {distinctCveCount > 0 && <TabsCount value={distinctCveCount} tone="danger" />}
             </TabsTrigger>
             <TabsTrigger value="assets" className="gap-1">
               Assets
-              {usedByAssetsCount > 0 && (
-                <Badge variant="secondary" className="h-5 px-1.5 text-xs ms-1">
-                  {usedByAssetsCount}
-                </Badge>
-              )}
+              {usedByAssetsCount > 0 && <TabsCount value={usedByAssetsCount} />}
             </TabsTrigger>
           </TabsList>
 
