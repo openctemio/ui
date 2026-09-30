@@ -8,7 +8,7 @@
 'use client'
 
 import * as React from 'react'
-import { FileText, UserRound } from 'lucide-react'
+import { FileText } from 'lucide-react'
 import { toast } from 'sonner'
 import { copyToClipboard } from '@/lib/clipboard'
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet'
@@ -20,8 +20,6 @@ import {
   DetailSheetHeader,
   DetailSections,
   DetailSection,
-  DetailField,
-  DetailFieldGrid,
 } from '@/features/shared'
 import { AssetStatusBadge, LifecycleSnoozeMenu } from '@/features/asset-lifecycle'
 import { AssetFindings } from './asset-findings'
@@ -34,6 +32,15 @@ import {
 import { AssetMergeHistory } from './asset-merge-history'
 import { RelationshipPreview } from './relationships'
 import { AssetRelationshipsTab } from './asset-relationships-tab'
+import { AssetOwnersTab } from './asset-owners-tab'
+import {
+  RiskSummarySection,
+  OwnershipSection,
+  ExposureSection,
+  DiscoverySection,
+  PropertiesSection,
+} from './asset-overview-sections'
+import { getAssetTypeIcon, getAssetTypeLabel } from '../lib/asset-type-icon'
 import { ClassificationBadges, CIABadges, ControlPlaneBadge } from './classification-badges'
 import { useAssetRelationships } from '../hooks'
 import type { Asset } from '../types/asset.types'
@@ -52,8 +59,8 @@ interface AssetDetailSheetProps<T extends Asset> {
   /** Callback when open state changes */
   onOpenChange: (open: boolean) => void
 
-  /** Icon component to display in header */
-  icon: React.ElementType
+  /** Header icon. Defaults to the asset type's icon. */
+  icon?: React.ElementType
 
   /**
    * @deprecated Ignored. The header icon sits in a neutral tile; per-type
@@ -91,8 +98,18 @@ interface AssetDetailSheetProps<T extends Asset> {
   /** Optional subtitle (shown below name, defaults to groupName) */
   subtitle?: string
 
-  /** Asset type label for display (e.g., "Domain", "Website") */
-  assetTypeName: string
+  /** Asset type label (e.g. "Domain"). Defaults to the asset type's label. */
+  assetTypeName?: string
+
+  /** Show the Owners tab (default: true). */
+  showOwnersTab?: boolean
+
+  /**
+   * Show the generic Properties section (the asset's raw `properties`).
+   * Defaults to true only when the caller passes no `overviewContent`, since
+   * per-type pages render their own curated metadata sections.
+   */
+  showProperties?: boolean
 
   /** Whether to show the Details tab (default: true) */
   showDetailsTab?: boolean
@@ -167,7 +184,7 @@ export function AssetDetailSheet<T extends Asset>({
   asset,
   open,
   onOpenChange,
-  icon: Icon,
+  icon: iconProp,
   onEdit,
   onDelete,
   canEdit = true,
@@ -176,7 +193,9 @@ export function AssetDetailSheet<T extends Asset>({
   statsContent,
   overviewContent,
   subtitle,
-  assetTypeName,
+  assetTypeName: assetTypeNameProp,
+  showOwnersTab = true,
+  showProperties,
   showDetailsTab = true,
   showFindingsTab = true,
   extraTabs,
@@ -196,6 +215,18 @@ export function AssetDetailSheet<T extends Asset>({
   const { relationships } = useAssetRelationships(asset?.id ?? null)
 
   if (!asset) return null
+
+  const Icon = iconProp ?? getAssetTypeIcon(asset.type)
+  const assetTypeName = assetTypeNameProp ?? getAssetTypeLabel(asset.type)
+  const renderProperties = showProperties ?? overviewContent === undefined
+
+  // Control plane is a property of relationship edges, not an asset column: the
+  // asset is control-plane when it is the target of an is_control_plane edge
+  // (same rule as the API's is_control_plane list filter). The API never sends
+  // an asset-level flag, which is why this badge never appeared before.
+  const isControlPlane =
+    asset.isControlPlane ||
+    relationships.some((r) => r.targetAssetId === asset.id && r.isControlPlane)
 
   // Determine if we should show relationships
   const hasRelationships = relationships.length > 0
@@ -242,7 +273,13 @@ export function AssetDetailSheet<T extends Asset>({
             <DetailSheetHeader
               icon={Icon}
               title={asset.name}
-              subtitle={subtitle || asset.groupName}
+              subtitle={
+                subtitle ||
+                asset.groupName ||
+                [assetTypeName, asset.subType && asset.subType !== asset.type && asset.subType]
+                  .filter(Boolean)
+                  .join(' · ')
+              }
               status={
                 <AssetStatusBadge
                   status={asset.status}
@@ -259,7 +296,7 @@ export function AssetDetailSheet<T extends Asset>({
                     showTooltips
                     className="flex-wrap"
                   />
-                  {asset.isControlPlane && <ControlPlaneBadge size="md" />}
+                  {isControlPlane && <ControlPlaneBadge size="md" />}
                   <CIABadges
                     confidentiality={asset.impactConfidentiality}
                     integrity={asset.impactIntegrity}
@@ -293,6 +330,7 @@ export function AssetDetailSheet<T extends Asset>({
           <div className="shrink-0 px-4 sm:px-6">
             <TabsList>
               <TabsTrigger value="overview">Overview</TabsTrigger>
+              {showOwnersTab && <TabsTrigger value="owners">Owners</TabsTrigger>}
               {extraTabs?.map((tab) => (
                 <TabsTrigger key={tab.value} value={tab.value}>
                   {tab.label}
@@ -314,10 +352,20 @@ export function AssetDetailSheet<T extends Asset>({
 
           <TabsContent value="overview" className={tabBody}>
             <DetailSections>
+              {/* Order follows the triage question: how risky, who owns it,
+                  what it is, how exposed, where it came from. */}
+              <RiskSummarySection
+                asset={asset}
+                onViewFindings={showFindingsTab ? () => setActiveTab('findings') : undefined}
+              />
+
               {statsContent}
 
-              {/* Description + owner reference — top-level Asset fields that
-                  are not part of per-type metadata. */}
+              <OwnershipSection
+                asset={asset}
+                onManageOwners={showOwnersTab ? () => setActiveTab('owners') : undefined}
+              />
+
               {asset.description && (
                 <DetailSection title="Description" icon={FileText}>
                   <p className="text-sm leading-relaxed whitespace-pre-wrap text-muted-foreground">
@@ -325,15 +373,14 @@ export function AssetDetailSheet<T extends Asset>({
                   </p>
                 </DetailSection>
               )}
-              {asset.ownerRef && (
-                <DetailSection title="Ownership" icon={UserRound}>
-                  <DetailFieldGrid>
-                    <DetailField label="Owner reference">{asset.ownerRef}</DetailField>
-                  </DetailFieldGrid>
-                </DetailSection>
-              )}
+
+              <ExposureSection asset={asset} isControlPlane={isControlPlane} />
 
               {overviewContent}
+
+              <DiscoverySection asset={asset} />
+
+              {renderProperties && <PropertiesSection properties={asset.metadata} />}
 
               {shouldShowRelationshipPreview && (
                 <RelationshipPreview
@@ -348,6 +395,12 @@ export function AssetDetailSheet<T extends Asset>({
               <TagsSection tags={asset.tags} suggestions={tagSuggestions} onSave={onUpdateTags} />
             </DetailSections>
           </TabsContent>
+
+          {showOwnersTab && (
+            <TabsContent value="owners" className={tabBody}>
+              <AssetOwnersTab assetId={asset.id} />
+            </TabsContent>
+          )}
 
           {/* Extra Tabs — same flex-1 + scroll pattern as Overview */}
           {extraTabs?.map((tab) => (
@@ -385,7 +438,15 @@ export function AssetDetailSheet<T extends Asset>({
                   createdAt={asset.createdAt}
                   updatedAt={asset.updatedAt}
                 />
-                <TechnicalDetailsSection id={asset.id} type={asset.type} groupId={asset.groupId} />
+                <TechnicalDetailsSection
+                  id={asset.id}
+                  type={asset.type}
+                  groupId={asset.groupId}
+                  subType={asset.subType}
+                  provider={asset.provider}
+                  externalId={asset.externalId}
+                  parentId={asset.parentId}
+                />
                 <AssetMergeHistory assetId={asset.id} />
                 {canDelete && (
                   <DangerZoneSection onDelete={onDelete} assetTypeName={assetTypeName} />

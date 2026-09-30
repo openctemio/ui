@@ -117,6 +117,18 @@ interface BackendAsset {
   is_control_plane?: boolean // CTEM Scoping: asset governs other assets (api #467)
   risk_score: number // 0-100
   finding_count: number
+  finding_severity_counts?: Partial<Record<'critical' | 'high' | 'medium' | 'low' | 'info', number>>
+  parent_id?: string
+  external_id?: string
+  discovery_source?: string
+  discovery_tool?: string
+  discovered_at?: string
+  compliance_scope?: string[]
+  data_classification?: string
+  pii_data_exposed?: boolean
+  phi_data_exposed?: boolean
+  sync_status?: string
+  last_synced_at?: string
   description?: string
   owner_ref?: string // Free-text owner reference (team / contact / cost center)
   tags?: string[]
@@ -156,6 +168,20 @@ function transformAsset(backend: BackendAsset): Asset {
     isControlPlane: backend.is_control_plane ?? undefined,
     riskScore: backend.risk_score,
     findingCount: backend.finding_count,
+    // Detail fields the API always sent but the transform used to drop, so the
+    // detail sheet had nothing to show beyond tags.
+    findingSeverityCounts: backend.finding_severity_counts,
+    parentId: backend.parent_id || undefined,
+    externalId: backend.external_id || undefined,
+    discoverySource: backend.discovery_source || undefined,
+    discoveryTool: backend.discovery_tool || undefined,
+    discoveredAt: backend.discovered_at || undefined,
+    complianceScope: backend.compliance_scope?.length ? backend.compliance_scope : undefined,
+    dataClassification: backend.data_classification || undefined,
+    piiDataExposed: backend.pii_data_exposed,
+    phiDataExposed: backend.phi_data_exposed,
+    syncStatus: backend.sync_status || undefined,
+    lastSyncedAt: backend.last_synced_at || undefined,
     metadata: backend.properties || {},
     tags: backend.tags || [],
     primaryOwner: backend.primary_owner

@@ -28,16 +28,13 @@ import {
   Container,
   Globe,
   MonitorSmartphone,
-  Zap,
   Server,
-  Boxes,
   Database,
   GitBranch,
   GitMerge,
   Cloud,
   ShieldCheck,
   Network,
-  HardDrive,
   ArrowRight,
   AlertTriangle,
   TrendingUp,
@@ -49,6 +46,7 @@ import {
 } from 'lucide-react'
 import { useMemo, type ReactNode } from 'react'
 import { useAssetStats } from '@/features/assets/hooks/use-assets'
+import { getAssetTypeIcon } from '@/features/assets/lib/asset-type-icon'
 import {
   ASSET_TYPE_CATEGORIES,
   LEGACY_ASSET_TYPES,
@@ -89,24 +87,6 @@ const ASSET_TYPE_URLS: Record<string, string> = {
   repository: '/assets/repositories',
 }
 
-const ASSET_TYPE_ICONS: Record<string, LucideIcon> = {
-  domain: Globe,
-  subdomain: Globe,
-  certificate: ShieldCheck,
-  ip_address: Network,
-  application: MonitorSmartphone,
-  service: Zap,
-  host: Server,
-  container: Boxes,
-  kubernetes: Container,
-  network: Network,
-  cloud_account: Cloud,
-  storage: HardDrive,
-  database: Database,
-  identity: ShieldCheck,
-  repository: GitBranch,
-  unclassified: Boxes,
-}
 
 // Mapping from asset type to sub-module slug (for filtering based on module visibility)
 const ASSET_TYPE_TO_SUBMODULE: Record<string, string> = {
@@ -387,7 +367,7 @@ export function AssetCategoriesView({ viewSwitcher }: { viewSwitcher?: ReactNode
                       .slice(0, 8)
                       .map((item) => {
                         const TypeIcon =
-                          ASSET_TYPE_ICONS[item.key] || ASSET_TYPE_ICONS[item.countKey] || Container
+                          getAssetTypeIcon(item.key)
                         const count = getItemCount(item.countKey)
 
                         return (

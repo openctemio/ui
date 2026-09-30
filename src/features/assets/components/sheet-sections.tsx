@@ -167,13 +167,29 @@ interface TechnicalDetailsSectionProps {
   id: string
   type: AssetType
   groupId?: string // Optional - asset can be ungrouped
+  subType?: string
+  provider?: string
+  /** ID in the source system (cloud provider, SCM, scanner). */
+  externalId?: string
+  /** Parent asset ID, e.g. the domain of a subdomain. */
+  parentId?: string
 }
 
-export function TechnicalDetailsSection({ id, type, groupId }: TechnicalDetailsSectionProps) {
+export function TechnicalDetailsSection({
+  id,
+  type,
+  groupId,
+  subType,
+  provider,
+  externalId,
+  parentId,
+}: TechnicalDetailsSectionProps) {
   return (
     <DetailSection title="Technical details" icon={Info}>
       <DetailFieldGrid>
-        <DetailField label="Type">{ASSET_TYPE_LABELS[type]}</DetailField>
+        <DetailField label="Type">{ASSET_TYPE_LABELS[type] ?? type}</DetailField>
+        <DetailField label="Sub-type">{subType}</DetailField>
+        {provider && provider !== 'other' && <DetailField label="Provider">{provider}</DetailField>}
         <DetailField label="Group">
           {groupId ? (
             <code className="font-mono text-xs break-all">{groupId}</code>
@@ -183,6 +199,12 @@ export function TechnicalDetailsSection({ id, type, groupId }: TechnicalDetailsS
         </DetailField>
         <DetailField label="ID" full>
           <code className="font-mono text-xs break-all">{id}</code>
+        </DetailField>
+        <DetailField label="External ID" full>
+          {externalId ? <code className="font-mono text-xs break-all">{externalId}</code> : undefined}
+        </DetailField>
+        <DetailField label="Parent asset" full>
+          {parentId ? <code className="font-mono text-xs break-all">{parentId}</code> : undefined}
         </DetailField>
       </DetailFieldGrid>
     </DetailSection>

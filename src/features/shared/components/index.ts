@@ -4,6 +4,7 @@
 
 export * from './severity-badge'
 export * from './risk-score-badge'
+export * from './severity-strip'
 export * from './status-badge'
 export * from './run-status-badge'
 export * from './epss-score-badge'
