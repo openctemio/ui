@@ -8572,6 +8572,75 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/dashboard/program-metrics': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Get CTEM program metrics
+     * @description Returns the ctem.org program KPIs computed from stored data, tenant-scoped and windowed to the last `days` days (1-365, default 90): mean/median time to detect new internet-facing assets, mean/median time to remediate validated (reproduced) exposures, and the owner acceptance rate within the SLA window. A null value means "not measurable" (no qualifying sample) and must be shown as "—", never 0 or 100%. Time-to-break attack paths is intentionally absent: attack paths are computed on demand and no path history is stored.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Window in days (1-365, default 90) */
+          days?: number
+        }
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_internal_app.ProgramMetrics']
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Internal Server Error */
+        500: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+      }
+    }
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/dashboard/stats': {
     parameters: {
       query?: never
@@ -26015,6 +26084,53 @@ export interface components {
       total?: number
       total_pages?: number
     }
+    'github_com_openctemio_api_internal_app.ProgramMetrics': {
+      /**
+       * @description MTTDInternetFacing — mean time to detect new internet-facing assets.
+       *
+       *     Population: non-archived assets whose first_seen falls in the window and
+       *     that are internet-facing now (exposure = 'public' OR
+       *     is_internet_accessible).
+       *
+       *     Clock start: assets.first_seen (the asset entered the inventory).
+       *     Clock stop: the EARLIEST of these per-asset signals that it was known to
+       *     be internet-facing or exposed —
+       *       - assets.exposure_changed_at, when the current exposure is 'public'
+       *         (stamped when the exposure level was classified);
+       *       - asset_state_history rows of change_type exposure_changed /
+       *         internet_exposure_changed whose new_value is 'public' / 'true';
+       *       - the asset's first exposure event (exposure_events.first_seen_at);
+       *       - the asset's first finding (findings.first_detected_at).
+       *     A stop before first_seen counts as 0 h (known at discovery). Assets with
+       *     no stop signal at all are not averaged; they are counted in Unmeasured.
+       *
+       *     Caveat: exposure_changed_at holds the LAST exposure change, so an asset
+       *     that flapped public → private → public is measured to the later flip
+       *     unless an earlier history row / exposure / finding exists.
+       */
+      mttd_internet_facing?: components['schemas']['github_com_openctemio_api_internal_app_module.DurationMetric']
+      /**
+       * @description MTTRValidated — mean time to remediate VALIDATED exposures only.
+       *
+       *     Population: findings with at least one validation_evidence row of
+       *     outcome 'detected' (the validation re-check reproduced the exposure —
+       *     "still exploitable", RFC-011.2 VerdictReproducible), now in status
+       *     resolved / verified, with resolved_at in the window.
+       *
+       *     Clock start: the first 'detected' validation_evidence.created_at.
+       *     Clock stop: findings.resolved_at. Findings resolved before they were
+       *     validated are excluded (the fix did not follow the validation).
+       *     false_positive / accepted / validated_fixed are not remediation and are
+       *     excluded.
+       */
+      mttr_validated?: components['schemas']['github_com_openctemio_api_internal_app_module.DurationMetric']
+      /**
+       * @description OwnerAcceptance — share of assignments the assignee acted on within the
+       *     SLA window. See OwnerAcceptanceMetric.
+       */
+      owner_acceptance?: components['schemas']['github_com_openctemio_api_internal_app_module.OwnerAcceptanceMetric']
+      period_days?: number
+    }
     'github_com_openctemio_api_internal_app.ProviderInfo': {
       enabled?: boolean
       id?: string
@@ -26099,6 +26215,23 @@ export interface components {
       provider?: string
       sent_at?: string
       status?: string
+    }
+    'github_com_openctemio_api_internal_app_module.DurationMetric': {
+      mean_hours?: number
+      median_hours?: number
+      sample_size?: number
+      /**
+       * @description Unmeasured counts population members that had no stop signal and so
+       *     could not be timed (MTTD only; always 0 for MTTR).
+       */
+      unmeasured?: number
+    }
+    'github_com_openctemio_api_internal_app_module.OwnerAcceptanceMetric': {
+      accepted?: number
+      excluded?: number
+      missed?: number
+      pending?: number
+      rate_pct?: number
     }
     'github_com_openctemio_api_internal_app_scancoverage.CoverageStats': {
       /** @description CoveragePercent = CoveredInWindow / TotalScannable * 100 (0 when none). */
@@ -27634,6 +27767,7 @@ export interface components {
       cvss_score?: number
       cvss_vector?: string
       description?: string
+      /** @description 0-100 percentile; a 0-1 fraction is rescaled */
       epss_percentile?: number
       epss_score?: number
       exploit_available?: boolean
@@ -28423,6 +28557,14 @@ export interface components {
       status?: 'pending' | 'connected' | 'disconnected' | 'error'
       /** @example  */
       status_message?: string
+      /**
+       * @description Supported is false for a provider that is declared but has no client in
+       *     this version (e.g. a Linear row created before creation was refused).
+       *     Such an integration never runs; clients should show it as not supported
+       *     rather than as pending or connected.
+       * @example true
+       */
+      supported?: boolean
       /** @example  */
       sync_error?: string
       /** @example 60 */
@@ -28482,6 +28624,14 @@ export interface components {
       status?: 'pending' | 'connected' | 'disconnected' | 'error'
       /** @example  */
       status_message?: string
+      /**
+       * @description Supported is false for a provider that is declared but has no client in
+       *     this version (e.g. a Linear row created before creation was refused).
+       *     Such an integration never runs; clients should show it as not supported
+       *     rather than as pending or connected.
+       * @example true
+       */
+      supported?: boolean
       /** @example  */
       sync_error?: string
       /** @example 60 */
@@ -29990,6 +30140,7 @@ export interface components {
       cvss_score?: number
       cvss_vector?: string
       description?: string
+      /** @description 0-100 percentile; a 0-1 fraction is rescaled */
       epss_percentile?: number
       epss_score?: number
       exploit_available?: boolean
@@ -30048,6 +30199,7 @@ export interface components {
       cvss_score?: number
       cvss_vector?: string
       description?: string
+      /** @description 0-100 percentile rank */
       epss_percentile?: number
       epss_score?: number
       exploit_available?: boolean
