@@ -1,9 +1,8 @@
 /**
- * Verified Domains API hooks.
- *
- * SWR read + mutations for tenant-scoped domain-ownership verification.
- * Mutations go through the shared api client (`@/lib/api/client`) so CSRF
- * headers are attached automatically.
+ * Verified Domains API hooks for one organization, used by the platform admin
+ * console (RFC-022): /api/v1/admin/tenants/{tenantId}/sso/verified-domains.
+ * Verified domains gate SSO auto-join, so they are part of SSO setup, an
+ * application-administrator operation.
  */
 
 'use client'
@@ -11,69 +10,55 @@
 import useSWR, { type SWRConfiguration } from 'swr'
 import useSWRMutation from 'swr/mutation'
 
-import { del, get, post } from '@/lib/api/client'
-import { useTenant } from '@/context/tenant-provider'
+import { adminFetch, AdminApiError } from '@/features/admin-console/api/admin-client'
 import type {
   CreateVerifiedDomainRequest,
   VerifiedDomain,
   VerifiedDomainListResponse,
 } from '../types/verified-domain.types'
 
-const BASE_URL = '/api/v1/settings/verified-domains'
+const base = (tenantId: string) => `/tenants/${tenantId}/sso/verified-domains`
 
 const defaultConfig: SWRConfiguration = {
   revalidateOnFocus: false,
   revalidateOnReconnect: true,
-  // 4xx (e.g. 403 for non-admins) is not worth retrying.
-  shouldRetryOnError: (error: { statusCode?: number }) => {
-    if (error?.statusCode && error.statusCode >= 400 && error.statusCode < 500) return false
-    return true
-  },
+  // 4xx (e.g. 403 for a read-only admin on a write) is not worth retrying.
+  shouldRetryOnError: (error: unknown) =>
+    !(error instanceof AdminApiError && error.status >= 400 && error.status < 500),
 }
 
-/** List verified domains for the current tenant. Keyed null until a tenant exists. */
-export function useVerifiedDomains(config?: SWRConfiguration) {
-  const { currentTenant } = useTenant()
-  const key = currentTenant ? BASE_URL : null
-
+/** List an organization's verified domains. */
+export function useVerifiedDomains(tenantId: string | null, config?: SWRConfiguration) {
   return useSWR<VerifiedDomain[]>(
-    key,
-    async (url: string) => {
-      const res = await get<VerifiedDomainListResponse>(url)
-      return res.verified_domains ?? []
-    },
+    tenantId ? base(tenantId) : null,
+    async (p: string) => (await adminFetch<VerifiedDomainListResponse>(p)).verified_domains ?? [],
     { ...defaultConfig, ...config }
   )
 }
 
 /** Add a domain. Returns the created row incl. the DNS TXT instructions to publish. */
-export function useAddVerifiedDomain() {
-  const { currentTenant } = useTenant()
-
+export function useAddVerifiedDomain(tenantId: string | null) {
   return useSWRMutation(
-    currentTenant ? BASE_URL : null,
-    async (url: string, { arg }: { arg: CreateVerifiedDomainRequest }) =>
-      post<VerifiedDomain>(url, arg)
+    tenantId ? base(tenantId) : null,
+    async (p: string, { arg }: { arg: CreateVerifiedDomainRequest }) =>
+      adminFetch<VerifiedDomain>(p, { method: 'POST', body: arg })
   )
 }
 
-/** Re-run verification now for a domain (id as the mutation arg). Returns the updated row. */
-export function useVerifyDomain() {
-  const { currentTenant } = useTenant()
-
+/** Re-run verification now for a domain (id as the mutation arg). */
+export function useVerifyDomain(tenantId: string | null) {
   return useSWRMutation(
-    currentTenant ? BASE_URL : null,
-    async (_url: string, { arg }: { arg: string }) =>
-      post<VerifiedDomain>(`${BASE_URL}/${arg}/verify`)
+    tenantId ? base(tenantId) : null,
+    async (p: string, { arg }: { arg: string }) =>
+      adminFetch<VerifiedDomain>(`${p}/${arg}/verify`, { method: 'POST' })
   )
 }
 
 /** Remove a domain (id as the mutation arg). */
-export function useDeleteVerifiedDomain() {
-  const { currentTenant } = useTenant()
-
+export function useDeleteVerifiedDomain(tenantId: string | null) {
   return useSWRMutation(
-    currentTenant ? BASE_URL : null,
-    async (_url: string, { arg }: { arg: string }) => del<void>(`${BASE_URL}/${arg}`)
+    tenantId ? base(tenantId) : null,
+    async (p: string, { arg }: { arg: string }) =>
+      adminFetch<void>(`${p}/${arg}`, { method: 'DELETE' })
   )
 }

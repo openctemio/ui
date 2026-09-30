@@ -26,11 +26,11 @@ import { DnsInstructions } from './dns-instructions'
  * switches to phase 2 and shows the DNS TXT record to publish. Closing the
  * dialog triggers `onAdded` so the parent can revalidate the list.
  */
-export function AddDomainDialog({ onAdded }: { onAdded: () => void }) {
+export function AddDomainDialog({ tenantId, onAdded }: { tenantId: string; onAdded: () => void }) {
   const [open, setOpen] = useState(false)
   const [domain, setDomain] = useState('')
   const [created, setCreated] = useState<VerifiedDomain | null>(null)
-  const { trigger: add, isMutating } = useAddVerifiedDomain()
+  const { trigger: add, isMutating } = useAddVerifiedDomain(tenantId)
 
   const reset = () => {
     setDomain('')

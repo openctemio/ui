@@ -1,16 +1,20 @@
 /**
- * SSO Identity Provider API Hooks
+ * SSO identity-provider hooks.
  *
- * SWR hooks for managing tenant-scoped SSO identity providers
+ * - Organization identity providers (Entra ID / Okta / Google Workspace) are
+ *   configured by the platform administrator per organization, through the
+ *   admin console (RFC-022): /api/v1/admin/tenants/{tenantId}/sso/identity-providers.
+ *   There is no tenant-context variant; SSO setup is not a tenant operation.
+ * - The login page reads an organization's active providers from the public
+ *   /api/v1/auth/sso/providers endpoint (useTenantSSOProviders).
  */
 
 'use client'
 
 import useSWR, { type SWRConfiguration } from 'swr'
-import useSWRMutation from 'swr/mutation'
 
-import { get, post, put, del } from '@/lib/api/client'
-import { useTenant } from '@/context/tenant-provider'
+import { get } from '@/lib/api/client'
+import { adminFetch, AdminApiError } from '@/features/admin-console/api/admin-client'
 import type {
   IdentityProvider,
   CreateIdentityProviderRequest,
@@ -18,18 +22,13 @@ import type {
   SSOProviderInfo,
 } from '../types/sso.types'
 
-// ============================================
-// CONFIG
-// ============================================
-
-const BASE_URL = '/api/v1/settings/identity-providers'
-
 const defaultConfig: SWRConfiguration = {
   revalidateOnFocus: false,
   revalidateOnReconnect: true,
-  shouldRetryOnError: (error: { statusCode?: number }) => {
-    if (error?.statusCode && error.statusCode >= 400 && error.statusCode < 500) return false
-    return true
+  shouldRetryOnError: (error: unknown) => {
+    const status =
+      error instanceof AdminApiError ? error.status : (error as { statusCode?: number })?.statusCode
+    return !(status && status >= 400 && status < 500)
   },
   errorRetryCount: 3,
   errorRetryInterval: 1000,
@@ -37,79 +36,37 @@ const defaultConfig: SWRConfiguration = {
 }
 
 // ============================================
-// ADMIN HOOKS (Settings page)
+// ADMIN CONSOLE (per organization)
 // ============================================
 
-/**
- * List all identity providers for the current tenant (admin)
- */
-export function useIdentityProvidersApi(config?: SWRConfiguration) {
-  const { currentTenant } = useTenant()
-  const key = currentTenant ? BASE_URL : null
+const orgBase = (tenantId: string) => `/tenants/${tenantId}/sso/identity-providers`
 
+/** An organization's identity providers. */
+export function useOrgIdentityProviders(tenantId: string | null, config?: SWRConfiguration) {
   return useSWR<IdentityProvider[]>(
-    key,
-    async (url: string) => {
-      const res = await get<{ providers: IdentityProvider[] }>(url)
+    tenantId ? orgBase(tenantId) : null,
+    async (p: string) => {
+      const res = await adminFetch<{ providers?: IdentityProvider[] }>(p)
       return res.providers ?? []
     },
-    {
-      ...defaultConfig,
-      ...config,
-    }
+    { ...defaultConfig, ...config }
   )
 }
 
-/**
- * Get a single identity provider by ID
- */
-export function useIdentityProviderApi(id: string | null, config?: SWRConfiguration) {
-  const { currentTenant } = useTenant()
-  const key = currentTenant && id ? `${BASE_URL}/${id}` : null
-
-  return useSWR<IdentityProvider>(key, (url: string) => get<IdentityProvider>(url), {
-    ...defaultConfig,
-    ...config,
-  })
+export function createOrgIdentityProvider(tenantId: string, input: CreateIdentityProviderRequest) {
+  return adminFetch<IdentityProvider>(orgBase(tenantId), { method: 'POST', body: input })
 }
 
-/**
- * Create a new identity provider
- */
-export function useCreateIdentityProviderApi() {
-  const { currentTenant } = useTenant()
-
-  return useSWRMutation(
-    currentTenant ? BASE_URL : null,
-    async (url: string, { arg }: { arg: CreateIdentityProviderRequest }) => {
-      return post<IdentityProvider>(url, arg)
-    }
-  )
+export function updateOrgIdentityProvider(
+  tenantId: string,
+  id: string,
+  input: UpdateIdentityProviderRequest
+) {
+  return adminFetch<IdentityProvider>(`${orgBase(tenantId)}/${id}`, { method: 'PUT', body: input })
 }
 
-/**
- * Update an identity provider
- */
-export function useUpdateIdentityProviderApi(id: string | null) {
-  const { currentTenant } = useTenant()
-
-  return useSWRMutation(
-    currentTenant && id ? `${BASE_URL}/${id}` : null,
-    async (url: string, { arg }: { arg: UpdateIdentityProviderRequest }) => {
-      return put<IdentityProvider>(url, arg)
-    }
-  )
-}
-
-/**
- * Delete an identity provider
- */
-export function useDeleteIdentityProviderApi(id: string | null) {
-  const { currentTenant } = useTenant()
-
-  return useSWRMutation(currentTenant && id ? `${BASE_URL}/${id}` : null, async (url: string) => {
-    return del<void>(url)
-  })
+export function deleteOrgIdentityProvider(tenantId: string, id: string) {
+  return adminFetch<void>(`${orgBase(tenantId)}/${id}`, { method: 'DELETE' })
 }
 
 // ============================================
@@ -134,15 +91,4 @@ export function useTenantSSOProviders(orgSlug: string | null, config?: SWRConfig
       ...config,
     }
   )
-}
-
-// ============================================
-// CACHE INVALIDATION
-// ============================================
-
-export async function invalidateIdentityProvidersCache() {
-  const { mutate } = await import('swr')
-  await mutate((key) => typeof key === 'string' && key.includes('/identity-providers'), undefined, {
-    revalidate: true,
-  })
 }
