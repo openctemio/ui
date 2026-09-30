@@ -6,10 +6,8 @@
 
 'use client'
 
-import useSWR, { type SWRConfiguration } from 'swr'
 import useSWRInfinite, { type SWRInfiniteConfiguration } from 'swr/infinite'
 import { get } from '@/lib/api/client'
-import { handleApiError } from '@/lib/api/error-handler'
 import { useTenant } from '@/context/tenant-provider'
 import type { Activity, ActivityType } from '../types'
 
@@ -43,30 +41,6 @@ export interface ApiFindingActivityListResponse {
   page: number
   page_size: number
   total_pages: number
-}
-
-// ============================================
-// SWR CONFIGURATION
-// ============================================
-
-const defaultConfig: SWRConfiguration = {
-  revalidateOnFocus: false,
-  revalidateOnReconnect: true,
-  shouldRetryOnError: (error) => {
-    if (error?.statusCode >= 400 && error?.statusCode < 500) {
-      return false
-    }
-    return true
-  },
-  errorRetryCount: 3,
-  errorRetryInterval: 1000,
-  dedupingInterval: 2000,
-  onError: (error) => {
-    handleApiError(error, {
-      showToast: false, // Activities are not critical - don't show toast
-      logError: true,
-    })
-  },
 }
 
 // ============================================
@@ -172,87 +146,6 @@ function mapActivity(api: ApiFindingActivity): Activity {
 // ============================================
 // API HOOKS
 // ============================================
-
-interface ActivityFilters {
-  page?: number
-  pageSize?: number
-  activityTypes?: string[]
-}
-
-/**
- * Fetch activities for a finding
- */
-export function useFindingActivitiesApi(
-  findingId: string | null,
-  filters?: ActivityFilters,
-  config?: SWRConfiguration
-) {
-  const { currentTenant } = useTenant()
-
-  // Build URL with filters
-  let url = findingId ? `/api/v1/findings/${findingId}/activities` : null
-
-  if (url && filters) {
-    const params = new URLSearchParams()
-    if (filters.page !== undefined) params.set('page', String(filters.page))
-    if (filters.pageSize !== undefined) params.set('page_size', String(filters.pageSize))
-    if (filters.activityTypes?.length) params.set('activity_types', filters.activityTypes.join(','))
-    const queryString = params.toString()
-    if (queryString) url = `${url}?${queryString}`
-  }
-
-  const key = currentTenant && url ? url : null
-
-  const { data, error, isLoading, mutate } = useSWR<ApiFindingActivityListResponse>(
-    key,
-    fetchActivities,
-    { ...defaultConfig, ...config }
-  )
-
-  // Map API response to frontend Activity type
-  const activities: Activity[] = data?.data?.map(mapActivity) || []
-
-  return {
-    activities,
-    total: data?.total || 0,
-    page: data?.page || 0,
-    pageSize: data?.page_size || 20,
-    totalPages: data?.total_pages || 0,
-    isLoading,
-    error,
-    mutate,
-  }
-}
-
-/**
- * Get a single activity by ID
- */
-export function useFindingActivityApi(
-  findingId: string | null,
-  activityId: string | null,
-  config?: SWRConfiguration
-) {
-  const { currentTenant } = useTenant()
-
-  const key =
-    currentTenant && findingId && activityId
-      ? `/api/v1/findings/${findingId}/activities/${activityId}`
-      : null
-
-  const { data, error, isLoading, mutate } = useSWR<ApiFindingActivity>(key, get, {
-    ...defaultConfig,
-    ...config,
-  })
-
-  const activity = data ? mapActivity(data) : null
-
-  return {
-    activity,
-    isLoading,
-    error,
-    mutate,
-  }
-}
 
 /**
  * Infinite loading hook for activities with "Load More" support

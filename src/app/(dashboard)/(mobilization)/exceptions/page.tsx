@@ -4,10 +4,6 @@ import { useState, useCallback, useMemo } from 'react'
 import { type ColumnDef } from '@tanstack/react-table'
 import { formatDistanceToNow } from 'date-fns'
 import {
-  ShieldQuestion,
-  Clock,
-  CheckCircle2,
-  XCircle,
   Plus,
   MoreHorizontal,
   Check,
@@ -22,12 +18,12 @@ import { toast } from 'sonner'
 
 import { Main } from '@/components/layout'
 import { PageHeader } from '@/features/shared/components/page-header'
+import { MetricStrip, type MetricStripItem } from '@/features/shared/components/metric-strip'
 import { DataTable } from '@/features/shared/components/data-table/data-table'
 import { DataTableColumnHeader } from '@/features/shared/components/data-table/data-table-column-header'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -47,6 +43,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { cn } from '@/lib/utils'
+import { useUrlFilter } from '@/hooks/use-url-param'
 import { getErrorMessage } from '@/lib/api/error-handler'
 import { Can, Permission } from '@/lib/permissions'
 
@@ -66,12 +63,8 @@ import {
   type SuppressionStatus,
 } from '@/features/exceptions'
 
-// Approval-status accents for the stat tiles / menu. These map lifecycle states
-// to colour and have no semantic token equivalent (there is no success/warning
-// token), so the palette-drift gate is told to allow them here.
-const STAT_PENDING_BORDER = 'border-yellow-500/30' // palette-ok: pending = warning accent
-const STAT_PENDING_TEXT = 'text-yellow-500' // palette-ok: pending = warning accent
-const STAT_APPROVED_TEXT = 'text-emerald-500' // palette-ok: approved = success accent
+// Approve action accent in the row menu. There is no success token, so the
+// palette-drift gate is told to allow it here.
 const MENU_APPROVE_ICON = 'text-emerald-500' // palette-ok: approve = success accent
 
 function relative(iso?: string | null): string {
@@ -83,38 +76,30 @@ function relative(iso?: string | null): string {
 
 type TabValue = 'all' | SuppressionStatus
 
-function ConsoleSkeleton() {
+function TableSkeleton() {
   return (
-    <div className="space-y-6">
-      <div className="grid gap-3 sm:gap-4 grid-cols-2 sm:grid-cols-4">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <Card key={i}>
-            <CardHeader className="pb-2">
-              <Skeleton className="h-4 w-16 mb-2" />
-              <Skeleton className="h-8 w-12" />
-            </CardHeader>
-          </Card>
+    <div className="space-y-2">
+      <Skeleton className="h-9 w-72" />
+      <div className="space-y-px overflow-hidden rounded-xl border">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <Skeleton key={i} className="h-12 w-full rounded-none" />
         ))}
       </div>
-      <Card>
-        <CardContent className="pt-6 space-y-3">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="flex items-center gap-4">
-              <Skeleton className="h-4 w-40" />
-              <Skeleton className="h-6 w-24" />
-              <Skeleton className="h-6 w-20" />
-              <Skeleton className="h-4 flex-1" />
-              <Skeleton className="h-8 w-8 rounded" />
-            </div>
-          ))}
-        </CardContent>
-      </Card>
     </div>
   )
 }
 
+const STATUS_VALUES: TabValue[] = ['all', 'pending', 'approved', 'rejected', 'expired']
+
 export default function ExceptionsPage() {
-  const [activeTab, setActiveTab] = useState<TabValue>('all')
+  // The status filter lives in the URL so a filtered view survives reload and
+  // can be shared (e.g. a link straight to the pending-approval queue).
+  const [statusParam, setStatusParam] = useUrlFilter('status', 'all')
+  const activeTab: TabValue = (STATUS_VALUES as string[]).includes(statusParam)
+    ? (statusParam as TabValue)
+    : 'all'
+  const toggleStatus = (status: TabValue) =>
+    setStatusParam(activeTab === status || status === 'all' ? 'all' : status)
 
   const { data, isLoading, error, mutate } = useSuppressions()
 
@@ -282,7 +267,7 @@ export default function ExceptionsPage() {
       },
       {
         accessorKey: 'requested_by',
-        header: 'Requested By',
+        header: () => <span className="whitespace-nowrap">Requested by</span>,
         cell: ({ row }) => (
           <span className="text-xs font-mono text-muted-foreground">
             {row.original.requested_by.slice(0, 8)}
@@ -361,157 +346,106 @@ export default function ExceptionsPage() {
     [openApprove, openReject, openEdit, openDelete]
   )
 
-  // ── Error state ───────────────────────────────────────────────────
-  if (error && !isLoading) {
-    return (
-      <Main>
-        <div className="flex flex-col items-center justify-center py-20">
-          <AlertCircle className="h-12 w-12 text-destructive mb-4" />
-          <h2 className="text-lg font-semibold mb-2">Failed to load suppressions</h2>
-          <p className="text-muted-foreground mb-4">
-            {error?.message || 'An unexpected error occurred'}
-          </p>
-          <Button onClick={() => mutate()}>
-            <RefreshCw className="me-2 h-4 w-4" />
-            Retry
-          </Button>
-        </div>
-      </Main>
-    )
-  }
+  const metrics: MetricStripItem[] = [
+    {
+      key: 'pending',
+      label: 'Pending approval',
+      value: counts.pending,
+      onClick: () => toggleStatus('pending'),
+      active: activeTab === 'pending',
+    },
+    {
+      key: 'approved',
+      label: 'Approved',
+      value: counts.approved,
+      onClick: () => toggleStatus('approved'),
+      active: activeTab === 'approved',
+    },
+    {
+      key: 'rejected',
+      label: 'Rejected',
+      value: counts.rejected,
+      onClick: () => toggleStatus('rejected'),
+      active: activeTab === 'rejected',
+    },
+    {
+      key: 'expired',
+      label: 'Expired',
+      value: counts.expired,
+      onClick: () => toggleStatus('expired'),
+      active: activeTab === 'expired',
+    },
+    {
+      key: 'all',
+      label: 'All rules',
+      value: counts.all,
+      onClick: () => toggleStatus('all'),
+      active: activeTab === 'all',
+    },
+  ]
 
   return (
     <>
       <Main>
         <PageHeader
           title="Exceptions"
-          description={
-            isInitialLoading
-              ? 'Loading suppression rules...'
-              : `${counts.all} suppression rules · ${counts.pending} pending approval`
-          }
+          description="Suppression rules that hide false positives and accepted risks, with an approval step."
         >
-          <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isLoading}>
-            {isLoading ? (
-              <Loader2 className="h-4 w-4 sm:me-2 animate-spin" />
-            ) : (
-              <RefreshCw className="h-4 w-4 sm:me-2" />
-            )}
-            <span className="hidden sm:inline">Refresh</span>
-          </Button>
           <Can permission={Permission.SuppressionsWrite}>
             <Button size="sm" onClick={openCreate}>
               <Plus className="h-4 w-4 sm:me-2" />
-              <span className="hidden sm:inline">New Rule</span>
+              <span className="hidden sm:inline">New rule</span>
             </Button>
           </Can>
         </PageHeader>
 
-        {isInitialLoading ? (
-          <div className="mt-6">
-            <ConsoleSkeleton />
-          </div>
-        ) : (
-          <>
-            {/* Stats */}
-            <div className="mt-6 grid gap-3 sm:gap-4 grid-cols-2 sm:grid-cols-4">
-              <Card className={counts.pending > 0 ? STAT_PENDING_BORDER : ''}>
-                <CardHeader className="pb-2">
-                  <CardDescription className="flex items-center gap-1.5">
-                    <Clock className="h-3.5 w-3.5" />
-                    Pending
-                  </CardDescription>
-                  <CardTitle className={cn('text-2xl sm:text-3xl', STAT_PENDING_TEXT)}>
-                    {counts.pending}
-                  </CardTitle>
-                </CardHeader>
-              </Card>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardDescription className="flex items-center gap-1.5">
-                    <CheckCircle2 className="h-3.5 w-3.5" />
-                    Approved
-                  </CardDescription>
-                  <CardTitle className={cn('text-2xl sm:text-3xl', STAT_APPROVED_TEXT)}>
-                    {counts.approved}
-                  </CardTitle>
-                </CardHeader>
-              </Card>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardDescription className="flex items-center gap-1.5">
-                    <XCircle className="h-3.5 w-3.5" />
-                    Rejected
-                  </CardDescription>
-                  <CardTitle className="text-2xl sm:text-3xl text-destructive">
-                    {counts.rejected}
-                  </CardTitle>
-                </CardHeader>
-              </Card>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardDescription className="flex items-center gap-1.5">
-                    <ShieldQuestion className="h-3.5 w-3.5" />
-                    Total
-                  </CardDescription>
-                  <CardTitle className="text-2xl sm:text-3xl">{counts.all}</CardTitle>
-                </CardHeader>
-              </Card>
-            </div>
+        <MetricStrip className="mt-5" loading={isInitialLoading} items={metrics} />
 
-            {/* Tabs + table */}
-            <Tabs
-              value={activeTab}
-              onValueChange={(v) => setActiveTab(v as TabValue)}
-              className="mt-6"
-            >
-              <div className="relative sm:static">
-                <div className="overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
-                  <TabsList className="h-auto w-max">
-                    <TabsTrigger value="all" className="text-xs sm:text-sm shrink-0">
-                      All ({counts.all})
-                    </TabsTrigger>
-                    <TabsTrigger value="pending" className="text-xs sm:text-sm shrink-0">
-                      Pending ({counts.pending})
-                    </TabsTrigger>
-                    <TabsTrigger value="approved" className="text-xs sm:text-sm shrink-0">
-                      Approved ({counts.approved})
-                    </TabsTrigger>
-                    <TabsTrigger value="rejected" className="text-xs sm:text-sm shrink-0">
-                      Rejected ({counts.rejected})
-                    </TabsTrigger>
-                    <TabsTrigger value="expired" className="text-xs sm:text-sm shrink-0">
-                      Expired ({counts.expired})
-                    </TabsTrigger>
-                  </TabsList>
-                </div>
-                <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-background to-transparent pointer-events-none sm:hidden" />
-              </div>
-
-              <TabsContent value={activeTab}>
-                <Card className="mt-4">
-                  <CardContent className="pt-6">
-                    <DataTable
-                      columns={columns}
-                      data={filteredRules}
-                      searchPlaceholder="Search by name..."
-                      searchKey="name"
-                      showColumnToggle={false}
-                      onRowClick={openDetail}
-                      emptyMessage="No suppression rules"
-                      emptyDescription={
-                        activeTab === 'all'
-                          ? 'Create a rule to suppress false positives or accepted risks.'
-                          : `No ${activeTab} suppression rules found.`
-                      }
-                      pageSize={20}
-                    />
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
-          </>
-        )}
+        <div className="mt-5">
+          {error && !isLoading ? (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Failed to load suppression rules</AlertTitle>
+              <AlertDescription className="flex flex-wrap items-center gap-3">
+                <span>{error?.message || 'An unexpected error occurred'}</span>
+                <Button variant="outline" size="sm" onClick={() => mutate()}>
+                  <RefreshCw className="me-2 h-4 w-4" />
+                  Retry
+                </Button>
+              </AlertDescription>
+            </Alert>
+          ) : isInitialLoading ? (
+            <TableSkeleton />
+          ) : (
+            <DataTable
+              columns={columns}
+              data={filteredRules}
+              searchPlaceholder="Search by name..."
+              searchKey="name"
+              showColumnToggle={false}
+              onRowClick={openDetail}
+              toolbarEnd={
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-9 w-9"
+                  onClick={handleRefresh}
+                  disabled={isLoading}
+                  aria-label="Refresh"
+                  title="Refresh"
+                >
+                  <RefreshCw className={cn('h-4 w-4', isLoading && 'animate-spin')} />
+                </Button>
+              }
+              emptyMessage="No suppression rules"
+              emptyDescription={
+                activeTab === 'all'
+                  ? 'Create a rule to suppress false positives or accepted risks.'
+                  : `No ${activeTab} suppression rules.`
+              }
+            />
+          )}
+        </div>
       </Main>
 
       {/* Detail sheet */}
@@ -537,7 +471,7 @@ export default function ExceptionsPage() {
       <ConfirmDialog
         open={approveOpen}
         onOpenChange={setApproveOpen}
-        title="Approve Suppression Rule"
+        title="Approve suppression rule"
         desc={
           selectedRule
             ? `Approve "${selectedRule.name}"? Matching findings will be suppressed while this rule is active.`
@@ -561,7 +495,7 @@ export default function ExceptionsPage() {
       <Dialog open={rejectOpen} onOpenChange={setRejectOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Reject Suppression Rule</DialogTitle>
+            <DialogTitle>Reject suppression rule</DialogTitle>
             <DialogDescription>Provide a reason for rejecting this rule.</DialogDescription>
           </DialogHeader>
           {selectedRule && (
@@ -608,10 +542,10 @@ export default function ExceptionsPage() {
       <ConfirmDialog
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
-        title="Delete Suppression Rule"
+        title="Delete suppression rule"
         desc={selectedRule ? `Delete "${selectedRule.name}"? This cannot be undone.` : ''}
         destructive
-        cancelBtnText="Keep Rule"
+        cancelBtnText="Keep rule"
         confirmText={
           isDeleting ? (
             <>

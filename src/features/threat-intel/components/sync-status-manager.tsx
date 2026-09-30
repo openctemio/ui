@@ -5,6 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { EmptyState } from '@/features/shared/components/empty-state'
+import { RunStatusBadge } from '@/features/shared/components/run-status-badge'
 import { cn } from '@/lib/utils'
 import {
   RefreshCw,
@@ -34,20 +37,17 @@ const sourceConfig: Record<
     name: string
     description: string
     icon: typeof TrendingUp
-    color: string
   }
 > = {
   epss: {
     name: 'EPSS',
-    description: 'Exploit Prediction Scoring System - Daily exploitation probability scores',
+    description: 'Exploit Prediction Scoring System — daily exploitation probability scores',
     icon: TrendingUp,
-    color: 'text-orange-500',
   },
   kev: {
     name: 'CISA KEV',
-    description: "Known Exploited Vulnerabilities - CISA's actively exploited CVE catalog",
+    description: "Known Exploited Vulnerabilities — CISA's actively exploited CVE catalog",
     icon: AlertOctagon,
-    color: 'text-red-500',
   },
 }
 
@@ -55,40 +55,42 @@ const sourceConfig: Record<
  * Sync Status Manager - Control panel for threat intel data sync
  */
 export function SyncStatusManager({ statuses, onRefresh, className }: SyncStatusManagerProps) {
+  // One card, one row per source (divided) — not a bordered box per source
+  // nested inside the card. No refresh button here: the page header has one.
   return (
     <Card className={className}>
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="text-lg">Data Sync Status</CardTitle>
-            <CardDescription>Manage threat intelligence data synchronization</CardDescription>
-          </div>
-          {onRefresh && (
-            <Button variant="outline" size="sm" onClick={onRefresh}>
-              <RefreshCw className="me-2 h-4 w-4" />
-              Refresh
-            </Button>
-          )}
-        </div>
+        <CardTitle>Data sync</CardTitle>
+        <CardDescription>
+          Turn each threat-intelligence feed on or off, or sync it now.
+        </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {statuses.map((status) => (
-          <SyncStatusCard key={status.source} status={status} onUpdate={onRefresh} />
-        ))}
-        {statuses.length === 0 && (
-          <div className="text-center py-6 text-muted-foreground">No sync sources configured</div>
+      <CardContent>
+        {statuses.length === 0 ? (
+          <EmptyState
+            card={false}
+            icon={Clock}
+            title="No sync sources"
+            description="No threat-intelligence feeds are configured for sync."
+          />
+        ) : (
+          <div className="divide-y">
+            {statuses.map((status) => (
+              <SyncStatusRow key={status.source} status={status} onUpdate={onRefresh} />
+            ))}
+          </div>
         )}
       </CardContent>
     </Card>
   )
 }
 
-interface SyncStatusCardProps {
+interface SyncStatusRowProps {
   status: SyncStatus
   onUpdate?: () => void
 }
 
-function SyncStatusCard({ status, onUpdate }: SyncStatusCardProps) {
+function SyncStatusRow({ status, onUpdate }: SyncStatusRowProps) {
   const [isToggling, setIsToggling] = useState(false)
   const [isSyncing, setIsSyncing] = useState(false)
 
@@ -129,22 +131,19 @@ function SyncStatusCard({ status, onUpdate }: SyncStatusCardProps) {
   }
 
   return (
-    <div className="flex items-start gap-4 p-4 rounded-lg border bg-card">
-      {/* Icon */}
-      <div className={cn('p-2 rounded-lg bg-muted', config.color)}>
-        <Icon className="h-5 w-5" />
-      </div>
+    <div className="flex flex-col gap-3 py-4 first:pt-0 last:pb-0 sm:flex-row sm:items-start">
+      <Icon className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
 
       {/* Info */}
-      <div className="flex-1 space-y-1">
+      <div className="min-w-0 flex-1 space-y-1">
         <div className="flex items-center gap-2">
-          <h4 className="font-semibold">{config.name}</h4>
+          <h3 className="text-sm font-semibold">{config.name}</h3>
           <SyncStatusBadge status={status.last_sync_status} />
         </div>
         <p className="text-sm text-muted-foreground">{config.description}</p>
 
         {/* Sync details */}
-        <div className="flex items-center gap-4 text-xs text-muted-foreground mt-2">
+        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
           {status.last_sync_at && (
             <div className="flex items-center gap-1">
               <Clock className="h-3 w-3" />
@@ -165,15 +164,15 @@ function SyncStatusCard({ status, onUpdate }: SyncStatusCardProps) {
 
         {/* Error message */}
         {status.last_error && (
-          <div className="flex items-start gap-2 mt-2 p-2 rounded bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-xs">
-            <AlertTriangle className="h-3 w-3 mt-0.5 flex-shrink-0" />
-            <span>{status.last_error}</span>
-          </div>
+          <Alert variant="destructive" className="mt-2 py-2 text-xs">
+            <AlertTriangle />
+            <AlertDescription className="text-xs">{status.last_error}</AlertDescription>
+          </Alert>
         )}
       </div>
 
       {/* Controls */}
-      <div className="flex items-center gap-3">
+      <div className="flex shrink-0 items-center gap-3">
         <Button
           variant="outline"
           size="sm"
@@ -185,7 +184,7 @@ function SyncStatusCard({ status, onUpdate }: SyncStatusCardProps) {
           ) : (
             <RefreshCw className="me-2 h-4 w-4" />
           )}
-          Sync Now
+          Sync now
         </Button>
 
         <div className="flex items-center gap-2">
@@ -204,52 +203,9 @@ function SyncStatusCard({ status, onUpdate }: SyncStatusCardProps) {
 }
 
 function SyncStatusBadge({ status }: { status: SyncStatus['last_sync_status'] }) {
-  const config = {
-    success: {
-      label: 'Success',
-      icon: Check,
-      className: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-    },
-    failed: {
-      label: 'Failed',
-      icon: X,
-      className: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-    },
-    pending: {
-      label: 'Pending',
-      icon: Clock,
-      className: 'bg-yellow-100 text-yellow-900 dark:bg-yellow-900/30 dark:text-yellow-400',
-    },
-    never: {
-      label: 'Never synced',
-      icon: Clock,
-      className: 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400',
-    },
-    running: {
-      label: 'Syncing',
-      icon: RefreshCw,
-      className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-    },
-  }
-
-  // Fall back rather than destructure undefined: a state the backend adds later
-  // would otherwise throw and blank the whole panel.
-  const {
-    label,
-    icon: BadgeIcon,
-    className,
-  } = config[status] ?? {
-    label: status || 'Unknown',
-    icon: Clock,
-    className: 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400',
-  }
-
-  return (
-    <Badge variant="outline" className={cn('gap-1', className)}>
-      <BadgeIcon className="h-3 w-3" />
-      {label}
-    </Badge>
-  )
+  // The canonical run-status badge covers every state but "never".
+  if (status === 'never') return <Badge variant="secondary">Never synced</Badge>
+  return <RunStatusBadge status={status === 'success' ? 'completed' : status} />
 }
 
 interface CompactSyncStatusProps {
@@ -274,17 +230,17 @@ export function CompactSyncStatus({ statuses, className }: CompactSyncStatusProp
   const anyFailed = statuses.some((s) => s.last_sync_status === 'failed')
   const anyPending = statuses.some((s) => s.last_sync_status === 'pending')
 
+  // Only a failure is coloured; healthy and pending read as quiet status text.
   let statusIcon = Check
-  let statusColor = 'text-green-500'
+  let statusColor = 'text-muted-foreground'
   let statusLabel = 'All syncs healthy'
 
   if (anyFailed) {
     statusIcon = X
-    statusColor = 'text-red-500'
+    statusColor = 'text-destructive'
     statusLabel = 'Sync failed'
   } else if (anyPending) {
     statusIcon = Clock
-    statusColor = 'text-yellow-500'
     statusLabel = 'Sync pending'
   }
 

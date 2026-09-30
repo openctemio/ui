@@ -8,11 +8,17 @@ import {
   DataTable,
   DataTableColumnHeader,
   DataTableRowActions,
-  StatsCard,
+  RiskScoreBadge,
+  getRiskLevel,
+  MetricStrip,
+  type MetricStripItem,
   SheetBody,
 } from '@/features/shared'
 import { Can, Permission } from '@/lib/permissions'
 import { useCsvExport, type ExportFieldConfig } from '@/hooks/use-csv-export'
+import { useUrlFilter } from '@/hooks/use-url-param'
+import { SEVERITY_BADGE_SOLID, type SeverityLevel } from '@/lib/severity-colors'
+import { useRiskThresholds } from '@/context/risk-scoring-provider'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -21,12 +27,11 @@ import { Badge } from '@/components/ui/badge'
 import {
   Plus,
   Download,
-  Filter,
+  Search,
   Eye,
   Pencil,
   Trash2,
   Crown,
-  AlertTriangle,
   Database,
   Server,
   AppWindow,
@@ -36,12 +41,9 @@ import {
   Users,
   Mail,
   Link2,
-  X,
-  ShieldAlert,
   ShieldCheck,
   ShieldX,
 } from 'lucide-react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Dialog,
   DialogContent,
@@ -81,6 +83,9 @@ import {
   useUndesignateCrownJewel,
 } from '@/features/crown-jewels/api/use-crown-jewels'
 import { mutate } from 'swr'
+import { Progress } from '@/components/ui/progress'
+import { cn } from '@/lib/utils'
+import { CRITICALITY_BADGE_SOFT, type CriticalityLevel } from '@/lib/criticality-colors'
 
 const categoryIcons: Record<AssetCategory, React.ElementType> = {
   data: Database,
@@ -105,15 +110,8 @@ const CROWN_JEWEL_EXPORT_FIELDS: ExportFieldConfig<CrownJewel>[] = [
   { header: 'Tags', accessor: (j) => (j.tags ?? []).join('; ') },
 ]
 
-// Risk band → color + label (mirrors the asset risk_score 0-100 scale).
-function riskBand(score: number) {
-  if (score >= 70)
-    return { text: 'text-red-600', bar: 'bg-red-600', dot: 'bg-red-600', label: 'Critical' }
-  if (score >= 40)
-    return { text: 'text-orange-600', bar: 'bg-orange-500', dot: 'bg-orange-500', label: 'High' }
-  if (score >= 20)
-    return { text: 'text-amber-600', bar: 'bg-amber-500', dot: 'bg-amber-500', label: 'Medium' }
-  return { text: 'text-green-600', bar: 'bg-green-600', dot: 'bg-green-600', label: 'Low' }
+function impactLabel(score: number) {
+  return score >= 67 ? 'High' : score >= 34 ? 'Medium' : 'Low'
 }
 
 // Real reachability → exposed vs not (drives the "Exposure" signal).
@@ -124,11 +122,11 @@ function isExposed(j: CrownJewel) {
 // Compact findings-by-severity chips (only non-zero bands).
 function SeverityChips({ sev }: { sev?: CrownJewel['findingSeverity'] }) {
   if (!sev) return <span className="text-muted-foreground text-xs">—</span>
-  const parts: { n: number; cls: string; k: string }[] = [
-    { n: sev.critical, cls: 'bg-red-600', k: 'C' },
-    { n: sev.high, cls: 'bg-orange-500', k: 'H' },
-    { n: sev.medium, cls: 'bg-amber-500', k: 'M' },
-    { n: sev.low, cls: 'bg-slate-500', k: 'L' },
+  const parts: { n: number; level: SeverityLevel; k: string }[] = [
+    { n: sev.critical, level: 'critical' as const, k: 'C' },
+    { n: sev.high, level: 'high' as const, k: 'H' },
+    { n: sev.medium, level: 'medium' as const, k: 'M' },
+    { n: sev.low, level: 'low' as const, k: 'L' },
   ].filter((p) => p.n > 0)
   if (parts.length === 0) return <span className="text-muted-foreground text-xs">None</span>
   return (
@@ -136,7 +134,11 @@ function SeverityChips({ sev }: { sev?: CrownJewel['findingSeverity'] }) {
       {parts.map((p) => (
         <span
           key={p.k}
-          className={`rounded px-1.5 py-0.5 text-[10px] font-bold text-white ${p.cls}`}
+          title={`${p.n} ${p.level}`}
+          className={cn(
+            'rounded px-1.5 py-0.5 text-[10px] font-semibold tabular-nums',
+            SEVERITY_BADGE_SOLID[p.level]
+          )}
         >
           {p.n}
           {p.k}
@@ -147,6 +149,9 @@ function SeverityChips({ sev }: { sev?: CrownJewel['findingSeverity'] }) {
 }
 
 export default function CrownJewelsPage() {
+  // Same bands as RiskScoreBadge, so the sheet's label matches the table's badge.
+  const riskThresholds = useRiskThresholds()
+  const riskLabel = (score: number) => getRiskLevel(score, riskThresholds).label
   // Fetch from API, fallback to mock if no API data
   const { data: apiCrownJewels } = useCrownJewels()
   const { trigger: designate, isMutating: isDesignating } = useDesignateCrownJewel()
@@ -205,8 +210,12 @@ export default function CrownJewelsPage() {
   const [editJewel, setEditJewel] = useState<CrownJewel | null>(null)
   const [deleteJewel, setDeleteJewel] = useState<CrownJewel | null>(null)
   const [isCreateOpen, setIsCreateOpen] = useState(false)
-  const [filterStatus, setFilterStatus] = useState<string>('all')
-  const [filterCategory, setFilterCategory] = useState<string>('all')
+  // Filters and search live in the URL so a filtered view can be linked to.
+  // Exposure and asset type are what the assets API actually returns; the old
+  // status/category filters matched fields it never sends, so they emptied the list.
+  const [filterExposure, setFilterExposure] = useUrlFilter('exposure', 'all')
+  const [filterType, setFilterType] = useUrlFilter('type', 'all')
+  const [searchQuery, setSearchQuery] = useUrlFilter('q', '')
 
   const [formData, setFormData] = useState({
     name: '',
@@ -225,13 +234,8 @@ export default function CrownJewelsPage() {
     const jewels = crownJewels
     return {
       total: jewels.length,
-      byStatus: {
-        protected: jewels.filter((j) => j.status === 'protected').length,
-        at_risk: jewels.filter((j) => j.status === 'at_risk').length,
-        exposed: jewels.filter((j) => j.status === 'exposed').length,
-        under_review: jewels.filter((j) => j.status === 'under_review').length,
-      },
-      totalExposures: jewels.reduce((acc, j) => acc + (j.exposureCount ?? 0), 0),
+      exposed: jewels.filter(isExposed).length,
+      withCritical: jewels.filter((j) => (j.findingSeverity?.critical ?? 0) > 0).length,
       // Guard against divide-by-zero on an empty tenant (was rendering "NaN").
       averageRiskScore: jewels.length
         ? Math.round(jewels.reduce((acc, j) => acc + (j.riskScore ?? 0), 0) / jewels.length)
@@ -239,13 +243,51 @@ export default function CrownJewelsPage() {
     }
   }, [crownJewels])
 
+  const assetTypes = useMemo(
+    () => [...new Set(crownJewels.map((j) => j.assetType).filter(Boolean) as string[])].sort(),
+    [crownJewels]
+  )
+
   const filteredJewels = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase()
     return crownJewels.filter((jewel) => {
-      if (filterStatus !== 'all' && jewel.status !== filterStatus) return false
-      if (filterCategory !== 'all' && jewel.category !== filterCategory) return false
+      if (filterExposure === 'exposed' && !isExposed(jewel)) return false
+      if (filterExposure === 'not_exposed' && isExposed(jewel)) return false
+      if (filterType !== 'all' && jewel.assetType !== filterType) return false
+      if (q && !jewel.name.toLowerCase().includes(q) && !jewel.owner.toLowerCase().includes(q))
+        return false
       return true
     })
-  }, [crownJewels, filterStatus, filterCategory])
+  }, [crownJewels, filterExposure, filterType, searchQuery])
+
+  const exposedOnly = filterExposure === 'exposed'
+  const metrics: MetricStripItem[] = [
+    {
+      key: 'total',
+      label: 'Crown jewels',
+      value: stats.total,
+      onClick: () => {
+        setFilterExposure('all')
+        setFilterType('all')
+      },
+      active: filterExposure === 'all' && filterType === 'all',
+    },
+    {
+      key: 'exposed',
+      label: 'Internet-exposed',
+      value: stats.exposed,
+      tone: 'danger',
+      onClick: () => setFilterExposure(exposedOnly ? 'all' : 'exposed'),
+      active: exposedOnly,
+    },
+    {
+      key: 'critical',
+      label: 'With critical findings',
+      value: stats.withCritical,
+      tone: 'danger',
+    },
+    { key: 'risk', label: 'Average risk score', value: stats.averageRiskScore, hint: 'of 100' },
+  ]
 
   const resetForm = () => {
     setFormData({
@@ -264,7 +306,7 @@ export default function CrownJewelsPage() {
 
   const handleCreate = async () => {
     if (!selectedAssetId) {
-      toast.error('Please select an asset to designate as a Crown Jewel')
+      toast.error('Please select an asset to designate as a crown jewel')
       return
     }
     if (!formData.businessImpact) {
@@ -285,13 +327,13 @@ export default function CrownJewelsPage() {
         businessImpactNotes: formData.businessImpact,
       })
       await mutate(CROWN_JEWELS_KEY)
-      toast.success('Asset designated as Crown Jewel')
+      toast.success('Asset designated as a crown jewel')
       setIsCreateOpen(false)
       setSelectedAssetId('')
       setAssetSearch('')
       resetForm()
     } catch {
-      toast.error('Failed to designate Crown Jewel')
+      toast.error('Failed to designate crown jewel')
     }
   }
 
@@ -313,7 +355,7 @@ export default function CrownJewelsPage() {
       setEditJewel(null)
       resetForm()
     } catch {
-      toast.error('Failed to update Crown Jewel')
+      toast.error('Failed to update crown jewel')
     }
   }
 
@@ -325,7 +367,7 @@ export default function CrownJewelsPage() {
       toast.success('Crown jewel removed successfully')
       setDeleteJewel(null)
     } catch {
-      toast.error('Failed to remove Crown Jewel')
+      toast.error('Failed to remove crown jewel')
     }
   }
 
@@ -355,15 +397,10 @@ export default function CrownJewelsPage() {
         // never render an undefined element.
         const CategoryIcon = categoryIcons[jewel.category] ?? Database
         return (
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-500/10">
-              <CategoryIcon className="h-5 w-5 text-amber-500" />
-            </div>
+          <div className="flex min-w-0 items-center gap-2.5">
+            <CategoryIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
             <div className="min-w-0">
-              <div className="font-medium flex items-center gap-1.5">
-                <span className="truncate font-mono text-[13px]">{jewel.name}</span>
-                <Crown className="h-3 w-3 shrink-0 text-amber-500" />
-              </div>
+              <div className="truncate font-medium">{jewel.name}</div>
               <div className="text-xs text-muted-foreground capitalize">
                 {jewel.assetType ?? 'asset'}
                 {jewel.criticality ? ` · ${jewel.criticality}` : ''}
@@ -376,23 +413,7 @@ export default function CrownJewelsPage() {
     {
       accessorKey: 'riskScore',
       header: ({ column }) => <DataTableColumnHeader column={column} title="Risk" />,
-      cell: ({ row }) => {
-        const s = row.original.riskScore
-        const band = riskBand(s)
-        return (
-          <div className="flex items-center gap-2">
-            <span
-              className={`inline-flex items-center gap-1.5 font-semibold tabular-nums ${band.text}`}
-            >
-              <span className={`h-2 w-2 rounded-full ${band.dot}`} />
-              {s}
-            </span>
-            <div className="h-1.5 w-16 overflow-hidden rounded-full bg-muted">
-              <div className={`h-full rounded-full ${band.bar}`} style={{ width: `${s}%` }} />
-            </div>
-          </div>
-        )
-      },
+      cell: ({ row }) => <RiskScoreBadge score={row.original.riskScore} size="sm" />,
     },
     {
       accessorKey: 'businessImpactScore',
@@ -401,13 +422,8 @@ export default function CrownJewelsPage() {
         const b = row.original.businessImpactScore ?? 0
         return (
           <div className="flex items-center gap-2">
-            <span className="font-semibold tabular-nums text-amber-600">
-              {b}
-              <span className="text-muted-foreground text-xs font-normal">/100</span>
-            </span>
-            <div className="h-1.5 w-16 overflow-hidden rounded-full bg-muted">
-              <div className="h-full rounded-full bg-amber-500" style={{ width: `${b}%` }} />
-            </div>
+            <span className="w-7 text-end font-medium tabular-nums">{b}</span>
+            <Progress value={b} className="h-1.5 w-16" aria-label={`Business impact ${b} of 100`} />
           </div>
         )
       },
@@ -423,15 +439,15 @@ export default function CrownJewelsPage() {
       cell: ({ row }) => {
         const exposed = isExposed(row.original)
         return exposed ? (
-          <Badge variant="outline" className="border-red-300 bg-red-500/5 text-red-600">
+          <Badge variant="outline" className="border-destructive/30 text-destructive">
             <ShieldX className="me-1 h-3 w-3" />
             Internet-exposed
           </Badge>
         ) : (
-          <Badge variant="outline" className="border-green-300 bg-green-500/5 text-green-600">
-            <ShieldCheck className="me-1 h-3 w-3" />
+          <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+            <ShieldCheck className="h-3 w-3" />
             Not exposed
-          </Badge>
+          </span>
         )
       },
     },
@@ -439,9 +455,11 @@ export default function CrownJewelsPage() {
       accessorKey: 'owner',
       header: ({ column }) => <DataTableColumnHeader column={column} title="Owner" />,
       cell: ({ row }) => (
-        <div className="text-sm">
-          <div className="font-medium">{row.original.owner}</div>
-        </div>
+        <span
+          className={cn('text-sm', row.original.owner === 'Unassigned' && 'text-muted-foreground')}
+        >
+          {row.original.owner}
+        </span>
       ),
     },
     {
@@ -452,7 +470,7 @@ export default function CrownJewelsPage() {
           <Can permission={[Permission.ScopeWrite, Permission.ScopeDelete]}>
             <DataTableRowActions
               actions={[
-                { label: 'View Details', icon: Eye, onClick: () => setViewJewel(jewel) },
+                { label: 'View details', icon: Eye, onClick: () => setViewJewel(jewel) },
                 {
                   label: 'Edit',
                   icon: Pencil,
@@ -479,133 +497,89 @@ export default function CrownJewelsPage() {
     <>
       <Main>
         <PageHeader
-          title="Crown Jewels"
-          description="Identify and protect your most critical assets"
+          title="Crown jewels"
+          description="The assets whose compromise would hurt the business most."
         >
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleExport}
-            disabled={crownJewels.length === 0}
-          >
-            <Download className="me-2 h-4 w-4" />
-            Export
-          </Button>
           <Can permission={Permission.ScopeWrite}>
             <Button size="sm" onClick={() => setIsCreateOpen(true)}>
               <Plus className="me-2 h-4 w-4" />
-              Add Crown Jewel
+              Designate crown jewel
             </Button>
           </Can>
         </PageHeader>
 
-        {/* Stats Cards */}
-        <div className="grid gap-4 md:grid-cols-4 mb-6">
-          <StatsCard
-            title="Total Jewels"
-            value={stats.total}
-            icon={Crown}
-            description={`${stats.byStatus.protected} protected`}
-          />
-          <StatsCard
-            title="At Risk"
-            value={stats.byStatus.at_risk}
-            valueClassName="text-amber-600"
-            icon={ShieldAlert}
-            description="Needs attention"
-          />
-          <StatsCard
-            title="Exposed"
-            value={stats.byStatus.exposed}
-            valueClassName="text-red-600"
-            icon={ShieldX}
-            description={`${stats.totalExposures} total exposures`}
-          />
-          <StatsCard
-            title="Avg Risk Score"
-            value={stats.averageRiskScore}
-            icon={AlertTriangle}
-            description="Across all jewels"
+        <MetricStrip className="mt-5" loading={!apiCrownJewels} items={metrics} />
+
+        <div className="mt-5">
+          <DataTable
+            columns={columns}
+            data={filteredJewels}
+            showSearch={false}
+            toolbarStart={
+              <>
+                <div className="relative min-w-0 flex-1 sm:max-w-xs">
+                  <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search name or owner…"
+                    aria-label="Search crown jewels"
+                    className="h-9 ps-9"
+                  />
+                </div>
+                <Select value={filterExposure} onValueChange={setFilterExposure}>
+                  <SelectTrigger className="h-9 w-auto min-w-36" aria-label="Filter by exposure">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Any exposure</SelectItem>
+                    <SelectItem value="exposed">Internet-exposed</SelectItem>
+                    <SelectItem value="not_exposed">Not exposed</SelectItem>
+                  </SelectContent>
+                </Select>
+                {assetTypes.length > 1 && (
+                  <Select value={filterType} onValueChange={setFilterType}>
+                    <SelectTrigger
+                      className="h-9 w-auto min-w-32"
+                      aria-label="Filter by asset type"
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All types</SelectItem>
+                      {assetTypes.map((t) => (
+                        <SelectItem key={t} value={t} className="capitalize">
+                          {t.replace(/_/g, ' ')}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </>
+            }
+            toolbarEnd={
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9"
+                onClick={handleExport}
+                disabled={crownJewels.length === 0}
+              >
+                <Download className="h-4 w-4 md:me-2" />
+                <span className="hidden md:inline">Export</span>
+              </Button>
+            }
+            emptyMessage={
+              crownJewels.length === 0 ? 'No crown jewels yet' : 'No crown jewels match'
+            }
+            emptyDescription={
+              crownJewels.length === 0
+                ? 'Designate a critical asset as a crown jewel to track it here.'
+                : 'Try adjusting your search or filters.'
+            }
+            onRowClick={(jewel) => setViewJewel(jewel)}
           />
         </div>
-
-        {/* Filters */}
-        <Card className="mb-6">
-          <CardHeader className="pb-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <Filter className="h-4 w-4" />
-              <CardTitle className="text-sm">Filters</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-4">
-              <div className="flex flex-wrap items-center gap-2">
-                <Label className="text-sm">Status:</Label>
-                <Select value={filterStatus} onValueChange={setFilterStatus}>
-                  <SelectTrigger className="w-36">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All</SelectItem>
-                    <SelectItem value="protected">Protected</SelectItem>
-                    <SelectItem value="at_risk">At Risk</SelectItem>
-                    <SelectItem value="exposed">Exposed</SelectItem>
-                    <SelectItem value="under_review">Under Review</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <Label className="text-sm">Category:</Label>
-                <Select value={filterCategory} onValueChange={setFilterCategory}>
-                  <SelectTrigger className="w-40">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All</SelectItem>
-                    <SelectItem value="data">Data</SelectItem>
-                    <SelectItem value="system">System</SelectItem>
-                    <SelectItem value="application">Application</SelectItem>
-                    <SelectItem value="infrastructure">Infrastructure</SelectItem>
-                    <SelectItem value="intellectual_property">IP</SelectItem>
-                    <SelectItem value="financial">Financial</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              {(filterStatus !== 'all' || filterCategory !== 'all') && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setFilterStatus('all')
-                    setFilterCategory('all')
-                  }}
-                >
-                  <X className="me-1 h-3 w-3" />
-                  Clear filters
-                </Button>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Data Table */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Crown Jewels</CardTitle>
-            <CardDescription>
-              {filteredJewels.length} of {crownJewels.length} critical assets
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <DataTable
-              columns={columns}
-              data={filteredJewels}
-              searchPlaceholder="Search crown jewels..."
-              searchKey="name"
-              onRowClick={(jewel) => setViewJewel(jewel)}
-            />
-          </CardContent>
-        </Card>
       </Main>
 
       {/* Create Dialog */}
@@ -620,16 +594,16 @@ export default function CrownJewelsPage() {
           }
         }}
       >
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Designate Crown Jewel</DialogTitle>
+            <DialogTitle>Designate crown jewel</DialogTitle>
             <DialogDescription>
-              Select an existing asset to designate as a Crown Jewel requiring special protection
+              Select an existing asset to designate as a crown jewel that needs special protection
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="asset-search">Search Asset *</Label>
+              <Label htmlFor="asset-search">Search asset *</Label>
               <Input
                 id="asset-search"
                 value={assetSearch}
@@ -664,11 +638,11 @@ export default function CrownJewelsPage() {
                 </div>
               )}
               {selectedAssetId && (
-                <p className="text-xs text-green-600">Asset selected: {assetSearch}</p>
+                <p className="text-xs text-muted-foreground">Asset selected: {assetSearch}</p>
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="businessImpact">Business Impact Notes *</Label>
+              <Label htmlFor="businessImpact">Business impact notes *</Label>
               <Textarea
                 id="businessImpact"
                 value={formData.businessImpact}
@@ -699,16 +673,16 @@ export default function CrownJewelsPage() {
           }
         }}
       >
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Edit Crown Jewel</DialogTitle>
+            <DialogTitle>Edit crown jewel</DialogTitle>
             <DialogDescription>
               Update business impact notes for {editJewel?.name}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="edit-businessImpact">Business Impact Notes *</Label>
+              <Label htmlFor="edit-businessImpact">Business impact notes *</Label>
               <Textarea
                 id="edit-businessImpact"
                 value={formData.businessImpact}
@@ -723,7 +697,7 @@ export default function CrownJewelsPage() {
               Cancel
             </Button>
             <Button onClick={handleEdit} disabled={isDesignating}>
-              {isDesignating ? 'Saving...' : 'Save Changes'}
+              {isDesignating ? 'Saving...' : 'Save changes'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -736,13 +710,9 @@ export default function CrownJewelsPage() {
             <>
               <SheetHeader>
                 <div className="flex items-center gap-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-500/10">
-                    <Crown className="h-6 w-6 text-amber-500" />
-                  </div>
+                  <Crown className="h-5 w-5 shrink-0 text-muted-foreground" />
                   <div className="min-w-0">
-                    <SheetTitle className="break-all font-mono text-base">
-                      {viewJewel.name}
-                    </SheetTitle>
+                    <SheetTitle className="break-all text-base">{viewJewel.name}</SheetTitle>
                     <SheetDescription className="capitalize">
                       {viewJewel.assetType ?? 'asset'}
                       {viewJewel.description ? ` · ${viewJewel.description}` : ''}
@@ -753,67 +723,37 @@ export default function CrownJewelsPage() {
 
               <SheetBody>
                 <Tabs defaultValue="overview" className="mt-6">
-                  <TabsList className="grid w-full grid-cols-2">
+                  <TabsList>
                     <TabsTrigger value="overview">Overview</TabsTrigger>
                     <TabsTrigger value="dependencies">Dependencies</TabsTrigger>
                   </TabsList>
 
-                  <TabsContent value="overview" className="space-y-4 mt-4">
+                  <TabsContent value="overview" className="mt-4 space-y-5">
                     {/* The three things that actually matter for a crown jewel. */}
-                    <div className="grid grid-cols-3 gap-2">
-                      <div className="rounded-lg border p-3 text-center">
-                        <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                          Risk
-                        </p>
-                        <p
-                          className={`mt-1 text-2xl font-bold tabular-nums ${riskBand(viewJewel.riskScore).text}`}
-                        >
-                          {viewJewel.riskScore}
-                        </p>
-                        <p
-                          className={`text-xs font-semibold ${riskBand(viewJewel.riskScore).text}`}
-                        >
-                          {riskBand(viewJewel.riskScore).label}
-                        </p>
-                      </div>
-                      <div className="rounded-lg border border-amber-200 bg-amber-500/5 p-3 text-center">
-                        <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                          Business impact
-                        </p>
-                        <p className="mt-1 text-2xl font-bold tabular-nums text-amber-600">
-                          {viewJewel.businessImpactScore ?? 0}
-                        </p>
-                        <p className="text-xs font-semibold text-amber-600">
-                          {(viewJewel.businessImpactScore ?? 0) >= 67
-                            ? 'High'
-                            : (viewJewel.businessImpactScore ?? 0) >= 34
-                              ? 'Medium'
-                              : 'Low'}
-                        </p>
-                      </div>
-                      <div className="rounded-lg border p-3 text-center">
-                        <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                          Exposure
-                        </p>
-                        <p
-                          className={`mt-1 flex justify-center ${isExposed(viewJewel) ? 'text-red-600' : 'text-green-600'}`}
-                        >
-                          {isExposed(viewJewel) ? (
-                            <ShieldX className="h-7 w-7" />
-                          ) : (
-                            <ShieldCheck className="h-7 w-7" />
-                          )}
-                        </p>
-                        <p
-                          className={`text-xs font-semibold ${isExposed(viewJewel) ? 'text-red-600' : 'text-green-600'}`}
-                        >
-                          {isExposed(viewJewel) ? 'Exposed' : 'Not exposed'}
-                        </p>
-                      </div>
-                    </div>
+                    <MetricStrip
+                      items={[
+                        {
+                          key: 'risk',
+                          label: 'Risk',
+                          value: viewJewel.riskScore,
+                          hint: riskLabel(viewJewel.riskScore),
+                        },
+                        {
+                          key: 'impact',
+                          label: 'Business impact',
+                          value: viewJewel.businessImpactScore ?? 0,
+                          hint: impactLabel(viewJewel.businessImpactScore ?? 0),
+                        },
+                        {
+                          key: 'exposure',
+                          label: 'Internet-exposed',
+                          value: isExposed(viewJewel) ? 'Yes' : 'No',
+                        },
+                      ]}
+                    />
 
                     {/* Why it's a crown jewel — one honest sentence. */}
-                    <div className="rounded-lg border border-amber-200 bg-amber-500/5 p-3 text-sm leading-relaxed">
+                    <p className="rounded-lg border bg-muted/40 p-3 text-sm leading-relaxed">
                       <span className="font-medium">Why it&apos;s critical: </span>
                       compromise would have{' '}
                       {(viewJewel.businessImpactScore ?? 0) >= 67
@@ -826,13 +766,11 @@ export default function CrownJewelsPage() {
                       {isExposed(viewJewel)
                         ? 'It is reachable from the internet — reducing its exposure is the priority.'
                         : 'It is not internet-reachable, which keeps its risk contained.'}
-                    </div>
+                    </p>
 
                     {/* Open findings by severity — real signal, not an empty card. */}
-                    <div>
-                      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                        Open findings
-                      </p>
+                    <section>
+                      <h3 className="mb-2 text-sm font-semibold">Open findings</h3>
                       {(viewJewel.findingCount ?? 0) > 0 ? (
                         <div className="flex items-center gap-3">
                           <SeverityChips sev={viewJewel.findingSeverity} />
@@ -841,19 +779,17 @@ export default function CrownJewelsPage() {
                           </span>
                         </div>
                       ) : (
-                        <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-500/5 px-3 py-2 text-sm text-green-700">
+                        <p className="flex items-center gap-2 text-sm text-muted-foreground">
                           <ShieldCheck className="h-4 w-4" /> No open findings on this asset.
-                        </div>
+                        </p>
                       )}
-                    </div>
+                    </section>
 
                     {/* Reachability — honest empty/real state. */}
-                    <div>
-                      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                        Reachability
-                      </p>
+                    <section>
+                      <h3 className="mb-2 text-sm font-semibold">Reachability</h3>
                       {isExposed(viewJewel) ? (
-                        <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-500/5 px-3 py-2 text-sm text-red-700">
+                        <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
                           <ShieldX className="mt-0.5 h-4 w-4 shrink-0" />
                           <span>
                             Reachable from the internet ({viewJewel.exposure}). This drives its risk
@@ -861,70 +797,64 @@ export default function CrownJewelsPage() {
                           </span>
                         </div>
                       ) : (
-                        <div className="flex items-start gap-2 rounded-lg border border-green-200 bg-green-500/5 px-3 py-2 text-sm text-green-700">
+                        <p className="flex items-start gap-2 text-sm text-muted-foreground">
                           <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
                           <span>
                             Not reachable from the internet — no public attack path reaches this
                             asset.
                           </span>
-                        </div>
+                        </p>
                       )}
-                    </div>
+                    </section>
 
                     {/* Details — only real, populated fields. */}
-                    <div>
-                      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                        Details
-                      </p>
-                      <div className="space-y-2 text-sm">
+                    <section>
+                      <h3 className="mb-2 text-sm font-semibold">Details</h3>
+                      <dl className="space-y-2 text-sm">
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground">Type</span>
-                          <span className="font-medium capitalize">
+                          <dt className="text-muted-foreground">Type</dt>
+                          <dd className="font-medium capitalize">
                             {viewJewel.assetType ?? 'asset'}
-                          </span>
+                          </dd>
                         </div>
                         {viewJewel.criticality && (
                           <div className="flex justify-between">
-                            <span className="text-muted-foreground">Criticality</span>
-                            <span className="font-medium capitalize">{viewJewel.criticality}</span>
+                            <dt className="text-muted-foreground">Criticality</dt>
+                            <dd className="font-medium capitalize">{viewJewel.criticality}</dd>
                           </div>
                         )}
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground">Data classification</span>
-                          <span className="font-medium capitalize">
+                          <dt className="text-muted-foreground">Data classification</dt>
+                          <dd className="font-medium capitalize">
                             {viewJewel.dataClassification.replace('_', ' ')}
-                          </span>
+                          </dd>
                         </div>
                         {(viewJewel.piiExposed || viewJewel.phiExposed) && (
                           <div className="flex justify-between">
-                            <span className="text-muted-foreground">Sensitive data</span>
-                            <span className="font-medium text-amber-600">
+                            <dt className="text-muted-foreground">Sensitive data</dt>
+                            <dd className="font-medium">
                               {[viewJewel.piiExposed && 'PII', viewJewel.phiExposed && 'PHI']
                                 .filter(Boolean)
                                 .join(', ')}
-                            </span>
+                            </dd>
                           </div>
                         )}
                         {viewJewel.lastAssessed && (
                           <div className="flex justify-between">
-                            <span className="text-muted-foreground">Last assessed</span>
-                            <span className="font-medium">
+                            <dt className="text-muted-foreground">Last assessed</dt>
+                            <dd className="font-medium">
                               {new Date(viewJewel.lastAssessed).toLocaleDateString()}
-                            </span>
+                            </dd>
                           </div>
                         )}
-                      </div>
-                    </div>
+                      </dl>
+                    </section>
 
                     {/* Owner */}
-                    <div>
-                      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                        Owner
-                      </p>
+                    <section>
+                      <h3 className="mb-2 text-sm font-semibold">Owner</h3>
                       <div className="flex items-center gap-3">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-muted">
-                          <Users className="h-4 w-4 text-muted-foreground" />
-                        </div>
+                        <Users className="h-4 w-4 shrink-0 text-muted-foreground" />
                         <div>
                           <p className="font-medium">{viewJewel.owner}</p>
                           {viewJewel.ownerEmail ? (
@@ -939,13 +869,11 @@ export default function CrownJewelsPage() {
                           )}
                         </div>
                       </div>
-                    </div>
+                    </section>
 
                     {viewJewel.tags.length > 0 && (
-                      <div>
-                        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                          Tags
-                        </p>
+                      <section>
+                        <h3 className="mb-2 text-sm font-semibold">Tags</h3>
                         <div className="flex flex-wrap gap-2">
                           {viewJewel.tags.map((tag) => (
                             <Badge key={tag} variant="secondary">
@@ -953,7 +881,7 @@ export default function CrownJewelsPage() {
                             </Badge>
                           ))}
                         </div>
-                      </div>
+                      </section>
                     )}
                   </TabsContent>
 
@@ -963,9 +891,9 @@ export default function CrownJewelsPage() {
                         Assets that this crown jewel depends on or is connected to.
                       </p>
                       {getDependencies(viewJewel.id).length > 0 ? (
-                        <div className="space-y-2">
+                        <div className="divide-y rounded-lg border">
                           {getDependencies(viewJewel.id).map((dep) => (
-                            <Card key={dep.id} className="p-3">
+                            <div key={dep.id} className="p-3">
                               <div className="flex items-center justify-between">
                                 <div className="flex flex-wrap items-center gap-2">
                                   <Link2 className="h-4 w-4 text-muted-foreground" />
@@ -975,19 +903,16 @@ export default function CrownJewelsPage() {
                                   <Badge variant="outline">{dep.dependencyType}</Badge>
                                   <Badge
                                     variant="outline"
-                                    className={
-                                      dep.criticality === 'critical'
-                                        ? 'bg-red-500/10 text-red-500'
-                                        : dep.criticality === 'high'
-                                          ? 'bg-orange-500/10 text-orange-500'
-                                          : ''
-                                    }
+                                    className={cn(
+                                      'capitalize',
+                                      CRITICALITY_BADGE_SOFT[dep.criticality as CriticalityLevel]
+                                    )}
                                   >
                                     {dep.criticality}
                                   </Badge>
                                 </div>
                               </div>
-                            </Card>
+                            </div>
                           ))}
                         </div>
                       ) : (
@@ -1024,7 +949,7 @@ export default function CrownJewelsPage() {
       <ConfirmDialog
         open={!!deleteJewel}
         onOpenChange={(open) => !open && setDeleteJewel(null)}
-        title="Remove Crown Jewel?"
+        title="Remove crown jewel?"
         desc={
           <>
             Are you sure you want to remove &quot;{deleteJewel?.name}&quot; from your crown jewels?

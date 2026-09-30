@@ -7,7 +7,9 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Main } from '@/components/layout'
 import { PageHeader, EmptyState } from '@/features/shared'
-import { cn } from '@/lib/utils'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { useUrlFilter } from '@/hooks/use-url-param'
+import { formatEpssPercentile, formatEpssScore, formatEpssTopPercent } from '@/lib/epss'
 import {
   TrendingUp,
   AlertOctagon,
@@ -27,11 +29,12 @@ import {
   SyncStatusManager,
   CompactSyncStatus,
   ThreatActorsPanel,
-  IOCsPanel,
 } from '@/features/threat-intel/components'
 import { EPSSScoreBadge, EPSSScoreMeter } from '@/features/shared/components/epss-score-badge'
 import { KEVIndicatorBadge, KEVStatus } from '@/features/shared/components/kev-indicator-badge'
 import type { CVEEnrichment } from '@/lib/api/threatintel-types'
+
+const TABS = ['overview', 'actors', 'lookup', 'sync']
 
 export default function ThreatIntelPage() {
   const { currentTenant } = useTenant()
@@ -52,111 +55,93 @@ export default function ThreatIntelPage() {
 
   const lastSync = syncStatuses.length > 0 ? syncStatuses[0].last_sync_at : undefined
 
+  const [tabParam, setTab] = useUrlFilter('tab', 'overview')
+  const activeTab = TABS.includes(tabParam) ? tabParam : 'overview'
+
   return (
-    <>
-      <Main>
-        <div className="space-y-6">
-          {/* Page Header */}
-          <PageHeader
-            title="Threat Intelligence"
-            description="Threat landscape (EPSS + CISA KEV), tracked threat actors, and indicators of compromise"
-          >
-            <div className="flex items-center gap-4">
-              <CompactSyncStatus statuses={syncStatuses} />
-              <Button variant="outline" onClick={handleRefreshAll} disabled={isLoading}>
-                {isLoading ? (
-                  <Loader2 className="me-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <RefreshCw className="me-2 h-4 w-4" />
-                )}
-                Refresh
-              </Button>
-            </div>
-          </PageHeader>
+    <Main>
+      <PageHeader
+        title="Threat intelligence"
+        description="Exploit likelihood (EPSS), known-exploited CVEs (CISA KEV) and tracked threat actors."
+      >
+        <CompactSyncStatus statuses={syncStatuses} />
+        <Button variant="outline" size="sm" onClick={handleRefreshAll} disabled={isLoading}>
+          {isLoading ? (
+            <Loader2 className="h-4 w-4 animate-spin sm:me-2" />
+          ) : (
+            <RefreshCw className="h-4 w-4 sm:me-2" />
+          )}
+          <span className="hidden sm:inline">Refresh</span>
+        </Button>
+      </PageHeader>
 
-          {/* Main Content */}
-          <Tabs defaultValue="overview" className="space-y-4">
-            <TabsList>
-              <TabsTrigger value="overview">Threat Landscape</TabsTrigger>
-              <TabsTrigger value="actors">Threat Actors</TabsTrigger>
-              <TabsTrigger value="iocs">IOCs</TabsTrigger>
-              <TabsTrigger value="lookup">CVE Lookup</TabsTrigger>
-              <TabsTrigger value="sync">Sync Status</TabsTrigger>
-            </TabsList>
+      {/* The active tab lives in the URL (?tab=) so each view can be linked. */}
+      <Tabs value={activeTab} onValueChange={setTab} className="mt-4">
+        <TabsList>
+          <TabsTrigger value="overview">Threat landscape</TabsTrigger>
+          <TabsTrigger value="actors">Threat actors</TabsTrigger>
+          <TabsTrigger value="lookup">CVE lookup</TabsTrigger>
+          <TabsTrigger value="sync">Sync status</TabsTrigger>
+        </TabsList>
 
-            {/* Overview Tab */}
-            <TabsContent value="overview" className="space-y-4">
-              <ThreatIntelOverview
-                epssStats={epssStats}
-                kevStats={kevStats}
-                lastSyncAt={lastSync}
-                isLoading={isLoading}
-              />
+        <TabsContent value="overview" className="mt-5 space-y-5">
+          <ThreatIntelOverview
+            epssStats={epssStats}
+            kevStats={kevStats}
+            lastSyncAt={lastSync}
+            isLoading={isLoading}
+          />
 
-              {/* Info Cards */}
-              <div className="grid gap-4 md:grid-cols-2">
-                <InfoCard
-                  title="What is EPSS?"
-                  icon={TrendingUp}
-                  iconColor="text-orange-500"
-                  description="The Exploit Prediction Scoring System (EPSS) provides a probability score (0-1) indicating the likelihood that a vulnerability will be exploited in the next 30 days."
-                  links={[{ label: 'FIRST EPSS', url: 'https://www.first.org/epss/' }]}
-                />
-                <InfoCard
-                  title="What is CISA KEV?"
-                  icon={AlertOctagon}
-                  iconColor="text-red-500"
-                  description="The CISA Known Exploited Vulnerabilities (KEV) catalog lists vulnerabilities that are being actively exploited in the wild and require immediate remediation attention."
-                  links={[
-                    {
-                      label: 'CISA KEV Catalog',
-                      url: 'https://www.cisa.gov/known-exploited-vulnerabilities-catalog',
-                    },
-                  ]}
-                />
-              </div>
-            </TabsContent>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <InfoCard
+              title="What is EPSS?"
+              icon={TrendingUp}
+              description="The Exploit Prediction Scoring System (EPSS) provides a probability score (0-1) indicating the likelihood that a vulnerability will be exploited in the next 30 days."
+              links={[{ label: 'FIRST EPSS', url: 'https://www.first.org/epss/' }]}
+            />
+            <InfoCard
+              title="What is CISA KEV?"
+              icon={AlertOctagon}
+              description="The CISA Known Exploited Vulnerabilities (KEV) catalog lists vulnerabilities that are being actively exploited in the wild and require immediate remediation attention."
+              links={[
+                {
+                  label: 'CISA KEV catalog',
+                  url: 'https://www.cisa.gov/known-exploited-vulnerabilities-catalog',
+                },
+              ]}
+            />
+          </div>
+        </TabsContent>
 
-            {/* Threat Actors Tab */}
-            <TabsContent value="actors" className="space-y-4">
-              <ThreatActorsPanel />
-            </TabsContent>
+        <TabsContent value="actors" className="mt-5">
+          <ThreatActorsPanel />
+        </TabsContent>
 
-            {/* IOCs Tab */}
-            <TabsContent value="iocs" className="space-y-4">
-              <IOCsPanel />
-            </TabsContent>
+        <TabsContent value="lookup" className="mt-5">
+          <CVELookup />
+        </TabsContent>
 
-            {/* CVE Lookup Tab */}
-            <TabsContent value="lookup" className="space-y-4">
-              <CVELookup />
-            </TabsContent>
-
-            {/* Sync Status Tab */}
-            <TabsContent value="sync" className="space-y-4">
-              <SyncStatusManager statuses={syncStatuses} onRefresh={refresh} />
-            </TabsContent>
-          </Tabs>
-        </div>
-      </Main>
-    </>
+        <TabsContent value="sync" className="mt-5">
+          <SyncStatusManager statuses={syncStatuses} onRefresh={refresh} />
+        </TabsContent>
+      </Tabs>
+    </Main>
   )
 }
 
 interface InfoCardProps {
   title: string
   icon: typeof Shield
-  iconColor: string
   description: string
   links?: Array<{ label: string; url: string }>
 }
 
-function InfoCard({ title, icon: Icon, iconColor, description, links }: InfoCardProps) {
+function InfoCard({ title, icon: Icon, description, links }: InfoCardProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base flex items-center gap-2">
-          <Icon className={cn('h-4 w-4', iconColor)} />
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Icon className="h-4 w-4 text-muted-foreground" />
           {title}
         </CardTitle>
       </CardHeader>
@@ -218,19 +203,20 @@ function CVELookup() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Search Input */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">CVE Lookup</CardTitle>
-          <CardDescription>Look up EPSS score and KEV status for any CVE</CardDescription>
+          <CardTitle>CVE lookup</CardTitle>
+          <CardDescription>Look up the EPSS score and KEV status of any CVE.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <div className="relative min-w-0 flex-1">
+              <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Enter CVE ID (e.g., CVE-2021-44228)"
+                placeholder="CVE ID, e.g. CVE-2021-44228"
+                aria-label="CVE ID"
                 value={cveId}
                 onChange={(e) => setCveId(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleLookup()}
@@ -251,14 +237,17 @@ function CVELookup() {
 
       {/* Error State */}
       {error && (
-        <Card className="border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/30">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3 text-red-600 dark:text-red-400">
-              <Info className="h-5 w-5" />
-              <span>{error}</span>
-            </div>
-          </CardContent>
-        </Card>
+        <Alert variant="destructive">
+          <Info />
+          <AlertTitle>Lookup failed</AlertTitle>
+          <AlertDescription>
+            <p>{error}</p>
+            <Button variant="outline" size="sm" className="mt-2" onClick={handleLookup}>
+              <RefreshCw className="me-2 h-4 w-4" />
+              Retry
+            </Button>
+          </AlertDescription>
+        </Alert>
       )}
 
       {/* Results */}
@@ -267,8 +256,8 @@ function CVELookup() {
           {/* CVE Header */}
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-xl">{result.cve_id}</CardTitle>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <CardTitle className="font-mono">{result.cve_id}</CardTitle>
                 <div className="flex items-center gap-2">
                   {result.epss && (
                     <EPSSScoreBadge
@@ -295,7 +284,7 @@ function CVELookup() {
                 </div>
               </div>
               <CardDescription>
-                Enriched at: {new Date(result.enriched_at).toLocaleString()}
+                Enriched {new Date(result.enriched_at).toLocaleString()}
               </CardDescription>
             </CardHeader>
           </Card>
@@ -304,27 +293,33 @@ function CVELookup() {
           {result.epss && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <TrendingUp className="h-4 w-4 text-orange-500" />
-                  EPSS Score Details
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                  EPSS score
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid gap-4 md:grid-cols-3">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                   <div>
                     <p className="text-sm text-muted-foreground">Score</p>
-                    <p className="text-2xl font-bold">{(result.epss.score * 100).toFixed(2)}%</p>
+                    <p className="text-2xl font-semibold tabular-nums">
+                      {formatEpssScore(result.epss.score, 2)}
+                    </p>
                     <p className="text-xs text-muted-foreground">
                       Probability of exploitation in next 30 days
                     </p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Percentile</p>
-                    <p className="text-2xl font-bold">{result.epss.percentile.toFixed(1)}%</p>
-                    <p className="text-xs text-muted-foreground">Higher than this % of all CVEs</p>
+                    <p className="text-2xl font-semibold tabular-nums">
+                      {formatEpssPercentile(result.epss.percentile)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatEpssTopPercent(result.epss.percentile)} of all CVEs
+                    </p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Model Version</p>
+                    <p className="text-sm text-muted-foreground">Model version</p>
                     <p className="text-lg font-medium">{result.epss.model_version}</p>
                     <p className="text-xs text-muted-foreground">
                       Score date: {new Date(result.epss.score_date).toLocaleDateString()}
@@ -340,9 +335,9 @@ function CVELookup() {
           {result.kev ? (
             <Card>
               <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <AlertOctagon className="h-4 w-4 text-red-500" />
-                  CISA KEV Entry
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <AlertOctagon className="h-4 w-4 text-muted-foreground" />
+                  CISA KEV entry
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -356,15 +351,15 @@ function CVELookup() {
                   }}
                 />
 
-                <div className="space-y-3 pt-4 border-t">
+                <div className="space-y-3 border-t pt-4">
                   <div>
-                    <p className="text-sm font-medium">Vendor / Product</p>
+                    <p className="text-sm font-medium">Vendor / product</p>
                     <p className="text-sm text-muted-foreground">
                       {result.kev.vendor_project} - {result.kev.product}
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm font-medium">Vulnerability Name</p>
+                    <p className="text-sm font-medium">Vulnerability name</p>
                     <p className="text-sm text-muted-foreground">{result.kev.vulnerability_name}</p>
                   </div>
                   <div>
@@ -372,7 +367,7 @@ function CVELookup() {
                     <p className="text-sm text-muted-foreground">{result.kev.short_description}</p>
                   </div>
                   <div>
-                    <p className="text-sm font-medium">Required Action</p>
+                    <p className="text-sm font-medium">Required action</p>
                     <p className="text-sm text-muted-foreground">{result.kev.required_action}</p>
                   </div>
                 </div>
@@ -380,8 +375,8 @@ function CVELookup() {
             </Card>
           ) : (
             <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-3 text-muted-foreground">
+              <CardContent>
+                <div className="flex items-center gap-3 text-sm text-muted-foreground">
                   <Shield className="h-5 w-5" />
                   <span>This CVE is not in the CISA KEV catalog</span>
                 </div>

@@ -6,6 +6,12 @@ import { ColumnDef } from '@tanstack/react-table'
 import { Main } from '@/components/layout'
 import {
   PageHeader,
+  MetricStrip,
+  BulkActionBar,
+  FacetPanel,
+  FacetSection,
+  FacetOption,
+  type MetricStripItem,
   SeverityBadge,
   DataTable,
   DataTableColumnHeader,
@@ -16,7 +22,7 @@ import {
 
 const REMEDIATION_TABS = [
   { label: 'Tasks', href: '/remediation' },
-  { label: 'Solution Families', href: '/remediations' },
+  { label: 'Solution families', href: '/remediations' },
 ]
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -31,7 +37,10 @@ import { format } from 'date-fns'
 import {
   Plus,
   Download,
-  Filter,
+  SlidersHorizontal,
+  List,
+  Columns3,
+  ListTodo,
   RefreshCw,
   Pencil,
   Trash2,
@@ -40,7 +49,6 @@ import {
   CheckCircle,
   ArrowRight,
   X,
-  ListTodo,
   Calendar,
   Copy,
   Play,
@@ -54,8 +62,8 @@ import {
   ChevronRight,
 } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Card, CardContent } from '@/components/ui/card'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { SEVERITY_BADGE_SOFT } from '@/lib/severity-colors'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -156,27 +164,23 @@ function findingFilterFromForm(findingIds: string[]): Record<string, unknown> | 
   return ids.length > 0 ? { finding_ids: ids } : undefined
 }
 
+// Task priority reuses the severity soft-tint scale (urgent reads as critical)
+// rather than a private palette, so it looks like every other severity chip.
 const priorityColors: Record<TaskPriority, string> = {
-  urgent: 'bg-red-500 text-white',
-  high: 'bg-orange-500 text-white',
-  medium: 'bg-yellow-500 text-black',
-  low: 'bg-blue-500 text-white',
+  urgent: SEVERITY_BADGE_SOFT.critical,
+  high: SEVERITY_BADGE_SOFT.high,
+  medium: SEVERITY_BADGE_SOFT.medium,
+  low: SEVERITY_BADGE_SOFT.low,
 }
 
-const statusColors: Record<TaskStatus, string> = {
-  open: 'bg-gray-500 text-white',
-  in_progress: 'bg-blue-500 text-white',
-  review: 'bg-purple-500 text-white',
-  completed: 'bg-green-500 text-white',
-  blocked: 'bg-red-500 text-white',
-}
+type BadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline'
 
-const statusDotColors: Record<TaskStatus, string> = {
-  open: 'bg-gray-400',
-  in_progress: 'bg-blue-500',
-  review: 'bg-purple-500',
-  completed: 'bg-green-500',
-  blocked: 'bg-red-500',
+const statusVariants: Record<TaskStatus, BadgeVariant> = {
+  open: 'outline',
+  in_progress: 'secondary',
+  review: 'secondary',
+  completed: 'default',
+  blocked: 'destructive',
 }
 
 interface Filters {
@@ -423,17 +427,6 @@ export default function RemediationPage() {
     [tasks]
   )
 
-  const tasksByStatus = useMemo(
-    () => ({
-      open: tasks.filter((t) => t.status === 'open'),
-      in_progress: tasks.filter((t) => t.status === 'in_progress'),
-      review: tasks.filter((t) => t.status === 'review'),
-      completed: tasks.filter((t) => t.status === 'completed'),
-      blocked: tasks.filter((t) => t.status === 'blocked'),
-    }),
-    [tasks]
-  )
-
   // ─── State ───────────────────────────────────────────────────────
 
   const [selectedIds, setSelectedIds] = useState<string[]>([])
@@ -462,7 +455,10 @@ export default function RemediationPage() {
     () => ({ priorities: priorityFilter, statuses: statusFilter, assignees: assigneeFilter }),
     [priorityFilter, statusFilter, assigneeFilter]
   )
-  const [isFilterOpen, setIsFilterOpen] = useState(false)
+  // Filter panel is closed by default, like the Findings page.
+  const [filtersOpen, setFiltersOpen] = useState(false)
+  // Bumped to clear the table's own checkbox state along with ours.
+  const [selectionEpoch, setSelectionEpoch] = useState(0)
   const [viewTask, setViewTask] = useState<RemediationTask | null>(null)
   const [editTask, setEditTask] = useState<RemediationTask | null>(null)
   const [deleteTask, setDeleteTask] = useState<RemediationTask | null>(null)
@@ -685,10 +681,12 @@ export default function RemediationPage() {
           }
         }
         setSelectedIds([])
+        setSelectionEpoch((n) => n + 1)
         return
       }
 
       setSelectedIds([])
+      setSelectionEpoch((n) => n + 1)
     },
     [selectedIds, refreshCampaigns]
   )
@@ -818,32 +816,10 @@ export default function RemediationPage() {
         header: ({ column }) => <DataTableColumnHeader column={column} title="Task" />,
         cell: ({ row }) => {
           const task = row.original
-          const overdue = checkOverdue(task)
           return (
-            <div className="flex items-center gap-3 min-w-0">
-              <div
-                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
-                  task.status === 'completed'
-                    ? 'bg-green-500/10'
-                    : task.status === 'blocked' || overdue
-                      ? 'bg-red-500/10'
-                      : 'bg-primary/10'
-                }`}
-              >
-                <ListTodo
-                  className={`h-4 w-4 ${
-                    task.status === 'completed'
-                      ? 'text-green-500'
-                      : task.status === 'blocked' || overdue
-                        ? 'text-red-500'
-                        : 'text-primary'
-                  }`}
-                />
-              </div>
-              <div className="min-w-0">
-                <p className="font-medium truncate text-sm">{task.title}</p>
-                <p className="text-xs text-muted-foreground truncate">{task.findingTitle}</p>
-              </div>
+            <div className="min-w-0 max-w-[360px]">
+              <p className="font-medium truncate text-sm">{task.title}</p>
+              <p className="text-xs text-muted-foreground truncate">{task.findingTitle}</p>
             </div>
           )
         },
@@ -852,7 +828,7 @@ export default function RemediationPage() {
         accessorKey: 'priority',
         header: ({ column }) => <DataTableColumnHeader column={column} title="Priority" />,
         cell: ({ row }) => (
-          <Badge className={`${priorityColors[row.original.priority]} text-xs`}>
+          <Badge variant="outline" className={`${priorityColors[row.original.priority]} text-xs`}>
             {TASK_PRIORITY_LABELS[row.original.priority]}
           </Badge>
         ),
@@ -861,7 +837,7 @@ export default function RemediationPage() {
         accessorKey: 'status',
         header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
         cell: ({ row }) => (
-          <Badge className={`${statusColors[row.original.status]} text-xs`}>
+          <Badge variant={statusVariants[row.original.status]} className="text-xs">
             {TASK_STATUS_LABELS[row.original.status]}
           </Badge>
         ),
@@ -884,14 +860,14 @@ export default function RemediationPage() {
               <Avatar className="h-6 w-6">
                 <AvatarFallback className="text-[10px]">{getInitials(name)}</AvatarFallback>
               </Avatar>
-              <span className="text-sm">{name}</span>
+              <span className="whitespace-nowrap text-sm">{name}</span>
             </div>
           )
         },
       },
       {
         accessorKey: 'dueDate',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Due Date" />,
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Due date" />,
         cell: ({ row }) => {
           const task = row.original
           const formatted = safeFormatDate(task.dueDate, { month: 'short', day: 'numeric' })
@@ -902,12 +878,12 @@ export default function RemediationPage() {
           }
           return (
             <div className="flex flex-col">
-              <span className={`text-sm ${overdue ? 'text-red-500 font-medium' : ''}`}>
+              <span className={`text-sm ${overdue ? 'text-destructive font-medium' : ''}`}>
                 {formatted}
               </span>
               {due && task.status !== 'completed' && (
                 <span
-                  className={`text-[11px] ${overdue ? 'text-red-400' : 'text-muted-foreground'}`}
+                  className={`text-[11px] ${overdue ? 'text-destructive' : 'text-muted-foreground'}`}
                 >
                   {due.overdue ? `${due.days}d overdue` : `${due.days}d left`}
                 </span>
@@ -923,19 +899,19 @@ export default function RemediationPage() {
           const statusActions = getAvailableActions(task.status)
           const rowActions: RowAction[] = [
             {
-              label: 'View Details',
+              label: 'View details',
               icon: ChevronRight,
               onClick: () => handleTaskAction('view', task),
             },
             {
-              label: 'Open Campaign',
+              label: 'Open campaign',
               icon: ExternalLink,
               onClick: () => handleTaskAction('open_campaign', task),
             },
           ]
           if (task.ticketUrl) {
             rowActions.push({
-              label: `View Jira Epic (${task.ticketKey})`,
+              label: `View Jira epic (${task.ticketKey})`,
               icon: ExternalLink,
               onClick: () => {
                 const safeUrl = sanitizeExternalUrl(task.ticketUrl ?? '')
@@ -946,7 +922,7 @@ export default function RemediationPage() {
             })
           } else {
             rowActions.push({
-              label: 'Create Jira Epic',
+              label: 'Create Jira epic',
               icon: ExternalLink,
               onClick: () => setJiraTask(task),
               permission: Permission.RemediationWrite,
@@ -983,305 +959,322 @@ export default function RemediationPage() {
 
   // ─── Render ────────────────────────────────────────────────────────
 
+  const toggleQuick = (key: string) => setQuickFilter(quickFilter === key ? 'all' : key)
+  const metrics: MetricStripItem[] = [
+    { key: 'all', label: 'All tasks', value: stats.total },
+    { key: 'open', label: 'Open', value: stats.byStatus.open },
+    { key: 'in_progress', label: 'In progress', value: stats.byStatus.in_progress },
+    { key: 'review', label: 'In review', value: stats.byStatus.review },
+    { key: 'blocked', label: 'Blocked', value: stats.byStatus.blocked, tone: 'danger' as const },
+    { key: 'overdue', label: 'Overdue', value: stats.overdue, tone: 'danger' as const },
+  ].map((m) => ({
+    ...m,
+    onClick: () => toggleQuick(m.key),
+    active: m.key === 'all' ? quickFilter === 'all' : quickFilter === m.key,
+  }))
+
+  const clearSelection = () => {
+    setSelectedIds([])
+    setSelectionEpoch((n) => n + 1)
+  }
+
+  const filterButton = (
+    <Button
+      variant={filtersOpen ? 'secondary' : 'outline'}
+      size="sm"
+      className="h-9"
+      onClick={() => setFiltersOpen(!filtersOpen)}
+      aria-expanded={filtersOpen}
+      aria-controls="task-filters"
+    >
+      <SlidersHorizontal className="me-2 h-4 w-4" />
+      Filters
+      {activeFilterCount > 0 && (
+        <span className="ms-2 rounded-full bg-primary px-1.5 text-[11px] font-medium tabular-nums text-primary-foreground">
+          {activeFilterCount}
+        </span>
+      )}
+    </Button>
+  )
+
+  const viewToggle = (
+    <div className="flex items-center rounded-md border p-0.5" role="group" aria-label="View">
+      {(
+        [
+          { key: 'table', label: 'Table view', icon: List },
+          { key: 'kanban', label: 'Kanban view', icon: Columns3 },
+        ] as const
+      ).map(({ key, label, icon: Icon }) => (
+        <Tooltip key={key}>
+          <TooltipTrigger asChild>
+            <Button
+              variant={viewTab === key ? 'secondary' : 'ghost'}
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => setViewTab(key)}
+              aria-label={label}
+              aria-pressed={viewTab === key}
+            >
+              <Icon className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{label}</TooltipContent>
+        </Tooltip>
+      ))}
+    </div>
+  )
+
+  const secondaryActions = (
+    <>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-9 w-9"
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            aria-label="Refresh"
+          >
+            <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>Refresh</TooltipContent>
+      </Tooltip>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline" size="sm" className="h-9">
+            <Download className="me-2 h-4 w-4" />
+            Export
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onClick={handleExportCsv} disabled={isExporting || tasks.length === 0}>
+            Export as CSV
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={handleExportJson} disabled={isExporting || tasks.length === 0}>
+            Export as JSON
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </>
+  )
+
+  const filterPanel = (
+    <FacetPanel activeCount={activeFilterCount} onClearAll={clearFilters} className="h-full">
+      <FacetSection title="Priority" selectedCount={filters.priorities.length}>
+        {(['urgent', 'high', 'medium', 'low'] as TaskPriority[]).map((p) => (
+          <FacetOption
+            key={p}
+            label={TASK_PRIORITY_LABELS[p]}
+            checked={filters.priorities.includes(p)}
+            onCheckedChange={() => togglePriorityFilter(p)}
+          />
+        ))}
+      </FacetSection>
+      <FacetSection title="Status" selectedCount={filters.statuses.length}>
+        {(['open', 'in_progress', 'review', 'completed', 'blocked'] as TaskStatus[]).map((st) => (
+          <FacetOption
+            key={st}
+            label={TASK_STATUS_LABELS[st]}
+            checked={filters.statuses.includes(st)}
+            onCheckedChange={() => toggleStatusFilter(st)}
+          />
+        ))}
+      </FacetSection>
+      {assignees.length > 0 && (
+        <FacetSection title="Assignee" selectedCount={filters.assignees.length}>
+          {assignees.map((name) => (
+            <FacetOption
+              key={name}
+              label={name}
+              checked={filters.assignees.includes(name)}
+              onCheckedChange={() =>
+                setAssigneeFilter((prev) =>
+                  prev.includes(name) ? prev.filter((a) => a !== name) : [...prev, name]
+                )
+              }
+            />
+          ))}
+        </FacetSection>
+      )}
+    </FacetPanel>
+  )
+
   return (
     <TooltipProvider>
       <Main>
-        {/* Header */}
         <PageHeader
-          title="Remediation Tasks"
-          description={`${filteredData.length} of ${tasks.length} tasks`}
+          title="Remediation tasks"
+          description="Track the work of fixing findings — who owns it, where it stands, and when it is due."
         >
-          <div className="flex flex-wrap items-center gap-2">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-9 w-9"
-                  onClick={handleRefresh}
-                  disabled={isRefreshing}
-                >
-                  <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Refresh</TooltipContent>
-            </Tooltip>
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <Download className="me-2 h-4 w-4" />
-                  Export
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem
-                  onClick={handleExportCsv}
-                  disabled={isExporting || tasks.length === 0}
-                >
-                  Export as CSV
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={handleExportJson}
-                  disabled={isExporting || tasks.length === 0}
-                >
-                  Export as JSON
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            {/* Filters Popover */}
-            <Popover open={isFilterOpen} onOpenChange={setIsFilterOpen}>
-              <PopoverTrigger asChild>
-                <Button variant="outline" size="sm" className="relative">
-                  <Filter className="me-2 h-4 w-4" />
-                  Filters
-                  {activeFilterCount > 0 && (
-                    <Badge className="ms-2 h-5 min-w-5 rounded-full px-1 text-xs">
-                      {activeFilterCount}
-                    </Badge>
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-72 sm:w-80" align="end">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-medium text-sm">Filters</h4>
-                    {activeFilterCount > 0 && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 text-xs"
-                        onClick={clearFilters}
-                      >
-                        Clear all
-                      </Button>
-                    )}
-                  </div>
-                  <Separator />
-                  <div className="space-y-2">
-                    <Label className="text-xs font-medium text-muted-foreground">Priority</Label>
-                    <div className="flex flex-wrap gap-1.5">
-                      {(['urgent', 'high', 'medium', 'low'] as TaskPriority[]).map((p) => (
-                        <Badge
-                          key={p}
-                          variant={filters.priorities.includes(p) ? 'default' : 'outline'}
-                          className={`cursor-pointer text-xs ${filters.priorities.includes(p) ? priorityColors[p] : ''}`}
-                          onClick={() => togglePriorityFilter(p)}
-                        >
-                          {TASK_PRIORITY_LABELS[p]}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs font-medium text-muted-foreground">Status</Label>
-                    <div className="flex flex-wrap gap-1.5">
-                      {(
-                        ['open', 'in_progress', 'review', 'completed', 'blocked'] as TaskStatus[]
-                      ).map((s) => (
-                        <Badge
-                          key={s}
-                          variant={filters.statuses.includes(s) ? 'default' : 'outline'}
-                          className={`cursor-pointer text-xs ${filters.statuses.includes(s) ? statusColors[s] : ''}`}
-                          onClick={() => toggleStatusFilter(s)}
-                        >
-                          {TASK_STATUS_LABELS[s]}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                  {assignees.length > 0 && (
-                    <div className="space-y-2">
-                      <Label className="text-xs font-medium text-muted-foreground">Assignee</Label>
-                      <div className="flex flex-wrap gap-1.5">
-                        {assignees.map((name) => (
-                          <Badge
-                            key={name}
-                            variant={filters.assignees.includes(name) ? 'default' : 'outline'}
-                            className="cursor-pointer text-xs"
-                            onClick={() =>
-                              setAssigneeFilter((prev) =>
-                                prev.includes(name)
-                                  ? prev.filter((a) => a !== name)
-                                  : [...prev, name]
-                              )
-                            }
-                          >
-                            {name}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  <Separator />
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs text-muted-foreground">
-                      {filteredData.length} results
-                    </span>
-                    <Button size="sm" className="h-7" onClick={() => setIsFilterOpen(false)}>
-                      Apply
-                    </Button>
-                  </div>
-                </div>
-              </PopoverContent>
-            </Popover>
-
-            <Button
-              size="sm"
-              onClick={() => {
-                setFormData(emptyFormData)
-                setIsCreateOpen(true)
-              }}
-            >
-              <Plus className="me-2 h-4 w-4" />
-              New Task
-            </Button>
-          </div>
+          <Button
+            size="sm"
+            onClick={() => {
+              setFormData(emptyFormData)
+              setIsCreateOpen(true)
+            }}
+          >
+            <Plus className="me-2 h-4 w-4" />
+            New task
+          </Button>
         </PageHeader>
 
-        <SectionTabs tabs={REMEDIATION_TABS} />
+        <SectionTabs tabs={REMEDIATION_TABS} className="mt-4 mb-0" />
 
-        {/* Loading State */}
-        {isLoading && (
-          <div className="mt-6 space-y-4">
-            <div className="flex gap-2">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <Skeleton key={i} className="h-8 w-24 rounded-full" />
-              ))}
-            </div>
-            <Skeleton className="h-10 w-full" />
-            {Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton key={i} className="h-14 w-full" />
-            ))}
-          </div>
-        )}
+        <MetricStrip className="mt-5" loading={isLoading} items={metrics} />
 
-        {/* Error State */}
-        {fetchError && !isLoading && (
-          <Card className="mt-6 border-red-500/20 bg-red-500/5">
-            <CardContent className="flex items-center justify-between py-4">
-              <div className="flex items-center gap-2">
-                <AlertCircle className="h-4 w-4 text-red-500" />
-                <span className="text-sm">Failed to load tasks. Please try again.</span>
-              </div>
+        {fetchError && !isLoading ? (
+          <Alert variant="destructive" className="mt-5">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Failed to load tasks</AlertTitle>
+            <AlertDescription className="flex flex-wrap items-center gap-3">
+              <span>{getErrorMessage(fetchError, 'Please try again.')}</span>
               <Button variant="outline" size="sm" onClick={handleRefresh}>
                 <RefreshCw className="me-2 h-3.5 w-3.5" />
                 Retry
               </Button>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Main content — hide when loading */}
-        {!isLoading && !fetchError && (
-          <>
-            {/* Bulk Actions */}
-            {selectedIds.length > 0 && (
-              <Card className="mt-4 border-primary/50 bg-primary/5">
-                <CardContent className="flex items-center justify-between py-2.5 px-4">
-                  <span className="text-sm font-medium">{selectedIds.length} selected</span>
-                  <div className="flex items-center gap-2">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="sm" className="h-7">
-                          <ArrowRight className="me-1.5 h-3.5 w-3.5" />
-                          Move to
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent>
-                        <DropdownMenuItem onClick={() => handleBulkAction('Moved', 'In Progress')}>
-                          In Progress
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleBulkAction('Moved', 'Review')}>
-                          Review
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleBulkAction('Moved', 'Completed')}>
-                          Completed
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7"
-                      onClick={() => setSelectedIds([])}
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Status filter bar — compact inline */}
-            <div className="mt-5 flex flex-wrap items-center gap-2">
-              {(
-                [
-                  { key: 'all', label: 'All', value: stats.total, dotColor: 'bg-foreground' },
-                  {
-                    key: 'open',
-                    label: 'Open',
-                    value: stats.byStatus.open,
-                    dotColor: statusDotColors.open,
-                  },
-                  {
-                    key: 'in_progress',
-                    label: 'In Progress',
-                    value: stats.byStatus.in_progress,
-                    dotColor: statusDotColors.in_progress,
-                  },
-                  {
-                    key: 'review',
-                    label: 'In Review',
-                    value: stats.byStatus.review,
-                    dotColor: statusDotColors.review,
-                  },
-                  {
-                    key: 'blocked',
-                    label: 'Blocked',
-                    value: stats.byStatus.blocked,
-                    dotColor: statusDotColors.blocked,
-                  },
-                  {
-                    key: 'overdue',
-                    label: 'Overdue',
-                    value: stats.overdue,
-                    dotColor: 'bg-red-500',
-                  },
-                ] as const
-              ).map((stat) => (
-                <button
-                  key={stat.key}
-                  onClick={() => setQuickFilter(quickFilter === stat.key ? 'all' : stat.key)}
-                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm transition-colors ${
-                    quickFilter === stat.key
-                      ? 'border-primary bg-primary/10 text-primary font-medium'
-                      : 'border-border hover:border-muted-foreground/40 text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  <div className={`h-1.5 w-1.5 rounded-full ${stat.dotColor}`} />
-                  {stat.label}
-                  <span className="font-semibold tabular-nums text-foreground">{stat.value}</span>
-                </button>
+            </AlertDescription>
+          </Alert>
+        ) : isLoading ? (
+          <div className="mt-5 space-y-2">
+            <Skeleton className="h-9 w-full" />
+            <div className="space-y-px overflow-hidden rounded-xl border">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Skeleton key={i} className="h-12 w-full rounded-none" />
               ))}
             </div>
+          </div>
+        ) : (
+          <div className="mt-5 flex items-start gap-5">
+            {filtersOpen && (
+              <aside
+                id="task-filters"
+                aria-label="Task filters"
+                className="sticky top-4 hidden max-h-[calc(100svh-7.5rem)] w-60 shrink-0 flex-col rounded-xl border bg-card p-4 shadow-sm lg:flex"
+              >
+                {filterPanel}
+              </aside>
+            )}
 
-            {/* Table / Kanban */}
-            <Tabs value={viewTab} onValueChange={setViewTab} className="mt-4">
-              <TabsList>
-                <TabsTrigger value="table">Table View</TabsTrigger>
-                <TabsTrigger value="kanban">Kanban View</TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="table" className="mt-2">
+            <div className="min-w-0 flex-1">
+              {viewTab === 'kanban' ? (
+                <div className="space-y-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    {filterButton}
+                    <span className="text-sm text-muted-foreground">
+                      {filteredData.length} of {tasks.length} tasks
+                    </span>
+                    <div className="ms-auto flex items-center gap-2">
+                      {viewToggle}
+                      {secondaryActions}
+                    </div>
+                  </div>
+                  {/* Five fixed-width lanes that scroll sideways inside their own frame,
+                      so they stay readable when the filter panel is open. */}
+                  <div className="grid auto-cols-[minmax(200px,1fr)] grid-flow-col gap-4 overflow-x-auto pb-2">
+                    {(
+                      ['open', 'in_progress', 'review', 'blocked', 'completed'] as TaskStatus[]
+                    ).map((status) => {
+                      const column = filteredData.filter((t) => t.status === status)
+                      return (
+                        <div key={status} className="min-w-0 space-y-3">
+                          <div className="flex items-center justify-between px-1">
+                            <span className="text-sm font-medium">
+                              {TASK_STATUS_LABELS[status]}
+                            </span>
+                            <span className="text-xs tabular-nums text-muted-foreground">
+                              {column.length}
+                            </span>
+                          </div>
+                          <div className="max-h-[520px] space-y-2 overflow-y-auto rounded-lg bg-muted/30 p-2">
+                            {column.map((task) => {
+                              const overdue = checkOverdue(task)
+                              return (
+                                <button
+                                  key={task.id}
+                                  type="button"
+                                  className="block w-full rounded-lg border bg-card p-3 text-start transition-colors hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                  onClick={() => setViewTask(task)}
+                                >
+                                  <p className="line-clamp-2 text-sm font-medium leading-snug">
+                                    {task.title}
+                                  </p>
+                                  {task.findingTitle && (
+                                    <p className="mt-1 truncate text-[11px] text-muted-foreground">
+                                      {task.findingTitle}
+                                    </p>
+                                  )}
+                                  <div className="mt-2.5 flex items-center justify-between gap-2">
+                                    <div className="flex min-w-0 items-center gap-1.5">
+                                      <Avatar className="h-5 w-5">
+                                        <AvatarFallback className="text-[9px]">
+                                          {getInitials(task.assigneeName)}
+                                        </AvatarFallback>
+                                      </Avatar>
+                                      <span className="truncate text-[11px] text-muted-foreground">
+                                        {task.assigneeName
+                                          ? task.assigneeName.split(' ')[0]
+                                          : 'Unassigned'}
+                                      </span>
+                                    </div>
+                                    {task.dueDate && (
+                                      <span
+                                        className={`flex shrink-0 items-center gap-1 text-[11px] ${overdue ? 'font-medium text-destructive' : 'text-muted-foreground'}`}
+                                      >
+                                        <Calendar className="h-3 w-3" />
+                                        {safeFormatDate(task.dueDate, {
+                                          month: 'short',
+                                          day: 'numeric',
+                                        }) ?? '--'}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                                    <Badge
+                                      variant="outline"
+                                      className={`${priorityColors[task.priority]} text-[11px]`}
+                                    >
+                                      {TASK_PRIORITY_LABELS[task.priority]}
+                                    </Badge>
+                                    <SeverityBadge severity={task.severity} />
+                                    {overdue && (
+                                      <Badge variant="destructive" className="text-[11px]">
+                                        Overdue
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </button>
+                              )
+                            })}
+                            {column.length === 0 && (
+                              <p className="py-8 text-center text-xs text-muted-foreground">
+                                No tasks
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              ) : (
                 <DataTable
                   columns={columns}
                   data={filteredData}
+                  getRowId={(t) => t.id}
                   onRowClick={(task) => setViewTask(task)}
                   onSelectionChange={(rows) => setSelectedIds(rows.map((t) => t.id))}
+                  resetSelectionKey={selectionEpoch}
+                  showSelectionCount={false}
                   searchPlaceholder="Search tasks..."
-                  pageSize={10}
+                  toolbarStart={filterButton}
+                  toolbarEnd={
+                    <>
+                      {viewToggle}
+                      {secondaryActions}
+                    </>
+                  }
                   emptyMessage="No tasks found"
                   emptyDescription={
                     activeFilterCount > 0 || quickFilter !== 'all'
@@ -1289,106 +1282,32 @@ export default function RemediationPage() {
                       : 'Create your first task to get started'
                   }
                 />
-              </TabsContent>
-
-              <TabsContent value="kanban">
-                <div className="mt-4 grid gap-4 lg:grid-cols-5">
-                  {(['open', 'in_progress', 'review', 'blocked', 'completed'] as TaskStatus[]).map(
-                    (status) => (
-                      <div key={status} className="space-y-3">
-                        {/* Column header */}
-                        <div className="flex items-center justify-between px-1">
-                          <div className="flex items-center gap-2">
-                            <div
-                              className={`h-2.5 w-2.5 rounded-full ${statusDotColors[status]}`}
-                            />
-                            <span className="text-sm font-medium">
-                              {TASK_STATUS_LABELS[status]}
-                            </span>
-                          </div>
-                          <Badge variant="outline" className="h-5 text-xs px-1.5">
-                            {tasksByStatus[status].length}
-                          </Badge>
-                        </div>
-                        {/* Cards */}
-                        <div className="space-y-2 max-h-[520px] overflow-y-auto rounded-lg bg-muted/30 p-2">
-                          {tasksByStatus[status].map((task) => {
-                            const overdue = checkOverdue(task)
-                            return (
-                              <Card
-                                key={task.id}
-                                className="p-3 cursor-pointer hover:shadow-md transition-shadow border-l-2"
-                                style={{
-                                  borderLeftColor:
-                                    task.priority === 'urgent'
-                                      ? 'rgb(239 68 68)'
-                                      : task.priority === 'high'
-                                        ? 'rgb(249 115 22)'
-                                        : task.priority === 'medium'
-                                          ? 'rgb(234 179 8)'
-                                          : 'rgb(59 130 246)',
-                                }}
-                                onClick={() => setViewTask(task)}
-                              >
-                                <p className="text-sm font-medium line-clamp-2 leading-snug">
-                                  {task.title}
-                                </p>
-                                <p className="text-[11px] text-muted-foreground mt-1 truncate">
-                                  {task.findingTitle}
-                                </p>
-                                <div className="mt-2.5 flex items-center justify-between">
-                                  <div className="flex items-center gap-1.5">
-                                    <Avatar className="h-5 w-5">
-                                      <AvatarFallback className="text-[9px]">
-                                        {getInitials(task.assigneeName)}
-                                      </AvatarFallback>
-                                    </Avatar>
-                                    <span className="text-[11px] text-muted-foreground">
-                                      {task.assigneeName
-                                        ? task.assigneeName.split(' ')[0]
-                                        : 'Unassigned'}
-                                    </span>
-                                  </div>
-                                  {task.dueDate && (
-                                    <div
-                                      className={`flex items-center gap-1 text-[11px] ${overdue ? 'text-red-500 font-medium' : 'text-muted-foreground'}`}
-                                    >
-                                      <Calendar className="h-3 w-3" />
-                                      {safeFormatDate(task.dueDate, {
-                                        month: 'short',
-                                        day: 'numeric',
-                                      }) ?? '--'}
-                                    </div>
-                                  )}
-                                </div>
-                                <div className="mt-2 flex items-center gap-2">
-                                  <SeverityBadge severity={task.severity} />
-                                  {overdue && (
-                                    <Badge
-                                      variant="outline"
-                                      className="border-red-500/40 text-red-500 text-[10px] h-5 px-1"
-                                    >
-                                      Overdue
-                                    </Badge>
-                                  )}
-                                </div>
-                              </Card>
-                            )
-                          })}
-                          {tasksByStatus[status].length === 0 && (
-                            <p className="text-muted-foreground text-center text-xs py-8">
-                              No tasks
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    )
-                  )}
-                </div>
-              </TabsContent>
-            </Tabs>
-          </>
+              )}
+            </div>
+          </div>
         )}
+
+        <BulkActionBar count={selectedIds.length} onClear={clearSelection} noun="tasks selected">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-8">
+                <ArrowRight className="me-1.5 h-3.5 w-3.5" />
+                Move to
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onClick={() => handleBulkAction('Moved', 'In Progress')}>
+                In progress
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleBulkAction('Moved', 'Review')}>
+                Review
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleBulkAction('Moved', 'Completed')}>
+                Completed
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </BulkActionBar>
       </Main>
 
       {/* ─── View Task Sheet ─────────────────────────────────────────── */}
@@ -1435,7 +1354,7 @@ export default function RemediationPage() {
       <ConfirmDialog
         open={!!deleteTask}
         onOpenChange={() => setDeleteTask(null)}
-        title="Delete Task"
+        title="Delete task"
         desc={
           <>
             Are you sure you want to delete &quot;{deleteTask?.title}&quot;? This action cannot be
@@ -1580,18 +1499,10 @@ function TaskDetailSheet({
 
         <div className={manageOpen ? 'hidden' : undefined}>
           {/* ── Header ── */}
-          <div
-            className={`p-5 border-b ${
-              task.status === 'completed'
-                ? 'bg-green-500/5'
-                : task.status === 'blocked' || overdue
-                  ? 'bg-red-500/5'
-                  : 'bg-muted/30'
-            }`}
-          >
+          <div className="p-5 border-b bg-muted/30">
             {/* Toolbar: title left, actions right */}
             <div className="flex items-center justify-between mb-3">
-              <p className="text-sm font-medium text-muted-foreground">Task Details</p>
+              <p className="text-sm font-medium text-muted-foreground">Task details</p>
               <div className="flex items-center gap-0.5 shrink-0">
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -1687,12 +1598,12 @@ function TaskDetailSheet({
                   ))}
                 </DropdownMenuContent>
               </DropdownMenu>
-              <Badge className={`${statusColors[task.status]} text-xs h-5`}>
+              <Badge variant={statusVariants[task.status]} className="text-xs h-5">
                 {TASK_STATUS_LABELS[task.status]}
               </Badge>
               <SeverityBadge severity={task.severity} />
               {overdue && (
-                <Badge variant="outline" className="border-red-500/50 text-red-500 text-xs h-5">
+                <Badge variant="destructive" className="text-xs h-5">
                   <AlertCircle className="me-1 h-3 w-3" />
                   Overdue
                 </Badge>
@@ -1757,21 +1668,21 @@ function TaskDetailSheet({
               <InfoCard
                 icon={
                   <Calendar
-                    className={`h-3.5 w-3.5 ${overdue ? 'text-red-500' : 'text-muted-foreground'}`}
+                    className={`h-3.5 w-3.5 ${overdue ? 'text-destructive' : 'text-muted-foreground'}`}
                   />
                 }
-                label="Due Date"
+                label="Due date"
               >
                 <Popover open={dueOpen} onOpenChange={setDueOpen}>
                   <PopoverTrigger asChild>
                     <button className="text-start rounded px-1 -mx-1 hover:bg-muted/50">
-                      <span className={`text-sm font-medium ${overdue ? 'text-red-500' : ''}`}>
+                      <span className={`text-sm font-medium ${overdue ? 'text-destructive' : ''}`}>
                         {safeFormatDate(task.dueDate, { month: 'short', day: 'numeric' }) ??
                           'Set date'}
                       </span>
                       {due && task.status !== 'completed' && (
                         <span
-                          className={`text-[11px] block ${due.overdue ? 'text-red-400' : 'text-muted-foreground'}`}
+                          className={`text-[11px] block ${due.overdue ? 'text-destructive' : 'text-muted-foreground'}`}
                         >
                           {due.overdue ? `${due.days}d overdue` : `${due.days}d remaining`}
                         </span>
@@ -1960,15 +1871,15 @@ function TaskDetailSheet({
             {/* Danger Zone */}
             <Can permission={Permission.RemediationWrite}>
               <Separator />
-              <div className="flex items-center justify-between rounded-lg border border-red-500/15 bg-red-500/5 p-3">
+              <div className="flex items-center justify-between rounded-lg border border-destructive/20 bg-destructive/5 p-3">
                 <div>
-                  <p className="text-sm font-medium text-red-500">Delete task</p>
+                  <p className="text-sm font-medium text-destructive">Delete task</p>
                   <p className="text-xs text-muted-foreground">Permanently remove this task</p>
                 </div>
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-7 border-red-500/30 text-red-500 hover:bg-red-500/10"
+                  className="h-7 border-destructive/30 text-destructive hover:bg-destructive/10"
                   onClick={() => onDelete(task)}
                 >
                   <Trash2 className="me-1.5 h-3.5 w-3.5" />

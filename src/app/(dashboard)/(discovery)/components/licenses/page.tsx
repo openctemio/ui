@@ -1,22 +1,15 @@
 'use client'
 
 import { useMemo } from 'react'
+import type { ColumnDef } from '@tanstack/react-table'
 import Link from 'next/link'
 import { Main } from '@/components/layout'
-import { PageHeader, EmptyState } from '@/features/shared'
+import { PageHeader, DataTable, DataTableColumnHeader } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import {
   Scale,
   CheckCircle,
@@ -25,7 +18,6 @@ import {
   HelpCircle,
   Download,
   ArrowRight,
-  Loader2,
   ExternalLink,
 } from 'lucide-react'
 import { LicenseRiskBadge, LicenseCategoryBadge } from '@/features/components'
@@ -35,6 +27,74 @@ import {
 } from '@/features/components/api/use-components-api'
 import type { LicenseRisk, LicenseCategory } from '@/features/components'
 import { toast } from 'sonner'
+import { TableSkeleton } from '@/components/list-page-parts'
+
+type LicenseRow = NonNullable<ReturnType<typeof useLicenseStatsApi>['data']>[number]
+
+/** Most risky first when sorted descending. */
+const LICENSE_RISK_RANK: Record<string, number> = {
+  critical: 5,
+  high: 4,
+  medium: 3,
+  low: 2,
+  none: 1,
+  unknown: 0,
+}
+
+const licenseColumns: ColumnDef<LicenseRow>[] = [
+  {
+    id: 'license',
+    accessorFn: (l) => l.license_id ?? '',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="License" />,
+    cell: ({ row }) => {
+      const license = row.original
+      return (
+        <div>
+          {license.url ? (
+            <a
+              href={license.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 font-medium text-primary hover:underline"
+            >
+              {license.license_id}
+              <ExternalLink className="h-3 w-3" />
+            </a>
+          ) : (
+            <span className="font-medium">{license.license_id}</span>
+          )}
+          {license.name && license.name !== license.license_id && (
+            <p className="text-xs text-muted-foreground">{license.name}</p>
+          )}
+        </div>
+      )
+    },
+  },
+  {
+    accessorKey: 'category',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Category" />,
+    cell: ({ row }) => <LicenseCategoryBadge category={row.original.category as LicenseCategory} />,
+  },
+  {
+    accessorKey: 'risk',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Risk" />,
+    sortingFn: (a, b) =>
+      (LICENSE_RISK_RANK[a.original.risk ?? 'unknown'] ?? 0) -
+      (LICENSE_RISK_RANK[b.original.risk ?? 'unknown'] ?? 0),
+    cell: ({ row }) => (
+      <LicenseRiskBadge risk={row.original.risk as LicenseRisk} showTooltip={false} />
+    ),
+  },
+  {
+    accessorKey: 'count',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Components" />,
+    cell: ({ row }) => (
+      <Badge variant="secondary" className="tabular-nums">
+        {row.original.count}
+      </Badge>
+    ),
+  },
+]
 
 export default function LicensesPage() {
   // Fetch data from real API
@@ -379,77 +439,24 @@ export default function LicensesPage() {
         </div>
 
         {/* License Table */}
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle>All Licenses</CardTitle>
-            <CardDescription>Complete list of licenses in use</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-              </div>
-            ) : licenseStats && licenseStats.length > 0 ? (
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>License</TableHead>
-                      <TableHead>Category</TableHead>
-                      <TableHead>Risk</TableHead>
-                      <TableHead className="text-end">Components</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {licenseStats.map((license) => (
-                      <TableRow key={license.license_id}>
-                        <TableCell>
-                          <div>
-                            {license.url ? (
-                              <a
-                                href={license.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 font-medium text-primary hover:underline"
-                              >
-                                {license.license_id}
-                                <ExternalLink className="h-3 w-3" />
-                              </a>
-                            ) : (
-                              <span className="font-medium">{license.license_id}</span>
-                            )}
-                            {license.name && license.name !== license.license_id && (
-                              <p className="text-xs text-muted-foreground">{license.name}</p>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <LicenseCategoryBadge category={license.category as LicenseCategory} />
-                        </TableCell>
-                        <TableCell>
-                          <LicenseRiskBadge
-                            risk={license.risk as LicenseRisk}
-                            showTooltip={false}
-                          />
-                        </TableCell>
-                        <TableCell className="text-end">
-                          <Badge variant="secondary">{license.count}</Badge>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            ) : (
-              <EmptyState
-                card={false}
-                icon={Scale}
-                title="No license data available"
-                description="License information will appear once components are scanned"
-              />
-            )}
-          </CardContent>
-        </Card>
+        <section className="mt-6 space-y-3">
+          <div>
+            <h2 className="text-base font-semibold">All licenses</h2>
+            <p className="text-sm text-muted-foreground">Complete list of licenses in use</p>
+          </div>
+          {isLoading ? (
+            <TableSkeleton />
+          ) : (
+            <DataTable
+              columns={licenseColumns}
+              data={licenseStats ?? []}
+              getRowId={(l) => l.license_id ?? ''}
+              searchPlaceholder="Search licenses…"
+              emptyMessage="No license data available"
+              emptyDescription="License information will appear once components are scanned"
+            />
+          )}
+        </section>
       </Main>
     </>
   )

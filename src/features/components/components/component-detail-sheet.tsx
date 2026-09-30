@@ -7,6 +7,7 @@
 
 'use client'
 
+import { formatEpssScore } from '@/lib/epss'
 import * as React from 'react'
 import { useRouter } from 'next/navigation'
 import {
@@ -30,7 +31,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabsContent, TabsList, TabsTrigger, TabsCount } from '@/components/ui/tabs'
 import { Separator } from '@/components/ui/separator'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
@@ -305,23 +306,15 @@ export function ComponentDetailSheet({ component, open, onOpenChange }: Componen
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="px-6 pb-6">
-          <TabsList className="grid w-full grid-cols-3 mb-4">
+          <TabsList className="mb-4">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="vulnerabilities" className="gap-1">
               CVEs
-              {distinctCveCount > 0 && (
-                <Badge variant="destructive" className="h-5 px-1.5 text-xs ms-1">
-                  {distinctCveCount}
-                </Badge>
-              )}
+              {distinctCveCount > 0 && <TabsCount value={distinctCveCount} tone="danger" />}
             </TabsTrigger>
             <TabsTrigger value="assets" className="gap-1">
               Assets
-              {usedByAssetsCount > 0 && (
-                <Badge variant="secondary" className="h-5 px-1.5 text-xs ms-1">
-                  {usedByAssetsCount}
-                </Badge>
-              )}
+              {usedByAssetsCount > 0 && <TabsCount value={usedByAssetsCount} />}
             </TabsTrigger>
           </TabsList>
 
@@ -606,7 +599,7 @@ export function ComponentDetailSheet({ component, open, onOpenChange }: Componen
                             <span>{v.total_finding_count} finding(s)</span>
                           )}
                           {v.epss_score != null && (
-                            <span>EPSS: {(v.epss_score * 100).toFixed(1)}%</span>
+                            <span>EPSS: {formatEpssScore(v.epss_score)}</span>
                           )}
                           {v.fixed_versions.length > 0 && (
                             <span className="ms-auto inline-flex items-center gap-1 text-green-600">

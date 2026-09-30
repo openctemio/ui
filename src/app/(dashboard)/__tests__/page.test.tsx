@@ -56,6 +56,14 @@ vi.mock('@/features/dashboard', () => ({
   useDashboardStats: () => ({ stats: emptyStats, isLoading: false, error: null, mutate: vi.fn() }),
 }))
 
+// Custom-dashboards data layer — no saved dashboards, so the shell defaults to CTEM.
+vi.mock('@/features/dashboards/api/use-dashboards-api', () => ({
+  useMyDashboards: () => ({ data: { data: [] }, isLoading: false }),
+  useRevalidateDashboards: () => async () => {},
+  setDefaultDashboard: vi.fn(),
+  deleteDashboard: vi.fn(),
+}))
+
 const summary = {
   risk_score_current: 54,
   risk_score_change: 2,
@@ -136,12 +144,13 @@ vi.mock('@/features/dashboard/hooks/use-ctem-dashboard', () => ({
 }))
 
 describe('CTEM Dashboard page', () => {
-  it('renders the action-first CTEM story sections and keeps the header action + analyst detail', () => {
+  it('renders the action-first CTEM story sections plus the dashboard switcher header', () => {
     render(<Dashboard />)
 
-    // Header + single primary action
+    // Header + switcher controls (Refresh / Switch Dashboard / Options)
     expect(screen.getByRole('heading', { name: 'Dashboard' })).toBeInTheDocument()
-    expect(screen.getByText('Run scan')).toBeInTheDocument()
+    expect(screen.getByText('Refresh')).toBeInTheDocument()
+    expect(screen.getByText('Options')).toBeInTheDocument()
 
     // CTEM story
     expect(screen.getByText('Active exposure')).toBeInTheDocument()

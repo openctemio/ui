@@ -6,7 +6,6 @@ import { Main } from '@/components/layout'
 import { PageHeader } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
@@ -16,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabsList, TabsTrigger, TabsCount } from '@/components/ui/tabs'
 import {
   Package,
   CheckCircle,
@@ -293,36 +292,23 @@ export default function AllComponentsPage() {
               <TabsList>
                 <TabsTrigger value="all" className="gap-1.5">
                   All
-                  <Badge variant="secondary" className="h-5 px-1.5 text-xs">
-                    {filterCounts.all}
-                  </Badge>
+                  <TabsCount value={filterCounts.all} />
                 </TabsTrigger>
                 <TabsTrigger value="direct" className="gap-1.5">
                   Direct
-                  <Badge variant="secondary" className="h-5 px-1.5 text-xs">
-                    {filterCounts.direct}
-                  </Badge>
+                  <TabsCount value={filterCounts.direct} />
                 </TabsTrigger>
                 <TabsTrigger value="transitive" className="gap-1.5">
                   Transitive
-                  <Badge variant="secondary" className="h-5 px-1.5 text-xs">
-                    {filterCounts.transitive}
-                  </Badge>
+                  <TabsCount value={filterCounts.transitive} />
                 </TabsTrigger>
                 <TabsTrigger value="outdated" className="gap-1.5">
                   Outdated
-                  <Badge
-                    variant="secondary"
-                    className="h-5 px-1.5 text-xs bg-yellow-500/15 text-yellow-600"
-                  >
-                    {filterCounts.outdated}
-                  </Badge>
+                  <TabsCount value={filterCounts.outdated} />
                 </TabsTrigger>
                 <TabsTrigger value="vulnerable" className="gap-1.5">
                   Vulnerable
-                  <Badge variant="destructive" className="h-5 px-1.5 text-xs">
-                    {filterCounts.vulnerable}
-                  </Badge>
+                  <TabsCount value={filterCounts.vulnerable} tone="danger" />
                 </TabsTrigger>
               </TabsList>
             </Tabs>

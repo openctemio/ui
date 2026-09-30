@@ -25,7 +25,7 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabsContent, TabsList, TabsTrigger, TabsCount } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
 
 import { ToolSelection, type ToolOption } from './tool-selection'
@@ -136,15 +136,11 @@ export function EditAgentDialog({ open, onOpenChange, agent, onSuccess }: EditAg
         </DialogHeader>
 
         <Tabs defaultValue="settings">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList>
             <TabsTrigger value="settings">Settings</TabsTrigger>
             <TabsTrigger value="tools">
               Tools
-              {selectedTools.length > 0 && (
-                <span className="ms-1.5 rounded-full bg-primary/20 px-1.5 py-0.5 text-xs">
-                  {selectedTools.length}
-                </span>
-              )}
+              {selectedTools.length > 0 && <TabsCount value={selectedTools.length} />}
             </TabsTrigger>
           </TabsList>
 

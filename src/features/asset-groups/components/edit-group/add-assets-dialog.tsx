@@ -22,7 +22,7 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabsContent, TabsList, TabsTrigger, TabsCount } from '@/components/ui/tabs'
 import {
   Select,
   SelectContent,
@@ -458,24 +458,18 @@ export function AddAssetsDialog({
         <div className="flex-1 min-h-0 overflow-hidden">
           <Tabs defaultValue="select" className="h-full flex flex-col">
             <div className="px-6 pt-4 shrink-0">
-              <TabsList className="grid w-full grid-cols-2">
+              <TabsList>
                 <TabsTrigger value="select" className="gap-2">
                   <ListChecks className="h-4 w-4" />
                   Select Existing
                   {selectedAssetIds.length > 0 && (
-                    <Badge variant="secondary" className="ms-1 h-5 px-1.5">
-                      +{selectedAssetIds.length}
-                    </Badge>
+                    <TabsCount value={`+${selectedAssetIds.length}`} />
                   )}
                 </TabsTrigger>
                 <TabsTrigger value="create" className="gap-2">
                   <PlusCircle className="h-4 w-4" />
                   Create New
-                  {newAssets.length > 0 && (
-                    <Badge variant="secondary" className="ms-1 h-5 px-1.5">
-                      {newAssets.length}
-                    </Badge>
-                  )}
+                  {newAssets.length > 0 && <TabsCount value={newAssets.length} />}
                 </TabsTrigger>
               </TabsList>
             </div>

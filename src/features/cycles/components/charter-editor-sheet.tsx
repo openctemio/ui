@@ -26,6 +26,7 @@ import { put } from '@/lib/api/client'
 import { getErrorMessage } from '@/lib/api/error-handler'
 
 import type { CtemCycle } from '../types'
+import { CharterOutcome } from './charter-outcome'
 import {
   charterFormSchema,
   charterToForm,
@@ -135,7 +136,7 @@ export function CharterEditorSheet({
       >
         <SheetHeader className="border-b">
           <div className="flex items-center gap-2">
-            <SheetTitle>Cycle Charter</SheetTitle>
+            <SheetTitle>Cycle charter</SheetTitle>
             {cycle && (
               <Badge variant="outline" className="capitalize">
                 {cycle.status}
@@ -165,10 +166,12 @@ export function CharterEditorSheet({
               </div>
             )}
 
+            {cycle?.charter_evaluation && <CharterOutcome evaluation={cycle.charter_evaluation} />}
+
             {/* Scope & objectives */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Scope &amp; Objectives</CardTitle>
+                <CardTitle className="text-base">Scope &amp; objectives</CardTitle>
                 <CardDescription>Frame scope by what the cycle defends against.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -213,7 +216,7 @@ export function CharterEditorSheet({
             {/* Risk & success */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Risk &amp; Success</CardTitle>
+                <CardTitle className="text-base">Risk &amp; success</CardTitle>
                 <CardDescription>
                   How much risk is acceptable and how success is measured.
                 </CardDescription>
@@ -243,7 +246,7 @@ export function CharterEditorSheet({
                   <div className="flex items-center justify-between">
                     <Label>Success criteria</Label>
                     <span className="text-xs text-muted-foreground">
-                      Measurable = name + metric + target
+                      Checked at close: name + metric + target
                     </span>
                   </div>
                   {editable ? (
@@ -264,7 +267,7 @@ export function CharterEditorSheet({
                             control={control}
                             name={`success_criteria.${index}.metric`}
                             render={({ field }) => (
-                              <Input placeholder="Metric (e.g. MTTR)" {...field} />
+                              <Input placeholder="Metric (e.g. MTTR, P0 resolved)" {...field} />
                             )}
                           />
                           <Controller
@@ -295,6 +298,12 @@ export function CharterEditorSheet({
                         <Plus className="h-4 w-4" />
                         Add success criterion
                       </Button>
+                      <p className="text-xs text-muted-foreground">
+                        Metrics checked automatically when the cycle closes: MTTR, P0/P1 resolved,
+                        P0/P1 open, findings resolved/opened, validation coverage, risk reduction,
+                        risk after. Targets like &ldquo;&lt; 14 days&rdquo;, &ldquo;&gt;= 90%&rdquo;
+                        or &ldquo;0&rdquo;. Anything else is recorded as not measurable.
+                      </p>
                     </div>
                   ) : watched.success_criteria.filter((c) => c.name || c.metric || c.target)
                       .length === 0 ? (

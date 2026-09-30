@@ -25,28 +25,28 @@ const RUN_STATUS: Record<string, RunStatusConfig> = {
   pending: {
     label: 'Pending',
     icon: Clock,
-    className: 'bg-yellow-500/15 text-yellow-700 dark:text-yellow-400',
+    className: 'bg-warning/15 text-warning',
   },
   running: {
     label: 'Running',
     icon: Loader2,
-    className: 'bg-blue-500/15 text-blue-700 dark:text-blue-400',
+    className: 'bg-info/15 text-info',
     spin: true,
   },
   completed: {
     label: 'Completed',
     icon: CheckCircle2,
-    className: 'bg-green-500/15 text-green-700 dark:text-green-400',
+    className: 'bg-success/15 text-success',
   },
   failed: {
     label: 'Failed',
     icon: XCircle,
-    className: 'bg-red-500/15 text-red-700 dark:text-red-400',
+    className: 'bg-destructive/15 text-destructive',
   },
   timeout: {
     label: 'Timeout',
     icon: AlertTriangle,
-    className: 'bg-orange-500/15 text-orange-700 dark:text-orange-400',
+    className: 'bg-warning/15 text-warning',
   },
   canceled: { label: 'Canceled', icon: Ban, className: 'bg-muted text-muted-foreground' },
 }

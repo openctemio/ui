@@ -183,31 +183,11 @@ export async function clearAuthTokens(): Promise<void> {
 // CSRF TOKEN MANAGEMENT
 // ============================================
 
-/**
- * Generate a CSRF token
- */
-function generateCsrfToken(): string {
-  // Simple implementation - in production, use crypto.randomBytes
-  return Buffer.from(
-    `${Date.now()}-${Math.random().toString(36)}-${serverEnv.security.csrfSecret}`
-  ).toString('base64')
-}
-
-/**
- * Set CSRF token cookie
- */
-export async function setCsrfToken(): Promise<string> {
-  const token = generateCsrfToken()
-
-  await setServerCookie('csrf_token', token, {
-    httpOnly: true,
-    secure: serverEnv.security.secureCookies,
-    sameSite: 'strict', // Strict for CSRF tokens
-    maxAge: 60 * 60 * 24, // 24 hours
-  })
-
-  return token
-}
+// NOTE: setCsrfToken()/generateCsrfToken() were removed (AUTHZ-12). They wrote a
+// frontend-generated csrf_token with httpOnly:true + sameSite:strict, which would
+// have broken the JS-read double-submit CSRF pattern the app actually uses (the
+// backend issues the csrf_token as JS-readable). They had zero callers; keeping
+// them was a footgun. The real CSRF flow lives in the API client + Go backend.
 
 /**
  * Verify CSRF token

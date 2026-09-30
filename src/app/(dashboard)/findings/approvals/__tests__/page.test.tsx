@@ -305,8 +305,9 @@ describe('ApprovalsPage', () => {
       mockHook({ data: { data: mockApprovals, total: 3, page: 1, per_page: 500 } })
       render(<ApprovalsPage />)
 
-      // CardDescription labels (with icons)
-      expect(screen.getByText('Pending')).toBeInTheDocument()
+      // Stat labels. "Pending" is also a tab label now that the tab count is a
+      // separate TabsCount, so it appears more than once.
+      expect(screen.getAllByText('Pending').length).toBeGreaterThanOrEqual(1)
       expect(screen.getByText('Total')).toBeInTheDocument()
     })
 
@@ -330,11 +331,11 @@ describe('ApprovalsPage', () => {
       mockHook({ data: { data: mockApprovals, total: 3, page: 1, per_page: 500 } })
       render(<ApprovalsPage />)
 
-      expect(screen.getByRole('tab', { name: /All \(3\)/i })).toBeInTheDocument()
-      expect(screen.getByRole('tab', { name: /Pending \(1\)/i })).toBeInTheDocument()
-      expect(screen.getByRole('tab', { name: /Approved \(1\)/i })).toBeInTheDocument()
-      expect(screen.getByRole('tab', { name: /Rejected \(1\)/i })).toBeInTheDocument()
-      expect(screen.getByRole('tab', { name: /Canceled \(0\)/i })).toBeInTheDocument()
+      expect(screen.getByRole('tab', { name: /^All\s*3$/i })).toBeInTheDocument()
+      expect(screen.getByRole('tab', { name: /^Pending\s*1$/i })).toBeInTheDocument()
+      expect(screen.getByRole('tab', { name: /^Approved\s*1$/i })).toBeInTheDocument()
+      expect(screen.getByRole('tab', { name: /^Rejected\s*1$/i })).toBeInTheDocument()
+      expect(screen.getByRole('tab', { name: /^Canceled\s*0$/i })).toBeInTheDocument()
     })
   })
 

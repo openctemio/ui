@@ -1,4 +1,6 @@
 export { CharterEditorSheet } from './components/charter-editor-sheet'
+export { CharterOutcome } from './components/charter-outcome'
+export { summarizeEvaluation } from './charter-outcome'
 export {
   charterFormSchema,
   charterToForm,
@@ -14,4 +16,7 @@ export type {
   CharterExclusion,
   CharterSuccessCriterion,
   CharterRoles,
+  CharterEvaluation,
+  CriterionEvaluation,
+  CriterionOutcome,
 } from './types'

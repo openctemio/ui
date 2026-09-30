@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import type { ColumnDef } from '@tanstack/react-table'
 import Link from 'next/link'
 import { formatDistanceToNow } from 'date-fns'
 import {
@@ -15,25 +16,15 @@ import {
   Trash2,
   ExternalLink,
   AlertTriangle,
-  Inbox,
   CheckCircle2,
   AlertCircle,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { Main } from '@/components/layout'
-import { EmptyState, ErrorState } from '@/features/shared'
+import { ErrorState, DataTable, PageHeader } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -50,7 +41,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { getErrorMessage } from '@/lib/api/error-handler'
 import { Can, Permission } from '@/lib/permissions'
 import { cn } from '@/lib/utils'
@@ -178,7 +169,8 @@ function QueueHealthStatus({
 export default function NotificationOutboxPage() {
   // State
   const [statusFilter, setStatusFilter] = useState<OutboxStatus | 'all'>('all')
-  const [page, setPage] = useState(1)
+  const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 })
+  const setPage = (page: number) => setPagination((p) => ({ ...p, pageIndex: page - 1 }))
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [selectedEntry, setSelectedEntry] = useState<OutboxEntry | null>(null)
   const [actionInProgress, setActionInProgress] = useState<string | null>(null)
@@ -197,8 +189,8 @@ export default function NotificationOutboxPage() {
     mutate: mutateEntries,
   } = useNotificationOutboxApi({
     status: statusFilter === 'all' ? undefined : statusFilter,
-    page,
-    page_size: 20,
+    page: pagination.pageIndex + 1,
+    page_size: pagination.pageSize,
   })
 
   // Mutations
@@ -277,6 +269,170 @@ export default function NotificationOutboxPage() {
     }
   }
 
+  // The API cannot sort the queue, so the headers are plain text. Rebuilt each
+  // render: the row actions close over the latest in-flight state.
+  const columns: ColumnDef<OutboxEntry>[] = [
+    {
+      accessorKey: 'title',
+      header: 'Title',
+      cell: ({ row }) => {
+        const entry = row.original
+        return (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="max-w-[250px]">
+                <p className="truncate font-medium">{entry.title}</p>
+                {entry.body && (
+                  <p className="truncate text-xs text-muted-foreground">{entry.body}</p>
+                )}
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="max-w-[400px]">
+              <p className="font-medium">{entry.title}</p>
+              {entry.body && <p className="mt-1 text-sm">{entry.body}</p>}
+            </TooltipContent>
+          </Tooltip>
+        )
+      },
+    },
+    {
+      accessorKey: 'event_type',
+      header: 'Event',
+      cell: ({ row }) => (
+        <div className="flex flex-col">
+          <span className="font-medium">{row.original.event_type}</span>
+          <span className="text-xs text-muted-foreground">{row.original.aggregate_type}</span>
+        </div>
+      ),
+    },
+    {
+      accessorKey: 'severity',
+      header: 'Severity',
+      cell: ({ row }) => {
+        const severityConfig = OUTBOX_SEVERITY_CONFIG[row.original.severity]
+        return (
+          <Badge variant="outline" className={`${severityConfig.bgColor} ${severityConfig.color}`}>
+            {severityConfig.label}
+          </Badge>
+        )
+      },
+    },
+    {
+      accessorKey: 'status',
+      header: 'Status',
+      cell: ({ row }) => {
+        const entry = row.original
+        const StatusIcon = STATUS_ICONS[entry.status]
+        const statusConfig = OUTBOX_STATUS_CONFIG[entry.status]
+        return (
+          <>
+            <div className="flex items-center gap-2">
+              <StatusIcon
+                className={cn(
+                  'h-4 w-4',
+                  statusConfig.color,
+                  entry.status === 'processing' && 'animate-spin'
+                )}
+              />
+              <Badge
+                variant="outline"
+                className={`${statusConfig.bgColor} ${statusConfig.textColor}`}
+              >
+                {statusConfig.label}
+              </Badge>
+            </div>
+            {entry.last_error && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <p className="mt-1 max-w-[150px] truncate text-xs text-destructive">
+                    {entry.last_error}
+                  </p>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-[400px]">
+                  <p className="text-sm">{entry.last_error}</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+          </>
+        )
+      },
+    },
+    {
+      id: 'retries',
+      header: 'Retries',
+      cell: ({ row }) => (
+        <span className="text-sm tabular-nums">
+          {row.original.retry_count} / {row.original.max_retries}
+        </span>
+      ),
+    },
+    {
+      accessorKey: 'scheduled_at',
+      header: 'Scheduled',
+      cell: ({ row }) => (
+        <span className="text-sm text-muted-foreground">
+          {formatDistanceToNow(new Date(row.original.scheduled_at), { addSuffix: true })}
+        </span>
+      ),
+    },
+    {
+      id: 'actions',
+      enableHiding: false,
+      cell: ({ row }) => {
+        const entry = row.original
+        const canRetry = entry.status === 'failed' || entry.status === 'dead'
+        return (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0"
+                aria-label={`Actions for ${entry.title}`}
+                disabled={actionInProgress === entry.id}
+              >
+                {actionInProgress === entry.id ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <MoreHorizontal className="h-4 w-4" />
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {entry.url && (
+                <DropdownMenuItem asChild>
+                  <a href={entry.url} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="me-2 h-4 w-4" />
+                    View source
+                  </a>
+                </DropdownMenuItem>
+              )}
+              <Can permission={Permission.NotificationsWrite}>
+                {canRetry && (
+                  <DropdownMenuItem onClick={() => handleRetry(entry)} disabled={isRetrying}>
+                    <RotateCcw className="me-2 h-4 w-4" />
+                    Retry
+                  </DropdownMenuItem>
+                )}
+              </Can>
+              <Can permission={Permission.NotificationsDelete}>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="text-destructive"
+                  onClick={() => handleDeleteClick(entry)}
+                  disabled={isDeleting}
+                >
+                  <Trash2 className="me-2 h-4 w-4" />
+                  Delete
+                </DropdownMenuItem>
+              </Can>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )
+      },
+    },
+  ]
+
   // A failed read would otherwise render an all-zero (i.e. healthy, empty) queue
   // while the real queue may be backed up with dead entries.
   const loadError = statsError ?? entriesError
@@ -299,24 +455,22 @@ export default function NotificationOutboxPage() {
     <>
       <Main>
         {/* Header */}
-        <div className="mb-6 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="sm" asChild className="-ms-2">
-              <Link href="/settings/integrations/notifications">
-                <ArrowLeft className="me-2 h-4 w-4" />
-                Back to Channels
-              </Link>
-            </Button>
-            <div className="h-6 w-px bg-border" />
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight">Notification Queue</h1>
-            </div>
-          </div>
+        <Button variant="ghost" size="sm" asChild className="-ms-2 mb-2">
+          <Link href="/settings/integrations/notifications">
+            <ArrowLeft className="me-2 h-4 w-4" />
+            Back to channels
+          </Link>
+        </Button>
+        <PageHeader
+          title="Notification queue"
+          description="Notifications waiting to be delivered, retried or given up on."
+          className="mb-6"
+        >
           <Button variant="outline" size="sm" onClick={handleRefresh}>
             <RefreshCw className="me-2 h-4 w-4" />
             Refresh
           </Button>
-        </div>
+        </PageHeader>
 
         {/* Queue Health Status */}
         <QueueHealthStatus stats={stats} isLoading={statsLoading} onViewFailed={handleViewFailed} />
@@ -324,250 +478,46 @@ export default function NotificationOutboxPage() {
         {/* Only show entries section if there are actionable entries or user applied filter */}
         {(hasActionableEntries || statusFilter !== 'all') && (
           <>
-            {/* Filters */}
-            <div className="mt-6 flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">Status:</span>
-                <Select
-                  value={statusFilter}
-                  onValueChange={(value) => {
-                    setStatusFilter(value as OutboxStatus | 'all')
-                    setPage(1)
-                  }}
-                >
-                  <SelectTrigger className="w-[150px]">
-                    <SelectValue placeholder="All statuses" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All statuses</SelectItem>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="processing">Processing</SelectItem>
-                    <SelectItem value="failed">Failed</SelectItem>
-                    <SelectItem value="dead">Dead</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="mt-6">
+              <DataTable
+                columns={columns}
+                data={entries}
+                getRowId={(e) => e.id}
+                isLoading={entriesLoading}
+                showSearch={false}
+                toolbarStart={
+                  <Select
+                    value={statusFilter}
+                    onValueChange={(value) => {
+                      setStatusFilter(value as OutboxStatus | 'all')
+                      setPage(1)
+                    }}
+                  >
+                    <SelectTrigger className="h-9 w-[160px]" aria-label="Filter by status">
+                      <SelectValue placeholder="All statuses" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All statuses</SelectItem>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="processing">Processing</SelectItem>
+                      <SelectItem value="failed">Failed</SelectItem>
+                      <SelectItem value="dead">Dead</SelectItem>
+                    </SelectContent>
+                  </Select>
+                }
+                manualPagination
+                rowCount={entriesData?.total ?? 0}
+                pagination={pagination}
+                onPaginationChange={setPagination}
+                pageSize={pagination.pageSize}
+                emptyMessage="No entries found"
+                emptyDescription={
+                  statusFilter !== 'all'
+                    ? `No ${statusFilter} entries in the queue`
+                    : 'The notification queue is empty'
+                }
+              />
             </div>
-
-            {/* Entries Table */}
-            <Card className="mt-4">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">Queue Entries</CardTitle>
-                <CardDescription>
-                  {entriesData?.total ?? 0} entries found
-                  {statusFilter !== 'all' && ` (filtered by ${statusFilter})`}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {entriesLoading ? (
-                  <div className="space-y-3">
-                    {[...Array(3)].map((_, i) => (
-                      <Skeleton key={i} className="h-16 w-full" />
-                    ))}
-                  </div>
-                ) : entries.length === 0 ? (
-                  <EmptyState
-                    card={false}
-                    icon={Inbox}
-                    title="No entries found"
-                    description={
-                      statusFilter !== 'all'
-                        ? `No ${statusFilter} entries in the queue`
-                        : 'The notification queue is empty'
-                    }
-                  />
-                ) : (
-                  <>
-                    <div className="rounded-md border">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Event</TableHead>
-                            <TableHead>Title</TableHead>
-                            <TableHead>Severity</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead>Retries</TableHead>
-                            <TableHead>Scheduled</TableHead>
-                            <TableHead className="w-[70px]"></TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {entries.map((entry) => {
-                            const StatusIcon = STATUS_ICONS[entry.status]
-                            const statusConfig = OUTBOX_STATUS_CONFIG[entry.status]
-                            const severityConfig = OUTBOX_SEVERITY_CONFIG[entry.severity]
-                            const canRetry = entry.status === 'failed' || entry.status === 'dead'
-
-                            return (
-                              <TableRow key={entry.id}>
-                                <TableCell>
-                                  <div className="flex flex-col">
-                                    <span className="font-medium">{entry.event_type}</span>
-                                    <span className="text-xs text-muted-foreground">
-                                      {entry.aggregate_type}
-                                    </span>
-                                  </div>
-                                </TableCell>
-                                <TableCell>
-                                  <TooltipProvider>
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <div className="max-w-[250px]">
-                                          <p className="truncate font-medium">{entry.title}</p>
-                                          {entry.body && (
-                                            <p className="truncate text-xs text-muted-foreground">
-                                              {entry.body}
-                                            </p>
-                                          )}
-                                        </div>
-                                      </TooltipTrigger>
-                                      <TooltipContent side="top" className="max-w-[400px]">
-                                        <p className="font-medium">{entry.title}</p>
-                                        {entry.body && <p className="mt-1 text-sm">{entry.body}</p>}
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  </TooltipProvider>
-                                </TableCell>
-                                <TableCell>
-                                  <Badge
-                                    variant="outline"
-                                    className={`${severityConfig.bgColor} ${severityConfig.color}`}
-                                  >
-                                    {severityConfig.label}
-                                  </Badge>
-                                </TableCell>
-                                <TableCell>
-                                  <div className="flex items-center gap-2">
-                                    <StatusIcon
-                                      className={`h-4 w-4 ${statusConfig.color} ${
-                                        entry.status === 'processing' ? 'animate-spin' : ''
-                                      }`}
-                                    />
-                                    <Badge
-                                      variant="outline"
-                                      className={`${statusConfig.bgColor} ${statusConfig.textColor}`}
-                                    >
-                                      {statusConfig.label}
-                                    </Badge>
-                                  </div>
-                                  {entry.last_error && (
-                                    <TooltipProvider>
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <p className="mt-1 max-w-[150px] truncate text-xs text-red-600">
-                                            {entry.last_error}
-                                          </p>
-                                        </TooltipTrigger>
-                                        <TooltipContent side="top" className="max-w-[400px]">
-                                          <p className="text-sm text-red-600">{entry.last_error}</p>
-                                        </TooltipContent>
-                                      </Tooltip>
-                                    </TooltipProvider>
-                                  )}
-                                </TableCell>
-                                <TableCell>
-                                  <span className="text-sm">
-                                    {entry.retry_count} / {entry.max_retries}
-                                  </span>
-                                </TableCell>
-                                <TableCell>
-                                  <span className="text-sm text-muted-foreground">
-                                    {formatDistanceToNow(new Date(entry.scheduled_at), {
-                                      addSuffix: true,
-                                    })}
-                                  </span>
-                                </TableCell>
-                                <TableCell>
-                                  <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="h-8 w-8 p-0"
-                                        disabled={actionInProgress === entry.id}
-                                      >
-                                        {actionInProgress === entry.id ? (
-                                          <Loader2 className="h-4 w-4 animate-spin" />
-                                        ) : (
-                                          <MoreHorizontal className="h-4 w-4" />
-                                        )}
-                                      </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                      {entry.url && (
-                                        <DropdownMenuItem asChild>
-                                          <a
-                                            href={entry.url}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                          >
-                                            <ExternalLink className="me-2 h-4 w-4" />
-                                            View Source
-                                          </a>
-                                        </DropdownMenuItem>
-                                      )}
-                                      <Can permission={Permission.NotificationsWrite}>
-                                        {canRetry && (
-                                          <DropdownMenuItem
-                                            onClick={() => handleRetry(entry)}
-                                            disabled={isRetrying}
-                                          >
-                                            <RotateCcw className="me-2 h-4 w-4" />
-                                            Retry
-                                          </DropdownMenuItem>
-                                        )}
-                                      </Can>
-                                      <Can permission={Permission.NotificationsDelete}>
-                                        <DropdownMenuSeparator />
-                                        <DropdownMenuItem
-                                          className="text-red-500"
-                                          onClick={() => handleDeleteClick(entry)}
-                                          disabled={isDeleting}
-                                        >
-                                          <Trash2 className="me-2 h-4 w-4" />
-                                          Delete
-                                        </DropdownMenuItem>
-                                      </Can>
-                                    </DropdownMenuContent>
-                                  </DropdownMenu>
-                                </TableCell>
-                              </TableRow>
-                            )
-                          })}
-                        </TableBody>
-                      </Table>
-                    </div>
-
-                    {/* Pagination */}
-                    {entriesData && entriesData.total_pages > 1 && (
-                      <div className="mt-4 flex items-center justify-between">
-                        <p className="text-sm text-muted-foreground">
-                          Page {entriesData.page} of {entriesData.total_pages}
-                        </p>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setPage((p) => Math.max(1, p - 1))}
-                            disabled={page === 1}
-                          >
-                            Previous
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setPage((p) => Math.min(entriesData.total_pages, p + 1))}
-                            disabled={page === entriesData.total_pages}
-                          >
-                            Next
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-                  </>
-                )}
-              </CardContent>
-            </Card>
           </>
         )}
 

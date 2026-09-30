@@ -109,6 +109,55 @@ export function useIOC(id: string | null) {
   })
 }
 
+/**
+ * One IOC match — a runtime-telemetry hit against this indicator that
+ * reopened (or would have reopened) a finding. This is the B6
+ * runtime-reopen signal. Mirrors GET /api/v1/iocs/{id}/matches.
+ */
+export interface IOCMatch {
+  id: string
+  ioc_id: string
+  ioc_type?: IOCType // populated by the tenant-wide feed (GET /iocs/matches)
+  ioc_value?: string // populated by the tenant-wide feed
+  telemetry_event_id?: string
+  finding_id?: string
+  finding_title?: string
+  reopened: boolean
+  matched_at: string
+}
+
+export interface IOCMatchListResponse {
+  items: IOCMatch[]
+  limit: number
+  offset: number
+}
+
+/**
+ * Fetch the match log for one IOC (skips when id is null). Degrades
+ * gracefully: SWR surfaces the error to the caller, which renders a
+ * neutral empty state — so a deployment where the matches endpoint is
+ * not yet live shows "no matches" rather than an error.
+ */
+export function useIOCMatches(id: string | null) {
+  return useSWR<IOCMatchListResponse>(id ? `${BASE}/${id}/matches?limit=50` : null, get, {
+    revalidateOnFocus: false,
+    shouldRetryOnError: false,
+  })
+}
+
+/**
+ * Fetch the tenant-wide IOC match feed (GET /iocs/matches) — every runtime
+ * detection that fired across all indicators, newest first, enriched with the
+ * indicator (ioc_type/ioc_value) and the finding it reopened. Backs the
+ * Detect/Respond view. Degrades to an empty list where the endpoint is not live.
+ */
+export function useRecentDetections(limit = 100) {
+  return useSWR<IOCMatchListResponse>(`${BASE}/matches?limit=${limit}`, get, {
+    revalidateOnFocus: false,
+    shouldRetryOnError: false,
+  })
+}
+
 /** Create an IOC. */
 export function useCreateIOC() {
   return useSWRMutation(BASE, (url: string, { arg }: { arg: CreateIOCInput }) =>

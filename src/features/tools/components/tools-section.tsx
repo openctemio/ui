@@ -1,44 +1,29 @@
 'use client'
 
 import { useState, useMemo, useCallback } from 'react'
-import { SortingState } from '@tanstack/react-table'
-import {
-  Plus,
-  Wrench,
-  AlertCircle,
-  RefreshCw,
-  Loader2,
-  Search,
-  LayoutGrid,
-  TableIcon,
-  Download,
-  Trash2,
-  Globe,
-  Code2,
-} from 'lucide-react'
+import { Plus, Wrench, Search, LayoutGrid, TableIcon, Download } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Skeleton } from '@/components/ui/skeleton'
+import { Tabs, TabsList, TabsTrigger, TabsCount } from '@/components/ui/tabs'
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { RefreshButton, TableSkeleton } from '@/components/list-page-parts'
+import { useUrlFilter } from '@/hooks/use-url-param'
 import { Can, Permission } from '@/lib/permissions'
 
 import { AddToolDialog } from './add-tool-dialog'
 import { ToolCard } from './tool-card'
 import { ToolTable } from './tool-table'
-import { ToolStatsCards } from './tool-stats-cards'
 import { ToolDetailSheet } from './tool-detail-sheet'
-import { ToolCategoryIcon } from './tool-category-icon'
 import { CATEGORY_OPTIONS } from '../schemas/tool-schema'
 
 import {
@@ -53,11 +38,16 @@ import { customToolEndpoints } from '@/lib/api/endpoints'
 import { post } from '@/lib/api/client'
 import type { Tool, ToolListFilters } from '@/lib/api/tool-types'
 import { getErrorMessage } from '@/lib/api/error-handler'
-import { EmptyState } from '@/features/shared'
+import {
+  EmptyState,
+  ErrorState,
+  MetricStrip,
+  PageHeader,
+  type MetricStripItem,
+} from '@/features/shared'
 
 type ViewMode = 'grid' | 'table'
 type MainTab = 'platform' | 'custom'
-type CategoryFilter = 'all' | string // Category name (e.g., 'sast', 'sca')
 
 interface ToolsSectionProps {
   onToolSelect?: (toolId: string | null) => void
@@ -76,16 +66,17 @@ export function ToolsSection({ onToolSelect, selectedToolId }: ToolsSectionProps
   const [editingTool, setEditingTool] = useState<Tool | null>(null)
 
   // View and filter states
-  const [viewMode, setViewMode] = useState<ViewMode>('grid')
-  const [mainTab, setMainTab] = useState<MainTab>('platform')
-  const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all')
-  const [statsFilter, setStatsFilter] = useState<string | null>(null)
-  const [filters, _setFilters] = useState<ToolListFilters>({})
-  const [searchQuery, setSearchQuery] = useState('')
-
-  // Table states
-  const [sorting, setSorting] = useState<SortingState>([])
-  const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({})
+  // Tab, view, filters and search live in the URL so a filtered view can be
+  // shared and survives a reload.
+  const [viewParam, setViewMode] = useUrlFilter('view', 'table')
+  const [tabParam, setMainTab] = useUrlFilter('tab', 'platform')
+  const [categoryFilter, setCategoryFilter] = useUrlFilter('category', 'all')
+  const [statsParam, setStatsParam] = useUrlFilter('stat', '')
+  const [searchQuery, setSearchQuery] = useUrlFilter('q', '')
+  const [filters] = useState<ToolListFilters>({})
+  const viewMode: ViewMode = viewParam === 'grid' ? 'grid' : 'table'
+  const mainTab: MainTab = tabParam === 'custom' ? 'custom' : 'platform'
+  const statsFilter = statsParam || null
 
   // API data - Platform tools
   const {
@@ -119,13 +110,6 @@ export function ToolsSection({ onToolSelect, selectedToolId }: ToolsSectionProps
     // Fallback to static options
     return CATEGORY_OPTIONS
   }, [categoriesData])
-
-  // All tools combined for stats (platform + custom)
-  const allTools = useMemo(() => {
-    const platform = platformToolsData?.items || []
-    const custom = customToolsData?.items || []
-    return [...platform, ...custom]
-  }, [platformToolsData, customToolsData])
 
   // Current data based on active tab (for list display)
   const tools = useMemo(() => {
@@ -195,10 +179,6 @@ export function ToolsSection({ onToolSelect, selectedToolId }: ToolsSectionProps
     }
     toast.success('Tools refreshed')
   }, [mainTab, mutatePlatform, mutateCustom])
-
-  const handleSearch = useCallback((e: React.FormEvent) => {
-    e.preventDefault()
-  }, [])
 
   const handleViewTool = useCallback((tool: Tool) => {
     setSelectedTool(tool)
@@ -301,280 +281,237 @@ export function ToolsSection({ onToolSelect, selectedToolId }: ToolsSectionProps
   }, [tools, mainTab, categoriesData])
 
   // Handle tab change - reset filters
-  const handleMainTabChange = useCallback((tab: string) => {
-    setMainTab(tab as MainTab)
-    setCategoryFilter('all')
-    setStatsFilter(null)
-    setSearchQuery('')
-    setRowSelection({})
-  }, [])
-
-  if (error) {
-    return (
-      <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-4">
-        <div className="flex items-center gap-2 text-red-500">
-          <AlertCircle className="h-4 w-4" />
-          <span className="text-sm font-medium">Failed to load tools</span>
-        </div>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {error instanceof Error ? error.message : 'An unexpected error occurred'}
-        </p>
-        <Button variant="outline" size="sm" className="mt-2" onClick={handleRefresh}>
-          <RefreshCw className="me-2 h-4 w-4" />
-          Retry
-        </Button>
-      </div>
-    )
-  }
+  const handleMainTabChange = useCallback(
+    (tab: string) => {
+      setMainTab(tab)
+      setCategoryFilter('all')
+      setStatsParam('')
+      setSearchQuery('')
+    },
+    [setMainTab, setCategoryFilter, setStatsParam, setSearchQuery]
+  )
 
   // Check if we're in custom tools mode for conditional rendering
   const isCustomToolsMode = mainTab === 'custom'
 
+  // Headline numbers describe the active tab's tools, so a metric's count is
+  // exactly what its filter shows.
+  const toggleStat = (filter: string) => setStatsParam(statsFilter === filter ? '' : filter)
+  const metrics: MetricStripItem[] = [
+    { key: 'total', label: 'Tools', value: tools.length },
+    {
+      key: 'active',
+      label: 'Active',
+      value: tools.filter((t) => t.is_active).length,
+      onClick: () => toggleStat('status:active'),
+      active: statsFilter === 'status:active',
+    },
+    {
+      key: 'inactive',
+      label: 'Inactive',
+      value: tools.filter((t) => !t.is_active).length,
+      onClick: () => toggleStat('status:inactive'),
+      active: statsFilter === 'status:inactive',
+    },
+    {
+      key: 'updates',
+      label: 'Updates available',
+      value: tools.filter((t) => t.has_update).length,
+      onClick: () => toggleStat('has_update:true'),
+      active: statsFilter === 'has_update:true',
+    },
+  ]
+
+  const platformCount = platformToolsData?.items?.length
+  const customCount = customToolsData?.items?.length
+
+  const toolbarStart = (
+    <>
+      <div className="relative min-w-0 flex-1 sm:max-w-sm">
+        <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          placeholder="Search tools…"
+          aria-label="Search tools"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="h-9 ps-9"
+        />
+      </div>
+      <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+        <SelectTrigger className="h-9 w-[160px]" aria-label="Category">
+          <SelectValue placeholder="All categories" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All categories</SelectItem>
+          {categoryOptions.map((cat) => (
+            <SelectItem key={cat.value} value={cat.value}>
+              {cat.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </>
+  )
+
+  const toolbarEnd = (
+    <>
+      <div className="flex items-center rounded-md border p-0.5" role="group" aria-label="View">
+        <Button
+          variant={viewMode === 'table' ? 'secondary' : 'ghost'}
+          size="icon"
+          className="h-7 w-7"
+          onClick={() => setViewMode('table')}
+          aria-label="Table view"
+          aria-pressed={viewMode === 'table'}
+        >
+          <TableIcon className="h-4 w-4" />
+        </Button>
+        <Button
+          variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+          size="icon"
+          className="h-7 w-7"
+          onClick={() => setViewMode('grid')}
+          aria-label="Card view"
+          aria-pressed={viewMode === 'grid'}
+        >
+          <LayoutGrid className="h-4 w-4" />
+        </Button>
+      </div>
+      <RefreshButton onClick={handleRefresh} loading={isLoading} />
+    </>
+  )
+
+  const hasFilter = !!searchQuery || categoryFilter !== 'all' || !!statsFilter
+  const emptyState = (
+    <EmptyState
+      icon={Wrench}
+      title={hasFilter ? 'No matching tools' : 'No tools'}
+      description={
+        hasFilter
+          ? 'No tools match your search or filters.'
+          : mainTab === 'platform'
+            ? 'No platform tools available yet.'
+            : 'Add a custom tool to start scanning and collecting data.'
+      }
+      card={false}
+      action={
+        !hasFilter && isCustomToolsMode ? (
+          <Can permission={Permission.ToolsWrite}>
+            <Button size="sm" onClick={() => setAddDialogOpen(true)}>
+              <Plus className="h-4 w-4" />
+              Add tool
+            </Button>
+          </Can>
+        ) : undefined
+      }
+    />
+  )
+
+  let body: React.ReactNode
+  if (error) {
+    body = <ErrorState title="tools" error={error} onRetry={handleRefresh} />
+  } else if (isLoading) {
+    body = <TableSkeleton rows={6} />
+  } else if (filteredTools.length === 0 && !hasFilter) {
+    body = emptyState
+  } else if (viewMode === 'table') {
+    body = (
+      <ToolTable
+        tools={filteredTools}
+        categories={categoriesData?.items}
+        onViewTool={handleViewTool}
+        onEditTool={isCustomToolsMode ? handleEditTool : undefined}
+        onDeleteTool={isCustomToolsMode ? handleDeleteClick : undefined}
+        onActivateTool={isCustomToolsMode ? handleActivateTool : undefined}
+        onDeactivateTool={isCustomToolsMode ? handleDeactivateTool : undefined}
+        // Platform tools are read-only - no enable/disable
+        readOnly={!isCustomToolsMode}
+        toolbarStart={toolbarStart}
+        toolbarEnd={toolbarEnd}
+      />
+    )
+  } else {
+    // Card view: the same toolbar row the table draws, then the grid.
+    body = (
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+          <div className="flex min-w-0 flex-1 items-center gap-2">{toolbarStart}</div>
+          <div className="ms-auto flex shrink-0 items-center gap-2">{toolbarEnd}</div>
+        </div>
+        {filteredTools.length > 0 ? (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {filteredTools.map((tool) => (
+              <ToolCard
+                key={tool.id}
+                tool={tool}
+                categories={categoriesData?.items}
+                selected={selectedToolId === tool.id}
+                onSelect={() => onToolSelect?.(selectedToolId === tool.id ? null : tool.id)}
+                onView={handleViewTool}
+                onEdit={isCustomToolsMode ? handleEditTool : undefined}
+                onDelete={isCustomToolsMode ? handleDeleteClick : undefined}
+                onActivate={isCustomToolsMode ? handleActivateTool : undefined}
+                onDeactivate={isCustomToolsMode ? handleDeactivateTool : undefined}
+                // Platform tools are read-only - no enable/disable
+                readOnly={!isCustomToolsMode}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-md border">{emptyState}</div>
+        )}
+      </div>
+    )
+  }
+
   return (
     <>
-      <div className="space-y-6">
-        {/* Stats Cards - Always show aggregate data for all tools (platform + custom) */}
-        {!isPlatformLoading && !isCustomLoading && (
-          <ToolStatsCards
-            tools={allTools}
-            activeFilter={statsFilter}
-            onFilterChange={setStatsFilter}
-          />
-        )}
-
-        {/* Main Content Card */}
-        <Card>
-          <CardHeader className="pb-4">
-            {/* Row 1: Title + Main Tabs + Actions */}
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-              {/* Left: Title and description - fixed width to prevent layout shift */}
-              <div className="flex min-w-[280px] items-center gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                  <Wrench className="h-5 w-5 text-primary" />
-                </div>
-                <div className="min-w-0">
-                  <CardTitle>Tool Registry</CardTitle>
-                  <CardDescription className="truncate">
-                    Manage security tools and scanners
-                  </CardDescription>
-                </div>
-              </div>
-
-              {/* Center: Main Tabs (Platform / Custom) */}
-              <Tabs value={mainTab} onValueChange={handleMainTabChange} className="w-auto">
-                <TabsList>
-                  <TabsTrigger value="platform" className="gap-1.5">
-                    <Globe className="h-4 w-4" />
-                    Platform Tools
-                  </TabsTrigger>
-                  <TabsTrigger value="custom" className="gap-1.5">
-                    <Code2 className="h-4 w-4" />
-                    Custom Tools
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
-
-              {/* Right: Actions */}
-              <div className="flex items-center gap-2">
-                <Button variant="ghost" size="sm" onClick={handleRefresh} disabled={isLoading}>
-                  {isLoading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <RefreshCw className="h-4 w-4" />
-                  )}
-                </Button>
-                <Button variant="outline" size="sm" onClick={handleExport}>
-                  <Download className="me-2 h-4 w-4" />
-                  Export
-                </Button>
-                {/* Add Tool button - always visible but disabled for platform tools */}
-                <Can permission={Permission.ToolsWrite}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span>
-                        <Button
-                          onClick={() => setAddDialogOpen(true)}
-                          disabled={!isCustomToolsMode}
-                        >
-                          <Plus className="me-2 h-4 w-4" />
-                          Add Tool
-                        </Button>
-                      </span>
-                    </TooltipTrigger>
-                    {!isCustomToolsMode && (
-                      <TooltipContent>
-                        <p>Switch to Custom Tools tab to add your own tools</p>
-                      </TooltipContent>
-                    )}
-                  </Tooltip>
-                </Can>
-              </div>
-            </div>
-          </CardHeader>
-
-          <CardContent>
-            {/* Category Filter + View Toggle */}
-            <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              {/* Category Filter - Scrollable container for many categories */}
-              <div className="flex-1 overflow-hidden">
-                <Tabs
-                  value={categoryFilter}
-                  onValueChange={(v) => setCategoryFilter(v as CategoryFilter)}
-                  className="w-full"
-                >
-                  <TabsList className="inline-flex w-max gap-1 overflow-x-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-muted">
-                    <TabsTrigger value="all">All</TabsTrigger>
-                    {categoryOptions.map((cat) => (
-                      <TabsTrigger
-                        key={cat.value}
-                        value={cat.value}
-                        className="gap-1 whitespace-nowrap"
-                      >
-                        <ToolCategoryIcon category={cat.value} className="h-3.5 w-3.5" />
-                        {cat.label}
-                      </TabsTrigger>
-                    ))}
-                  </TabsList>
-                </Tabs>
-              </div>
-
-              {/* View Toggle */}
-              <div className="flex shrink-0 items-center gap-1">
+      <PageHeader
+        title="Tools"
+        description="The security tools and scanners agents can run. Platform tools are built in; add custom ones for your own scanners."
+      >
+        <Button variant="outline" size="sm" onClick={handleExport}>
+          <Download className="h-4 w-4" />
+          Export
+        </Button>
+        {/* Add is for custom tools; on the Platform tab it explains why it is off. */}
+        <Can permission={Permission.ToolsWrite}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span>
                 <Button
-                  variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
                   size="sm"
-                  onClick={() => setViewMode('grid')}
+                  onClick={() => setAddDialogOpen(true)}
+                  disabled={!isCustomToolsMode}
                 >
-                  <LayoutGrid className="h-4 w-4" />
+                  <Plus className="h-4 w-4" />
+                  Add tool
                 </Button>
-                <Button
-                  variant={viewMode === 'table' ? 'secondary' : 'ghost'}
-                  size="sm"
-                  onClick={() => setViewMode('table')}
-                >
-                  <TableIcon className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-
-            {/* Search */}
-            <div className="mb-4">
-              <form onSubmit={handleSearch}>
-                <div className="relative max-w-md">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    placeholder="Search tools..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="ps-9"
-                  />
-                </div>
-              </form>
-            </div>
-
-            {/* Bulk Actions (only for custom tools) */}
-            {isCustomToolsMode && Object.keys(rowSelection).length > 0 && (
-              <div className="mb-4">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm">
-                      {Object.keys(rowSelection).length} selected
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start">
-                    <DropdownMenuItem className="text-red-500" disabled>
-                      <Trash2 className="me-2 h-4 w-4" />
-                      Delete Selected
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
+              </span>
+            </TooltipTrigger>
+            {!isCustomToolsMode && (
+              <TooltipContent>Switch to the Custom tab to add your own tools</TooltipContent>
             )}
+          </Tooltip>
+        </Can>
+      </PageHeader>
 
-            {/* Content */}
-            {isLoading ? (
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {[...Array(6)].map((_, i) => (
-                  <div key={i} className="rounded-lg border p-4">
-                    <div className="mb-3 flex items-center gap-3">
-                      <Skeleton className="h-10 w-10 rounded-lg" />
-                      <div className="flex-1 space-y-1.5">
-                        <Skeleton className="h-4 w-32" />
-                        <Skeleton className="h-3 w-24" />
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <Skeleton className="h-5 w-20" />
-                      <Skeleton className="h-4 w-16" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : filteredTools.length > 0 ? (
-              viewMode === 'grid' ? (
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {filteredTools.map((tool) => (
-                    <ToolCard
-                      key={tool.id}
-                      tool={tool}
-                      categories={categoriesData?.items}
-                      selected={selectedToolId === tool.id}
-                      onSelect={() => onToolSelect?.(selectedToolId === tool.id ? null : tool.id)}
-                      onView={handleViewTool}
-                      onEdit={isCustomToolsMode ? handleEditTool : undefined}
-                      onDelete={isCustomToolsMode ? handleDeleteClick : undefined}
-                      onActivate={isCustomToolsMode ? handleActivateTool : undefined}
-                      onDeactivate={isCustomToolsMode ? handleDeactivateTool : undefined}
-                      // Platform tools are read-only - no enable/disable
-                      readOnly={!isCustomToolsMode}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <ToolTable
-                  tools={filteredTools}
-                  categories={categoriesData?.items}
-                  sorting={sorting}
-                  onSortingChange={setSorting}
-                  globalFilter={searchQuery}
-                  rowSelection={rowSelection}
-                  onRowSelectionChange={setRowSelection}
-                  onViewTool={handleViewTool}
-                  onEditTool={isCustomToolsMode ? handleEditTool : undefined}
-                  onDeleteTool={isCustomToolsMode ? handleDeleteClick : undefined}
-                  onActivateTool={isCustomToolsMode ? handleActivateTool : undefined}
-                  onDeactivateTool={isCustomToolsMode ? handleDeactivateTool : undefined}
-                  // Platform tools are read-only - no enable/disable
-                  readOnly={!isCustomToolsMode}
-                />
-              )
-            ) : (
-              <EmptyState
-                icon={Wrench}
-                title="No Tools Found"
-                description={
-                  searchQuery || categoryFilter !== 'all' || statsFilter
-                    ? 'No tools match your search criteria. Try adjusting your filters.'
-                    : mainTab === 'platform'
-                      ? 'No platform tools available yet.'
-                      : 'Add a custom tool to start scanning and collecting data.'
-                }
-                card={false}
-                action={
-                  !searchQuery && categoryFilter === 'all' && !statsFilter && isCustomToolsMode ? (
-                    <Can permission={Permission.ToolsWrite}>
-                      <Button onClick={() => setAddDialogOpen(true)}>
-                        <Plus className="me-2 h-4 w-4" />
-                        Add Your First Custom Tool
-                      </Button>
-                    </Can>
-                  ) : undefined
-                }
-              />
-            )}
-          </CardContent>
-        </Card>
-      </div>
+      <Tabs value={mainTab} onValueChange={handleMainTabChange} className="mt-4">
+        <TabsList>
+          <TabsTrigger value="platform">
+            Platform
+            {platformCount != null && <TabsCount value={platformCount} />}
+          </TabsTrigger>
+          <TabsTrigger value="custom">
+            Custom
+            {customCount != null && <TabsCount value={customCount} />}
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+
+      <MetricStrip className="mt-5" loading={isLoading} items={metrics} />
+
+      <div className="mt-5">{body}</div>
 
       {/* Dialogs - only for custom tools */}
       {isCustomToolsMode && (
@@ -610,7 +547,7 @@ export function ToolsSection({ onToolSelect, selectedToolId }: ToolsSectionProps
         <ConfirmDialog
           open={deleteDialogOpen}
           onOpenChange={setDeleteDialogOpen}
-          title="Delete Tool"
+          title="Delete tool"
           desc={
             <>
               Are you sure you want to delete <strong>{selectedTool?.display_name}</strong>? This

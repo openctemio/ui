@@ -41,6 +41,8 @@ export interface SecuritySettings {
   ip_whitelist: string[]
   allowed_domains: string[]
   email_verification_mode: EmailVerificationMode
+  /** Fail-closed data scope: non-admins see only assigned assets/findings. */
+  restricted_data_scope?: boolean
 }
 
 export interface UpdateSecuritySettingsInput {
@@ -49,6 +51,7 @@ export interface UpdateSecuritySettingsInput {
   ip_whitelist?: string[]
   allowed_domains?: string[]
   email_verification_mode?: EmailVerificationMode
+  restricted_data_scope?: boolean
 }
 
 // ============================================

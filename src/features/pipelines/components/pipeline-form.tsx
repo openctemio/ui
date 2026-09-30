@@ -530,7 +530,7 @@ export function PipelineForm({ pipeline, onSubmit, onCancel, isSubmitting }: Pip
         onValueChange={(v) => setCurrentStep(v as WizardStep)}
         className="flex flex-col"
       >
-        <TabsList className="grid w-full grid-cols-4 mb-4">
+        <TabsList className="mb-4">
           {WIZARD_STEPS.map((step) => (
             <TabsTrigger
               key={step.id}

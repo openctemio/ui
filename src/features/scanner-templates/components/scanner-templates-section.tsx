@@ -2,11 +2,10 @@
 
 import * as React from 'react'
 import { useState, useMemo, useCallback } from 'react'
+import type { ColumnDef } from '@tanstack/react-table'
 import {
   Plus,
   FileCode2,
-  AlertCircle,
-  RefreshCw,
   Loader2,
   Search,
   Trash2,
@@ -15,28 +14,16 @@ import {
   XCircle,
   Archive,
   FileWarning,
-  Filter,
   Upload,
   GitBranch,
   Cloud,
   Globe,
-  Database,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -47,7 +34,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { ConfirmDialog } from '@/components/confirm-dialog'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import {
   Select,
   SelectContent,
@@ -55,9 +42,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { RefreshButton, TableSkeleton } from '@/components/list-page-parts'
+import { useUrlFilter } from '@/hooks/use-url-param'
 
 import { AddScannerTemplateDialog } from './add-scanner-template-dialog'
-import { DataTableRowActions, EmptyState, type RowAction } from '@/features/shared'
+import {
+  DataTable,
+  DataTableColumnHeader,
+  DataTableRowActions,
+  EmptyState,
+  ErrorState,
+  MetricStrip,
+  PageHeader,
+  type MetricStripItem,
+  type RowAction,
+} from '@/features/shared'
+
 import { Can, Permission } from '@/lib/permissions'
 import {
   useScannerTemplates,
@@ -80,45 +80,22 @@ import {
   getUsagePercentage,
   formatStorageSize,
 } from '@/lib/api/scanner-template-types'
-import { Alert, AlertDescription } from '@/components/ui/alert'
 import { getErrorMessage } from '@/lib/api/error-handler'
 
 function TemplateStatusBadge({ status }: { status: TemplateStatus }) {
-  const colorMap: Record<TemplateStatus, string> = {
-    active: 'bg-green-100 text-green-700',
-    pending_review: 'bg-yellow-100 text-yellow-900',
-    deprecated: 'bg-gray-100 text-gray-500',
-    revoked: 'bg-red-100 text-red-700',
-  }
-
   const IconMap: Record<TemplateStatus, React.ElementType> = {
     active: CheckCircle,
     pending_review: FileWarning,
     deprecated: Archive,
     revoked: XCircle,
   }
-
   const Icon = IconMap[status]
-  const className = colorMap[status]
 
+  // Only a revoked template is a problem worth colour; the icon carries the rest.
   return (
-    <Badge variant="outline" className={`gap-1 ${className}`}>
+    <Badge variant={status === 'revoked' ? 'destructive' : 'outline'} className="gap-1">
       <Icon className="h-3 w-3" />
       {TEMPLATE_STATUS_DISPLAY_NAMES[status]}
-    </Badge>
-  )
-}
-
-function TemplateTypeBadge({ type }: { type: TemplateType }) {
-  const colorMap: Record<TemplateType, string> = {
-    nuclei: 'bg-purple-100 text-purple-700',
-    semgrep: 'bg-blue-100 text-blue-700',
-    gitleaks: 'bg-orange-100 text-orange-700',
-  }
-
-  return (
-    <Badge variant="outline" className={colorMap[type]}>
-      {TEMPLATE_TYPE_DISPLAY_NAMES[type]}
     </Badge>
   )
 }
@@ -127,107 +104,53 @@ function TemplateSourceBadge({ template }: { template: ScannerTemplate }) {
   const isManual = isManuallyUploadedTemplate(template)
   const syncSource = template.sync_source || (isManual ? 'manual' : undefined)
 
-  const sourceConfig: Record<
-    SyncSource,
-    { icon: React.ElementType; label: string; className: string }
-  > = {
-    manual: { icon: Upload, label: 'Uploaded', className: 'bg-slate-100 text-slate-700' },
-    git: { icon: GitBranch, label: 'Git', className: 'bg-emerald-100 text-emerald-700' },
-    s3: { icon: Cloud, label: 'S3', className: 'bg-amber-100 text-amber-700' },
-    http: { icon: Globe, label: 'HTTP', className: 'bg-sky-100 text-sky-700' },
+  const sourceConfig: Record<SyncSource, { icon: React.ElementType; label: string }> = {
+    manual: { icon: Upload, label: 'Uploaded' },
+    git: { icon: GitBranch, label: 'Git' },
+    s3: { icon: Cloud, label: 'S3' },
+    http: { icon: Globe, label: 'HTTP' },
   }
 
   const config = syncSource ? sourceConfig[syncSource] : sourceConfig.manual
   const Icon = config.icon
 
   return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Badge variant="outline" className={`gap-1 ${config.className}`}>
-            <Icon className="h-3 w-3" />
-            {config.label}
-          </Badge>
-        </TooltipTrigger>
-        <TooltipContent>
-          {isManual ? (
-            <p>Uploaded directly and stored in database</p>
-          ) : (
-            <p>
-              Synced from {config.label} source
-              {template.source_path ? `: ${template.source_path}` : ''}
-            </p>
-          )}
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Badge variant="outline" className="gap-1">
+          <Icon className="h-3 w-3" />
+          {config.label}
+        </Badge>
+      </TooltipTrigger>
+      <TooltipContent>
+        {isManual ? (
+          <p>Uploaded directly and stored in database</p>
+        ) : (
+          <p>
+            Synced from {config.label} source
+            {template.source_path ? `: ${template.source_path}` : ''}
+          </p>
+        )}
+      </TooltipContent>
+    </Tooltip>
   )
 }
 
-function UsageProgress({ current, max, label }: { current: number; max: number; label: string }) {
-  const percentage = getUsagePercentage(current, max)
-  const isWarning = percentage >= 80
-  const isDanger = percentage >= 95
-
-  return (
-    <div className="space-y-1">
-      <div className="flex justify-between text-xs">
-        <span className="text-muted-foreground">{label}</span>
-        <span
-          className={
-            isDanger
-              ? 'text-red-600 font-medium'
-              : isWarning
-                ? 'text-amber-600'
-                : 'text-muted-foreground'
-          }
-        >
-          {current} / {max}
-        </span>
-      </div>
-      <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
-        <div
-          className={`h-full transition-all ${
-            isDanger ? 'bg-red-500' : isWarning ? 'bg-amber-500' : 'bg-primary'
-          }`}
-          style={{ width: `${percentage}%` }}
-        />
-      </div>
-    </div>
-  )
-}
-
-function StorageUsageProgress({ current, max }: { current: number; max: number }) {
-  const percentage = getUsagePercentage(current, max)
-  const isWarning = percentage >= 80
-  const isDanger = percentage >= 95
-
-  return (
-    <div className="space-y-1">
-      <div className="flex justify-between text-xs">
-        <span className="text-muted-foreground">Storage</span>
-        <span
-          className={
-            isDanger
-              ? 'text-red-600 font-medium'
-              : isWarning
-                ? 'text-amber-600'
-                : 'text-muted-foreground'
-          }
-        >
-          {formatStorageSize(current)} / {formatStorageSize(max)}
-        </span>
-      </div>
-      <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
-        <div
-          className={`h-full transition-all ${
-            isDanger ? 'bg-red-500' : isWarning ? 'bg-amber-500' : 'bg-primary'
-          }`}
-          style={{ width: `${percentage}%` }}
-        />
-      </div>
-    </div>
-  )
+/** A quota metric: the current count, "of max" as the hint, red once nearly full. */
+function quotaMetric(
+  key: string,
+  label: string,
+  current: number,
+  max: number,
+  format: (n: number) => string | number = (n) => n
+): MetricStripItem {
+  return {
+    key,
+    label,
+    value: format(current),
+    hint: `of ${format(max)}`,
+    tone: getUsagePercentage(current, max) >= 95 ? 'danger' : 'default',
+  }
 }
 
 export function ScannerTemplatesSection() {
@@ -240,9 +163,12 @@ export function ScannerTemplatesSection() {
   const [selectedTemplate, setSelectedTemplate] = useState<ScannerTemplate | null>(null)
 
   // Filter states
-  const [searchQuery, setSearchQuery] = useState('')
-  const [typeFilter, setTypeFilter] = useState<TemplateType | 'all'>('all')
-  const [statusFilter, setStatusFilter] = useState<TemplateStatus | 'all'>('all')
+  const [searchQuery, setSearchQuery] = useUrlFilter('q', '')
+  const [typeParam, setTypeFilter] = useUrlFilter('type', 'all')
+  const [statusParam, setStatusFilter] = useUrlFilter('status', 'all')
+  const typeFilter = typeParam as TemplateType | 'all'
+  const statusFilter = statusParam as TemplateStatus | 'all'
+  const anyFilter = !!searchQuery || typeFilter !== 'all' || statusFilter !== 'all'
 
   // API data
   const filters = useMemo(
@@ -334,291 +260,251 @@ export function ScannerTemplatesSection() {
     }
   }, [])
 
-  if (error) {
-    return (
-      <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-4">
-        <div className="flex items-center gap-2 text-red-500">
-          <AlertCircle className="h-4 w-4" />
-          <span className="text-sm font-medium">Failed to load scanner templates</span>
-        </div>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {error instanceof Error ? error.message : 'An unexpected error occurred'}
-        </p>
-        <Button variant="outline" size="sm" className="mt-2" onClick={handleRefresh}>
-          <RefreshCw className="me-2 h-4 w-4" />
-          Retry
-        </Button>
+  const columns = useMemo<ColumnDef<ScannerTemplate>[]>(
+    () => [
+      {
+        id: 'name',
+        accessorKey: 'name',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Template" />,
+        cell: ({ row }) => {
+          const template = row.original
+          return (
+            <div className="min-w-0">
+              <div className="truncate font-medium">{template.name}</div>
+              {template.description && (
+                <p
+                  className="max-w-xs truncate text-sm text-muted-foreground"
+                  title={template.description}
+                >
+                  {template.description}
+                </p>
+              )}
+            </div>
+          )
+        },
+      },
+      {
+        id: 'type',
+        accessorFn: (t) => TEMPLATE_TYPE_DISPLAY_NAMES[t.template_type],
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Type" />,
+        cell: ({ getValue }) => <Badge variant="outline">{getValue<string>()}</Badge>,
+      },
+      {
+        id: 'source',
+        enableSorting: false,
+        header: 'Source',
+        cell: ({ row }) => <TemplateSourceBadge template={row.original} />,
+      },
+      {
+        id: 'rules',
+        accessorKey: 'rule_count',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Rules" />,
+        cell: ({ row }) => (
+          <span className="text-sm tabular-nums text-muted-foreground">
+            {row.original.rule_count} {row.original.rule_count === 1 ? 'rule' : 'rules'}
+          </span>
+        ),
+      },
+      {
+        id: 'version',
+        accessorKey: 'version',
+        header: 'Version',
+        enableSorting: false,
+        cell: ({ row }) => (
+          <span className="text-xs tabular-nums text-muted-foreground">
+            v{row.original.version}
+          </span>
+        ),
+      },
+      {
+        id: 'status',
+        accessorKey: 'status',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
+        cell: ({ row }) => <TemplateStatusBadge status={row.original.status} />,
+      },
+      {
+        id: 'updated',
+        accessorKey: 'updated_at',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Updated" />,
+        cell: ({ row }) => (
+          <span className="text-sm text-muted-foreground">
+            {new Date(row.original.updated_at).toLocaleDateString()}
+          </span>
+        ),
+      },
+      {
+        id: 'actions',
+        enableSorting: false,
+        enableHiding: false,
+        cell: ({ row }) => {
+          const template = row.original
+          return (
+            <DataTableRowActions
+              actions={[
+                {
+                  label: 'Download',
+                  icon: Download,
+                  onClick: () => handleDownload(template),
+                },
+                ...(template.status === 'active'
+                  ? ([
+                      {
+                        label: 'Deprecate',
+                        icon: Archive,
+                        onClick: () => handleDeprecateClick(template),
+                        permission: Permission.ScannerTemplatesWrite,
+                      },
+                    ] satisfies RowAction[])
+                  : []),
+                {
+                  label: 'Delete',
+                  icon: Trash2,
+                  onClick: () => handleDeleteClick(template),
+                  destructive: true,
+                  separatorBefore: true,
+                  permission: Permission.ScannerTemplatesDelete,
+                },
+              ]}
+            />
+          )
+        },
+      },
+    ],
+    [handleDownload, handleDeprecateClick, handleDeleteClick]
+  )
+
+  const metrics: MetricStripItem[] = usageData
+    ? [
+        quotaMetric(
+          'total',
+          'Templates',
+          usageData.usage.total_templates,
+          usageData.quota.max_templates
+        ),
+        quotaMetric(
+          'nuclei',
+          'Nuclei',
+          usageData.usage.nuclei_templates,
+          usageData.quota.max_templates_nuclei
+        ),
+        quotaMetric(
+          'semgrep',
+          'Semgrep',
+          usageData.usage.semgrep_templates,
+          usageData.quota.max_templates_semgrep
+        ),
+        quotaMetric(
+          'gitleaks',
+          'Gitleaks',
+          usageData.usage.gitleaks_templates,
+          usageData.quota.max_templates_gitleaks
+        ),
+        quotaMetric(
+          'storage',
+          'Storage',
+          usageData.usage.total_storage_bytes,
+          usageData.quota.max_total_storage_bytes,
+          formatStorageSize
+        ),
+      ]
+    : []
+
+  // Search and filters are applied by the API, so the table gets its own
+  // server-backed search box instead of its built-in client filter.
+  const toolbarStart = (
+    <>
+      <div className="relative min-w-0 flex-1 sm:max-w-sm">
+        <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          placeholder="Search templates…"
+          aria-label="Search templates"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="h-9 ps-9"
+        />
       </div>
+      <Select value={typeFilter} onValueChange={setTypeFilter}>
+        <SelectTrigger className="h-9 w-[140px]" aria-label="Template type">
+          <SelectValue placeholder="All types" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All types</SelectItem>
+          {TEMPLATE_TYPES.map((type) => (
+            <SelectItem key={type} value={type}>
+              {TEMPLATE_TYPE_DISPLAY_NAMES[type]}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Select value={statusFilter} onValueChange={setStatusFilter}>
+        <SelectTrigger className="h-9 w-[150px]" aria-label="Status">
+          <SelectValue placeholder="All statuses" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All statuses</SelectItem>
+          <SelectItem value="active">Active</SelectItem>
+          <SelectItem value="pending_review">Pending review</SelectItem>
+          <SelectItem value="deprecated">Deprecated</SelectItem>
+          <SelectItem value="revoked">Revoked</SelectItem>
+        </SelectContent>
+      </Select>
+    </>
+  )
+
+  let body: React.ReactNode
+  if (error) {
+    body = <ErrorState title="scanner templates" error={error} onRetry={handleRefresh} />
+  } else if (isLoading && !anyFilter) {
+    body = <TableSkeleton rows={4} />
+  } else if (!isLoading && templates.length === 0 && !anyFilter) {
+    body = (
+      <EmptyState
+        icon={FileCode2}
+        title="No scanner templates"
+        description="Upload custom templates for Nuclei, Semgrep, or Gitleaks scanners."
+        action={
+          <Can permission={Permission.ScannerTemplatesWrite}>
+            <Button size="sm" onClick={() => setAddDialogOpen(true)}>
+              <Plus className="h-4 w-4" />
+              Upload template
+            </Button>
+          </Can>
+        }
+      />
+    )
+  } else {
+    // While a filter change is in flight the toolbar stays mounted (the search
+    // box keeps focus); only the rows wait.
+    body = (
+      <DataTable
+        columns={columns}
+        data={templates}
+        getRowId={(t) => t.id}
+        showSearch={false}
+        toolbarStart={toolbarStart}
+        toolbarEnd={<RefreshButton onClick={handleRefresh} loading={isLoading} />}
+        emptyMessage={isLoading ? 'Loading templates…' : 'No templates match these filters'}
+      />
     )
   }
 
   return (
     <>
-      <div className="space-y-6">
-        <Card>
-          <CardHeader>
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                  <FileCode2 className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                  <CardTitle>Scanner Templates</CardTitle>
-                  <CardDescription>
-                    Custom templates for Nuclei, Semgrep, and Gitleaks scanners
-                  </CardDescription>
-                </div>
-                {!isLoading && templates.length > 0 && (
-                  <Badge variant="secondary" className="ms-2 h-5 px-1.5 text-xs">
-                    {templates.length}
-                  </Badge>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                <Button variant="ghost" size="sm" onClick={handleRefresh} disabled={isLoading}>
-                  {isLoading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <RefreshCw className="h-4 w-4" />
-                  )}
-                </Button>
-                <Can permission={Permission.ScannerTemplatesWrite}>
-                  <Button onClick={() => setAddDialogOpen(true)}>
-                    <Plus className="me-2 h-4 w-4" />
-                    Upload Template
-                  </Button>
-                </Can>
-              </div>
-            </div>
-          </CardHeader>
+      <PageHeader
+        title="Scanner templates"
+        description="Custom Nuclei, Semgrep and Gitleaks templates — uploaded here or synced from template sources, validated and versioned."
+      >
+        <Can permission={Permission.ScannerTemplatesWrite}>
+          <Button size="sm" onClick={() => setAddDialogOpen(true)}>
+            <Plus className="h-4 w-4" />
+            Upload template
+          </Button>
+        </Can>
+      </PageHeader>
 
-          <CardContent>
-            {/* Info Banner - How templates are stored */}
-            <Alert className="mb-4 border-blue-200 bg-blue-50">
-              <Database className="h-4 w-4 text-blue-600" />
-              <AlertDescription className="text-blue-800">
-                <strong>Template Storage:</strong> Templates can be{' '}
-                <span className="font-medium">uploaded directly</span> (stored in database) or{' '}
-                <span className="font-medium">synced from external sources</span> (Git, S3, HTTP).
-                All templates are validated and stored securely with versioning support.
-              </AlertDescription>
-            </Alert>
+      {metrics.length > 0 && <MetricStrip className="mt-5" items={metrics} />}
 
-            {/* Usage/Quota Display */}
-            {usageData && (
-              <div className="mb-4 rounded-lg border p-4 bg-muted/30">
-                <div className="text-sm font-medium mb-3">Template Usage</div>
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-                  <UsageProgress
-                    current={usageData.usage.total_templates}
-                    max={usageData.quota.max_templates}
-                    label="Total Templates"
-                  />
-                  <UsageProgress
-                    current={usageData.usage.nuclei_templates}
-                    max={usageData.quota.max_templates_nuclei}
-                    label="Nuclei"
-                  />
-                  <UsageProgress
-                    current={usageData.usage.semgrep_templates}
-                    max={usageData.quota.max_templates_semgrep}
-                    label="Semgrep"
-                  />
-                  <UsageProgress
-                    current={usageData.usage.gitleaks_templates}
-                    max={usageData.quota.max_templates_gitleaks}
-                    label="Gitleaks"
-                  />
-                  <StorageUsageProgress
-                    current={usageData.usage.total_storage_bytes}
-                    max={usageData.quota.max_total_storage_bytes}
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Filters */}
-            <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder="Search templates..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="ps-9"
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <Select
-                  value={typeFilter}
-                  onValueChange={(v) => setTypeFilter(v as TemplateType | 'all')}
-                >
-                  <SelectTrigger className="w-[150px]">
-                    <Filter className="me-2 h-4 w-4" />
-                    <SelectValue placeholder="All Types" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Types</SelectItem>
-                    {TEMPLATE_TYPES.map((type) => (
-                      <SelectItem key={type} value={type}>
-                        {TEMPLATE_TYPE_DISPLAY_NAMES[type]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select
-                  value={statusFilter}
-                  onValueChange={(v) => setStatusFilter(v as TemplateStatus | 'all')}
-                >
-                  <SelectTrigger className="w-[150px]">
-                    <SelectValue placeholder="All Statuses" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Statuses</SelectItem>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="pending_review">Pending Review</SelectItem>
-                    <SelectItem value="deprecated">Deprecated</SelectItem>
-                    <SelectItem value="revoked">Revoked</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* Content */}
-            {isLoading ? (
-              <div className="space-y-3">
-                {[...Array(3)].map((_, i) => (
-                  <div key={i} className="flex items-center gap-4 rounded-lg border p-4">
-                    <Skeleton className="h-10 w-10 rounded-lg" />
-                    <div className="flex-1 space-y-2">
-                      <Skeleton className="h-4 w-48" />
-                      <Skeleton className="h-3 w-32" />
-                    </div>
-                    <Skeleton className="h-8 w-20" />
-                  </div>
-                ))}
-              </div>
-            ) : templates.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Template</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Source</TableHead>
-                    <TableHead>Rules</TableHead>
-                    <TableHead>Version</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Updated</TableHead>
-                    <TableHead className="w-[100px]">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {templates.map((template) => (
-                    <TableRow key={template.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted">
-                            <FileCode2 className="h-4 w-4 text-muted-foreground" />
-                          </div>
-                          <div>
-                            <div className="font-medium">{template.name}</div>
-                            {template.description && (
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <p className="max-w-[200px] truncate text-sm text-muted-foreground">
-                                      {template.description}
-                                    </p>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p className="max-w-[300px]">{template.description}</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            )}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <TemplateTypeBadge type={template.template_type} />
-                      </TableCell>
-                      <TableCell>
-                        <TemplateSourceBadge template={template} />
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary">
-                          {template.rule_count} {template.rule_count === 1 ? 'rule' : 'rules'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-sm text-muted-foreground">v{template.version}</span>
-                      </TableCell>
-                      <TableCell>
-                        <TemplateStatusBadge status={template.status} />
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-sm text-muted-foreground">
-                          {new Date(template.updated_at).toLocaleDateString()}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <DataTableRowActions
-                          actions={[
-                            {
-                              label: 'Download',
-                              icon: Download,
-                              onClick: () => handleDownload(template),
-                            },
-                            ...(template.status === 'active'
-                              ? ([
-                                  {
-                                    label: 'Deprecate',
-                                    icon: Archive,
-                                    onClick: () => handleDeprecateClick(template),
-                                    permission: Permission.ScannerTemplatesWrite,
-                                  },
-                                ] satisfies RowAction[])
-                              : []),
-                            {
-                              label: 'Delete',
-                              icon: Trash2,
-                              onClick: () => handleDeleteClick(template),
-                              destructive: true,
-                              separatorBefore: true,
-                              permission: Permission.ScannerTemplatesDelete,
-                            },
-                          ]}
-                        />
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            ) : (
-              <EmptyState
-                card={false}
-                icon={FileCode2}
-                title="No Scanner Templates Found"
-                description={
-                  searchQuery || typeFilter !== 'all' || statusFilter !== 'all'
-                    ? 'No templates match your filters.'
-                    : 'Upload custom templates for Nuclei, Semgrep, or Gitleaks scanners.'
-                }
-                action={
-                  !searchQuery && typeFilter === 'all' && statusFilter === 'all' ? (
-                    <Can permission={Permission.ScannerTemplatesWrite}>
-                      <Button onClick={() => setAddDialogOpen(true)}>
-                        <Plus className="me-2 h-4 w-4" />
-                        Upload Your First Template
-                      </Button>
-                    </Can>
-                  ) : undefined
-                }
-              />
-            )}
-          </CardContent>
-        </Card>
-      </div>
+      <div className="mt-5">{body}</div>
 
       {/* Dialogs */}
       <AddScannerTemplateDialog
@@ -631,7 +517,7 @@ export function ScannerTemplatesSection() {
       <ConfirmDialog
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
-        title="Delete Scanner Template"
+        title="Delete scanner template"
         desc={
           <>
             Are you sure you want to delete <strong>{selectedTemplate?.name}</strong>? This action
@@ -648,7 +534,7 @@ export function ScannerTemplatesSection() {
       <AlertDialog open={deprecateDialogOpen} onOpenChange={setDeprecateDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Deprecate Scanner Template</AlertDialogTitle>
+            <AlertDialogTitle>Deprecate scanner template</AlertDialogTitle>
             <AlertDialogDescription>
               Are you sure you want to deprecate <strong>{selectedTemplate?.name}</strong>?
               Deprecated templates cannot be used in new scans.

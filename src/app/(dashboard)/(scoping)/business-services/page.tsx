@@ -10,7 +10,8 @@ import {
   DataTableColumnHeader,
   DataTableRowActions,
   StackedCell,
-  StatsCard,
+  MetricStrip,
+  type MetricStripItem,
 } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -18,7 +19,8 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
-import { Card, CardContent } from '@/components/ui/card'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   Dialog,
   DialogContent,
@@ -36,19 +38,12 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import {
-  Plus,
-  Pencil,
-  Trash2,
-  Briefcase,
-  AlertTriangle,
-  ShieldCheck,
-  DollarSign,
-} from 'lucide-react'
+import { Plus, Pencil, Trash2, AlertCircle, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 import { get, post, put, del } from '@/lib/api/client'
 import { Can, Permission } from '@/lib/permissions'
 import { CRITICALITY_BADGE_SOFT } from '@/lib/criticality-colors'
+import { useUrlFilter } from '@/hooks/use-url-param'
 
 type Criticality = 'critical' | 'high' | 'medium' | 'low'
 
@@ -114,7 +109,15 @@ export default function BusinessServicesPage() {
     (url: string) => get<ListResponse>(url)
   )
 
-  const services: BusinessService[] = useMemo(() => data?.data ?? [], [data])
+  const allServices: BusinessService[] = useMemo(() => data?.data ?? [], [data])
+  // Quick filter set from the metric strip; lives in the URL so the view links.
+  const [quick, setQuick] = useUrlFilter('show', '')
+  const services = useMemo(() => {
+    if (quick === 'critical') return allServices.filter((s) => s.criticality === 'critical')
+    if (quick === 'pii') return allServices.filter((s) => s.handles_pii)
+    if (quick === 'financial') return allServices.filter((s) => s.handles_financial)
+    return allServices
+  }, [allServices, quick])
 
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingService, setEditingService] = useState<BusinessService | null>(null)
@@ -124,12 +127,45 @@ export default function BusinessServicesPage() {
 
   const stats = useMemo(() => {
     return {
-      total: services.length,
-      critical: services.filter((s) => s.criticality === 'critical').length,
-      pii: services.filter((s) => s.handles_pii).length,
-      financial: services.filter((s) => s.handles_financial).length,
+      total: allServices.length,
+      critical: allServices.filter((s) => s.criticality === 'critical').length,
+      pii: allServices.filter((s) => s.handles_pii).length,
+      financial: allServices.filter((s) => s.handles_financial).length,
     }
-  }, [services])
+  }, [allServices])
+
+  const toggleQuick = (key: string) => setQuick(quick === key ? '' : key)
+  const metrics: MetricStripItem[] = [
+    {
+      key: 'total',
+      label: 'Services',
+      value: stats.total,
+      onClick: () => setQuick(''),
+      active: !quick,
+    },
+    {
+      key: 'critical',
+      label: 'Critical',
+      value: stats.critical,
+      tone: 'danger',
+      onClick: () => toggleQuick('critical'),
+      active: quick === 'critical',
+    },
+    {
+      key: 'pii',
+      label: 'Handle PII',
+      value: stats.pii,
+      onClick: () => toggleQuick('pii'),
+      active: quick === 'pii',
+    },
+    {
+      key: 'financial',
+      label: 'Handle financial data',
+      value: stats.financial,
+      onClick: () => toggleQuick('financial'),
+      active: quick === 'financial',
+    },
+  ]
 
   function openCreate() {
     setEditingService(null)
@@ -182,14 +218,17 @@ export default function BusinessServicesPage() {
         accessorKey: 'criticality',
         header: ({ column }) => <DataTableColumnHeader column={column} title="Criticality" />,
         cell: ({ row }) => (
-          <Badge variant="outline" className={criticalityColors[row.original.criticality]}>
+          <Badge
+            variant="outline"
+            className={`capitalize ${criticalityColors[row.original.criticality]}`}
+          >
             {row.original.criticality}
           </Badge>
         ),
       },
       {
         id: 'data_handling',
-        header: 'Data Handling',
+        header: 'Data handling',
         enableSorting: false,
         cell: ({ row }) => {
           const service = row.original
@@ -216,7 +255,7 @@ export default function BusinessServicesPage() {
       },
       {
         id: 'compliance_scope',
-        header: 'Compliance Scope',
+        header: 'Compliance scope',
         enableSorting: false,
         cell: ({ row }) => (
           <div className="flex flex-wrap gap-1">
@@ -352,69 +391,56 @@ export default function BusinessServicesPage() {
   return (
     <Main>
       <PageHeader
-        title="Business Services"
-        description="Define business services and their compliance, data handling, and availability requirements."
+        title="Business services"
+        description="Business services and their compliance, data handling and availability requirements."
       >
         <Can permission={Permission.BusinessServicesWrite}>
-          <Button onClick={openCreate}>
+          <Button size="sm" onClick={openCreate}>
             <Plus className="me-2 h-4 w-4" />
-            Create Service
+            New service
           </Button>
         </Can>
       </PageHeader>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mt-6">
-        <StatsCard title="Total Services" value={stats.total} icon={Briefcase} />
-        <StatsCard title="Critical Services" value={stats.critical} icon={AlertTriangle} />
-        <StatsCard title="Handles PII" value={stats.pii} icon={ShieldCheck} />
-        <StatsCard title="Handles Financial" value={stats.financial} icon={DollarSign} />
-      </div>
+      <MetricStrip className="mt-5" loading={isLoading} items={metrics} />
 
       {isLoading ? (
-        <Card className="mt-6">
-          <CardContent className="py-8 text-center text-sm text-muted-foreground">
-            Loading...
-          </CardContent>
-        </Card>
+        <div className="mt-5 space-y-2 rounded-xl border p-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="h-9 w-full" />
+          ))}
+        </div>
       ) : error ? (
-        <Card className="mt-6">
-          <CardContent className="py-8">
-            <div className="mx-auto flex max-w-md flex-col items-center gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-4 text-center">
-              <p className="text-sm font-medium text-destructive">
-                Failed to load business services
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {error instanceof Error ? error.message : 'Unknown error'}
-              </p>
-              <button
-                type="button"
-                className="mt-1 text-xs text-primary hover:underline"
-                onClick={() => {
-                  void mutate()
-                }}
-              >
-                Retry
-              </button>
-            </div>
-          </CardContent>
-        </Card>
+        <Alert variant="destructive" className="mt-5">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Failed to load business services</AlertTitle>
+          <AlertDescription className="flex flex-wrap items-center gap-3">
+            {error instanceof Error ? error.message : 'Unknown error'}
+            <Button variant="outline" size="sm" onClick={() => void mutate()}>
+              <RefreshCw className="me-2 h-4 w-4" />
+              Retry
+            </Button>
+          </AlertDescription>
+        </Alert>
       ) : (
-        <div className="mt-6">
+        <div className="mt-5">
           <DataTable
             columns={columns}
             data={services}
             searchPlaceholder="Search services..."
-            emptyMessage="No business services yet"
-            emptyDescription='Click "Create Service" to add one.'
+            emptyMessage={quick ? 'No services match this filter' : 'No business services yet'}
+            emptyDescription={
+              quick ? 'Clear the filter to see every service.' : 'Create a service to get started.'
+            }
           />
         </div>
       )}
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>
-              {editingService ? 'Edit Business Service' : 'Create Business Service'}
+              {editingService ? 'Edit business service' : 'New business service'}
             </DialogTitle>
             <DialogDescription>
               Define the business service and its associated compliance and data handling
@@ -463,7 +489,7 @@ export default function BusinessServicesPage() {
             </div>
 
             <div className="grid gap-2">
-              <Label>Compliance Scope</Label>
+              <Label>Compliance scope</Label>
               <div className="flex flex-wrap gap-2">
                 {COMPLIANCE_FRAMEWORKS.map((framework) => {
                   const selected = form.compliance_scope.includes(framework)
@@ -482,7 +508,7 @@ export default function BusinessServicesPage() {
             </div>
 
             <div className="grid gap-3 rounded-md border p-3">
-              <Label className="text-sm font-semibold">Data Handling</Label>
+              <Label className="text-sm font-semibold">Data handling</Label>
               <div className="flex items-center justify-between">
                 <Label htmlFor="handles_pii" className="font-normal">
                   Handles PII
@@ -551,7 +577,7 @@ export default function BusinessServicesPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="owner_name">Owner Name</Label>
+                <Label htmlFor="owner_name">Owner name</Label>
                 <Input
                   id="owner_name"
                   value={form.owner_name}
@@ -560,7 +586,7 @@ export default function BusinessServicesPage() {
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="owner_email">Owner Email</Label>
+                <Label htmlFor="owner_email">Owner email</Label>
                 <Input
                   id="owner_email"
                   type="email"

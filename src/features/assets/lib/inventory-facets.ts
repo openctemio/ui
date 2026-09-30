@@ -282,3 +282,33 @@ export const QUICK_PRESETS: QuickPreset[] = [
     isActive: (f) => !!f.lastSeenBefore,
   },
 ]
+
+/**
+ * Compute the filters after toggling a preset OFF, removing only the values the
+ * preset itself contributed and preserving anything the user selected manually.
+ *
+ * For an array-valued key (e.g. `criticalities`) this subtracts the preset's own
+ * values and keeps the remainder — so a user who added `high`/`medium` on top of
+ * the "Critical + has findings" preset keeps them when the preset is switched
+ * off. The key is dropped only when nothing remains. Scalar keys (booleans,
+ * timestamps) are fully owned by the preset, so they are removed outright.
+ */
+export function deactivatePreset(filters: InventoryFilters, preset: QuickPreset): InventoryFilters {
+  const next: InventoryFilters = { ...filters }
+  for (const key of Object.keys(preset.apply) as (keyof InventoryFilters)[]) {
+    const presetVal = preset.apply[key]
+    const currentVal = next[key]
+    if (Array.isArray(presetVal) && Array.isArray(currentVal)) {
+      const removed = new Set<string>(presetVal as string[])
+      const remaining = (currentVal as string[]).filter((v) => !removed.has(v))
+      if (remaining.length > 0) {
+        ;(next as Record<string, unknown>)[key] = remaining
+      } else {
+        delete next[key]
+      }
+    } else {
+      delete next[key]
+    }
+  }
+  return next
+}

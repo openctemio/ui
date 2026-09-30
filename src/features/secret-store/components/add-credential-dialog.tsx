@@ -305,7 +305,7 @@ export function AddCredentialDialog({ open, onOpenChange, onSuccess }: AddCreden
                 value={credentialType}
                 onValueChange={(v) => handleCredentialTypeChange(v as CredentialType)}
               >
-                <TabsList className="grid w-full grid-cols-5">
+                <TabsList>
                   {CREDENTIAL_TYPES.map((type) => {
                     const Icon = CREDENTIAL_TYPE_ICONS[type]
                     return (

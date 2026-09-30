@@ -162,7 +162,7 @@ export function LinkFindingsToRemediationDialog({
         </DialogHeader>
 
         <Tabs value={tab} onValueChange={(v) => setTab(v as 'new' | 'existing')}>
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList>
             <TabsTrigger value="new">New task</TabsTrigger>
             <TabsTrigger value="existing">Add to existing</TabsTrigger>
           </TabsList>

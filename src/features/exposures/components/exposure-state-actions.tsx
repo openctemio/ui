@@ -12,7 +12,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
-import { Badge } from '@/components/ui/badge'
+import { BulkActionBar } from '@/features/shared'
 import { cn } from '@/lib/utils'
 import { getErrorMessage } from '@/lib/api/error-handler'
 import { Check, X, AlertTriangle, RefreshCw, ShieldCheck, ShieldX, Loader2 } from 'lucide-react'
@@ -41,7 +41,6 @@ const actionConfig: Record<
     title: string
     description: string
     icon: typeof Check
-    iconColor: string
     buttonText: string
     buttonVariant: 'default' | 'destructive' | 'outline' | 'secondary'
     successMessage: string
@@ -49,42 +48,38 @@ const actionConfig: Record<
   }
 > = {
   resolve: {
-    title: 'Resolve Exposure',
+    title: 'Resolve exposure',
     description: 'Mark this exposure as resolved. This indicates the issue has been fixed.',
     icon: ShieldCheck,
-    iconColor: 'text-green-500',
-    buttonText: 'Mark Resolved',
+    buttonText: 'Mark resolved',
     buttonVariant: 'default',
     successMessage: 'Exposure marked as resolved',
     requireReason: false,
   },
   accept: {
-    title: 'Accept Risk',
+    title: 'Accept risk',
     description:
       'Accept the risk associated with this exposure. Use this when the exposure is a known acceptable risk.',
     icon: AlertTriangle,
-    iconColor: 'text-yellow-500',
-    buttonText: 'Accept Risk',
+    buttonText: 'Accept risk',
     buttonVariant: 'secondary',
     successMessage: 'Risk accepted',
     requireReason: true,
   },
   false_positive: {
-    title: 'Mark as False Positive',
+    title: 'Mark as false positive',
     description:
       'Mark this exposure as a false positive. Use this when the detection was incorrect.',
     icon: ShieldX,
-    iconColor: 'text-muted-foreground',
-    buttonText: 'Mark False Positive',
+    buttonText: 'Mark false positive',
     buttonVariant: 'outline',
     successMessage: 'Marked as false positive',
     requireReason: true,
   },
   reactivate: {
-    title: 'Reactivate Exposure',
+    title: 'Reactivate exposure',
     description: 'Reactivate this exposure. This will return it to active status for remediation.',
     icon: RefreshCw,
-    iconColor: 'text-blue-500',
     buttonText: 'Reactivate',
     buttonVariant: 'default',
     successMessage: 'Exposure reactivated',
@@ -152,7 +147,7 @@ export function ExposureActionDialog({
       <DialogContent>
         <DialogHeader>
           <div className="flex items-center gap-3">
-            <div className={cn('p-2 rounded-full bg-muted', config.iconColor)}>
+            <div className="rounded-full bg-muted p-2 text-muted-foreground">
               <Icon className="h-5 w-5" />
             </div>
             <DialogTitle>{config.title}</DialogTitle>
@@ -225,41 +220,21 @@ export function ExposureQuickActions({
       <div className={cn('flex items-center gap-2', className)}>
         {isActive ? (
           <>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setActionType('resolve')}
-              className="text-green-600 hover:text-green-700 hover:bg-green-50"
-            >
+            <Button size="sm" variant="outline" onClick={() => setActionType('resolve')}>
               <Check className="me-1 h-4 w-4" />
               Resolve
             </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setActionType('accept')}
-              className="text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50"
-            >
+            <Button size="sm" variant="outline" onClick={() => setActionType('accept')}>
               <AlertTriangle className="me-1 h-4 w-4" />
               Accept
             </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setActionType('false_positive')}
-              className="text-muted-foreground hover:text-foreground hover:bg-muted"
-            >
+            <Button size="sm" variant="outline" onClick={() => setActionType('false_positive')}>
               <X className="me-1 h-4 w-4" />
-              False Positive
+              False positive
             </Button>
           </>
         ) : (
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => setActionType('reactivate')}
-            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-          >
+          <Button size="sm" variant="outline" onClick={() => setActionType('reactivate')}>
             <RefreshCw className="me-1 h-4 w-4" />
             Reactivate
           </Button>
@@ -283,7 +258,6 @@ interface ExposureBulkActionsProps {
   onBulkResolve: (ids: string[]) => Promise<void>
   onBulkAccept: (ids: string[], reason: string) => Promise<void>
   onBulkFalsePositive: (ids: string[], reason: string) => Promise<void>
-  className?: string
 }
 
 /**
@@ -295,7 +269,6 @@ export function ExposureBulkActions({
   onBulkResolve,
   onBulkAccept,
   onBulkFalsePositive,
-  className,
 }: ExposureBulkActionsProps) {
   const [isProcessing, setIsProcessing] = useState(false)
   const [bulkAction, setBulkAction] = useState<'accept' | 'false_positive' | null>(null)
@@ -345,62 +318,40 @@ export function ExposureBulkActions({
 
   return (
     <>
-      <div
-        className={cn(
-          'flex items-center justify-between p-3 bg-muted/50 rounded-lg border',
-          className
-        )}
-      >
-        <div className="flex items-center gap-2">
-          <Badge variant="secondary">{count} selected</Badge>
-          <Button variant="ghost" size="sm" onClick={onClearSelection}>
-            Clear
-          </Button>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={handleBulkResolve}
-            disabled={isProcessing}
-            className="text-green-600"
-          >
-            {isProcessing ? (
-              <Loader2 className="me-1 h-4 w-4 animate-spin" />
-            ) : (
-              <Check className="me-1 h-4 w-4" />
-            )}
-            Resolve All
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => setBulkAction('accept')}
-            disabled={isProcessing}
-            className="text-yellow-600"
-          >
-            <AlertTriangle className="me-1 h-4 w-4" />
-            Accept All
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => setBulkAction('false_positive')}
-            disabled={isProcessing}
-            className="text-muted-foreground"
-          >
-            <X className="me-1 h-4 w-4" />
-            False Positive All
-          </Button>
-        </div>
-      </div>
+      <BulkActionBar count={count} onClear={onClearSelection} noun="exposures selected">
+        <Button size="sm" variant="ghost" onClick={handleBulkResolve} disabled={isProcessing}>
+          {isProcessing ? (
+            <Loader2 className="me-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Check className="me-2 h-4 w-4" />
+          )}
+          Resolve
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => setBulkAction('accept')}
+          disabled={isProcessing}
+        >
+          <AlertTriangle className="me-2 h-4 w-4" />
+          Accept risk
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => setBulkAction('false_positive')}
+          disabled={isProcessing}
+        >
+          <X className="me-2 h-4 w-4" />
+          False positive
+        </Button>
+      </BulkActionBar>
 
       <Dialog open={bulkAction !== null} onOpenChange={(open) => !open && setBulkAction(null)}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {bulkAction === 'accept' ? 'Accept Risk for ' : 'Mark as False Positive: '}
+              {bulkAction === 'accept' ? 'Accept risk for ' : 'Mark as false positive: '}
               {count} exposure(s)
             </DialogTitle>
             <DialogDescription>

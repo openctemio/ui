@@ -17,7 +17,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabsContent, TabsList, TabsTrigger, TabsCount } from '@/components/ui/tabs'
 import { Card } from '@/components/ui/card'
 import {
   Select,
@@ -181,24 +181,16 @@ export function AddAssetsStep({ data, onChange, ungroupedAssets }: AddAssetsStep
 
       {/* Tabs */}
       <Tabs defaultValue="select" className="flex-1 flex flex-col">
-        <TabsList className="grid w-full grid-cols-2 mb-4">
+        <TabsList className="mb-4">
           <TabsTrigger value="select" className="gap-2">
             <ListChecks className="h-4 w-4" />
             Select Existing
-            {data.selectedAssetIds.length > 0 && (
-              <Badge variant="secondary" className="ms-1 h-5 px-1.5">
-                {data.selectedAssetIds.length}
-              </Badge>
-            )}
+            {data.selectedAssetIds.length > 0 && <TabsCount value={data.selectedAssetIds.length} />}
           </TabsTrigger>
           <TabsTrigger value="create" className="gap-2">
             <PlusCircle className="h-4 w-4" />
             Create New
-            {data.newAssets.length > 0 && (
-              <Badge variant="secondary" className="ms-1 h-5 px-1.5">
-                {data.newAssets.length}
-              </Badge>
-            )}
+            {data.newAssets.length > 0 && <TabsCount value={data.newAssets.length} />}
           </TabsTrigger>
         </TabsList>
 

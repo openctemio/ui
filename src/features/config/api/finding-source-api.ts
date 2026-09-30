@@ -52,14 +52,6 @@ export interface ApiFindingSourceListResponse {
   total_pages?: number
 }
 
-export interface ApiFindingSourceCategoryListResponse {
-  data: ApiFindingSourceCategory[]
-  total: number
-  page?: number
-  per_page?: number
-  total_pages?: number
-}
-
 // ============================================
 // SWR CONFIGURATION
 // ============================================
@@ -95,16 +87,6 @@ async function fetchFindingSources(url: string): Promise<ApiFindingSourceListRes
   return get<ApiFindingSourceListResponse>(url)
 }
 
-async function fetchFindingSourceCategories(
-  url: string
-): Promise<ApiFindingSourceCategoryListResponse> {
-  return get<ApiFindingSourceCategoryListResponse>(url)
-}
-
-async function fetchFindingSource(url: string): Promise<ApiFindingSource> {
-  return get<ApiFindingSource>(url)
-}
-
 // ============================================
 // HOOKS
 // ============================================
@@ -124,42 +106,6 @@ export function useFindingSourcesApi(config?: SWRConfiguration) {
     ...defaultConfig,
     ...config,
   })
-}
-
-/**
- * Fetch all active finding source categories
- */
-export function useFindingSourceCategoriesApi(config?: SWRConfiguration) {
-  const { currentTenant } = useTenant()
-
-  const key = currentTenant ? '/api/v1/finding-sources/categories?active_only=true' : null
-
-  return useSWR<ApiFindingSourceCategoryListResponse>(key, fetchFindingSourceCategories, {
-    ...defaultConfig,
-    ...config,
-  })
-}
-
-/**
- * Fetch a single finding source by code
- */
-export function useFindingSourceByCodeApi(code: string | null, config?: SWRConfiguration) {
-  const { currentTenant } = useTenant()
-
-  const key = currentTenant && code ? `/api/v1/finding-sources/code/${code}` : null
-
-  return useSWR<ApiFindingSource>(key, fetchFindingSource, { ...defaultConfig, ...config })
-}
-
-/**
- * Fetch a single finding source by ID
- */
-export function useFindingSourceByIdApi(id: string | null, config?: SWRConfiguration) {
-  const { currentTenant } = useTenant()
-
-  const key = currentTenant && id ? `/api/v1/finding-sources/${id}` : null
-
-  return useSWR<ApiFindingSource>(key, fetchFindingSource, { ...defaultConfig, ...config })
 }
 
 // ============================================
