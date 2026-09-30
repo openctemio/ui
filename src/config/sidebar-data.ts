@@ -824,43 +824,5 @@ export const sidebarData: SidebarData = {
         },
       ],
     },
-
-    // ========================================
-    // ADMINISTRATION - Application administrator only
-    // ========================================
-    // Tenable-style system-level configuration, separate from tenant Settings.
-    // Every item is platformAdmin-gated, so the whole group disappears for
-    // tenant users (empty groups are dropped by the sidebar filter).
-    {
-      title: 'Administration',
-      icon: ShieldCheck,
-      items: [
-        {
-          title: 'Overview',
-          url: '/admin',
-          icon: LayoutDashboard,
-          platformAdmin: true,
-        },
-        {
-          title: 'Single Sign-On',
-          icon: ShieldCheck,
-          platformAdmin: true,
-          items: [
-            {
-              title: 'SAML SSO',
-              url: '/admin/saml',
-              icon: ShieldCheck,
-              platformAdmin: true,
-            },
-            {
-              title: 'Verified Domains',
-              url: '/admin/verified-domains',
-              icon: BadgeCheck,
-              platformAdmin: true,
-            },
-          ],
-        },
-      ],
-    },
   ],
 }

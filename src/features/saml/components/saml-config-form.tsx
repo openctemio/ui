@@ -3,8 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { Trash2, Copy, Check, Loader2, RotateCcw } from 'lucide-react'
-import { Main } from '@/components/layout'
-import { PageHeader, ErrorState, PlatformAdminGate } from '@/features/shared'
+import { ErrorState } from '@/features/shared'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -23,8 +22,6 @@ import {
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { copyToClipboard } from '@/lib/clipboard'
 import { getErrorMessage } from '@/lib/api/error-handler'
-import { useTenant } from '@/context/tenant-provider'
-import { usePermissions } from '@/context/permission-provider'
 import {
   useSamlConfig,
   useSaveSamlConfig,
@@ -56,14 +53,30 @@ function CopyableUrl({ label, url }: { label: string; url: string }) {
   )
 }
 
-function SamlSettingsContent() {
-  const { currentTenant } = useTenant()
-  const { hasPermission } = usePermissions()
-  const canManage = hasPermission('team:admin')
+interface SamlConfigFormProps {
+  /** Organization being configured. */
+  tenantId: string
+  /** Organization slug; the SP URLs are built from it. */
+  tenantSlug: string
+  /** False for a read-only administrator: the form is shown disabled. */
+  canManage: boolean
+  /** Called after a save or removal, e.g. to refresh the organization summary. */
+  onChanged?: () => void
+}
 
-  const { data, error, isLoading, mutate } = useSamlConfig()
-  const { trigger: save, isMutating: isSaving } = useSaveSamlConfig()
-  const { trigger: remove, isMutating: isDeleting } = useDeleteSamlConfig()
+/**
+ * SAML 2.0 service-provider configuration for one organization. Used by the
+ * platform admin console (RFC-022); SSO setup is not a tenant operation.
+ */
+export function SamlConfigForm({
+  tenantId,
+  tenantSlug,
+  canManage,
+  onChanged,
+}: SamlConfigFormProps) {
+  const { data, error, isLoading, mutate } = useSamlConfig(tenantId)
+  const { trigger: save, isMutating: isSaving } = useSaveSamlConfig(tenantId)
+  const { trigger: remove, isMutating: isDeleting } = useDeleteSamlConfig(tenantId)
 
   const [form, setForm] = useState<SamlConfig>(emptySamlConfig)
   const [domainsText, setDomainsText] = useState('')
@@ -88,7 +101,7 @@ function SamlSettingsContent() {
     domainsText !== (data?.allowed_domains ?? []).join(', ')
 
   const spURLs = useMemo(() => {
-    const slug = currentTenant?.slug
+    const slug = tenantSlug
     if (!slug || typeof window === 'undefined') return null
     const base = `${window.location.origin}/api/v1/auth/saml/${slug}`
     return {
@@ -96,7 +109,7 @@ function SamlSettingsContent() {
       acs: `${base}/acs`,
       login: `${base}/login`,
     }
-  }, [currentTenant?.slug])
+  }, [tenantSlug])
 
   const set = <K extends keyof SamlConfig>(key: K, value: SamlConfig[K]) =>
     setForm((f) => ({ ...f, [key]: value }))
@@ -113,6 +126,7 @@ function SamlSettingsContent() {
       await save(payload)
       toast.success('SAML configuration saved')
       void mutate()
+      onChanged?.()
     } catch (e) {
       toast.error(getErrorMessage(e, 'Failed to save SAML configuration'))
     }
@@ -126,17 +140,15 @@ function SamlSettingsContent() {
       setForm(emptySamlConfig)
       setDomainsText('')
       void mutate()
+      onChanged?.()
     } catch (e) {
       toast.error(getErrorMessage(e, 'Failed to remove SAML configuration'))
     }
   }
 
   return (
-    <Main>
-      <PageHeader
-        title="SAML single sign-on"
-        description="Federate login through your SAML 2.0 identity provider (Okta, EntraID, ADFS)."
-      >
+    <div>
+      <div className="flex flex-wrap items-center justify-end gap-2">
         {canManage && !error && !isLoading && (
           <>
             {data && (
@@ -160,9 +172,9 @@ function SamlSettingsContent() {
             </Button>
           </>
         )}
-      </PageHeader>
+      </div>
 
-      <div className="mt-5">
+      <div className="mt-4">
         {error ? (
           // A read failure must NOT fall through to the blank form: it reads as
           // "SAML is not configured", and saving from there would PUT empty values
@@ -320,17 +332,6 @@ function SamlSettingsContent() {
         isLoading={isDeleting}
         handleConfirm={() => void handleDelete()}
       />
-    </Main>
-  )
-}
-
-export default function SamlSettingsPage() {
-  return (
-    <PlatformAdminGate
-      title="SAML single sign-on"
-      description="Federate login through your SAML 2.0 identity provider (Okta, EntraID, ADFS)."
-    >
-      <SamlSettingsContent />
-    </PlatformAdminGate>
+    </div>
   )
 }
