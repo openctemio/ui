@@ -9,6 +9,7 @@ import { Main } from '@/components/layout'
 import { PageHeader, EmptyState } from '@/features/shared'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { useUrlFilter } from '@/hooks/use-url-param'
+import { formatEpssPercentile, formatEpssScore, formatEpssTopPercent } from '@/lib/epss'
 import {
   TrendingUp,
   AlertOctagon,
@@ -302,7 +303,7 @@ function CVELookup() {
                   <div>
                     <p className="text-sm text-muted-foreground">Score</p>
                     <p className="text-2xl font-semibold tabular-nums">
-                      {(result.epss.score * 100).toFixed(2)}%
+                      {formatEpssScore(result.epss.score, 2)}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       Probability of exploitation in next 30 days
@@ -311,9 +312,11 @@ function CVELookup() {
                   <div>
                     <p className="text-sm text-muted-foreground">Percentile</p>
                     <p className="text-2xl font-semibold tabular-nums">
-                      {result.epss.percentile.toFixed(1)}%
+                      {formatEpssPercentile(result.epss.percentile)}
                     </p>
-                    <p className="text-xs text-muted-foreground">Higher than this % of all CVEs</p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatEpssTopPercent(result.epss.percentile)} of all CVEs
+                    </p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Model version</p>

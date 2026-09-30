@@ -1,5 +1,6 @@
 'use client'
 
+import { formatEpssScore } from '@/lib/epss'
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -1046,7 +1047,7 @@ function FindingsContent() {
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <span className="inline-flex shrink-0 items-center rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-400">
-                        EPSS {(row.original.epssScore * 100).toFixed(1)}%
+                        EPSS {formatEpssScore(row.original.epssScore)}
                       </span>
                     </TooltipTrigger>
                     <TooltipContent side="top" className="max-w-xs text-xs">
