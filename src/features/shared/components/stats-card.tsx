@@ -1,9 +1,11 @@
 'use client'
 
+import type * as React from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import type { LucideIcon } from 'lucide-react'
-import { TrendingDown, TrendingUp, Minus } from 'lucide-react'
+import { Info, TrendingDown, TrendingUp, Minus } from 'lucide-react'
 
 interface StatsCardProps {
   title: string
@@ -18,6 +20,9 @@ interface StatsCardProps {
   valueClassName?: string
   /** Optional color class for the icon (defaults to muted). */
   iconClassName?: string
+  /** Optional definition shown in a tooltip from an info button beside the
+   *  title — for metrics whose exact meaning matters (how it is computed). */
+  info?: React.ReactNode
 }
 
 export function StatsCard({
@@ -30,6 +35,7 @@ export function StatsCard({
   className,
   valueClassName,
   iconClassName,
+  info,
 }: StatsCardProps) {
   const changeColors = {
     positive: 'text-success',
@@ -43,7 +49,23 @@ export function StatsCard({
   return (
     <Card className={cn(className)}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">{title}</CardTitle>
+        <div className="flex min-w-0 items-center gap-1.5">
+          <CardTitle className="text-sm font-medium">{title}</CardTitle>
+          {info && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  aria-label={`How ${title} is measured`}
+                  className="shrink-0 rounded-sm text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <Info className="h-3.5 w-3.5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent className="max-w-xs text-xs leading-relaxed">{info}</TooltipContent>
+            </Tooltip>
+          )}
+        </div>
         {Icon && <Icon className={cn('h-4 w-4', iconClassName ?? 'text-muted-foreground')} />}
       </CardHeader>
       <CardContent>
