@@ -12,58 +12,8 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb'
 import { Fragment } from 'react'
-
-// Route labels mapping - add more as needed
-const routeLabels: Record<string, string> = {
-  // Main sections
-  '': 'Dashboard',
-  'asset-groups': 'Asset Groups',
-  findings: 'Findings',
-  reports: 'Reports',
-
-  // Scoping
-  scoping: 'Scoping',
-  'attack-surface': 'Attack Surface',
-  'scope-config': 'Scope Configuration',
-
-  // Discovery
-  discovery: 'Discovery',
-  scans: 'Scan Management',
-  assets: 'Asset Inventory',
-  domains: 'Domains',
-  websites: 'Websites',
-  services: 'Services',
-  repositories: 'Repositories',
-  cloud: 'Cloud Assets',
-  credentials: 'Credential Leaks',
-
-  // Identities (roadmap)
-  'api-keys': 'API Keys',
-  'oauth-apps': 'OAuth Apps',
-
-  // Prioritization
-  prioritization: 'Prioritization',
-  'business-impact': 'Business Impact',
-
-  // Validation
-  validation: 'Validation',
-  'attack-simulation': 'Attack Simulation',
-  'control-testing': 'Control Testing',
-
-  // Mobilization
-  mobilization: 'Mobilization',
-  remediation: 'Remediation Tasks',
-  workflows: 'Workflows',
-
-  // Settings
-  settings: 'Settings',
-  users: 'Users',
-  integrations: 'Integrations',
-  siem: 'SIEM',
-  cicd: 'CI/CD',
-  runners: 'Runners',
-  tenant: 'Tenant',
-}
+import { cn } from '@/lib/utils'
+import { breadcrumbLabel } from './breadcrumb-labels'
 
 // UUID regex pattern to detect dynamic route segments
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -123,7 +73,7 @@ export function BreadcrumbNav({ pageTitle, className, hideIdSegment = true }: Br
 
   const breadcrumbItems = filteredSegments.map((segment, index) => {
     const path = '/' + filteredSegments.slice(0, index + 1).join('/')
-    const label = routeLabels[segment] || segment.replace(/-/g, ' ')
+    const label = breadcrumbLabel(path, segment)
     // When on a detail page, the parent (e.g., "Findings") becomes a link, not current page
     const isLast = index === filteredSegments.length - 1 && detailPageLabel === null
 
@@ -139,11 +89,15 @@ export function BreadcrumbNav({ pageTitle, className, hideIdSegment = true }: Br
     })
   }
 
+  // One line, always: the trail takes the width the header leaves it and each
+  // item truncates. Below lg only the last two items show, behind an ellipsis
+  // (the list used to wrap, and on a tablet it stacked up out of the header).
+  const hiddenBelowLg = Math.max(0, breadcrumbItems.length - 2)
+
   return (
-    <Breadcrumb className={className}>
-      <BreadcrumbList>
-        {/* Home link */}
-        <BreadcrumbItem>
+    <Breadcrumb className={cn('min-w-0 flex-1 overflow-hidden', className)}>
+      <BreadcrumbList className="flex-nowrap overflow-hidden">
+        <BreadcrumbItem className="shrink-0">
           <BreadcrumbLink asChild>
             <Link href="/" className="flex items-center gap-1">
               <Home className="h-4 w-4" />
@@ -152,24 +106,36 @@ export function BreadcrumbNav({ pageTitle, className, hideIdSegment = true }: Br
           </BreadcrumbLink>
         </BreadcrumbItem>
 
-        {breadcrumbItems.map((item) => (
-          <Fragment key={item.path}>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              {item.isLast ? (
-                <BreadcrumbPage className="max-w-[200px] truncate capitalize" aria-current="page">
-                  {item.label}
-                </BreadcrumbPage>
-              ) : (
-                <BreadcrumbLink asChild>
-                  <Link href={item.path} className="max-w-[150px] truncate capitalize">
-                    {item.label}
-                  </Link>
-                </BreadcrumbLink>
-              )}
+        {hiddenBelowLg > 0 && (
+          <>
+            <BreadcrumbSeparator className="lg:hidden" />
+            <BreadcrumbItem className="shrink-0 lg:hidden" aria-hidden>
+              …
             </BreadcrumbItem>
-          </Fragment>
-        ))}
+          </>
+        )}
+
+        {breadcrumbItems.map((item, i) => {
+          const collapsible = i < hiddenBelowLg
+          return (
+            <Fragment key={item.path}>
+              <BreadcrumbSeparator className={cn(collapsible && 'hidden lg:flex')} />
+              <BreadcrumbItem className={cn('min-w-0', collapsible && 'hidden lg:inline-flex')}>
+                {item.isLast ? (
+                  <BreadcrumbPage className="truncate" aria-current="page">
+                    {item.label}
+                  </BreadcrumbPage>
+                ) : (
+                  <BreadcrumbLink asChild>
+                    <Link href={item.path} className="truncate">
+                      {item.label}
+                    </Link>
+                  </BreadcrumbLink>
+                )}
+              </BreadcrumbItem>
+            </Fragment>
+          )
+        })}
       </BreadcrumbList>
     </Breadcrumb>
   )
