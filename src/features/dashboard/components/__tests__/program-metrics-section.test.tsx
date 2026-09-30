@@ -111,7 +111,7 @@ describe('ProgramMetricsSection', () => {
   it('shows an error state with retry instead of numbers when the request fails', () => {
     hookResult.error = new Error('boom')
     render(<ProgramMetricsSection tenantId="t1" days={90} />)
-    expect(screen.getByText('Couldn’t load program metrics')).toBeTruthy()
+    expect(screen.getByText('Failed to load program metrics')).toBeTruthy()
     expect(screen.queryByText('Owner acceptance rate')).toBeNull()
   })
 })
