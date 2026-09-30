@@ -7,6 +7,7 @@
  */
 
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 import { LoginForm } from './login-form'
@@ -15,6 +16,10 @@ import { useTenantSSOProviders } from '@/features/sso/api/use-sso-api'
 
 vi.mock('../api/use-auth-providers')
 vi.mock('@/features/sso/api/use-sso-api')
+const loginAction = vi.fn()
+vi.mock('../actions/local-auth-actions', () => ({
+  loginAction: (...a: unknown[]) => loginAction(...a),
+}))
 
 const mockUseAuthProviders = vi.mocked(useAuthProviders)
 const mockUseTenantSSOProviders = vi.mocked(useTenantSSOProviders)
@@ -70,5 +75,43 @@ describe('LoginForm social-button gating', () => {
     render(<LoginForm showSocialLogin={false} />)
     expect(screen.queryByText('Or continue with')).not.toBeInTheDocument()
     expect(screen.queryByText('Google')).not.toBeInTheDocument()
+  })
+})
+
+describe('LoginForm platform administrator', () => {
+  const originalLocation = window.location
+  beforeEach(() => {
+    mockUseTenantSSOProviders.mockReturnValue({
+      data: undefined,
+    } as ReturnType<typeof useTenantSSOProviders>)
+    setAuthProviders({ google: false, github: false, microsoft: false })
+  })
+
+  it('opens the admin console instead of organization onboarding', async () => {
+    const href = vi.fn()
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: {
+        ...originalLocation,
+        set href(v: string) {
+          href(v)
+        },
+      },
+    })
+    loginAction.mockResolvedValueOnce({
+      success: true,
+      platformAdmin: true,
+      tenants: [],
+      user: { id: 'u1', name: 'Ops', email: 'ops@acme.io' },
+    })
+    const user = userEvent.setup()
+    render(<LoginForm />)
+    await user.type(screen.getByLabelText('Email'), 'ops@acme.io')
+    await user.type(screen.getByLabelText('Password'), 'Correct-Horse-9')
+    await user.click(screen.getByRole('button', { name: /sign in/i }))
+    await vi.waitFor(() => expect(href).toHaveBeenCalled())
+    expect(href).toHaveBeenCalledWith('/admin')
+    expect(href).not.toHaveBeenCalledWith('/onboarding/create-team')
+    Object.defineProperty(window, 'location', { configurable: true, value: originalLocation })
   })
 })

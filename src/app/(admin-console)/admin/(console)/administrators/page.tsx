@@ -50,7 +50,7 @@ export default function AdministratorsPage() {
       if (pending.kind === 'reset') {
         await resetAdminCredentials(pending.admin.id)
         toast.success(
-          `${pending.admin.email} must set a new password and re-enroll two-step verification`
+          `${pending.admin.email} will set up two-step verification again when they next open the console`
         )
       } else if (pending.kind === 'toggle') {
         await updateAdminUser(pending.admin.id, { is_active: !pending.admin.is_active })
@@ -109,7 +109,7 @@ export default function AdministratorsPage() {
         enableSorting: false,
         cell: ({ row }) => {
           const a = row.original
-          if (a.id === me.id) return null // own account: use the password endpoint
+          if (a.id === me.id) return null // not on your own account
           return (
             <DataTableRowActions
               actions={[
@@ -118,7 +118,7 @@ export default function AdministratorsPage() {
                   onClick: () => setPending({ kind: 'role', admin: a, role: o.value }),
                 })),
                 {
-                  label: 'Reset sign-in (password and two-step)',
+                  label: 'Reset two-step verification',
                   onClick: () => setPending({ kind: 'reset', admin: a }),
                   separatorBefore: true,
                 },
@@ -152,7 +152,7 @@ export default function AdministratorsPage() {
 
   const desc =
     pending?.kind === 'reset'
-      ? `${pending.admin.email} will be signed out everywhere and must set a new password with their API key, then set up two-step verification again. Use this when they lose their authenticator.`
+      ? `${pending.admin.email} will be signed out of the console and must set up two-step verification again the next time they open it. Use this when they lose their authenticator. Their password is their account's and is reset from the sign-in page.`
       : pending?.kind === 'toggle'
         ? pending.admin.is_active
           ? `${pending.admin.email} will no longer be able to sign in or use their API key.`
@@ -190,7 +190,7 @@ export default function AdministratorsPage() {
         onOpenChange={(open) => !open && setPending(null)}
         title={
           pending?.kind === 'reset'
-            ? 'Reset sign-in?'
+            ? 'Reset two-step verification?'
             : pending?.kind === 'toggle'
               ? pending.admin.is_active
                 ? 'Deactivate administrator?'

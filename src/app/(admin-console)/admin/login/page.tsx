@@ -1,15 +1,16 @@
 'use client'
 
-import { useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { Loader2, ShieldCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { adminLogin, adminVerifyMFA } from '@/features/admin-console/api/use-admin-session'
+import { adminStartSession, adminVerifyMFA } from '@/features/admin-console/api/use-admin-session'
 import { AdminApiError } from '@/features/admin-console/api/admin-client'
 import { TotpQrCode } from '@/features/admin-console/components/totp-qr-code'
+import { localLogoutAction } from '@/features/auth/actions/local-auth-actions'
 import type { AdminLoginResult } from '@/features/admin-console/types'
 
 function errorMessage(e: unknown, fallback: string): string {
@@ -20,34 +21,61 @@ function errorMessage(e: unknown, fallback: string): string {
   return fallback
 }
 
-/** Only same-origin console paths are allowed as the post-login target. */
+/** Only same-origin console paths are allowed as the post-verification target. */
 function nextPath(): string {
   if (typeof window === 'undefined') return '/admin'
   const next = new URLSearchParams(window.location.search).get('next') ?? ''
-  return next.startsWith('/admin') && !next.startsWith('//') ? next : '/admin'
+  return (next === '/admin' || next.startsWith('/admin/')) && !next.startsWith('//')
+    ? next
+    : '/admin'
 }
 
-export default function AdminLoginPage() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
+type Phase =
+  | { kind: 'starting' }
+  | { kind: 'code'; step: AdminLoginResult }
+  /** Signed in, but this account cannot open the console. */
+  | { kind: 'refused'; message: string }
+  | { kind: 'failed'; message: string }
+
+/**
+ * Second step of the platform administrator sign-in (RFC-022). The
+ * administrator signs in on the normal /login page; this page then asks for
+ * the code from their authenticator app (or enrolls one on first use) and
+ * opens the console session.
+ */
+export default function AdminVerifyPage() {
+  const [phase, setPhase] = useState<Phase>({ kind: 'starting' })
   const [code, setCode] = useState('')
-  const [step, setStep] = useState<AdminLoginResult | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const started = useRef(false)
 
-  const submitPassword = async (e: FormEvent) => {
-    e.preventDefault()
-    setBusy(true)
+  const start = useCallback(async () => {
+    setPhase({ kind: 'starting' })
     setError(null)
     try {
-      setStep(await adminLogin(email.trim(), password))
-      setPassword('')
+      setPhase({ kind: 'code', step: await adminStartSession() })
     } catch (err) {
-      setError(errorMessage(err, 'Invalid email or password'))
-    } finally {
-      setBusy(false)
+      if (err instanceof AdminApiError && err.status === 401) {
+        // Not signed in: the normal sign-in page brings the administrator back.
+        window.location.replace(`/login?redirect=${encodeURIComponent(nextPath())}`)
+        return
+      }
+      if (err instanceof AdminApiError && err.status === 403) {
+        setPhase({ kind: 'refused', message: err.message })
+        return
+      }
+      setPhase({ kind: 'failed', message: errorMessage(err, 'The console could not be reached.') })
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    // Once per mount: each start issues a new pending session (and, before
+    // enrollment, a new secret), so a double run would show a stale QR code.
+    if (started.current) return
+    started.current = true
+    void start()
+  }, [start])
 
   const submitCode = async (e: FormEvent) => {
     e.preventDefault()
@@ -64,12 +92,12 @@ export default function AdminLoginPage() {
     }
   }
 
-  const restart = () => {
-    setStep(null)
-    setCode('')
-    setError(null)
+  const switchAccount = () => {
+    setBusy(true)
+    void localLogoutAction(`/login?redirect=${encodeURIComponent(nextPath())}`)
   }
 
+  const step = phase.kind === 'code' ? phase.step : null
   const enrolling = step?.status === 'mfa_enrollment_required'
 
   return (
@@ -80,51 +108,53 @@ export default function AdminLoginPage() {
           Platform administration
         </CardTitle>
         <CardDescription>
-          {step === null
-            ? 'Sign in with your administrator account. This is separate from organization accounts.'
+          {phase.kind === 'refused'
+            ? 'This account cannot open the admin console.'
             : enrolling
               ? 'Set up two-step verification. It is required for every administrator.'
-              : 'Enter the 6-digit code from your authenticator app.'}
+              : 'Enter the 6-digit code from your authenticator app to continue.'}
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {error && (
-          <Alert variant="destructive" className="mb-4">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
+        {phase.kind === 'starting' && (
+          <div
+            className="flex justify-center py-6"
+            role="status"
+            aria-label="Checking your sign-in"
+          >
+            <Loader2 className="size-6 animate-spin text-muted-foreground" />
+          </div>
         )}
 
-        {step === null ? (
-          <form onSubmit={submitPassword} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="admin-email">Email</Label>
-              <Input
-                id="admin-email"
-                type="email"
-                autoComplete="username"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="admin-password">Password</Label>
-              <Input
-                id="admin-password"
-                type="password"
-                autoComplete="current-password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </div>
-            <Button type="submit" className="w-full" disabled={busy}>
-              {busy && <Loader2 className="me-2 size-4 animate-spin" />}
-              Continue
+        {(phase.kind === 'refused' || phase.kind === 'failed') && (
+          <div className="space-y-4">
+            <Alert variant="destructive">
+              <AlertDescription>{phase.message}</AlertDescription>
+            </Alert>
+            {phase.kind === 'failed' && (
+              <Button type="button" className="w-full" onClick={() => void start()}>
+                Try again
+              </Button>
+            )}
+            <Button
+              type="button"
+              variant={phase.kind === 'refused' ? 'default' : 'ghost'}
+              className="w-full"
+              disabled={busy}
+              onClick={switchAccount}
+            >
+              Sign in with a different account
             </Button>
-          </form>
-        ) : (
+          </div>
+        )}
+
+        {step && (
           <form onSubmit={submitCode} className="space-y-4">
+            {error && (
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
             {enrolling && step.otpauth_uri && (
               <div className="space-y-3">
                 <ol className="list-decimal space-y-1 ps-5 text-sm text-muted-foreground">
@@ -165,10 +195,16 @@ export default function AdminLoginPage() {
             </div>
             <Button type="submit" className="w-full" disabled={busy || code.length !== 6}>
               {busy && <Loader2 className="me-2 size-4 animate-spin" />}
-              {enrolling ? 'Verify and finish setup' : 'Sign in'}
+              {enrolling ? 'Verify and finish setup' : 'Continue'}
             </Button>
-            <Button type="button" variant="ghost" className="w-full" onClick={restart}>
-              Use a different account
+            <Button
+              type="button"
+              variant="ghost"
+              className="w-full"
+              disabled={busy}
+              onClick={switchAccount}
+            >
+              Sign in with a different account
             </Button>
           </form>
         )}
