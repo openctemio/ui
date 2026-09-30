@@ -25,6 +25,7 @@ const SIDEBAR_LABELS: Map<string, string> = (() => {
 const FALLBACK_LABELS: Record<string, string> = {
   assets: 'Asset inventory',
   settings: 'Settings',
+  admin: 'Administration',
   integrations: 'Integrations',
   'access-control': 'Access control',
   account: 'Account',
