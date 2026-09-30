@@ -153,6 +153,12 @@ export interface Integration {
   category: IntegrationCategory
   status: IntegrationStatus
   status_message?: string
+  /**
+   * False when the backend has no client for this provider (e.g. a Linear or
+   * Asana row created before the API began refusing them). Such an
+   * integration never runs; show it as not supported.
+   */
+  supported?: boolean
 
   // Connection details
   auth_type: AuthType
