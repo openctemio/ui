@@ -22,6 +22,9 @@ export const PUBLIC_ROUTES = [
   '/auth/callback',
   '/auth/sso/callback',
   '/auth/error',
+  // Platform admin console (RFC-022): its own session and login at /admin/login;
+  // the console layout redirects there when there is no admin session.
+  '/admin',
 ] as const
 
 export type PublicRoute = (typeof PUBLIC_ROUTES)[number]

@@ -46,13 +46,6 @@ type BaseNavItem = {
    */
   minRole?: string
   /**
-   * When true, the item is visible only to an application (platform)
-   * administrator (the `is_platform_admin` flag from /users/me, driven by the
-   * API's PLATFORM_ADMIN_EMAILS allow-list). Used for SSO setup, which is a
-   * system-level operation, not a tenant one. Independent of tenant role.
-   */
-  platformAdmin?: boolean
-  /**
    * Module required to view this item (licensing-based).
    * If tenant's plan doesn't include this module, item is hidden.
    * Example: 'findings', 'scans', 'compliance'

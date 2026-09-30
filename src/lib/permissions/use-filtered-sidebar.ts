@@ -29,7 +29,6 @@ import { useMemo } from 'react'
 import { usePermissions } from './hooks'
 import { isRoleAtLeast, type RoleString } from './constants'
 import { useBootstrapModules } from '@/context/bootstrap-provider'
-import { useProfile } from '@/features/account/api/use-profile'
 import type {
   SidebarData,
   NavGroup,
@@ -48,7 +47,6 @@ interface AccessCheckFunctions {
   hasModule: (moduleId: string) => boolean
   getModuleReleaseStatus: (moduleId: string) => ReleaseStatus | undefined
   isModuleActive: (moduleId: string) => boolean
-  isPlatformAdmin: boolean
 }
 
 interface FilteredSidebarResult {
@@ -69,7 +67,6 @@ function hasItemAccess(
     permission?: string | string[]
     role?: string | string[]
     minRole?: string
-    platformAdmin?: boolean
   },
   checks: AccessCheckFunctions
 ): boolean {
@@ -82,14 +79,7 @@ function hasItemAccess(
     hasModule,
     getModuleReleaseStatus,
     isModuleActive,
-    isPlatformAdmin,
   } = checks
-
-  // Application-administrator-only items (e.g. SSO setup) are hidden from
-  // everyone else, regardless of tenant role/permissions.
-  if (item.platformAdmin && !isPlatformAdmin) {
-    return false
-  }
 
   // Check module access (licensing layer)
   if (item.module) {
@@ -241,11 +231,6 @@ function filterNavGroup(group: NavGroup, checks: AccessCheckFunctions): NavGroup
 export function useFilteredSidebarData(sidebarData: SidebarData): FilteredSidebarResult {
   const { can, canAny, isRole, isAnyRole, tenantRole } = usePermissions()
   const { moduleIds, modules } = useBootstrapModules()
-  // Application-admin flag from /users/me (shared, warm SWR key — no extra
-  // request). Gates SSO-setup nav items. While the profile is still loading,
-  // isPlatformAdmin is false, so those items simply appear once it resolves.
-  const { profile } = useProfile()
-  const isPlatformAdmin = !!profile?.is_platform_admin
 
   // Create helper functions for module access
   const moduleHelpers = useMemo(() => {
@@ -294,7 +279,6 @@ export function useFilteredSidebarData(sidebarData: SidebarData): FilteredSideba
       hasModule: moduleHelpers.hasModule,
       getModuleReleaseStatus: moduleHelpers.getModuleReleaseStatus,
       isModuleActive: moduleHelpers.isModuleActive,
-      isPlatformAdmin,
     }
 
     const filteredNavGroups = sidebarData.navGroups
@@ -305,7 +289,7 @@ export function useFilteredSidebarData(sidebarData: SidebarData): FilteredSideba
       ...sidebarData,
       navGroups: filteredNavGroups,
     }
-  }, [sidebarData, can, canAny, isRole, isAnyRole, tenantRole, moduleHelpers, isPlatformAdmin])
+  }, [sidebarData, can, canAny, isRole, isAnyRole, tenantRole, moduleHelpers])
 
   // TenantGate handles loading - these are always false when Sidebar renders
   return {

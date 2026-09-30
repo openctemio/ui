@@ -16,12 +16,6 @@ vi.mock('@/features/scim-tokens/api/use-scim-tokens', () => ({
   useRevokeScimToken: () => ({ trigger: mockRevoke, isMutating: false }),
 }))
 
-// SCIM is a tenant-admin feature: render as a tenant admin who is NOT an
-// application administrator, so a regression that re-gates it would fail here.
-vi.mock('@/features/account/api/use-profile', () => ({
-  useProfile: () => ({ profile: { is_platform_admin: false }, isLoading: false }),
-}))
-
 vi.mock('sonner', () => ({
   toast: { success: vi.fn(), error: vi.fn() },
 }))
