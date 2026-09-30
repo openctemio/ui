@@ -2614,15 +2614,16 @@ export default function RepositoryDetailPage() {
       <Main>
         {/* Repository Header */}
         <div className="mb-6">
-          {/* Repository Header */}
-          <div className="flex items-start justify-between">
-            <div className="flex items-start gap-4">
+          {/* Repository Header: wraps like PageHeader, so the actions move to
+              their own row on narrow screens instead of running off it. */}
+          <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
+            <div className="flex min-w-0 flex-1 basis-72 items-start gap-4">
               <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary/20 via-primary/10 to-transparent border">
                 <ProviderIcon provider={repository.scm_provider} className="h-7 w-7" />
               </div>
-              <div>
-                <div className="flex items-center gap-3 mb-1">
-                  <h1 className="text-2xl font-bold">{repository.name}</h1>
+              <div className="min-w-0">
+                <div className="mb-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <h1 className="min-w-0 text-2xl font-bold break-words">{repository.name}</h1>
                   <Badge
                     variant="outline"
                     className={cn(SCM_PROVIDER_COLORS[repository.scm_provider])}
@@ -2636,7 +2637,7 @@ export default function RepositoryDetailPage() {
                 <p className="text-muted-foreground mb-2">
                   {repository.description || 'No description'}
                 </p>
-                <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
                   <span className="flex items-center gap-1">
                     {repository.visibility === 'private' ? (
                       <Lock className="h-3.5 w-3.5" />
@@ -2666,7 +2667,7 @@ export default function RepositoryDetailPage() {
             </div>
 
             {/* Actions */}
-            <div className="flex items-center gap-2">
+            <div className="flex max-w-full flex-wrap items-center gap-2">
               <Button
                 variant="outline"
                 size="sm"
