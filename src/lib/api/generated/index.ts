@@ -128,3 +128,6 @@ export type ScopeStatsResponse = Schemas['internal_infra_http_handler.ScopeStats
 export type ScopeMatchResponse = Schemas['internal_infra_http_handler.ScopeMatchResponse']
 export type ScopeBulkOperationResponse =
   Schemas['internal_infra_http_handler.ScopeBulkOperationResponse']
+
+// Asset state history ("What changed")
+export type StateChangeResponse = Schemas['internal_infra_http_handler.StateChangeResponse']
