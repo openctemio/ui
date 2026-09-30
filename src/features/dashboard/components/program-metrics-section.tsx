@@ -86,11 +86,7 @@ export function ProgramMetricsSection({
       </div>
 
       {error ? (
-        <ErrorState
-          title="Couldn’t load program metrics"
-          error={error}
-          onRetry={() => void mutate()}
-        />
+        <ErrorState title="program metrics" error={error} onRetry={() => void mutate()} />
       ) : isLoading ? (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {Array.from({ length: 4 }).map((_, i) => (
