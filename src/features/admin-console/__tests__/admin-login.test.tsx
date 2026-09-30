@@ -1,83 +1,120 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
-const login = vi.fn()
+const start = vi.fn()
 const verify = vi.fn()
+const logout = vi.fn()
 vi.mock('@/features/admin-console/api/use-admin-session', () => ({
-  adminLogin: (...a: unknown[]) => login(...a),
+  adminStartSession: (...a: unknown[]) => start(...a),
   adminVerifyMFA: (...a: unknown[]) => verify(...a),
 }))
+vi.mock('@/features/auth/actions/local-auth-actions', () => ({
+  localLogoutAction: (...a: unknown[]) => logout(...a),
+}))
 
-import AdminLoginPage from '@/app/(admin-console)/admin/login/page'
+import AdminVerifyPage from '@/app/(admin-console)/admin/login/page'
+import { AdminApiError } from '@/features/admin-console/api/admin-client'
 
-describe('Admin console login', () => {
+const originalLocation = window.location
+
+/** Replaces window.location so navigations can be observed. */
+function stubLocation(search: string) {
+  const nav = { href: vi.fn(), replace: vi.fn() }
+  Object.defineProperty(window, 'location', {
+    configurable: true,
+    value: {
+      ...originalLocation,
+      search,
+      replace: nav.replace,
+      set href(v: string) {
+        nav.href(v)
+      },
+    },
+  })
+  return nav
+}
+
+describe('Admin console verification (after /login)', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    window.history.replaceState(null, '', '/admin/login')
+  })
+  afterEach(() => {
+    Object.defineProperty(window, 'location', { configurable: true, value: originalLocation })
   })
 
-  async function signIn() {
-    const user = userEvent.setup()
-    render(<AdminLoginPage />)
-    await user.type(screen.getByLabelText('Email'), 'ops@acme.io')
-    await user.type(screen.getByLabelText('Password'), 'a long password')
-    await user.click(screen.getByRole('button', { name: 'Continue' }))
-    return user
-  }
-
-  it('asks for the code after the password when MFA is enrolled', async () => {
-    login.mockResolvedValueOnce({ status: 'mfa_required' })
-    await signIn()
-    expect(login).toHaveBeenCalledWith('ops@acme.io', 'a long password')
+  it('starts the console session from the /login sign-in and asks for the code', async () => {
+    stubLocation('')
+    start.mockResolvedValueOnce({ status: 'mfa_required' })
+    render(<AdminVerifyPage />)
     expect(await screen.findByLabelText('Verification code')).toBeInTheDocument()
+    expect(start).toHaveBeenCalledTimes(1)
+    expect(screen.queryByLabelText('Password')).not.toBeInTheDocument()
     expect(screen.queryByRole('img', { name: /QR code/ })).not.toBeInTheDocument()
   })
 
-  it('shows the QR code and setup key on first sign-in', async () => {
-    login.mockResolvedValueOnce({
+  it('shows the QR code and setup key on first use', async () => {
+    stubLocation('')
+    start.mockResolvedValueOnce({
       status: 'mfa_enrollment_required',
       otpauth_uri: 'otpauth://totp/OpenCTEM%20Admin:ops@acme.io?secret=ABCDEFGH&issuer=OpenCTEM',
       secret: 'ABCDEFGHIJKLMNOP',
     })
-    await signIn()
+    render(<AdminVerifyPage />)
     expect(await screen.findByRole('img', { name: /QR code/ })).toBeInTheDocument()
     expect(screen.getByText('ABCD EFGH IJKL MNOP')).toBeInTheDocument()
   })
 
-  it('shows the API error when the password is wrong', async () => {
-    const { AdminApiError } = await import('@/features/admin-console/api/admin-client')
-    login.mockRejectedValueOnce(new AdminApiError('Invalid email or password', 401))
-    await signIn()
-    expect(await screen.findByText('Invalid email or password')).toBeInTheDocument()
+  it('sends someone who is not signed in to the normal sign-in page', async () => {
+    const nav = stubLocation('?next=/admin/organizations')
+    start.mockRejectedValueOnce(new AdminApiError('Sign in first', 401))
+    render(<AdminVerifyPage />)
+    await vi.waitFor(() =>
+      expect(nav.replace).toHaveBeenCalledWith('/login?redirect=%2Fadmin%2Forganizations')
+    )
+  })
+
+  it('explains a refusal and offers to switch accounts', async () => {
+    stubLocation('')
+    start.mockRejectedValueOnce(
+      new AdminApiError('This account is not a platform administrator', 403)
+    )
+    const user = userEvent.setup()
+    render(<AdminVerifyPage />)
+    expect(
+      await screen.findByText('This account is not a platform administrator')
+    ).toBeInTheDocument()
+    expect(screen.queryByLabelText('Verification code')).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Sign in with a different account' }))
+    expect(logout).toHaveBeenCalledWith('/login?redirect=%2Fadmin')
+  })
+
+  it('shows the API error for a wrong code and lets the admin retry', async () => {
+    stubLocation('')
+    start.mockResolvedValueOnce({ status: 'mfa_required' })
+    verify.mockRejectedValueOnce(new AdminApiError('Invalid or expired verification code', 401))
+    const user = userEvent.setup()
+    render(<AdminVerifyPage />)
+    await user.type(await screen.findByLabelText('Verification code'), '000000')
+    await user.click(screen.getByRole('button', { name: 'Continue' }))
+    expect(await screen.findByText('Invalid or expired verification code')).toBeInTheDocument()
+    expect(screen.getByLabelText('Verification code')).toHaveValue('')
   })
 
   it('only follows ?next= into the console (no open redirect)', async () => {
-    window.history.replaceState(null, '', '/admin/login?next=https://evil.example')
-    login.mockResolvedValueOnce({ status: 'mfa_required' })
+    const nav = stubLocation('?next=https://evil.example')
+    start.mockResolvedValueOnce({ status: 'mfa_required' })
     verify.mockResolvedValueOnce({
       id: '1',
       email: 'ops@acme.io',
       name: 'Ops',
       role: 'super_admin',
     })
-    const assign = vi.fn()
-    const original = window.location
-    Object.defineProperty(window, 'location', {
-      configurable: true,
-      value: {
-        ...original,
-        search: '?next=https://evil.example',
-        set href(v: string) {
-          assign(v)
-        },
-      },
-    })
-    const user = await signIn()
+    const user = userEvent.setup()
+    render(<AdminVerifyPage />)
     await user.type(await screen.findByLabelText('Verification code'), '123456')
-    await user.click(screen.getByRole('button', { name: 'Sign in' }))
-    await vi.waitFor(() => expect(assign).toHaveBeenCalled())
-    expect(assign).toHaveBeenCalledWith('/admin')
-    Object.defineProperty(window, 'location', { configurable: true, value: original })
+    await user.click(screen.getByRole('button', { name: 'Continue' }))
+    await vi.waitFor(() => expect(nav.href).toHaveBeenCalled())
+    expect(nav.href).toHaveBeenCalledWith('/admin')
   })
 })

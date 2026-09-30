@@ -156,6 +156,13 @@ export function LoginForm({
           }
         }
 
+        // Platform administrator: the admin console (it asks for the TOTP code).
+        if (result.platformAdmin) {
+          const toConsole = safeRedirectTo === '/admin' || safeRedirectTo.startsWith('/admin/')
+          window.location.href = toConsole ? safeRedirectTo : '/admin'
+          return
+        }
+
         // Case 1: Multiple tenants - redirect to tenant selection
         if (result.requiresTenantSelection) {
           toast.success('Please select a team to continue')
