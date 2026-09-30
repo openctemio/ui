@@ -17,9 +17,6 @@ import {
   Plus,
   Check,
   Loader2,
-  Command,
-  AudioWaveform,
-  Building2,
 } from 'lucide-react'
 import {
   DropdownMenu,
@@ -42,11 +39,31 @@ import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { getErrorMessage } from '@/lib/api/error-handler'
 
-// Team icons based on index or name
-const teamIcons = [Command, AudioWaveform, Building2]
+/** Up to two initials, e.g. "ORG tenant" -> "OT", "acme" -> "AC". */
+function orgInitials(name: string): string {
+  const words = name.trim().split(/[\s_-]+/).filter(Boolean)
+  if (words.length === 0) return '?'
+  if (words.length === 1) return words[0].slice(0, 2).toUpperCase()
+  return (words[0][0] + words[1][0]).toUpperCase()
+}
 
-function getTeamIcon(index: number) {
-  return teamIcons[index % teamIcons.length]
+/**
+ * Org avatar: initials on a neutral tile, so each organization is recognisable
+ * in the switcher (previously a decorative icon cycled by list index, which
+ * told the user nothing and changed when the list order changed).
+ */
+function OrgAvatar({ name, size = 'md' }: { name: string; size?: 'sm' | 'md' }) {
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        'flex shrink-0 items-center justify-center rounded-md bg-sidebar-primary font-semibold text-sidebar-primary-foreground',
+        size === 'md' ? 'size-8 text-xs' : 'size-6 text-[10px]'
+      )}
+    >
+      {orgInitials(name)}
+    </span>
+  )
 }
 
 export function TeamSwitcher() {
@@ -136,10 +153,6 @@ export function TeamSwitcher() {
 
   // Get current tenant display info
   const currentTeamName = currentTenant?.name || currentTenant?.slug || 'Select Team'
-  const currentIndex = currentTenant
-    ? displayTenants.findIndex((t) => t.id === currentTenant.id)
-    : 0
-  const currentIconIndex = currentIndex >= 0 ? currentIndex : 0
 
   // Loading state
   if (isLoading && displayTenants.length === 0) {
@@ -206,13 +219,11 @@ export function TeamSwitcher() {
               className="ps-0 group-data-[collapsible=icon]:h-12! data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
               disabled={isTransitioning}
             >
-              <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 shrink-0 items-center justify-center rounded-lg">
+              <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 shrink-0 items-center justify-center rounded-md text-xs font-semibold">
                 {isTransitioning ? (
                   <Loader2 className="size-4 animate-spin" />
                 ) : (
-                  React.createElement(teamIcons[currentIconIndex % teamIcons.length], {
-                    className: 'size-4',
-                  })
+                  orgInitials(currentTeamName)
                 )}
               </div>
 
@@ -236,7 +247,6 @@ export function TeamSwitcher() {
             </DropdownMenuLabel>
 
             {displayTenants.map((tenant, index) => {
-              const Icon = getTeamIcon(index)
               const isActive = currentTenant?.id === tenant.id
 
               return (
@@ -246,9 +256,7 @@ export function TeamSwitcher() {
                   className={cn('gap-2 p-2', isActive && 'bg-accent')}
                   disabled={isTransitioning}
                 >
-                  <div className="flex size-6 items-center justify-center rounded-sm border">
-                    <Icon className="size-4 shrink-0" />
-                  </div>
+                  <OrgAvatar name={tenant.name} size="sm" />
                   <span className="flex-1">{tenant.name}</span>
                   {isActive && <Check className="size-4 text-primary" />}
                   {/* ⌘⇧1-9 / Ctrl+Shift+1-9. Shift is required to avoid
