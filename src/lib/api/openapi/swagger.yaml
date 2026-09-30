@@ -2916,6 +2916,68 @@ definitions:
       total_processed:
         type: integer
     type: object
+  github_com_openctemio_api_pkg_domain_ctemcycle.CharterEvaluation:
+    properties:
+      completion_rate:
+        description: |-
+          CompletionRate is met / (met + unmet) × 100, rounded to 2 decimals.
+          Nil when no criterion was measurable.
+        type: number
+      criteria:
+        items:
+          $ref: '#/definitions/github_com_openctemio_api_pkg_domain_ctemcycle.CriterionEvaluation'
+        type: array
+      evaluated_at:
+        type: string
+      met:
+        type: integer
+      not_measurable:
+        type: integer
+      unmet:
+        type: integer
+    type: object
+  github_com_openctemio_api_pkg_domain_ctemcycle.CriterionEvaluation:
+    properties:
+      actual:
+        description: Actual is the measured value in Unit (nil when there was no data).
+        type: number
+      comparator:
+        description: |-
+          Comparator is one of <=, <, >=, >, = (empty when the target did not
+          parse).
+        type: string
+      metric:
+        type: string
+      metric_key:
+        description: |-
+          MetricKey is the cycle metric the criterion resolved to (empty when
+          the metric name was not recognized).
+        type: string
+      name:
+        type: string
+      outcome:
+        $ref: '#/definitions/github_com_openctemio_api_pkg_domain_ctemcycle.CriterionOutcome'
+      reason:
+        description: Reason explains a not_measurable outcome.
+        type: string
+      target:
+        type: string
+      threshold:
+        description: Threshold is the target converted to Unit.
+        type: number
+      unit:
+        type: string
+    type: object
+  github_com_openctemio_api_pkg_domain_ctemcycle.CriterionOutcome:
+    enum:
+    - met
+    - unmet
+    - not_measurable
+    type: string
+    x-enum-varnames:
+    - CriterionMet
+    - CriterionUnmet
+    - CriterionNotMeasurable
   github_com_openctemio_api_pkg_domain_group.GroupSettings:
     properties:
       allow_self_join:
@@ -4579,6 +4641,39 @@ definitions:
       notes:
         type: string
       ransomware_use:
+        type: string
+    type: object
+  internal_infra_http_handler.CTEMCycleResponse:
+    properties:
+      charter:
+        additionalProperties: {}
+        type: object
+      charter_evaluation:
+        allOf:
+        - $ref: '#/definitions/github_com_openctemio_api_pkg_domain_ctemcycle.CharterEvaluation'
+        description: |-
+          CharterEvaluation is the close-time verdict on each charter success
+          criterion (met / unmet / not_measurable, with the measured value).
+          Absent until the cycle is closed with at least one criterion.
+      closed_at:
+        type: string
+      closed_by:
+        type: string
+      created_at:
+        type: string
+      created_by:
+        type: string
+      end_date:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      start_date:
+        type: string
+      status:
+        type: string
+      updated_at:
         type: string
     type: object
   internal_infra_http_handler.CTISIngestRequest:
@@ -9257,7 +9352,21 @@ definitions:
     type: object
   internal_infra_http_handler.StateChangeResponse:
     properties:
+      asset_exposure:
+        type: string
       asset_id:
+        type: string
+      asset_internet_accessible:
+        type: boolean
+      asset_name:
+        description: |-
+          Current state of the asset the change refers to (absent when the asset
+          no longer exists), so a change list can show what changed without one
+          asset lookup per row.
+        type: string
+      asset_scope:
+        type: string
+      asset_type:
         type: string
       change_type:
         type: string
@@ -15479,6 +15588,76 @@ paths:
       summary: Get credential leak statistics
       tags:
       - Credentials
+  /ctem-cycles/{id}:
+    get:
+      description: Returns one CTEM cycle with its charter and, once closed, the evaluation
+        of each charter success criterion.
+      parameters:
+      - description: Cycle ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_infra_http_handler.CTEMCycleResponse'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get CTEM cycle
+      tags:
+      - CTEM Cycles
+  /ctem-cycles/{id}/close:
+    post:
+      description: Closes a cycle in review, computes its metrics and evaluates each
+        charter success criterion.
+      parameters:
+      - description: Cycle ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_infra_http_handler.CTEMCycleResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Close CTEM cycle
+      tags:
+      - CTEM Cycles
   /custom-tools:
     get:
       consumes:
@@ -23108,6 +23287,11 @@ paths:
         in: query
         name: to
         type: string
+      - description: Only assets that are (true) or are not (false) internet-facing
+          now
+        in: query
+        name: internet_facing
+        type: boolean
       - default: 50
         description: Maximum results (max 1000)
         in: query
@@ -23193,17 +23377,36 @@ paths:
       consumes:
       - application/json
       description: |-
-        Deprecated: use GET /state-history?event_type=appeared instead.
-        Retrieves recently discovered assets (new assets appearing in scans).
+        Assets that appeared (newly discovered by a scan or created) in the window.
+        Equivalent to GET /state-history?event_type=appeared.
       parameters:
-      - description: 'Start time (RFC3339, default: 7 days ago)'
+      - description: 'Start time (RFC3339, default: 7 days ago; ignored when from
+          is set)'
         in: query
         name: since
         type: string
+      - description: Start time (RFC3339)
+        in: query
+        name: from
+        type: string
+      - description: End time (RFC3339)
+        in: query
+        name: to
+        type: string
+      - description: Only assets that are (true) or are not (false) internet-facing
+          now
+        in: query
+        name: internet_facing
+        type: boolean
       - default: 100
         description: Maximum results (max 1000)
         in: query
         name: limit
+        type: integer
+      - default: 0
+        description: Pagination offset
+        in: query
+        name: offset
         type: integer
       produces:
       - application/json
@@ -23233,7 +23436,7 @@ paths:
             $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
       security:
       - BearerAuth: []
-      summary: Get recent asset appearances (deprecated)
+      summary: Get recent asset appearances
       tags:
       - Asset State History
   /state-history/compliance:
@@ -23289,17 +23492,36 @@ paths:
       consumes:
       - application/json
       description: |-
-        Deprecated: use GET /state-history?event_type=disappeared instead.
-        Retrieves assets that have disappeared (no longer seen in scans).
+        Assets that disappeared (no scan has seen them within the stale threshold) in the window.
+        Equivalent to GET /state-history?event_type=disappeared.
       parameters:
-      - description: 'Start time (RFC3339, default: 7 days ago)'
+      - description: 'Start time (RFC3339, default: 7 days ago; ignored when from
+          is set)'
         in: query
         name: since
         type: string
+      - description: Start time (RFC3339)
+        in: query
+        name: from
+        type: string
+      - description: End time (RFC3339)
+        in: query
+        name: to
+        type: string
+      - description: Only assets that are (true) or are not (false) internet-facing
+          now
+        in: query
+        name: internet_facing
+        type: boolean
       - default: 100
         description: Maximum results (max 1000)
         in: query
         name: limit
+        type: integer
+      - default: 0
+        description: Pagination offset
+        in: query
+        name: offset
         type: integer
       produces:
       - application/json
@@ -23329,7 +23551,7 @@ paths:
             $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
       security:
       - BearerAuth: []
-      summary: Get recent asset disappearances (deprecated)
+      summary: Get recent asset disappearances
       tags:
       - Asset State History
   /state-history/exposure-changes:
@@ -23337,17 +23559,36 @@ paths:
       consumes:
       - application/json
       description: |-
-        Deprecated: use GET /state-history?event_type=exposure_changed,internet_exposure_changed instead.
-        Retrieves assets that have changed exposure status (public/private/restricted).
+        Every exposure transition (exposure level or internet reachability, either direction) in the window.
+        Equivalent to GET /state-history?event_type=exposure_changed,internet_exposure_changed.
       parameters:
-      - description: 'Start time (RFC3339, default: 7 days ago)'
+      - description: 'Start time (RFC3339, default: 7 days ago; ignored when from
+          is set)'
         in: query
         name: since
         type: string
+      - description: Start time (RFC3339)
+        in: query
+        name: from
+        type: string
+      - description: End time (RFC3339)
+        in: query
+        name: to
+        type: string
+      - description: Only assets that are (true) or are not (false) internet-facing
+          now
+        in: query
+        name: internet_facing
+        type: boolean
       - default: 100
         description: Maximum results (max 1000)
         in: query
         name: limit
+        type: integer
+      - default: 0
+        description: Pagination offset
+        in: query
+        name: offset
         type: integer
       produces:
       - application/json
@@ -23377,7 +23618,7 @@ paths:
             $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
       security:
       - BearerAuth: []
-      summary: Get exposure changes (deprecated)
+      summary: Get exposure changes
       tags:
       - Asset State History
   /state-history/newly-exposed:
@@ -23385,17 +23626,31 @@ paths:
       consumes:
       - application/json
       description: |-
-        Deprecated: use GET /state-history?event_type=internet_exposure_changed instead.
-        Retrieves assets that have recently become publicly exposed.
+        Assets that BECAME internet-facing in the window: exposure changed to public, or
+        internet reachability changed to true. Transitions away from public are excluded.
       parameters:
-      - description: 'Start time (RFC3339, default: 7 days ago)'
+      - description: 'Start time (RFC3339, default: 7 days ago; ignored when from
+          is set)'
         in: query
         name: since
+        type: string
+      - description: Start time (RFC3339)
+        in: query
+        name: from
+        type: string
+      - description: End time (RFC3339)
+        in: query
+        name: to
         type: string
       - default: 100
         description: Maximum results (max 1000)
         in: query
         name: limit
+        type: integer
+      - default: 0
+        description: Pagination offset
+        in: query
+        name: offset
         type: integer
       produces:
       - application/json
@@ -23425,25 +23680,43 @@ paths:
             $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
       security:
       - BearerAuth: []
-      summary: Get newly exposed assets (deprecated)
+      summary: Get newly exposed assets
       tags:
       - Asset State History
   /state-history/shadow-it:
     get:
       consumes:
       - application/json
-      description: |-
-        Deprecated: use GET /state-history?event_type=appeared with scope filtering instead.
-        Retrieves assets identified as potential Shadow IT (appeared with shadow scope).
+      description: Appearances of assets currently in the `shadow` scope (potential
+        shadow IT).
       parameters:
-      - description: 'Start time (RFC3339, default: 7 days ago)'
+      - description: 'Start time (RFC3339, default: 7 days ago; ignored when from
+          is set)'
         in: query
         name: since
         type: string
+      - description: Start time (RFC3339)
+        in: query
+        name: from
+        type: string
+      - description: End time (RFC3339)
+        in: query
+        name: to
+        type: string
+      - description: Only assets that are (true) or are not (false) internet-facing
+          now
+        in: query
+        name: internet_facing
+        type: boolean
       - default: 100
         description: Maximum results (max 1000)
         in: query
         name: limit
+        type: integer
+      - default: 0
+        description: Pagination offset
+        in: query
+        name: offset
         type: integer
       produces:
       - application/json
@@ -23473,7 +23746,7 @@ paths:
             $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
       security:
       - BearerAuth: []
-      summary: Get Shadow IT candidates (deprecated)
+      summary: Get Shadow IT candidates
       tags:
       - Asset State History
   /state-history/stats:
