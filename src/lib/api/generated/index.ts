@@ -86,6 +86,15 @@ export type LicenseStats = Schemas['github_com_openctemio_api_pkg_domain_compone
 export type VulnerableComponent =
   Schemas['github_com_openctemio_api_pkg_domain_component.VulnerableComponent']
 
+// CTEM cycles — the close-time verdict on each charter success criterion.
+export type CtemCycleResponse = Schemas['internal_infra_http_handler.CTEMCycleResponse']
+export type CharterEvaluation =
+  Schemas['github_com_openctemio_api_pkg_domain_ctemcycle.CharterEvaluation']
+export type CriterionEvaluation =
+  Schemas['github_com_openctemio_api_pkg_domain_ctemcycle.CriterionEvaluation']
+export type CriterionOutcome =
+  Schemas['github_com_openctemio_api_pkg_domain_ctemcycle.CriterionOutcome']
+
 // Credentials (leaked-credential inventory)
 export type CredentialItem = Schemas['github_com_openctemio_api_internal_app.CredentialItem']
 export type CredentialListResult =

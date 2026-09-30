@@ -34,7 +34,7 @@ import {
 import { get, post } from '@/lib/api/client'
 import { getErrorMessage } from '@/lib/api/error-handler'
 import { toast } from 'sonner'
-import { CharterEditorSheet, type CtemCycle } from '@/features/cycles'
+import { CharterEditorSheet, summarizeEvaluation, type CtemCycle } from '@/features/cycles'
 
 interface PaginatedResponse {
   data: CtemCycle[]
@@ -206,9 +206,17 @@ export default function CtemCyclesPage() {
       close: 'Cycle closed',
     } as const
     try {
-      await post(`/api/v1/ctem-cycles/${id}/${endpointMap[action]}`)
+      const updated = await post<CtemCycle>(`/api/v1/ctem-cycles/${id}/${endpointMap[action]}`)
       await mutate()
-      toast.success(successMap[action])
+      // Closing judges the charter's success criteria; say how it went and
+      // open the charter so the per-criterion outcome is right there.
+      const outcome = action === 'close' ? summarizeEvaluation(updated?.charter_evaluation) : null
+      if (outcome && updated) {
+        toast.success(`${successMap[action]}: ${outcome.toLowerCase()}`)
+        setCharterCycle(updated)
+      } else {
+        toast.success(successMap[action])
+      }
     } catch (err) {
       toast.error(getErrorMessage(err, 'Failed to update cycle status'))
     }
@@ -270,6 +278,31 @@ export default function CtemCyclesPage() {
         cell: ({ row }) => formatDate(row.original.end_date),
       },
       {
+        id: 'criteria',
+        header: () => <span>Success criteria</span>,
+        enableSorting: false,
+        cell: ({ row }) => {
+          const ev = row.original.charter_evaluation
+          const summary = summarizeEvaluation(ev)
+          if (!summary) return <span className="text-muted-foreground">-</span>
+          return (
+            <button
+              type="button"
+              className="text-start text-sm tabular-nums hover:underline"
+              onClick={() => setCharterCycle(row.original)}
+              title="View the success criteria outcome"
+            >
+              {summary}
+              {ev?.completion_rate !== undefined && (
+                <span className="ms-1.5 text-xs text-muted-foreground">
+                  {Math.round(ev.completion_rate)}%
+                </span>
+              )}
+            </button>
+          )
+        },
+      },
+      {
         id: 'actions',
         header: () => <div className="text-end">Actions</div>,
         enableSorting: false,
@@ -316,7 +349,7 @@ export default function CtemCyclesPage() {
                   }
                 >
                   <Eye className="me-1 h-3 w-3" />
-                  Start Review
+                  Start review
                 </Button>
               )}
               {(cycle.status === 'review' || cycle.status === 'closed') && (
