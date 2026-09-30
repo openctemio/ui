@@ -75,7 +75,9 @@ export function Header({
       >
         <SidebarTrigger variant="outline" className="max-md:scale-125" />
         <Separator orientation="vertical" className="h-6" />
-        {showBreadcrumb && <BreadcrumbNav className="hidden md:flex" />}
+        {/* From lg: at tablet width the sidebar and header actions leave no room for
+            a readable trail, and the page title already says where you are. */}
+        {showBreadcrumb && <BreadcrumbNav className="hidden lg:flex" />}
         {children}
         {showHeaderActions && <HeaderActions />}
       </div>
