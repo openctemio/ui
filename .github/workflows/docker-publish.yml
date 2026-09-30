@@ -127,7 +127,11 @@ jobs:
       # Base image (node) is pulled from Docker Hub. Log in so it is an
       # AUTHENTICATED pull — anonymous pulls from shared CI runner IPs hit
       # "429 Too Many Requests / Data limit exceeded" and fail the build.
+      # Optional: this repo may not have DOCKERHUB secrets. If absent the login
+      # is skipped (continue-on-error) and the base image is pulled anonymously
+      # from Docker Hub, which is fine for the few base pulls a build makes.
       - name: Login to Docker Hub (base-image pulls)
+        continue-on-error: true
         uses: docker/login-action@v4
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
