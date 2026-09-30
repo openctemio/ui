@@ -13,14 +13,18 @@
 
 import { useMemo, useState, type ReactNode } from 'react'
 import type { ColumnDef } from '@tanstack/react-table'
-import { ChevronRight, Globe, MinusCircle, Package, User, Users } from 'lucide-react'
+import { ChevronRight, Globe, MinusCircle, User, Users } from 'lucide-react'
+import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { DataTable, DataTableColumnHeader, RiskScoreBadge } from '@/features/shared'
 import { AssetStatusBadge } from '@/features/asset-lifecycle'
 import { CriticalityBadge, ExposureBadge } from '../classification-badges'
 import { AssetDetailSheet } from '../asset-detail-sheet'
-import { getAsset } from '../../hooks'
+import { getAsset, updateAsset } from '../../hooks'
+import { useAssetTags } from '../../hooks/use-asset-tags'
+import { AssetTypeIcon } from '../../lib/asset-type-icon'
+import { Permission, usePermissions } from '@/lib/permissions'
 import { ASSET_TYPE_LABELS, type Asset } from '../../types/asset.types'
 import { SORT_FIELDS, sortToSorting, sortingToSort } from '../../lib/inventory-url'
 
@@ -49,7 +53,10 @@ interface InventoryTableProps {
   toolbarStart?: ReactNode
   toolbarEnd?: ReactNode
   hasFilters: boolean
+  /** Called after an asset is edited from the detail sheet (e.g. tags), to refetch the list. */
+  onAssetUpdated?: () => void
 }
+
 
 export function InventoryTable({
   assets,
@@ -64,8 +71,13 @@ export function InventoryTable({
   toolbarStart,
   toolbarEnd,
   hasFilters,
+  onAssetUpdated,
 }: InventoryTableProps) {
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null)
+  const { can } = usePermissions()
+  const canWriteAssets = can(Permission.AssetsWrite)
+  // Tag suggestions only load once someone can actually edit tags.
+  const { tags: tagSuggestions } = useAssetTags(undefined, canWriteAssets)
   const sorting = useMemo(() => sortToSorting(sort), [sort])
 
   const columns = useMemo<ColumnDef<Asset>[]>(() => {
@@ -102,7 +114,7 @@ export function InventoryTable({
         header: ({ column }) => <DataTableColumnHeader column={column} title="Name" />,
         cell: ({ row }) => (
           <div className="flex min-w-0 items-center gap-2">
-            <Package className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <AssetTypeIcon type={row.original.type} className="h-4 w-4 shrink-0 text-muted-foreground" />
             <div className="min-w-0">
               <p className="truncate font-medium">{row.original.name}</p>
               {row.original.description && (
@@ -277,7 +289,7 @@ export function InventoryTable({
               onClick={() => setSelectedAsset(a)}
               className="flex w-full items-start gap-3 px-3 py-3 text-start transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <Package className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+              <AssetTypeIcon type={a.type} className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
               <div className="min-w-0 flex-1">
                 <p className="line-clamp-2 break-all text-sm font-medium">{a.name}</p>
                 <p className="mt-0.5 truncate text-xs text-muted-foreground">
@@ -316,14 +328,32 @@ export function InventoryTable({
         asset={selectedAsset}
         open={!!selectedAsset}
         onOpenChange={(open) => !open && setSelectedAsset(null)}
-        icon={Package}
-        assetTypeName="Asset"
-        // Inventory is a read-only lens: edit/delete happen on the per-type
-        // pages, so the sheet's danger-zone actions are gated off here.
+        // Icon and title come from the asset's own type ("Repository details").
+        // Edit/delete stay on the per-type pages, so those actions are gated
+        // off here; tags are editable inline like on every other asset page.
         onEdit={() => {}}
         onDelete={() => {}}
         canEdit={false}
         canDelete={false}
+        tagSuggestions={tagSuggestions}
+        onUpdateTags={
+          canWriteAssets
+            ? async (tags: string[]) => {
+                if (!selectedAsset) return
+                try {
+                  const updated = await updateAsset(selectedAsset.id, { tags })
+                  toast.success('Tags updated')
+                  // Lift the fresh asset into the sheet so it re-renders with the
+                  // saved tags, then refetch the list in the background.
+                  setSelectedAsset(updated)
+                  onAssetUpdated?.()
+                } catch (err) {
+                  toast.error(err instanceof Error ? err.message : 'Failed to update tags')
+                  throw err
+                }
+              }
+            : undefined
+        }
         onNavigateToAsset={async (id: string) => {
           const local = assets.find((a) => a.id === id)
           if (local) {
