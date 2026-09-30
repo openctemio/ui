@@ -812,16 +812,21 @@ export const sidebarData: SidebarData = {
               url: '/settings/integrations/scim-tokens',
               icon: Users,
               subModuleKey: 'scim',
+              // SSO setup is an application-administrator operation (Tenable-style
+              // system-level config), not a tenant one — hidden from tenant admins.
+              platformAdmin: true,
             },
             {
               title: 'SAML SSO',
               url: '/settings/integrations/saml',
               icon: ShieldCheck,
+              platformAdmin: true,
             },
             {
               title: 'Verified Domains',
               url: '/settings/integrations/verified-domains',
               icon: BadgeCheck,
+              platformAdmin: true,
             },
             {
               title: 'AI Access (MCP)',

@@ -11,6 +11,7 @@ import {
   DataTableColumnHeader,
   ErrorState,
   MetricStrip,
+  PlatformAdminGate,
   type MetricStripItem,
 } from '@/features/shared'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -252,7 +253,7 @@ function LoadingSkeleton() {
   )
 }
 
-export default function ScimTokensPage() {
+function ScimTokensContent() {
   const { data, error, isLoading, mutate } = useScimTokens()
   const [genOpen, setGenOpen] = useState(false)
   const [newToken, setNewToken] = useState('')
@@ -376,5 +377,16 @@ export default function ScimTokensPage() {
       />
       <RevealTokenDialog value={newToken} onClose={() => setNewToken('')} />
     </Main>
+  )
+}
+
+export default function ScimTokensPage() {
+  return (
+    <PlatformAdminGate
+      title="SCIM provisioning"
+      description="Automate user provisioning and deprovisioning from your identity provider."
+    >
+      <ScimTokensContent />
+    </PlatformAdminGate>
   )
 }

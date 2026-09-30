@@ -9,11 +9,18 @@ const mockMutate = vi.fn()
 const mockCreate = vi.fn()
 const mockRevoke = vi.fn()
 let listData: { tokens: unknown[] } | undefined = { tokens: [] }
+let isPlatformAdmin = true
 
 vi.mock('@/features/scim-tokens/api/use-scim-tokens', () => ({
   useScimTokens: () => ({ data: listData, isLoading: false, mutate: mockMutate }),
   useCreateScimToken: () => ({ trigger: mockCreate, isMutating: false }),
   useRevokeScimToken: () => ({ trigger: mockRevoke, isMutating: false }),
+}))
+
+// The page is wrapped in PlatformAdminGate, which only renders SSO/SCIM setup
+// for application administrators. Render as one so the token UI is present.
+vi.mock('@/features/account/api/use-profile', () => ({
+  useProfile: () => ({ profile: { is_platform_admin: isPlatformAdmin }, isLoading: false }),
 }))
 
 vi.mock('sonner', () => ({
@@ -28,6 +35,15 @@ describe('ScimTokensPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     listData = { tokens: [] }
+    isPlatformAdmin = true
+  })
+
+  it('hides SCIM setup from non-platform-admins', () => {
+    isPlatformAdmin = false
+    render(<ScimTokensPage />)
+    expect(screen.getByText('Application administrator only')).toBeInTheDocument()
+    // The token UI must not render for a tenant admin.
+    expect(screen.queryByText('SCIM endpoint')).not.toBeInTheDocument()
   })
 
   it('shows the empty state when there are no tokens', () => {

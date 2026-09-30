@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { Trash2, Copy, Check, Loader2, RotateCcw } from 'lucide-react'
 import { Main } from '@/components/layout'
-import { PageHeader, ErrorState } from '@/features/shared'
+import { PageHeader, ErrorState, PlatformAdminGate } from '@/features/shared'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -56,7 +56,7 @@ function CopyableUrl({ label, url }: { label: string; url: string }) {
   )
 }
 
-export default function SamlSettingsPage() {
+function SamlSettingsContent() {
   const { currentTenant } = useTenant()
   const { hasPermission } = usePermissions()
   const canManage = hasPermission('team:admin')
@@ -321,5 +321,16 @@ export default function SamlSettingsPage() {
         handleConfirm={() => void handleDelete()}
       />
     </Main>
+  )
+}
+
+export default function SamlSettingsPage() {
+  return (
+    <PlatformAdminGate
+      title="SAML single sign-on"
+      description="Federate login through your SAML 2.0 identity provider (Okta, EntraID, ADFS)."
+    >
+      <SamlSettingsContent />
+    </PlatformAdminGate>
   )
 }
