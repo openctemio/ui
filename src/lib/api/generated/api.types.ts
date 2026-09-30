@@ -8103,6 +8103,134 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/ctem-cycles/{id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Get CTEM cycle
+     * @description Returns one CTEM cycle with its charter and, once closed, the evaluation of each charter success criterion.
+     */
+    get: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          /** @description Cycle ID */
+          id: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['internal_infra_http_handler.CTEMCycleResponse']
+          }
+        }
+        /** @description Not Found */
+        404: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': {
+              [key: string]: string
+            }
+          }
+        }
+        /** @description Internal Server Error */
+        500: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': {
+              [key: string]: string
+            }
+          }
+        }
+      }
+    }
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/ctem-cycles/{id}/close': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Close CTEM cycle
+     * @description Closes a cycle in review, computes its metrics and evaluates each charter success criterion.
+     */
+    post: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          /** @description Cycle ID */
+          id: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['internal_infra_http_handler.CTEMCycleResponse']
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': {
+              [key: string]: string
+            }
+          }
+        }
+        /** @description Internal Server Error */
+        500: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': {
+              [key: string]: string
+            }
+          }
+        }
+      }
+    }
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/custom-tools': {
     parameters: {
       query?: never
@@ -21288,6 +21416,8 @@ export interface paths {
           from?: string
           /** @description End time (RFC3339) */
           to?: string
+          /** @description Only assets that are (true) or are not (false) internet-facing now */
+          internet_facing?: boolean
           /** @description Maximum results (max 1000) */
           limit?: number
           /** @description Pagination offset */
@@ -21427,17 +21557,25 @@ export interface paths {
       cookie?: never
     }
     /**
-     * Get recent asset appearances (deprecated)
-     * @description Deprecated: use GET /state-history?event_type=appeared instead.
-     *     Retrieves recently discovered assets (new assets appearing in scans).
+     * Get recent asset appearances
+     * @description Assets that appeared (newly discovered by a scan or created) in the window.
+     *     Equivalent to GET /state-history?event_type=appeared.
      */
     get: {
       parameters: {
         query?: {
-          /** @description Start time (RFC3339, default: 7 days ago) */
+          /** @description Start time (RFC3339, default: 7 days ago; ignored when from is set) */
           since?: string
+          /** @description Start time (RFC3339) */
+          from?: string
+          /** @description End time (RFC3339) */
+          to?: string
+          /** @description Only assets that are (true) or are not (false) internet-facing now */
+          internet_facing?: boolean
           /** @description Maximum results (max 1000) */
           limit?: number
+          /** @description Pagination offset */
+          offset?: number
         }
         header?: never
         path?: never
@@ -21563,17 +21701,25 @@ export interface paths {
       cookie?: never
     }
     /**
-     * Get recent asset disappearances (deprecated)
-     * @description Deprecated: use GET /state-history?event_type=disappeared instead.
-     *     Retrieves assets that have disappeared (no longer seen in scans).
+     * Get recent asset disappearances
+     * @description Assets that disappeared (no scan has seen them within the stale threshold) in the window.
+     *     Equivalent to GET /state-history?event_type=disappeared.
      */
     get: {
       parameters: {
         query?: {
-          /** @description Start time (RFC3339, default: 7 days ago) */
+          /** @description Start time (RFC3339, default: 7 days ago; ignored when from is set) */
           since?: string
+          /** @description Start time (RFC3339) */
+          from?: string
+          /** @description End time (RFC3339) */
+          to?: string
+          /** @description Only assets that are (true) or are not (false) internet-facing now */
+          internet_facing?: boolean
           /** @description Maximum results (max 1000) */
           limit?: number
+          /** @description Pagination offset */
+          offset?: number
         }
         header?: never
         path?: never
@@ -21631,17 +21777,25 @@ export interface paths {
       cookie?: never
     }
     /**
-     * Get exposure changes (deprecated)
-     * @description Deprecated: use GET /state-history?event_type=exposure_changed,internet_exposure_changed instead.
-     *     Retrieves assets that have changed exposure status (public/private/restricted).
+     * Get exposure changes
+     * @description Every exposure transition (exposure level or internet reachability, either direction) in the window.
+     *     Equivalent to GET /state-history?event_type=exposure_changed,internet_exposure_changed.
      */
     get: {
       parameters: {
         query?: {
-          /** @description Start time (RFC3339, default: 7 days ago) */
+          /** @description Start time (RFC3339, default: 7 days ago; ignored when from is set) */
           since?: string
+          /** @description Start time (RFC3339) */
+          from?: string
+          /** @description End time (RFC3339) */
+          to?: string
+          /** @description Only assets that are (true) or are not (false) internet-facing now */
+          internet_facing?: boolean
           /** @description Maximum results (max 1000) */
           limit?: number
+          /** @description Pagination offset */
+          offset?: number
         }
         header?: never
         path?: never
@@ -21699,17 +21853,23 @@ export interface paths {
       cookie?: never
     }
     /**
-     * Get newly exposed assets (deprecated)
-     * @description Deprecated: use GET /state-history?event_type=internet_exposure_changed instead.
-     *     Retrieves assets that have recently become publicly exposed.
+     * Get newly exposed assets
+     * @description Assets that BECAME internet-facing in the window: exposure changed to public, or
+     *     internet reachability changed to true. Transitions away from public are excluded.
      */
     get: {
       parameters: {
         query?: {
-          /** @description Start time (RFC3339, default: 7 days ago) */
+          /** @description Start time (RFC3339, default: 7 days ago; ignored when from is set) */
           since?: string
+          /** @description Start time (RFC3339) */
+          from?: string
+          /** @description End time (RFC3339) */
+          to?: string
           /** @description Maximum results (max 1000) */
           limit?: number
+          /** @description Pagination offset */
+          offset?: number
         }
         header?: never
         path?: never
@@ -21767,17 +21927,24 @@ export interface paths {
       cookie?: never
     }
     /**
-     * Get Shadow IT candidates (deprecated)
-     * @description Deprecated: use GET /state-history?event_type=appeared with scope filtering instead.
-     *     Retrieves assets identified as potential Shadow IT (appeared with shadow scope).
+     * Get Shadow IT candidates
+     * @description Appearances of assets currently in the `shadow` scope (potential shadow IT).
      */
     get: {
       parameters: {
         query?: {
-          /** @description Start time (RFC3339, default: 7 days ago) */
+          /** @description Start time (RFC3339, default: 7 days ago; ignored when from is set) */
           since?: string
+          /** @description Start time (RFC3339) */
+          from?: string
+          /** @description End time (RFC3339) */
+          to?: string
+          /** @description Only assets that are (true) or are not (false) internet-facing now */
+          internet_facing?: boolean
           /** @description Maximum results (max 1000) */
           limit?: number
+          /** @description Pagination offset */
+          offset?: number
         }
         header?: never
         path?: never
@@ -26376,6 +26543,44 @@ export interface components {
       success_count?: number
       total_processed?: number
     }
+    'github_com_openctemio_api_pkg_domain_ctemcycle.CharterEvaluation': {
+      /**
+       * @description CompletionRate is met / (met + unmet) × 100, rounded to 2 decimals.
+       *     Nil when no criterion was measurable.
+       */
+      completion_rate?: number
+      criteria?: components['schemas']['github_com_openctemio_api_pkg_domain_ctemcycle.CriterionEvaluation'][]
+      evaluated_at?: string
+      met?: number
+      not_measurable?: number
+      unmet?: number
+    }
+    'github_com_openctemio_api_pkg_domain_ctemcycle.CriterionEvaluation': {
+      /** @description Actual is the measured value in Unit (nil when there was no data). */
+      actual?: number
+      /**
+       * @description Comparator is one of <=, <, >=, >, = (empty when the target did not
+       *     parse).
+       */
+      comparator?: string
+      metric?: string
+      /**
+       * @description MetricKey is the cycle metric the criterion resolved to (empty when
+       *     the metric name was not recognized).
+       */
+      metric_key?: string
+      name?: string
+      outcome?: components['schemas']['github_com_openctemio_api_pkg_domain_ctemcycle.CriterionOutcome']
+      /** @description Reason explains a not_measurable outcome. */
+      reason?: string
+      target?: string
+      /** @description Threshold is the target converted to Unit. */
+      threshold?: number
+      unit?: string
+    }
+    /** @enum {string} */
+    'github_com_openctemio_api_pkg_domain_ctemcycle.CriterionOutcome':
+      'met' | 'unmet' | 'not_measurable'
     'github_com_openctemio_api_pkg_domain_group.GroupSettings': {
       allow_self_join?: boolean
       max_members?: number
@@ -27229,6 +27434,27 @@ export interface components {
       is_past_due?: boolean
       notes?: string
       ransomware_use?: string
+    }
+    'internal_infra_http_handler.CTEMCycleResponse': {
+      charter?: {
+        [key: string]: unknown
+      }
+      /**
+       * @description CharterEvaluation is the close-time verdict on each charter success
+       *     criterion (met / unmet / not_measurable, with the measured value).
+       *     Absent until the cycle is closed with at least one criterion.
+       */
+      charter_evaluation?: components['schemas']['github_com_openctemio_api_pkg_domain_ctemcycle.CharterEvaluation']
+      closed_at?: string
+      closed_by?: string
+      created_at?: string
+      created_by?: string
+      end_date?: string
+      id?: string
+      name?: string
+      start_date?: string
+      status?: string
+      updated_at?: string
     }
     'internal_infra_http_handler.CTISIngestRequest': {
       report?: components['schemas']['ctis.Report']
@@ -29511,7 +29737,17 @@ export interface components {
       microsoft?: boolean
     }
     'internal_infra_http_handler.StateChangeResponse': {
+      asset_exposure?: string
       asset_id?: string
+      asset_internet_accessible?: boolean
+      /**
+       * @description Current state of the asset the change refers to (absent when the asset
+       *     no longer exists), so a change list can show what changed without one
+       *     asset lookup per row.
+       */
+      asset_name?: string
+      asset_scope?: string
+      asset_type?: string
       change_type?: string
       changed_at?: string
       changed_by?: string
