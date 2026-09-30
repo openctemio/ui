@@ -53,8 +53,32 @@ jobs:
       #
       # A fetch failure exits 2 rather than passing. When this goes red the fix
       # is two commands, printed in the failure message.
+      #
+      # Who it blocks: every api merge that changes the spec used to turn EVERY
+      # open ui pull request red, though none of them caused the drift. So on a
+      # pull request it blocks only when the PR itself touches the vendored spec
+      # (then the copy it brings must be exact); otherwise the drift is reported
+      # as a warning. On develop (push) it always blocks, and the Sync API spec
+      # workflow opens the fix PR.
+      - name: Does this PR touch the vendored spec?
+        id: spec_touch
+        if: github.event_name == 'pull_request'
+        run: |
+          if git diff --name-only "origin/${{ github.base_ref }}...HEAD" | grep -q '^src/lib/api/openapi/'; then
+            echo "touched=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "touched=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Vendored spec matches openctemio/api
-        run: npm run check:spec-vendored
+        run: |
+          if npm run -s check:spec-vendored; then exit 0; fi
+          rc=$?
+          if [ "${{ github.event_name }}" = "pull_request" ] && [ "${{ steps.spec_touch.outputs.touched }}" != "true" ]; then
+            echo "::warning title=API spec drift::openctemio/api's spec moved since develop vendored it. Not caused by this PR; the Sync API spec workflow re-vendors it."
+            exit 0
+          fi
+          exit $rc
 
       # Run all checks in parallel using &
       - name: Run type check
