@@ -203,7 +203,7 @@ function AutoMobileCard<TData>({
     <div
       data-state={row.getIsSelected() ? 'selected' : undefined}
       className={cn(
-        'flex items-start gap-3 px-3 py-3 data-[state=selected]:bg-muted',
+        'px-3 py-3 data-[state=selected]:bg-muted',
         onRowClick && 'cursor-pointer hover:bg-muted/50'
       )}
       onClick={(e) => {
@@ -213,36 +213,47 @@ function AutoMobileCard<TData>({
         onRowClick?.(row.original)
       }}
     >
-      {select && (
-        <div className="pt-0.5">
-          {flexRender(select.column.columnDef.cell, select.getContext())}
-        </div>
-      )}
-      <div className="min-w-0 flex-1">
+      {/* Header: the title keeps at least 60% of the width, so a row menu
+          (the usual "...") sits beside it while wide action buttons wrap onto
+          their own line instead of covering the title. */}
+      <div className="flex flex-wrap items-start gap-x-3 gap-y-2">
+        {select && (
+          <div className="shrink-0 pt-0.5">
+            {flexRender(select.column.columnDef.cell, select.getContext())}
+          </div>
+        )}
         {title && (
-          <div className="min-w-0 text-sm font-medium [overflow-wrap:anywhere]">
+          <div className="min-w-0 flex-[1_1_60%] text-sm font-medium break-words [&_.truncate]:whitespace-normal [&_.whitespace-nowrap]:whitespace-normal">
             {flexRender(title.column.columnDef.cell, title.getContext())}
           </div>
         )}
-        {fields.length > 0 && (
-          <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-2">
-            {fields.map((cell) => (
-              <div key={cell.id} className="min-w-0">
-                <dt className="truncate text-xs text-muted-foreground">
-                  {labels.get(cell.column.id)}
-                </dt>
-                <dd className="mt-0.5 min-w-0 text-sm [overflow-wrap:anywhere] [&_[data-slot=badge]]:max-w-full [&_[data-slot=badge]]:whitespace-normal">
-                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                </dd>
-              </div>
-            ))}
-          </dl>
+        {actions && (
+          <div className="ms-auto flex max-w-full shrink-0 flex-wrap items-center justify-end gap-2">
+            {flexRender(actions.column.columnDef.cell, actions.getContext())}
+          </div>
         )}
       </div>
-      {actions && (
-        <div className="-me-1 shrink-0">
-          {flexRender(actions.column.columnDef.cell, actions.getContext())}
-        </div>
+      {fields.length > 0 && (
+        // Full card width, two equal columns (minmax(0,1fr): a long value
+        // cannot widen its column). break-words only splits a word that is
+        // longer than the column; "High" stays whole.
+        <dl
+          className={cn(
+            'mt-2 grid grid-cols-[repeat(2,minmax(0,1fr))] gap-x-3 gap-y-2',
+            select && 'ps-7'
+          )}
+        >
+          {fields.map((cell) => (
+            <div key={cell.id} className="min-w-0">
+              <dt className="truncate text-xs text-muted-foreground">
+                {labels.get(cell.column.id)}
+              </dt>
+              <dd className="mt-0.5 min-w-0 text-sm break-words [&_[data-slot=badge]]:max-w-full [&_[data-slot=badge]]:whitespace-normal [&_[data-slot=badge]]:break-words">
+                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+              </dd>
+            </div>
+          ))}
+        </dl>
       )}
     </div>
   )
@@ -440,7 +451,9 @@ export function DataTable<TData, TValue>({
           second row rather than squeezing the search box to a few letters. */}
       <div className="flex flex-wrap items-center gap-2">
         {toolbarStart && (
-          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2 [&>.relative:has(input)]:min-w-36">
+          // No min-w-0: the group must not shrink below its widest control, or a
+          // button spills over the search box beside it. It wraps instead.
+          <div className="flex flex-1 flex-wrap items-center gap-2 [&>.relative:has(input)]:min-w-36">
             {toolbarStart}
           </div>
         )}
