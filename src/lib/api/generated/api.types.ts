@@ -227,6 +227,811 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/admin/auth/login': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Admin console login (password step)
+     * @description First step of platform admin console login (RFC-022). Sets a short-lived admin_mfa cookie; the response says whether to enter a TOTP code or enroll an authenticator first. Every failure is the same generic 401.
+     */
+    post: {
+      parameters: {
+        query?: never
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      /** @description Credentials */
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['internal_infra_http_handler.AdminLoginRequest']
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['internal_infra_http_handler.AdminLoginResponse']
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Invalid email or password */
+        401: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+      }
+    }
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/admin/auth/logout': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Admin console logout
+     * @description Ends the caller's console session and clears the admin cookies.
+     */
+    post: {
+      parameters: {
+        query?: never
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description No Content */
+        204: {
+          headers: {
+            [name: string]: unknown
+          }
+          content?: never
+        }
+      }
+    }
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/admin/auth/mfa': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Admin console login (TOTP step)
+     * @description Verifies the TOTP code for the pending login (admin_mfa cookie) and issues the admin_session and admin_csrf cookies. On first login this also completes authenticator enrollment.
+     */
+    post: {
+      parameters: {
+        query?: never
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      /** @description TOTP code */
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['internal_infra_http_handler.AdminMFARequest']
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['internal_infra_http_handler.ValidateResponse']
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Invalid or expired verification code */
+        401: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+      }
+    }
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/admin/auth/password': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Set own admin console password
+     * @description Sets or changes the caller's console password. With an API key the current password is not required (bootstrap path); with a console session it is, and every session of the admin is ended.
+     */
+    post: {
+      parameters: {
+        query?: never
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      /** @description Passwords */
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['internal_infra_http_handler.AdminPasswordRequest']
+        }
+      }
+      responses: {
+        /** @description No Content */
+        204: {
+          headers: {
+            [name: string]: unknown
+          }
+          content?: never
+        }
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            '*/*': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            '*/*': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+      }
+    }
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/admin/tenants': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * List organizations (platform admin)
+     * @description Cross-tenant list of organizations with size and SSO posture. Newest first.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Match name or slug */
+          search?: string
+          /** @description Page (default 1) */
+          page?: number
+          /** @description Page size (default 50, max 200) */
+          per_page?: number
+        }
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['internal_infra_http_handler.AdminOrganizationListResponse']
+          }
+        }
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+      }
+    }
+    put?: never
+    /**
+     * Create an organization (platform admin)
+     * @description Creates an organization with an existing user as its owner. Works in both TENANT_CREATION_MODE values.
+     */
+    post: {
+      parameters: {
+        query?: never
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      /** @description Organization */
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['internal_infra_http_handler.AdminCreateOrganizationRequest']
+        }
+      }
+      responses: {
+        /** @description Created */
+        201: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['internal_infra_http_handler.AdminOrganizationResponse']
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+      }
+    }
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/admin/tenants/{tenantId}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Get an organization (platform admin) */
+    get: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          /** @description Organization ID */
+          tenantId: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['internal_infra_http_handler.AdminOrganizationResponse']
+          }
+        }
+        /** @description Not Found */
+        404: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+      }
+    }
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/admin/tenants/{tenantId}/sso/enforcement': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Get an organization's SSO enforcement */
+    get: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          /** @description Organization ID */
+          tenantId: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['internal_infra_http_handler.AdminSSOEnforcementResponse']
+          }
+        }
+      }
+    }
+    /**
+     * Set an organization's SSO enforcement
+     * @description Requires members to sign in via SSO (the owner is exempt as break-glass). Refused with 400 when the organization has no usable SSO path.
+     */
+    put: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          /** @description Organization ID */
+          tenantId: string
+        }
+        cookie?: never
+      }
+      /** @description Enforcement */
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['internal_infra_http_handler.AdminSSOEnforcementRequest']
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['internal_infra_http_handler.AdminSSOEnforcementResponse']
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+      }
+    }
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/admin/tenants/{tenantId}/sso/identity-providers': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * List an organization's identity providers
+     * @description Platform admin console (RFC-022): runs against the organization in the path.
+     */
+    get: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          /** @description Organization ID */
+          tenantId: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: never
+    }
+    put?: never
+    /**
+     * Create an identity provider for an organization
+     * @description Platform admin console (RFC-022): runs against the organization in the path.
+     */
+    post: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          /** @description Organization ID */
+          tenantId: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: never
+    }
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/admin/tenants/{tenantId}/sso/identity-providers/{id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Get an organization's identity provider
+     * @description Platform admin console (RFC-022): runs against the organization in the path.
+     */
+    get: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          /** @description Organization ID */
+          tenantId: string
+          /** @description Identity provider ID */
+          id: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: never
+    }
+    /**
+     * Update an organization's identity provider
+     * @description Platform admin console (RFC-022): runs against the organization in the path.
+     */
+    put: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          /** @description Organization ID */
+          tenantId: string
+          /** @description Identity provider ID */
+          id: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: never
+    }
+    post?: never
+    /**
+     * Delete an organization's identity provider
+     * @description Platform admin console (RFC-022): runs against the organization in the path.
+     */
+    delete: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          /** @description Organization ID */
+          tenantId: string
+          /** @description Identity provider ID */
+          id: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: never
+    }
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/admin/tenants/{tenantId}/sso/saml': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Get an organization's SAML config
+     * @description Platform admin console (RFC-022): runs against the organization in the path.
+     */
+    get: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          /** @description Organization ID */
+          tenantId: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: never
+    }
+    /**
+     * Set an organization's SAML config
+     * @description Platform admin console (RFC-022): runs against the organization in the path.
+     */
+    put: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          /** @description Organization ID */
+          tenantId: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: never
+    }
+    post?: never
+    /**
+     * Delete an organization's SAML config
+     * @description Platform admin console (RFC-022): runs against the organization in the path.
+     */
+    delete: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          /** @description Organization ID */
+          tenantId: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: never
+    }
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/admin/tenants/{tenantId}/sso/verified-domains': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * List an organization's verified domains
+     * @description Platform admin console (RFC-022): runs against the organization in the path.
+     */
+    get: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          /** @description Organization ID */
+          tenantId: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: never
+    }
+    put?: never
+    /**
+     * Add a domain to verify for an organization
+     * @description Platform admin console (RFC-022): runs against the organization in the path.
+     */
+    post: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          /** @description Organization ID */
+          tenantId: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: never
+    }
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/admin/tenants/{tenantId}/sso/verified-domains/{id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    /**
+     * Delete an organization's verified domain
+     * @description Platform admin console (RFC-022): runs against the organization in the path.
+     */
+    delete: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          /** @description Organization ID */
+          tenantId: string
+          /** @description Domain ID */
+          id: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: never
+    }
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/admin/tenants/{tenantId}/sso/verified-domains/{id}/verify': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Verify an organization's domain via DNS
+     * @description Platform admin console (RFC-022): runs against the organization in the path.
+     */
+    post: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          /** @description Organization ID */
+          tenantId: string
+          /** @description Domain ID */
+          id: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: never
+    }
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/admin/users/{id}/reset-credentials': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Reset another admin's console credentials
+     * @description Super admin only. Removes the target admin's password and MFA and ends their sessions (lost authenticator). The target sets a new password with their API key and re-enrolls on next login.
+     */
+    post: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          /** @description Admin user ID */
+          id: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description No Content */
+        204: {
+          headers: {
+            [name: string]: unknown
+          }
+          content?: never
+        }
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            '*/*': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            '*/*': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Not Found */
+        404: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            '*/*': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+      }
+    }
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/agent/commands': {
     parameters: {
       query?: never
@@ -26797,6 +27602,54 @@ export interface components {
       success?: boolean
       user_agent?: string
     }
+    'internal_infra_http_handler.AdminCreateOrganizationRequest': {
+      description?: string
+      name: string
+      owner_email: string
+      slug: string
+    }
+    'internal_infra_http_handler.AdminLoginRequest': {
+      email?: string
+      password?: string
+    }
+    'internal_infra_http_handler.AdminLoginResponse': {
+      otpauth_uri?: string
+      secret?: string
+      status?: string
+    }
+    'internal_infra_http_handler.AdminMFARequest': {
+      code?: string
+    }
+    'internal_infra_http_handler.AdminOrganizationListResponse': {
+      data?: components['schemas']['internal_infra_http_handler.AdminOrganizationResponse'][]
+      page?: number
+      per_page?: number
+      total?: number
+      total_pages?: number
+    }
+    'internal_infra_http_handler.AdminOrganizationResponse': {
+      active_identity_providers?: number
+      active_members?: number
+      created_at?: string
+      description?: string
+      id?: string
+      name?: string
+      owner_emails?: string[]
+      saml_enabled?: boolean
+      slug?: string
+      sso_enforced?: boolean
+      verified_domains?: number
+    }
+    'internal_infra_http_handler.AdminPasswordRequest': {
+      current_password?: string
+      new_password?: string
+    }
+    'internal_infra_http_handler.AdminSSOEnforcementRequest': {
+      enforced: boolean
+    }
+    'internal_infra_http_handler.AdminSSOEnforcementResponse': {
+      enforced?: boolean
+    }
     'internal_infra_http_handler.AffectedVersionResponse': {
       ecosystem?: string
       fixed?: string
@@ -27292,6 +28145,8 @@ export interface components {
        *     Microsoft Entra ID SSO fallback is usable (SSO_ENTRA_* configured).
        */
       sso_env_entra_enabled?: boolean
+      /** @description TenantCreationMode is "self_service" or "admin_only" (TENANT_CREATION_MODE). */
+      tenant_creation_mode?: string
     }
     'internal_infra_http_handler.AuthorizeResponse': {
       authorization_url?: string
@@ -30397,12 +31252,25 @@ export interface components {
       created_at?: string
       email?: string
       id?: string
+      /**
+       * @description IsPlatformAdmin marks the caller as an application (platform) administrator
+       *     (PLATFORM_ADMIN_EMAILS allow-list). The UI uses it to show/hide the SSO
+       *     setup surface, which only platform admins may configure. Set on the
+       *     /users/me response only (context-derived), not in every toUserResponse.
+       */
+      is_platform_admin?: boolean
       last_login_at?: string
       name?: string
       phone?: string
       preferences?: components['schemas']['internal_infra_http_handler.PreferencesDTO']
       status?: string
       updated_at?: string
+    }
+    'internal_infra_http_handler.ValidateResponse': {
+      email?: string
+      id?: string
+      name?: string
+      role?: string
     }
     'internal_infra_http_handler.ValidateScannerTemplateRequest': {
       /** @description Base64 encoded */

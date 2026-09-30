@@ -3413,6 +3413,108 @@ definitions:
       user_agent:
         type: string
     type: object
+  internal_infra_http_handler.AdminCreateOrganizationRequest:
+    properties:
+      description:
+        maxLength: 500
+        type: string
+      name:
+        maxLength: 100
+        minLength: 2
+        type: string
+      owner_email:
+        type: string
+      slug:
+        maxLength: 100
+        minLength: 3
+        type: string
+    required:
+    - name
+    - owner_email
+    - slug
+    type: object
+  internal_infra_http_handler.AdminLoginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    type: object
+  internal_infra_http_handler.AdminLoginResponse:
+    properties:
+      otpauth_uri:
+        type: string
+      secret:
+        type: string
+      status:
+        type: string
+    type: object
+  internal_infra_http_handler.AdminMFARequest:
+    properties:
+      code:
+        type: string
+    type: object
+  internal_infra_http_handler.AdminOrganizationListResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/internal_infra_http_handler.AdminOrganizationResponse'
+        type: array
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  internal_infra_http_handler.AdminOrganizationResponse:
+    properties:
+      active_identity_providers:
+        type: integer
+      active_members:
+        type: integer
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      owner_emails:
+        items:
+          type: string
+        type: array
+      saml_enabled:
+        type: boolean
+      slug:
+        type: string
+      sso_enforced:
+        type: boolean
+      verified_domains:
+        type: integer
+    type: object
+  internal_infra_http_handler.AdminPasswordRequest:
+    properties:
+      current_password:
+        type: string
+      new_password:
+        type: string
+    type: object
+  internal_infra_http_handler.AdminSSOEnforcementRequest:
+    properties:
+      enforced:
+        type: boolean
+    required:
+    - enforced
+    type: object
+  internal_infra_http_handler.AdminSSOEnforcementResponse:
+    properties:
+      enforced:
+        type: boolean
+    type: object
   internal_infra_http_handler.AffectedVersionResponse:
     properties:
       ecosystem:
@@ -4300,6 +4402,9 @@ definitions:
           SSOEnvEntraEnabled reports whether the platform-wide (env-based)
           Microsoft Entra ID SSO fallback is usable (SSO_ENTRA_* configured).
         type: boolean
+      tenant_creation_mode:
+        description: TenantCreationMode is "self_service" or "admin_only" (TENANT_CREATION_MODE).
+        type: string
     type: object
   internal_infra_http_handler.AuthorizeResponse:
     properties:
@@ -10764,6 +10869,13 @@ definitions:
         type: string
       id:
         type: string
+      is_platform_admin:
+        description: |-
+          IsPlatformAdmin marks the caller as an application (platform) administrator
+          (PLATFORM_ADMIN_EMAILS allow-list). The UI uses it to show/hide the SSO
+          setup surface, which only platform admins may configure. Set on the
+          /users/me response only (context-derived), not in every toUserResponse.
+        type: boolean
       last_login_at:
         type: string
       name:
@@ -10775,6 +10887,17 @@ definitions:
       status:
         type: string
       updated_at:
+        type: string
+    type: object
+  internal_infra_http_handler.ValidateResponse:
+    properties:
+      email:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      role:
         type: string
     type: object
   internal_infra_http_handler.ValidateScannerTemplateRequest:
@@ -11038,6 +11161,513 @@ paths:
       summary: Get audit log statistics
       tags:
       - Admin Audit Logs
+  /admin/auth/login:
+    post:
+      consumes:
+      - application/json
+      description: First step of platform admin console login (RFC-022). Sets a short-lived
+        admin_mfa cookie; the response says whether to enter a TOTP code or enroll
+        an authenticator first. Every failure is the same generic 401.
+      parameters:
+      - description: Credentials
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_infra_http_handler.AdminLoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_infra_http_handler.AdminLoginResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+        "401":
+          description: Invalid email or password
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+      summary: Admin console login (password step)
+      tags:
+      - Admin Auth
+  /admin/auth/logout:
+    post:
+      description: Ends the caller's console session and clears the admin cookies.
+      responses:
+        "204":
+          description: No Content
+      summary: Admin console logout
+      tags:
+      - Admin Auth
+  /admin/auth/mfa:
+    post:
+      consumes:
+      - application/json
+      description: Verifies the TOTP code for the pending login (admin_mfa cookie)
+        and issues the admin_session and admin_csrf cookies. On first login this also
+        completes authenticator enrollment.
+      parameters:
+      - description: TOTP code
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_infra_http_handler.AdminMFARequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_infra_http_handler.ValidateResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+        "401":
+          description: Invalid or expired verification code
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+      summary: Admin console login (TOTP step)
+      tags:
+      - Admin Auth
+  /admin/auth/password:
+    post:
+      consumes:
+      - application/json
+      description: Sets or changes the caller's console password. With an API key
+        the current password is not required (bootstrap path); with a console session
+        it is, and every session of the admin is ended.
+      parameters:
+      - description: Passwords
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_infra_http_handler.AdminPasswordRequest'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Set own admin console password
+      tags:
+      - Admin Auth
+  /admin/tenants:
+    get:
+      description: Cross-tenant list of organizations with size and SSO posture. Newest
+        first.
+      parameters:
+      - description: Match name or slug
+        in: query
+        name: search
+        type: string
+      - description: Page (default 1)
+        in: query
+        name: page
+        type: integer
+      - description: Page size (default 50, max 200)
+        in: query
+        name: per_page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_infra_http_handler.AdminOrganizationListResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: List organizations (platform admin)
+      tags:
+      - Admin Organizations
+    post:
+      consumes:
+      - application/json
+      description: Creates an organization with an existing user as its owner. Works
+        in both TENANT_CREATION_MODE values.
+      parameters:
+      - description: Organization
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_infra_http_handler.AdminCreateOrganizationRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/internal_infra_http_handler.AdminOrganizationResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Create an organization (platform admin)
+      tags:
+      - Admin Organizations
+  /admin/tenants/{tenantId}:
+    get:
+      parameters:
+      - description: Organization ID
+        in: path
+        name: tenantId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_infra_http_handler.AdminOrganizationResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Get an organization (platform admin)
+      tags:
+      - Admin Organizations
+  /admin/tenants/{tenantId}/sso/enforcement:
+    get:
+      parameters:
+      - description: Organization ID
+        in: path
+        name: tenantId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_infra_http_handler.AdminSSOEnforcementResponse'
+      security:
+      - BearerAuth: []
+      summary: Get an organization's SSO enforcement
+      tags:
+      - Admin Organizations
+    put:
+      consumes:
+      - application/json
+      description: Requires members to sign in via SSO (the owner is exempt as break-glass).
+        Refused with 400 when the organization has no usable SSO path.
+      parameters:
+      - description: Organization ID
+        in: path
+        name: tenantId
+        required: true
+        type: string
+      - description: Enforcement
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_infra_http_handler.AdminSSOEnforcementRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_infra_http_handler.AdminSSOEnforcementResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Set an organization's SSO enforcement
+      tags:
+      - Admin Organizations
+  /admin/tenants/{tenantId}/sso/identity-providers:
+    get:
+      description: 'Platform admin console (RFC-022): runs against the organization
+        in the path.'
+      parameters:
+      - description: Organization ID
+        in: path
+        name: tenantId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: List an organization's identity providers
+      tags:
+      - Admin Organization SSO
+    post:
+      description: 'Platform admin console (RFC-022): runs against the organization
+        in the path.'
+      parameters:
+      - description: Organization ID
+        in: path
+        name: tenantId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Create an identity provider for an organization
+      tags:
+      - Admin Organization SSO
+  /admin/tenants/{tenantId}/sso/identity-providers/{id}:
+    delete:
+      description: 'Platform admin console (RFC-022): runs against the organization
+        in the path.'
+      parameters:
+      - description: Organization ID
+        in: path
+        name: tenantId
+        required: true
+        type: string
+      - description: Identity provider ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Delete an organization's identity provider
+      tags:
+      - Admin Organization SSO
+    get:
+      description: 'Platform admin console (RFC-022): runs against the organization
+        in the path.'
+      parameters:
+      - description: Organization ID
+        in: path
+        name: tenantId
+        required: true
+        type: string
+      - description: Identity provider ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Get an organization's identity provider
+      tags:
+      - Admin Organization SSO
+    put:
+      description: 'Platform admin console (RFC-022): runs against the organization
+        in the path.'
+      parameters:
+      - description: Organization ID
+        in: path
+        name: tenantId
+        required: true
+        type: string
+      - description: Identity provider ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Update an organization's identity provider
+      tags:
+      - Admin Organization SSO
+  /admin/tenants/{tenantId}/sso/saml:
+    delete:
+      description: 'Platform admin console (RFC-022): runs against the organization
+        in the path.'
+      parameters:
+      - description: Organization ID
+        in: path
+        name: tenantId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Delete an organization's SAML config
+      tags:
+      - Admin Organization SSO
+    get:
+      description: 'Platform admin console (RFC-022): runs against the organization
+        in the path.'
+      parameters:
+      - description: Organization ID
+        in: path
+        name: tenantId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Get an organization's SAML config
+      tags:
+      - Admin Organization SSO
+    put:
+      description: 'Platform admin console (RFC-022): runs against the organization
+        in the path.'
+      parameters:
+      - description: Organization ID
+        in: path
+        name: tenantId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Set an organization's SAML config
+      tags:
+      - Admin Organization SSO
+  /admin/tenants/{tenantId}/sso/verified-domains:
+    get:
+      description: 'Platform admin console (RFC-022): runs against the organization
+        in the path.'
+      parameters:
+      - description: Organization ID
+        in: path
+        name: tenantId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: List an organization's verified domains
+      tags:
+      - Admin Organization SSO
+    post:
+      description: 'Platform admin console (RFC-022): runs against the organization
+        in the path.'
+      parameters:
+      - description: Organization ID
+        in: path
+        name: tenantId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Add a domain to verify for an organization
+      tags:
+      - Admin Organization SSO
+  /admin/tenants/{tenantId}/sso/verified-domains/{id}:
+    delete:
+      description: 'Platform admin console (RFC-022): runs against the organization
+        in the path.'
+      parameters:
+      - description: Organization ID
+        in: path
+        name: tenantId
+        required: true
+        type: string
+      - description: Domain ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Delete an organization's verified domain
+      tags:
+      - Admin Organization SSO
+  /admin/tenants/{tenantId}/sso/verified-domains/{id}/verify:
+    post:
+      description: 'Platform admin console (RFC-022): runs against the organization
+        in the path.'
+      parameters:
+      - description: Organization ID
+        in: path
+        name: tenantId
+        required: true
+        type: string
+      - description: Domain ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Verify an organization's domain via DNS
+      tags:
+      - Admin Organization SSO
+  /admin/users/{id}/reset-credentials:
+    post:
+      description: Super admin only. Removes the target admin's password and MFA and
+        ends their sessions (lost authenticator). The target sets a new password with
+        their API key and re-enrolls on next login.
+      parameters:
+      - description: Admin user ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Reset another admin's console credentials
+      tags:
+      - Admin Users
   /agent/commands:
     get:
       consumes:
