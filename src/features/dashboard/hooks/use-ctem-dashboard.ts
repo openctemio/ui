@@ -13,6 +13,7 @@ import useSWR, { type SWRConfiguration } from 'swr'
 import { get } from '@/lib/api/client'
 import { usePermissions, Permission } from '@/lib/permissions'
 import type { PriorityClass } from '@/features/findings/types/finding.types'
+import type { ApiResponse } from '@/lib/api/generated'
 
 // ============================================
 // TYPES
@@ -186,6 +187,21 @@ export function useRiskTrend(tenantId: string | null, days = 90) {
   return useSWR<RiskTrendPoint[]>(
     useKey(`/api/v1/dashboard/risk-trend?days=${days}`, tenantId),
     ([url]) => get<RiskTrendPoint[]>(url),
+    config
+  )
+}
+
+/**
+ * CTEM program metrics — MTTD for new internet-facing assets, MTTR for
+ * validated exposures, owner acceptance rate. Shape is generated from the API
+ * spec; a null field means "not measurable" and must render as "—".
+ */
+export type ProgramMetrics = ApiResponse<'/dashboard/program-metrics', 'get'>
+
+export function useProgramMetrics(tenantId: string | null, days = 90) {
+  return useSWR<ProgramMetrics>(
+    useKey(`/api/v1/dashboard/program-metrics?days=${days}`, tenantId),
+    ([url]) => get<ProgramMetrics>(url),
     config
   )
 }

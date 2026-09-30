@@ -2434,6 +2434,58 @@ definitions:
       total_pages:
         type: integer
     type: object
+  github_com_openctemio_api_internal_app.ProgramMetrics:
+    properties:
+      mttd_internet_facing:
+        allOf:
+        - $ref: '#/definitions/github_com_openctemio_api_internal_app_module.DurationMetric'
+        description: |-
+          MTTDInternetFacing — mean time to detect new internet-facing assets.
+
+          Population: non-archived assets whose first_seen falls in the window and
+          that are internet-facing now (exposure = 'public' OR
+          is_internet_accessible).
+
+          Clock start: assets.first_seen (the asset entered the inventory).
+          Clock stop: the EARLIEST of these per-asset signals that it was known to
+          be internet-facing or exposed —
+            - assets.exposure_changed_at, when the current exposure is 'public'
+              (stamped when the exposure level was classified);
+            - asset_state_history rows of change_type exposure_changed /
+              internet_exposure_changed whose new_value is 'public' / 'true';
+            - the asset's first exposure event (exposure_events.first_seen_at);
+            - the asset's first finding (findings.first_detected_at).
+          A stop before first_seen counts as 0 h (known at discovery). Assets with
+          no stop signal at all are not averaged; they are counted in Unmeasured.
+
+          Caveat: exposure_changed_at holds the LAST exposure change, so an asset
+          that flapped public → private → public is measured to the later flip
+          unless an earlier history row / exposure / finding exists.
+      mttr_validated:
+        allOf:
+        - $ref: '#/definitions/github_com_openctemio_api_internal_app_module.DurationMetric'
+        description: |-
+          MTTRValidated — mean time to remediate VALIDATED exposures only.
+
+          Population: findings with at least one validation_evidence row of
+          outcome 'detected' (the validation re-check reproduced the exposure —
+          "still exploitable", RFC-011.2 VerdictReproducible), now in status
+          resolved / verified, with resolved_at in the window.
+
+          Clock start: the first 'detected' validation_evidence.created_at.
+          Clock stop: findings.resolved_at. Findings resolved before they were
+          validated are excluded (the fix did not follow the validation).
+          false_positive / accepted / validated_fixed are not remediation and are
+          excluded.
+      owner_acceptance:
+        allOf:
+        - $ref: '#/definitions/github_com_openctemio_api_internal_app_module.OwnerAcceptanceMetric'
+        description: |-
+          OwnerAcceptance — share of assignments the assignee acted on within the
+          SLA window. See OwnerAcceptanceMetric.
+      period_days:
+        type: integer
+    type: object
   github_com_openctemio_api_internal_app.ProviderInfo:
     properties:
       enabled:
@@ -2593,6 +2645,33 @@ definitions:
         type: string
       status:
         type: string
+    type: object
+  github_com_openctemio_api_internal_app_module.DurationMetric:
+    properties:
+      mean_hours:
+        type: number
+      median_hours:
+        type: number
+      sample_size:
+        type: integer
+      unmeasured:
+        description: |-
+          Unmeasured counts population members that had no stop signal and so
+          could not be timed (MTTD only; always 0 for MTTR).
+        type: integer
+    type: object
+  github_com_openctemio_api_internal_app_module.OwnerAcceptanceMetric:
+    properties:
+      accepted:
+        type: integer
+      excluded:
+        type: integer
+      missed:
+        type: integer
+      pending:
+        type: integer
+      rate_pct:
+        type: number
     type: object
   github_com_openctemio_api_internal_app_scancoverage.CoverageStats:
     properties:
@@ -5852,7 +5931,8 @@ definitions:
         maxLength: 10000
         type: string
       epss_percentile:
-        maximum: 1
+        description: 0-100 percentile; a 0-1 fraction is rescaled
+        maximum: 100
         minimum: 0
         type: number
       epss_score:
@@ -10511,7 +10591,8 @@ definitions:
         maxLength: 10000
         type: string
       epss_percentile:
-        maximum: 1
+        description: 0-100 percentile; a 0-1 fraction is rescaled
+        maximum: 100
         minimum: 0
         type: number
       epss_score:
@@ -10639,6 +10720,7 @@ definitions:
       description:
         type: string
       epss_percentile:
+        description: 0-100 percentile rank
         type: number
       epss_score:
         type: number
@@ -15665,6 +15747,44 @@ paths:
       summary: Deactivate custom tool
       tags:
       - Custom Tools
+  /dashboard/program-metrics:
+    get:
+      description: 'Returns the ctem.org program KPIs computed from stored data, tenant-scoped
+        and windowed to the last `days` days (1-365, default 90): mean/median time
+        to detect new internet-facing assets, mean/median time to remediate validated
+        (reproduced) exposures, and the owner acceptance rate within the SLA window.
+        A null value means "not measurable" (no qualifying sample) and must be shown
+        as "—", never 0 or 100%. Time-to-break attack paths is intentionally absent:
+        attack paths are computed on demand and no path history is stored.'
+      parameters:
+      - description: Window in days (1-365, default 90)
+        in: query
+        name: days
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_internal_app.ProgramMetrics'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Get CTEM program metrics
+      tags:
+      - Dashboard
   /dashboard/stats:
     get:
       description: Returns dashboard statistics for the current tenant
