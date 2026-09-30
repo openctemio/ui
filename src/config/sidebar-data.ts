@@ -808,6 +808,14 @@ export const sidebarData: SidebarData = {
               subModuleKey: 'siem',
             },
             {
+              // SCIM is run by the tenant's own IT (their IdP pushes users into
+              // their tenant), so it lives with tenant integrations, not /admin.
+              title: 'SCIM Provisioning',
+              url: '/settings/integrations/scim-tokens',
+              icon: Users,
+              subModuleKey: 'scim',
+            },
+            {
               title: 'AI Access (MCP)',
               url: '/settings/integrations/mcp',
               icon: Bot,
@@ -842,12 +850,6 @@ export const sidebarData: SidebarData = {
               title: 'SAML SSO',
               url: '/admin/saml',
               icon: ShieldCheck,
-              platformAdmin: true,
-            },
-            {
-              title: 'SCIM Provisioning',
-              url: '/admin/scim',
-              icon: Users,
               platformAdmin: true,
             },
             {

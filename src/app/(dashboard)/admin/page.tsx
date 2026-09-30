@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { BadgeCheck, ChevronRight, ShieldCheck, Users, type LucideIcon } from 'lucide-react'
+import { BadgeCheck, ChevronRight, ShieldCheck, type LucideIcon } from 'lucide-react'
 import { Main } from '@/components/layout'
 import { PageHeader } from '@/features/shared'
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -21,12 +21,6 @@ const sections: AdminSection[] = [
     description: 'Federate login through a SAML 2.0 identity provider (Okta, Entra ID, ADFS).',
     href: '/admin/saml',
     icon: ShieldCheck,
-  },
-  {
-    title: 'SCIM provisioning',
-    description: 'Let your identity provider create, update and deprovision users automatically.',
-    href: '/admin/scim',
-    icon: Users,
   },
   {
     title: 'Verified domains',
