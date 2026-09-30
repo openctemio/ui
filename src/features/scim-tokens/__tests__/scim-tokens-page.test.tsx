@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import ScimTokensPage from '@/app/(dashboard)/admin/scim/page'
+import ScimTokensPage from '@/app/(dashboard)/settings/integrations/scim-tokens/page'
 
 // ── mocks ──────────────────────────────────────────────────
 
@@ -9,7 +9,6 @@ const mockMutate = vi.fn()
 const mockCreate = vi.fn()
 const mockRevoke = vi.fn()
 let listData: { tokens: unknown[] } | undefined = { tokens: [] }
-let isPlatformAdmin = true
 
 vi.mock('@/features/scim-tokens/api/use-scim-tokens', () => ({
   useScimTokens: () => ({ data: listData, isLoading: false, mutate: mockMutate }),
@@ -17,10 +16,10 @@ vi.mock('@/features/scim-tokens/api/use-scim-tokens', () => ({
   useRevokeScimToken: () => ({ trigger: mockRevoke, isMutating: false }),
 }))
 
-// The page is wrapped in PlatformAdminGate, which only renders SSO/SCIM setup
-// for application administrators. Render as one so the token UI is present.
+// SCIM is a tenant-admin feature: render as a tenant admin who is NOT an
+// application administrator, so a regression that re-gates it would fail here.
 vi.mock('@/features/account/api/use-profile', () => ({
-  useProfile: () => ({ profile: { is_platform_admin: isPlatformAdmin }, isLoading: false }),
+  useProfile: () => ({ profile: { is_platform_admin: false }, isLoading: false }),
 }))
 
 vi.mock('sonner', () => ({
@@ -35,15 +34,12 @@ describe('ScimTokensPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     listData = { tokens: [] }
-    isPlatformAdmin = true
   })
 
-  it('hides SCIM setup from non-platform-admins', () => {
-    isPlatformAdmin = false
+  it('is available to tenant admins who are not application administrators', () => {
     render(<ScimTokensPage />)
-    expect(screen.getByText('Application administrator only')).toBeInTheDocument()
-    // The token UI must not render for a tenant admin.
-    expect(screen.queryByText('SCIM endpoint')).not.toBeInTheDocument()
+    expect(screen.queryByText('Application administrator only')).not.toBeInTheDocument()
+    expect(screen.getByText('SCIM endpoint')).toBeInTheDocument()
   })
 
   it('shows the empty state when there are no tokens', () => {
