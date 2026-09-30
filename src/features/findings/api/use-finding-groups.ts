@@ -99,13 +99,3 @@ export function useRelatedCVEs(cveId: string | null, assetTags?: string) {
     revalidateOnFocus: false,
   })
 }
-
-export function usePendingVerificationCount() {
-  const { data } = useFindingGroups({
-    group_by: 'cve_id',
-    statuses: 'fix_applied',
-    per_page: 1,
-  })
-
-  return data?.pagination?.total ?? 0
-}

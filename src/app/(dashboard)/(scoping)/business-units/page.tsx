@@ -9,11 +9,13 @@ import {
   DataTableColumnHeader,
   DataTableRowActions,
   RiskScoreBadge,
-  StatsCard,
+  MetricStrip,
+  type MetricStripItem,
   SheetBody,
 } from '@/features/shared'
 import { Can, Permission } from '@/lib/permissions'
 import { useCsvExport, type ExportFieldConfig } from '@/hooks/use-csv-export'
+import { useUrlFilter } from '@/hooks/use-url-param'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -23,22 +25,16 @@ import { Progress } from '@/components/ui/progress'
 import {
   Plus,
   Download,
-  Filter,
   Eye,
   Pencil,
   Trash2,
-  Layers,
-  Users,
-  Shield,
-  AlertTriangle,
   Building2,
   Mail,
   ChevronRight,
   ChevronsUpDown,
   Check,
-  X,
+  Search,
 } from 'lucide-react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Dialog,
   DialogContent,
@@ -281,8 +277,10 @@ export default function BusinessUnitsPage() {
   const [editUnit, setEditUnit] = useState<BusinessUnit | null>(null)
   const [deleteUnit, setDeleteUnit] = useState<BusinessUnit | null>(null)
   const [isCreateOpen, setIsCreateOpen] = useState(false)
-  const [filterCriticality, setFilterCriticality] = useState<string>('all')
-  const [filterRiskTolerance, setFilterRiskTolerance] = useState<string>('all')
+  // Filters and search live in the URL so a filtered view can be linked to.
+  const [filterCriticality, setFilterCriticality] = useUrlFilter('criticality', 'all')
+  const [filterRiskTolerance, setFilterRiskTolerance] = useUrlFilter('risk_tolerance', 'all')
+  const [searchQuery, setSearchQuery] = useUrlFilter('q', '')
 
   // Form state
   const [formData, setFormData] = useState({
@@ -300,8 +298,7 @@ export default function BusinessUnitsPage() {
     const count = businessUnits.length
     return {
       total: count,
-      active: businessUnits.filter((bu) => bu.status === 'active').length,
-      inactive: businessUnits.filter((bu) => bu.status === 'inactive').length,
+      critical: businessUnits.filter((bu) => bu.criticality === 'critical').length,
       totalAssets: businessUnits.reduce((acc, bu) => acc + bu.assetCount, 0),
       // Guard against divide-by-zero on an empty tenant and missing per-unit
       // fields (the API adapter doesn't always populate score fields) — both
@@ -309,19 +306,19 @@ export default function BusinessUnitsPage() {
       averageRiskScore: count
         ? Math.round(businessUnits.reduce((acc, bu) => acc + (bu.riskScore ?? 0), 0) / count)
         : 0,
-      averageComplianceScore: count
-        ? Math.round(businessUnits.reduce((acc, bu) => acc + (bu.complianceScore ?? 0), 0) / count)
-        : 0,
     }
   }, [businessUnits])
 
   const filteredUnits = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase()
     return businessUnits.filter((unit) => {
       if (filterCriticality !== 'all' && unit.criticality !== filterCriticality) return false
       if (filterRiskTolerance !== 'all' && unit.riskTolerance !== filterRiskTolerance) return false
+      if (q && !unit.name.toLowerCase().includes(q) && !unit.owner.toLowerCase().includes(q))
+        return false
       return true
     })
-  }, [businessUnits, filterCriticality, filterRiskTolerance])
+  }, [businessUnits, filterCriticality, filterRiskTolerance, searchQuery])
 
   const resetForm = () => {
     setFormData({
@@ -426,28 +423,23 @@ export default function BusinessUnitsPage() {
   const columns: ColumnDef<BusinessUnit>[] = [
     {
       accessorKey: 'name',
-      header: ({ column }) => <DataTableColumnHeader column={column} title="Business Unit" />,
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Business unit" />,
       cell: ({ row }) => {
         const unit = row.original
         const children = getChildUnits(businessUnits, unit.id)
+        const parent = unit.parentId ? businessUnits.find((u) => u.id === unit.parentId) : undefined
+        const context = [
+          parent ? `in ${parent.name}` : unit.parentId ? 'Sub-unit' : '',
+          children.length > 0 ? `${children.length} sub-units` : '',
+        ]
+          .filter(Boolean)
+          .join(' · ')
         return (
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-              <Building2 className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <div className="font-medium flex items-center gap-2">
-                {unit.name}
-                {unit.parentId && (
-                  <Badge variant="outline" className="text-xs">
-                    Sub-unit
-                  </Badge>
-                )}
-              </div>
-              <div className="text-xs text-muted-foreground">
-                {unit.employeeCount} employees
-                {children.length > 0 && ` | ${children.length} sub-units`}
-              </div>
+          <div className="flex min-w-0 items-center gap-2.5">
+            <Building2 className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <div className="min-w-0">
+              <div className="truncate font-medium">{unit.name}</div>
+              {context && <div className="text-xs text-muted-foreground">{context}</div>}
             </div>
           </div>
         )
@@ -465,7 +457,7 @@ export default function BusinessUnitsPage() {
     },
     {
       accessorKey: 'riskTolerance',
-      header: ({ column }) => <DataTableColumnHeader column={column} title="Risk Tolerance" />,
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Risk tolerance" />,
       cell: ({ row }) => (
         <Badge variant="outline" className={riskToleranceColors[row.original.riskTolerance]}>
           {riskToleranceLabels[row.original.riskTolerance]}
@@ -475,25 +467,12 @@ export default function BusinessUnitsPage() {
     {
       accessorKey: 'assetCount',
       header: ({ column }) => <DataTableColumnHeader column={column} title="Assets" />,
-      cell: ({ row }) => <span className="font-medium">{row.original.assetCount}</span>,
+      cell: ({ row }) => <span className="tabular-nums">{row.original.assetCount}</span>,
     },
     {
       accessorKey: 'riskScore',
-      header: ({ column }) => <DataTableColumnHeader column={column} title="Risk Score" />,
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Risk score" />,
       cell: ({ row }) => <RiskScoreBadge score={row.original.riskScore} />,
-    },
-    {
-      accessorKey: 'complianceScore',
-      header: ({ column }) => <DataTableColumnHeader column={column} title="Compliance" />,
-      cell: ({ row }) => {
-        const score = row.original.complianceScore
-        return (
-          <div className="flex flex-wrap items-center gap-2">
-            <Progress value={score} className="w-16 h-2" />
-            <span className="text-sm font-medium">{score}%</span>
-          </div>
-        )
-      },
     },
     {
       accessorKey: 'owner',
@@ -513,7 +492,7 @@ export default function BusinessUnitsPage() {
           <Can permission={[Permission.ScopeWrite, Permission.ScopeDelete]}>
             <DataTableRowActions
               actions={[
-                { label: 'View Details', icon: Eye, onClick: () => setViewUnit(unit) },
+                { label: 'View details', icon: Eye, onClick: () => setViewUnit(unit) },
                 {
                   label: 'Edit',
                   icon: Pencil,
@@ -533,6 +512,35 @@ export default function BusinessUnitsPage() {
           </Can>
         )
       },
+    },
+  ]
+
+  const criticalOnly = filterCriticality === 'critical'
+  const metrics: MetricStripItem[] = [
+    {
+      key: 'total',
+      label: 'Business units',
+      value: stats.total,
+      onClick: () => {
+        setFilterCriticality('all')
+        setFilterRiskTolerance('all')
+      },
+      active: filterCriticality === 'all' && filterRiskTolerance === 'all',
+    },
+    {
+      key: 'critical',
+      label: 'Critical units',
+      value: stats.critical,
+      tone: 'danger',
+      onClick: () => setFilterCriticality(criticalOnly ? 'all' : 'critical'),
+      active: criticalOnly,
+    },
+    { key: 'assets', label: 'Assets', value: stats.totalAssets },
+    {
+      key: 'risk',
+      label: 'Average risk score',
+      value: stats.averageRiskScore,
+      hint: 'of 100',
     },
   ]
 
@@ -582,7 +590,7 @@ export default function BusinessUnitsPage() {
           </Select>
         </div>
         <div className="space-y-2">
-          <Label htmlFor="riskTolerance">Risk Tolerance</Label>
+          <Label htmlFor="riskTolerance">Risk tolerance</Label>
           <Select
             value={formData.riskTolerance}
             onValueChange={(v) => setFormData({ ...formData, riskTolerance: v as RiskTolerance })}
@@ -602,7 +610,7 @@ export default function BusinessUnitsPage() {
       </div>
 
       <div className="space-y-2">
-        <Label>Parent Unit</Label>
+        <Label>Parent unit</Label>
         <ParentUnitSelect
           units={businessUnits}
           value={formData.parentId}
@@ -625,7 +633,7 @@ export default function BusinessUnitsPage() {
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="ownerEmail">Owner Email *</Label>
+          <Label htmlFor="ownerEmail">Owner email *</Label>
           <Input
             id="ownerEmail"
             type="email"
@@ -652,143 +660,97 @@ export default function BusinessUnitsPage() {
     <>
       <Main>
         <PageHeader
-          title="Business Units"
-          description="Manage organizational structure and align security with business objectives"
+          title="Business units"
+          description="Your organizational structure, so security priorities follow the business."
         >
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleExport}
-            disabled={businessUnits.length === 0}
-          >
-            <Download className="me-2 h-4 w-4" />
-            Export
-          </Button>
           <Can permission={Permission.ScopeWrite}>
             <Button size="sm" onClick={() => setIsCreateOpen(true)}>
               <Plus className="me-2 h-4 w-4" />
-              Add Business Unit
+              New business unit
             </Button>
           </Can>
         </PageHeader>
 
-        {/* Stats Cards */}
-        <div className="grid gap-4 md:grid-cols-4 mb-6">
-          <StatsCard
-            title="Total Units"
-            value={stats.total}
-            icon={Layers}
-            description={`${stats.active} active, ${stats.inactive} inactive`}
-          />
-          <StatsCard
-            title="Total Assets"
-            value={stats.totalAssets}
-            icon={Shield}
-            description="Across all units"
-          />
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Avg Risk Score</CardTitle>
-              <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.averageRiskScore}</div>
-              <Progress value={stats.averageRiskScore} className="mt-2" />
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Avg Compliance</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.averageComplianceScore}%</div>
-              <Progress value={stats.averageComplianceScore} className="mt-2" />
-            </CardContent>
-          </Card>
-        </div>
+        <MetricStrip className="mt-5" loading={!apiData} items={metrics} />
 
-        {/* Filters */}
-        <Card className="mb-6">
-          <CardHeader className="pb-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <Filter className="h-4 w-4" />
-              <CardTitle className="text-sm">Filters</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-4">
-              <div className="flex flex-wrap items-center gap-2">
-                <Label className="text-sm">Criticality:</Label>
+        <div className="mt-5">
+          <DataTable
+            columns={columns}
+            data={filteredUnits}
+            showSearch={false}
+            toolbarStart={
+              <>
+                <div className="relative min-w-0 flex-1 sm:max-w-xs">
+                  <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search name or owner…"
+                    aria-label="Search business units"
+                    className="h-9 ps-9"
+                  />
+                </div>
                 <Select value={filterCriticality} onValueChange={setFilterCriticality}>
-                  <SelectTrigger className="w-32">
+                  <SelectTrigger className="h-9 w-auto min-w-36" aria-label="Filter by criticality">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All</SelectItem>
-                    <SelectItem value="critical">Critical</SelectItem>
-                    <SelectItem value="high">High</SelectItem>
-                    <SelectItem value="medium">Medium</SelectItem>
-                    <SelectItem value="low">Low</SelectItem>
+                    <SelectItem value="all">All criticalities</SelectItem>
+                    {CRITICALITY_OPTIONS.map((level) => (
+                      <SelectItem key={level} value={level}>
+                        {CRITICALITY_LABELS[level]}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <Label className="text-sm">Risk Tolerance:</Label>
                 <Select value={filterRiskTolerance} onValueChange={setFilterRiskTolerance}>
-                  <SelectTrigger className="w-32">
+                  <SelectTrigger
+                    className="h-9 w-auto min-w-36"
+                    aria-label="Filter by risk tolerance"
+                  >
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All</SelectItem>
-                    <SelectItem value="low">Low</SelectItem>
-                    <SelectItem value="medium">Medium</SelectItem>
-                    <SelectItem value="high">High</SelectItem>
+                    <SelectItem value="all">All risk tolerances</SelectItem>
+                    {RISK_TOLERANCE_OPTIONS.map((level) => (
+                      <SelectItem key={level} value={level}>
+                        {riskToleranceLabels[level]} tolerance
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
-              </div>
-              {(filterCriticality !== 'all' || filterRiskTolerance !== 'all') && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setFilterCriticality('all')
-                    setFilterRiskTolerance('all')
-                  }}
-                >
-                  <X className="me-1 h-3 w-3" />
-                  Clear filters
-                </Button>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Data Table */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Business Units</CardTitle>
-            <CardDescription>
-              {filteredUnits.length} of {businessUnits.length} units
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <DataTable
-              columns={columns}
-              data={filteredUnits}
-              searchPlaceholder="Search business units..."
-              searchKey="name"
-              onRowClick={(unit) => setViewUnit(unit)}
-            />
-          </CardContent>
-        </Card>
+              </>
+            }
+            toolbarEnd={
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9"
+                onClick={handleExport}
+                disabled={businessUnits.length === 0}
+              >
+                <Download className="h-4 w-4 md:me-2" />
+                <span className="hidden md:inline">Export</span>
+              </Button>
+            }
+            emptyMessage={
+              businessUnits.length === 0 ? 'No business units yet' : 'No business units match'
+            }
+            emptyDescription={
+              businessUnits.length === 0
+                ? 'Create a business unit to map assets to the organization.'
+                : 'Try adjusting your search or filters.'
+            }
+            onRowClick={(unit) => setViewUnit(unit)}
+          />
+        </div>
       </Main>
 
       {/* Create Dialog */}
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Create Business Unit</DialogTitle>
+            <DialogTitle>New business unit</DialogTitle>
             <DialogDescription>
               Add a new business unit to organize your security scope
             </DialogDescription>
@@ -805,9 +767,9 @@ export default function BusinessUnitsPage() {
 
       {/* Edit Dialog */}
       <Dialog open={!!editUnit} onOpenChange={(open) => !open && setEditUnit(null)}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Edit Business Unit</DialogTitle>
+            <DialogTitle>Edit business unit</DialogTitle>
             <DialogDescription>Update business unit details</DialogDescription>
           </DialogHeader>
           {formFields}
@@ -815,7 +777,7 @@ export default function BusinessUnitsPage() {
             <Button variant="outline" onClick={() => setEditUnit(null)}>
               Cancel
             </Button>
-            <Button onClick={handleEdit}>Save Changes</Button>
+            <Button onClick={handleEdit}>Save changes</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -827,9 +789,7 @@ export default function BusinessUnitsPage() {
             <>
               <SheetHeader>
                 <div className="flex items-center gap-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-                    <Building2 className="h-6 w-6 text-primary" />
-                  </div>
+                  <Building2 className="h-5 w-5 shrink-0 text-muted-foreground" />
                   <div>
                     <SheetTitle>{viewUnit.name}</SheetTitle>
                     <SheetDescription>{viewUnit.description}</SheetDescription>
@@ -839,108 +799,72 @@ export default function BusinessUnitsPage() {
 
               <SheetBody>
                 <Tabs defaultValue="overview" className="mt-2">
-                  <TabsList className="grid w-full grid-cols-2">
+                  <TabsList>
                     <TabsTrigger value="overview">Overview</TabsTrigger>
                     <TabsTrigger value="hierarchy">Hierarchy</TabsTrigger>
                   </TabsList>
 
-                  <TabsContent value="overview" className="space-y-4 mt-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-1">
-                        <p className="text-sm text-muted-foreground">Criticality</p>
-                        <Badge
-                          variant="outline"
-                          className={criticalityColors[viewUnit.criticality]}
-                        >
-                          {CRITICALITY_LABELS[viewUnit.criticality]}
-                        </Badge>
+                  <TabsContent value="overview" className="mt-4">
+                    {/* One definition list with dividers, not a stack of cards. */}
+                    <dl className="divide-y rounded-lg border">
+                      <div className="flex items-center justify-between gap-4 px-4 py-3">
+                        <dt className="text-sm text-muted-foreground">Criticality</dt>
+                        <dd>
+                          <Badge
+                            variant="outline"
+                            className={criticalityColors[viewUnit.criticality]}
+                          >
+                            {CRITICALITY_LABELS[viewUnit.criticality]}
+                          </Badge>
+                        </dd>
                       </div>
-                      <div className="space-y-1">
-                        <p className="text-sm text-muted-foreground">Risk Tolerance</p>
-                        <Badge
-                          variant="outline"
-                          className={riskToleranceColors[viewUnit.riskTolerance]}
-                        >
-                          {riskToleranceLabels[viewUnit.riskTolerance]}
-                        </Badge>
+                      <div className="flex items-center justify-between gap-4 px-4 py-3">
+                        <dt className="text-sm text-muted-foreground">Risk tolerance</dt>
+                        <dd>
+                          <Badge
+                            variant="outline"
+                            className={riskToleranceColors[viewUnit.riskTolerance]}
+                          >
+                            {riskToleranceLabels[viewUnit.riskTolerance]}
+                          </Badge>
+                        </dd>
                       </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <Card>
-                        <CardHeader className="pb-2">
-                          <CardTitle className="text-sm">Assets</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="text-2xl font-bold">{viewUnit.assetCount}</div>
-                        </CardContent>
-                      </Card>
-                      <Card>
-                        <CardHeader className="pb-2">
-                          <CardTitle className="text-sm">Employees</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="text-2xl font-bold">{viewUnit.employeeCount}</div>
-                        </CardContent>
-                      </Card>
-                    </div>
-
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm">Risk Score</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="flex items-center gap-4">
+                      <div className="flex items-center justify-between gap-4 px-4 py-3">
+                        <dt className="text-sm text-muted-foreground">Assets</dt>
+                        <dd className="text-sm font-medium tabular-nums">{viewUnit.assetCount}</dd>
+                      </div>
+                      <div className="flex items-center justify-between gap-4 px-4 py-3">
+                        <dt className="text-sm text-muted-foreground">Risk score</dt>
+                        <dd className="flex items-center gap-3">
+                          <Progress value={viewUnit.riskScore ?? 0} className="h-1.5 w-24" />
                           <RiskScoreBadge score={viewUnit.riskScore} />
-                          <Progress value={viewUnit.riskScore} className="flex-1" />
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm">Compliance Score</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="flex items-center gap-4">
-                          <span className="text-2xl font-bold">{viewUnit.complianceScore}%</span>
-                          <Progress value={viewUnit.complianceScore} className="flex-1" />
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm">Owner</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
-                            <Users className="h-5 w-5" />
-                          </div>
-                          <div>
-                            <p className="font-medium">{viewUnit.owner}</p>
-                            <p className="text-sm text-muted-foreground flex items-center gap-1">
+                        </dd>
+                      </div>
+                      <div className="flex items-center justify-between gap-4 px-4 py-3">
+                        <dt className="text-sm text-muted-foreground">Owner</dt>
+                        <dd className="min-w-0 text-end">
+                          <p className="text-sm font-medium">{viewUnit.owner}</p>
+                          {viewUnit.ownerEmail && (
+                            <p className="flex items-center justify-end gap-1 text-xs text-muted-foreground">
                               <Mail className="h-3 w-3" />
                               {viewUnit.ownerEmail}
                             </p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    {viewUnit.tags.length > 0 && (
-                      <div className="space-y-2">
-                        <p className="text-sm text-muted-foreground">Tags</p>
-                        <div className="flex flex-wrap gap-2">
-                          {viewUnit.tags.map((tag) => (
-                            <Badge key={tag} variant="secondary">
-                              {tag}
-                            </Badge>
-                          ))}
-                        </div>
+                          )}
+                        </dd>
                       </div>
-                    )}
+                      {viewUnit.tags.length > 0 && (
+                        <div className="flex items-start justify-between gap-4 px-4 py-3">
+                          <dt className="text-sm text-muted-foreground">Tags</dt>
+                          <dd className="flex flex-wrap justify-end gap-1.5">
+                            {viewUnit.tags.map((tag) => (
+                              <Badge key={tag} variant="secondary">
+                                {tag}
+                              </Badge>
+                            ))}
+                          </dd>
+                        </div>
+                      )}
+                    </dl>
                   </TabsContent>
 
                   <TabsContent value="hierarchy" className="mt-4">
@@ -949,18 +873,16 @@ export default function BusinessUnitsPage() {
                         const parent = businessUnits.find((u) => u.id === viewUnit.parentId)
                         return (
                           <div className="mb-4">
-                            <p className="text-sm text-muted-foreground mb-2">Parent Unit</p>
-                            <Card
-                              className={cn('p-3', parent && 'cursor-pointer hover:bg-muted/50')}
+                            <p className="mb-2 text-sm text-muted-foreground">Parent unit</p>
+                            <button
+                              type="button"
+                              disabled={!parent}
+                              className="flex w-full items-center gap-2 rounded-lg border p-3 text-start enabled:hover:bg-muted/50"
                               onClick={() => parent && setViewUnit(parent)}
                             >
-                              <div className="flex flex-wrap items-center gap-2">
-                                <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                                <span className="font-medium">
-                                  {parent?.name ?? 'Unknown unit'}
-                                </span>
-                              </div>
-                            </Card>
+                              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                              <span className="font-medium">{parent?.name ?? 'Unknown unit'}</span>
+                            </button>
                           </div>
                         )
                       })()}
@@ -968,9 +890,9 @@ export default function BusinessUnitsPage() {
                     <div>
                       <p className="text-sm text-muted-foreground mb-2">Sub-units</p>
                       {getChildUnits(businessUnits, viewUnit.id).length > 0 ? (
-                        <div className="space-y-2">
+                        <div className="divide-y rounded-lg border">
                           {getChildUnits(businessUnits, viewUnit.id).map((child) => (
-                            <Card key={child.id} className="p-3">
+                            <div key={child.id} className="p-3">
                               <div className="flex items-center justify-between">
                                 <div className="flex flex-wrap items-center gap-2">
                                   <Building2 className="h-4 w-4 text-muted-foreground" />
@@ -983,7 +905,7 @@ export default function BusinessUnitsPage() {
                                   {CRITICALITY_LABELS[child.criticality]}
                                 </Badge>
                               </div>
-                            </Card>
+                            </div>
                           ))}
                         </div>
                       ) : (
@@ -1020,7 +942,7 @@ export default function BusinessUnitsPage() {
       <ConfirmDialog
         open={!!deleteUnit}
         onOpenChange={(open) => !open && setDeleteUnit(null)}
-        title="Delete Business Unit?"
+        title="Delete business unit?"
         desc={
           <>
             Are you sure you want to delete &quot;{deleteUnit?.name}&quot;? This action cannot be

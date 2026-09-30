@@ -1,32 +1,22 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import {
-  ColumnDef,
-  flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  SortingState,
-  useReactTable,
-} from '@tanstack/react-table'
+import type { ColumnDef } from '@tanstack/react-table'
 import { Main } from '@/components/layout'
-import { PageHeader, DataTablePagination, DataTableRowActions } from '@/features/shared'
+import {
+  PageHeader,
+  DataTable,
+  DataTableColumnHeader,
+  DataTableRowActions,
+  EmptyState,
+  MetricStrip,
+} from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Checkbox } from '@/components/ui/checkbox'
 import { Textarea } from '@/components/ui/textarea'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   Dialog,
   DialogContent,
@@ -35,26 +25,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import { toast } from 'sonner'
-import {
-  Users,
-  Plus,
-  Trash2,
-  ArrowUpDown,
-  Search as SearchIcon,
-  Eye,
-  Pencil,
-  Loader2,
-  AlertCircle,
-  FolderKey,
-  Box,
-} from 'lucide-react'
+import { Plus, Trash2, Eye, Pencil, Loader2, AlertCircle, FolderKey, RefreshCw } from 'lucide-react'
 import { useSWRConfig } from 'swr'
 import {
   useGroups,
@@ -87,9 +59,6 @@ export default function GroupsPage() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [groupToDelete, setGroupToDelete] = useState<Group | null>(null)
-  const [sorting, setSorting] = useState<SortingState>([])
-  const [globalFilter, setGlobalFilter] = useState('')
-  const [rowSelection, setRowSelection] = useState({})
   const [createForm, setCreateForm] = useState({
     name: '',
     description: '',
@@ -110,101 +79,57 @@ export default function GroupsPage() {
   // Table columns
   const columns: ColumnDef<Group>[] = [
     {
-      id: 'select',
-      header: ({ table }) => (
-        <Checkbox
-          checked={
-            table.getIsAllPageRowsSelected() ||
-            (table.getIsSomePageRowsSelected() && 'indeterminate')
-          }
-          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-          aria-label="Select all"
-        />
-      ),
-      cell: ({ row }) => (
-        <Checkbox
-          checked={row.getIsSelected()}
-          onCheckedChange={(value) => row.toggleSelected(!!value)}
-          aria-label="Select row"
-        />
-      ),
-      enableSorting: false,
-      enableHiding: false,
-    },
-    {
       accessorKey: 'name',
-      header: ({ column }) => (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-          className="-ms-4"
-        >
-          Team
-          <ArrowUpDown className="ms-2 h-4 w-4" />
-        </Button>
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Team" />,
+      cell: ({ row }) => (
+        <div className="min-w-0">
+          <p className="font-medium">{row.original.name}</p>
+          {row.original.description && (
+            <p className="text-muted-foreground text-xs line-clamp-1">{row.original.description}</p>
+          )}
+        </div>
       ),
-      cell: ({ row }) => {
-        return (
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-primary/10">
-              <Users className="h-4 w-4 text-primary" />
-            </div>
-            <div>
-              <p className="font-medium">{row.original.name}</p>
-              {row.original.description && (
-                <p className="text-muted-foreground text-xs line-clamp-1">
-                  {row.original.description}
-                </p>
-              )}
-            </div>
-          </div>
-        )
-      },
     },
     {
       accessorKey: 'member_count',
-      header: 'Members',
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Members" />,
       cell: ({ row }) => (
-        <div className="flex items-center gap-2">
-          <Users className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm">{row.original.member_count ?? 0}</span>
-        </div>
+        <span className="text-sm tabular-nums">{row.original.member_count ?? 0}</span>
       ),
     },
     {
       accessorKey: 'asset_count',
-      header: 'Assets',
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Assets" />,
       cell: ({ row }) => (
-        <div className="flex items-center gap-2">
-          <Box className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm">{row.original.asset_count ?? 0}</span>
-        </div>
+        <span className="text-sm tabular-nums">{row.original.asset_count ?? 0}</span>
       ),
     },
     {
       accessorKey: 'created_at',
-      header: 'Created',
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Created" />,
       cell: ({ row }) => (
         <span className="text-muted-foreground text-sm">{formatDate(row.original.created_at)}</span>
       ),
     },
     {
       id: 'actions',
+      enableSorting: false,
+      enableHiding: false,
       cell: ({ row }) => {
         const group = row.original
 
         return (
           <DataTableRowActions
             actions={[
-              { label: 'View Details', icon: Eye, onClick: () => setSelectedGroupId(group.id) },
+              { label: 'View details', icon: Eye, onClick: () => setSelectedGroupId(group.id) },
               {
-                label: 'Edit Team',
+                label: 'Edit team',
                 icon: Pencil,
                 permission: Permission.GroupsWrite,
                 onClick: () => setSelectedGroupId(group.id),
               },
               {
-                label: 'Delete Team',
+                label: 'Delete team',
                 icon: Trash2,
                 destructive: true,
                 separatorBefore: true,
@@ -220,23 +145,6 @@ export default function GroupsPage() {
       },
     },
   ]
-
-  const table = useReactTable({
-    data: groups,
-    columns,
-    state: {
-      sorting,
-      globalFilter,
-      rowSelection,
-    },
-    onSortingChange: setSorting,
-    onGlobalFilterChange: setGlobalFilter,
-    onRowSelectionChange: setRowSelection,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-  })
 
   // Actions
   const handleCreateGroup = async () => {
@@ -286,183 +194,74 @@ export default function GroupsPage() {
       <Main>
         <PageHeader
           title="Teams"
-          description="Organize users into teams to control access to assets"
+          description="Organize users into teams to control access to assets."
         >
           <Can permission={Permission.GroupsWrite} mode="disable">
-            <Button onClick={() => setCreateDialogOpen(true)}>
+            <Button size="sm" onClick={() => setCreateDialogOpen(true)}>
               <Plus className="me-2 h-4 w-4" />
-              Create Team
+              Create team
             </Button>
           </Can>
         </PageHeader>
 
-        {/* Loading State */}
-        {isLoading && (
-          <div className="mt-6 flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          </div>
-        )}
-
-        {/* Error State */}
-        {isError && !isLoading && (
-          <div className="mt-6 flex flex-col items-center justify-center py-12 gap-4">
-            <AlertCircle className="h-12 w-12 text-red-400" />
-            <p className="text-muted-foreground">Failed to load groups</p>
-            <Button variant="outline" onClick={refreshData}>
-              Try Again
-            </Button>
-          </div>
-        )}
-
-        {/* Content */}
-        {!isLoading && !isError && (
+        {isError && !isLoading ? (
+          <Alert variant="destructive" className="mt-5">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Failed to load teams</AlertTitle>
+            <AlertDescription>
+              <p>The team list could not be loaded.</p>
+              <Button variant="outline" size="sm" className="mt-2" onClick={refreshData}>
+                <RefreshCw className="me-2 h-4 w-4" />
+                Retry
+              </Button>
+            </AlertDescription>
+          </Alert>
+        ) : (
           <>
-            {/* Stats */}
-            <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardDescription className="flex items-center gap-2">
-                    <FolderKey className="h-4 w-4" />
-                    Total Teams
-                  </CardDescription>
-                  <CardTitle className="text-3xl">{totalGroups}</CardTitle>
-                </CardHeader>
-              </Card>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardDescription className="flex items-center gap-2">
-                    <Users className="h-4 w-4" />
-                    Total Members
-                  </CardDescription>
-                  <CardTitle className="text-3xl">{uniqueMemberCount}</CardTitle>
-                </CardHeader>
-              </Card>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardDescription className="flex items-center gap-2">
-                    <Box className="h-4 w-4" />
-                    Assigned Assets
-                  </CardDescription>
-                  <CardTitle className="text-3xl">{totalAssets}</CardTitle>
-                </CardHeader>
-              </Card>
+            <MetricStrip
+              className="mt-5"
+              loading={isLoading}
+              items={[
+                { key: 'teams', label: 'Teams', value: totalGroups },
+                { key: 'members', label: 'Members', value: uniqueMemberCount },
+                { key: 'assets', label: 'Assigned assets', value: totalAssets },
+              ]}
+            />
+
+            <div className="mt-5">
+              {isLoading ? (
+                <div className="space-y-2">
+                  <Skeleton className="h-9 w-full max-w-sm" />
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Skeleton key={i} className="h-12 w-full" />
+                  ))}
+                </div>
+              ) : groups.length === 0 ? (
+                <EmptyState
+                  icon={FolderKey}
+                  title="No teams yet"
+                  description="Create a team to group users and scope their access to assets."
+                  action={
+                    <Can permission={Permission.GroupsWrite}>
+                      <Button size="sm" onClick={() => setCreateDialogOpen(true)}>
+                        <Plus className="me-2 h-4 w-4" />
+                        Create team
+                      </Button>
+                    </Can>
+                  }
+                />
+              ) : (
+                <DataTable
+                  columns={columns}
+                  data={groups}
+                  getRowId={(g) => g.id}
+                  searchPlaceholder="Search teams..."
+                  onRowClick={(g) => setSelectedGroupId(g.id)}
+                  showColumnToggle={false}
+                  emptyMessage="No teams match your search"
+                />
+              )}
             </div>
-
-            {/* Groups Table */}
-            <Card className="mt-6">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-base">All Teams</CardTitle>
-                    <CardDescription>Manage teams and their members</CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {/* Search */}
-                <div className="flex flex-col gap-4 mb-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="relative flex-1 max-w-sm">
-                    <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Search teams..."
-                      value={globalFilter}
-                      onChange={(e) => setGlobalFilter(e.target.value)}
-                      className="ps-9"
-                    />
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-2">
-                    {Object.keys(rowSelection).length > 0 && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="outline" size="sm">
-                            {Object.keys(rowSelection).length} selected
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            className="text-red-400"
-                            onClick={() => toast.info('Bulk delete not implemented yet')}
-                          >
-                            <Trash2 className="me-2 h-4 w-4" />
-                            Delete Selected
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
-                  </div>
-                </div>
-
-                {/* Table */}
-                <div className="rounded-md border overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      {table.getHeaderGroups().map((headerGroup) => (
-                        <TableRow key={headerGroup.id}>
-                          {headerGroup.headers.map((header) => (
-                            <TableHead key={header.id}>
-                              {header.isPlaceholder
-                                ? null
-                                : flexRender(header.column.columnDef.header, header.getContext())}
-                            </TableHead>
-                          ))}
-                        </TableRow>
-                      ))}
-                    </TableHeader>
-                    <TableBody>
-                      {table.getRowModel().rows?.length ? (
-                        table.getRowModel().rows.map((row) => (
-                          <TableRow
-                            key={row.id}
-                            data-state={row.getIsSelected() && 'selected'}
-                            className="cursor-pointer"
-                            onClick={(e) => {
-                              if (
-                                (e.target as HTMLElement).closest('[role="checkbox"]') ||
-                                (e.target as HTMLElement).closest('button')
-                              ) {
-                                return
-                              }
-                              setSelectedGroupId(row.original.id)
-                            }}
-                          >
-                            {row.getVisibleCells().map((cell) => (
-                              <TableCell key={cell.id}>
-                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                              </TableCell>
-                            ))}
-                          </TableRow>
-                        ))
-                      ) : (
-                        <TableRow>
-                          <TableCell colSpan={columns.length} className="h-24 text-center">
-                            {groups.length === 0 ? (
-                              <div className="flex flex-col items-center gap-2">
-                                <FolderKey className="h-8 w-8 text-muted-foreground/50" />
-                                <p className="text-muted-foreground">No teams yet</p>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => setCreateDialogOpen(true)}
-                                >
-                                  <Plus className="me-2 h-4 w-4" />
-                                  Create your first team
-                                </Button>
-                              </div>
-                            ) : (
-                              'No teams found.'
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-
-                {/* Pagination */}
-                <DataTablePagination table={table} />
-              </CardContent>
-            </Card>
           </>
         )}
       </Main>
@@ -479,21 +278,15 @@ export default function GroupsPage() {
       <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <div className="rounded-full bg-primary/10 p-2">
-                <Plus className="h-5 w-5 text-primary" />
-              </div>
-              Create Team
-            </DialogTitle>
+            <DialogTitle>Create team</DialogTitle>
             <DialogDescription>
               Create a new team to organize users and control access to assets.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
-            {/* Name Input */}
             <div className="space-y-2">
-              <Label htmlFor="group-name">Team Name</Label>
+              <Label htmlFor="group-name">Team name</Label>
               <Input
                 id="group-name"
                 placeholder="e.g., Security Team, DevOps"
@@ -502,7 +295,6 @@ export default function GroupsPage() {
               />
             </div>
 
-            {/* Description */}
             <div className="space-y-2">
               <Label htmlFor="group-description">Description (optional)</Label>
               <Textarea
@@ -516,7 +308,7 @@ export default function GroupsPage() {
           </div>
 
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="ghost" onClick={() => setCreateDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>
               Cancel
             </Button>
             <Button onClick={handleCreateGroup} disabled={isCreating || !createForm.name}>
@@ -525,7 +317,7 @@ export default function GroupsPage() {
               ) : (
                 <Plus className="me-2 h-4 w-4" />
               )}
-              Create Team
+              Create team
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -535,10 +327,7 @@ export default function GroupsPage() {
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-red-500">
-              <Trash2 className="h-5 w-5" />
-              Delete Team
-            </DialogTitle>
+            <DialogTitle>Delete team</DialogTitle>
             <DialogDescription>
               Are you sure you want to delete the team &quot;{groupToDelete?.name}&quot;? This
               action cannot be undone. Members will lose access to assets owned by this team.
@@ -547,7 +336,7 @@ export default function GroupsPage() {
 
           <DialogFooter className="gap-2 sm:gap-0">
             <Button
-              variant="ghost"
+              variant="outline"
               onClick={() => {
                 setDeleteDialogOpen(false)
                 setGroupToDelete(null)
@@ -561,7 +350,7 @@ export default function GroupsPage() {
               ) : (
                 <Trash2 className="me-2 h-4 w-4" />
               )}
-              Delete Team
+              Delete team
             </Button>
           </DialogFooter>
         </DialogContent>

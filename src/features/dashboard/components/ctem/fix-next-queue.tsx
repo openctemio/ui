@@ -1,5 +1,6 @@
 'use client'
 
+import { epssScoreToPercent } from '@/lib/epss'
 import Link from 'next/link'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -55,7 +56,7 @@ function toItems(chains: ExposureChain[], topRisks: ExecTopRisk[]): FixNextItem[
     return {
       key: `risk-${i}-${r.title}`,
       // EPSS is 0..1; scale to a comparable 0..100 exposure score.
-      score: Math.round((r.epss_score ?? 0) * 100),
+      score: Math.round(epssScoreToPercent(r.epss_score)),
       title: r.title,
       // Deep-link to the specific finding when the id is present (sibling API PR
       // is adding it); otherwise fall back to the filtered list. CTEM filters now

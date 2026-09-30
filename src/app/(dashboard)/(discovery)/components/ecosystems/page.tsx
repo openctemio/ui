@@ -1,9 +1,11 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
+import { cn } from '@/lib/utils'
+import type { ColumnDef } from '@tanstack/react-table'
 import Link from 'next/link'
 import { Main } from '@/components/layout'
-import { PageHeader, EmptyState } from '@/features/shared'
+import { PageHeader, EmptyState, DataTable, DataTableColumnHeader } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
@@ -24,15 +26,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import {
   Package,
@@ -40,14 +34,11 @@ import {
   Clock,
   ArrowRight,
   Shield,
-  Loader2,
   ExternalLink,
   ShieldAlert,
   CheckCircle2,
   FileCode,
   Search as SearchIcon,
-  ChevronLeft,
-  ChevronRight,
   ChevronDown,
   ChevronUp,
   LayoutGrid,
@@ -64,11 +55,14 @@ import {
 } from '@/features/components'
 import type { ComponentEcosystem } from '@/features/components'
 
-const ITEMS_PER_PAGE = 15
 const TOP_ECOSYSTEMS_COUNT = 6 // Number of ecosystems to show as cards
 
 type SortOption = 'count' | 'vulnerabilities' | 'name'
 type ViewMode = 'cards' | 'table'
+
+type EcosystemComponent = NonNullable<
+  NonNullable<ReturnType<typeof useComponentsApi>['data']>['data']
+>[number]
 
 interface EcosystemData {
   ecosystem: ComponentEcosystem
@@ -90,21 +84,18 @@ export default function EcosystemsPage() {
 
   // Sheet state
   const [sheetSearchQuery, setSheetSearchQuery] = useState('')
-  const [currentPage, setCurrentPage] = useState(1)
   const [securityFilter, setSecurityFilter] = useState<'all' | 'vulnerable' | 'secure'>('all')
 
   // Reset sheet state when ecosystem changes
   const handleSelectEcosystem = (ecosystem: ComponentEcosystem) => {
     setSelectedEcosystem(ecosystem)
     setSheetSearchQuery('')
-    setCurrentPage(1)
     setSecurityFilter('all')
   }
 
   const handleCloseSheet = () => {
     setSelectedEcosystem(null)
     setSheetSearchQuery('')
-    setCurrentPage(1)
     setSecurityFilter('all')
   }
 
@@ -141,18 +132,6 @@ export default function EcosystemsPage() {
 
     return filtered
   }, [ecosystemComponentsData?.data, sheetSearchQuery, securityFilter])
-
-  // Pagination
-  const totalPages = Math.ceil(filteredComponents.length / ITEMS_PER_PAGE)
-  const paginatedComponents = useMemo(() => {
-    const start = (currentPage - 1) * ITEMS_PER_PAGE
-    return filteredComponents.slice(start, start + ITEMS_PER_PAGE)
-  }, [filteredComponents, currentPage])
-
-  // Reset page when filters change
-  useEffect(() => {
-    setCurrentPage(1)
-  }, [sheetSearchQuery, securityFilter])
 
   // Transform and sort API data
   const ecosystemStats = useMemo((): EcosystemData[] => {
@@ -268,59 +247,194 @@ export default function EcosystemsPage() {
     )
   }
 
-  // Render ecosystem table row
-  const renderEcosystemTableRow = (eco: EcosystemData) => {
-    const percentage = stats.totalComponents > 0 ? (eco.count / stats.totalComponents) * 100 : 0
-    return (
-      <TableRow
-        key={eco.ecosystem}
-        className="cursor-pointer hover:bg-muted/50"
-        onClick={() => handleSelectEcosystem(eco.ecosystem)}
-      >
-        <TableCell>
+  // Table view columns. Every value is on the client, so every header sorts.
+  const ecosystemColumns = useMemo<ColumnDef<EcosystemData>[]>(() => {
+    const share = (count: number) =>
+      stats.totalComponents > 0 ? (count / stats.totalComponents) * 100 : 0
+    return [
+      {
+        id: 'ecosystem',
+        accessorFn: (e) => COMPONENT_ECOSYSTEM_LABELS[e.ecosystem] || e.ecosystem,
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Ecosystem" />,
+        cell: ({ row }) => (
           <div className="flex items-center gap-3">
-            <EcosystemBadge ecosystem={eco.ecosystem} />
+            <EcosystemBadge ecosystem={row.original.ecosystem} />
             <span className="font-medium">
-              {COMPONENT_ECOSYSTEM_LABELS[eco.ecosystem] || eco.ecosystem}
+              {COMPONENT_ECOSYSTEM_LABELS[row.original.ecosystem] || row.original.ecosystem}
             </span>
           </div>
-        </TableCell>
-        <TableCell>
-          <div className="flex items-center gap-2">
-            <span className="font-medium">{eco.count}</span>
-            <span className="text-xs text-muted-foreground">({percentage.toFixed(1)}%)</span>
+        ),
+      },
+      {
+        accessorKey: 'count',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Components" />,
+        cell: ({ row }) => (
+          <div className="flex items-center gap-2 tabular-nums">
+            <span className="font-medium">{row.original.count}</span>
+            <span className="text-xs text-muted-foreground">
+              ({share(row.original.count).toFixed(1)}%)
+            </span>
           </div>
-        </TableCell>
-        <TableCell>
+        ),
+      },
+      {
+        accessorKey: 'vulnerabilities',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Vulnerable" />,
+        cell: ({ row }) => (
           <Badge
-            variant={eco.vulnerabilities > 0 ? 'destructive' : 'outline'}
-            className={
-              eco.vulnerabilities === 0
-                ? 'text-green-600 border-green-200 bg-green-50 dark:bg-green-950/30 dark:border-green-800'
-                : ''
-            }
+            variant={row.original.vulnerabilities > 0 ? 'destructive' : 'outline'}
+            className={cn(
+              'tabular-nums',
+              row.original.vulnerabilities === 0 && 'text-muted-foreground'
+            )}
           >
-            {eco.vulnerabilities}
+            {row.original.vulnerabilities}
           </Badge>
-        </TableCell>
-        <TableCell>
+        ),
+      },
+      {
+        accessorKey: 'outdated',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Outdated" />,
+        cell: ({ row }) => (
           <Badge
             variant="outline"
-            className={
-              eco.outdated > 0
-                ? 'text-yellow-600 border-yellow-200 bg-yellow-50 dark:bg-yellow-950/30 dark:border-yellow-800'
-                : ''
-            }
+            className={cn(
+              'tabular-nums',
+              row.original.outdated > 0
+                ? 'border-warning/30 bg-warning/15 text-warning'
+                : 'text-muted-foreground'
+            )}
           >
-            {eco.outdated}
+            {row.original.outdated}
           </Badge>
-        </TableCell>
-        <TableCell>
-          <Progress value={percentage} className="h-2 w-24" />
-        </TableCell>
-      </TableRow>
-    )
-  }
+        ),
+      },
+      {
+        id: 'distribution',
+        header: 'Distribution',
+        cell: ({ row }) => <Progress value={share(row.original.count)} className="h-2 w-24" />,
+      },
+    ]
+  }, [stats.totalComponents])
+
+  // Components of the ecosystem open in the sheet.
+  const componentColumns = useMemo<ColumnDef<EcosystemComponent>[]>(
+    () => [
+      {
+        accessorKey: 'name',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Package" />,
+        cell: ({ row }) => {
+          const comp = row.original
+          return (
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-muted">
+                <FileCode className="h-4 w-4 text-muted-foreground" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <p className="max-w-[250px] cursor-default truncate font-medium">{comp.name}</p>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-xs">
+                    <p className="break-all">{comp.purl || comp.name}</p>
+                  </TooltipContent>
+                </Tooltip>
+                {comp.namespace && (
+                  <p className="truncate text-xs text-muted-foreground">{comp.namespace}</p>
+                )}
+              </div>
+            </div>
+          )
+        },
+      },
+      {
+        accessorKey: 'version',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Version" />,
+        cell: ({ row }) => (
+          <Badge variant="outline" className="text-xs tabular-nums">
+            {row.original.version}
+          </Badge>
+        ),
+      },
+      {
+        accessorKey: 'license',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="License" />,
+        cell: ({ row }) =>
+          row.original.license ? (
+            <Badge variant="secondary" className="text-xs">
+              {row.original.license}
+            </Badge>
+          ) : (
+            <span className="text-xs text-muted-foreground">-</span>
+          ),
+      },
+      {
+        id: 'security',
+        accessorFn: (c) => c.vulnerability_count ?? 0,
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Security" />,
+        cell: ({ row }) => {
+          const count = row.original.vulnerability_count ?? 0
+          return count > 0 ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge variant="destructive" className="gap-1 tabular-nums">
+                  <ShieldAlert className="h-3 w-3" />
+                  {count}
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent>
+                {count} known {count === 1 ? 'vulnerability' : 'vulnerabilities'}
+              </TooltipContent>
+            </Tooltip>
+          ) : (
+            <Badge variant="outline" className="gap-1 border-success/30 bg-success/15 text-success">
+              <CheckCircle2 className="h-3 w-3" />
+              Secure
+            </Badge>
+          )
+        },
+      },
+    ],
+    []
+  )
+
+  const searchBox = (
+    <div className="relative min-w-0 flex-1 sm:max-w-sm">
+      <SearchIcon className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+      <Input
+        placeholder="Search ecosystems…"
+        aria-label="Search ecosystems"
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+        className="h-9 ps-9"
+      />
+    </div>
+  )
+
+  const viewToggle = (
+    <div className="flex items-center rounded-md border">
+      <Button
+        variant={viewMode === 'cards' ? 'secondary' : 'ghost'}
+        size="sm"
+        className="rounded-e-none"
+        aria-label="Card view"
+        aria-pressed={viewMode === 'cards'}
+        onClick={() => setViewMode('cards')}
+      >
+        <LayoutGrid className="h-4 w-4" />
+      </Button>
+      <Button
+        variant={viewMode === 'table' ? 'secondary' : 'ghost'}
+        size="sm"
+        className="rounded-s-none"
+        aria-label="Table view"
+        aria-pressed={viewMode === 'table'}
+        onClick={() => setViewMode('table')}
+      >
+        <List className="h-4 w-4" />
+      </Button>
+    </div>
+  )
 
   return (
     <>
@@ -412,52 +526,24 @@ export default function EcosystemsPage() {
           </Card>
         </div>
 
-        {/* Controls: Search, Sort, View Toggle */}
-        {!isLoading && ecosystemStats.length > 0 && (
+        {/* Controls for the card view (the table view carries them in its toolbar,
+            and sorts from its column headers). */}
+        {!isLoading && ecosystemStats.length > 0 && viewMode === 'cards' && (
           <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex flex-1 items-center gap-2 max-w-md">
-              <div className="relative flex-1">
-                <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search ecosystems..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="ps-9"
-                />
-              </div>
-            </div>
-
+            {searchBox}
             <div className="flex items-center gap-2">
               <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
-                <SelectTrigger className="w-[160px]">
+                <SelectTrigger className="w-[180px]" aria-label="Sort ecosystems">
                   <ArrowUpDown className="h-4 w-4 me-2" />
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="count">Sort by Count</SelectItem>
-                  <SelectItem value="vulnerabilities">Sort by Vulnerabilities</SelectItem>
-                  <SelectItem value="name">Sort by Name</SelectItem>
+                  <SelectItem value="count">Sort by count</SelectItem>
+                  <SelectItem value="vulnerabilities">Sort by vulnerabilities</SelectItem>
+                  <SelectItem value="name">Sort by name</SelectItem>
                 </SelectContent>
               </Select>
-
-              <div className="flex items-center border rounded-md">
-                <Button
-                  variant={viewMode === 'cards' ? 'secondary' : 'ghost'}
-                  size="sm"
-                  className="rounded-r-none"
-                  onClick={() => setViewMode('cards')}
-                >
-                  <LayoutGrid className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant={viewMode === 'table' ? 'secondary' : 'ghost'}
-                  size="sm"
-                  className="rounded-l-none"
-                  onClick={() => setViewMode('table')}
-                >
-                  <List className="h-4 w-4" />
-                </Button>
-              </div>
+              {viewToggle}
             </div>
           </div>
         )}
@@ -506,31 +592,18 @@ export default function EcosystemsPage() {
           )
         ) : viewMode === 'table' ? (
           /* Table View */
-          <Card className="mt-6">
-            <CardHeader>
-              <CardTitle>All Ecosystems</CardTitle>
-              <CardDescription>
-                {processedEcosystems.length} ecosystems
-                {searchQuery && ` matching "${searchQuery}"`}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Ecosystem</TableHead>
-                      <TableHead>Components</TableHead>
-                      <TableHead>Vulnerable</TableHead>
-                      <TableHead>Outdated</TableHead>
-                      <TableHead>Distribution</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>{processedEcosystems.map(renderEcosystemTableRow)}</TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="mt-6">
+            <DataTable
+              columns={ecosystemColumns}
+              data={processedEcosystems}
+              getRowId={(e) => e.ecosystem}
+              showSearch={false}
+              toolbarStart={searchBox}
+              toolbarEnd={viewToggle}
+              onRowClick={(e) => handleSelectEcosystem(e.ecosystem)}
+              emptyMessage="No ecosystems match this search"
+            />
+          </div>
         ) : (
           /* Card View */
           <>
@@ -681,197 +754,51 @@ export default function EcosystemsPage() {
                     </p>
                   </button>
                 </div>
-
-                {/* Search Bar */}
-                <div className="mt-4 relative">
-                  <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search packages by name or version..."
-                    value={sheetSearchQuery}
-                    onChange={(e) => setSheetSearchQuery(e.target.value)}
-                    className="ps-9"
-                  />
-                </div>
               </div>
 
               {/* Content */}
               <ScrollArea className="flex-1">
                 <div className="p-6">
-                  {isLoadingComponents ? (
-                    <div className="flex flex-col items-center justify-center py-12">
-                      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mb-4" />
-                      <p className="text-sm text-muted-foreground">Loading components...</p>
-                    </div>
-                  ) : paginatedComponents.length > 0 ? (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="w-[40%]">Package</TableHead>
-                          <TableHead>Version</TableHead>
-                          <TableHead>License</TableHead>
-                          <TableHead className="text-end">Security</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {paginatedComponents.map((comp) => (
-                          <TableRow key={comp.id} className="group">
-                            <TableCell>
-                              <div className="flex items-center gap-3">
-                                <div className="flex h-9 w-9 items-center justify-center rounded-md bg-muted group-hover:bg-muted/80 transition-colors">
-                                  <FileCode className="h-4 w-4 text-muted-foreground" />
-                                </div>
-                                <div className="min-w-0 flex-1">
-                                  <TooltipProvider>
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <p className="font-medium truncate max-w-[250px] cursor-default">
-                                          {comp.name}
-                                        </p>
-                                      </TooltipTrigger>
-                                      <TooltipContent side="top" className="max-w-xs">
-                                        <p className="break-all">{comp.purl || comp.name}</p>
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  </TooltipProvider>
-                                  {comp.namespace && (
-                                    <p className="text-xs text-muted-foreground truncate">
-                                      {comp.namespace}
-                                    </p>
-                                  )}
-                                </div>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant="outline" className="font-mono text-xs">
-                                {comp.version}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              {comp.license ? (
-                                <Badge variant="secondary" className="text-xs">
-                                  {comp.license}
-                                </Badge>
-                              ) : (
-                                <span className="text-xs text-muted-foreground">-</span>
-                              )}
-                            </TableCell>
-                            <TableCell className="text-end">
-                              {(comp.vulnerability_count ?? 0) > 0 ? (
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Badge variant="destructive" className="gap-1">
-                                        <ShieldAlert className="h-3 w-3" />
-                                        {comp.vulnerability_count}
-                                      </Badge>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      {comp.vulnerability_count} known{' '}
-                                      {comp.vulnerability_count === 1
-                                        ? 'vulnerability'
-                                        : 'vulnerabilities'}
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                              ) : (
-                                <Badge
-                                  variant="outline"
-                                  className="gap-1 text-green-600 border-green-200 bg-green-50 dark:bg-green-950/30 dark:border-green-800"
-                                >
-                                  <CheckCircle2 className="h-3 w-3" />
-                                  Secure
-                                </Badge>
-                              )}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  ) : (
-                    <EmptyState
-                      card={false}
-                      icon={sheetSearchQuery || securityFilter !== 'all' ? SearchIcon : Package}
-                      title={
-                        sheetSearchQuery || securityFilter !== 'all'
-                          ? 'No Matches Found'
-                          : 'No Components Found'
-                      }
-                      description={
-                        sheetSearchQuery || securityFilter !== 'all'
-                          ? 'Try adjusting your search or filter criteria.'
-                          : 'No components have been discovered for this ecosystem yet.'
-                      }
-                      action={
-                        sheetSearchQuery || securityFilter !== 'all' ? (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setSheetSearchQuery('')
-                              setSecurityFilter('all')
-                            }}
-                          >
-                            Clear Filters
-                          </Button>
-                        ) : undefined
-                      }
-                    />
-                  )}
-                </div>
-              </ScrollArea>
-
-              {/* Footer with Pagination */}
-              {filteredComponents.length > 0 && (
-                <div className="border-t px-6 py-4 bg-muted/30">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm text-muted-foreground">
-                      Showing {(currentPage - 1) * ITEMS_PER_PAGE + 1}-
-                      {Math.min(currentPage * ITEMS_PER_PAGE, filteredComponents.length)} of{' '}
-                      {filteredComponents.length}
-                      {(sheetSearchQuery || securityFilter !== 'all') && (
-                        <span className="ms-1">
-                          (filtered from {ecosystemComponentsData?.data?.length ?? 0})
-                        </span>
-                      )}
-                    </p>
-                    <div className="flex items-center gap-2">
-                      {totalPages > 1 && (
-                        <div className="flex items-center gap-1">
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                            disabled={currentPage === 1}
-                          >
-                            <ChevronLeft className="h-4 w-4" />
-                          </Button>
-                          <div className="flex items-center gap-1 px-2">
-                            <span className="text-sm font-medium">{currentPage}</span>
-                            <span className="text-sm text-muted-foreground">/</span>
-                            <span className="text-sm text-muted-foreground">{totalPages}</span>
-                          </div>
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                            disabled={currentPage === totalPages}
-                          >
-                            <ChevronRight className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      )}
+                  <DataTable
+                    columns={componentColumns}
+                    data={filteredComponents}
+                    getRowId={(c) => c.id ?? c.name ?? ''}
+                    isLoading={isLoadingComponents}
+                    showSearch={false}
+                    showColumnToggle={false}
+                    toolbarStart={
+                      <div className="relative min-w-0 flex-1">
+                        <SearchIcon className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                          placeholder="Search packages by name or version…"
+                          aria-label="Search packages"
+                          value={sheetSearchQuery}
+                          onChange={(e) => setSheetSearchQuery(e.target.value)}
+                          className="h-9 ps-9"
+                        />
+                      </div>
+                    }
+                    toolbarEnd={
                       <Link href={`/components/all?ecosystem=${selectedEcosystem}`}>
-                        <Button variant="outline" size="sm" className="gap-2">
-                          View All
+                        <Button variant="outline" size="sm" className="h-9 gap-2">
+                          View all
                           <ExternalLink className="h-3 w-3" />
                         </Button>
                       </Link>
-                    </div>
-                  </div>
+                    }
+                    emptyMessage={
+                      sheetSearchQuery || securityFilter !== 'all'
+                        ? 'No packages match these filters'
+                        : 'No components found'
+                    }
+                    emptyDescription={
+                      sheetSearchQuery || securityFilter !== 'all'
+                        ? 'Try adjusting your search or filter'
+                        : 'No components have been discovered for this ecosystem yet'
+                    }
+                  />
                 </div>
-              )}
+              </ScrollArea>
             </>
           )}
         </SheetContent>

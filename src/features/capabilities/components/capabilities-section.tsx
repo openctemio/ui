@@ -4,14 +4,10 @@ import { useState, useMemo, useCallback } from 'react'
 import {
   Plus,
   Zap,
-  AlertCircle,
-  RefreshCw,
   Loader2,
   Search,
   LayoutGrid,
   TableIcon,
-  Globe,
-  Sparkles,
   AlertTriangle,
   Wrench,
   Bot,
@@ -21,10 +17,7 @@ import { getErrorMessage } from '@/lib/api/error-handler'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Badge } from '@/components/ui/badge'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Tabs, TabsList, TabsTrigger, TabsCount } from '@/components/ui/tabs'
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -34,8 +27,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Checkbox } from '@/components/ui/checkbox'
+import { RefreshButton, TableSkeleton } from '@/components/list-page-parts'
+import { useUrlFilter } from '@/hooks/use-url-param'
 import { Can, Permission } from '@/lib/permissions'
 
 import { CapabilityCard } from './capability-card'
@@ -52,11 +54,10 @@ import {
   invalidateCapabilitiesCache,
 } from '@/lib/api/capability-hooks'
 import type { Capability, CapabilityListFilters } from '@/lib/api/capability-types'
-import { EmptyState } from '@/features/shared'
+import { EmptyState, ErrorState, PageHeader } from '@/features/shared'
 
 type ViewMode = 'grid' | 'table'
 type MainTab = 'platform' | 'custom'
-type CategoryFilter = 'all' | string
 
 export function CapabilitiesSection() {
   // Dialog states
@@ -70,10 +71,14 @@ export function CapabilitiesSection() {
   const [selectedCapability, setSelectedCapability] = useState<Capability | null>(null)
 
   // View and filter states
-  const [viewMode, setViewMode] = useState<ViewMode>('grid')
-  const [mainTab, setMainTab] = useState<MainTab>('platform')
-  const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all')
-  const [searchQuery, setSearchQuery] = useState('')
+  // Tab, view, category and search live in the URL so a filtered view can be
+  // shared and survives a reload.
+  const [viewParam, setViewMode] = useUrlFilter('view', 'table')
+  const [tabParam, setMainTab] = useUrlFilter('tab', 'platform')
+  const [categoryFilter, setCategoryFilter] = useUrlFilter('category', 'all')
+  const [searchQuery, setSearchQuery] = useUrlFilter('q', '')
+  const viewMode: ViewMode = viewParam === 'grid' ? 'grid' : 'table'
+  const mainTab: MainTab = tabParam === 'custom' ? 'custom' : 'platform'
   const [filters, _setFilters] = useState<CapabilityListFilters>({})
 
   // API data
@@ -140,10 +145,6 @@ export function CapabilitiesSection() {
     toast.success('Capabilities refreshed')
   }, [mutate])
 
-  const handleSearch = useCallback((e: React.FormEvent) => {
-    e.preventDefault()
-  }, [])
-
   const handleEditCapability = useCallback((capability: Capability) => {
     setSelectedCapability(capability)
     setEditDialogOpen(true)
@@ -186,29 +187,14 @@ export function CapabilitiesSection() {
   }, [selectedCapability, deleteCapability, forceDelete, selectedUsageStats])
 
   // Handle tab change - reset filters
-  const handleMainTabChange = useCallback((tab: string) => {
-    setMainTab(tab as MainTab)
-    setCategoryFilter('all')
-    setSearchQuery('')
-  }, [])
-
-  if (error) {
-    return (
-      <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-4">
-        <div className="flex items-center gap-2 text-red-500">
-          <AlertCircle className="h-4 w-4" />
-          <span className="text-sm font-medium">Failed to load capabilities</span>
-        </div>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {error instanceof Error ? error.message : 'An unexpected error occurred'}
-        </p>
-        <Button variant="outline" size="sm" className="mt-2" onClick={handleRefresh}>
-          <RefreshCw className="me-2 h-4 w-4" />
-          Retry
-        </Button>
-      </div>
-    )
-  }
+  const handleMainTabChange = useCallback(
+    (tab: string) => {
+      setMainTab(tab)
+      setCategoryFilter('all')
+      setSearchQuery('')
+    },
+    [setMainTab, setCategoryFilter, setSearchQuery]
+  )
 
   // Check if we're in custom capabilities mode for conditional rendering
   const isCustomMode = mainTab === 'custom'
@@ -221,259 +207,185 @@ export function CapabilitiesSection() {
   const selectedHasUsage =
     selectedUsageStats && (selectedUsageStats.tool_count > 0 || selectedUsageStats.agent_count > 0)
 
+  const toolbarStart = (
+    <>
+      <div className="relative min-w-0 flex-1 sm:max-w-sm">
+        <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          placeholder="Search capabilities…"
+          aria-label="Search capabilities"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="h-9 ps-9"
+        />
+      </div>
+      {categories.length > 0 && (
+        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+          <SelectTrigger className="h-9 w-[160px]" aria-label="Category">
+            <SelectValue placeholder="All categories" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All categories</SelectItem>
+            {categories.map((cat) => (
+              <SelectItem key={cat} value={cat} className="capitalize">
+                {cat}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
+    </>
+  )
+
+  const viewToggle = (
+    <div className="flex items-center rounded-md border p-0.5" role="group" aria-label="View">
+      <Button
+        variant={viewMode === 'table' ? 'secondary' : 'ghost'}
+        size="icon"
+        className="h-7 w-7"
+        onClick={() => setViewMode('table')}
+        aria-label="Table view"
+        aria-pressed={viewMode === 'table'}
+      >
+        <TableIcon className="h-4 w-4" />
+      </Button>
+      <Button
+        variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+        size="icon"
+        className="h-7 w-7"
+        onClick={() => setViewMode('grid')}
+        aria-label="Card view"
+        aria-pressed={viewMode === 'grid'}
+      >
+        <LayoutGrid className="h-4 w-4" />
+      </Button>
+    </div>
+  )
+
+  const toolbarEnd = (
+    <>
+      {viewToggle}
+      <RefreshButton onClick={handleRefresh} loading={isLoading} />
+    </>
+  )
+
+  const hasFilter = !!searchQuery || categoryFilter !== 'all'
+  const emptyState = (
+    <EmptyState
+      icon={Zap}
+      title={hasFilter ? 'No matching capabilities' : 'No capabilities'}
+      description={
+        hasFilter
+          ? 'No capabilities match your search or category.'
+          : mainTab === 'platform'
+            ? 'No platform capabilities available yet.'
+            : 'Add a custom capability to extend your tool registry.'
+      }
+      card={false}
+      action={
+        !hasFilter && isCustomMode ? (
+          <Can permission={Permission.ToolsWrite}>
+            <Button size="sm" onClick={() => setCreateDialogOpen(true)}>
+              <Plus className="h-4 w-4" />
+              Add capability
+            </Button>
+          </Can>
+        ) : undefined
+      }
+    />
+  )
+
+  let body: React.ReactNode
+  if (error) {
+    body = <ErrorState title="capabilities" error={error} onRetry={handleRefresh} />
+  } else if (isLoading) {
+    body = <TableSkeleton rows={6} />
+  } else if (viewMode === 'table') {
+    body =
+      filteredCapabilities.length === 0 && !hasFilter ? (
+        emptyState
+      ) : (
+        <CapabilityTable
+          capabilities={filteredCapabilities}
+          usageStats={usageStatsData}
+          onEdit={isCustomMode ? handleEditCapability : undefined}
+          onDelete={isCustomMode ? handleDeleteClick : undefined}
+          onViewDetails={handleViewDetails}
+          readOnly={!isCustomMode}
+          toolbarStart={toolbarStart}
+          toolbarEnd={toolbarEnd}
+        />
+      )
+  } else {
+    // Card view: the same toolbar row the table draws, then the grid.
+    body = (
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+          <div className="flex min-w-0 flex-1 items-center gap-2">{toolbarStart}</div>
+          <div className="ms-auto flex shrink-0 items-center gap-2">{toolbarEnd}</div>
+        </div>
+        {filteredCapabilities.length > 0 ? (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {filteredCapabilities.map((capability) => (
+              <CapabilityCard
+                key={capability.id}
+                capability={capability}
+                usageStats={usageStatsData?.[capability.id]}
+                onEdit={isCustomMode ? handleEditCapability : undefined}
+                onDelete={isCustomMode ? handleDeleteClick : undefined}
+                onViewDetails={handleViewDetails}
+                readOnly={!isCustomMode}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-md border">{emptyState}</div>
+        )}
+      </div>
+    )
+  }
+
   return (
     <>
-      <div className="space-y-6">
-        {/* Stats Cards - 2 per row on mobile, 4 on lg+ */}
-        {!isLoading && (
-          <div className="grid grid-cols-2 gap-2 sm:gap-4 lg:grid-cols-4">
-            <Card>
-              <CardContent className="p-3 sm:pt-6 sm:px-6">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">
-                      Total
-                    </p>
-                    <p className="text-xl sm:text-2xl font-bold">
-                      {capabilitiesData?.items?.length || 0}
-                    </p>
-                  </div>
-                  <Zap className="h-6 w-6 sm:h-8 sm:w-8 text-muted-foreground/50 shrink-0" />
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-3 sm:pt-6 sm:px-6">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">
-                      Platform
-                    </p>
-                    <p className="text-xl sm:text-2xl font-bold">{platformCount}</p>
-                  </div>
-                  <Globe className="h-6 w-6 sm:h-8 sm:w-8 text-muted-foreground/50 shrink-0" />
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-3 sm:pt-6 sm:px-6">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">
-                      Custom
-                    </p>
-                    <p className="text-xl sm:text-2xl font-bold">{customCount}</p>
-                  </div>
-                  <Sparkles className="h-6 w-6 sm:h-8 sm:w-8 text-muted-foreground/50 shrink-0" />
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-3 sm:pt-6 sm:px-6">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">
-                      Categories
-                    </p>
-                    <p className="text-xl sm:text-2xl font-bold">{categories.length}</p>
-                  </div>
-                  <LayoutGrid className="h-6 w-6 sm:h-8 sm:w-8 text-muted-foreground/50 shrink-0" />
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        {/* Main Content Card */}
-        <Card>
-          <CardHeader className="pb-4">
-            {/* Row 1: Title + Main Tabs + Actions */}
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-              {/* Left: Title and description */}
-              <div className="flex min-w-[280px] items-center gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                  <Zap className="h-5 w-5 text-primary" />
-                </div>
-                <div className="min-w-0">
-                  <CardTitle>Tool Capabilities</CardTitle>
-                  <CardDescription className="truncate">Manage what tools can do</CardDescription>
-                </div>
-              </div>
-
-              {/* Center: Main Tabs (Platform / Custom) */}
-              <Tabs value={mainTab} onValueChange={handleMainTabChange} className="w-auto">
-                <TabsList>
-                  <TabsTrigger value="platform" className="gap-1.5">
-                    <Globe className="h-4 w-4" />
-                    Platform
-                    <Badge variant="secondary" className="ms-1">
-                      {platformCount}
-                    </Badge>
-                  </TabsTrigger>
-                  <TabsTrigger value="custom" className="gap-1.5">
-                    <Sparkles className="h-4 w-4" />
-                    Custom
-                    <Badge variant="secondary" className="ms-1">
-                      {customCount}
-                    </Badge>
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
-
-              {/* Right: Actions */}
-              <div className="flex items-center gap-2">
-                <Button variant="ghost" size="sm" onClick={handleRefresh} disabled={isLoading}>
-                  {isLoading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <RefreshCw className="h-4 w-4" />
-                  )}
-                </Button>
-                {/* Add Capability button - only enabled for custom tab */}
-                <Can permission={Permission.ToolsWrite}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span>
-                        <Button onClick={() => setCreateDialogOpen(true)} disabled={!isCustomMode}>
-                          <Plus className="me-2 h-4 w-4" />
-                          Add Capability
-                        </Button>
-                      </span>
-                    </TooltipTrigger>
-                    {!isCustomMode && (
-                      <TooltipContent>
-                        <p>Switch to Custom tab to add your own capabilities</p>
-                      </TooltipContent>
-                    )}
-                  </Tooltip>
-                </Can>
-              </div>
-            </div>
-          </CardHeader>
-
-          <CardContent>
-            {/* Category Filter + View Toggle */}
-            <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              {/* Category Filter */}
-              <div className="flex-1 overflow-hidden">
-                <Tabs
-                  value={categoryFilter}
-                  onValueChange={(v) => setCategoryFilter(v as CategoryFilter)}
-                  className="w-full"
-                >
-                  <TabsList className="inline-flex w-max gap-1 overflow-x-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-muted">
-                    <TabsTrigger value="all">All</TabsTrigger>
-                    {categories.map((cat) => (
-                      <TabsTrigger key={cat} value={cat} className="capitalize">
-                        {cat}
-                      </TabsTrigger>
-                    ))}
-                  </TabsList>
-                </Tabs>
-              </div>
-
-              {/* View Toggle */}
-              <div className="flex shrink-0 items-center gap-1">
+      <PageHeader
+        title="Capabilities"
+        description="What tools can do. Platform capabilities are built in; add custom ones to extend the tool registry."
+      >
+        <Can permission={Permission.ToolsWrite}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span>
                 <Button
-                  variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
                   size="sm"
-                  onClick={() => setViewMode('grid')}
+                  onClick={() => setCreateDialogOpen(true)}
+                  disabled={!isCustomMode}
                 >
-                  <LayoutGrid className="h-4 w-4" />
+                  <Plus className="h-4 w-4" />
+                  Add capability
                 </Button>
-                <Button
-                  variant={viewMode === 'table' ? 'secondary' : 'ghost'}
-                  size="sm"
-                  onClick={() => setViewMode('table')}
-                >
-                  <TableIcon className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-
-            {/* Search */}
-            <div className="mb-4">
-              <form onSubmit={handleSearch}>
-                <div className="relative max-w-md">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    placeholder="Search capabilities..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="ps-9"
-                  />
-                </div>
-              </form>
-            </div>
-
-            {/* Content */}
-            {isLoading ? (
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {[...Array(6)].map((_, i) => (
-                  <div key={i} className="rounded-lg border p-4">
-                    <div className="mb-3 flex items-center gap-3">
-                      <Skeleton className="h-10 w-10 rounded-lg" />
-                      <div className="flex-1 space-y-1.5">
-                        <Skeleton className="h-4 w-32" />
-                        <Skeleton className="h-3 w-24" />
-                      </div>
-                    </div>
-                    <Skeleton className="h-12 w-full" />
-                  </div>
-                ))}
-              </div>
-            ) : filteredCapabilities.length > 0 ? (
-              viewMode === 'grid' ? (
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {filteredCapabilities.map((capability) => (
-                    <CapabilityCard
-                      key={capability.id}
-                      capability={capability}
-                      usageStats={usageStatsData?.[capability.id]}
-                      onEdit={isCustomMode ? handleEditCapability : undefined}
-                      onDelete={isCustomMode ? handleDeleteClick : undefined}
-                      onViewDetails={handleViewDetails}
-                      readOnly={!isCustomMode}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <CapabilityTable
-                  capabilities={filteredCapabilities}
-                  usageStats={usageStatsData}
-                  onEdit={isCustomMode ? handleEditCapability : undefined}
-                  onDelete={isCustomMode ? handleDeleteClick : undefined}
-                  onViewDetails={handleViewDetails}
-                  readOnly={!isCustomMode}
-                />
-              )
-            ) : (
-              <EmptyState
-                icon={Zap}
-                title="No Capabilities Found"
-                description={
-                  searchQuery || categoryFilter !== 'all'
-                    ? 'No capabilities match your search criteria. Try adjusting your filters.'
-                    : mainTab === 'platform'
-                      ? 'No platform capabilities available yet.'
-                      : 'Add a custom capability to extend your tool registry.'
-                }
-                card={false}
-                action={
-                  !searchQuery && categoryFilter === 'all' && isCustomMode ? (
-                    <Can permission={Permission.ToolsWrite}>
-                      <Button onClick={() => setCreateDialogOpen(true)}>
-                        <Plus className="me-2 h-4 w-4" />
-                        Add Your First Capability
-                      </Button>
-                    </Can>
-                  ) : undefined
-                }
-              />
+              </span>
+            </TooltipTrigger>
+            {!isCustomMode && (
+              <TooltipContent>Switch to the Custom tab to add your own capabilities</TooltipContent>
             )}
-          </CardContent>
-        </Card>
-      </div>
+          </Tooltip>
+        </Can>
+      </PageHeader>
+
+      <Tabs value={mainTab} onValueChange={handleMainTabChange} className="mt-4">
+        <TabsList>
+          <TabsTrigger value="platform">
+            Platform
+            <TabsCount value={platformCount} />
+          </TabsTrigger>
+          <TabsTrigger value="custom">
+            Custom
+            <TabsCount value={customCount} />
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+
+      <div className="mt-5">{body}</div>
 
       {/* Dialogs */}
       <CreateCapabilityDialog
@@ -512,8 +424,8 @@ export function CapabilitiesSection() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
-              {selectedHasUsage && <AlertTriangle className="h-5 w-5 text-amber-500" />}
-              Delete Capability
+              {selectedHasUsage && <AlertTriangle className="h-5 w-5 text-destructive" />}
+              Delete capability
             </AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className="space-y-3">
@@ -609,7 +521,7 @@ export function CapabilitiesSection() {
               disabled={isDeleting || isLoadingSelectedStats || (selectedHasUsage && !forceDelete)}
             >
               {isDeleting && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
-              {selectedHasUsage ? 'Force Delete' : 'Delete'}
+              {selectedHasUsage ? 'Force delete' : 'Delete'}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>

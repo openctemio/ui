@@ -1,13 +1,18 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import type { ColumnDef } from '@tanstack/react-table'
 import { Main } from '@/components/layout'
 import {
   PageHeader,
+  MetricStrip,
+  type MetricStripItem,
+  DataTable,
+  DataTableColumnHeader,
   DataTableRowActions,
-  StatsCard,
   EmptyState,
   SheetBody,
+  SheetInfoRow,
 } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -15,24 +20,8 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
-import {
-  Download,
-  Filter,
-  Eye,
-  Pencil,
-  ClipboardCheck,
-  Shield,
-  AlertTriangle,
-  CheckCircle2,
-  XCircle,
-  Clock,
-  FileText,
-  AlertCircle,
-  X,
-  Calendar,
-  ChevronRight,
-  Circle,
-} from 'lucide-react'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Download, Eye, Pencil, ClipboardCheck, Shield } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Dialog,
@@ -72,6 +61,8 @@ import {
 } from '@/features/compliance/api/use-compliance-api'
 import { mutate as swrMutate } from 'swr'
 import { exportToCsv } from '@/hooks/use-csv-export'
+import { useUrlFilter } from '@/hooks/use-url-param'
+import { CRITICALITY_BADGE_SOFT } from '@/lib/criticality-colors'
 
 // ── Local view types ──────────────────────────────────────────────────────────
 
@@ -112,37 +103,104 @@ function mapAssessmentPriority(p: string | undefined): Priority {
   return 'medium'
 }
 
-const statusColors: Record<ControlStatus, string> = {
-  implemented:
-    'bg-green-500/10 text-green-500 border-green-500/20 dark:bg-green-900/30 dark:text-green-400',
-  partial:
-    'bg-yellow-500/10 text-yellow-500 border-yellow-500/20 dark:bg-yellow-900/30 dark:text-yellow-400',
-  not_implemented:
-    'bg-red-500/10 text-red-500 border-red-500/20 dark:bg-red-900/30 dark:text-red-400',
-  not_applicable:
-    'bg-gray-500/10 text-gray-500 border-gray-500/20 dark:bg-gray-800 dark:text-gray-400',
-}
-
 const statusLabels: Record<ControlStatus, string> = {
   implemented: 'Implemented',
   partial: 'Partial',
-  not_implemented: 'Not Implemented',
+  not_implemented: 'Not implemented',
   not_applicable: 'N/A',
 }
 
-const statusIcons: Record<ControlStatus, React.ElementType> = {
-  implemented: CheckCircle2,
-  partial: Clock,
-  not_implemented: XCircle,
-  not_applicable: AlertCircle,
+// Theme tokens only: a missing control is the one state worth colouring.
+function ControlStatusBadge({ status }: { status: ControlStatus }) {
+  const label = statusLabels[status] ?? status
+  if (status === 'implemented') return <Badge variant="secondary">{label}</Badge>
+  return (
+    <Badge
+      variant="outline"
+      className={
+        status === 'not_implemented'
+          ? 'text-destructive'
+          : status === 'not_applicable'
+            ? 'text-muted-foreground'
+            : undefined
+      }
+    >
+      {label}
+    </Badge>
+  )
 }
 
-const priorityColors: Record<Priority, string> = {
-  critical: 'bg-red-500/10 text-red-500 border-red-500/20 dark:bg-red-900/30 dark:text-red-400',
-  high: 'bg-orange-500/10 text-orange-500 border-orange-500/20 dark:bg-orange-900/30 dark:text-orange-400',
-  medium:
-    'bg-yellow-500/10 text-yellow-500 border-yellow-500/20 dark:bg-yellow-900/30 dark:text-yellow-400',
-  low: 'bg-green-500/10 text-green-500 border-green-500/20 dark:bg-green-900/30 dark:text-green-400',
+// Priority shares the criticality scale's colours (critical/high/medium/low).
+function PriorityBadge({ priority }: { priority: Priority }) {
+  return (
+    <Badge variant="outline" className={`capitalize ${CRITICALITY_BADGE_SOFT[priority] ?? ''}`}>
+      {priority}
+    </Badge>
+  )
+}
+
+/** One framework's score. Its own component so its stats hook is stable. */
+function FrameworkCard({
+  fw,
+  onOpen,
+}: {
+  fw: ComplianceFrameworkApi
+  onOpen: (id: string) => void
+}) {
+  const { data: fwStats } = useFrameworkStats(fw.id)
+  const total = fwStats?.TotalControls ?? fw.total_controls
+  const implemented = fwStats?.Implemented ?? 0
+  const partial = fwStats?.Partial ?? 0
+  const notImpl = fwStats?.NotImplemented ?? 0
+  const notApplicable = fwStats?.NotApplicable ?? 0
+  const score = total > 0 ? Math.round(((implemented + partial * 0.5) / total) * 100) : 0
+  const counts = [
+    { label: 'Implemented', value: implemented },
+    { label: 'Partial', value: partial },
+    { label: 'Missing', value: notImpl, danger: true },
+    { label: 'N/A', value: notApplicable },
+  ]
+  return (
+    <Card
+      role="button"
+      tabIndex={0}
+      aria-label={`Open ${fw.name} controls`}
+      className="cursor-pointer transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      onClick={() => onOpen(fw.id)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onOpen(fw.id)
+        }
+      }}
+    >
+      <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
+        <div className="min-w-0 space-y-1.5">
+          <CardTitle>{fw.name}</CardTitle>
+          <CardDescription className="line-clamp-2">{fw.description}</CardDescription>
+        </div>
+        <div className="shrink-0 text-end">
+          <div className="text-2xl font-semibold tabular-nums">{score}%</div>
+          <p className="text-xs text-muted-foreground">compliant</p>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <Progress value={score} className="mb-4" />
+        <dl className="grid grid-cols-4 gap-2 text-sm">
+          {counts.map((c) => (
+            <div key={c.label}>
+              <dd
+                className={`font-medium tabular-nums ${c.danger && c.value > 0 ? 'text-destructive' : ''}`}
+              >
+                {c.value}
+              </dd>
+              <dt className="text-xs text-muted-foreground">{c.label}</dt>
+            </div>
+          ))}
+        </dl>
+      </CardContent>
+    </Card>
+  )
 }
 
 export default function CompliancePage() {
@@ -153,8 +211,12 @@ export default function CompliancePage() {
   const frameworks = useMemo(() => frameworksData?.data ?? [], [frameworksData])
 
   // Selected framework for controls tab
-  const [selectedFrameworkId, setSelectedFrameworkId] = useState<string>('all')
-  const [selectedStatus, setSelectedStatus] = useState<ControlStatus | 'all'>('all')
+  // Filters and the active tab live in the URL so a view can be linked.
+  const [selectedFrameworkId, setSelectedFrameworkId] = useUrlFilter('framework', 'all')
+  const [statusParam, setSelectedStatus] = useUrlFilter('status', 'all')
+  const selectedStatus = statusParam as ControlStatus | 'all'
+  const [tabParam, setTab] = useUrlFilter('tab', 'frameworks')
+  const activeTab = tabParam === 'controls' ? 'controls' : 'frameworks'
   const [viewRequirement, setViewRequirement] = useState<ControlRow | null>(null)
   const [editRequirement, setEditRequirement] = useState<ControlRow | null>(null)
 
@@ -175,64 +237,6 @@ export default function CompliancePage() {
     200
   )
   const { data: assessmentsData } = useAssessments(activeFrameworkId, 1, 200)
-
-  // Per-framework stats for the frameworks tab
-  const FrameworkCard = ({ fw }: { fw: ComplianceFrameworkApi }) => {
-    const { data: fwStats } = useFrameworkStats(fw.id)
-    const total = fwStats?.TotalControls ?? fw.total_controls
-    const implemented = fwStats?.Implemented ?? 0
-    const partial = fwStats?.Partial ?? 0
-    const notImpl = fwStats?.NotImplemented ?? 0
-    const notApplicable = fwStats?.NotApplicable ?? 0
-    const score = total > 0 ? Math.round(((implemented + partial * 0.5) / total) * 100) : 0
-    return (
-      <Card
-        className="cursor-pointer hover:shadow-md transition-shadow"
-        onClick={() => {
-          setSelectedFrameworkId(fw.id)
-        }}
-      >
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                <ClipboardCheck className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <CardTitle className="text-lg">{fw.name}</CardTitle>
-                <CardDescription>{fw.description}</CardDescription>
-              </div>
-            </div>
-            <div className="text-end">
-              <div className="text-2xl font-bold">{score}%</div>
-              <p className="text-xs text-muted-foreground">Compliance</p>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <Progress value={score} className="mb-4" />
-          <div className="grid grid-cols-4 gap-2 text-center text-sm">
-            <div>
-              <div className="font-medium text-green-500">{implemented}</div>
-              <div className="text-xs text-muted-foreground">Implemented</div>
-            </div>
-            <div>
-              <div className="font-medium text-yellow-500">{partial}</div>
-              <div className="text-xs text-muted-foreground">Partial</div>
-            </div>
-            <div>
-              <div className="font-medium text-red-500">{notImpl}</div>
-              <div className="text-xs text-muted-foreground">Missing</div>
-            </div>
-            <div>
-              <div className="font-medium text-gray-500">{notApplicable}</div>
-              <div className="text-xs text-muted-foreground">N/A</div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    )
-  }
 
   // Build control rows by merging controls + assessments
   const controlRows: ControlRow[] = useMemo(() => {
@@ -355,336 +359,248 @@ export default function CompliancePage() {
     setEditRequirement(req)
   }
 
+  const metrics: MetricStripItem[] = [
+    { key: 'frameworks', label: 'Frameworks', value: stats.totalFrameworks },
+    {
+      key: 'controls',
+      label: 'Controls',
+      value: apiStats?.total_controls ?? stats.totalControls,
+      hint: `${stats.byStatus.implemented} implemented`,
+    },
+    { key: 'score', label: 'Avg compliance', value: `${stats.averageComplianceScore}%` },
+    { key: 'overdue', label: 'Overdue', value: stats.overdueControls, tone: 'danger' },
+  ]
+
+  const columns: ColumnDef<ControlRow>[] = [
+    {
+      accessorKey: 'title',
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Control" />,
+      cell: ({ row }) => (
+        <div className="min-w-0">
+          <p className="font-medium">{row.original.title}</p>
+          <p className="text-xs text-muted-foreground">
+            <span className="font-mono">{row.original.controlId}</span>
+            {row.original.category ? ` · ${row.original.category}` : ''}
+          </p>
+        </div>
+      ),
+    },
+    {
+      accessorKey: 'frameworkName',
+      header: 'Framework',
+      cell: ({ row }) => <Badge variant="outline">{row.original.frameworkName}</Badge>,
+    },
+    {
+      accessorKey: 'status',
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
+      cell: ({ row }) => <ControlStatusBadge status={row.original.status} />,
+    },
+    {
+      accessorKey: 'priority',
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Priority" />,
+      cell: ({ row }) => <PriorityBadge priority={row.original.priority} />,
+    },
+    {
+      accessorKey: 'evidenceCount',
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Evidence" />,
+      cell: ({ row }) => (
+        <span className="text-sm tabular-nums text-muted-foreground">
+          {row.original.evidenceCount}
+        </span>
+      ),
+    },
+    {
+      id: 'actions',
+      enableSorting: false,
+      enableHiding: false,
+      cell: ({ row }) => (
+        <DataTableRowActions
+          actions={[
+            { label: 'View details', icon: Eye, onClick: () => setViewRequirement(row.original) },
+            { label: 'Update status', icon: Pencil, onClick: () => openEdit(row.original) },
+          ]}
+        />
+      ),
+    },
+  ]
+
+  // Two filter dimensions: dropdowns in the table toolbar.
+  const filterSelects = (
+    <>
+      <Select value={selectedFrameworkId} onValueChange={setSelectedFrameworkId}>
+        <SelectTrigger className="h-9 w-44" aria-label="Framework">
+          <SelectValue placeholder="Framework" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">First framework</SelectItem>
+          {frameworks.map((fw) => (
+            <SelectItem key={fw.id} value={fw.id}>
+              {fw.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+        <SelectTrigger className="h-9 w-40" aria-label="Status">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All statuses</SelectItem>
+          <SelectItem value="implemented">Implemented</SelectItem>
+          <SelectItem value="partial">Partial</SelectItem>
+          <SelectItem value="not_implemented">Not implemented</SelectItem>
+          <SelectItem value="not_applicable">N/A</SelectItem>
+        </SelectContent>
+      </Select>
+    </>
+  )
+
   return (
     <>
       <Main>
         <PageHeader
-          title="Compliance Requirements"
-          description="Track compliance frameworks and regulatory requirements"
+          title="Compliance"
+          description="How far each compliance framework's controls are implemented."
         >
           <Button variant="outline" size="sm" onClick={handleExport}>
-            <Download className="me-2 h-4 w-4" />
-            Export Report
+            <Download className="h-4 w-4 sm:me-2" />
+            <span className="hidden sm:inline">Export</span>
           </Button>
         </PageHeader>
 
-        {/* Stats Cards */}
-        <div className="grid gap-4 md:grid-cols-4 mb-6">
-          <StatsCard
-            title="Frameworks"
-            value={stats.totalFrameworks}
-            icon={ClipboardCheck}
-            description="Active frameworks"
-          />
-          <StatsCard
-            title="Controls"
-            value={apiStats?.total_controls ?? stats.totalControls}
-            icon={Shield}
-            description={`${stats.byStatus.implemented} implemented`}
-          />
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Avg Compliance</CardTitle>
-              <CheckCircle2 className="h-4 w-4 text-green-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-500">
-                {stats.averageComplianceScore}%
-              </div>
-              <Progress value={stats.averageComplianceScore} className="mt-2" />
-            </CardContent>
-          </Card>
-          <StatsCard
-            title="Overdue"
-            value={stats.overdueControls}
-            valueClassName="text-red-600"
-            icon={AlertTriangle}
-            description="Controls need attention"
-          />
-        </div>
-
-        <Tabs defaultValue="frameworks" className="space-y-6">
+        <Tabs
+          value={activeTab}
+          onValueChange={(v) => setTab(v === 'controls' ? 'controls' : 'frameworks')}
+          className="mt-4"
+        >
           <TabsList>
             <TabsTrigger value="frameworks">Frameworks</TabsTrigger>
-            <TabsTrigger value="controls">All Controls</TabsTrigger>
+            <TabsTrigger value="controls">Controls</TabsTrigger>
           </TabsList>
 
-          {/* Frameworks Tab */}
-          <TabsContent value="frameworks">
+          <MetricStrip className="mt-5" items={metrics} />
+
+          <TabsContent value="frameworks" className="mt-5">
             {loadingFrameworks ? (
-              <div className="text-center py-12 text-muted-foreground">Loading frameworks...</div>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                {Array.from({ length: 2 }).map((_, i) => (
+                  <Skeleton key={i} className="h-48 rounded-xl" />
+                ))}
+              </div>
             ) : frameworks.length === 0 ? (
-              <EmptyState icon={Shield} title="No compliance frameworks configured yet." />
+              <EmptyState
+                icon={Shield}
+                title="No frameworks yet"
+                description="Compliance frameworks appear here once they are configured."
+              />
             ) : (
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 {frameworks.map((fw) => (
-                  <FrameworkCard key={fw.id} fw={fw} />
+                  <FrameworkCard
+                    key={fw.id}
+                    fw={fw}
+                    onOpen={(id) => {
+                      setSelectedFrameworkId(id)
+                      setTab('controls')
+                    }}
+                  />
                 ))}
               </div>
             )}
           </TabsContent>
 
-          {/* Controls Tab */}
-          <TabsContent value="controls">
-            {/* Filters */}
-            <Card className="mb-6">
-              <CardHeader className="pb-3">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Filter className="h-4 w-4" />
-                  <CardTitle className="text-sm">Filters</CardTitle>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-wrap gap-4">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Label className="text-sm">Framework:</Label>
-                    <Select
-                      value={selectedFrameworkId}
-                      onValueChange={(v) => setSelectedFrameworkId(v)}
-                    >
-                      <SelectTrigger className="w-44">
-                        <SelectValue placeholder="Select framework" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All (first)</SelectItem>
-                        {frameworks.map((fw) => (
-                          <SelectItem key={fw.id} value={fw.id}>
-                            {fw.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Label className="text-sm">Status:</Label>
-                    <Select
-                      value={selectedStatus}
-                      onValueChange={(v) => setSelectedStatus(v as ControlStatus | 'all')}
-                    >
-                      <SelectTrigger className="w-40">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All</SelectItem>
-                        <SelectItem value="implemented">Implemented</SelectItem>
-                        <SelectItem value="partial">Partial</SelectItem>
-                        <SelectItem value="not_implemented">Not Implemented</SelectItem>
-                        <SelectItem value="not_applicable">N/A</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  {selectedStatus !== 'all' && (
-                    <Button variant="ghost" size="sm" onClick={() => setSelectedStatus('all')}>
-                      <X className="me-1 h-3 w-3" />
-                      Clear filters
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Controls List */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Controls</CardTitle>
-                <CardDescription>
-                  {loadingControls
-                    ? 'Loading...'
-                    : `${filteredRows.length} of ${controlRows.length} controls`}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {loadingControls ? (
-                  <div className="py-8 text-center text-muted-foreground">Loading controls...</div>
-                ) : filteredRows.length === 0 ? (
-                  <EmptyState icon={ClipboardCheck} title="No controls found." card={false} />
-                ) : (
-                  <div className="space-y-3">
-                    {filteredRows.map((req) => {
-                      // Guard: an unmapped status must not render undefined.
-                      const StatusIcon = statusIcons[req.status] ?? Circle
-                      return (
-                        <div
-                          key={req.id}
-                          className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 cursor-pointer"
-                          onClick={() => setViewRequirement(req)}
-                        >
-                          <div className="flex items-center gap-4">
-                            <div className={`p-2 rounded-lg ${statusColors[req.status]}`}>
-                              <StatusIcon className="h-4 w-4" />
-                            </div>
-                            <div>
-                              <div className="flex flex-wrap items-center gap-2">
-                                <Badge variant="outline">{req.frameworkName}</Badge>
-                                <span className="font-mono text-sm text-muted-foreground">
-                                  {req.controlId}
-                                </span>
-                              </div>
-                              <p className="font-medium mt-1">{req.title}</p>
-                              <p className="text-sm text-muted-foreground">{req.category}</p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-4">
-                            <div className="text-end">
-                              <Badge variant="outline" className={priorityColors[req.priority]}>
-                                {req.priority}
-                              </Badge>
-                              <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
-                                <FileText className="h-3 w-3" />
-                                {req.evidenceCount} evidence
-                              </div>
-                            </div>
-                            <span onClick={(e) => e.stopPropagation()}>
-                              <DataTableRowActions
-                                actions={[
-                                  {
-                                    label: 'View Details',
-                                    icon: Eye,
-                                    onClick: () => setViewRequirement(req),
-                                  },
-                                  {
-                                    label: 'Update Status',
-                                    icon: Pencil,
-                                    onClick: () => openEdit(req),
-                                  },
-                                ]}
-                              />
-                            </span>
-                            <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+          <TabsContent value="controls" className="mt-5">
+            {loadingControls ? (
+              <div className="space-y-2">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Skeleton key={i} className="h-12 w-full" />
+                ))}
+              </div>
+            ) : controlRows.length === 0 ? (
+              <EmptyState
+                icon={ClipboardCheck}
+                title="No controls"
+                description="This framework has no controls yet."
+              />
+            ) : (
+              <DataTable
+                columns={columns}
+                data={filteredRows}
+                searchPlaceholder="Search controls…"
+                toolbarEnd={filterSelects}
+                onRowClick={setViewRequirement}
+                emptyMessage="No controls match these filters"
+                emptyDescription="Try a different status."
+              />
+            )}
           </TabsContent>
         </Tabs>
       </Main>
 
       {/* View Sheet */}
       <Sheet open={!!viewRequirement} onOpenChange={(open) => !open && setViewRequirement(null)}>
-        <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
+        <SheetContent className="w-full overflow-y-auto sm:max-w-xl">
           {viewRequirement && (
             <>
               <SheetHeader>
-                <div className="flex items-center gap-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-                    <ClipboardCheck className="h-6 w-6 text-primary" />
-                  </div>
-                  <div>
-                    <SheetTitle>{viewRequirement.title}</SheetTitle>
-                    <SheetDescription>
-                      {viewRequirement.frameworkName} - {viewRequirement.controlId}
-                    </SheetDescription>
-                  </div>
-                </div>
+                <SheetTitle>{viewRequirement.title}</SheetTitle>
+                <SheetDescription>
+                  {viewRequirement.frameworkName} · {viewRequirement.controlId}
+                </SheetDescription>
               </SheetHeader>
 
-              <SheetBody>
-                <div className="mt-6 space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <p className="text-sm text-muted-foreground">Status</p>
-                      <Badge variant="outline" className={statusColors[viewRequirement.status]}>
-                        {statusLabels[viewRequirement.status]}
-                      </Badge>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-sm text-muted-foreground">Priority</p>
-                      <Badge variant="outline" className={priorityColors[viewRequirement.priority]}>
-                        {viewRequirement.priority}
-                      </Badge>
-                    </div>
-                  </div>
+              <SheetBody className="space-y-5">
+                {viewRequirement.description && (
+                  <p className="text-sm text-muted-foreground">{viewRequirement.description}</p>
+                )}
 
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Description</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm">{viewRequirement.description}</p>
-                    </CardContent>
-                  </Card>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm">Evidence</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-2xl font-bold">{viewRequirement.evidenceCount}</div>
-                      </CardContent>
-                    </Card>
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm">Findings</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div
-                          className={`text-2xl font-bold ${viewRequirement.findingCount > 0 ? 'text-red-500' : ''}`}
-                        >
-                          {viewRequirement.findingCount}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Owner</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="font-medium">{viewRequirement.owner}</p>
-                    </CardContent>
-                  </Card>
-
+                <div className="divide-y">
+                  <SheetInfoRow label="Status">
+                    <ControlStatusBadge status={viewRequirement.status} />
+                  </SheetInfoRow>
+                  <SheetInfoRow label="Priority">
+                    <PriorityBadge priority={viewRequirement.priority} />
+                  </SheetInfoRow>
+                  <SheetInfoRow label="Owner">
+                    <span className="text-sm">{viewRequirement.owner || '—'}</span>
+                  </SheetInfoRow>
+                  <SheetInfoRow label="Evidence">
+                    <span className="text-sm tabular-nums">{viewRequirement.evidenceCount}</span>
+                  </SheetInfoRow>
+                  <SheetInfoRow label="Findings">
+                    <span
+                      className={`text-sm tabular-nums ${viewRequirement.findingCount > 0 ? 'font-medium text-destructive' : ''}`}
+                    >
+                      {viewRequirement.findingCount}
+                    </span>
+                  </SheetInfoRow>
                   {viewRequirement.dueDate && (
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm">Due Date</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4" />
-                          {new Date(viewRequirement.dueDate).toLocaleDateString()}
-                        </p>
-                      </CardContent>
-                    </Card>
+                    <SheetInfoRow label="Due date">
+                      <span className="text-sm">
+                        {new Date(viewRequirement.dueDate).toLocaleDateString()}
+                      </span>
+                    </SheetInfoRow>
                   )}
-
-                  {viewRequirement.notes && (
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm">Notes</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="text-sm">{viewRequirement.notes}</p>
-                      </CardContent>
-                    </Card>
-                  )}
-
                   {viewRequirement.lastAssessed && (
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm">Last Assessed</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="text-sm">
-                          {new Date(viewRequirement.lastAssessed).toLocaleDateString()}
-                        </p>
-                      </CardContent>
-                    </Card>
+                    <SheetInfoRow label="Last assessed">
+                      <span className="text-sm">
+                        {new Date(viewRequirement.lastAssessed).toLocaleDateString()}
+                      </span>
+                    </SheetInfoRow>
                   )}
                 </div>
 
-                <div className="mt-6">
-                  <Button className="w-full" onClick={() => openEdit(viewRequirement)}>
-                    <Pencil className="me-2 h-4 w-4" />
-                    Update Status
-                  </Button>
-                </div>
+                {viewRequirement.notes && (
+                  <div className="space-y-1">
+                    <h3 className="text-sm font-semibold">Notes</h3>
+                    <p className="text-sm text-muted-foreground">{viewRequirement.notes}</p>
+                  </div>
+                )}
+
+                <Button className="w-full" onClick={() => openEdit(viewRequirement)}>
+                  <Pencil className="me-2 h-4 w-4" />
+                  Update status
+                </Button>
               </SheetBody>
             </>
           )}
@@ -693,11 +609,11 @@ export default function CompliancePage() {
 
       {/* Edit Dialog */}
       <Dialog open={!!editRequirement} onOpenChange={(open) => !open && setEditRequirement(null)}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Update Control Status</DialogTitle>
+            <DialogTitle>Update control status</DialogTitle>
             <DialogDescription>
-              {editRequirement && `${editRequirement.frameworkName} - ${editRequirement.controlId}`}
+              {editRequirement && `${editRequirement.frameworkName} · ${editRequirement.controlId}`}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -714,7 +630,7 @@ export default function CompliancePage() {
                   <SelectContent>
                     <SelectItem value="implemented">Implemented</SelectItem>
                     <SelectItem value="partial">Partial</SelectItem>
-                    <SelectItem value="not_implemented">Not Implemented</SelectItem>
+                    <SelectItem value="not_implemented">Not implemented</SelectItem>
                     <SelectItem value="not_applicable">N/A</SelectItem>
                   </SelectContent>
                 </Select>
@@ -745,7 +661,7 @@ export default function CompliancePage() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Due Date</Label>
+              <Label>Due date</Label>
               <Input
                 type="date"
                 value={formData.dueDate}
@@ -766,7 +682,7 @@ export default function CompliancePage() {
               Cancel
             </Button>
             <Button onClick={handleEditSave} disabled={isSaving}>
-              {isSaving ? 'Saving...' : 'Save Changes'}
+              {isSaving ? 'Saving…' : 'Save changes'}
             </Button>
           </DialogFooter>
         </DialogContent>

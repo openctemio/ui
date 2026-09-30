@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+import type { ColumnDef } from '@tanstack/react-table'
 import { Main } from '@/components/layout'
-import { PageHeader } from '@/features/shared'
+import { PageHeader, DataTable, DataTableColumnHeader } from '@/features/shared'
 import { useTenant } from '@/context/tenant-provider'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -31,17 +32,8 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
 import { toast } from 'sonner'
-import {
-  Save,
-  RotateCcw,
-  Info,
-  SlidersHorizontal,
-  Eye,
-  RefreshCw,
-  ArrowUpDown,
-  Sparkles,
-  Loader2,
-} from 'lucide-react'
+import { Save, RotateCcw, Info, Eye, ArrowUpDown, Loader2, AlertCircle } from 'lucide-react'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import {
   useRiskScoringSettings,
   useUpdateRiskScoring,
@@ -53,17 +45,20 @@ import type {
   RiskScoringSettings,
   RiskScorePreviewItem,
 } from '@/features/organization/types/settings.types'
-import { Pagination } from '@/components/ui/pagination'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { getErrorMessage } from '@/lib/api/error-handler'
+
+const PAGE_TITLE = 'Scoring'
+const PAGE_DESCRIPTION =
+  "Configure the weights and parameters that make up each asset's risk score."
 
 function LoadingSkeleton() {
   return (
     <Main>
-      <Skeleton className="mb-6 h-8 w-64" />
-      <div className="mt-6 grid gap-4 lg:grid-cols-2">
-        <Skeleton className="h-80 rounded-lg" />
-        <Skeleton className="h-80 rounded-lg" />
+      <PageHeader title={PAGE_TITLE} description={PAGE_DESCRIPTION} />
+      <div className="mt-5 grid gap-5 lg:grid-cols-2">
+        <Skeleton className="h-80 rounded-xl" />
+        <Skeleton className="h-80 rounded-xl" />
       </div>
     </Main>
   )
@@ -211,10 +206,52 @@ function NumberInput({
   )
 }
 
+/** Sampled assets of the scoring preview, sortable on the client. */
+const PREVIEW_COLUMNS: ColumnDef<RiskScorePreviewItem>[] = [
+  {
+    accessorKey: 'asset_name',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Asset" />,
+    cell: ({ row }) => (
+      <span className="block max-w-[300px] truncate font-medium" title={row.original.asset_name}>
+        {row.original.asset_name}
+      </span>
+    ),
+  },
+  {
+    accessorKey: 'asset_type',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Type" />,
+    cell: ({ row }) => (
+      <span className="text-xs text-muted-foreground">{row.original.asset_type}</span>
+    ),
+  },
+  {
+    accessorKey: 'current_score',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Current" />,
+    cell: ({ row }) => <span className="tabular-nums">{row.original.current_score}</span>,
+  },
+  {
+    accessorKey: 'new_score',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="New" />,
+    cell: ({ row }) => <span className="tabular-nums">{row.original.new_score}</span>,
+  },
+  {
+    accessorKey: 'delta',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Delta" />,
+    cell: ({ row }) => (
+      <span
+        className={`font-medium tabular-nums ${row.original.delta > 0 ? 'text-destructive' : ''}`}
+      >
+        {row.original.delta > 0 ? '+' : ''}
+        {row.original.delta}
+      </span>
+    ),
+  },
+]
+
 export default function ScoringConfigurationPage() {
   const { currentTenant } = useTenant()
   const tenantId = currentTenant?.id
-  const { settings, isLoading, mutate } = useRiskScoringSettings(tenantId)
+  const { settings, isLoading, error, mutate } = useRiskScoringSettings(tenantId)
   const { updateRiskScoring, isUpdating } = useUpdateRiskScoring(tenantId)
   const { previewChanges, isPreviewing } = useRiskScoringPreview(tenantId)
   const { recalculate, isRecalculating } = useRecalculateRiskScores(tenantId)
@@ -224,8 +261,6 @@ export default function ScoringConfigurationPage() {
   const [isDirty, setIsDirty] = useState(false)
   const [previewItems, setPreviewItems] = useState<RiskScorePreviewItem[] | null>(null)
   const [previewTotalAssets, setPreviewTotalAssets] = useState<number>(0)
-  const [previewPage, setPreviewPage] = useState(1)
-  const previewPageSize = 10
 
   // Initialize form from API data
   useEffect(() => {
@@ -337,7 +372,6 @@ export default function ScoringConfigurationPage() {
       if (result) {
         setPreviewItems(result.assets)
         setPreviewTotalAssets(result.total_assets)
-        setPreviewPage(1)
       }
     } catch (err) {
       toast.error(getErrorMessage(err))
@@ -366,11 +400,23 @@ export default function ScoringConfigurationPage() {
     return () => window.removeEventListener('beforeunload', handler)
   }, [isDirty])
 
-  const paginatedPreviewItems = useMemo(() => {
-    if (!previewItems) return []
-    const start = (previewPage - 1) * previewPageSize
-    return previewItems.slice(start, start + previewPageSize)
-  }, [previewItems, previewPage])
+  if (error && !config) {
+    return (
+      <Main>
+        <PageHeader title={PAGE_TITLE} description={PAGE_DESCRIPTION} />
+        <Alert variant="destructive" className="mt-5">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Failed to load scoring settings</AlertTitle>
+          <AlertDescription>
+            <p>{getErrorMessage(error, 'The scoring settings request failed.')}</p>
+            <Button variant="outline" size="sm" className="mt-2" onClick={() => void mutate()}>
+              Retry
+            </Button>
+          </AlertDescription>
+        </Alert>
+      </Main>
+    )
+  }
 
   if (isLoading || !config) {
     return <LoadingSkeleton />
@@ -391,34 +437,22 @@ export default function ScoringConfigurationPage() {
 
   return (
     <Main>
-      <PageHeader
-        title="Scoring Configuration"
-        description="Configure risk scoring weights and parameters for your organization"
-      >
-        <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={handleReset} disabled={!isDirty}>
-            <RotateCcw className="h-4 w-4" />
-            Reset
-          </Button>
-          <Button onClick={handleSave} disabled={!canSave}>
-            {isUpdating ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Save className="h-4 w-4" />
-            )}
-            Save Changes
-          </Button>
-        </div>
+      <PageHeader title={PAGE_TITLE} description={PAGE_DESCRIPTION}>
+        <Button variant="outline" size="sm" onClick={handleReset} disabled={!isDirty}>
+          <RotateCcw className="h-4 w-4" />
+          Reset
+        </Button>
+        <Button size="sm" onClick={handleSave} disabled={!canSave}>
+          {isUpdating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+          Save changes
+        </Button>
       </PageHeader>
 
       {/* Preset Selector */}
       {presets && presets.length > 0 && (
-        <Card className="mt-6">
+        <Card className="mt-5">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5" />
-              Presets
-            </CardTitle>
+            <CardTitle>Presets</CardTitle>
             <CardDescription>Start from a preset optimized for your industry</CardDescription>
           </CardHeader>
           <CardContent>
@@ -459,14 +493,11 @@ export default function ScoringConfigurationPage() {
         </Card>
       )}
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-2">
+      <div className="mt-5 grid gap-5 lg:grid-cols-2">
         {/* Component Weights */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <SlidersHorizontal className="h-5 w-5" />
-              Component Weights
-            </CardTitle>
+            <CardTitle>Component weights</CardTitle>
             <CardDescription>
               Adjust the weight of each factor. Weights auto-balance to 100%.
             </CardDescription>
@@ -513,13 +544,13 @@ export default function ScoringConfigurationPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-1">
-              Exposure Scores
+              Exposure scores
               <InfoTip text="Base scores assigned based on how exposed an asset is to external access. Higher scores mean more risk." />
             </CardTitle>
             <CardDescription>Base score (0-100) for each exposure level</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-5 gap-2">
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
               <NumberInput
                 label="Public"
                 tooltip="Directly accessible from the internet"
@@ -581,7 +612,7 @@ export default function ScoringConfigurationPage() {
               Multipliers (0.1 - 3.0)
               <InfoTip text="Final score is multiplied by this factor based on asset exposure. A multiplier of 1.0 means no change, >1.0 amplifies risk, <1.0 reduces risk." />
             </CardDescription>
-            <div className="grid grid-cols-5 gap-2">
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
               <NumberInput
                 label="Public"
                 value={config.exposure_multipliers.public}
@@ -650,7 +681,7 @@ export default function ScoringConfigurationPage() {
             </div>
             <Separator className="my-4" />
             <div className="space-y-1">
-              <Label className="flex items-center text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              <Label className="flex items-center text-sm font-medium">
                 Score composition
                 <InfoTip text="Controls how the exposure multiplier combines with the weighted base score. Standard multiplies the whole score (can pin highly-exposed critical assets at 100). Amplify within headroom fills the remaining range instead, so top-risk assets keep a distinguishable ranking." />
               </Label>
@@ -684,7 +715,7 @@ export default function ScoringConfigurationPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-1">
-              Criticality & Risk Levels
+              Criticality and risk levels
               <InfoTip text="Criticality scores define the base risk score for each business criticality level. Risk level thresholds define the score boundaries that determine the final risk label (Critical, High, Medium, Low)." />
             </CardTitle>
             <CardDescription>
@@ -693,11 +724,11 @@ export default function ScoringConfigurationPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <Label className="flex items-center text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Criticality Scores (0-100)
+              <Label className="flex items-center text-sm font-medium">
+                Criticality scores (0–100)
                 <InfoTip text="Base score assigned to each asset based on its criticality classification. A 'Critical' asset (e.g., payment gateway) gets a higher base score than a 'Low' asset (e.g., dev blog)." />
               </Label>
-              <div className="mt-2 grid grid-cols-5 gap-2">
+              <div className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-5">
                 <NumberInput
                   label="Critical"
                   value={config.criticality_scores.critical}
@@ -753,17 +784,17 @@ export default function ScoringConfigurationPage() {
             <Separator />
             <div>
               <div className="flex items-center justify-between">
-                <Label className="flex items-center text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  Risk Level Thresholds (min score)
+                <Label className="flex items-center text-sm font-medium">
+                  Risk level thresholds (min score)
                   <InfoTip text="Minimum score required for each risk level. E.g., if Critical=80, any asset with score >= 80 is labeled Critical. Must be in descending order." />
                 </Label>
                 {!isThresholdValid && isDirty && (
-                  <span className="text-xs font-medium text-red-500">
+                  <span className="text-xs font-medium text-destructive">
                     Must be ordered: Critical &gt; High &gt; Medium &gt; Low &gt; 0
                   </span>
                 )}
               </div>
-              <div className="mt-2 grid grid-cols-4 gap-2">
+              <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
                 <NumberInput
                   label="Critical (min)"
                   value={config.risk_levels.critical_min}
@@ -811,7 +842,7 @@ export default function ScoringConfigurationPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-1">
-              Finding & CTEM Impact
+              Finding and CTEM impact
               <InfoTip text="Configure how vulnerability findings and CTEM threat exposure factors contribute to the overall risk score." />
             </CardTitle>
             <CardDescription>
@@ -820,8 +851,8 @@ export default function ScoringConfigurationPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <Label className="flex items-center text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Finding Impact
+              <Label className="flex items-center text-sm font-medium">
+                Finding impact
                 <InfoTip text="Determines how vulnerability findings on an asset affect its score. Count-based adds fixed points per finding. Severity-weighted adds different points based on finding severity." />
               </Label>
               <div className="mt-2 space-y-3">
@@ -884,10 +915,10 @@ export default function ScoringConfigurationPage() {
                 {config.finding_impact.mode === 'severity_weighted' && (
                   <div>
                     <Label className="flex items-center text-xs">
-                      Severity Weights (points per finding)
+                      Severity weights (points per finding)
                       <InfoTip text="Points added per finding of each severity. E.g., if Critical=10 and an asset has 3 critical findings, it adds 30 points (capped by Finding Cap)." />
                     </Label>
-                    <div className="mt-1 grid grid-cols-5 gap-2">
+                    <div className="mt-1 grid grid-cols-3 gap-2 sm:grid-cols-5">
                       <NumberInput
                         label="Critical"
                         value={config.finding_impact.severity_weights.critical}
@@ -969,8 +1000,8 @@ export default function ScoringConfigurationPage() {
             <Separator />
             <div>
               <div className="flex items-center justify-between">
-                <Label className="flex items-center text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  CTEM Bonus Points
+                <Label className="flex items-center text-sm font-medium">
+                  CTEM bonus points
                   <InfoTip text="Additional points added to the CTEM component based on specific threat exposure attributes of each asset. Points are additive (an asset with PII + internet exposure gets both bonuses)." />
                 </Label>
                 <div className="flex items-center gap-2">
@@ -1056,10 +1087,10 @@ export default function ScoringConfigurationPage() {
       </div>
 
       {/* Unowned Findings Floor — CTEM "ownership unknown defaults to P2" rule */}
-      <Card className="mt-6">
+      <Card className="mt-5">
         <CardHeader>
           <CardTitle className="flex items-center gap-1">
-            Unowned Findings Floor
+            Unowned findings floor
             <InfoTip text="CTEM playbook rule. When enabled, findings on assets with no assigned owner are floored at P2 priority. It is a strict floor: only ever raises a P3 to P2, never lowers anything and never touches P0/P1." />
           </CardTitle>
           <CardDescription>How findings on ownerless assets are prioritized</CardDescription>
@@ -1084,94 +1115,57 @@ export default function ScoringConfigurationPage() {
         </CardContent>
       </Card>
 
-      {/* Preview Changes — full width for table readability */}
-      <Card className="mt-6">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <Eye className="h-5 w-5" />
-                Preview Changes
-              </CardTitle>
-              <CardDescription className="mt-1.5">
-                See how score changes affect a sample of assets
-              </CardDescription>
-            </div>
-            <Button variant="outline" onClick={handlePreview} disabled={isPreviewing || !isDirty}>
-              {isPreviewing ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Eye className="h-4 w-4" />
-              )}
-              Preview Impact
-            </Button>
-          </div>
-        </CardHeader>
-        {previewItems && previewItems.length > 0 && (
-          <CardContent>
-            <p className="text-muted-foreground mb-2 text-xs">
-              Showing {previewItems.length} sampled assets out of{' '}
-              {previewTotalAssets.toLocaleString()} total (top risk, bottom risk, and random
-              sample).
+      {/* Preview Changes — full width for table readability. A section rather
+          than a card: the table draws its own frame. */}
+      <section className="mt-5 space-y-3">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h2 className="text-base font-semibold">Preview changes</h2>
+            <p className="text-sm text-muted-foreground">
+              See how score changes affect a sample of assets
             </p>
-            <div className="max-h-80 overflow-auto rounded border">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/50 sticky top-0">
-                  <tr>
-                    <th className="p-2 text-start font-medium">Asset</th>
-                    <th className="p-2 text-start font-medium">Type</th>
-                    <th className="p-2 text-end font-medium">Current</th>
-                    <th className="p-2 text-end font-medium">New</th>
-                    <th className="p-2 text-end font-medium">Delta</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {paginatedPreviewItems.map((item) => (
-                    <tr key={item.asset_id} className="border-t">
-                      <td className="max-w-[300px] truncate p-2">{item.asset_name}</td>
-                      <td className="text-muted-foreground p-2 text-xs">{item.asset_type}</td>
-                      <td className="p-2 text-end">{item.current_score}</td>
-                      <td className="p-2 text-end">{item.new_score}</td>
-                      <td
-                        className={`p-2 text-end font-medium ${item.delta > 0 ? 'text-red-500' : item.delta < 0 ? 'text-green-500' : ''}`}
-                      >
-                        {item.delta > 0 ? '+' : ''}
-                        {item.delta}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            {previewItems.length > previewPageSize && (
-              <div className="mt-3">
-                <Pagination
-                  currentPage={previewPage}
-                  totalPages={Math.ceil(previewItems.length / previewPageSize)}
-                  pageSize={previewPageSize}
-                  totalItems={previewItems.length}
-                  onPageChange={setPreviewPage}
-                  showPageSizeSelector={false}
-                />
-              </div>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handlePreview}
+            disabled={isPreviewing || !isDirty}
+          >
+            {isPreviewing ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Eye className="h-4 w-4" />
             )}
-          </CardContent>
+            Preview impact
+          </Button>
+        </div>
+        {previewItems && (
+          <>
+            {previewItems.length > 0 && (
+              <p className="text-xs text-muted-foreground">
+                Showing {previewItems.length} sampled assets out of{' '}
+                {previewTotalAssets.toLocaleString()} total (top risk, bottom risk, and random
+                sample).
+              </p>
+            )}
+            <DataTable
+              columns={PREVIEW_COLUMNS}
+              data={previewItems}
+              getRowId={(item) => item.asset_id}
+              searchKey="asset_name"
+              searchPlaceholder="Search assets…"
+              emptyMessage="No assets to preview"
+              emptyDescription="There are no assets for the new weights to score yet"
+            />
+          </>
         )}
-        {previewItems && previewItems.length === 0 && (
-          <CardContent>
-            <p className="text-muted-foreground text-sm">No assets to preview.</p>
-          </CardContent>
-        )}
-      </Card>
+      </section>
 
       {/* Recalculate & How Scoring Works — side by side */}
-      <div className="mt-6 grid gap-6 lg:grid-cols-2">
+      <div className="mt-5 grid gap-5 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <RefreshCw className="h-5 w-5" />
-              Recalculate Scores
-            </CardTitle>
+            <CardTitle>Recalculate scores</CardTitle>
             <CardDescription>
               Apply current scoring configuration to all assets. This may take a moment for large
               portfolios.
@@ -1180,18 +1174,18 @@ export default function ScoringConfigurationPage() {
           <CardContent>
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button variant="outline" disabled={isRecalculating || isDirty}>
+                <Button variant="outline" size="sm" disabled={isRecalculating || isDirty}>
                   {isRecalculating ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
                     <ArrowUpDown className="h-4 w-4" />
                   )}
-                  Recalculate All Scores
+                  Recalculate all scores
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Recalculate Risk Scores</AlertDialogTitle>
+                  <AlertDialogTitle>Recalculate risk scores</AlertDialogTitle>
                   <AlertDialogDescription>
                     This will recalculate risk scores for all assets using the current saved
                     configuration. This operation cannot be undone.
@@ -1213,10 +1207,7 @@ export default function ScoringConfigurationPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Info className="h-5 w-5" />
-              How Scoring Works
-            </CardTitle>
+            <CardTitle>How scoring works</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-muted-foreground space-y-2 text-sm">

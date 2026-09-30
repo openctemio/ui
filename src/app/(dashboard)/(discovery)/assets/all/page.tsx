@@ -1,15 +1,19 @@
-import { Suspense } from 'react'
-import { AllAssetsInventory } from '@/features/assets/components/inventory/all-assets-inventory'
+import { redirect } from 'next/navigation'
 
 /**
- * All-Assets inventory — one server-paginated, faceted table across every asset
- * type. The client component reads its filter state from the URL, so it is
- * wrapped in Suspense as required for useSearchParams under the app router.
+ * The full asset list now lives at /assets (the default view). Old links and
+ * bookmarks to /assets/all keep their filters.
  */
-export default function AllAssetsPage() {
-  return (
-    <Suspense fallback={null}>
-      <AllAssetsInventory />
-    </Suspense>
-  )
+export default async function AllAssetsRedirect({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>
+}) {
+  const params = new URLSearchParams()
+  for (const [key, value] of Object.entries(await searchParams)) {
+    for (const v of Array.isArray(value) ? value : value == null ? [] : [value])
+      params.append(key, v)
+  }
+  const query = params.toString()
+  redirect(query ? `/assets?${query}` : '/assets')
 }

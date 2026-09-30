@@ -1,9 +1,13 @@
 'use client'
 
 import * as React from 'react'
+import { cn } from '@/lib/utils'
+import { useIsMobile } from '@/hooks/use-mobile'
 import {
   ColumnDef,
   ColumnFiltersState,
+  type Header,
+  type Row,
   SortingState,
   VisibilityState,
   flexRender,
@@ -23,6 +27,7 @@ import {
 } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -87,7 +92,187 @@ interface DataTableProps<TData, TValue> {
    * (index-keyed selection would mis-mark rows when the page's data swaps).
    */
   getRowId?: (row: TData) => string
+  /**
+   * Server-side sorting (with `manualPagination`): the controlled sort state and
+   * its change handler — the parent maps it to its API's sort parameter. Under
+   * manual pagination without these, columns are not sortable at all: sorting
+   * only the rows on screen would be misleading, and a header that toggles an
+   * arrow without reordering anything is a dead control.
+   */
+  sorting?: SortingState
+  onSortingChange?: (sorting: SortingState) => void
+  /** Rendered at the start of the toolbar (e.g. a filter toggle + search). */
+  toolbarStart?: React.ReactNode
+  /** Rendered at the end of the toolbar, before the column toggle. */
+  toolbarEnd?: React.ReactNode
+  /**
+   * Keep the selection checkbox and the first data column (the row's name) —
+   * and the trailing `actions` column — in view while the table scrolls
+   * sideways, so a row can be identified and acted on at any scroll position.
+   * On by default.
+   */
+  stickyFirstColumn?: boolean
+  /**
+   * Change this value to clear the table's row selection (the table owns the
+   * checkbox state; clearing only a parent's copy left rows ticked, and the
+   * next tick brought the stale selection back).
+   */
+  resetSelectionKey?: string | number
+  /** Hide the "N of M selected" note, e.g. when a bulk-action bar shows it. */
+  showSelectionCount?: boolean
+  /**
+   * Phone layout: below `md` each row renders through this as a stacked card
+   * instead of the table — a many-column table squeezed to phone width leaves
+   * only the pinned name readable. Pagination stays the same.
+   */
+  mobileRow?: (row: TData) => React.ReactNode
+  /**
+   * Without `mobileRow`, rows still render as cards below `md`, built from the
+   * columns (first column as title, the next few as fields). Set false to keep
+   * the scrolling table on phones.
+   */
+  mobileCards?: boolean
+  /**
+   * The rows are being fetched. The body shows skeleton rows instead of the
+   * empty message, while the toolbar stays mounted — a server-side search box
+   * must not lose focus (or its text) because a keystroke started a refetch.
+   * Rows already on screen stay visible; skeletons only replace an empty body.
+   */
+  isLoading?: boolean
 }
+
+/** Skeleton rows shown in an empty body while `isLoading`. */
+const LOADING_ROWS = 5
+
+/** Fixed width of the selection column, so the pinned column after it knows its offset. */
+const SELECT_COL_WIDTH = 40
+
+/**
+ * Pinned cells must be opaque (content scrolls underneath), so they repeat the
+ * row's state colours as solid equivalents: the row hover is muted at 50% over
+ * the page background.
+ */
+const PINNED_CELL_CLASS =
+  'sticky z-[1] bg-background group-hover/row:bg-[color-mix(in_oklab,var(--muted)_50%,var(--background))] group-data-[state=selected]/row:bg-muted'
+
+/** Soft edge after the start-pinned columns, shown while content is hidden under them. */
+const PINNED_START_EDGE_CLASS =
+  "after:pointer-events-none after:absolute after:inset-y-0 after:-end-3 after:w-3 after:bg-gradient-to-r after:from-foreground/10 after:to-transparent after:opacity-0 after:transition-opacity after:content-[''] rtl:after:bg-gradient-to-l group-data-[hidden-start=true]/table:after:opacity-100"
+
+/** Soft edge before the end-pinned actions column, shown while content remains to scroll. */
+const PINNED_END_EDGE_CLASS =
+  "before:pointer-events-none before:absolute before:inset-y-0 before:-start-3 before:w-3 before:bg-gradient-to-l before:from-foreground/10 before:to-transparent before:opacity-0 before:transition-opacity before:content-[''] rtl:before:bg-gradient-to-r group-data-[hidden-end=true]/table:before:opacity-100"
+
+/** Columns the automatic phone card treats as controls rather than fields. */
+const CONTROL_COLUMN_IDS = new Set(['select', 'actions'])
+/** Fields shown under the title on an automatic phone card. */
+const MOBILE_CARD_FIELDS = 4
+
+/**
+ * A column's readable label for the phone card: `meta.label`, a string
+ * header, or the `title` of a `DataTableColumnHeader` header; else its id.
+ */
+function columnLabel<TData>(header: Header<TData, unknown>): string {
+  const def = header.column.columnDef
+  const metaLabel = (def.meta as { label?: unknown } | undefined)?.label
+  if (typeof metaLabel === 'string') return metaLabel
+  if (typeof def.header === 'string') return def.header
+  if (typeof def.header === 'function') {
+    try {
+      const el = def.header(header.getContext())
+      if (React.isValidElement<{ title?: unknown }>(el) && typeof el.props.title === 'string') {
+        return el.props.title
+      }
+    } catch {
+      // A header that needs React context cannot be read here; fall through.
+    }
+  }
+  const id = header.column.id.replace(/[_.-]+/g, ' ').trim()
+  return id.charAt(0).toUpperCase() + id.slice(1)
+}
+
+/**
+ * Phone layout for a table with no `mobileRow`: the first data column is the
+ * title, the next few become label/value fields, and the row's checkbox and
+ * actions stay reachable. Built from the same cells, so it needs no per-page code.
+ */
+function AutoMobileCard<TData>({
+  row,
+  labels,
+  onRowClick,
+}: {
+  row: Row<TData>
+  labels: Map<string, string>
+  onRowClick?: (row: TData) => void
+}) {
+  const cells = row.getVisibleCells()
+  const select = cells.find((c) => c.column.id === 'select')
+  const actions = cells.find((c) => c.column.id === 'actions')
+  const [title, ...rest] = cells.filter((c) => !CONTROL_COLUMN_IDS.has(c.column.id))
+  const fields = rest.slice(0, MOBILE_CARD_FIELDS)
+  return (
+    <div
+      data-state={row.getIsSelected() ? 'selected' : undefined}
+      className={cn(
+        'px-3 py-3 data-[state=selected]:bg-muted',
+        onRowClick && 'cursor-pointer hover:bg-muted/50'
+      )}
+      onClick={(e) => {
+        const target = e.target as HTMLElement
+        if (!e.currentTarget.contains(target)) return
+        if (target.closest(INTERACTIVE_SELECTOR)) return
+        onRowClick?.(row.original)
+      }}
+    >
+      {/* Header: the title keeps at least 60% of the width, so a row menu
+          (the usual "...") sits beside it while wide action buttons wrap onto
+          their own line instead of covering the title. */}
+      <div className="flex flex-wrap items-start gap-x-3 gap-y-2">
+        {select && (
+          <div className="shrink-0 pt-0.5">
+            {flexRender(select.column.columnDef.cell, select.getContext())}
+          </div>
+        )}
+        {title && (
+          <div className="min-w-0 flex-[1_1_60%] text-sm font-medium break-words [&_.truncate]:whitespace-normal [&_.whitespace-nowrap]:whitespace-normal">
+            {flexRender(title.column.columnDef.cell, title.getContext())}
+          </div>
+        )}
+        {actions && (
+          <div className="ms-auto flex max-w-full shrink-0 flex-wrap items-center justify-end gap-2">
+            {flexRender(actions.column.columnDef.cell, actions.getContext())}
+          </div>
+        )}
+      </div>
+      {fields.length > 0 && (
+        // Full card width, two equal columns (minmax(0,1fr): a long value
+        // cannot widen its column). break-words only splits a word that is
+        // longer than the column; "High" stays whole.
+        <dl
+          className={cn(
+            'mt-2 grid grid-cols-[repeat(2,minmax(0,1fr))] gap-x-3 gap-y-2',
+            select && 'ps-7'
+          )}
+        >
+          {fields.map((cell) => (
+            <div key={cell.id} className="min-w-0">
+              <dt className="truncate text-xs text-muted-foreground">
+                {labels.get(cell.column.id)}
+              </dt>
+              <dd className="mt-0.5 min-w-0 text-sm break-words [&_[data-slot=badge]]:max-w-full [&_[data-slot=badge]]:whitespace-normal [&_[data-slot=badge]]:break-words">
+                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+              </dd>
+            </div>
+          ))}
+        </dl>
+      )}
+    </div>
+  )
+}
+
+/** Elements inside a row that act on their own instead of opening the row. */
+const INTERACTIVE_SELECTOR =
+  'button, a[href], input, select, textarea, label, [role="checkbox"], [role="switch"], [role="menuitem"], [data-radix-collection-item]'
 
 export function DataTable<TData, TValue>({
   columns,
@@ -109,8 +294,35 @@ export function DataTable<TData, TValue>({
   pagination,
   onPaginationChange,
   getRowId,
+  sorting: sortingProp,
+  onSortingChange,
+  toolbarStart,
+  toolbarEnd,
+  stickyFirstColumn = true,
+  resetSelectionKey,
+  showSelectionCount = true,
+  mobileRow,
+  mobileCards = true,
+  isLoading = false,
 }: DataTableProps<TData, TValue>) {
-  const [sorting, setSorting] = React.useState<SortingState>([])
+  // Cards replace the table on phones. Decided in JS rather than by hiding one
+  // with CSS, so only one of the two is ever rendered.
+  const isPhone = useIsMobile()
+  const phoneCards = isPhone && (!!mobileRow || mobileCards)
+  // Which sides of the horizontally-scrolling table have content hidden under
+  // the pinned columns — drives the edge shadows.
+  const tableWrapRef = React.useRef<HTMLDivElement>(null)
+  const [hiddenEdges, setHiddenEdges] = React.useState({ start: false, end: false })
+  const measureEdges = React.useCallback(() => {
+    const el = tableWrapRef.current?.querySelector<HTMLElement>('[data-slot="table-container"]')
+    if (!el) return
+    const x = Math.abs(el.scrollLeft)
+    const next = { start: x > 0, end: el.scrollWidth - el.clientWidth - x > 1 }
+    setHiddenEdges((prev) => (prev.start === next.start && prev.end === next.end ? prev : next))
+  }, [])
+  const [internalSorting, setInternalSorting] = React.useState<SortingState>([])
+  const serverSorting = manualPagination && !!onSortingChange
+  const sorting = serverSorting ? (sortingProp ?? []) : internalSorting
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
   const [rowSelection, setRowSelection] = React.useState({})
@@ -120,7 +332,11 @@ export function DataTable<TData, TValue>({
     data,
     columns,
     ...(getRowId ? { getRowId } : {}),
-    onSortingChange: setSorting,
+    onSortingChange: serverSorting
+      ? (updater) => onSortingChange(typeof updater === 'function' ? updater(sorting) : updater)
+      : setInternalSorting,
+    enableSorting: !manualPagination || serverSorting,
+    enableMultiSort: false,
     onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
     // In manual (server) pagination the parent already fetched exactly one page,
@@ -166,6 +382,68 @@ export function DataTable<TData, TValue>({
     },
   })
 
+  // Field labels for the automatic phone cards.
+  const mobileLabels = new Map<string, string>()
+  if (phoneCards && !mobileRow) {
+    for (const header of table.getFlatHeaders()) {
+      mobileLabels.set(header.column.id, columnLabel(header as Header<TData, unknown>))
+    }
+  }
+
+  // Pinned columns: the selection checkbox (if first) + the first data column.
+  const visibleColumns = table.getVisibleLeafColumns()
+  const selectColumn = visibleColumns[0]?.id === 'select' ? visibleColumns[0] : undefined
+  const firstDataColumn = visibleColumns.find((c) => c.id !== 'select' && c.id !== 'actions')
+  const pinned = new Map<string, { start: number; last: boolean }>()
+  const actionsPinned =
+    stickyFirstColumn && visibleColumns[visibleColumns.length - 1]?.id === 'actions'
+  if (stickyFirstColumn && firstDataColumn) {
+    if (selectColumn) pinned.set(selectColumn.id, { start: 0, last: false })
+    pinned.set(firstDataColumn.id, { start: selectColumn ? SELECT_COL_WIDTH : 0, last: true })
+  }
+  const pinnedProps = (columnId: string) => {
+    const isSelect = columnId === 'select'
+    const width = isSelect
+      ? { width: SELECT_COL_WIDTH, minWidth: SELECT_COL_WIDTH, maxWidth: SELECT_COL_WIDTH }
+      : {}
+    if (columnId === 'actions' && actionsPinned) {
+      return {
+        className: cn(PINNED_CELL_CLASS, PINNED_END_EDGE_CLASS),
+        style: { insetInlineEnd: 0 },
+      }
+    }
+    const pin = pinned.get(columnId)
+    if (!pin) return { className: undefined, style: isSelect ? width : undefined }
+    return {
+      className: cn(
+        PINNED_CELL_CLASS,
+        pin.last && PINNED_START_EDGE_CLASS,
+        // The pinned name column must leave room for the columns that scroll:
+        // cap it and let long names wrap instead of widening the pin.
+        pin.last && 'max-w-[min(26rem,38vw)] whitespace-normal'
+      ),
+      style: { ...width, insetInlineStart: pin.start },
+    }
+  }
+
+  // Re-measure when the rows, visible columns or container size change.
+  React.useEffect(() => {
+    measureEdges()
+    const el = tableWrapRef.current?.querySelector<HTMLElement>('[data-slot="table-container"]')
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(measureEdges)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [measureEdges, data, columnVisibility])
+
+  // Clear the selection whenever the parent bumps resetSelectionKey.
+  const lastResetKey = React.useRef(resetSelectionKey)
+  React.useEffect(() => {
+    if (lastResetKey.current === resetSelectionKey) return
+    lastResetKey.current = resetSelectionKey
+    setRowSelection({})
+  }, [resetSelectionKey])
+
   const selectedCount = table.getFilteredSelectedRowModel().rows.length
   const totalCount = table.getFilteredRowModel().rows.length
 
@@ -181,11 +459,19 @@ export function DataTable<TData, TValue>({
 
   return (
     <div className="space-y-4">
-      {/* Toolbar - Search and Column toggle on same row */}
-      <div className="flex items-center gap-2">
+      {/* Toolbar: one row where it fits; on narrow screens filters wrap onto a
+          second row rather than squeezing the search box to a few letters. */}
+      <div className="flex flex-wrap items-center gap-2">
+        {toolbarStart && (
+          // No min-w-0: the group must not shrink below its widest control, or a
+          // button spills over the search box beside it. It wraps instead.
+          <div className="flex flex-1 flex-wrap items-center gap-2 [&>.relative:has(input)]:min-w-36">
+            {toolbarStart}
+          </div>
+        )}
         {/* Search */}
         {showSearch && (
-          <div className="relative flex-1 min-w-0 sm:max-w-sm">
+          <div className="relative min-w-36 flex-1 sm:max-w-sm">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder={searchPlaceholder}
@@ -223,9 +509,10 @@ export function DataTable<TData, TValue>({
         )}
 
         {/* Right side actions */}
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="ms-auto flex items-center gap-2 shrink-0">
+          {toolbarEnd}
           {/* Selection info - hidden on mobile when no selection */}
-          {selectedCount > 0 && (
+          {showSelectionCount && selectedCount > 0 && (
             <span className="text-sm text-muted-foreground hidden sm:inline">
               {selectedCount} of {totalCount} selected
             </span>
@@ -235,7 +522,7 @@ export function DataTable<TData, TValue>({
           {showColumnToggle && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="h-9">
+                <Button variant="outline" size="sm" className={cn('h-9', phoneCards && 'hidden')}>
                   <SlidersHorizontal className="h-4 w-4 sm:me-2" />
                   <span className="hidden sm:inline">Columns</span>
                 </Button>
@@ -262,15 +549,61 @@ export function DataTable<TData, TValue>({
         </div>
       </div>
 
+      {phoneCards && (
+        <div className="divide-y rounded-md border">
+          {table.getRowModel().rows.length ? (
+            table
+              .getRowModel()
+              .rows.map((row) =>
+                mobileRow ? (
+                  <div key={row.id}>{mobileRow(row.original)}</div>
+                ) : (
+                  <AutoMobileCard
+                    key={row.id}
+                    row={row}
+                    labels={mobileLabels}
+                    onRowClick={onRowClick}
+                  />
+                )
+              )
+          ) : isLoading ? (
+            <div aria-busy="true" aria-label="Loading">
+              {Array.from({ length: LOADING_ROWS }).map((_, i) => (
+                <div key={i} className="space-y-2 px-3 py-3">
+                  <Skeleton className="h-4 w-2/3" />
+                  <Skeleton className="h-3 w-1/3" />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
+              <Inbox className="h-10 w-10 text-muted-foreground/50" />
+              <p className="text-sm font-medium">{emptyMessage}</p>
+              <p className="text-xs text-muted-foreground">{emptyDescription}</p>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Table */}
-      <div className="rounded-md border overflow-x-auto">
+      <div
+        ref={tableWrapRef}
+        className={cn('group/table rounded-md border overflow-x-auto', phoneCards && 'hidden')}
+        data-hidden-start={hiddenEdges.start}
+        data-hidden-end={hiddenEdges.end}
+        // scroll does not bubble, but a capture listener on an ancestor sees the
+        // inner table container's scroll.
+        onScrollCapture={(e) => {
+          if ((e.target as HTMLElement).dataset.slot === 'table-container') measureEdges()
+        }}
+      >
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => {
                   return (
-                    <TableHead key={header.id}>
+                    <TableHead key={header.id} {...pinnedProps(header.column.id)}>
                       {header.isPlaceholder
                         ? null
                         : flexRender(header.column.columnDef.header, header.getContext())}
@@ -286,15 +619,15 @@ export function DataTable<TData, TValue>({
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && 'selected'}
-                  className={onRowClick ? 'cursor-pointer hover:bg-muted/50' : ''}
+                  className={cn('group/row', onRowClick && 'cursor-pointer hover:bg-muted/50')}
                   onClick={(e) => {
-                    // Don't trigger row click if clicking on checkbox, button, or dropdown
                     const target = e.target as HTMLElement
-                    const isInteractiveElement =
-                      target.closest('button') ||
-                      target.closest('[role="checkbox"]') ||
-                      target.closest('[data-radix-collection-item]') ||
-                      target.closest('[role="menuitem"]')
+                    // React bubbles events out of portals: a click inside a row's
+                    // open menu, or a dialog opened from it, reaches this handler
+                    // although it is not in the row's DOM. Only real row clicks count.
+                    if (!e.currentTarget.contains(target)) return
+                    // Nor clicks on the row's own controls.
+                    const isInteractiveElement = target.closest(INTERACTIVE_SELECTOR)
 
                     if (!isInteractiveElement && onRowClick) {
                       onRowClick(row.original)
@@ -302,8 +635,20 @@ export function DataTable<TData, TValue>({
                   }}
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
+                    <TableCell key={cell.id} {...pinnedProps(cell.column.id)}>
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
+            ) : isLoading ? (
+              Array.from({ length: LOADING_ROWS }).map((_, i) => (
+                <TableRow key={`loading-${i}`} aria-busy="true" data-loading-row="">
+                  {table.getVisibleLeafColumns().map((column) => (
+                    <TableCell key={column.id}>
+                      <Skeleton
+                        className={cn('h-4', column.id === 'select' ? 'w-4' : 'w-full max-w-40')}
+                      />
                     </TableCell>
                   ))}
                 </TableRow>

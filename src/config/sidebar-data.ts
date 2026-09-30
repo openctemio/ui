@@ -58,6 +58,7 @@ import {
   TrendingUp,
   AlertTriangle,
   Link2,
+  Fingerprint,
   // Access Control icons
   FolderKey,
   Key,
@@ -121,6 +122,23 @@ export const sidebarData: SidebarData = {
           icon: LayoutDashboard,
           permission: Permission.DashboardRead,
         },
+        {
+          title: 'My Work',
+          url: '/my-work',
+          icon: ClipboardCheck,
+          permission: Permission.FindingsRead,
+        },
+        // The central work object — one click from anywhere, next to the views
+        // built on it (Dashboard, My Work), not buried under Insights.
+        {
+          title: 'Findings',
+          url: '/findings',
+          icon: FileWarning,
+          // Badge is dynamically fetched from dashboard stats - see useDynamicBadges hook
+          // Approvals accessible via button in findings page (not sidebar - keeps sidebar lean)
+          permission: Permission.FindingsRead,
+          module: 'findings',
+        },
       ],
     },
 
@@ -132,6 +150,7 @@ export const sidebarData: SidebarData = {
     {
       title: 'Scoping',
       icon: Goal,
+      cluster: 'cycle',
       items: [
         {
           title: 'Attack Surface',
@@ -166,14 +185,14 @@ export const sidebarData: SidebarData = {
           url: '/business-units',
           icon: Building2,
           permission: Permission.ScopeRead,
-          module: 'scope_config',
+          module: 'business_units',
         },
         {
           title: 'Crown Jewels',
           url: '/crown-jewels',
           icon: Crown,
           permission: Permission.ScopeRead,
-          module: 'scope_config',
+          module: 'crown_jewels',
         },
         {
           title: 'CTEM Cycles',
@@ -194,7 +213,7 @@ export const sidebarData: SidebarData = {
           url: '/threat-model',
           icon: Crosshair,
           permission: Permission.AssetsRead,
-          module: 'attack_surface',
+          module: 'threat_model',
         },
         {
           title: 'Relationships',
@@ -221,6 +240,7 @@ export const sidebarData: SidebarData = {
     {
       title: 'Discovery',
       icon: Telescope,
+      cluster: 'cycle',
       items: [
         {
           title: 'Scans',
@@ -235,27 +255,42 @@ export const sidebarData: SidebarData = {
         // Organized by CTEM categories for comprehensive attack surface visibility
         // ----------------------------------------
         {
-          title: 'Asset Inventory',
+          title: 'Assets',
           url: '/assets',
           icon: Container,
           permission: Permission.AssetsRead,
           module: 'assets',
         },
-        // The unified, filterable "All Assets" inventory (/assets/all) is reached
-        // from a button on the Assets Overview page, so it is intentionally not a
-        // separate sidebar entry (it duplicated the item above).
+        // ----------------------------------------
+        // WHAT CHANGED (change detection)
+        // Discovery, not Scoping: it is the delta of the inventory above (assets
+        // that appeared, disappeared or became internet-facing), fed by the
+        // same scans. Scoping > Attack Surface decides what matters; this shows
+        // what moved. Same permission + module as the inventory it reads.
+        // ----------------------------------------
+        {
+          title: 'What changed',
+          url: '/assets/changes',
+          icon: History,
+          permission: Permission.AssetsRead,
+          module: 'assets',
+        },
+        // /assets opens on the full, filterable list; the category cards are a
+        // view switch on the same page (?view=categories). /assets/all redirects.
         // ----------------------------------------
         // EXPOSURES (CVEs + non-CVE security issues)
         // ----------------------------------------
-        // Note: route guard at `/exposures/**` checks the `findings` module.
-        // Backend keeps a separate `exposures` module record (migration 000004)
-        // but no route enforces it, so binding sidebar to it caused a divergence.
+        // The API gates /api/v1/exposures on the `exposures` module
+        // (RequireModule(ModuleExposures)), so the sidebar binds the same
+        // module: turning the Exposures toggle off now hides the nav AND gates
+        // the API consistently. `exposures` ships active/default-on, so tenants
+        // with no override keep the group — only an explicit disable hides it.
         {
           title: 'Exposures',
           icon: AlertTriangle,
           // Group is visible if user has EITHER findings:read OR vulnerabilities:read.
           permission: [Permission.FindingsRead, Permission.VulnerabilitiesRead],
-          module: 'findings',
+          module: 'exposures',
           // A collapsible cannot also carry a `url` (NavCollapsible has no url in
           // src/components/types.ts), so the parent page is reached through an
           // Overview child — the same shape Integrations uses below.
@@ -326,6 +361,7 @@ export const sidebarData: SidebarData = {
     {
       title: 'Prioritization',
       icon: ListOrdered,
+      cluster: 'cycle',
       items: [
         {
           title: 'Exposure Chains',
@@ -347,6 +383,26 @@ export const sidebarData: SidebarData = {
           icon: TrendingUp,
           permission: Permission.VulnerabilitiesRead,
           module: 'threat_intel',
+        },
+        {
+          // IOC catalogue — bound to its own `iocs` module (not the parent's
+          // threat_intel) so the ModuleIOCs toggle gates this page end-to-end.
+          // permission threat_intel:read matches the backend on /api/v1/iocs.
+          title: 'Indicators (IOCs)',
+          url: '/threat-intel/iocs',
+          icon: Fingerprint,
+          permission: Permission.ThreatIntelRead,
+          module: 'iocs',
+        },
+        {
+          // Detect & Respond — tenant-wide IOC match feed showing runtime
+          // detections that fired and which findings auto-reopened. Same `iocs`
+          // module so the toggle gates it end-to-end.
+          title: 'Detections',
+          url: '/threat-intel/detections',
+          icon: Radar,
+          permission: Permission.ThreatIntelRead,
+          module: 'iocs',
         },
         {
           title: 'Business Impact',
@@ -373,6 +429,7 @@ export const sidebarData: SidebarData = {
     {
       title: 'Validation',
       icon: FlaskConical,
+      cluster: 'cycle',
       items: [
         {
           title: 'Penetration Testing',
@@ -449,6 +506,7 @@ export const sidebarData: SidebarData = {
     {
       title: 'Mobilization',
       icon: Rocket,
+      cluster: 'cycle',
       items: [
         {
           // One nav item; the two related views (Tasks / Solution Families) are
@@ -467,6 +525,7 @@ export const sidebarData: SidebarData = {
           url: '/sla',
           icon: Timer,
           permission: Permission.SLARead,
+          module: 'sla',
         },
         {
           title: 'Exceptions',
@@ -528,15 +587,6 @@ export const sidebarData: SidebarData = {
           module: 'ctem_maturity',
         },
         {
-          title: 'Findings',
-          url: '/findings',
-          icon: FileWarning,
-          // Badge is dynamically fetched from dashboard stats - see useDynamicBadges hook
-          // Approvals accessible via button in findings page (not sidebar - keeps sidebar lean)
-          permission: Permission.FindingsRead,
-          module: 'findings',
-        },
-        {
           title: 'Reports',
           url: '/reports',
           icon: FileText,
@@ -553,24 +603,28 @@ export const sidebarData: SidebarData = {
       title: 'Settings',
       icon: Settings,
       items: [
+        // Agents — the execution/data-collection runtime (Fleet-style). Agents
+        // span recon/scan/validate/collect, so they are their own plane, not a
+        // sub-item of Scanning. Mirrors the Elastic Agent+Fleet / Datadog Agent
+        // model; "Scanning" below is narrowed to scan-job configuration.
         {
-          title: 'Scanning',
-          icon: Radar,
-          permission: Permission.ScansRead,
+          title: 'Agents',
+          icon: Bot,
+          permission: Permission.AgentsRead,
           module: 'scans',
           items: [
             {
-              title: 'Agents',
+              title: 'All Agents',
               url: '/agents',
               icon: Bot,
               permission: Permission.AgentsRead,
-              module: 'scans', // Agents are required to run scans, so bundle with scans module
+              module: 'scans',
             },
             {
-              title: 'Profiles',
-              url: '/scan-profiles',
-              icon: FileSliders,
-              permission: Permission.ScanProfilesRead,
+              title: 'Capabilities',
+              url: '/capabilities',
+              icon: Zap,
+              permission: Permission.ToolsRead,
               module: 'scans',
             },
             {
@@ -581,10 +635,25 @@ export const sidebarData: SidebarData = {
               module: 'scans',
             },
             {
-              title: 'Capabilities',
-              url: '/capabilities',
-              icon: Zap,
-              permission: Permission.ToolsRead,
+              title: 'Secret Store',
+              url: '/secret-store',
+              icon: Lock,
+              permission: Permission.SecretStoreRead,
+              module: 'scans',
+            },
+          ],
+        },
+        {
+          title: 'Scanning',
+          icon: Radar,
+          permission: Permission.ScansRead,
+          module: 'scans',
+          items: [
+            {
+              title: 'Profiles',
+              url: '/scan-profiles',
+              icon: FileSliders,
+              permission: Permission.ScanProfilesRead,
               module: 'scans',
             },
             {
@@ -600,13 +669,6 @@ export const sidebarData: SidebarData = {
               icon: FolderGit2,
               permission: Permission.TemplateSourcesRead,
               module: 'template_sources',
-            },
-            {
-              title: 'Secret Store',
-              url: '/secret-store',
-              icon: Lock,
-              permission: Permission.SecretStoreRead,
-              module: 'scans',
             },
           ],
         },
@@ -690,6 +752,7 @@ export const sidebarData: SidebarData = {
               url: '/settings/sla-policies',
               icon: Timer,
               permission: Permission.SLARead,
+              module: 'sla',
             },
           ],
         },

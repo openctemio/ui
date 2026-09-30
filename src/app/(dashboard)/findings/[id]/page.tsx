@@ -4,7 +4,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { csrfFetch } from '@/lib/api/client'
 import { Main } from '@/components/layout'
 import { Button } from '@/components/ui/button'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabsContent, TabsList, TabsTrigger, TabsCount } from '@/components/ui/tabs'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable'
@@ -587,14 +587,10 @@ export default function FindingDetailPage() {
 
             {/* Tabs — order and visibility driven by source layout */}
             <Tabs defaultValue={orderedTabs[0]} className="flex min-h-0 flex-1 flex-col">
-              <div className="flex-shrink-0 border-b px-3 sm:px-6 overflow-x-auto no-scrollbar">
-                <TabsList className="h-auto gap-2 sm:gap-4 rounded-none bg-transparent p-0 w-max min-w-full">
+              <div className="flex-shrink-0 border-b px-3 sm:px-6">
+                <TabsList className="h-11 border-b-0">
                   {orderedTabs.map((tab) => (
-                    <TabsTrigger
-                      key={tab}
-                      value={tab}
-                      className="rounded-none border-b-2 border-transparent bg-transparent px-1 sm:px-0 pb-3 pt-3 text-sm sm:text-base whitespace-nowrap shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
-                    >
+                    <TabsTrigger key={tab} value={tab}>
                       {tab === 'overview' && 'Overview'}
                       {tab === 'evidence' && (
                         <>
@@ -615,24 +611,23 @@ export default function FindingDetailPage() {
                           <span className="hidden sm:inline">Attack Path</span>
                           <span className="sm:hidden">Path</span>
                           {finding.dataFlow && (
-                            <span className="ms-1 sm:ms-1.5 rounded-full bg-blue-500/20 px-1 sm:px-1.5 py-0.5 text-[10px] text-blue-400">
-                              {(finding.dataFlow.sources?.length || 0) +
+                            <TabsCount
+                              value={
+                                (finding.dataFlow.sources?.length || 0) +
                                 (finding.dataFlow.intermediates?.length || 0) +
-                                (finding.dataFlow.sinks?.length || 0)}
-                            </span>
+                                (finding.dataFlow.sinks?.length || 0)
+                              }
+                            />
                           )}
                         </>
                       )}
-                      {tab === 'pentest' && 'Pentest Details'}
+                      {tab === 'pentest' && 'Pentest details'}
                       {tab === 'related' && 'Related'}
                     </TabsTrigger>
                   ))}
                   {/* Activity tab — mobile only (desktop has side panel) */}
-                  <TabsTrigger
-                    value="activity"
-                    className="lg:hidden rounded-none border-b-2 border-transparent bg-transparent px-1 sm:px-0 pb-3 pt-3 text-sm whitespace-nowrap shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
-                  >
-                    Activity ({activitiesTotal + realtimeActivities.length})
+                  <TabsTrigger value="activity" className="lg:hidden">
+                    Activity <TabsCount value={activitiesTotal + realtimeActivities.length} />
                   </TabsTrigger>
                 </TabsList>
               </div>

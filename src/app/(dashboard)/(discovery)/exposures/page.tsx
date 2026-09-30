@@ -6,6 +6,20 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import {
   Sheet,
   SheetContent,
@@ -14,15 +28,15 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { Main } from '@/components/layout'
-import { PageHeader } from '@/features/shared'
+import { DataTable, EmptyState, MetricStrip, PageHeader, SeverityBadge } from '@/features/shared'
+import type { MetricStripItem } from '@/features/shared'
 import { useUrlFilter, useUrlFilterList } from '@/hooks/use-url-param'
+import { useDebounce } from '@/hooks/use-debounce'
 import { copyToClipboard } from '@/lib/clipboard'
 import { cn } from '@/lib/utils'
-import { SEVERITY_BADGE_SOLID } from '@/lib/severity-colors'
 import {
   Search,
   RefreshCw,
-  Loader2,
   Download,
   Shield,
   AlertTriangle,
@@ -40,6 +54,8 @@ import {
   Globe,
   User,
   Server,
+  ChevronDown,
+  BarChart3,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatRelative } from '@/lib/format-date'
@@ -57,12 +73,13 @@ import {
   markExposureFalsePositive,
 } from '@/features/exposures/hooks'
 import {
-  ExposureStatsCards,
+  EXPOSURE_STATE_BADGE,
   ExposureSeverityBreakdown,
   ExposureStateBreakdown,
-  ExposureTable,
+  getExposureColumns,
   ExposureActionDialog,
   ExposureBulkActions,
+  ExposureSecurityContext,
 } from '@/features/exposures/components'
 import type {
   ExposureEvent,
@@ -73,11 +90,27 @@ import type {
 
 type ActionType = 'resolve' | 'accept' | 'false_positive' | 'reactivate'
 
-// State tab type for cleaner organization
+// Lifecycle view — the primary filter.
 type StateTab = 'needs_attention' | 'resolved' | 'all'
 
-// CSV columns for the Export action. Exports the currently loaded (filtered)
-// page of exposures — matches the Findings export behaviour.
+const STATE_VIEWS: { value: StateTab; label: string }[] = [
+  { value: 'needs_attention', label: 'Needs attention' },
+  { value: 'resolved', label: 'Closed' },
+  { value: 'all', label: 'All states' },
+]
+
+const SEVERITIES: ExposureSeverity[] = ['critical', 'high', 'medium', 'low', 'info']
+const SEVERITY_LABELS: Record<ExposureSeverity, string> = {
+  critical: 'Critical',
+  high: 'High',
+  medium: 'Medium',
+  low: 'Low',
+  info: 'Info',
+}
+
+const PAGE_SIZES = [10, 20, 30, 50, 100]
+
+// CSV columns for the Export action — every exposure matching the filters.
 const EXPOSURE_EXPORT_FIELDS: ExportFieldConfig<ExposureEvent>[] = [
   { header: 'ID', accessor: (e) => e.id },
   { header: 'Title', accessor: (e) => e.title },
@@ -90,43 +123,83 @@ const EXPOSURE_EXPORT_FIELDS: ExportFieldConfig<ExposureEvent>[] = [
   { header: 'Resolved At', accessor: (e) => e.resolved_at ?? '' },
 ]
 
+// Map the lifecycle view to API state filters.
+function getStatesForTab(tab: StateTab): ExposureState[] | undefined {
+  switch (tab) {
+    case 'needs_attention':
+      return ['active']
+    case 'resolved':
+      return ['resolved', 'accepted', 'false_positive']
+    default:
+      return undefined // No filter = all states
+  }
+}
+
+function ExposureTableSkeleton() {
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <Skeleton className="h-9 w-72" />
+        <Skeleton className="h-9 w-28" />
+        <Skeleton className="ms-auto h-9 w-24" />
+      </div>
+      <div className="space-y-2 rounded-md border p-3">
+        {Array.from({ length: 8 }).map((_, i) => (
+          <Skeleton key={i} className="h-10 w-full" />
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export default function ExposuresPage() {
   const { currentTenant } = useTenant()
   const tenantId = currentTenant?.id || null
 
-  // State tab - primary filter. Filters live in the URL so a filtered view is
-  // shareable and survives reload (matching the findings/assets pages). The hook
-  // returns plain strings; cast the tuples so downstream typing stays identical.
-  const [activeTab, setActiveTab] = useUrlFilter('state', 'needs_attention') as [
-    StateTab,
-    (v: StateTab) => void,
-  ]
-
-  // Pagination state (page/per_page stay local; page resets to 1 on filter change)
-  const [filters, setFilters] = useState<ExposureListFilters>({
-    page: 1,
-    per_page: 20,
-  })
+  // The whole view lives in the URL — tab, lifecycle view, severity, search,
+  // page and page size — so a filtered view is shareable and survives reload.
+  const [tabParam, setTabParam] = useUrlFilter('tab', 'list')
+  const tab = tabParam === 'analytics' ? 'analytics' : 'list'
+  const [stateParam, setStateParam] = useUrlFilter('state', 'needs_attention')
+  const activeView: StateTab = STATE_VIEWS.some((v) => v.value === stateParam)
+    ? (stateParam as StateTab)
+    : 'needs_attention'
   const [searchQuery, setSearchQuery] = useUrlFilter('q', '')
-  const [selectedSeverities, setSelectedSeverities] = useUrlFilterList('severity') as [
-    ExposureSeverity[],
-    (next: ExposureSeverity[] | ((prev: ExposureSeverity[]) => ExposureSeverity[])) => void,
-  ]
+  const debouncedSearch = useDebounce(searchQuery, 300)
+  const [severityParam, setSeverityParam] = useUrlFilterList('severity')
+  const selectedSeverities = useMemo(
+    () =>
+      severityParam.filter((s): s is ExposureSeverity =>
+        SEVERITIES.includes(s as ExposureSeverity)
+      ),
+    [severityParam]
+  )
+  const [pageParam, setPageParam] = useUrlFilter('page', '1')
+  const [perPageParam, setPerPageParam] = useUrlFilter('per_page', '20')
+  const pagination = useMemo(
+    () => ({
+      pageIndex: Math.max(0, (parseInt(pageParam, 10) || 1) - 1),
+      pageSize: PAGE_SIZES.includes(parseInt(perPageParam, 10)) ? parseInt(perPageParam, 10) : 20,
+    }),
+    [pageParam, perPageParam]
+  )
+  const setPagination = useCallback(
+    (next: { pageIndex: number; pageSize: number }) => {
+      setPageParam(String(next.pageIndex + 1))
+      setPerPageParam(String(next.pageSize))
+    },
+    [setPageParam, setPerPageParam]
+  )
+  const resetPage = useCallback(() => setPageParam('1'), [setPageParam])
 
-  // Map tab to state filters
-  const getStatesForTab = (tab: StateTab): ExposureState[] | undefined => {
-    switch (tab) {
-      case 'needs_attention':
-        return ['active']
-      case 'resolved':
-        return ['resolved', 'accepted', 'false_positive']
-      case 'all':
-        return undefined // No filter = all states
-    }
-  }
-
-  // Selection state
+  // Selection is owned by the DataTable; we mirror it for the bulk-action bar
+  // and bump the epoch to clear the table's own checkboxes.
   const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [selectionEpoch, setSelectionEpoch] = useState(0)
+  const clearSelection = useCallback(() => {
+    setSelectedIds([])
+    setSelectionEpoch((e) => e + 1)
+  }, [])
 
   // Action dialog state
   const [selectedExposure, setSelectedExposure] = useState<ExposureEvent | null>(null)
@@ -135,24 +208,22 @@ export default function ExposuresPage() {
   // Detail sheet state
   const [detailExposure, setDetailExposure] = useState<ExposureEvent | null>(null)
 
-  // Build filters for API based on active tab
   const apiFilters: ExposureListFilters = useMemo(
     () => ({
-      ...filters,
-      search: searchQuery || undefined,
+      page: pagination.pageIndex + 1,
+      per_page: pagination.pageSize,
+      search: debouncedSearch || undefined,
       severities: selectedSeverities.length > 0 ? selectedSeverities : undefined,
-      states: getStatesForTab(activeTab),
+      states: getStatesForTab(activeView),
     }),
-    [filters, searchQuery, selectedSeverities, activeTab]
+    [pagination, debouncedSearch, selectedSeverities, activeView]
   )
 
-  // Data fetching
   const {
     exposures,
     total,
-    page,
-    totalPages,
     isLoading: exposuresLoading,
+    error: exposuresError,
     mutate: refreshExposures,
   } = useExposures(tenantId, apiFilters)
 
@@ -160,7 +231,6 @@ export default function ExposuresPage() {
 
   const isLoading = exposuresLoading || statsLoading
 
-  // CSV export of the currently loaded exposures
   // Export EVERY exposure matching the current filters (all pages), not just
   // the page rendered in the table.
   const [isExporting, setIsExporting] = useState(false)
@@ -185,32 +255,37 @@ export default function ExposuresPage() {
     }
   }, [isExporting, apiFilters])
 
-  // Handlers
   const handleRefresh = useCallback(() => {
     refreshExposures()
     refreshStats()
   }, [refreshExposures, refreshStats])
 
-  const handleSearch = useCallback((value: string) => {
-    setSearchQuery(value)
-    setFilters((prev) => ({ ...prev, page: 1 }))
-  }, [])
+  const handleSearch = useCallback(
+    (value: string) => {
+      setSearchQuery(value)
+      resetPage()
+    },
+    [setSearchQuery, resetPage]
+  )
 
-  const handleSeverityFilter = useCallback((severity: ExposureSeverity) => {
-    setSelectedSeverities((prev) =>
-      prev.includes(severity) ? prev.filter((s) => s !== severity) : [...prev, severity]
-    )
-    setFilters((prev) => ({ ...prev, page: 1 }))
-  }, [])
+  const toggleSeverity = useCallback(
+    (severity: ExposureSeverity) => {
+      setSeverityParam((prev) =>
+        prev.includes(severity) ? prev.filter((s) => s !== severity) : [...prev, severity]
+      )
+      resetPage()
+    },
+    [setSeverityParam, resetPage]
+  )
 
-  const handleTabChange = useCallback((tab: StateTab) => {
-    setActiveTab(tab)
-    setFilters((prev) => ({ ...prev, page: 1 }))
-  }, [])
-
-  const handlePageChange = useCallback((newPage: number) => {
-    setFilters((prev) => ({ ...prev, page: newPage }))
-  }, [])
+  const setView = useCallback(
+    (view: StateTab) => {
+      setStateParam(view)
+      resetPage()
+      clearSelection()
+    },
+    [setStateParam, resetPage, clearSelection]
+  )
 
   const handleAction = useCallback((exposure: ExposureEvent, action: ActionType) => {
     setSelectedExposure(exposure)
@@ -219,10 +294,10 @@ export default function ExposuresPage() {
 
   const handleActionSuccess = useCallback(() => {
     handleRefresh()
-    setSelectedIds([])
+    clearSelection()
     // Close detail sheet after successful action
     setDetailExposure(null)
-  }, [handleRefresh])
+  }, [handleRefresh, clearSelection])
 
   // Bulk handlers apply the per-exposure state-change API to every selected id.
   // ExposureBulkActions surfaces the success/error toast and clears selection;
@@ -254,247 +329,281 @@ export default function ExposuresPage() {
 
   const clearFilters = useCallback(() => {
     setSearchQuery('')
-    setSelectedSeverities([])
-    setActiveTab('needs_attention')
-    setFilters({ page: 1, per_page: 20 })
-  }, [])
+    setSeverityParam([])
+    setStateParam('needs_attention')
+    resetPage()
+  }, [setSearchQuery, setSeverityParam, setStateParam, resetPage])
 
   const hasActiveFilters =
-    searchQuery || selectedSeverities.length > 0 || activeTab !== 'needs_attention'
+    !!searchQuery || selectedSeverities.length > 0 || activeView !== 'needs_attention'
+
+  const columns = useMemo(
+    () =>
+      getExposureColumns({
+        onResolve: (e) => handleAction(e, 'resolve'),
+        onAccept: (e) => handleAction(e, 'accept'),
+        onMarkFalsePositive: (e) => handleAction(e, 'false_positive'),
+        onReactivate: (e) => handleAction(e, 'reactivate'),
+        onViewDetails: setDetailExposure,
+      }),
+    [handleAction]
+  )
+
+  // Headline numbers double as the lifecycle quick filter.
+  const activeCount = stats?.active_count ?? 0
+  const metrics: MetricStripItem[] = [
+    {
+      key: 'total',
+      label: 'Total exposures',
+      value: stats?.total ?? 0,
+      onClick: () => setView('all'),
+      active: activeView === 'all',
+    },
+    {
+      key: 'active',
+      label: 'Needs attention',
+      value: activeCount,
+      tone: 'danger',
+      onClick: () => setView('needs_attention'),
+      active: activeView === 'needs_attention',
+    },
+    {
+      key: 'resolved',
+      label: 'Resolved',
+      value: stats?.resolved_count ?? 0,
+      onClick: () => setView('resolved'),
+      active: activeView === 'resolved',
+    },
+    {
+      key: 'mttr',
+      label: 'Mean time to resolve',
+      value: stats?.mttr_hours ? `${stats.mttr_hours.toFixed(1)}h` : '—',
+    },
+  ]
+
+  const rangeStart = total === 0 ? 0 : pagination.pageIndex * pagination.pageSize + 1
+  const rangeEnd = Math.min(total, (pagination.pageIndex + 1) * pagination.pageSize)
+
+  const toolbarStart = (
+    <>
+      <div className="relative min-w-0 flex-1 sm:max-w-sm">
+        <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          value={searchQuery}
+          onChange={(e) => handleSearch(e.target.value)}
+          placeholder="Search exposures…"
+          aria-label="Search exposures"
+          className="h-9 ps-9"
+        />
+      </div>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline" size="sm" className="h-9">
+            Severity
+            {selectedSeverities.length > 0 && (
+              <Badge variant="secondary" className="ms-2 px-1.5 tabular-nums">
+                {selectedSeverities.length}
+              </Badge>
+            )}
+            <ChevronDown className="ms-2 h-4 w-4 text-muted-foreground" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start">
+          <DropdownMenuLabel>Severity</DropdownMenuLabel>
+          {SEVERITIES.map((severity) => (
+            <DropdownMenuCheckboxItem
+              key={severity}
+              checked={selectedSeverities.includes(severity)}
+              onCheckedChange={() => toggleSeverity(severity)}
+              onSelect={(e) => e.preventDefault()}
+            >
+              {SEVERITY_LABELS[severity]}
+            </DropdownMenuCheckboxItem>
+          ))}
+          {selectedSeverities.length > 0 && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setSeverityParam([])}>Clear</DropdownMenuItem>
+            </>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline" size="sm" className="h-9">
+            {STATE_VIEWS.find((v) => v.value === activeView)?.label}
+            <ChevronDown className="ms-2 h-4 w-4 text-muted-foreground" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start">
+          <DropdownMenuLabel>State</DropdownMenuLabel>
+          <DropdownMenuRadioGroup value={activeView} onValueChange={(v) => setView(v as StateTab)}>
+            {STATE_VIEWS.map((v) => (
+              <DropdownMenuRadioItem key={v.value} value={v.value}>
+                {v.label}
+              </DropdownMenuRadioItem>
+            ))}
+          </DropdownMenuRadioGroup>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      {hasActiveFilters && (
+        <Button variant="ghost" size="sm" className="h-9" onClick={clearFilters}>
+          <X className="me-1 h-4 w-4" />
+          Clear
+        </Button>
+      )}
+    </>
+  )
+
+  const toolbarEnd = (
+    <>
+      <span className="hidden text-sm tabular-nums text-muted-foreground xl:inline">
+        {total === 0 ? 'No results' : `${rangeStart}–${rangeEnd} of ${total.toLocaleString()}`}
+      </span>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-9 w-9"
+            onClick={handleRefresh}
+            disabled={isLoading}
+            aria-label="Refresh"
+          >
+            <RefreshCw className={cn('h-4 w-4', isLoading && 'animate-spin')} />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>Refresh</TooltipContent>
+      </Tooltip>
+      <Button
+        variant="outline"
+        size="sm"
+        className="h-9"
+        onClick={handleExport}
+        disabled={isExporting || exposuresLoading || total === 0}
+      >
+        <Download className="h-4 w-4 md:me-2" />
+        <span className="hidden md:inline">{isExporting ? 'Exporting…' : 'Export'}</span>
+      </Button>
+    </>
+  )
 
   return (
-    <>
-      <Main>
-        <div className="space-y-6">
-          {/* Page Header */}
-          <PageHeader
-            title="Exposure Events"
-            description="Monitor and manage attack surface exposures"
-          >
-            <div className="flex items-center gap-2">
-              <Button variant="outline" onClick={handleRefresh} disabled={isLoading}>
-                {isLoading ? (
-                  <Loader2 className="me-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <RefreshCw className="me-2 h-4 w-4" />
-                )}
-                Refresh
-              </Button>
-              <Button
-                variant="outline"
-                onClick={handleExport}
-                disabled={isExporting || exposuresLoading || total === 0}
-              >
-                <Download className="me-2 h-4 w-4" />
-                {isExporting ? 'Exporting…' : 'Export'}
-              </Button>
+    <Main>
+      <PageHeader
+        title="Exposures"
+        description="Changes to your attack surface that need a decision — resolve, accept or dismiss them."
+      />
+
+      <Tabs value={tab} onValueChange={setTabParam} className="mt-4">
+        <TabsList>
+          <TabsTrigger value="list">All exposures</TabsTrigger>
+          <TabsTrigger value="analytics">Analytics</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="list" className="mt-5 space-y-5">
+          <MetricStrip loading={statsLoading} items={metrics} />
+
+          {exposuresError ? (
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Could not load exposures</AlertTitle>
+              <AlertDescription className="flex flex-wrap items-center gap-3">
+                The exposure list failed to load.
+                <Button variant="outline" size="sm" onClick={handleRefresh}>
+                  Retry
+                </Button>
+              </AlertDescription>
+            </Alert>
+          ) : exposuresLoading && exposures.length === 0 ? (
+            <ExposureTableSkeleton />
+          ) : (
+            <DataTable
+              columns={columns}
+              data={exposures}
+              showSearch={false}
+              toolbarStart={toolbarStart}
+              toolbarEnd={toolbarEnd}
+              getRowId={(e) => e.id}
+              manualPagination
+              rowCount={total}
+              pagination={pagination}
+              onPaginationChange={setPagination}
+              pageSizeOptions={PAGE_SIZES}
+              onRowClick={setDetailExposure}
+              onSelectionChange={(rows) => setSelectedIds(rows.map((e) => e.id))}
+              resetSelectionKey={selectionEpoch}
+              showSelectionCount={false}
+              emptyMessage={hasActiveFilters ? 'No exposures match these filters' : 'No exposures'}
+              emptyDescription={
+                hasActiveFilters
+                  ? 'Try removing a filter or clearing them all.'
+                  : 'Your attack surface has no open exposure events.'
+              }
+            />
+          )}
+
+          <ExposureBulkActions
+            selectedIds={selectedIds}
+            onClearSelection={clearSelection}
+            onBulkResolve={handleBulkResolve}
+            onBulkAccept={handleBulkAccept}
+            onBulkFalsePositive={handleBulkFalsePositive}
+          />
+        </TabsContent>
+
+        <TabsContent value="analytics" className="mt-5 space-y-5">
+          {statsLoading ? (
+            <div className="grid gap-4 md:grid-cols-2">
+              <Skeleton className="h-64 w-full rounded-xl" />
+              <Skeleton className="h-64 w-full rounded-xl" />
             </div>
-          </PageHeader>
-
-          {/* Stats Overview */}
-          <ExposureStatsCards stats={stats} isLoading={statsLoading} />
-
-          {/* Main Content */}
-          <Tabs defaultValue="list" className="space-y-4">
-            <TabsList>
-              <TabsTrigger value="list">All Exposures</TabsTrigger>
-              <TabsTrigger value="analytics">Analytics</TabsTrigger>
-            </TabsList>
-
-            {/* List Tab */}
-            <TabsContent value="list" className="space-y-4">
-              {/* Filters */}
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                    {/* Search */}
-                    <div className="relative flex-1 max-w-sm">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        placeholder="Search exposures..."
-                        value={searchQuery}
-                        onChange={(e) => handleSearch(e.target.value)}
-                        className="ps-9"
-                      />
-                    </div>
-
-                    {/* Filter Controls */}
-                    <div className="flex items-center gap-2 flex-wrap">
-                      {/* Severity Filter */}
-                      <div className="flex items-center gap-1">
-                        {(['critical', 'high', 'medium', 'low', 'info'] as ExposureSeverity[]).map(
-                          (severity) => (
-                            <Button
-                              key={severity}
-                              variant={
-                                selectedSeverities.includes(severity) ? 'default' : 'outline'
-                              }
-                              size="sm"
-                              onClick={() => handleSeverityFilter(severity)}
-                              className={cn(
-                                'capitalize',
-                                selectedSeverities.includes(severity) &&
-                                  getSeverityButtonClass(severity)
-                              )}
-                            >
-                              {severity}
-                            </Button>
-                          )
-                        )}
-                      </div>
-
-                      {/* State Tabs */}
-                      <div className="flex items-center gap-1 rounded-lg border p-1">
-                        <Button
-                          variant={activeTab === 'needs_attention' ? 'default' : 'ghost'}
-                          size="sm"
-                          className="h-7"
-                          onClick={() => handleTabChange('needs_attention')}
-                        >
-                          Needs Attention
-                          {stats.by_state?.active > 0 && (
-                            <Badge variant="secondary" className="ms-1.5">
-                              {stats.by_state.active}
-                            </Badge>
-                          )}
-                        </Button>
-                        <Button
-                          variant={activeTab === 'resolved' ? 'default' : 'ghost'}
-                          size="sm"
-                          className="h-7"
-                          onClick={() => handleTabChange('resolved')}
-                        >
-                          Resolved
-                        </Button>
-                        <Button
-                          variant={activeTab === 'all' ? 'default' : 'ghost'}
-                          size="sm"
-                          className="h-7"
-                          onClick={() => handleTabChange('all')}
-                        >
-                          All
-                        </Button>
-                      </div>
-
-                      {/* Clear Filters */}
-                      {hasActiveFilters && (
-                        <Button variant="ghost" size="sm" onClick={clearFilters}>
-                          <X className="me-1 h-4 w-4" />
-                          Clear
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Bulk Actions */}
-              {selectedIds.length > 0 && (
-                <ExposureBulkActions
-                  selectedIds={selectedIds}
-                  onClearSelection={() => setSelectedIds([])}
-                  onBulkResolve={handleBulkResolve}
-                  onBulkAccept={handleBulkAccept}
-                  onBulkFalsePositive={handleBulkFalsePositive}
-                />
-              )}
-
-              {/* Exposures Table */}
-              <ExposureTable
-                exposures={exposures}
-                isLoading={exposuresLoading}
-                selectedIds={selectedIds}
-                onSelectionChange={setSelectedIds}
-                onResolve={(exposure) => handleAction(exposure, 'resolve')}
-                onAccept={(exposure) => handleAction(exposure, 'accept')}
-                onMarkFalsePositive={(exposure) => handleAction(exposure, 'false_positive')}
-                onReactivate={(exposure) => handleAction(exposure, 'reactivate')}
-                onViewDetails={setDetailExposure}
-              />
-
-              {/* Pagination */}
-              {totalPages > 1 && (
-                <div className="flex items-center justify-between">
-                  <p className="text-sm text-muted-foreground">
-                    Showing {exposures.length} of {total} exposures
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handlePageChange(page - 1)}
-                      disabled={page <= 1}
-                    >
-                      Previous
-                    </Button>
-                    <span className="text-sm">
-                      Page {page} of {totalPages}
-                    </span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handlePageChange(page + 1)}
-                      disabled={page >= totalPages}
-                    >
-                      Next
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </TabsContent>
-
-            {/* Analytics Tab */}
-            <TabsContent value="analytics" className="space-y-4">
+          ) : (
+            <>
               <div className="grid gap-4 md:grid-cols-2">
                 <ExposureSeverityBreakdown bySeverity={stats.by_severity} />
                 <ExposureStateBreakdown byState={stats.by_state} />
               </div>
-
-              {/* Event Type Distribution */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base">By Event Type</CardTitle>
+                  <CardTitle>By event type</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <EventTypeDistribution byEventType={stats.by_event_type} />
                 </CardContent>
               </Card>
-            </TabsContent>
-          </Tabs>
+            </>
+          )}
+        </TabsContent>
+      </Tabs>
 
-          {/* Action Dialog */}
-          <ExposureActionDialog
-            exposure={selectedExposure}
-            actionType={actionType}
-            open={actionType !== null}
-            onOpenChange={(open) => {
-              if (!open) {
-                setActionType(null)
-                setSelectedExposure(null)
-              }
-            }}
-            onSuccess={handleActionSuccess}
-          />
+      {/* Action Dialog */}
+      <ExposureActionDialog
+        exposure={selectedExposure}
+        actionType={actionType}
+        open={actionType !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setActionType(null)
+            setSelectedExposure(null)
+          }
+        }}
+        onSuccess={handleActionSuccess}
+      />
 
-          {/* Detail Sheet */}
-          <ExposureDetailSheet
-            exposure={detailExposure}
-            open={detailExposure !== null}
-            onOpenChange={(open) => !open && setDetailExposure(null)}
-            onAction={(action) => {
-              if (detailExposure) {
-                handleAction(detailExposure, action)
-              }
-            }}
-          />
-        </div>
-      </Main>
-    </>
+      {/* Detail Sheet */}
+      <ExposureDetailSheet
+        exposure={detailExposure}
+        open={detailExposure !== null}
+        onOpenChange={(open) => !open && setDetailExposure(null)}
+        onAction={(action) => {
+          if (detailExposure) {
+            handleAction(detailExposure, action)
+          }
+        }}
+      />
+    </Main>
   )
-}
-
-function getSeverityButtonClass(severity: ExposureSeverity): string {
-  return SEVERITY_BADGE_SOLID[severity]
 }
 
 interface EventTypeDistributionProps {
@@ -502,38 +611,42 @@ interface EventTypeDistributionProps {
 }
 
 function EventTypeDistribution({ byEventType }: EventTypeDistributionProps) {
-  if (!byEventType || Object.keys(byEventType).length === 0) {
-    return <div className="text-center py-8 text-muted-foreground">No exposure data available</div>
-  }
-
-  const entries = Object.entries(byEventType).sort((a, b) => b[1] - a[1])
-  const total = entries.reduce((sum, [_, count]) => sum + count, 0) || 1
-
+  const entries = Object.entries(byEventType || {}).sort((a, b) => b[1] - a[1])
   if (entries.length === 0) {
-    return <div className="text-center py-8 text-muted-foreground">No exposure data available</div>
+    return <EmptyState card={false} icon={BarChart3} title="No exposure data yet" />
   }
+  const total = entries.reduce((sum, [, count]) => sum + count, 0) || 1
 
   return (
     <div className="space-y-2">
       {entries.slice(0, 10).map(([type, count]) => {
         const percentage = ((count / total) * 100).toFixed(1)
+        const label = type.replace(/_/g, ' ')
         return (
           <div key={type} className="flex items-center gap-3">
-            <div className="w-40 text-sm truncate capitalize">{type.replace(/_/g, ' ')}</div>
-            <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
+            <div className="w-40 truncate text-sm">
+              {label.charAt(0).toUpperCase() + label.slice(1)}
+            </div>
+            <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
               <div
                 className="h-full rounded-full bg-primary transition-all"
                 style={{ width: `${percentage}%` }}
               />
             </div>
-            <div className="w-20 text-sm text-end text-muted-foreground">
-              {count} ({percentage}%)
+            <div className="w-24 text-end text-sm text-muted-foreground tabular-nums">
+              {count.toLocaleString()} ({percentage}%)
             </div>
           </div>
         )
       })}
     </div>
   )
+}
+
+/** `source_url` → `Source url` when there is no explicit label. */
+function humanizeKey(key: string): string {
+  const text = key.replace(/_/g, ' ')
+  return text.charAt(0).toUpperCase() + text.slice(1)
 }
 
 // ============================================
@@ -547,7 +660,7 @@ const SENSITIVE_FIELDS = ['secret_value', 'password', 'api_key', 'token', 'priva
 const FIELD_LABELS: Record<string, string> = {
   credential_type: 'Type',
   secret_value: 'Secret',
-  source_type: 'Source Type',
+  source_type: 'Source type',
   source_url: 'Source URL',
   source_name: 'Source',
   database_host: 'Host',
@@ -558,7 +671,7 @@ const FIELD_LABELS: Record<string, string> = {
   email: 'Email',
   domain: 'Domain',
   identifier: 'Identifier',
-  ip_address: 'IP Address',
+  ip_address: 'IP address',
   file_path: 'File',
   repository: 'Repository',
   commit_hash: 'Commit',
@@ -605,7 +718,7 @@ const FIELD_GROUPS: Record<string, { title: string; icon: typeof Key; fields: st
     ],
   },
   code: {
-    title: 'Code Location',
+    title: 'Code location',
     icon: Server,
     fields: ['repository', 'file_path', 'branch', 'commit_hash', 'line_number'],
   },
@@ -696,12 +809,12 @@ function ExposureDetailsView({
             {secretsRevealed ? (
               <>
                 <EyeOff className="me-1 h-3 w-3" />
-                Hide Secrets
+                Hide secrets
               </>
             ) : (
               <>
                 <Eye className="me-1 h-3 w-3" />
-                Reveal Secrets
+                Reveal secrets
               </>
             )}
           </Button>
@@ -723,9 +836,7 @@ function ExposureDetailsView({
             </div>
             <div className="divide-y">
               {groupItems.map(({ key, value }) => {
-                const label =
-                  FIELD_LABELS[key] ||
-                  key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+                const label = FIELD_LABELS[key] || humanizeKey(key)
                 const stringValue = formatValue(key, value)
                 const isSensitive = isSensitiveField(key)
                 const displayValue =
@@ -750,7 +861,7 @@ function ExposureDetailsView({
                         <span
                           className={cn(
                             'font-mono text-xs max-w-[200px] truncate',
-                            isSensitive && 'text-red-600 dark:text-red-400'
+                            isSensitive && 'text-destructive'
                           )}
                         >
                           {displayValue}
@@ -789,12 +900,11 @@ function ExposureDetailsView({
       {ungroupedDetails.length > 0 && (
         <div className="rounded-lg border">
           <div className="flex items-center gap-2 px-3 py-2 bg-muted/50 border-b">
-            <span className="text-sm font-medium">Additional Details</span>
+            <span className="text-sm font-medium">Additional details</span>
           </div>
           <div className="divide-y">
             {ungroupedDetails.map(({ key, value }) => {
-              const label =
-                FIELD_LABELS[key] || key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+              const label = FIELD_LABELS[key] || humanizeKey(key)
               const stringValue = formatValue(key, value)
               const isSensitive = isSensitiveField(key)
               const displayValue =
@@ -819,7 +929,7 @@ function ExposureDetailsView({
                       <span
                         className={cn(
                           'font-mono text-xs max-w-[200px] truncate',
-                          isSensitive && 'text-red-600 dark:text-red-400'
+                          isSensitive && 'text-destructive'
                         )}
                       >
                         {displayValue}
@@ -863,85 +973,18 @@ function ExposureDetailSheet({ exposure, open, onOpenChange, onAction }: Exposur
 
   if (!exposure) return null
 
-  const severityConfig: Record<string, { color: string; bgColor: string; borderColor: string }> = {
-    critical: {
-      color: 'text-red-700',
-      bgColor: 'bg-red-50 dark:bg-red-950/50',
-      borderColor: 'border-red-200 dark:border-red-900',
-    },
-    high: {
-      color: 'text-orange-700',
-      bgColor: 'bg-orange-50 dark:bg-orange-950/50',
-      borderColor: 'border-orange-200 dark:border-orange-900',
-    },
-    medium: {
-      color: 'text-yellow-700',
-      bgColor: 'bg-yellow-50 dark:bg-yellow-950/50',
-      borderColor: 'border-yellow-200 dark:border-yellow-900',
-    },
-    low: {
-      color: 'text-blue-700',
-      bgColor: 'bg-blue-50 dark:bg-blue-950/50',
-      borderColor: 'border-blue-200 dark:border-blue-900',
-    },
-    info: {
-      color: 'text-gray-700',
-      bgColor: 'bg-gray-50 dark:bg-gray-950/50',
-      borderColor: 'border-gray-200 dark:border-gray-800',
-    },
-  }
-
-  const stateConfig: Record<
-    ExposureState,
-    { icon: typeof Shield; label: string; color: string; bgColor: string }
-  > = {
-    active: {
-      icon: AlertTriangle,
-      label: 'Active',
-      color: 'text-red-600',
-      bgColor: 'bg-red-100 dark:bg-red-900/30',
-    },
-    resolved: {
-      icon: ShieldCheck,
-      label: 'Resolved',
-      color: 'text-green-600',
-      bgColor: 'bg-green-100 dark:bg-green-900/30',
-    },
-    accepted: {
-      icon: Shield,
-      label: 'Accepted Risk',
-      color: 'text-yellow-600',
-      bgColor: 'bg-yellow-100 dark:bg-yellow-900/30',
-    },
-    false_positive: {
-      icon: ShieldX,
-      label: 'False Positive',
-      color: 'text-gray-500',
-      bgColor: 'bg-gray-100 dark:bg-gray-900/30',
-    },
-  }
-
-  const StateIcon = stateConfig[exposure.state].icon
-  const sevConfig = severityConfig[exposure.severity] || severityConfig.info
+  const state = EXPOSURE_STATE_BADGE[exposure.state]
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-xl overflow-y-auto p-0">
         {/* Header with severity indicator */}
-        <div className={cn('px-6 pt-6 pb-4 border-b', sevConfig.bgColor, sevConfig.borderColor)}>
+        <div className="border-b px-6 pb-4 pt-6">
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-2">
-                <Badge className={getSeverityBadgeClass(exposure.severity)}>
-                  {exposure.severity.toUpperCase()}
-                </Badge>
-                <Badge
-                  variant="outline"
-                  className={cn(stateConfig[exposure.state].color, 'border-current')}
-                >
-                  <StateIcon className="me-1 h-3 w-3" />
-                  {stateConfig[exposure.state].label}
-                </Badge>
+                <SeverityBadge severity={exposure.severity} />
+                {state && <Badge variant={state.variant}>{state.label}</Badge>}
               </div>
               <SheetHeader className="p-0 space-y-1">
                 <SheetTitle className="text-start text-lg leading-tight">
@@ -957,42 +1000,23 @@ function ExposureDetailSheet({ exposure, open, onOpenChange, onAction }: Exposur
           {/* Quick Actions - prominent at top */}
           {exposure.state === 'active' && (
             <div className="flex flex-wrap gap-2 mt-4">
-              <Button
-                size="sm"
-                onClick={() => onAction('resolve')}
-                className="bg-green-600 hover:bg-green-700"
-              >
+              <Button size="sm" onClick={() => onAction('resolve')}>
                 <ShieldCheck className="me-1.5 h-4 w-4" />
                 Resolve
               </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => onAction('accept')}
-                className="bg-background"
-              >
+              <Button size="sm" variant="outline" onClick={() => onAction('accept')}>
                 <Shield className="me-1.5 h-4 w-4" />
-                Accept Risk
+                Accept risk
               </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => onAction('false_positive')}
-                className="bg-background"
-              >
+              <Button size="sm" variant="outline" onClick={() => onAction('false_positive')}>
                 <ShieldX className="me-1.5 h-4 w-4" />
-                False Positive
+                False positive
               </Button>
             </div>
           )}
           {exposure.state !== 'active' && (
             <div className="mt-4">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => onAction('reactivate')}
-                className="bg-background"
-              >
+              <Button size="sm" variant="outline" onClick={() => onAction('reactivate')}>
                 <Activity className="me-1.5 h-4 w-4" />
                 Reactivate
               </Button>
@@ -1008,6 +1032,11 @@ function ExposureDetailSheet({ exposure, open, onOpenChange, onAction }: Exposur
             </div>
           )}
 
+          {/* Security context — read-time CTEM enrichment (api #483): effective
+              criticality, KEV, EPSS and attack-path reachability. Renders only
+              when the API returns at least one signal. */}
+          <ExposureSecurityContext exposure={exposure} />
+
           {/* Timeline Card */}
           <div className="rounded-lg border">
             <div className="px-4 py-3 border-b bg-muted/30">
@@ -1018,26 +1047,18 @@ function ExposureDetailSheet({ exposure, open, onOpenChange, onAction }: Exposur
             </div>
             <div className="grid grid-cols-2 divide-x">
               <div className="p-4">
-                <span className="text-xs text-muted-foreground uppercase tracking-wide">
-                  First Seen
-                </span>
+                <span className="text-xs text-muted-foreground">First seen</span>
                 <p className="text-sm font-medium mt-1">{formatRelative(exposure.first_seen_at)}</p>
               </div>
               <div className="p-4">
-                <span className="text-xs text-muted-foreground uppercase tracking-wide">
-                  Last Seen
-                </span>
+                <span className="text-xs text-muted-foreground">Last seen</span>
                 <p className="text-sm font-medium mt-1">{formatRelative(exposure.last_seen_at)}</p>
               </div>
             </div>
             {exposure.resolved_at && (
-              <div className="p-4 border-t bg-green-50/50 dark:bg-green-950/20">
-                <span className="text-xs text-muted-foreground uppercase tracking-wide">
-                  Resolved
-                </span>
-                <p className="text-sm font-medium mt-1 text-green-700 dark:text-green-400">
-                  {formatRelative(exposure.resolved_at)}
-                </p>
+              <div className="border-t p-4">
+                <span className="text-xs text-muted-foreground">Resolved</span>
+                <p className="mt-1 text-sm font-medium">{formatRelative(exposure.resolved_at)}</p>
               </div>
             )}
           </div>
@@ -1082,7 +1103,7 @@ function StateHistorySection({ history, isLoading }: StateHistorySectionProps) {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Activity className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm font-medium">State History</span>
+            <span className="text-sm font-medium">State history</span>
             {history.length > 0 && (
               <Badge variant="secondary" className="text-xs">
                 {history.length}
@@ -1093,9 +1114,10 @@ function StateHistorySection({ history, isLoading }: StateHistorySectionProps) {
       </div>
       <div className={cn('p-4', isExpanded && history.length > 5 && 'max-h-80 overflow-y-auto')}>
         {isLoading ? (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Loading...
+          <div className="space-y-3" aria-label="Loading state history">
+            {[1, 2].map((i) => (
+              <Skeleton key={i} className="h-10 w-full" />
+            ))}
           </div>
         ) : history.length > 0 ? (
           <div className="space-y-3">
@@ -1163,8 +1185,4 @@ function StateHistorySection({ history, isLoading }: StateHistorySectionProps) {
       </div>
     </div>
   )
-}
-
-function getSeverityBadgeClass(severity: ExposureSeverity): string {
-  return SEVERITY_BADGE_SOLID[severity]
 }

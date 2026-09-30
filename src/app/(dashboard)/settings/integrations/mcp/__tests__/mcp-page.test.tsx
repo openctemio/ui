@@ -16,6 +16,7 @@ vi.mock('@/lib/clipboard', () => ({ copyToClipboard: vi.fn(async () => true) }))
 vi.mock('@/lib/permissions', () => ({
   Can: ({ children }: { children: React.ReactNode }) => children,
   Permission: { ApiKeysWrite: 'integrations:api_keys:write' },
+  useHasPermission: () => true,
 }))
 
 describe('MCPConnectPage', () => {
@@ -23,7 +24,7 @@ describe('MCPConnectPage', () => {
 
   it('shows the read-only scopes and a placeholder config', () => {
     render(<MCPConnectPage />)
-    expect(screen.getByText('AI Access (MCP)')).toBeInTheDocument()
+    expect(screen.getByText('AI access (MCP)')).toBeInTheDocument()
     expect(screen.getByText('findings:read')).toBeInTheDocument()
     expect(screen.getByText('assets:read')).toBeInTheDocument()
     // Config block shows a placeholder until a key is minted.

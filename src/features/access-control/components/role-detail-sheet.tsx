@@ -16,7 +16,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabsContent, TabsList, TabsTrigger, TabsCount } from '@/components/ui/tabs'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { toast } from 'sonner'
 import { copyToClipboard } from '@/lib/clipboard'
@@ -415,22 +415,16 @@ export function RoleDetailSheet({
         {/* Tabs */}
         <Tabs defaultValue="permissions" className="flex-1 flex flex-col min-h-0">
           <div className="px-6 pt-2 shrink-0">
-            <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsList>
               <TabsTrigger value="permissions" className="gap-2">
                 <Shield className="h-4 w-4" />
                 Permissions
-                <Badge variant="secondary" className="ms-1 h-5 px-1.5 text-xs">
-                  {filteredPermissionCount}
-                </Badge>
+                <TabsCount value={filteredPermissionCount} />
               </TabsTrigger>
               <TabsTrigger value="members" className="gap-2">
                 <Users className="h-4 w-4" />
                 Members
-                {!isLoadingMembers && (
-                  <Badge variant="secondary" className="ms-1 h-5 px-1.5 text-xs">
-                    {roleMembers.length}
-                  </Badge>
-                )}
+                {!isLoadingMembers && <TabsCount value={roleMembers.length} />}
               </TabsTrigger>
             </TabsList>
           </div>

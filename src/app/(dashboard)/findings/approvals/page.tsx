@@ -26,7 +26,7 @@ import { DataTableColumnHeader } from '@/features/shared/components/data-table/d
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { Tabs, TabsList, TabsTrigger, TabsContent, TabsCount } from '@/components/ui/tabs'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -279,7 +279,7 @@ export default function ApprovalsPage() {
           return (
             <Link
               href={`/findings/${findingId}`}
-              className="font-mono text-xs text-blue-600 hover:underline dark:text-blue-400"
+              className="font-mono text-xs text-primary hover:underline"
             >
               {findingId.slice(0, 8)}...
             </Link>
@@ -497,21 +497,21 @@ export default function ApprovalsPage() {
               {/* Scroll container with fade indicator on mobile */}
               <div className="relative sm:static">
                 <div className="overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
-                  <TabsList className="h-auto w-max">
+                  <TabsList>
                     <TabsTrigger value="all" className="text-xs sm:text-sm shrink-0">
-                      All ({counts.all})
+                      All <TabsCount value={counts.all} />
                     </TabsTrigger>
                     <TabsTrigger value="pending" className="text-xs sm:text-sm shrink-0">
-                      Pending ({counts.pending})
+                      Pending <TabsCount value={counts.pending} />
                     </TabsTrigger>
                     <TabsTrigger value="approved" className="text-xs sm:text-sm shrink-0">
-                      Approved ({counts.approved})
+                      Approved <TabsCount value={counts.approved} />
                     </TabsTrigger>
                     <TabsTrigger value="rejected" className="text-xs sm:text-sm shrink-0">
-                      Rejected ({counts.rejected})
+                      Rejected <TabsCount value={counts.rejected} />
                     </TabsTrigger>
                     <TabsTrigger value="canceled" className="text-xs sm:text-sm shrink-0">
-                      Canceled ({counts.canceled})
+                      Canceled <TabsCount value={counts.canceled} />
                     </TabsTrigger>
                   </TabsList>
                 </div>
@@ -520,24 +520,21 @@ export default function ApprovalsPage() {
               </div>
 
               <TabsContent value={activeTab}>
-                <Card className="mt-4">
-                  <CardContent className="pt-6">
-                    <DataTable
-                      columns={columns}
-                      data={filteredApprovals}
-                      searchPlaceholder="Search by justification..."
-                      searchKey="justification"
-                      showColumnToggle={false}
-                      emptyMessage="No approval requests"
-                      emptyDescription={
-                        activeTab === 'all'
-                          ? 'There are no approval requests to review at this time.'
-                          : `No ${activeTab} approval requests found.`
-                      }
-                      pageSize={20}
-                    />
-                  </CardContent>
-                </Card>
+                <div className="mt-4">
+                  <DataTable
+                    columns={columns}
+                    data={filteredApprovals}
+                    searchPlaceholder="Search by justification..."
+                    searchKey="justification"
+                    showColumnToggle={false}
+                    emptyMessage="No approval requests"
+                    emptyDescription={
+                      activeTab === 'all'
+                        ? 'There are no approval requests to review at this time.'
+                        : `No ${activeTab} approval requests found.`
+                    }
+                  />
+                </div>
               </TabsContent>
             </Tabs>
           </>

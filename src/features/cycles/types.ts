@@ -8,6 +8,10 @@
  * `json:"..."` tags.
  */
 
+import type { CharterEvaluation } from '@/lib/api/generated'
+
+export type { CharterEvaluation, CriterionEvaluation, CriterionOutcome } from '@/lib/api/generated'
+
 export type CtemCycleStatus = 'planning' | 'active' | 'review' | 'closed'
 
 export interface CharterExclusion {
@@ -60,6 +64,12 @@ export interface CtemCycle {
   start_date: string
   end_date: string
   charter?: CtemCharter | null
+  /**
+   * Close-time verdict on each charter success criterion (met / unmet /
+   * not_measurable, with the measured value). Absent until the cycle closes
+   * with at least one criterion.
+   */
+  charter_evaluation?: CharterEvaluation
   created_at: string
   updated_at: string
 }

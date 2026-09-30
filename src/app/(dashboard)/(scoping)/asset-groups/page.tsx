@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { ColumnDef } from '@tanstack/react-table'
 import { Main } from '@/components/layout'
@@ -10,17 +10,22 @@ import {
   DataTableColumnHeader,
   DataTableRowActions,
   RiskScoreBadge,
+  EmptyState,
+  MetricStrip,
+  type MetricStripItem,
+  FacetPanel,
+  FacetSection,
+  FacetOption,
+  BulkActionBar,
 } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Slider } from '@/components/ui/slider'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   Plus,
   Download,
-  Filter,
   RefreshCw,
   Eye,
   Pencil,
@@ -29,15 +34,13 @@ import {
   Copy,
   Link,
   ExternalLink,
-  X,
   SlidersHorizontal,
   Tags,
   Search as SearchIcon,
   Package,
-  AlertTriangle,
-  TrendingUp,
+  ListFilter,
+  PanelLeftClose,
 } from 'lucide-react'
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -52,10 +55,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { ConfirmDialog } from '@/components/confirm-dialog'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Badge } from '@/components/ui/badge'
-import { Separator } from '@/components/ui/separator'
 import { toast } from 'sonner'
 import {
   CreateGroupDialog,
@@ -75,8 +78,15 @@ import type { AssetGroup, CreateAssetGroupInput } from '@/features/asset-groups/
 import type { AssetGroupApiFilters } from '@/features/asset-groups/api'
 import { copyToClipboard } from '@/lib/clipboard'
 import { Can, Permission } from '@/lib/permissions'
-import { CRITICALITY_BADGE_SOFT } from '@/lib/criticality-colors'
+import {
+  CRITICALITY_BADGE_SOFT,
+  CRITICALITY_DOT_COLORS,
+  CRITICALITY_LABELS,
+  CRITICALITY_ORDER,
+} from '@/lib/criticality-colors'
 import { useCsvExport, type ExportFieldConfig } from '@/hooks/use-csv-export'
+import { useUrlFilter, useUrlFilterList } from '@/hooks/use-url-param'
+import { cn } from '@/lib/utils'
 
 // ============================================
 // CONSTANTS
@@ -85,27 +95,17 @@ import { useCsvExport, type ExportFieldConfig } from '@/hooks/use-csv-export'
 type Environment = 'production' | 'staging' | 'development' | 'testing'
 type Criticality = 'critical' | 'high' | 'medium' | 'low'
 
+const ENVIRONMENTS: Environment[] = ['production', 'staging', 'development', 'testing']
+const CRITICALITIES: Criticality[] = CRITICALITY_ORDER
+
 const CRITICALITY_BADGE: Record<string, string> = CRITICALITY_BADGE_SOFT
 
-const ENVIRONMENT_BADGE: Record<string, string> = {
-  production: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100',
-  staging: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100',
-  development: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-100',
-  testing: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-100',
-}
+const FILTERS_OPEN_KEY = 'openctem:asset-groups-filters-open'
 
-interface Filters {
-  environments: Environment[]
-  criticalities: Criticality[]
-  riskScoreRange: [number, number]
-  hasFindings: boolean | null
-}
-
-const DEFAULT_FILTERS: Filters = {
-  environments: [],
-  criticalities: [],
-  riskScoreRange: [0, 100],
-  hasFindings: null,
+/** A 0–100 score from a URL value; anything else falls back. */
+function clampScore(raw: string, fallback: number): number {
+  if (!/^\d+$/.test(raw)) return fallback
+  return Math.min(100, Math.max(0, Number(raw)))
 }
 
 const ASSET_GROUP_EXPORT_FIELDS: ExportFieldConfig<AssetGroup>[] = [
@@ -161,9 +161,9 @@ function AddAssetsDialog({
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-lg max-h-[80vh] flex flex-col">
+      <DialogContent className="flex max-h-[80vh] flex-col sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Add Assets to &quot;{group.name}&quot;</DialogTitle>
+          <DialogTitle>Add assets to &quot;{group.name}&quot;</DialogTitle>
           <DialogDescription>Select assets to add to this group.</DialogDescription>
         </DialogHeader>
 
@@ -180,7 +180,12 @@ function AddAssetsDialog({
 
           <div className="flex-1 overflow-y-auto border rounded-lg max-h-64">
             {displayed.length === 0 ? (
-              <div className="p-4 text-center text-muted-foreground">No assets found</div>
+              <EmptyState
+                icon={Package}
+                title="No assets found"
+                description="Try a different search."
+                card={false}
+              />
             ) : (
               <div className="divide-y">
                 {displayed.map((asset) => (
@@ -233,7 +238,7 @@ function AddAssetsDialog({
           <Button onClick={handleSubmit} disabled={selectedIds.length === 0 || isMutating}>
             {isMutating
               ? 'Adding...'
-              : `Add ${selectedIds.length || ''} Asset${selectedIds.length !== 1 ? 's' : ''}`}
+              : `Add ${selectedIds.length || ''} asset${selectedIds.length !== 1 ? 's' : ''}`}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -253,9 +258,49 @@ export default function AssetGroupsPage() {
   const createAssetGroup = useCreateAssetGroup()
   const bulkOperations = useBulkAssetGroupOperations()
 
-  // Filter state
-  const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS)
-  const [isFilterOpen, setIsFilterOpen] = useState(false)
+  // Filters live in the URL so a filtered view can be linked to.
+  const [envParam, setEnvParam] = useUrlFilterList('environment')
+  const [critParam, setCritParam] = useUrlFilterList('criticality')
+  const [findingsParam, setFindingsParam] = useUrlFilter('findings', '')
+  const [riskMinParam, setRiskMinParam] = useUrlFilter('risk_min', '0')
+  const [riskMaxParam, setRiskMaxParam] = useUrlFilter('risk_max', '100')
+  const [searchQuery, setSearchQuery] = useUrlFilter('q', '')
+
+  const environments = useMemo(
+    () => envParam.filter((v): v is Environment => (ENVIRONMENTS as string[]).includes(v)),
+    [envParam]
+  )
+  const criticalities = useMemo(
+    () => critParam.filter((v): v is Criticality => (CRITICALITIES as string[]).includes(v)),
+    [critParam]
+  )
+  const hasFindings = findingsParam === 'yes' ? true : findingsParam === 'no' ? false : null
+  const riskMin = clampScore(riskMinParam, 0)
+  const riskMax = clampScore(riskMaxParam, 100)
+  // The slider moves locally while dragging; the URL is written on release.
+  const [riskDraft, setRiskDraft] = useState<[number, number] | null>(null)
+  const riskRange: [number, number] = riskDraft ?? [riskMin, riskMax]
+
+  // Filter panel: closed by default; the viewer's choice is remembered.
+  const [filtersOpen, setFiltersOpenState] = useState(false)
+  const [filterSheetOpen, setFilterSheetOpen] = useState(false)
+  useEffect(() => {
+    try {
+      if (window.localStorage.getItem(FILTERS_OPEN_KEY) === '1') setFiltersOpenState(true)
+    } catch {
+      // storage unavailable — stay closed
+    }
+  }, [])
+  const toggleFiltersOpen = useCallback(() => {
+    setFiltersOpenState((prev) => {
+      try {
+        window.localStorage.setItem(FILTERS_OPEN_KEY, prev ? '0' : '1')
+      } catch {
+        // best-effort
+      }
+      return !prev
+    })
+  }, [])
 
   // Dialog state
   const [viewGroup, setViewGroup] = useState<AssetGroup | null>(null)
@@ -266,32 +311,49 @@ export default function AssetGroupsPage() {
   const [isEditSubmitting, setIsEditSubmitting] = useState(false)
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false)
 
-  // Selection state
+  // Selection state. The table owns the checkboxes; bumping the epoch clears them.
   const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [selectionEpoch, setSelectionEpoch] = useState(0)
+  const clearSelection = useCallback(() => {
+    setSelectedIds([])
+    setSelectionEpoch((n) => n + 1)
+  }, [])
 
-  // Active filter count
-  const activeFilterCount = useMemo(() => {
-    let count = 0
-    if (filters.environments.length > 0) count++
-    if (filters.criticalities.length > 0) count++
-    if (filters.riskScoreRange[0] > 0 || filters.riskScoreRange[1] < 100) count++
-    if (filters.hasFindings !== null) count++
-    return count
-  }, [filters])
+  const riskActive = riskMin > 0 || riskMax < 100
+  const activeFilterCount =
+    environments.length +
+    criticalities.length +
+    (riskActive ? 1 : 0) +
+    (hasFindings !== null ? 1 : 0)
 
   // Build API filters
   const apiFilters = useMemo(() => {
     const result: AssetGroupApiFilters = {}
-    if (filters.environments.length > 0) result.environments = filters.environments
-    if (filters.criticalities.length > 0) result.criticalities = filters.criticalities
-    if (filters.riskScoreRange[0] > 0) result.min_risk_score = filters.riskScoreRange[0]
-    if (filters.riskScoreRange[1] < 100) result.max_risk_score = filters.riskScoreRange[1]
-    if (filters.hasFindings !== null) result.has_findings = filters.hasFindings
+    if (environments.length > 0) result.environments = environments
+    if (criticalities.length > 0) result.criticalities = criticalities
+    if (riskMin > 0) result.min_risk_score = riskMin
+    if (riskMax < 100) result.max_risk_score = riskMax
+    if (hasFindings !== null) result.has_findings = hasFindings
     return result
-  }, [filters])
+  }, [environments, criticalities, riskMin, riskMax, hasFindings])
 
   // Fetch data
-  const { data: groups, isLoading, mutate: refreshData } = useAssetGroups({ filters: apiFilters })
+  const {
+    data: fetchedGroups,
+    isLoading,
+    mutate: refreshData,
+  } = useAssetGroups({ filters: apiFilters })
+
+  const groups = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase()
+    if (!q) return fetchedGroups
+    return fetchedGroups.filter(
+      (g) =>
+        g.name.toLowerCase().includes(q) ||
+        (g.description ?? '').toLowerCase().includes(q) ||
+        (g.tags ?? []).some((t) => t.toLowerCase().includes(q))
+    )
+  }, [fetchedGroups, searchQuery])
 
   // CSV export of the current (filtered) groups list.
   const { handleExport: handleExportCsv } = useCsvExport(
@@ -369,7 +431,7 @@ export default function AssetGroupsPage() {
 
   const handleBulkDelete = async () => {
     await bulkOperations.bulkDelete(selectedIds)
-    setSelectedIds([])
+    clearSelection()
     setBulkDeleteConfirm(false)
     refreshData()
   }
@@ -377,11 +439,11 @@ export default function AssetGroupsPage() {
   const handleBulkAction = async (action: string, value?: string) => {
     if (action === 'change-criticality' && value) {
       await bulkOperations.bulkUpdate(selectedIds, { criticality: value })
-      setSelectedIds([])
+      clearSelection()
       refreshData()
     } else if (action === 'change-environment' && value) {
       await bulkOperations.bulkUpdate(selectedIds, { environment: value })
-      setSelectedIds([])
+      clearSelection()
       refreshData()
     }
   }
@@ -397,22 +459,16 @@ export default function AssetGroupsPage() {
   }
 
   const clearFilters = () => {
-    setFilters(DEFAULT_FILTERS)
-    toast.success('Filters cleared')
+    setEnvParam([])
+    setCritParam([])
+    setFindingsParam('')
+    setRiskMinParam('0')
+    setRiskMaxParam('100')
+    setRiskDraft(null)
   }
 
-  const toggleFilter = <K extends keyof Filters>(
-    key: K,
-    value: Filters[K] extends (infer T)[] ? T : never
-  ) => {
-    setFilters((prev) => {
-      const arr = prev[key] as unknown[]
-      return {
-        ...prev,
-        [key]: arr.includes(value) ? arr.filter((v) => v !== value) : [...arr, value],
-      }
-    })
-  }
+  const toggleIn = (setter: typeof setEnvParam, value: string, on: boolean) =>
+    setter((prev) => (on ? [...prev, value] : prev.filter((v) => v !== value)))
 
   // Column definitions
   const columns: ColumnDef<AssetGroup>[] = [
@@ -429,6 +485,7 @@ export default function AssetGroupsPage() {
         <Checkbox
           checked={row.getIsSelected()}
           onCheckedChange={(value) => row.toggleSelected(!!value)}
+          onClick={(e) => e.stopPropagation()}
           aria-label="Select row"
         />
       ),
@@ -441,14 +498,12 @@ export default function AssetGroupsPage() {
       cell: ({ row }) => {
         const group = row.original
         return (
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
-              <FolderKanban className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <p className="font-medium">{group.name}</p>
+          <div className="flex min-w-0 items-center gap-2.5">
+            <FolderKanban className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <div className="min-w-0">
+              <p className="truncate font-medium">{group.name}</p>
               {group.description && (
-                <p className="text-xs text-muted-foreground line-clamp-1">{group.description}</p>
+                <p className="line-clamp-1 text-xs text-muted-foreground">{group.description}</p>
               )}
             </div>
           </div>
@@ -459,7 +514,7 @@ export default function AssetGroupsPage() {
       accessorKey: 'environment',
       header: ({ column }) => <DataTableColumnHeader column={column} title="Environment" />,
       cell: ({ row }) => (
-        <Badge variant="outline" className={ENVIRONMENT_BADGE[row.original.environment]}>
+        <Badge variant="outline" className="capitalize">
           {row.original.environment}
         </Badge>
       ),
@@ -469,7 +524,10 @@ export default function AssetGroupsPage() {
       accessorKey: 'criticality',
       header: ({ column }) => <DataTableColumnHeader column={column} title="Criticality" />,
       cell: ({ row }) => (
-        <Badge variant="outline" className={CRITICALITY_BADGE[row.original.criticality]}>
+        <Badge
+          variant="outline"
+          className={cn('capitalize', CRITICALITY_BADGE[row.original.criticality])}
+        >
           {row.original.criticality}
         </Badge>
       ),
@@ -478,7 +536,7 @@ export default function AssetGroupsPage() {
     {
       accessorKey: 'assetCount',
       header: ({ column }) => <DataTableColumnHeader column={column} title="Assets" />,
-      cell: ({ row }) => <span className="font-medium">{row.original.assetCount}</span>,
+      cell: ({ row }) => <span className="tabular-nums">{row.original.assetCount}</span>,
     },
     {
       accessorKey: 'findingCount',
@@ -486,7 +544,12 @@ export default function AssetGroupsPage() {
       cell: ({ row }) => {
         const count = row.original.findingCount
         return (
-          <span className={count > 0 ? 'font-medium text-orange-500' : 'text-muted-foreground'}>
+          <span
+            className={cn(
+              'tabular-nums',
+              count > 0 ? 'font-medium text-destructive' : 'text-muted-foreground'
+            )}
+          >
             {count}
           </span>
         )
@@ -494,7 +557,7 @@ export default function AssetGroupsPage() {
     },
     {
       accessorKey: 'riskScore',
-      header: ({ column }) => <DataTableColumnHeader column={column} title="Risk Score" />,
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Risk score" />,
       cell: ({ row }) => <RiskScoreBadge score={row.original.riskScore} size="sm" />,
     },
     {
@@ -504,9 +567,9 @@ export default function AssetGroupsPage() {
         return (
           <DataTableRowActions
             actions={[
-              { label: 'Quick View', icon: Eye, onClick: () => setViewGroup(group) },
+              { label: 'Quick view', icon: Eye, onClick: () => setViewGroup(group) },
               {
-                label: 'Open Full Page',
+                label: 'Open full page',
                 icon: ExternalLink,
                 onClick: () => router.push(`/asset-groups/${group.id}`),
               },
@@ -517,13 +580,13 @@ export default function AssetGroupsPage() {
                 permission: Permission.AssetGroupsWrite,
               },
               {
-                label: 'Add Assets',
+                label: 'Add assets',
                 icon: Plus,
                 onClick: () => setAddAssetsGroup(group),
                 permission: Permission.AssetGroupsWrite,
               },
               {
-                label: 'Manage Assets',
+                label: 'Manage assets',
                 icon: Package,
                 onClick: () => router.push(`/asset-groups/${group.id}?tab=assets`),
                 permission: Permission.AssetGroupsWrite,
@@ -534,7 +597,7 @@ export default function AssetGroupsPage() {
                 onClick: () => handleCopyId(group.id),
                 separatorBefore: true,
               },
-              { label: 'Copy Link', icon: Link, onClick: () => handleCopyLink(group.id) },
+              { label: 'Copy link', icon: Link, onClick: () => handleCopyLink(group.id) },
               {
                 label: 'Delete',
                 icon: Trash2,
@@ -550,391 +613,303 @@ export default function AssetGroupsPage() {
     },
   ]
 
+  const criticalOnly = criticalities.length === 1 && criticalities[0] === 'critical'
+  const metrics: MetricStripItem[] = [
+    {
+      key: 'total',
+      label: 'Groups',
+      value: stats.total,
+      onClick: clearFilters,
+      active: activeFilterCount === 0,
+    },
+    {
+      key: 'critical',
+      label: 'Critical groups',
+      value: stats.byCriticality?.critical ?? 0,
+      tone: 'danger',
+      onClick: () => setCritParam(criticalOnly ? [] : ['critical']),
+      active: criticalOnly,
+    },
+    { key: 'assets', label: 'Assets in groups', value: stats.totalAssets },
+    {
+      key: 'risk',
+      label: 'Average risk score',
+      // One decimal: the raw average of integer scores can carry a long
+      // repeating fractional tail (e.g. 53.16666666666664).
+      value: Math.round((stats.averageRiskScore ?? 0) * 10) / 10,
+      hint: 'of 100',
+    },
+  ]
+
+  const facetPanel = (
+    <FacetPanel activeCount={activeFilterCount} onClearAll={clearFilters}>
+      <FacetSection title="Environment" selectedCount={environments.length}>
+        {ENVIRONMENTS.map((env) => (
+          <FacetOption
+            key={env}
+            label={<span className="capitalize">{env}</span>}
+            checked={environments.includes(env)}
+            onCheckedChange={(on) => toggleIn(setEnvParam, env, on)}
+          />
+        ))}
+      </FacetSection>
+      <FacetSection title="Criticality" selectedCount={criticalities.length}>
+        {CRITICALITIES.map((crit) => (
+          <FacetOption
+            key={crit}
+            label={CRITICALITY_LABELS[crit]}
+            adornment={
+              <span className={cn('size-2 shrink-0 rounded-full', CRITICALITY_DOT_COLORS[crit])} />
+            }
+            checked={criticalities.includes(crit)}
+            onCheckedChange={(on) => toggleIn(setCritParam, crit, on)}
+          />
+        ))}
+      </FacetSection>
+      <FacetSection title="Findings" selectedCount={hasFindings !== null ? 1 : 0}>
+        <FacetOption
+          label="Has findings"
+          checked={hasFindings === true}
+          onCheckedChange={(on) => setFindingsParam(on ? 'yes' : '')}
+        />
+        <FacetOption
+          label="No findings"
+          checked={hasFindings === false}
+          onCheckedChange={(on) => setFindingsParam(on ? 'no' : '')}
+        />
+      </FacetSection>
+      <FacetSection title="Risk score" selectedCount={riskActive ? 1 : 0}>
+        <div className="space-y-3 pe-1.5 pt-1">
+          <p className="text-xs tabular-nums text-muted-foreground">
+            {riskRange[0]} – {riskRange[1]}
+          </p>
+          <Slider
+            value={riskRange}
+            onValueChange={(value) => setRiskDraft(value as [number, number])}
+            onValueCommit={(value) => {
+              setRiskMinParam(String(value[0]))
+              setRiskMaxParam(String(value[1]))
+              setRiskDraft(null)
+            }}
+            max={100}
+            min={0}
+            step={5}
+            aria-label="Risk score range"
+          />
+        </div>
+      </FacetSection>
+    </FacetPanel>
+  )
+
+  // Icon-only filter toggle; the active-filter count sits on its corner (as on Findings).
+  const filterCountDot =
+    activeFilterCount > 0 ? (
+      <span className="absolute -end-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-medium tabular-nums text-primary-foreground">
+        {activeFilterCount}
+      </span>
+    ) : null
+  const filterLabel = activeFilterCount > 0 ? `Filters (${activeFilterCount} active)` : 'Filters'
+
+  const toolbarStart = (
+    <>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="outline"
+            size="icon"
+            className="relative hidden h-9 w-9 lg:inline-flex"
+            onClick={toggleFiltersOpen}
+            aria-pressed={filtersOpen}
+            aria-controls="asset-group-filters"
+            aria-label={filterLabel}
+          >
+            {filtersOpen ? (
+              <PanelLeftClose className="h-4 w-4" />
+            ) : (
+              <ListFilter className="h-4 w-4" />
+            )}
+            {filterCountDot}
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>{filtersOpen ? 'Hide filters' : 'Show filters'}</TooltipContent>
+      </Tooltip>
+      <Button
+        variant="outline"
+        size="icon"
+        className="relative h-9 w-9 lg:hidden"
+        onClick={() => setFilterSheetOpen(true)}
+        aria-label={filterLabel}
+      >
+        <ListFilter className="h-4 w-4" />
+        {filterCountDot}
+      </Button>
+      <div className="relative min-w-0 flex-1 sm:max-w-sm">
+        <SearchIcon className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search name, description or tag…"
+          aria-label="Search asset groups"
+          className="h-9 ps-9"
+        />
+      </div>
+    </>
+  )
+
+  const toolbarEnd = (
+    <>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-9 w-9"
+            onClick={handleRefresh}
+            disabled={isLoading}
+            aria-label="Refresh"
+          >
+            <RefreshCw className={cn('h-4 w-4', isLoading && 'animate-spin')} />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>Refresh</TooltipContent>
+      </Tooltip>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline" size="sm" className="h-9">
+            <Download className="h-4 w-4 md:me-2" />
+            <span className="hidden md:inline">Export</span>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onClick={handleExportCsv} disabled={groups.length === 0}>
+            Export as CSV
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={handleExportJson} disabled={groups.length === 0}>
+            Export as JSON
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </>
+  )
+
   return (
     <>
       <Main>
         <PageHeader
-          title="Asset Groups"
-          description="Organize and monitor your assets by logical groups"
+          title="Asset groups"
+          description="Organize and monitor assets by logical group."
         >
-          <div className="flex flex-wrap items-center gap-2">
-            <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isLoading}>
-              <RefreshCw className={`me-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-              Refresh
+          <Can permission={Permission.AssetGroupsWrite} mode="disable">
+            <Button size="sm" onClick={() => setIsCreateOpen(true)}>
+              <Plus className="me-2 h-4 w-4" />
+              New group
             </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <Download className="me-2 h-4 w-4" />
-                  Export
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={handleExportCsv} disabled={groups.length === 0}>
-                  Export as CSV
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleExportJson} disabled={groups.length === 0}>
-                  Export as JSON
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            {/* Filters Popover */}
-            <Popover open={isFilterOpen} onOpenChange={setIsFilterOpen}>
-              <PopoverTrigger asChild>
-                <Button variant="outline" size="sm" className="relative">
-                  <Filter className="me-2 h-4 w-4" />
-                  Filters
-                  {activeFilterCount > 0 && (
-                    <Badge className="ms-2 h-5 w-5 rounded-full p-0 text-xs">
-                      {activeFilterCount}
-                    </Badge>
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-72 sm:w-80" align="end">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-medium">Filters</h4>
-                    {activeFilterCount > 0 && (
-                      <Button variant="ghost" size="sm" onClick={clearFilters}>
-                        Clear all
-                      </Button>
-                    )}
-                  </div>
-
-                  <Separator />
-
-                  {/* Environment */}
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">Environment</Label>
-                    <div className="flex flex-wrap gap-2">
-                      {(['production', 'staging', 'development', 'testing'] as Environment[]).map(
-                        (env) => (
-                          <Badge
-                            key={env}
-                            variant={filters.environments.includes(env) ? 'default' : 'outline'}
-                            className={`cursor-pointer ${
-                              filters.environments.includes(env) ? '' : 'hover:bg-muted'
-                            }`}
-                            onClick={() => toggleFilter('environments', env)}
-                          >
-                            {env}
-                          </Badge>
-                        )
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Criticality */}
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">Criticality</Label>
-                    <div className="flex flex-wrap gap-2">
-                      {(['critical', 'high', 'medium', 'low'] as Criticality[]).map((crit) => (
-                        <Badge
-                          key={crit}
-                          variant="outline"
-                          className={`cursor-pointer ${
-                            filters.criticalities.includes(crit)
-                              ? CRITICALITY_BADGE[crit]
-                              : 'hover:bg-muted'
-                          }`}
-                          onClick={() => toggleFilter('criticalities', crit)}
-                        >
-                          {crit}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Risk Score Range */}
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-sm font-medium">Risk Score</Label>
-                      <span className="text-sm text-muted-foreground">
-                        {filters.riskScoreRange[0]} - {filters.riskScoreRange[1]}
-                      </span>
-                    </div>
-                    <Slider
-                      value={filters.riskScoreRange}
-                      onValueChange={(value) =>
-                        setFilters((prev) => ({
-                          ...prev,
-                          riskScoreRange: value as [number, number],
-                        }))
-                      }
-                      max={100}
-                      min={0}
-                      step={5}
-                      className="w-full"
-                    />
-                  </div>
-
-                  {/* Has Findings */}
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">Findings</Label>
-                    <div className="flex gap-2">
-                      <Badge
-                        variant={filters.hasFindings === true ? 'default' : 'outline'}
-                        className="cursor-pointer"
-                        onClick={() =>
-                          setFilters((prev) => ({
-                            ...prev,
-                            hasFindings: prev.hasFindings === true ? null : true,
-                          }))
-                        }
-                      >
-                        Has Findings
-                      </Badge>
-                      <Badge
-                        variant={filters.hasFindings === false ? 'default' : 'outline'}
-                        className="cursor-pointer"
-                        onClick={() =>
-                          setFilters((prev) => ({
-                            ...prev,
-                            hasFindings: prev.hasFindings === false ? null : false,
-                          }))
-                        }
-                      >
-                        No Findings
-                      </Badge>
-                    </div>
-                  </div>
-
-                  <Separator />
-
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">{groups.length} results</span>
-                    <Button size="sm" onClick={() => setIsFilterOpen(false)}>
-                      Apply
-                    </Button>
-                  </div>
-                </div>
-              </PopoverContent>
-            </Popover>
-
-            <Can permission={Permission.AssetGroupsWrite} mode="disable">
-              <Button size="sm" onClick={() => setIsCreateOpen(true)}>
-                <Plus className="me-2 h-4 w-4" />
-                New Group
-              </Button>
-            </Can>
-          </div>
+          </Can>
         </PageHeader>
 
-        {/* Active Filters */}
-        {activeFilterCount > 0 && (
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            <span className="text-sm text-muted-foreground">Active filters:</span>
-            {filters.environments.map((env) => (
-              <Badge key={env} variant="secondary" className="gap-1">
-                {env}
-                <X
-                  className="h-3 w-3 cursor-pointer"
-                  onClick={() => toggleFilter('environments', env)}
-                />
-              </Badge>
-            ))}
-            {filters.criticalities.map((crit) => (
-              <Badge key={crit} variant="secondary" className="gap-1">
-                {crit}
-                <X
-                  className="h-3 w-3 cursor-pointer"
-                  onClick={() => toggleFilter('criticalities', crit)}
-                />
-              </Badge>
-            ))}
-            {(filters.riskScoreRange[0] > 0 || filters.riskScoreRange[1] < 100) && (
-              <Badge variant="secondary" className="gap-1">
-                Risk: {filters.riskScoreRange[0]}-{filters.riskScoreRange[1]}
-                <X
-                  className="h-3 w-3 cursor-pointer"
-                  onClick={() => setFilters((prev) => ({ ...prev, riskScoreRange: [0, 100] }))}
-                />
-              </Badge>
-            )}
-            {filters.hasFindings !== null && (
-              <Badge variant="secondary" className="gap-1">
-                {filters.hasFindings ? 'Has Findings' : 'No Findings'}
-                <X
-                  className="h-3 w-3 cursor-pointer"
-                  onClick={() => setFilters((prev) => ({ ...prev, hasFindings: null }))}
-                />
-              </Badge>
-            )}
-            <Button variant="ghost" size="sm" onClick={clearFilters}>
-              Clear all
-            </Button>
-          </div>
-        )}
+        <MetricStrip className="mt-5" loading={statsLoading} items={metrics} />
 
-        {/* Bulk Actions */}
-        {selectedIds.length > 0 && (
-          <Card className="mt-4 border-primary">
-            <CardContent className="flex items-center justify-between py-3">
-              <span className="text-sm font-medium">{selectedIds.length} group(s) selected</span>
-              <div className="flex flex-wrap items-center gap-2">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm">
-                      <Tags className="me-2 h-4 w-4" />
-                      Criticality
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    {(['critical', 'high', 'medium', 'low'] as Criticality[]).map((crit) => (
-                      <DropdownMenuItem
-                        key={crit}
-                        onClick={() => handleBulkAction('change-criticality', crit)}
-                      >
-                        <Badge variant="outline" className={`me-2 ${CRITICALITY_BADGE[crit]}`}>
-                          {crit}
-                        </Badge>
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
+        <div className="mt-5 flex items-start gap-5">
+          {filtersOpen && (
+            <aside
+              id="asset-group-filters"
+              aria-label="Asset group filters"
+              className="sticky top-4 hidden max-h-[calc(100svh-7.5rem)] w-64 shrink-0 flex-col rounded-xl border bg-card p-4 shadow-sm lg:flex"
+            >
+              <div className="flex min-h-0 flex-1 flex-col">{facetPanel}</div>
+            </aside>
+          )}
 
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm">
-                      <SlidersHorizontal className="me-2 h-4 w-4" />
-                      Environment
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    {(['production', 'staging', 'development', 'testing'] as Environment[]).map(
-                      (env) => (
-                        <DropdownMenuItem
-                          key={env}
-                          onClick={() => handleBulkAction('change-environment', env)}
-                        >
-                          {env}
-                        </DropdownMenuItem>
-                      )
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-red-500 hover:text-red-600"
-                  onClick={() => setBulkDeleteConfirm(true)}
-                >
-                  <Trash2 className="me-2 h-4 w-4" />
-                  Delete
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => setSelectedIds([])}>
-                  Clear
-                </Button>
+          <div className="min-w-0 flex-1">
+            {isLoading && fetchedGroups.length === 0 ? (
+              <div className="space-y-2 rounded-xl border p-3">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <Skeleton key={i} className="h-10 w-full" />
+                ))}
               </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Stats Cards */}
-        <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <p className="text-sm font-medium text-muted-foreground">Total Groups</p>
-              <FolderKanban className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              {statsLoading ? (
-                <Skeleton className="h-8 w-16" />
-              ) : (
-                <>
-                  <p className="text-2xl font-bold">{stats.total}</p>
-                  <p className="text-xs text-muted-foreground mt-1">Across all environments</p>
-                </>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className={stats.byCriticality?.critical > 0 ? 'border-red-500/50' : ''}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <p className="text-sm font-medium text-muted-foreground">Critical Groups</p>
-              <AlertTriangle
-                className={`h-4 w-4 ${stats.byCriticality?.critical > 0 ? 'text-red-500' : 'text-muted-foreground'}`}
+            ) : (
+              <DataTable
+                columns={columns}
+                data={groups}
+                showSearch={false}
+                toolbarStart={toolbarStart}
+                toolbarEnd={toolbarEnd}
+                emptyMessage="No asset groups found"
+                emptyDescription={
+                  activeFilterCount > 0 || searchQuery
+                    ? 'Try adjusting your search or filters'
+                    : 'Create a group to organize your assets'
+                }
+                onRowClick={(group) => setViewGroup(group)}
+                getRowId={(group) => group.id}
+                onSelectionChange={(rows) => setSelectedIds(rows.map((g) => g.id))}
+                resetSelectionKey={selectionEpoch}
+                showSelectionCount={false}
               />
-            </CardHeader>
-            <CardContent>
-              {statsLoading ? (
-                <Skeleton className="h-8 w-16" />
-              ) : (
-                <>
-                  <p
-                    className={`text-2xl font-bold ${stats.byCriticality?.critical > 0 ? 'text-red-500' : ''}`}
-                  >
-                    {stats.byCriticality?.critical ?? 0}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">Require immediate attention</p>
-                </>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <p className="text-sm font-medium text-muted-foreground">Total Assets</p>
-              <Package className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              {statsLoading ? (
-                <Skeleton className="h-8 w-16" />
-              ) : (
-                <>
-                  <p className="text-2xl font-bold">{stats.totalAssets}</p>
-                  <p className="text-xs text-muted-foreground mt-1">In all groups</p>
-                </>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <p className="text-sm font-medium text-muted-foreground">Avg Risk Score</p>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              {statsLoading ? (
-                <Skeleton className="h-8 w-16" />
-              ) : (
-                <>
-                  {/* Round to 1 decimal — the raw value is computed by
-                      averaging integer scores so it can have a long
-                      repeating fractional tail (e.g. 53.16666666666664).
-                      One decimal place is precise enough for a risk
-                      summary card. */}
-                  <p className="text-2xl font-bold">
-                    {Math.round((stats.averageRiskScore ?? 0) * 10) / 10}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">Out of 100</p>
-                </>
-              )}
-            </CardContent>
-          </Card>
+            )}
+          </div>
         </div>
 
-        {/* Data Table */}
-        <div className="mt-6">
-          <DataTable
-            columns={columns}
-            data={groups}
-            searchPlaceholder="Search groups..."
-            pageSize={10}
-            emptyMessage="No asset groups found"
-            emptyDescription={
-              activeFilterCount > 0
-                ? 'Try adjusting your filters'
-                : 'Create your first asset group to organize your assets'
-            }
-            onRowClick={(group) => setViewGroup(group)}
-            getRowId={(group) => group.id}
-            onSelectionChange={(rows) => setSelectedIds(rows.map((g) => g.id))}
-          />
-        </div>
+        <BulkActionBar count={selectedIds.length} onClear={clearSelection} noun="selected">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-8">
+                <Tags className="me-2 h-4 w-4" />
+                Criticality
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              {CRITICALITIES.map((crit) => (
+                <DropdownMenuItem
+                  key={crit}
+                  onClick={() => handleBulkAction('change-criticality', crit)}
+                >
+                  <span className={cn('me-2 size-2 rounded-full', CRITICALITY_DOT_COLORS[crit])} />
+                  {CRITICALITY_LABELS[crit]}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-8">
+                <SlidersHorizontal className="me-2 h-4 w-4" />
+                Environment
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              {ENVIRONMENTS.map((env) => (
+                <DropdownMenuItem
+                  key={env}
+                  className="capitalize"
+                  onClick={() => handleBulkAction('change-environment', env)}
+                >
+                  {env}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Can permission={Permission.AssetGroupsDelete}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 text-destructive hover:text-destructive"
+              onClick={() => setBulkDeleteConfirm(true)}
+            >
+              <Trash2 className="me-2 h-4 w-4" />
+              Delete
+            </Button>
+          </Can>
+        </BulkActionBar>
+
+        <Sheet open={filterSheetOpen} onOpenChange={setFilterSheetOpen}>
+          <SheetContent side="left" className="w-80 overflow-y-auto p-4">
+            <SheetHeader className="sr-only">
+              <SheetTitle>Asset group filters</SheetTitle>
+            </SheetHeader>
+            {facetPanel}
+          </SheetContent>
+        </Sheet>
       </Main>
 
       {/* Quick View Sheet */}
@@ -969,7 +944,7 @@ export default function AssetGroupsPage() {
       <ConfirmDialog
         open={!!deleteGroup}
         onOpenChange={() => setDeleteGroup(null)}
-        title="Delete Asset Group"
+        title="Delete asset group"
         desc={
           <>
             Are you sure you want to delete &quot;{deleteGroup?.name}&quot;? This action cannot be
@@ -985,14 +960,14 @@ export default function AssetGroupsPage() {
       <ConfirmDialog
         open={bulkDeleteConfirm}
         onOpenChange={setBulkDeleteConfirm}
-        title={`Delete ${selectedIds.length} Asset Groups`}
+        title={`Delete ${selectedIds.length} asset groups`}
         desc={
           <>
             Are you sure you want to delete {selectedIds.length} group(s)? This action cannot be
             undone. All assets in these groups will be unassigned.
           </>
         }
-        confirmText={`Delete ${selectedIds.length} Groups`}
+        confirmText={`Delete ${selectedIds.length} groups`}
         destructive
         handleConfirm={handleBulkDelete}
       />

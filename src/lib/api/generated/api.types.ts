@@ -3230,6 +3230,28 @@ export interface paths {
           max_risk_score?: number
           /** @description Filter by whether asset has findings */
           has_findings?: boolean
+          /** @description Filter crown-jewel assets */
+          is_crown_jewel?: boolean
+          /** @description Filter by sub_type */
+          sub_type?: string
+          /** @description Filter by business unit membership (comma-separated UUIDs) */
+          business_unit_ids?: string
+          /** @description Filter assets with (true) / without (false) an assigned owner */
+          has_owner?: boolean
+          /** @description Filter by data classification (comma-separated: public,internal,confidential,restricted,secret) */
+          data_classifications?: string
+          /** @description Filter assets that are a control-plane dependency */
+          is_control_plane?: boolean
+          /** @description Filter internet-reachable assets */
+          is_internet_accessible?: boolean
+          /** @description Filter by environment (comma-separated: production,staging,development,testing,dr) */
+          environments?: string
+          /** @description Filter by provider/source (comma-separated) */
+          providers?: string
+          /** @description Filter assets last seen at/after this time (RFC3339 or YYYY-MM-DD) */
+          last_seen_after?: string
+          /** @description Filter assets last seen at/before this time (RFC3339 or YYYY-MM-DD) */
+          last_seen_before?: string
           /** @description Sort field (e.g., -created_at, name, -risk_score) */
           sort?: string
           /** @description Page number */
@@ -8081,6 +8103,134 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/ctem-cycles/{id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Get CTEM cycle
+     * @description Returns one CTEM cycle with its charter and, once closed, the evaluation of each charter success criterion.
+     */
+    get: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          /** @description Cycle ID */
+          id: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['internal_infra_http_handler.CTEMCycleResponse']
+          }
+        }
+        /** @description Not Found */
+        404: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': {
+              [key: string]: string
+            }
+          }
+        }
+        /** @description Internal Server Error */
+        500: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': {
+              [key: string]: string
+            }
+          }
+        }
+      }
+    }
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/ctem-cycles/{id}/close': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Close CTEM cycle
+     * @description Closes a cycle in review, computes its metrics and evaluates each charter success criterion.
+     */
+    post: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          /** @description Cycle ID */
+          id: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['internal_infra_http_handler.CTEMCycleResponse']
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': {
+              [key: string]: string
+            }
+          }
+        }
+        /** @description Internal Server Error */
+        500: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': {
+              [key: string]: string
+            }
+          }
+        }
+      }
+    }
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/custom-tools': {
     parameters: {
       query?: never
@@ -8544,6 +8694,75 @@ export interface paths {
         }
       }
     }
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/dashboard/program-metrics': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Get CTEM program metrics
+     * @description Returns the ctem.org program KPIs computed from stored data, tenant-scoped and windowed to the last `days` days (1-365, default 90): mean/median time to detect new internet-facing assets, mean/median time to remediate validated (reproduced) exposures, and the owner acceptance rate within the SLA window. A null value means "not measurable" (no qualifying sample) and must be shown as "—", never 0 or 100%. Time-to-break attack paths is intentionally absent: attack paths are computed on demand and no path history is stored.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Window in days (1-365, default 90) */
+          days?: number
+        }
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_internal_app.ProgramMetrics']
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Internal Server Error */
+        500: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+      }
+    }
+    put?: never
+    post?: never
     delete?: never
     options?: never
     head?: never
@@ -10883,12 +11102,18 @@ export interface paths {
      *     parameter scopes the stats to a single asset (used by the Findings
      *     page when filtered by `?assetId=…` so the severity cards match the
      *     filtered table instead of showing global tenant counts).
+     *     Optional sources query parameter (comma-separated, same values and
+     *     validation as the list endpoint's sources filter) scopes every
+     *     number to those sources; the Exposures type pages use it to get
+     *     their counts in one request instead of walking the list.
      */
     get: {
       parameters: {
         query?: {
           /** @description Restrict stats to a single asset */
           asset_id?: string
+          /** @description Restrict stats to these finding sources (comma-separated, max 25) */
+          sources?: string
         }
         header?: never
         path?: never
@@ -10903,6 +11128,17 @@ export interface paths {
           }
           content: {
             'application/json': components['schemas']['internal_infra_http_handler.FindingStatsResponse']
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': {
+              [key: string]: string
+            }
           }
         }
         /** @description Unauthorized */
@@ -21180,6 +21416,8 @@ export interface paths {
           from?: string
           /** @description End time (RFC3339) */
           to?: string
+          /** @description Only assets that are (true) or are not (false) internet-facing now */
+          internet_facing?: boolean
           /** @description Maximum results (max 1000) */
           limit?: number
           /** @description Pagination offset */
@@ -21319,17 +21557,25 @@ export interface paths {
       cookie?: never
     }
     /**
-     * Get recent asset appearances (deprecated)
-     * @description Deprecated: use GET /state-history?event_type=appeared instead.
-     *     Retrieves recently discovered assets (new assets appearing in scans).
+     * Get recent asset appearances
+     * @description Assets that appeared (newly discovered by a scan or created) in the window.
+     *     Equivalent to GET /state-history?event_type=appeared.
      */
     get: {
       parameters: {
         query?: {
-          /** @description Start time (RFC3339, default: 7 days ago) */
+          /** @description Start time (RFC3339, default: 7 days ago; ignored when from is set) */
           since?: string
+          /** @description Start time (RFC3339) */
+          from?: string
+          /** @description End time (RFC3339) */
+          to?: string
+          /** @description Only assets that are (true) or are not (false) internet-facing now */
+          internet_facing?: boolean
           /** @description Maximum results (max 1000) */
           limit?: number
+          /** @description Pagination offset */
+          offset?: number
         }
         header?: never
         path?: never
@@ -21455,17 +21701,25 @@ export interface paths {
       cookie?: never
     }
     /**
-     * Get recent asset disappearances (deprecated)
-     * @description Deprecated: use GET /state-history?event_type=disappeared instead.
-     *     Retrieves assets that have disappeared (no longer seen in scans).
+     * Get recent asset disappearances
+     * @description Assets that disappeared (no scan has seen them within the stale threshold) in the window.
+     *     Equivalent to GET /state-history?event_type=disappeared.
      */
     get: {
       parameters: {
         query?: {
-          /** @description Start time (RFC3339, default: 7 days ago) */
+          /** @description Start time (RFC3339, default: 7 days ago; ignored when from is set) */
           since?: string
+          /** @description Start time (RFC3339) */
+          from?: string
+          /** @description End time (RFC3339) */
+          to?: string
+          /** @description Only assets that are (true) or are not (false) internet-facing now */
+          internet_facing?: boolean
           /** @description Maximum results (max 1000) */
           limit?: number
+          /** @description Pagination offset */
+          offset?: number
         }
         header?: never
         path?: never
@@ -21523,17 +21777,25 @@ export interface paths {
       cookie?: never
     }
     /**
-     * Get exposure changes (deprecated)
-     * @description Deprecated: use GET /state-history?event_type=exposure_changed,internet_exposure_changed instead.
-     *     Retrieves assets that have changed exposure status (public/private/restricted).
+     * Get exposure changes
+     * @description Every exposure transition (exposure level or internet reachability, either direction) in the window.
+     *     Equivalent to GET /state-history?event_type=exposure_changed,internet_exposure_changed.
      */
     get: {
       parameters: {
         query?: {
-          /** @description Start time (RFC3339, default: 7 days ago) */
+          /** @description Start time (RFC3339, default: 7 days ago; ignored when from is set) */
           since?: string
+          /** @description Start time (RFC3339) */
+          from?: string
+          /** @description End time (RFC3339) */
+          to?: string
+          /** @description Only assets that are (true) or are not (false) internet-facing now */
+          internet_facing?: boolean
           /** @description Maximum results (max 1000) */
           limit?: number
+          /** @description Pagination offset */
+          offset?: number
         }
         header?: never
         path?: never
@@ -21591,17 +21853,23 @@ export interface paths {
       cookie?: never
     }
     /**
-     * Get newly exposed assets (deprecated)
-     * @description Deprecated: use GET /state-history?event_type=internet_exposure_changed instead.
-     *     Retrieves assets that have recently become publicly exposed.
+     * Get newly exposed assets
+     * @description Assets that BECAME internet-facing in the window: exposure changed to public, or
+     *     internet reachability changed to true. Transitions away from public are excluded.
      */
     get: {
       parameters: {
         query?: {
-          /** @description Start time (RFC3339, default: 7 days ago) */
+          /** @description Start time (RFC3339, default: 7 days ago; ignored when from is set) */
           since?: string
+          /** @description Start time (RFC3339) */
+          from?: string
+          /** @description End time (RFC3339) */
+          to?: string
           /** @description Maximum results (max 1000) */
           limit?: number
+          /** @description Pagination offset */
+          offset?: number
         }
         header?: never
         path?: never
@@ -21659,17 +21927,24 @@ export interface paths {
       cookie?: never
     }
     /**
-     * Get Shadow IT candidates (deprecated)
-     * @description Deprecated: use GET /state-history?event_type=appeared with scope filtering instead.
-     *     Retrieves assets identified as potential Shadow IT (appeared with shadow scope).
+     * Get Shadow IT candidates
+     * @description Appearances of assets currently in the `shadow` scope (potential shadow IT).
      */
     get: {
       parameters: {
         query?: {
-          /** @description Start time (RFC3339, default: 7 days ago) */
+          /** @description Start time (RFC3339, default: 7 days ago; ignored when from is set) */
           since?: string
+          /** @description Start time (RFC3339) */
+          from?: string
+          /** @description End time (RFC3339) */
+          to?: string
+          /** @description Only assets that are (true) or are not (false) internet-facing now */
+          internet_facing?: boolean
           /** @description Maximum results (max 1000) */
           limit?: number
+          /** @description Pagination offset */
+          offset?: number
         }
         header?: never
         path?: never
@@ -25976,6 +26251,53 @@ export interface components {
       total?: number
       total_pages?: number
     }
+    'github_com_openctemio_api_internal_app.ProgramMetrics': {
+      /**
+       * @description MTTDInternetFacing — mean time to detect new internet-facing assets.
+       *
+       *     Population: non-archived assets whose first_seen falls in the window and
+       *     that are internet-facing now (exposure = 'public' OR
+       *     is_internet_accessible).
+       *
+       *     Clock start: assets.first_seen (the asset entered the inventory).
+       *     Clock stop: the EARLIEST of these per-asset signals that it was known to
+       *     be internet-facing or exposed —
+       *       - assets.exposure_changed_at, when the current exposure is 'public'
+       *         (stamped when the exposure level was classified);
+       *       - asset_state_history rows of change_type exposure_changed /
+       *         internet_exposure_changed whose new_value is 'public' / 'true';
+       *       - the asset's first exposure event (exposure_events.first_seen_at);
+       *       - the asset's first finding (findings.first_detected_at).
+       *     A stop before first_seen counts as 0 h (known at discovery). Assets with
+       *     no stop signal at all are not averaged; they are counted in Unmeasured.
+       *
+       *     Caveat: exposure_changed_at holds the LAST exposure change, so an asset
+       *     that flapped public → private → public is measured to the later flip
+       *     unless an earlier history row / exposure / finding exists.
+       */
+      mttd_internet_facing?: components['schemas']['github_com_openctemio_api_internal_app_module.DurationMetric']
+      /**
+       * @description MTTRValidated — mean time to remediate VALIDATED exposures only.
+       *
+       *     Population: findings with at least one validation_evidence row of
+       *     outcome 'detected' (the validation re-check reproduced the exposure —
+       *     "still exploitable", RFC-011.2 VerdictReproducible), now in status
+       *     resolved / verified, with resolved_at in the window.
+       *
+       *     Clock start: the first 'detected' validation_evidence.created_at.
+       *     Clock stop: findings.resolved_at. Findings resolved before they were
+       *     validated are excluded (the fix did not follow the validation).
+       *     false_positive / accepted / validated_fixed are not remediation and are
+       *     excluded.
+       */
+      mttr_validated?: components['schemas']['github_com_openctemio_api_internal_app_module.DurationMetric']
+      /**
+       * @description OwnerAcceptance — share of assignments the assignee acted on within the
+       *     SLA window. See OwnerAcceptanceMetric.
+       */
+      owner_acceptance?: components['schemas']['github_com_openctemio_api_internal_app_module.OwnerAcceptanceMetric']
+      period_days?: number
+    }
     'github_com_openctemio_api_internal_app.ProviderInfo': {
       enabled?: boolean
       id?: string
@@ -26060,6 +26382,23 @@ export interface components {
       provider?: string
       sent_at?: string
       status?: string
+    }
+    'github_com_openctemio_api_internal_app_module.DurationMetric': {
+      mean_hours?: number
+      median_hours?: number
+      sample_size?: number
+      /**
+       * @description Unmeasured counts population members that had no stop signal and so
+       *     could not be timed (MTTD only; always 0 for MTTR).
+       */
+      unmeasured?: number
+    }
+    'github_com_openctemio_api_internal_app_module.OwnerAcceptanceMetric': {
+      accepted?: number
+      excluded?: number
+      missed?: number
+      pending?: number
+      rate_pct?: number
     }
     'github_com_openctemio_api_internal_app_scancoverage.CoverageStats': {
       /** @description CoveragePercent = CoveredInWindow / TotalScannable * 100 (0 when none). */
@@ -26204,6 +26543,44 @@ export interface components {
       success_count?: number
       total_processed?: number
     }
+    'github_com_openctemio_api_pkg_domain_ctemcycle.CharterEvaluation': {
+      /**
+       * @description CompletionRate is met / (met + unmet) × 100, rounded to 2 decimals.
+       *     Nil when no criterion was measurable.
+       */
+      completion_rate?: number
+      criteria?: components['schemas']['github_com_openctemio_api_pkg_domain_ctemcycle.CriterionEvaluation'][]
+      evaluated_at?: string
+      met?: number
+      not_measurable?: number
+      unmet?: number
+    }
+    'github_com_openctemio_api_pkg_domain_ctemcycle.CriterionEvaluation': {
+      /** @description Actual is the measured value in Unit (nil when there was no data). */
+      actual?: number
+      /**
+       * @description Comparator is one of <=, <, >=, >, = (empty when the target did not
+       *     parse).
+       */
+      comparator?: string
+      metric?: string
+      /**
+       * @description MetricKey is the cycle metric the criterion resolved to (empty when
+       *     the metric name was not recognized).
+       */
+      metric_key?: string
+      name?: string
+      outcome?: components['schemas']['github_com_openctemio_api_pkg_domain_ctemcycle.CriterionOutcome']
+      /** @description Reason explains a not_measurable outcome. */
+      reason?: string
+      target?: string
+      /** @description Threshold is the target converted to Unit. */
+      threshold?: number
+      unit?: string
+    }
+    /** @enum {string} */
+    'github_com_openctemio_api_pkg_domain_ctemcycle.CriterionOutcome':
+      'met' | 'unmet' | 'not_measurable'
     'github_com_openctemio_api_pkg_domain_group.GroupSettings': {
       allow_self_join?: boolean
       max_members?: number
@@ -26526,6 +26903,7 @@ export interface components {
     'internal_infra_http_handler.AssetGroupResponse': {
       asset_count?: number
       business_unit?: string
+      business_unit_id?: string
       cloud_count?: number
       created_at?: string
       credential_count?: number
@@ -26576,6 +26954,10 @@ export interface components {
       /** @description Timestamps */
       first_seen?: string
       id?: string
+      impact_availability?: string
+      /** @description CTEM Scoping: CIA impact rating (low | moderate | high; empty = not rated) */
+      impact_confidentiality?: string
+      impact_integrity?: string
       is_internet_accessible?: boolean
       last_seen?: string
       last_synced_at?: string
@@ -26657,10 +27039,32 @@ export interface components {
       total?: number
     }
     'internal_infra_http_handler.AssetStatsResponse': {
+      by_business_unit?: {
+        [key: string]: number
+      }
+      by_control_plane?: {
+        [key: string]: number
+      }
       by_criticality?: {
         [key: string]: number
       }
+      /** @description CTEM inventory facet counts. */
+      by_data_classification?: {
+        [key: string]: number
+      }
+      by_environment?: {
+        [key: string]: number
+      }
       by_exposure?: {
+        [key: string]: number
+      }
+      by_has_owner?: {
+        [key: string]: number
+      }
+      by_internet_accessible?: {
+        [key: string]: number
+      }
+      by_provider?: {
         [key: string]: number
       }
       by_scope?: {
@@ -26735,6 +27139,10 @@ export interface components {
       /** @description Timestamps */
       first_seen?: string
       id?: string
+      impact_availability?: string
+      /** @description CTEM Scoping: CIA impact rating (low | moderate | high; empty = not rated) */
+      impact_confidentiality?: string
+      impact_integrity?: string
       is_internet_accessible?: boolean
       last_seen?: string
       last_synced_at?: string
@@ -27026,6 +27434,27 @@ export interface components {
       is_past_due?: boolean
       notes?: string
       ransomware_use?: string
+    }
+    'internal_infra_http_handler.CTEMCycleResponse': {
+      charter?: {
+        [key: string]: unknown
+      }
+      /**
+       * @description CharterEvaluation is the close-time verdict on each charter success
+       *     criterion (met / unmet / not_measurable, with the measured value).
+       *     Absent until the cycle is closed with at least one criterion.
+       */
+      charter_evaluation?: components['schemas']['github_com_openctemio_api_pkg_domain_ctemcycle.CharterEvaluation']
+      closed_at?: string
+      closed_by?: string
+      created_at?: string
+      created_by?: string
+      end_date?: string
+      id?: string
+      name?: string
+      start_date?: string
+      status?: string
+      updated_at?: string
     }
     'internal_infra_http_handler.CTISIngestRequest': {
       report?: components['schemas']['ctis.Report']
@@ -27355,10 +27784,18 @@ export interface components {
       enabled_severities?: string[]
       include_details?: boolean
       message_template?: string
+      /**
+       * @description Metadata holds non-sensitive provider-specific config (e.g. Splunk HEC
+       *     hec_url / index / sourcetype). The credential (token/URL) still goes in
+       *     Credentials; only non-secret routing config belongs here.
+       */
+      metadata?: {
+        [key: string]: unknown
+      }
       min_interval_minutes?: number
       name: string
       /** @enum {string} */
-      provider: 'slack' | 'teams' | 'telegram' | 'webhook' | 'email'
+      provider: 'slack' | 'teams' | 'telegram' | 'webhook' | 'email' | 'splunk'
     }
     'internal_infra_http_handler.CreatePermissionSetRequest': {
       description?: string
@@ -27556,6 +27993,7 @@ export interface components {
       cvss_score?: number
       cvss_vector?: string
       description?: string
+      /** @description 0-100 percentile; a 0-1 fraction is rescaled */
       epss_percentile?: number
       epss_score?: number
       exploit_available?: boolean
@@ -27786,15 +28224,29 @@ export interface components {
     'internal_infra_http_handler.ExposureResponse': {
       asset_id?: string
       created_at?: string
+      ctem_id?: string
+      cve_id?: string
       description?: string
       details?: {
         [key: string]: unknown
       }
+      /**
+       * @description CTEM enrichment (read-time, additive). Present only when an enricher is
+       *     wired and the exposure has a linked asset (criticality/reachability) or a
+       *     CVE in its details (EPSS/KEV).
+       */
+      effective_criticality?: string
+      epss_percentile?: number
+      epss_score?: number
       event_type?: string
       fingerprint?: string
       first_seen_at?: string
       id?: string
+      is_in_kev?: boolean
+      is_internet_accessible?: boolean
+      kev_due_date?: string
       last_seen_at?: string
+      on_attack_path?: boolean
       resolution_notes?: string
       resolved_at?: string
       resolved_by?: string
@@ -27862,6 +28314,8 @@ export interface components {
       total?: number
     }
     'internal_infra_http_handler.FindingRemediationResponse': {
+      /** @description Other acceptable remediations */
+      alternative_fixes?: string[]
       /** @description Whether the fix can be auto-applied */
       auto_fixable?: boolean
       /** @description trivial, low, medium, high */
@@ -27872,12 +28326,18 @@ export interface components {
       fix_code?: string
       /** @description Regex-based fix pattern */
       fix_regex?: components['schemas']['internal_infra_http_handler.FixRegexResponse']
+      /** @description CTEM Mobilization: engineering-grade work-item fields. */
+      preferred_fix?: string
       /** @description Human-readable guidance */
       recommendation?: string
       /** @description Reference URLs */
       references?: string[]
       /** @description Step-by-step instructions */
       steps?: string[]
+      /** @description Definition of done */
+      success_criteria?: string
+      /** @description How a fix is checked */
+      verification_method?: string
     }
     'internal_infra_http_handler.FindingResponse': {
       /** @description Full asset info */
@@ -28097,8 +28557,18 @@ export interface components {
       by_status?: {
         [key: string]: number
       }
+      /** @description open findings with EPSS >= 0.10 */
+      epss_high_open?: number
+      /**
+       * @description Risk posture over OPEN findings (same scope as the rest: tenant, data
+       *     scope and optional asset_id). Already computed by the stats query; the
+       *     UI previously fired a separate list request per number to get them.
+       */
+      kev_open?: number
       open_count?: number
       resolved_count?: number
+      /** @description open findings past their SLA (overdue/exceeded) */
+      sla_breached?: number
       total?: number
     }
     'internal_infra_http_handler.FindingTrendPoint': {
@@ -28313,6 +28783,14 @@ export interface components {
       status?: 'pending' | 'connected' | 'disconnected' | 'error'
       /** @example  */
       status_message?: string
+      /**
+       * @description Supported is false for a provider that is declared but has no client in
+       *     this version (e.g. a Linear row created before creation was refused).
+       *     Such an integration never runs; clients should show it as not supported
+       *     rather than as pending or connected.
+       * @example true
+       */
+      supported?: boolean
       /** @example  */
       sync_error?: string
       /** @example 60 */
@@ -28372,6 +28850,14 @@ export interface components {
       status?: 'pending' | 'connected' | 'disconnected' | 'error'
       /** @example  */
       status_message?: string
+      /**
+       * @description Supported is false for a provider that is declared but has no client in
+       *     this version (e.g. a Linear row created before creation was refused).
+       *     Such an integration never runs; clients should show it as not supported
+       *     rather than as pending or connected.
+       * @example true
+       */
+      supported?: boolean
       /** @example  */
       sync_error?: string
       /** @example 60 */
@@ -29251,7 +29737,17 @@ export interface components {
       microsoft?: boolean
     }
     'internal_infra_http_handler.StateChangeResponse': {
+      asset_exposure?: string
       asset_id?: string
+      asset_internet_accessible?: boolean
+      /**
+       * @description Current state of the asset the change refers to (absent when the asset
+       *     no longer exists), so a change list can show what changed without one
+       *     asset lookup per row.
+       */
+      asset_name?: string
+      asset_scope?: string
+      asset_type?: string
       change_type?: string
       changed_at?: string
       changed_by?: string
@@ -29582,6 +30078,10 @@ export interface components {
       criticality?: string
       description?: string
       exposure?: string
+      impact_availability?: string
+      /** @description CTEM Scoping: CIA impact rating (low | moderate | high). Empty string clears. */
+      impact_confidentiality?: string
+      impact_integrity?: string
       name?: string
       owner_ref?: string
       properties?: {
@@ -29677,6 +30177,13 @@ export interface components {
       enabled_severities?: string[]
       include_details?: boolean
       message_template?: string
+      /**
+       * @description Metadata, when non-nil, replaces the integration's non-sensitive
+       *     provider config (e.g. Splunk HEC hec_url / index / sourcetype).
+       */
+      metadata?: {
+        [key: string]: unknown
+      }
       min_interval_minutes?: number
       name?: string
     }
@@ -29869,6 +30376,7 @@ export interface components {
       cvss_score?: number
       cvss_vector?: string
       description?: string
+      /** @description 0-100 percentile; a 0-1 fraction is rescaled */
       epss_percentile?: number
       epss_score?: number
       exploit_available?: boolean
@@ -29927,6 +30435,7 @@ export interface components {
       cvss_score?: number
       cvss_vector?: string
       description?: string
+      /** @description 0-100 percentile rank */
       epss_percentile?: number
       epss_score?: number
       exploit_available?: boolean

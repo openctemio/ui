@@ -2,8 +2,7 @@
 
 import { useCallback, useState } from 'react'
 import { toast } from 'sonner'
-import { Download, ShieldAlert, ListChecks, Gauge, AlertOctagon } from 'lucide-react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Download } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Select,
@@ -12,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Skeleton } from '@/components/ui/skeleton'
+import { MetricStrip } from '@/features/shared'
 import { useExecutiveSummary, downloadExecutiveSummaryCsv } from '../hooks/use-report-schedules'
 
 const RANGES = [
@@ -20,32 +19,6 @@ const RANGES = [
   { value: '30', label: 'Last 30 days' },
   { value: '90', label: 'Last 90 days' },
 ]
-
-function Metric({
-  icon: Icon,
-  label,
-  value,
-  loading,
-}: {
-  icon: typeof Gauge
-  label: string
-  value: string | number
-  loading: boolean
-}) {
-  return (
-    <div className="rounded-lg border p-4">
-      <div className="flex items-center gap-2 text-muted-foreground">
-        <Icon className="h-4 w-4" />
-        <span className="text-xs font-medium uppercase tracking-wide">{label}</span>
-      </div>
-      {loading ? (
-        <Skeleton className="mt-2 h-7 w-16" />
-      ) : (
-        <p className="mt-1 text-2xl font-semibold">{value}</p>
-      )}
-    </div>
-  )
-}
 
 export function ExecutiveSummarySection() {
   const [days, setDays] = useState('30')
@@ -65,18 +38,18 @@ export function ExecutiveSummarySection() {
   }, [days])
 
   return (
-    <Card>
-      <CardHeader className="flex flex-col gap-4 space-y-0 sm:flex-row sm:items-start sm:justify-between">
-        <div className="space-y-1.5">
-          <CardTitle>Executive summary</CardTitle>
-          <CardDescription>
-            Program-level risk, findings, SLA, and MTTR metrics for the selected window. Download a
-            CSV for board decks and stakeholder updates.
-          </CardDescription>
+    <section className="space-y-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <h2 className="text-base font-semibold">Executive summary</h2>
+          <p className="text-sm text-muted-foreground">
+            Program-level risk, findings, SLA and MTTR for the selected window — download a CSV for
+            board decks and stakeholder updates.
+          </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           <Select value={days} onValueChange={setDays}>
-            <SelectTrigger className="w-[150px]">
+            <SelectTrigger className="h-9 w-[150px]" aria-label="Period">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -87,40 +60,40 @@ export function ExecutiveSummarySection() {
               ))}
             </SelectContent>
           </Select>
-          <Button onClick={handleDownload} disabled={downloading}>
-            <Download className="h-4 w-4" />
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-9"
+            onClick={handleDownload}
+            disabled={downloading}
+          >
+            <Download className="me-2 h-4 w-4" />
             {downloading ? 'Preparing…' : 'Download CSV'}
           </Button>
         </div>
-      </CardHeader>
-      <CardContent>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Metric
-            icon={Gauge}
-            label="Risk score"
-            value={summary ? summary.risk_score_current.toFixed(1) : '—'}
-            loading={isLoading}
-          />
-          <Metric
-            icon={ListChecks}
-            label="Open findings"
-            value={summary ? summary.findings_total : '—'}
-            loading={isLoading}
-          />
-          <Metric
-            icon={AlertOctagon}
-            label="P0 open"
-            value={summary ? summary.p0_open : '—'}
-            loading={isLoading}
-          />
-          <Metric
-            icon={ShieldAlert}
-            label="SLA compliance"
-            value={summary ? `${summary.sla_compliance_pct.toFixed(0)}%` : '—'}
-            loading={isLoading}
-          />
-        </div>
-      </CardContent>
-    </Card>
+      </div>
+      <MetricStrip
+        loading={isLoading}
+        items={[
+          {
+            key: 'risk',
+            label: 'Risk score',
+            value: summary ? summary.risk_score_current.toFixed(1) : '—',
+          },
+          { key: 'open', label: 'Open findings', value: summary ? summary.findings_total : '—' },
+          {
+            key: 'p0',
+            label: 'P0 open',
+            value: summary ? summary.p0_open : '—',
+            tone: 'danger',
+          },
+          {
+            key: 'sla',
+            label: 'SLA compliance',
+            value: summary ? `${summary.sla_compliance_pct.toFixed(0)}%` : '—',
+          },
+        ]}
+      />
+    </section>
   )
 }

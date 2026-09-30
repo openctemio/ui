@@ -45,6 +45,7 @@ export type IntegrationProvider =
   | 'telegram'
   | 'email'
   | 'webhook'
+  | 'splunk'
 
 /**
  * Integration status
@@ -152,6 +153,12 @@ export interface Integration {
   category: IntegrationCategory
   status: IntegrationStatus
   status_message?: string
+  /**
+   * False when the backend has no client for this provider (e.g. a Linear or
+   * Asana row created before the API began refusing them). Such an
+   * integration never runs; show it as not supported.
+   */
+  supported?: boolean
 
   // Connection details
   auth_type: AuthType
@@ -236,7 +243,7 @@ export interface UpdateIntegrationRequest {
 export interface CreateNotificationIntegrationRequest {
   name: string
   description?: string
-  provider: 'slack' | 'teams' | 'telegram' | 'webhook' | 'email'
+  provider: 'slack' | 'teams' | 'telegram' | 'webhook' | 'email' | 'splunk'
   auth_type: AuthType
   credentials: string
   channel_id?: string
@@ -246,6 +253,8 @@ export interface CreateNotificationIntegrationRequest {
   message_template?: string
   include_details?: boolean
   min_interval_minutes?: number
+  // Non-sensitive provider config (e.g. Splunk HEC hec_url / index / sourcetype).
+  metadata?: Record<string, unknown>
 }
 
 /**
@@ -584,6 +593,17 @@ export const INTEGRATION_PROVIDERS: Record<IntegrationProvider, ProviderConfig> 
     authTypes: ['token', 'basic'],
     features: ['notifications', 'events'],
     docUrl: '',
+    available: true,
+  },
+  splunk: {
+    id: 'splunk',
+    name: 'Splunk',
+    category: 'notification',
+    description: 'Forward findings and events to Splunk via HTTP Event Collector',
+    icon: 'splunk',
+    authTypes: ['token'],
+    features: ['siem', 'notifications', 'events'],
+    docUrl: 'https://docs.splunk.com/Documentation/Splunk/latest/Data/UsetheHTTPEventCollector',
     available: true,
   },
 }

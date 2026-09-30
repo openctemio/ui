@@ -1,21 +1,15 @@
 'use client'
 
+import { useMemo } from 'react'
 import { useRouter } from 'next/navigation'
+import type { ColumnDef } from '@tanstack/react-table'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import { Link2, Copy, Eye, ExternalLink, Repeat, Fingerprint } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import type { FindingDetail, RelatedFinding } from '../../types'
-import { FINDING_STATUS_CONFIG } from '../../types'
-import { EmptyState, SeverityBadge } from '@/features/shared'
+import { EmptyState, SeverityBadge, DataTable, DataTableColumnHeader } from '@/features/shared'
+import { FindingStatusBadge } from '../finding-status-badge'
 
 interface RelatedTabProps {
   finding: FindingDetail
@@ -27,6 +21,9 @@ interface RelatedFindingsTableProps {
   showSimilarity?: boolean
 }
 
+/** Most severe first when sorted descending. */
+const SEVERITY_RANK: Record<string, number> = { critical: 5, high: 4, medium: 3, low: 2, info: 1 }
+
 function RelatedFindingsTable({
   findings,
   emptyMessage,
@@ -34,68 +31,91 @@ function RelatedFindingsTable({
 }: RelatedFindingsTableProps) {
   const router = useRouter()
 
-  if (findings.length === 0) {
-    return <div className="text-muted-foreground py-8 text-center text-sm">{emptyMessage}</div>
-  }
+  const columns = useMemo<ColumnDef<RelatedFinding>[]>(
+    () => [
+      {
+        accessorKey: 'title',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Finding" />,
+        cell: ({ row }) => (
+          <div>
+            <p className="font-medium">{row.original.title}</p>
+            <p className="text-xs text-muted-foreground font-mono">{row.original.id}</p>
+          </div>
+        ),
+      },
+      {
+        accessorKey: 'severity',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Severity" />,
+        sortingFn: (a, b) =>
+          (SEVERITY_RANK[a.original.severity] ?? 0) - (SEVERITY_RANK[b.original.severity] ?? 0),
+        cell: ({ row }) => <SeverityBadge severity={row.original.severity} />,
+      },
+      {
+        accessorKey: 'status',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
+        cell: ({ row }) => <FindingStatusBadge status={row.original.status} />,
+      },
+      {
+        accessorKey: 'assetName',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Asset" />,
+        cell: ({ row }) => <span className="text-sm">{row.original.assetName}</span>,
+      },
+      ...(showSimilarity
+        ? ([
+            {
+              accessorKey: 'similarity',
+              header: ({ column }) => <DataTableColumnHeader column={column} title="Match" />,
+              cell: ({ row }) => {
+                const similarity = row.original.similarity
+                if (!similarity) return <span className="text-muted-foreground">-</span>
+                return (
+                  <span
+                    className={cn(
+                      'text-sm font-medium tabular-nums',
+                      similarity >= 80
+                        ? 'text-success'
+                        : similarity >= 50
+                          ? 'text-warning'
+                          : 'text-muted-foreground'
+                    )}
+                  >
+                    {similarity}%
+                  </span>
+                )
+              },
+            },
+          ] as ColumnDef<RelatedFinding>[])
+        : []),
+      {
+        id: 'actions',
+        enableHiding: false,
+        cell: ({ row }) => (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 w-7 p-0"
+            aria-label={`Open ${row.original.title}`}
+            onClick={() => router.push(`/findings/${row.original.id}`)}
+          >
+            <ExternalLink className="h-3 w-3" />
+          </Button>
+        ),
+      },
+    ],
+    [router, showSimilarity]
+  )
 
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Finding</TableHead>
-          <TableHead>Severity</TableHead>
-          <TableHead>Status</TableHead>
-          <TableHead>Asset</TableHead>
-          {showSimilarity && <TableHead className="text-end">Match</TableHead>}
-          <TableHead className="w-[40px]" />
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {findings.map((finding) => {
-          const statusConfig = FINDING_STATUS_CONFIG[finding.status]
-
-          return (
-            <TableRow
-              key={finding.id}
-              className="cursor-pointer hover:bg-muted/50"
-              onClick={() => router.push(`/findings/${finding.id}`)}
-            >
-              <TableCell>
-                <div>
-                  <p className="font-medium">{finding.title}</p>
-                  <p className="text-muted-foreground text-xs">{finding.id}</p>
-                </div>
-              </TableCell>
-              <TableCell>
-                <SeverityBadge severity={finding.severity} />
-              </TableCell>
-              <TableCell>
-                <Badge className={`${statusConfig.bgColor} ${statusConfig.textColor} border-0`}>
-                  {statusConfig.label}
-                </Badge>
-              </TableCell>
-              <TableCell className="text-sm">{finding.assetName}</TableCell>
-              {showSimilarity && (
-                <TableCell className="text-end">
-                  {finding.similarity && (
-                    <span
-                      className={`text-sm font-medium ${finding.similarity >= 80 ? 'text-green-400' : finding.similarity >= 50 ? 'text-yellow-400' : 'text-muted-foreground'}`}
-                    >
-                      {finding.similarity}%
-                    </span>
-                  )}
-                </TableCell>
-              )}
-              <TableCell>
-                <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
-                  <ExternalLink className="h-3 w-3" />
-                </Button>
-              </TableCell>
-            </TableRow>
-          )
-        })}
-      </TableBody>
-    </Table>
+    <DataTable
+      columns={columns}
+      data={findings}
+      getRowId={(f) => f.id}
+      showSearch={false}
+      showColumnToggle={false}
+      onRowClick={(f) => router.push(`/findings/${f.id}`)}
+      emptyMessage={emptyMessage}
+      emptyDescription=""
+    />
   )
 }
 

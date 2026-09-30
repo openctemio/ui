@@ -5,350 +5,125 @@ import { Main } from '@/components/layout'
 import { PageHeader, StatsCard, EmptyState } from '@/features/shared'
 import { useDashboardStats } from '@/features/dashboard/hooks/use-dashboard-stats'
 import { useFindingTypeStats } from '@/features/exposures/hooks'
-import { useTenant } from '@/context/tenant-provider'
 import {
-  PieChart,
-  Pie,
-  Cell,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  AreaChart,
-  Area,
-} from '@/components/charts'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Skeleton } from '@/components/ui/skeleton'
-import { cn } from '@/lib/utils'
+  ChartCard,
+  OverviewSkeleton,
+  OVERVIEW_CHARTS_GRID,
+  OVERVIEW_STATS_GRID,
+  RankedBarList,
+  SeverityDonut,
+  SeverityTrend,
+  humanize,
+  TypeBreakdownUnavailable,
+} from '@/features/exposures/components'
+import { useTenant } from '@/context/tenant-provider'
+import type { FindingSource } from '@/lib/api/finding-types'
 import { FileCode, AlertTriangle, Flame, GitBranch } from 'lucide-react'
 
-const SEVERITY_COLORS: Record<string, string> = {
-  critical: '#ef4444',
-  high: '#f97316',
-  medium: '#eab308',
-  low: '#3b82f6',
-  info: '#6b7280',
-}
-
-const SEVERITY_LABELS: Record<string, string> = {
-  critical: 'Critical',
-  high: 'High',
-  medium: 'Medium',
-  low: 'Low',
-  info: 'Info',
-}
-
-const SEVERITY_ORDER = ['critical', 'high', 'medium', 'low', 'info'] as const
-
-function LoadingSkeleton() {
-  return (
-    <>
-      <section className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-        {[1, 2, 3, 4].map((i) => (
-          <Card key={i}>
-            <CardHeader className="pb-2">
-              <Skeleton className="h-4 w-24" />
-            </CardHeader>
-            <CardContent>
-              <Skeleton className="mb-2 h-8 w-16" />
-              <Skeleton className="h-3 w-20" />
-            </CardContent>
-          </Card>
-        ))}
-      </section>
-      <section className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
-        {[1, 2].map((i) => (
-          <Card key={i}>
-            <CardHeader>
-              <Skeleton className="h-5 w-32" />
-              <Skeleton className="h-4 w-48" />
-            </CardHeader>
-            <CardContent>
-              <Skeleton className="h-[300px] w-full" />
-            </CardContent>
-          </Card>
-        ))}
-      </section>
-      <section>
-        <Card>
-          <CardHeader>
-            <Skeleton className="h-5 w-40" />
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {[1, 2, 3, 4, 5].map((i) => (
-                <Skeleton key={i} className="h-14 w-full" />
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </section>
-    </>
-  )
-}
+const CODE_SOURCES: FindingSource[] = ['sast']
 
 export default function CodeVulnerabilitiesPage() {
   const { currentTenant } = useTenant()
   const tenantId = currentTenant?.id || null
-  // Org-wide context (repositories scanned, asset-type mix, finding trend) —
-  // the backend exposes no per-type variant of these.
+  // Org-wide context (repository coverage, asset mix, trend) has no per-type variant.
   const { stats, isLoading: dashboardLoading } = useDashboardStats(tenantId)
-  // Type-scoped finding stats: code findings come from static analysis (SAST).
-  const { stats: typeStats, isLoading: typeLoading } = useFindingTypeStats(tenantId, ['sast'])
+  // Type-scoped finding stats: code vulnerabilities come from static analysis.
+  const { stats: typeStats, isLoading: typeLoading } = useFindingTypeStats(tenantId, CODE_SOURCES)
   const isLoading = dashboardLoading || typeLoading
 
   const criticalCount = typeStats.bySeverity.critical || 0
   const highCount = typeStats.bySeverity.high || 0
 
-  const severityPieData = useMemo(() => {
-    return SEVERITY_ORDER.map((severity) => ({
-      name: SEVERITY_LABELS[severity],
-      value: typeStats.bySeverity[severity] || 0,
-      color: SEVERITY_COLORS[severity],
-    })).filter((d) => d.value > 0)
-  }, [typeStats.bySeverity])
-
-  const topRepos = useMemo(() => {
-    const byType = stats.assets.byType || {}
-    return Object.entries(byType)
-      .map(([type, count]) => ({
-        name: type.charAt(0).toUpperCase() + type.slice(1).replace(/_/g, ' '),
-        count,
-      }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 10)
-  }, [stats.assets.byType])
-
-  const hasData = typeStats.total > 0
-  const hasTrendData = stats.findingTrend.length > 0
+  // The dashboard stats only break assets down by type (there is no per-repository
+  // finding count), so this is labelled as the asset mix it really is.
+  const assetTypes = useMemo(
+    () =>
+      Object.entries(stats.assets.byType || {})
+        .map(([type, count]) => ({ name: humanize(type), count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 10),
+    [stats.assets.byType]
+  )
 
   return (
     <Main>
       <PageHeader
-        title="Code Vulnerabilities"
-        description="Track code-level security vulnerabilities from static analysis"
-        className="mb-6"
+        title="Code vulnerabilities"
+        description="Code-level security issues found by static analysis, by severity and over time."
       />
 
-      {isLoading ? (
-        <LoadingSkeleton />
-      ) : !hasData ? (
-        <EmptyState
-          icon={FileCode}
-          title="No code vulnerability data available"
-          description="Configure static analysis scanners to detect code-level security vulnerabilities."
-        />
-      ) : (
-        <>
-          {/* Stats Row */}
-          <section className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-            <StatsCard title="Total Code Findings" value={typeStats.total} icon={FileCode} />
-            <StatsCard
-              title="Critical"
-              value={criticalCount}
-              changeType={criticalCount > 0 ? 'negative' : 'positive'}
-              change={criticalCount > 0 ? 'Fix immediately' : 'No critical findings'}
-              icon={AlertTriangle}
-            />
-            <StatsCard
-              title="High"
-              value={highCount}
-              changeType={highCount > 0 ? 'negative' : 'positive'}
-              change={
-                typeStats.total > 0
-                  ? `${((highCount / typeStats.total) * 100).toFixed(0)}% of total`
-                  : undefined
-              }
-              icon={Flame}
-            />
-            <StatsCard
-              title="Repositories Scanned"
-              value={stats.repositories.withFindings}
-              change={
-                stats.repositories.total > 0 ? `of ${stats.repositories.total} total` : undefined
-              }
-              changeType="neutral"
-              icon={GitBranch}
-            />
-          </section>
+      <div className="mt-5">
+        {isLoading ? (
+          <OverviewSkeleton />
+        ) : typeStats.total === 0 ? (
+          <EmptyState
+            icon={FileCode}
+            title="No code vulnerabilities yet"
+            description="Configure static analysis scanners to detect code-level security vulnerabilities."
+          />
+        ) : !typeStats.scoped ? (
+          <TypeBreakdownUnavailable
+            icon={FileCode}
+            total={typeStats.total}
+            noun={['code finding', 'code findings']}
+            sources={CODE_SOURCES}
+          />
+        ) : (
+          <div className="space-y-5">
+            <div className={OVERVIEW_STATS_GRID}>
+              <StatsCard title="Total code findings" value={typeStats.total} icon={FileCode} />
+              <StatsCard
+                title="Critical"
+                value={criticalCount}
+                valueClassName={criticalCount > 0 ? 'text-destructive' : undefined}
+                description={criticalCount > 0 ? 'Fix immediately' : 'No critical findings'}
+                icon={AlertTriangle}
+              />
+              <StatsCard
+                title="High"
+                value={highCount}
+                description={`${((highCount / typeStats.total) * 100).toFixed(0)}% of total`}
+                icon={Flame}
+              />
+              <StatsCard
+                title="Repositories with findings"
+                value={stats.repositories.withFindings}
+                description={
+                  stats.repositories.total > 0
+                    ? `of ${stats.repositories.total.toLocaleString()} repositories`
+                    : undefined
+                }
+                icon={GitBranch}
+              />
+            </div>
 
-          {/* Charts Row */}
-          <section className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
-            {/* Severity Distribution Pie */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Severity Distribution</CardTitle>
-                <CardDescription>
-                  Code findings across {typeStats.total} total issues
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {severityPieData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={300}>
-                    <PieChart>
-                      <Pie
-                        data={severityPieData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={100}
-                        paddingAngle={2}
-                        dataKey="value"
-                        label={({ name, value }) => `${name}: ${value}`}
-                      >
-                        {severityPieData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                      <Legend />
-                    </PieChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="flex h-[300px] items-center justify-center">
-                    <p className="text-muted-foreground">No severity data available</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            <div className={OVERVIEW_CHARTS_GRID}>
+              <ChartCard
+                title="Severity distribution"
+                description={`${typeStats.total.toLocaleString()} code findings by severity`}
+              >
+                <SeverityDonut bySeverity={typeStats.bySeverity} />
+              </ChartCard>
+              <ChartCard
+                title="Finding trend"
+                description="Severity over time across all findings (a per-type trend is not available yet)"
+              >
+                <SeverityTrend
+                  data={stats.findingTrend}
+                  emptyDescription="Run SAST scans to start tracking trends."
+                />
+              </ChartCard>
+            </div>
 
-            {/* Code Finding Trend */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Finding Trend</CardTitle>
-                <CardDescription>
-                  Severity counts over time across all findings (per-type trend not yet available)
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {hasTrendData ? (
-                  <ResponsiveContainer width="100%" height={300}>
-                    <AreaChart data={stats.findingTrend}>
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                      <XAxis
-                        dataKey="date"
-                        tick={{ fontSize: 12 }}
-                        tickLine={false}
-                        axisLine={false}
-                      />
-                      <YAxis tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
-                      <Tooltip />
-                      <Legend />
-                      <Area
-                        type="monotone"
-                        dataKey="critical"
-                        stackId="1"
-                        stroke={SEVERITY_COLORS.critical}
-                        fill={SEVERITY_COLORS.critical}
-                        fillOpacity={0.8}
-                        name="Critical"
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="high"
-                        stackId="1"
-                        stroke={SEVERITY_COLORS.high}
-                        fill={SEVERITY_COLORS.high}
-                        fillOpacity={0.8}
-                        name="High"
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="medium"
-                        stackId="1"
-                        stroke={SEVERITY_COLORS.medium}
-                        fill={SEVERITY_COLORS.medium}
-                        fillOpacity={0.8}
-                        name="Medium"
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="low"
-                        stackId="1"
-                        stroke={SEVERITY_COLORS.low}
-                        fill={SEVERITY_COLORS.low}
-                        fillOpacity={0.8}
-                        name="Low"
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="info"
-                        stackId="1"
-                        stroke={SEVERITY_COLORS.info}
-                        fill={SEVERITY_COLORS.info}
-                        fillOpacity={0.8}
-                        name="Info"
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="flex h-[300px] items-center justify-center">
-                    <p className="text-muted-foreground">
-                      No trend data available yet. Run SAST scans to start tracking trends.
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </section>
-
-          {/* Top Affected Repositories */}
-          <section>
-            <Card>
-              <CardHeader>
-                <CardTitle>Top Affected Repositories</CardTitle>
-                <CardDescription>
-                  Repositories with the most code-level findings by asset type
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {topRepos.length > 0 ? (
-                  <div className="space-y-4">
-                    {topRepos.map((repo, index) => {
-                      const maxCount = topRepos[0]?.count || 1
-                      const percentage = (repo.count / maxCount) * 100
-                      return (
-                        <div
-                          key={repo.name}
-                          className="flex items-center gap-4 rounded-lg border p-4"
-                        >
-                          <Badge variant="outline" className="w-8 justify-center">
-                            {index + 1}
-                          </Badge>
-                          <div className="min-w-0 flex-1">
-                            <div className="mb-1 flex items-center justify-between">
-                              <span className="truncate text-sm font-medium">{repo.name}</span>
-                              <span className="text-sm text-muted-foreground">
-                                {repo.count} {repo.count === 1 ? 'finding' : 'findings'}
-                              </span>
-                            </div>
-                            <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-                              <div
-                                className={cn('h-full rounded-full transition-all')}
-                                style={{
-                                  width: `${percentage}%`,
-                                  backgroundColor: '#8b5cf6',
-                                }}
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                ) : (
-                  <div className="flex h-[200px] items-center justify-center">
-                    <p className="text-muted-foreground">No repository data available</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </section>
-        </>
-      )}
+            <ChartCard
+              title="Assets by type"
+              description="Your asset mix across all findings (a per-repository breakdown is not available yet)"
+            >
+              <RankedBarList rows={assetTypes} unit={['asset', 'assets']} />
+            </ChartCard>
+          </div>
+        )}
+      </div>
     </Main>
   )
 }

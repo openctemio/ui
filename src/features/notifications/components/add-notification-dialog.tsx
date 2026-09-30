@@ -712,7 +712,7 @@ export function AddNotificationDialog({
                       value={templateTab}
                       onValueChange={(v) => setTemplateTab(v as 'edit' | 'preview')}
                     >
-                      <TabsList className="grid w-full grid-cols-2 h-8">
+                      <TabsList className="h-8">
                         <TabsTrigger value="edit" className="text-xs">
                           Edit
                         </TabsTrigger>

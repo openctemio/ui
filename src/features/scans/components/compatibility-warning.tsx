@@ -189,10 +189,10 @@ export function CompatibilityWarning({
   // -------------------------------------------
   if (isFullyCompatible) {
     return (
-      <Alert className={cn('border-green-500/30 bg-green-500/5', className)}>
-        <Check className="h-4 w-4 text-green-600" />
-        <AlertTitle className="text-green-600">All assets compatible</AlertTitle>
-        <AlertDescription className="text-green-600/80">
+      <Alert className={cn('border-success/30 bg-success/5', className)}>
+        <Check className="h-4 w-4 text-success" />
+        <AlertTitle className="text-success">All assets compatible</AlertTitle>
+        <AlertDescription className="text-success/80">
           All {totalAssets} asset{totalAssets !== 1 ? 's' : ''} can be scanned by {displayToolName}.
         </AlertDescription>
       </Alert>
@@ -208,13 +208,13 @@ export function CompatibilityWarning({
   return (
     <Alert
       variant={variant}
-      className={cn(!hasNoCompatible && 'border-yellow-500/30 bg-yellow-500/5', className)}
+      className={cn(!hasNoCompatible && 'border-warning/30 bg-warning/5', className)}
     >
       <AlertTriangle
-        className={cn('h-4 w-4', accentColor === 'yellow' ? 'text-yellow-600' : 'text-red-600')}
+        className={cn('h-4 w-4', accentColor === 'yellow' ? 'text-warning' : 'text-destructive')}
       />
 
-      <AlertTitle className={cn(accentColor === 'yellow' ? 'text-yellow-600' : 'text-red-600')}>
+      <AlertTitle className={cn(accentColor === 'yellow' ? 'text-warning' : 'text-destructive')}>
         {hasNoCompatible
           ? 'No compatible assets'
           : `${skippedAssets} of ${totalAssets} assets will be skipped`}
@@ -222,7 +222,7 @@ export function CompatibilityWarning({
 
       <AlertDescription className="space-y-3">
         {/* Summary text */}
-        <p className={cn(accentColor === 'yellow' ? 'text-yellow-600/80' : 'text-red-600/80')}>
+        <p className={cn(accentColor === 'yellow' ? 'text-warning/80' : 'text-destructive/80')}>
           {hasNoCompatible ? (
             <>
               None of the {totalAssets} asset{totalAssets !== 1 ? 's' : ''} in scope are compatible
@@ -240,7 +240,7 @@ export function CompatibilityWarning({
 
         {/* Count badges */}
         <div className="flex flex-wrap gap-2 text-sm">
-          <Badge variant="outline" className="border-green-500/30 bg-green-500/10 text-green-600">
+          <Badge variant="outline" className="border-success/30 bg-success/10 text-success">
             <Check className="me-1 h-3 w-3" />
             {compatibleAssets} compatible
           </Badge>
@@ -248,8 +248,8 @@ export function CompatibilityWarning({
             variant="outline"
             className={cn(
               accentColor === 'yellow'
-                ? 'border-yellow-500/30 bg-yellow-500/10 text-yellow-600'
-                : 'border-red-500/30 bg-red-500/10 text-red-600'
+                ? 'border-warning/30 bg-warning/10 text-warning'
+                : 'border-destructive/30 bg-destructive/10 text-destructive'
             )}
           >
             <AlertTriangle className="me-1 h-3 w-3" />
@@ -290,11 +290,13 @@ export function CompatibilityWarning({
 
             <CollapsibleContent className="mt-2">
               <div className="rounded-md border bg-background/50 p-2 overflow-x-auto">
+                {/* A few-row breakdown inside an alert, not a list: a plain table keeps
+                    it compact; DataTable's toolbar and paging would outweigh it. */}
                 <table className="w-full text-xs" role="table">
                   <thead>
                     <tr className="border-b text-muted-foreground">
                       <th scope="col" className="pb-1 text-start font-medium">
-                        Asset Type
+                        Asset type
                       </th>
                       <th scope="col" className="pb-1 text-end font-medium hidden md:table-cell">
                         Count
@@ -312,11 +314,13 @@ export function CompatibilityWarning({
                     {compatibleDetails.map((item) => (
                       <tr key={item.asset_type}>
                         <td className="py-1">{getAssetTypeLabel(item.asset_type)}</td>
-                        <td className="py-1 text-end hidden md:table-cell">{item.count}</td>
+                        <td className="py-1 text-end tabular-nums hidden md:table-cell">
+                          {item.count}
+                        </td>
                         <td className="py-1 text-end">
                           <Badge
                             variant="outline"
-                            className="border-green-500/30 bg-green-500/10 text-green-600"
+                            className="border-success/30 bg-success/10 text-success"
                           >
                             Scanned
                           </Badge>
@@ -329,14 +333,16 @@ export function CompatibilityWarning({
                     {skippedDetails.map((item) => (
                       <tr key={item.asset_type}>
                         <td className="py-1">{getAssetTypeLabel(item.asset_type)}</td>
-                        <td className="py-1 text-end hidden md:table-cell">{item.count}</td>
+                        <td className="py-1 text-end tabular-nums hidden md:table-cell">
+                          {item.count}
+                        </td>
                         <td className="py-1 text-end">
                           <Badge
                             variant="outline"
                             className={cn(
                               accentColor === 'yellow'
-                                ? 'border-yellow-500/30 bg-yellow-500/10 text-yellow-600'
-                                : 'border-red-500/30 bg-red-500/10 text-red-600'
+                                ? 'border-warning/30 bg-warning/10 text-warning'
+                                : 'border-destructive/30 bg-destructive/10 text-destructive'
                             )}
                           >
                             Skipped

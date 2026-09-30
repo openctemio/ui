@@ -1,5 +1,6 @@
 'use client'
 
+import type * as React from 'react'
 import { useMemo } from 'react'
 import type { ColumnDef } from '@tanstack/react-table'
 import { Pencil, Trash2, Globe, Sparkles, Wrench, Bot, Eye } from 'lucide-react'
@@ -18,6 +19,9 @@ interface CapabilityTableProps {
   onDelete?: (capability: Capability) => void
   onViewDetails?: (capability: Capability) => void
   readOnly?: boolean
+  /** Passed through to the DataTable toolbar (search, filters, view toggle). */
+  toolbarStart?: React.ReactNode
+  toolbarEnd?: React.ReactNode
 }
 
 // Get color class from color name
@@ -112,6 +116,8 @@ export function CapabilityTable({
   onDelete,
   onViewDetails,
   readOnly = false,
+  toolbarStart,
+  toolbarEnd,
 }: CapabilityTableProps) {
   const showActions = Boolean(onViewDetails || (!readOnly && (onEdit || onDelete)))
 
@@ -230,6 +236,8 @@ export function CapabilityTable({
       columns={columns}
       data={capabilities}
       showSearch={false}
+      toolbarStart={toolbarStart}
+      toolbarEnd={toolbarEnd}
       emptyMessage="No capabilities"
       emptyDescription="No capabilities match the current filters."
     />

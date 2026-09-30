@@ -2,18 +2,16 @@
 
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { formatDistanceToNow } from 'date-fns'
-import {
-  type ColumnDef,
-  flexRender,
-  getCoreRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  type SortingState,
-  useReactTable,
-} from '@tanstack/react-table'
+import { type ColumnDef, type SortingState } from '@tanstack/react-table'
 import { cn } from '@/lib/utils'
 import { Main } from '@/components/layout'
-import { PageHeader, StatusBadge, RiskScoreBadge } from '@/features/shared'
+import {
+  PageHeader,
+  StatusBadge,
+  RiskScoreBadge,
+  DataTable,
+  DataTableColumnHeader,
+} from '@/features/shared'
 import {
   AssetDetailSheet,
   StatCardCentered,
@@ -25,16 +23,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -59,11 +49,6 @@ import {
   Eye,
   Pencil,
   Trash2,
-  ArrowUpDown,
-  ChevronLeft,
-  ChevronRight,
-  ChevronsLeft,
-  ChevronsRight,
   Download,
   Copy,
   X,
@@ -144,6 +129,18 @@ function transformApiExclusion(api: ApiScopeExclusion): ScopeExclusion {
   }
 }
 
+const ASSET_PAGE_SIZES = [10, 20, 30, 50, 100]
+const DEFAULT_ASSET_PAGE_SIZE = 50
+
+/** Column ids the assets API can sort by (AllowedSortFields, camelCase here). */
+const SERVER_SORTABLE_COLUMNS = new Set([
+  'name',
+  'status',
+  'findingCount',
+  'riskScore',
+  'updatedAt',
+])
+
 const defaultStatusFilters: { value: string; label: string }[] = [
   { value: 'all', label: 'All' },
   { value: 'active', label: 'Active' },
@@ -172,7 +169,14 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
     const p = searchParams.get('page')
     return p ? Math.max(1, parseInt(p, 10) || 1) : 1
   })
-  const [pageSize] = useState(50)
+  // Page size lives in the URL (`per_page`) like the other list pages. The
+  // default stays 50 rather than the table's 10: the headline stat cards that
+  // read metadata compute over the fetched page (see headlineAssets below), so
+  // a smaller default page would make those numbers noticeably less complete.
+  const [pageSize, setPageSize] = useState(() => {
+    const n = parseInt(searchParams.get('per_page') ?? '', 10)
+    return ASSET_PAGE_SIZES.includes(n) ? n : DEFAULT_ASSET_PAGE_SIZE
+  })
 
   // Server-side search (debounced) — initialise from URL
   const [searchValue, setSearchValue] = useState(() => searchParams.get('q') || '')
@@ -242,7 +246,7 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
   const statusParam = searchParams.get('status')
 
   // Data fetching with server-side pagination, search, tag, and properties filter.
-  const { assets, total, totalPages, isLoading, mutate } = useAssets({
+  const { assets, total, isLoading, mutate } = useAssets({
     types: typeFilter,
     subType: subTypeFilter,
     propertiesFilter: Object.keys(propertiesFilter).length > 0 ? propertiesFilter : undefined,
@@ -395,7 +399,15 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
     () => (searchParams.get('status') as StatusFilter) || 'all'
   )
   // (customFilterValues removed — PropertyFilter handles properties directly)
-  const [rowSelection, setRowSelection] = useState({})
+  // The table owns the checkbox state; this mirrors the ticked rows for the
+  // bulk-action menu, and bumping selectionEpoch clears the table's copy.
+  const [selectedRows, setSelectedRows] = useState<Asset[]>([])
+  const [selectionEpoch, setSelectionEpoch] = useState(0)
+  // A new sort reorders the whole dataset, so start again from its first page.
+  const handleSortingChange = useCallback((next: SortingState) => {
+    setSorting(next)
+    setCurrentPage(1)
+  }, [])
 
   // Sync state to URL search params
   const isInitialMount = useRef(true)
@@ -410,6 +422,7 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
     if (urlType) params.set('type', urlType)
     if (urlSubType) params.set('sub_type', urlSubType)
     if (currentPage > 1) params.set('page', String(currentPage))
+    if (pageSize !== DEFAULT_ASSET_PAGE_SIZE) params.set('per_page', String(pageSize))
     if (debouncedSearch) params.set('q', debouncedSearch)
     if (statusFilter !== 'all') params.set('status', statusFilter)
     if (tagFilters.length > 0) params.set('tags', tagFilters.join(','))
@@ -434,6 +447,7 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
     router.replace(newUrl, { scroll: false })
   }, [
     currentPage,
+    pageSize,
     debouncedSearch,
     statusFilter,
     tagFilters,
@@ -728,6 +742,7 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
       // Select
       {
         id: 'select',
+        enableHiding: false,
         header: ({ table }) => (
           <Checkbox
             checked={
@@ -750,16 +765,7 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
       // Name
       {
         accessorKey: 'name',
-        header: ({ column }) => (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-            className="-ms-4"
-          >
-            {config.label}
-            <ArrowUpDown className="ms-2 h-4 w-4" />
-          </Button>
-        ),
+        header: ({ column }) => <DataTableColumnHeader column={column} title={config.label} />,
         cell: ({ row }) => (
           // max-w caps the cell so very long names (e.g. UUIDs appended to a
           // hostname) don't blow out the table layout. Truncate + native title
@@ -782,12 +788,13 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
           </div>
         ),
       },
-      // Type-specific columns
-      ...config.columns,
+      // Type-specific columns. They read metadata the API cannot sort by, so
+      // their headers stay plain text (a sort would only reorder this page).
+      ...config.columns.map((col) => ({ enableSorting: false, ...col })),
       // Status
       {
         accessorKey: 'status',
-        header: 'Status',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
         cell: ({ row }) => <StatusBadge status={row.original.status} />,
       },
       // Classification
@@ -879,16 +886,7 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
       // Findings
       {
         accessorKey: 'findingCount',
-        header: ({ column }) => (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-            className="-ms-4"
-          >
-            Findings
-            <ArrowUpDown className="ms-2 h-4 w-4" />
-          </Button>
-        ),
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Findings" />,
         cell: ({ row }) => {
           const count = row.original.findingCount
           if (count === 0) {
@@ -904,31 +902,13 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
       // Risk
       {
         accessorKey: 'riskScore',
-        header: ({ column }) => (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-            className="-ms-4"
-          >
-            Risk
-            <ArrowUpDown className="ms-2 h-4 w-4" />
-          </Button>
-        ),
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Risk" />,
         cell: ({ row }) => <RiskScoreBadge score={row.original.riskScore} size="sm" />,
       },
       // Last Update — built-in for all asset pages, sortable
       {
         accessorKey: 'updatedAt',
-        header: ({ column }) => (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-            className="-ms-4"
-          >
-            Last Update
-            <ArrowUpDown className="ms-2 h-4 w-4" />
-          </Button>
-        ),
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Last updated" />,
         cell: ({ row }) => {
           const raw = row.original.updatedAt
           if (!raw) return <span className="text-muted-foreground">-</span>
@@ -938,9 +918,9 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
           const label = formatDistanceToNow(date, { addSuffix: true })
           const color =
             diffDays > 30
-              ? 'text-red-500'
+              ? 'text-destructive'
               : diffDays > 7
-                ? 'text-yellow-600 dark:text-yellow-400'
+                ? 'text-warning'
                 : 'text-muted-foreground'
           return (
             <span className={`text-xs ${color}`} title={date.toLocaleString()}>
@@ -962,6 +942,7 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
       // Actions
       {
         id: 'actions',
+        enableHiding: false,
         cell: ({ row }) => {
           const asset = row.original
           return (
@@ -971,6 +952,7 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
                   variant="ghost"
                   size="sm"
                   className="h-8 w-8 p-0"
+                  aria-label={`Actions for ${asset.name}`}
                   onClick={(e) => e.stopPropagation()}
                 >
                   <MoreHorizontal className="h-4 w-4" />
@@ -988,7 +970,7 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
                   }}
                 >
                   <Eye className="me-2 h-4 w-4" />
-                  View Details
+                  View details
                 </DropdownMenuItem>
                 <Can permission={Permission.AssetsWrite}>
                   <DropdownMenuItem
@@ -1031,7 +1013,7 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
                 <Can permission={Permission.AssetsDelete}>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
-                    className="text-red-400"
+                    className="text-destructive"
                     onClick={(e) => {
                       e.stopPropagation()
                       dialogs.openDelete(asset)
@@ -1047,26 +1029,31 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
         },
       },
     ]
-  }, [config, scopeMatchesMap, dialogs, handleCopy, can])
+  }, [config, scopeMatchesMap, dialogs, handleCopy, can, router])
 
-  const table = useReactTable({
-    data: filteredData,
-    columns,
-    state: { sorting, rowSelection },
-    onSortingChange: setSorting,
-    onRowSelectionChange: setRowSelection,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    manualPagination: true,
-    pageCount: totalPages,
-  })
+  // Only sort fields the API accepts; a stale URL value must not leave an
+  // arrow on a column the rows are not actually ordered by.
+  const tableSorting = useMemo(
+    () => sorting.filter((s) => SERVER_SORTABLE_COLUMNS.has(s.id)),
+    [sorting]
+  )
 
   const handleBulkDelete = async () => {
-    const ids = table.getSelectedRowModel().rows.map((r) => r.original.id)
+    const ids = selectedRows.map((a) => a.id)
     const success = await crud.handleBulkDelete(ids)
-    if (success) setRowSelection({})
+    if (success) setSelectionEpoch((n) => n + 1)
   }
+
+  const openAsset = useCallback(
+    (asset: Asset) => {
+      if (config.detailPagePath) {
+        router.push(config.detailPagePath.replace('{id}', asset.id))
+      } else {
+        dialogs.setSelectedAsset(asset)
+      }
+    },
+    [config.detailPagePath, router, dialogs]
+  )
 
   const selectedAsset = dialogs.selectedAsset
   const Icon = config.icon
@@ -1209,36 +1196,36 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
         )}
 
         {/* Table */}
-        <Card className="mt-6">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>All {config.labelPlural}</CardTitle>
-              {headerExtra}
-            </div>
-            {hasActiveFilter && !isLoading && typeStats.total > 0 && (
-              <CardDescription className="text-xs">
-                Filtered:{' '}
-                <span className="font-medium text-foreground">{total.toLocaleString()}</span> of{' '}
-                <span className="font-medium">{typeStats.total.toLocaleString()}</span>{' '}
-                {config.labelPlural.toLowerCase()}
-              </CardDescription>
-            )}
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col gap-2 mb-4">
-              {/* Row 1: Search + Status + Tags + Add Filter (scrollable, no wrap) */}
-              <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
-                <div className="relative flex-1 min-w-[200px] max-w-md">
-                  <SearchIcon className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+        <div className="mt-6 space-y-2">
+          {/* Active filter chips — tags + properties */}
+          <TagFilterChips value={tagFilters} onChange={setTagFilters} />
+          <PropertyFilterChips
+            value={propertiesFilter}
+            onChange={(pf) => {
+              setPropertiesFilter(pf)
+              setCurrentPage(1)
+            }}
+            filtered={total}
+            total={typeStats.total}
+          />
+          <DataTable
+            columns={columns}
+            data={filteredData}
+            getRowId={(a) => a.id}
+            isLoading={isLoading}
+            showSearch={false}
+            toolbarStart={
+              <>
+                <div className="relative min-w-0 flex-1 sm:max-w-sm">
+                  <SearchIcon className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
-                    placeholder={`Search ${config.labelPlural.toLowerCase()}...`}
+                    placeholder={`Search ${config.labelPlural.toLowerCase()}…`}
                     value={searchValue}
                     onChange={(e) => setSearchValue(e.target.value)}
-                    className="ps-8 h-9"
-                    aria-label="Search assets"
+                    className="h-9 ps-9"
+                    aria-label={`Search ${config.labelPlural.toLowerCase()}`}
                   />
                 </div>
-
                 <Select
                   value={statusFilter}
                   onValueChange={(v) => {
@@ -1246,12 +1233,10 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
                     setCurrentPage(1)
                   }}
                 >
-                  <SelectTrigger className="w-[130px] h-9">
+                  <SelectTrigger className="h-9 w-auto sm:min-w-32" aria-label="Filter by status">
                     <SelectValue>
-                      <span className="text-xs">
-                        Status:{' '}
-                        {statusFilterOptions.find((f) => f.value === statusFilter)?.label ?? 'All'}
-                      </span>
+                      Status:{' '}
+                      {statusFilterOptions.find((f) => f.value === statusFilter)?.label ?? 'All'}
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
@@ -1262,9 +1247,7 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
                     ))}
                   </SelectContent>
                 </Select>
-
                 <TagFilter value={tagFilters} onChange={setTagFilters} types={typeFilter} />
-
                 <PropertyFilter
                   types={typeFilter}
                   subType={subTypeFilter}
@@ -1274,191 +1257,73 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
                     setCurrentPage(1)
                   }}
                 />
-
-                {Object.keys(rowSelection).length > 0 && (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline" size="sm">
-                        {Object.keys(rowSelection).length} selected
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent>
-                      {config.bulkActions?.map((action) => {
-                        if (action.permission && !can(action.permission)) return null
-                        const BulkIcon = action.icon
-                        return (
-                          <DropdownMenuItem
-                            key={action.label}
-                            className={action.variant === 'destructive' ? 'text-red-400' : ''}
-                            onClick={() => {
-                              const assets = table.getSelectedRowModel().rows.map((r) => r.original)
-                              action.onClick(assets)
-                            }}
-                          >
-                            <BulkIcon className="me-2 h-4 w-4" />
-                            {action.label}
-                          </DropdownMenuItem>
-                        )
-                      })}
-                      <Can permission={Permission.AssetsDelete}>
-                        <DropdownMenuItem className="text-red-400" onClick={handleBulkDelete}>
-                          <Trash2 className="me-2 h-4 w-4" />
-                          Delete Selected
+                {headerExtra}
+              </>
+            }
+            toolbarEnd={
+              selectedRows.length > 0 ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-9">
+                      {selectedRows.length} selected
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {config.bulkActions?.map((action) => {
+                      if (action.permission && !can(action.permission)) return null
+                      const BulkIcon = action.icon
+                      return (
+                        <DropdownMenuItem
+                          key={action.label}
+                          className={action.variant === 'destructive' ? 'text-destructive' : ''}
+                          onClick={() => action.onClick(selectedRows)}
+                        >
+                          <BulkIcon className="me-2 h-4 w-4" />
+                          {action.label}
                         </DropdownMenuItem>
-                      </Can>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                )}
-              </div>
-
-              {/* Row 2: Active filter chips — tags + properties (separate row) */}
-              <TagFilterChips value={tagFilters} onChange={setTagFilters} />
-              <PropertyFilterChips
-                value={propertiesFilter}
-                onChange={(pf) => {
-                  setPropertiesFilter(pf)
-                  setCurrentPage(1)
-                }}
-                filtered={total}
-                total={typeStats.total}
-              />
-            </div>
-
-            {/* Table */}
-            <div className="overflow-x-auto -mx-4 sm:mx-0">
-              <div className="min-w-[800px] sm:min-w-0">
-                <div className="rounded-md border">
-                  <Table aria-label="Assets table">
-                    <TableHeader>
-                      {table.getHeaderGroups().map((headerGroup) => (
-                        <TableRow key={headerGroup.id}>
-                          {headerGroup.headers.map((header) => {
-                            const hideOnMobile = [
-                              'classification',
-                              'tags',
-                              'findingCount',
-                              'riskScore',
-                              'scope-match',
-                            ].includes(header.id)
-                            return (
-                              <TableHead
-                                key={header.id}
-                                className={hideOnMobile ? 'hidden sm:table-cell' : undefined}
-                              >
-                                {header.isPlaceholder
-                                  ? null
-                                  : flexRender(header.column.columnDef.header, header.getContext())}
-                              </TableHead>
-                            )
-                          })}
-                        </TableRow>
-                      ))}
-                    </TableHeader>
-                    <TableBody>
-                      {table.getRowModel().rows?.length ? (
-                        table.getRowModel().rows.map((row) => (
-                          <TableRow
-                            key={row.id}
-                            data-state={row.getIsSelected() && 'selected'}
-                            className="cursor-pointer"
-                            onClick={() => {
-                              if (config.detailPagePath) {
-                                router.push(config.detailPagePath.replace('{id}', row.original.id))
-                              } else {
-                                dialogs.setSelectedAsset(row.original)
-                              }
-                            }}
-                          >
-                            {row.getVisibleCells().map((cell) => {
-                              const hideOnMobile = [
-                                'classification',
-                                'tags',
-                                'findingCount',
-                                'riskScore',
-                                'scope-match',
-                              ].includes(cell.column.id)
-                              return (
-                                <TableCell
-                                  key={cell.id}
-                                  className={hideOnMobile ? 'hidden sm:table-cell' : undefined}
-                                >
-                                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                </TableCell>
-                              )
-                            })}
-                          </TableRow>
-                        ))
-                      ) : (
-                        <TableRow>
-                          <TableCell colSpan={columns.length} className="h-24 text-center">
-                            {isLoading ? (
-                              <div className="flex flex-col items-center gap-2">
-                                <Skeleton className="h-4 w-48" />
-                                <Skeleton className="h-4 w-32" />
-                              </div>
-                            ) : (
-                              `No ${config.labelPlural.toLowerCase()} found.`
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-              </div>
-            </div>
-
-            {/* Pagination (server-side) */}
-            <div className="flex items-center justify-between mt-4">
-              <div className="text-sm text-muted-foreground">
-                {total > 0
-                  ? `Showing ${(currentPage - 1) * pageSize + 1}-${Math.min(currentPage * pageSize, total)} of ${total}`
-                  : 'No results'}
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(1)}
-                  disabled={currentPage <= 1}
-                  aria-label="First page"
-                >
-                  <ChevronsLeft className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  disabled={currentPage <= 1}
-                  aria-label="Previous page"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <span className="text-sm text-muted-foreground">
-                  Page {currentPage} of {totalPages || 1}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={currentPage >= totalPages}
-                  aria-label="Next page"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(totalPages)}
-                  disabled={currentPage >= totalPages}
-                  aria-label="Last page"
-                >
-                  <ChevronsRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+                      )
+                    })}
+                    <Can permission={Permission.AssetsDelete}>
+                      <DropdownMenuItem className="text-destructive" onClick={handleBulkDelete}>
+                        <Trash2 className="me-2 h-4 w-4" />
+                        Delete selected
+                      </DropdownMenuItem>
+                    </Can>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : undefined
+            }
+            showSelectionCount={false}
+            onSelectionChange={setSelectedRows}
+            resetSelectionKey={selectionEpoch}
+            onRowClick={openAsset}
+            manualPagination
+            rowCount={total}
+            pagination={{ pageIndex: currentPage - 1, pageSize }}
+            onPaginationChange={(next) => {
+              if (next.pageSize !== pageSize) {
+                setPageSize(next.pageSize)
+                setCurrentPage(1)
+              } else {
+                setCurrentPage(next.pageIndex + 1)
+              }
+            }}
+            pageSize={pageSize}
+            pageSizeOptions={ASSET_PAGE_SIZES}
+            sorting={tableSorting}
+            onSortingChange={handleSortingChange}
+            emptyMessage={
+              hasActiveFilter || statusFilter !== 'all'
+                ? `No ${config.labelPlural.toLowerCase()} match these filters`
+                : `No ${config.labelPlural.toLowerCase()} yet`
+            }
+            emptyDescription={
+              hasActiveFilter || statusFilter !== 'all'
+                ? 'Try adjusting your search or filters'
+                : `Add a ${config.label.toLowerCase()} or run a discovery scan to populate this list`
+            }
+          />
+        </div>
       </Main>
 
       {/* Detail Sheet */}

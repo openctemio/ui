@@ -1,17 +1,11 @@
 'use client'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+
+import type { ColumnDef } from '@tanstack/react-table'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import { cn } from '@/lib/utils'
-import { DataTableRowActions, EmptyState } from '@/features/shared'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { DataTableRowActions, RelativeTime, SeverityBadge } from '@/features/shared'
+import { ExposureThreatPills } from './exposure-enrichment'
 import {
   Check,
   X,
@@ -30,13 +24,7 @@ import {
   Settings,
   HelpCircle,
 } from 'lucide-react'
-import { formatDistanceToNow } from 'date-fns'
-import type {
-  ExposureEvent,
-  ExposureEventType,
-  ExposureSeverity,
-  ExposureState,
-} from '@/lib/api/exposure-types'
+import type { ExposureEvent, ExposureEventType, ExposureState } from '@/lib/api/exposure-types'
 
 // Icon mapping for event types
 const eventTypeIcons: Record<string, typeof Network> = {
@@ -53,305 +41,210 @@ const eventTypeIcons: Record<string, typeof Network> = {
   other: HelpCircle,
 }
 
-// Get icon for event type based on category
+const EVENT_TYPE_CATEGORY = {
+  port_open: 'network',
+  port_closed: 'network',
+  service_detected: 'service',
+  service_changed: 'service',
+  subdomain_discovered: 'domain',
+  subdomain_removed: 'domain',
+  certificate_expiring: 'certificate',
+  certificate_expired: 'certificate',
+  bucket_public: 'cloud',
+  bucket_private: 'cloud',
+  repo_public: 'code',
+  repo_private: 'code',
+  api_exposed: 'api',
+  api_removed: 'api',
+  credential_leaked: 'credential',
+  sensitive_data_exposed: 'data',
+  misconfiguration: 'config',
+  custom: 'other',
+} as const
+
 function getEventTypeIcon(eventType: ExposureEventType): typeof Network {
-  const config = {
-    port_open: 'network',
-    port_closed: 'network',
-    service_detected: 'service',
-    service_changed: 'service',
-    subdomain_discovered: 'domain',
-    subdomain_removed: 'domain',
-    certificate_expiring: 'certificate',
-    certificate_expired: 'certificate',
-    bucket_public: 'cloud',
-    bucket_private: 'cloud',
-    repo_public: 'code',
-    repo_private: 'code',
-    api_exposed: 'api',
-    api_removed: 'api',
-    credential_leaked: 'credential',
-    sensitive_data_exposed: 'data',
-    misconfiguration: 'config',
-    custom: 'other',
-  } as const
-
-  return eventTypeIcons[config[eventType]] || HelpCircle
+  return eventTypeIcons[EVENT_TYPE_CATEGORY[eventType]] || HelpCircle
 }
 
-// Severity badge config
-const severityConfig: Record<ExposureSeverity, { label: string; className: string }> = {
-  critical: { label: 'Critical', className: 'bg-red-500 text-white hover:bg-red-600' },
-  high: { label: 'High', className: 'bg-orange-500 text-white hover:bg-orange-600' },
-  medium: { label: 'Medium', className: 'bg-yellow-500 text-black hover:bg-yellow-600' },
-  low: { label: 'Low', className: 'bg-blue-500 text-white hover:bg-blue-600' },
-  info: { label: 'Info', className: 'bg-gray-500 text-white hover:bg-gray-600' },
+/** Lifecycle state → badge. Only the open ("active") state draws attention. */
+export const EXPOSURE_STATE_BADGE: Record<
+  ExposureState,
+  { label: string; variant: 'destructive' | 'secondary' | 'outline' }
+> = {
+  active: { label: 'Active', variant: 'destructive' },
+  resolved: { label: 'Resolved', variant: 'secondary' },
+  accepted: { label: 'Accepted', variant: 'outline' },
+  false_positive: { label: 'False positive', variant: 'outline' },
 }
 
-// State badge config
-const stateConfig: Record<ExposureState, { label: string; className: string }> = {
-  active: {
-    label: 'Active',
-    className: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-  },
-  resolved: {
-    label: 'Resolved',
-    className: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-  },
-  accepted: {
-    label: 'Accepted',
-    className: 'bg-yellow-100 text-yellow-900 dark:bg-yellow-900/30 dark:text-yellow-400',
-  },
-  false_positive: {
-    label: 'False Positive',
-    className: 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400',
-  },
-}
-
-// Event type labels
-const eventTypeLabels: Record<ExposureEventType, string> = {
-  port_open: 'Port Open',
-  port_closed: 'Port Closed',
-  service_detected: 'Service Detected',
-  service_changed: 'Service Changed',
-  subdomain_discovered: 'Subdomain Discovered',
-  subdomain_removed: 'Subdomain Removed',
-  certificate_expiring: 'Certificate Expiring',
-  certificate_expired: 'Certificate Expired',
-  bucket_public: 'Bucket Public',
-  bucket_private: 'Bucket Private',
-  repo_public: 'Repository Public',
-  repo_private: 'Repository Private',
-  api_exposed: 'API Exposed',
-  api_removed: 'API Removed',
-  credential_leaked: 'Credential Leaked',
-  sensitive_data_exposed: 'Sensitive Data Exposed',
+export const EXPOSURE_EVENT_TYPE_LABELS: Record<ExposureEventType, string> = {
+  port_open: 'Port open',
+  port_closed: 'Port closed',
+  service_detected: 'Service detected',
+  service_changed: 'Service changed',
+  subdomain_discovered: 'Subdomain discovered',
+  subdomain_removed: 'Subdomain removed',
+  certificate_expiring: 'Certificate expiring',
+  certificate_expired: 'Certificate expired',
+  bucket_public: 'Bucket public',
+  bucket_private: 'Bucket private',
+  repo_public: 'Repository public',
+  repo_private: 'Repository private',
+  api_exposed: 'API exposed',
+  api_removed: 'API removed',
+  credential_leaked: 'Credential leaked',
+  sensitive_data_exposed: 'Sensitive data exposed',
   misconfiguration: 'Misconfiguration',
   custom: 'Custom',
 }
 
-interface ExposureTableProps {
-  exposures: ExposureEvent[]
-  isLoading?: boolean
-  onResolve?: (exposure: ExposureEvent) => void
-  onAccept?: (exposure: ExposureEvent) => void
-  onMarkFalsePositive?: (exposure: ExposureEvent) => void
-  onReactivate?: (exposure: ExposureEvent) => void
-  onViewDetails?: (exposure: ExposureEvent) => void
-  selectedIds?: string[]
-  onSelectionChange?: (ids: string[]) => void
-  className?: string
+interface ExposureColumnHandlers {
+  onResolve: (exposure: ExposureEvent) => void
+  onAccept: (exposure: ExposureEvent) => void
+  onMarkFalsePositive: (exposure: ExposureEvent) => void
+  onReactivate: (exposure: ExposureEvent) => void
+  onViewDetails: (exposure: ExposureEvent) => void
 }
 
 /**
- * Exposure Table - Displays list of exposure events with actions
+ * Columns for the exposure list, rendered by the shared DataTable. The table
+ * is server-paginated and the exposures API takes no sort parameter, so no
+ * column is sortable (a header that reordered only the rows on screen would
+ * mislead).
  */
-export function ExposureTable({
-  exposures,
-  isLoading,
-  onResolve,
-  onAccept,
-  onMarkFalsePositive,
-  onReactivate,
-  onViewDetails,
-  selectedIds = [],
-  onSelectionChange,
-  className,
-}: ExposureTableProps) {
-  const allSelected = exposures.length > 0 && selectedIds.length === exposures.length
-  const someSelected = selectedIds.length > 0 && selectedIds.length < exposures.length
-
-  const handleSelectAll = () => {
-    if (allSelected) {
-      onSelectionChange?.([])
-    } else {
-      onSelectionChange?.(exposures.map((e) => e.id))
-    }
-  }
-
-  const handleSelectOne = (id: string) => {
-    if (selectedIds.includes(id)) {
-      onSelectionChange?.(selectedIds.filter((i) => i !== id))
-    } else {
-      onSelectionChange?.([...selectedIds, id])
-    }
-  }
-
-  if (isLoading) {
-    return (
-      <div className={cn('rounded-md border', className)}>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-12" />
-              <TableHead>Type</TableHead>
-              <TableHead>Title</TableHead>
-              <TableHead>Severity</TableHead>
-              <TableHead>State</TableHead>
-              <TableHead>Source</TableHead>
-              <TableHead>First Seen</TableHead>
-              <TableHead className="w-12" />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {[...Array(5)].map((_, i) => (
-              <TableRow key={i}>
-                <TableCell colSpan={8}>
-                  <div className="animate-pulse h-8 bg-muted rounded" />
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-    )
-  }
-
-  if (exposures.length === 0) {
-    return (
-      <EmptyState
-        icon={ShieldCheck}
-        title="No exposures found"
-        description="Your attack surface is looking clean!"
-        className={className}
-      />
-    )
-  }
-
-  return (
-    <div className={cn('rounded-md border', className)}>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            {onSelectionChange && (
-              <TableHead className="w-12">
-                <Checkbox
-                  checked={allSelected}
-                  ref={(el) => {
-                    if (el) {
-                      ;(el as HTMLButtonElement & { indeterminate?: boolean }).indeterminate =
-                        someSelected
-                    }
-                  }}
-                  onCheckedChange={handleSelectAll}
-                  aria-label="Select all"
-                />
-              </TableHead>
-            )}
-            <TableHead className="w-10">Type</TableHead>
-            <TableHead>Title</TableHead>
-            <TableHead className="w-24">Severity</TableHead>
-            <TableHead className="w-28">State</TableHead>
-            <TableHead className="w-28">Source</TableHead>
-            <TableHead className="w-32">First Seen</TableHead>
-            <TableHead className="w-12" />
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {exposures.map((exposure) => {
-            const Icon = getEventTypeIcon(exposure.event_type)
-            const severity = severityConfig[exposure.severity]
-            const state = stateConfig[exposure.state]
-
-            return (
-              <TableRow
-                key={exposure.id}
-                className={cn(
-                  selectedIds.includes(exposure.id) && 'bg-muted/50',
-                  'cursor-pointer hover:bg-muted/50'
-                )}
-                onClick={() => onViewDetails?.(exposure)}
-              >
-                {onSelectionChange && (
-                  <TableCell onClick={(e) => e.stopPropagation()}>
-                    <Checkbox
-                      checked={selectedIds.includes(exposure.id)}
-                      onCheckedChange={() => handleSelectOne(exposure.id)}
-                      aria-label={`Select ${exposure.title}`}
-                    />
-                  </TableCell>
-                )}
-                <TableCell>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <div className="p-1.5 rounded bg-muted">
-                          <Icon className="h-4 w-4" />
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent>{eventTypeLabels[exposure.event_type]}</TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </TableCell>
-                <TableCell>
-                  <div className="space-y-1">
-                    <p className="font-medium line-clamp-1">{exposure.title}</p>
-                    {exposure.description && (
-                      <p className="text-xs text-muted-foreground line-clamp-1">
-                        {exposure.description}
-                      </p>
-                    )}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <Badge className={severity.className}>{severity.label}</Badge>
-                </TableCell>
-                <TableCell>
-                  <Badge variant="outline" className={state.className}>
-                    {state.label}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <span className="text-sm text-muted-foreground">{exposure.source}</span>
-                </TableCell>
-                <TableCell>
-                  <span className="text-sm text-muted-foreground">
-                    {formatDistanceToNow(new Date(exposure.first_seen_at), { addSuffix: true })}
-                  </span>
-                </TableCell>
-                <TableCell onClick={(e) => e.stopPropagation()}>
-                  <DataTableRowActions
-                    actions={[
+export function getExposureColumns(handlers: ExposureColumnHandlers): ColumnDef<ExposureEvent>[] {
+  return [
+    {
+      id: 'select',
+      header: ({ table }) => (
+        <Checkbox
+          checked={
+            table.getIsAllPageRowsSelected() ||
+            (table.getIsSomePageRowsSelected() && 'indeterminate')
+          }
+          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+          aria-label="Select all"
+        />
+      ),
+      cell: ({ row }) => (
+        <Checkbox
+          checked={row.getIsSelected()}
+          onCheckedChange={(value) => row.toggleSelected(!!value)}
+          aria-label={`Select ${row.original.title}`}
+          onClick={(e) => e.stopPropagation()}
+        />
+      ),
+      enableSorting: false,
+      enableHiding: false,
+    },
+    {
+      accessorKey: 'title',
+      header: 'Exposure',
+      enableSorting: false,
+      enableHiding: false,
+      cell: ({ row }) => {
+        const exposure = row.original
+        const Icon = getEventTypeIcon(exposure.event_type)
+        return (
+          <div className="flex min-w-0 items-start gap-2.5">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="mt-0.5 shrink-0 text-muted-foreground">
+                  <Icon className="h-4 w-4" aria-hidden />
+                  <span className="sr-only">{EXPOSURE_EVENT_TYPE_LABELS[exposure.event_type]}</span>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>{EXPOSURE_EVENT_TYPE_LABELS[exposure.event_type]}</TooltipContent>
+            </Tooltip>
+            <div className="min-w-0 space-y-1">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <p className="line-clamp-1 font-medium">{exposure.title}</p>
+                <ExposureThreatPills exposure={exposure} />
+              </div>
+              {exposure.description && (
+                <p className="line-clamp-1 text-xs text-muted-foreground">{exposure.description}</p>
+              )}
+            </div>
+          </div>
+        )
+      },
+    },
+    {
+      accessorKey: 'severity',
+      header: 'Severity',
+      enableSorting: false,
+      cell: ({ row }) => <SeverityBadge severity={row.original.severity} />,
+    },
+    {
+      accessorKey: 'state',
+      header: 'State',
+      enableSorting: false,
+      cell: ({ row }) => {
+        const state = EXPOSURE_STATE_BADGE[row.original.state]
+        return state ? <Badge variant={state.variant}>{state.label}</Badge> : null
+      },
+    },
+    {
+      accessorKey: 'source',
+      header: 'Source',
+      enableSorting: false,
+      cell: ({ row }) => (
+        <span className="text-sm text-muted-foreground">{row.original.source}</span>
+      ),
+    },
+    {
+      accessorKey: 'first_seen_at',
+      header: 'First seen',
+      enableSorting: false,
+      cell: ({ row }) => <RelativeTime date={row.original.first_seen_at} />,
+    },
+    {
+      id: 'actions',
+      enableSorting: false,
+      enableHiding: false,
+      cell: ({ row }) => {
+        const exposure = row.original
+        return (
+          <div onClick={(e) => e.stopPropagation()}>
+            <DataTableRowActions
+              actions={[
+                {
+                  label: 'View details',
+                  icon: Eye,
+                  onClick: () => handlers.onViewDetails(exposure),
+                },
+                ...(exposure.state === 'active'
+                  ? [
                       {
-                        label: 'View Details',
-                        icon: Eye,
-                        onClick: () => onViewDetails?.(exposure),
+                        label: 'Mark resolved',
+                        icon: Check,
+                        onClick: () => handlers.onResolve(exposure),
+                        separatorBefore: true,
                       },
-                      ...(exposure.state === 'active'
-                        ? [
-                            {
-                              label: 'Mark Resolved',
-                              icon: Check,
-                              onClick: () => onResolve?.(exposure),
-                              separatorBefore: true,
-                            },
-                            {
-                              label: 'Accept Risk',
-                              icon: AlertTriangle,
-                              onClick: () => onAccept?.(exposure),
-                            },
-                            {
-                              label: 'False Positive',
-                              icon: X,
-                              onClick: () => onMarkFalsePositive?.(exposure),
-                            },
-                          ]
-                        : [
-                            {
-                              label: 'Reactivate',
-                              icon: RefreshCw,
-                              onClick: () => onReactivate?.(exposure),
-                              separatorBefore: true,
-                            },
-                          ]),
-                    ]}
-                  />
-                </TableCell>
-              </TableRow>
-            )
-          })}
-        </TableBody>
-      </Table>
-    </div>
-  )
+                      {
+                        label: 'Accept risk',
+                        icon: AlertTriangle,
+                        onClick: () => handlers.onAccept(exposure),
+                      },
+                      {
+                        label: 'False positive',
+                        icon: X,
+                        onClick: () => handlers.onMarkFalsePositive(exposure),
+                      },
+                    ]
+                  : [
+                      {
+                        label: 'Reactivate',
+                        icon: RefreshCw,
+                        onClick: () => handlers.onReactivate(exposure),
+                        separatorBefore: true,
+                      },
+                    ]),
+              ]}
+            />
+          </div>
+        )
+      },
+    },
+  ]
 }

@@ -1,32 +1,23 @@
 'use client'
 
 import { useState, useMemo, useCallback } from 'react'
-import {
-  ColumnDef,
-  flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  SortingState,
-  useReactTable,
-} from '@tanstack/react-table'
+import type { ColumnDef } from '@tanstack/react-table'
 import { Main } from '@/components/layout'
-import { PageHeader, DataTableRowActions } from '@/features/shared'
+import {
+  PageHeader,
+  DataTable,
+  DataTableColumnHeader,
+  DataTableRowActions,
+  EmptyState,
+  MetricStrip,
+} from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   Dialog,
   DialogContent,
@@ -42,27 +33,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from 'sonner'
 import {
   GitBranch,
   Plus,
   Trash2,
-  ArrowUpDown,
-  ChevronLeft,
-  ChevronRight,
-  ChevronsLeft,
-  ChevronsRight,
   Search as SearchIcon,
   Eye,
   Pencil,
   Loader2,
   AlertCircle,
   Play,
-  Target,
-  Zap,
-  ZapOff,
+  RefreshCw,
 } from 'lucide-react'
+import { useUrlFilter } from '@/hooks/use-url-param'
 import {
   useAssignmentRules,
   useCreateAssignmentRule,
@@ -78,10 +62,10 @@ import { Can, Permission } from '@/lib/permissions'
 
 type FilterType = 'all' | 'active' | 'inactive'
 
-const typeFilters: { value: FilterType; label: string; icon: React.ReactNode }[] = [
-  { value: 'all', label: 'All', icon: <GitBranch className="h-4 w-4" /> },
-  { value: 'active', label: 'Active', icon: <Zap className="h-4 w-4" /> },
-  { value: 'inactive', label: 'Inactive', icon: <ZapOff className="h-4 w-4" /> },
+const typeFilters: { value: FilterType; label: string }[] = [
+  { value: 'all', label: 'All statuses' },
+  { value: 'active', label: 'Active' },
+  { value: 'inactive', label: 'Inactive' },
 ]
 
 const CONDITION_LABELS: Record<string, string> = {
@@ -124,9 +108,10 @@ export default function AssignmentRulesPage() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [ruleToDelete, setRuleToDelete] = useState<AssignmentRule | null>(null)
-  const [sorting, setSorting] = useState<SortingState>([])
-  const [globalFilter, setGlobalFilter] = useState('')
-  const [typeFilter, setTypeFilter] = useState<FilterType>('all')
+  const [searchQuery, setSearchQuery] = useUrlFilter('q', '')
+  const [typeFilterParam, setTypeFilter] = useUrlFilter('status', 'all')
+  const typeFilter: FilterType =
+    typeFilterParam === 'active' || typeFilterParam === 'inactive' ? typeFilterParam : 'all'
   const [createForm, setCreateForm] = useState({
     name: '',
     description: '',
@@ -162,8 +147,18 @@ export default function AssignmentRulesPage() {
       data = data.filter((r) => !r.is_active)
     }
 
+    const q = searchQuery.trim().toLowerCase()
+    if (q) {
+      data = data.filter(
+        (r) =>
+          r.name.toLowerCase().includes(q) ||
+          r.description?.toLowerCase().includes(q) ||
+          groupMap[r.target_group_id]?.toLowerCase().includes(q)
+      )
+    }
+
     return data
-  }, [assignmentRules, typeFilter])
+  }, [assignmentRules, typeFilter, searchQuery, groupMap])
 
   // Type counts
   const typeCounts = useMemo(
@@ -179,72 +174,44 @@ export default function AssignmentRulesPage() {
   const columns: ColumnDef<AssignmentRule>[] = [
     {
       accessorKey: 'name',
-      header: ({ column }) => (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-          className="-ms-4"
-        >
-          Rule
-          <ArrowUpDown className="ms-2 h-4 w-4" />
-        </Button>
-      ),
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Rule" />,
       cell: ({ row }) => {
         const isActive = row.original.is_active
         return (
-          <div className="flex items-center gap-3">
-            <div className={`p-2 rounded-lg ${isActive ? 'bg-green-500/20' : 'bg-muted'}`}>
-              <GitBranch
-                className={`h-4 w-4 ${isActive ? 'text-green-500' : 'text-muted-foreground'}`}
-              />
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <p className="font-medium">{row.original.name}</p>
+              <Badge variant={isActive ? 'default' : 'secondary'} className="text-xs">
+                {isActive ? 'Active' : 'Inactive'}
+              </Badge>
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <p className="font-medium">{row.original.name}</p>
-                <Badge variant={isActive ? 'default' : 'secondary'} className="text-xs">
-                  {isActive ? 'Active' : 'Inactive'}
-                </Badge>
-              </div>
-              {row.original.description && (
-                <p className="text-muted-foreground text-xs line-clamp-1">
-                  {row.original.description}
-                </p>
-              )}
-            </div>
+            {row.original.description && (
+              <p className="text-muted-foreground text-xs line-clamp-1">
+                {row.original.description}
+              </p>
+            )}
           </div>
         )
       },
     },
     {
       accessorKey: 'target_group_id',
-      header: 'Target Group',
+      header: 'Target team',
+      enableSorting: false,
       cell: ({ row }) => {
         const name = groupMap[row.original.target_group_id]
-        return (
-          <div className="flex items-center gap-2">
-            <Target className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm font-medium">{name || 'Unknown Group'}</span>
-          </div>
-        )
+        return <span className="text-sm">{name || 'Unknown team'}</span>
       },
     },
     {
       accessorKey: 'priority',
-      header: ({ column }) => (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-          className="-ms-4"
-        >
-          Priority
-          <ArrowUpDown className="ms-2 h-4 w-4" />
-        </Button>
-      ),
-      cell: ({ row }) => <Badge variant="outline">{row.original.priority}</Badge>,
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Priority" />,
+      cell: ({ row }) => <span className="text-sm tabular-nums">{row.original.priority}</span>,
     },
     {
       id: 'conditions',
       header: 'Conditions',
+      enableSorting: false,
       cell: ({ row }) => {
         const conditions = row.original.conditions || {}
         const entries = Object.entries(conditions).filter(
@@ -280,7 +247,7 @@ export default function AssignmentRulesPage() {
         return (
           <DataTableRowActions
             actions={[
-              { label: 'View Details', icon: Eye, onClick: () => setSelectedRuleId(rule.id) },
+              { label: 'View details', icon: Eye, onClick: () => setSelectedRuleId(rule.id) },
               {
                 label: 'Edit',
                 icon: Pencil,
@@ -288,7 +255,7 @@ export default function AssignmentRulesPage() {
                 onClick: () => setSelectedRuleId(rule.id),
               },
               {
-                label: 'Test Rule',
+                label: 'Test rule',
                 icon: Play,
                 permission: Permission.AssignmentRulesWrite,
                 onClick: async () => {
@@ -322,21 +289,6 @@ export default function AssignmentRulesPage() {
       },
     },
   ]
-
-  const table = useReactTable({
-    data: filteredData,
-    columns,
-    state: {
-      sorting,
-      globalFilter,
-    },
-    onSortingChange: setSorting,
-    onGlobalFilterChange: setGlobalFilter,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-  })
 
   // Actions
   const handleCreateRule = async () => {
@@ -390,233 +342,122 @@ export default function AssignmentRulesPage() {
     <>
       <Main>
         <PageHeader
-          title="Assignment Rules"
-          description="Manage rules that automatically assign assets to groups"
+          title="Assignment rules"
+          description="Rules that assign assets to teams automatically, evaluated in priority order."
         >
           <Can permission={Permission.AssignmentRulesWrite} mode="disable">
-            <Button onClick={() => setCreateDialogOpen(true)}>
+            <Button size="sm" onClick={() => setCreateDialogOpen(true)}>
               <Plus className="me-2 h-4 w-4" />
-              Create Rule
+              Create rule
             </Button>
           </Can>
         </PageHeader>
 
-        {/* Loading State */}
-        {isLoading && (
-          <div className="mt-6 flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          </div>
-        )}
-
-        {/* Error State */}
-        {isError && !isLoading && (
-          <div className="mt-6 flex flex-col items-center justify-center py-12 gap-4">
-            <AlertCircle className="h-12 w-12 text-red-400" />
-            <p className="text-muted-foreground">Failed to load assignment rules</p>
-            <Button variant="outline" onClick={refreshData}>
-              Try Again
-            </Button>
-          </div>
-        )}
-
-        {/* Content */}
-        {!isLoading && !isError && (
+        {isError && !isLoading ? (
+          <Alert variant="destructive" className="mt-5">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Failed to load assignment rules</AlertTitle>
+            <AlertDescription>
+              <p>The rule list could not be loaded.</p>
+              <Button variant="outline" size="sm" className="mt-2" onClick={refreshData}>
+                <RefreshCw className="me-2 h-4 w-4" />
+                Retry
+              </Button>
+            </AlertDescription>
+          </Alert>
+        ) : (
           <>
-            {/* Stats */}
-            <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <Card
-                className={`cursor-pointer hover:border-primary transition-colors ${typeFilter === 'all' ? 'border-primary' : ''}`}
-                onClick={() => setTypeFilter('all')}
-              >
-                <CardHeader className="pb-2">
-                  <CardDescription className="flex items-center gap-2">
-                    <GitBranch className="h-4 w-4" />
-                    Total Rules
-                  </CardDescription>
-                  <CardTitle className="text-3xl">{typeCounts.all}</CardTitle>
-                </CardHeader>
-              </Card>
-              <Card
-                className={`cursor-pointer hover:border-green-500 transition-colors ${typeFilter === 'active' ? 'border-green-500' : ''}`}
-                onClick={() => setTypeFilter('active')}
-              >
-                <CardHeader className="pb-2">
-                  <CardDescription className="flex items-center gap-2">
-                    <Zap className="h-4 w-4 text-green-500" />
-                    Active
-                  </CardDescription>
-                  <CardTitle className="text-3xl text-green-500">{typeCounts.active}</CardTitle>
-                </CardHeader>
-              </Card>
-              <Card
-                className={`cursor-pointer hover:border-muted-foreground transition-colors ${typeFilter === 'inactive' ? 'border-muted-foreground' : ''}`}
-                onClick={() => setTypeFilter('inactive')}
-              >
-                <CardHeader className="pb-2">
-                  <CardDescription className="flex items-center gap-2">
-                    <ZapOff className="h-4 w-4 text-muted-foreground" />
-                    Inactive
-                  </CardDescription>
-                  <CardTitle className="text-3xl text-muted-foreground">
-                    {typeCounts.inactive}
-                  </CardTitle>
-                </CardHeader>
-              </Card>
-            </div>
+            <MetricStrip
+              className="mt-5"
+              loading={isLoading}
+              items={[
+                {
+                  key: 'all',
+                  label: 'Rules',
+                  value: typeCounts.all,
+                  onClick: () => setTypeFilter('all'),
+                  active: typeFilter === 'all',
+                },
+                {
+                  key: 'active',
+                  label: 'Active',
+                  value: typeCounts.active,
+                  onClick: () => setTypeFilter(typeFilter === 'active' ? 'all' : 'active'),
+                  active: typeFilter === 'active',
+                },
+                {
+                  key: 'inactive',
+                  label: 'Inactive',
+                  value: typeCounts.inactive,
+                  onClick: () => setTypeFilter(typeFilter === 'inactive' ? 'all' : 'inactive'),
+                  active: typeFilter === 'inactive',
+                },
+              ]}
+            />
 
-            {/* Assignment Rules Table */}
-            <Card className="mt-6">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-base">All Assignment Rules</CardTitle>
-                    <CardDescription>
-                      Rules are evaluated in priority order when assigning assets to groups
-                    </CardDescription>
-                  </div>
+            <div className="mt-5">
+              {isLoading ? (
+                <div className="space-y-2">
+                  <Skeleton className="h-9 w-full max-w-sm" />
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Skeleton key={i} className="h-12 w-full" />
+                  ))}
                 </div>
-              </CardHeader>
-              <CardContent>
-                {/* Quick Filter Tabs */}
-                <Tabs
-                  value={typeFilter}
-                  onValueChange={(v) => setTypeFilter(v as FilterType)}
-                  className="mb-4"
-                >
-                  <TabsList className="w-max max-w-full overflow-x-auto">
-                    {typeFilters.map((filter) => (
-                      <TabsTrigger key={filter.value} value={filter.value} className="gap-1.5">
-                        {filter.icon}
-                        {filter.label}
-                        <Badge variant="secondary" className="h-5 px-1.5 text-xs">
-                          {typeCounts[filter.value]}
-                        </Badge>
-                      </TabsTrigger>
-                    ))}
-                  </TabsList>
-                </Tabs>
-
-                {/* Search */}
-                <div className="flex flex-col gap-4 mb-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="relative flex-1 max-w-sm">
-                    <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Search assignment rules..."
-                      value={globalFilter}
-                      onChange={(e) => setGlobalFilter(e.target.value)}
-                      className="ps-9"
-                    />
-                  </div>
-                </div>
-
-                {/* Table */}
-                <div className="rounded-md border overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      {table.getHeaderGroups().map((headerGroup) => (
-                        <TableRow key={headerGroup.id}>
-                          {headerGroup.headers.map((header) => (
-                            <TableHead key={header.id}>
-                              {header.isPlaceholder
-                                ? null
-                                : flexRender(header.column.columnDef.header, header.getContext())}
-                            </TableHead>
+              ) : assignmentRules.length === 0 ? (
+                <EmptyState
+                  icon={GitBranch}
+                  title="No assignment rules yet"
+                  description="Rules assign assets to teams automatically, in priority order."
+                  action={
+                    <Can permission={Permission.AssignmentRulesWrite}>
+                      <Button size="sm" onClick={() => setCreateDialogOpen(true)}>
+                        <Plus className="me-2 h-4 w-4" />
+                        Create rule
+                      </Button>
+                    </Can>
+                  }
+                />
+              ) : (
+                <DataTable
+                  columns={columns}
+                  data={filteredData}
+                  getRowId={(r) => r.id}
+                  showSearch={false}
+                  showColumnToggle={false}
+                  onRowClick={(r) => setSelectedRuleId(r.id)}
+                  toolbarStart={
+                    <>
+                      <div className="relative min-w-0 flex-1 sm:max-w-sm">
+                        <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                          placeholder="Search assignment rules..."
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          className="ps-9"
+                          aria-label="Search assignment rules"
+                        />
+                      </div>
+                      <Select
+                        value={typeFilter}
+                        onValueChange={(v) => setTypeFilter(v as FilterType)}
+                      >
+                        <SelectTrigger className="h-9 w-[140px]" aria-label="Status">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {typeFilters.map((f) => (
+                            <SelectItem key={f.value} value={f.value}>
+                              {f.label}
+                            </SelectItem>
                           ))}
-                        </TableRow>
-                      ))}
-                    </TableHeader>
-                    <TableBody>
-                      {table.getRowModel().rows?.length ? (
-                        table.getRowModel().rows.map((row) => (
-                          <TableRow
-                            key={row.id}
-                            className="cursor-pointer"
-                            onClick={(e) => {
-                              if ((e.target as HTMLElement).closest('button')) {
-                                return
-                              }
-                              setSelectedRuleId(row.original.id)
-                            }}
-                          >
-                            {row.getVisibleCells().map((cell) => (
-                              <TableCell key={cell.id}>
-                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                              </TableCell>
-                            ))}
-                          </TableRow>
-                        ))
-                      ) : (
-                        <TableRow>
-                          <TableCell colSpan={columns.length} className="h-24 text-center">
-                            {assignmentRules.length === 0 ? (
-                              <div className="flex flex-col items-center gap-2">
-                                <GitBranch className="h-8 w-8 text-muted-foreground/50" />
-                                <p className="text-muted-foreground">No assignment rules yet</p>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => setCreateDialogOpen(true)}
-                                >
-                                  <Plus className="me-2 h-4 w-4" />
-                                  Create your first rule
-                                </Button>
-                              </div>
-                            ) : (
-                              'No assignment rules found.'
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-
-                {/* Pagination */}
-                <div className="flex items-center justify-between mt-4">
-                  <p className="text-sm text-muted-foreground">
-                    {table.getFilteredRowModel().rows.length} rule(s)
-                  </p>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => table.setPageIndex(0)}
-                      disabled={!table.getCanPreviousPage()}
-                    >
-                      <ChevronsLeft className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => table.previousPage()}
-                      disabled={!table.getCanPreviousPage()}
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                    </Button>
-                    <span className="text-sm">
-                      Page {table.getState().pagination.pageIndex + 1} of{' '}
-                      {table.getPageCount() || 1}
-                    </span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => table.nextPage()}
-                      disabled={!table.getCanNextPage()}
-                    >
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-                      disabled={!table.getCanNextPage()}
-                    >
-                      <ChevronsRight className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                        </SelectContent>
+                      </Select>
+                    </>
+                  }
+                  emptyMessage="No assignment rules match these filters"
+                />
+              )}
+            </div>
           </>
         )}
       </Main>
@@ -634,12 +475,7 @@ export default function AssignmentRulesPage() {
       <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
         <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <div className="rounded-full bg-primary/10 p-2">
-                <Plus className="h-5 w-5 text-primary" />
-              </div>
-              Create Assignment Rule
-            </DialogTitle>
+            <DialogTitle>Create assignment rule</DialogTitle>
             <DialogDescription>
               Create a rule to automatically assign assets to a group based on conditions.
             </DialogDescription>
@@ -681,7 +517,7 @@ export default function AssignmentRulesPage() {
             </div>
 
             <div className="space-y-2">
-              <Label>Target Group</Label>
+              <Label>Target team</Label>
               <Select
                 value={createForm.target_group_id}
                 onValueChange={(v) => setCreateForm({ ...createForm, target_group_id: v })}
@@ -759,7 +595,7 @@ export default function AssignmentRulesPage() {
               ) : (
                 <Plus className="me-2 h-4 w-4" />
               )}
-              Create Rule
+              Create rule
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -769,10 +605,7 @@ export default function AssignmentRulesPage() {
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-red-500">
-              <Trash2 className="h-5 w-5" />
-              Delete Assignment Rule
-            </DialogTitle>
+            <DialogTitle>Delete assignment rule</DialogTitle>
             <DialogDescription>
               Are you sure you want to delete &quot;{ruleToDelete?.name}&quot;? This action cannot
               be undone.

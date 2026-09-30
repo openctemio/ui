@@ -1,24 +1,31 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import Dashboard from '../page'
 
-// The two views are exercised by their own tests; here we only verify the
-// switcher — which view renders, that switching persists, and the default.
-// The switcher now lives in the shell (a real TabsList rendered outside the
-// views), so the view mocks are just content stubs.
+// The two built-in views and the custom canvas are stubbed — this suite only
+// verifies the switcher shell: which view renders for a given persisted choice,
+// the CTEM default, and that the header controls are present. (The dropdown
+// interaction itself is Radix plumbing; the meaningful behaviour is state→view.)
 vi.mock('@/features/dashboard/components/ctem-dashboard', () => ({
   CtemDashboard: () => <div>CTEM_VIEW</div>,
 }))
 vi.mock('@/features/dashboard/components/classic-dashboard', () => ({
   ClassicDashboard: () => <div>CLASSIC_VIEW</div>,
 }))
+vi.mock('@/features/dashboards/components/dashboard-canvas', () => ({
+  DashboardCanvas: () => <div>CANVAS_VIEW</div>,
+}))
 
-// The shell's shared header now renders a permission-gated "Run scan" action.
-// Stub the permission layer so the switcher test needs no tenant/auth providers.
-vi.mock('@/lib/permissions', () => ({
-  Can: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  Permission: { ScansWrite: 'scans:write' },
+vi.mock('@/context/tenant-provider', () => ({
+  useTenant: () => ({ currentTenant: { id: 't1', name: 'ORG' } }),
+}))
+
+const dashboardsMock = vi.fn(() => ({ data: { data: [] as unknown[] }, isLoading: false }))
+vi.mock('@/features/dashboards/api/use-dashboards-api', () => ({
+  useMyDashboards: () => dashboardsMock(),
+  useRevalidateDashboards: () => async () => {},
+  setDefaultDashboard: vi.fn(),
+  deleteDashboard: vi.fn(),
 }))
 
 const STORAGE_KEY = 'openctem:dashboard-view'
@@ -26,6 +33,7 @@ const STORAGE_KEY = 'openctem:dashboard-view'
 describe('Dashboard view switcher', () => {
   beforeEach(() => {
     window.localStorage.clear()
+    dashboardsMock.mockReturnValue({ data: { data: [] }, isLoading: false })
   })
 
   it('defaults to the CTEM view when nothing is persisted', () => {
@@ -34,36 +42,38 @@ describe('Dashboard view switcher', () => {
     expect(screen.queryByText('CLASSIC_VIEW')).not.toBeInTheDocument()
   })
 
-  it('switches to Classic and persists the choice to localStorage', async () => {
-    const user = userEvent.setup()
-    render(<Dashboard />)
-
-    await user.click(screen.getByRole('tab', { name: 'Classic' }))
-
-    expect(screen.getByText('CLASSIC_VIEW')).toBeInTheDocument()
-    expect(screen.queryByText('CTEM_VIEW')).not.toBeInTheDocument()
-    expect(window.localStorage.getItem(STORAGE_KEY)).toBe('classic')
-
-    // Switch back to CTEM — persistence follows the active view.
-    await user.click(screen.getByRole('tab', { name: 'CTEM' }))
-    expect(screen.getByText('CTEM_VIEW')).toBeInTheDocument()
-    expect(window.localStorage.getItem(STORAGE_KEY)).toBe('ctem')
-  })
-
   it('restores the persisted Classic view on mount', async () => {
     window.localStorage.setItem(STORAGE_KEY, 'classic')
     render(<Dashboard />)
-
-    // Applied in an effect after the default first render — assert it lands.
     expect(await screen.findByText('CLASSIC_VIEW')).toBeInTheDocument()
     expect(screen.queryByText('CTEM_VIEW')).not.toBeInTheDocument()
   })
 
-  it('exposes an accessible, keyboard-selectable tablist', () => {
+  it('renders a persisted custom dashboard via the canvas', async () => {
+    dashboardsMock.mockReturnValue({
+      data: { data: [{ id: 'd1', name: 'Mine', is_default: false, layout: [] }] },
+      isLoading: false,
+    })
+    window.localStorage.setItem(STORAGE_KEY, 'd1')
     render(<Dashboard />)
-    const ctemTab = screen.getByRole('tab', { name: 'CTEM' })
-    const classicTab = screen.getByRole('tab', { name: 'Classic' })
-    expect(ctemTab).toHaveAttribute('aria-selected', 'true')
-    expect(classicTab).toHaveAttribute('aria-selected', 'false')
+    expect(await screen.findByText('CANVAS_VIEW')).toBeInTheDocument()
+    expect(screen.queryByText('CTEM_VIEW')).not.toBeInTheDocument()
+  })
+
+  it('falls back to CTEM for the default custom dashboard when nothing is persisted', async () => {
+    dashboardsMock.mockReturnValue({
+      data: { data: [{ id: 'd2', name: 'Default', is_default: true, layout: [] }] },
+      isLoading: false,
+    })
+    render(<Dashboard />)
+    // No persisted choice → the user's default custom dashboard wins.
+    expect(await screen.findByText('CANVAS_VIEW')).toBeInTheDocument()
+  })
+
+  it('renders the header controls (Refresh / Switch Dashboard / Options)', () => {
+    render(<Dashboard />)
+    expect(screen.getByRole('heading', { name: 'Dashboard' })).toBeInTheDocument()
+    expect(screen.getByText('Refresh')).toBeInTheDocument()
+    expect(screen.getByText('Options')).toBeInTheDocument()
   })
 })

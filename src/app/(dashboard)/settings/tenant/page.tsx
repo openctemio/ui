@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { useUrlFilter } from '@/hooks/use-url-param'
 import { Main } from '@/components/layout'
 import { PageHeader } from '@/features/shared'
 import { Button } from '@/components/ui/button'
@@ -10,14 +11,12 @@ import { Textarea } from '@/components/ui/textarea'
 import {
   Save,
   Building,
-  Globe,
   Shield,
   Key,
   Upload,
   Loader2,
   AlertCircle,
   Lock,
-  KeyRound,
   ChevronDown,
   Trash2,
 } from 'lucide-react'
@@ -35,7 +34,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Switch } from '@/components/ui/switch'
 import { Separator } from '@/components/ui/separator'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Badge } from '@/components/ui/badge'
@@ -71,7 +70,19 @@ import {
   type SSOProviderType,
 } from '@/features/sso/types/sso.types'
 
-function StorageConfigTab() {
+const STORAGE_FORM_ID = 'storage-config-form'
+
+interface StorageStatus {
+  canSave: boolean
+  saving: boolean
+}
+
+/**
+ * The storage tab owns its own fields; it renders them as a <form> so the page
+ * header's Save button (the one Save every settings page has) can submit it via
+ * `form={STORAGE_FORM_ID}`, and reports whether saving is possible.
+ */
+function StorageConfigTab({ onStatusChange }: { onStatusChange: (s: StorageStatus) => void }) {
   const [provider, setProvider] = useState('local')
   const [bucket, setBucket] = useState('')
   const [region, setRegion] = useState('')
@@ -101,7 +112,8 @@ function StorageConfigTab() {
       .catch(() => setLoaded(true))
   }, [])
 
-  const handleSave = async () => {
+  const handleSave = async (e: FormEvent) => {
+    e.preventDefault()
     setSaving(true)
     try {
       await patch('/api/v1/attachments/storage-config', {
@@ -123,14 +135,19 @@ function StorageConfigTab() {
   }
 
   const isCloud = provider === 's3' || provider === 'minio'
+  const canSave = loaded && !saving && !(isCloud && !bucket)
 
-  if (!loaded) return <Skeleton className="h-48 w-full" />
+  useEffect(() => {
+    onStatusChange({ canSave, saving })
+  }, [canSave, saving, onStatusChange])
+
+  if (!loaded) return <Skeleton className="h-48 w-full rounded-xl" />
 
   return (
-    <>
+    <form id={STORAGE_FORM_ID} onSubmit={handleSave}>
       <Card>
         <CardHeader>
-          <CardTitle>Storage Provider</CardTitle>
+          <CardTitle>Storage provider</CardTitle>
           <CardDescription>
             Choose where uploaded evidence and attachments are stored
           </CardDescription>
@@ -144,7 +161,7 @@ function StorageConfigTab() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="local">
-                  <span className="flex items-center gap-2">Local Filesystem</span>
+                  <span className="flex items-center gap-2">Local filesystem</span>
                 </SelectItem>
                 <SelectItem value="s3">Amazon S3</SelectItem>
                 <SelectItem value="minio">MinIO (S3-compatible)</SelectItem>
@@ -162,7 +179,7 @@ function StorageConfigTab() {
               <Separator />
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Bucket Name *</Label>
+                  <Label>Bucket name *</Label>
                   <Input
                     value={bucket}
                     onChange={(e) => setBucket(e.target.value)}
@@ -188,7 +205,7 @@ function StorageConfigTab() {
                   </div>
                 )}
                 <div className="space-y-2">
-                  <Label>Access Key</Label>
+                  <Label>Access key</Label>
                   <Input
                     value={accessKey}
                     onChange={(e) => setAccessKey(e.target.value)}
@@ -200,7 +217,7 @@ function StorageConfigTab() {
                   </p>
                 </div>
                 <div className="space-y-2">
-                  <Label>Secret Key</Label>
+                  <Label>Secret key</Label>
                   <Input
                     value={secretKey}
                     onChange={(e) => setSecretKey(e.target.value)}
@@ -218,24 +235,80 @@ function StorageConfigTab() {
               </Alert>
             </>
           )}
-
-          <div className="flex justify-end">
-            <Button onClick={handleSave} disabled={saving || (isCloud && !bucket)}>
-              {saving ? (
-                <Loader2 className="me-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Save className="me-2 h-4 w-4" />
-              )}
-              Save Configuration
-            </Button>
-          </div>
         </CardContent>
       </Card>
-    </>
+    </form>
+  )
+}
+
+const PAGE_TITLE = 'Tenant settings'
+const PAGE_DESCRIPTION =
+  "Manage your organization's profile, sign-in security, API access and file storage."
+const TABS = ['general', 'security', 'api', 'storage'] as const
+
+/**
+ * The active tab's one Save, in the page header like every settings page. A
+ * permission-locked Save stays visible (disabled, with a lock and the reason)
+ * so the admin knows why nothing can be changed.
+ */
+function HeaderSaveButton({
+  onClick,
+  form,
+  busy,
+  disabled = false,
+  locked = false,
+  lockedReason,
+}: {
+  onClick?: () => void
+  form?: string
+  busy: boolean
+  disabled?: boolean
+  locked?: boolean
+  lockedReason?: string
+}) {
+  const button = (
+    <Button
+      size="sm"
+      type={form ? 'submit' : 'button'}
+      form={form}
+      onClick={onClick}
+      disabled={busy || disabled || locked}
+    >
+      {busy ? (
+        <Loader2 className="h-4 w-4 animate-spin" />
+      ) : locked ? (
+        <Lock className="h-4 w-4" />
+      ) : (
+        <Save className="h-4 w-4" />
+      )}
+      Save changes
+    </Button>
+  )
+  if (!locked || !lockedReason) return button
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span>{button}</span>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>{lockedReason}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   )
 }
 
 export default function TenantPage() {
+  const [tabParam, setTabParam] = useUrlFilter('tab', 'general')
+  const activeTab = (TABS as readonly string[]).includes(tabParam) ? tabParam : 'general'
+  const setActiveTab = (next: string) => setTabParam(next === 'general' ? '' : next)
+  const [storageStatus, setStorageStatus] = useState<StorageStatus>({
+    canSave: false,
+    saving: false,
+  })
+  const onStorageStatus = useCallback((st: StorageStatus) => setStorageStatus(st), [])
+
   const { currentTenant, updateCurrentTenant, refreshTenants } = useTenant()
   const tenantId = currentTenant?.id
 
@@ -295,6 +368,7 @@ export default function TenantPage() {
     ip_whitelist: '',
     allowed_domains: '',
     email_verification_mode: 'auto' as 'auto' | 'always' | 'never',
+    restricted_data_scope: false,
   })
 
   const [apiForm, setApiForm] = useState({
@@ -359,6 +433,7 @@ export default function TenantPage() {
         allowed_domains: (settings.security.allowed_domains || []).join('\n'),
         email_verification_mode:
           (settings.security.email_verification_mode as 'auto' | 'always' | 'never') || 'auto',
+        restricted_data_scope: settings.security.restricted_data_scope || false,
       })
       setApiForm({
         api_key_enabled: settings.api.api_key_enabled || false,
@@ -604,6 +679,7 @@ export default function TenantPage() {
         ip_whitelist: ipWhitelist,
         allowed_domains: allowedDomains,
         email_verification_mode: securityForm.email_verification_mode,
+        restricted_data_scope: securityForm.restricted_data_scope,
       })
       if (result) {
         mutate(result)
@@ -648,14 +724,11 @@ export default function TenantPage() {
     return (
       <>
         <Main>
-          <PageHeader
-            title="Tenant Settings"
-            description="Manage your organization settings and configuration"
-          />
-          <div className="mt-6 space-y-6">
-            <Skeleton className="h-12 w-full" />
-            <Skeleton className="h-64 w-full" />
-            <Skeleton className="h-64 w-full" />
+          <PageHeader title={PAGE_TITLE} description={PAGE_DESCRIPTION} />
+          <div className="mt-5 space-y-5">
+            <Skeleton className="h-9 w-96 max-w-full" />
+            <Skeleton className="h-64 w-full rounded-xl" />
+            <Skeleton className="h-64 w-full rounded-xl" />
           </div>
         </Main>
       </>
@@ -667,14 +740,15 @@ export default function TenantPage() {
     return (
       <>
         <Main>
-          <PageHeader
-            title="Tenant Settings"
-            description="Manage your organization settings and configuration"
-          />
-          <Alert variant="destructive" className="mt-6">
+          <PageHeader title={PAGE_TITLE} description={PAGE_DESCRIPTION} />
+          <Alert variant="destructive" className="mt-5">
             <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Failed to load settings</AlertTitle>
             <AlertDescription>
-              Failed to load settings: {error?.message || 'Unknown error'}
+              <p>{error?.message || 'Unknown error'}</p>
+              <Button variant="outline" size="sm" className="mt-2" onClick={() => void mutate()}>
+                Retry
+              </Button>
             </AlertDescription>
           </Alert>
         </Main>
@@ -685,13 +759,42 @@ export default function TenantPage() {
   return (
     <>
       <Main>
-        <PageHeader
-          title="Tenant Settings"
-          description="Manage your organization settings and configuration"
-        />
+        <PageHeader title={PAGE_TITLE} description={PAGE_DESCRIPTION}>
+          {activeTab === 'general' && (
+            <HeaderSaveButton
+              onClick={handleSaveGeneral}
+              busy={isUpdatingGeneral}
+              locked={!canUpdateTenant}
+              lockedReason="You do not have permission to update tenant settings"
+            />
+          )}
+          {activeTab === 'security' && (
+            <HeaderSaveButton
+              onClick={handleSaveSecurity}
+              busy={isUpdatingSecurity}
+              locked={!canManageSecurityAndAPI}
+              lockedReason="Only the tenant owner can change these settings"
+            />
+          )}
+          {activeTab === 'api' && (
+            <HeaderSaveButton
+              onClick={handleSaveAPI}
+              busy={isUpdatingAPI}
+              locked={!canManageSecurityAndAPI}
+              lockedReason="Only the tenant owner can change these settings"
+            />
+          )}
+          {activeTab === 'storage' && (
+            <HeaderSaveButton
+              form={STORAGE_FORM_ID}
+              busy={storageStatus.saving}
+              disabled={!storageStatus.canSave}
+            />
+          )}
+        </PageHeader>
 
-        <Tabs defaultValue="general" className="mt-6">
-          <TabsList className="w-max max-w-full overflow-x-auto">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
+          <TabsList className="overflow-x-auto">
             <TabsTrigger value="general">
               <Building className="me-2 h-4 w-4" />
               General
@@ -706,18 +809,15 @@ export default function TenantPage() {
             </TabsTrigger>
             <TabsTrigger value="storage">
               <Upload className="me-2 h-4 w-4" />
-              File Storage
+              File storage
             </TabsTrigger>
           </TabsList>
 
           {/* General Tab */}
-          <TabsContent value="general" className="mt-4 space-y-6">
+          <TabsContent value="general" className="mt-5 space-y-5">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Building className="h-5 w-5" />
-                  Organization Information
-                </CardTitle>
+                <CardTitle>Organization information</CardTitle>
                 <CardDescription>Basic information about your organization</CardDescription>
               </CardHeader>
               <CardContent>
@@ -793,7 +893,7 @@ export default function TenantPage() {
                     <div className="flex flex-col items-center gap-2">
                       {brandingForm.logo_data ? (
                         <>
-                          <span className="text-xs text-yellow-500 bg-yellow-500/10 px-2 py-1 rounded">
+                          <span className="rounded bg-muted px-2 py-1 text-xs text-muted-foreground">
                             Unsaved changes
                           </span>
                           <div className="flex gap-2">
@@ -857,7 +957,7 @@ export default function TenantPage() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="text-red-500 hover:text-red-600 hover:bg-red-500/10 h-7 text-xs"
+                              className="h-7 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
                               onClick={async () => {
                                 try {
                                   const result = await updateBrandingSettings({
@@ -888,7 +988,7 @@ export default function TenantPage() {
                   <div className="flex-1 space-y-4">
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div className="space-y-2">
-                        <Label htmlFor="name">Organization Name</Label>
+                        <Label htmlFor="name">Organization name</Label>
                         <Input
                           id="name"
                           value={orgInfoForm.name}
@@ -898,7 +998,7 @@ export default function TenantPage() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="slug">URL Slug</Label>
+                        <Label htmlFor="slug">URL slug</Label>
                         <div className="flex">
                           <span className="inline-flex items-center px-3 text-sm text-muted-foreground bg-muted border border-r-0 rounded-l-md">
                             app.openctem.io/
@@ -962,10 +1062,7 @@ export default function TenantPage() {
             {/* Localization */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Globe className="h-5 w-5" />
-                  Localization
-                </CardTitle>
+                <CardTitle>Localization</CardTitle>
                 <CardDescription>Language and timezone settings</CardDescription>
               </CardHeader>
               <CardContent>
@@ -990,7 +1087,7 @@ export default function TenantPage() {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="language">Default Language</Label>
+                    <Label htmlFor="language">Default language</Label>
                     <Select
                       value={generalForm.language}
                       onValueChange={(value) => setGeneralForm({ ...generalForm, language: value })}
@@ -1011,45 +1108,13 @@ export default function TenantPage() {
                 </div>
               </CardContent>
             </Card>
-
-            <div className="flex justify-end">
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span>
-                      <Button
-                        onClick={handleSaveGeneral}
-                        disabled={isUpdatingGeneral || !canUpdateTenant}
-                      >
-                        {isUpdatingGeneral ? (
-                          <Loader2 className="me-2 h-4 w-4 animate-spin" />
-                        ) : !canUpdateTenant ? (
-                          <Lock className="me-2 h-4 w-4" />
-                        ) : (
-                          <Save className="me-2 h-4 w-4" />
-                        )}
-                        Save Settings
-                      </Button>
-                    </span>
-                  </TooltipTrigger>
-                  {!canUpdateTenant && (
-                    <TooltipContent>
-                      <p>You do not have permission to update tenant settings</p>
-                    </TooltipContent>
-                  )}
-                </Tooltip>
-              </TooltipProvider>
-            </div>
           </TabsContent>
 
           {/* Security Tab */}
-          <TabsContent value="security" className="mt-4 space-y-6">
+          <TabsContent value="security" className="mt-5 space-y-5">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Shield className="h-5 w-5" />
-                  Authentication
-                </CardTitle>
+                <CardTitle>Authentication</CardTitle>
                 <CardDescription>Configure authentication and access settings</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -1071,8 +1136,29 @@ export default function TenantPage() {
 
                 <Separator />
 
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label>Restricted data scope</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Non-admins see only the assets they&apos;re assigned (directly or via a team)
+                      and their findings. When off, a user with no assignment sees everything.
+                      Assign members to teams with their assets before turning this on, or
+                      they&apos;ll see nothing.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={securityForm.restricted_data_scope}
+                    onCheckedChange={(checked) =>
+                      setSecurityForm({ ...securityForm, restricted_data_scope: checked })
+                    }
+                    disabled={!canManageSecurityAndAPI}
+                  />
+                </div>
+
+                <Separator />
+
                 <div className="space-y-2">
-                  <Label>Session Timeout</Label>
+                  <Label>Session timeout</Label>
                   <Select
                     value={String(securityForm.session_timeout_min)}
                     onValueChange={(value) =>
@@ -1096,7 +1182,7 @@ export default function TenantPage() {
                 <Separator />
 
                 <div className="space-y-2">
-                  <Label>Email Verification</Label>
+                  <Label>Email verification</Label>
                   <p className="text-sm text-muted-foreground">
                     Controls whether new users must verify their email address before login.
                   </p>
@@ -1124,7 +1210,7 @@ export default function TenantPage() {
                       </SelectItem>
                       <SelectItem value="always">
                         <div className="flex flex-col items-start">
-                          <span className="font-medium">Always Require</span>
+                          <span className="font-medium">Always require</span>
                           <span className="text-xs text-muted-foreground">
                             Force verification (SMTP must be configured to deliver emails)
                           </span>
@@ -1132,7 +1218,7 @@ export default function TenantPage() {
                       </SelectItem>
                       <SelectItem value="never">
                         <div className="flex flex-col items-start">
-                          <span className="font-medium">Never Require</span>
+                          <span className="font-medium">Never require</span>
                           <span className="text-xs text-muted-foreground">
                             Skip verification — users marked verified on registration. Use only for
                             closed/internal deployments.
@@ -1142,7 +1228,7 @@ export default function TenantPage() {
                     </SelectContent>
                   </Select>
                   {securityForm.email_verification_mode === 'never' && (
-                    <p className="text-sm text-amber-600 dark:text-amber-400 flex items-start gap-2 mt-2">
+                    <p className="mt-2 flex items-start gap-2 text-sm text-destructive">
                       <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
                       <span>
                         Warning: anyone can register with any email address. This opens the door to
@@ -1158,10 +1244,7 @@ export default function TenantPage() {
             {/* SSO Identity Providers */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <KeyRound className="h-5 w-5" />
-                  Single Sign-On (SSO)
-                </CardTitle>
+                <CardTitle>Single sign-on (SSO)</CardTitle>
                 <CardDescription>
                   Allow members to sign in with your organization&apos;s identity provider.
                   {currentTenant &&
@@ -1208,12 +1291,7 @@ export default function TenantPage() {
                             </div>
                             <div className="flex items-center gap-2">
                               {isConfigured ? (
-                                <Badge
-                                  variant={existing.is_active ? 'default' : 'secondary'}
-                                  className={
-                                    existing.is_active ? 'bg-green-100 text-green-800' : ''
-                                  }
-                                >
+                                <Badge variant={existing.is_active ? 'default' : 'secondary'}>
                                   {existing.is_active ? 'Active' : 'Inactive'}
                                 </Badge>
                               ) : (
@@ -1232,7 +1310,7 @@ export default function TenantPage() {
                           <div className="border-t px-4 pb-4 pt-3 space-y-4">
                             <div className="grid gap-4 sm:grid-cols-2">
                               <div className="space-y-2">
-                                <Label>Display Name</Label>
+                                <Label>Display name</Label>
                                 <Input
                                   value={form.display_name}
                                   onChange={(e) =>
@@ -1248,7 +1326,7 @@ export default function TenantPage() {
                                     ? 'Directory (Tenant) ID'
                                     : providerDef.value === 'okta'
                                       ? 'Okta Org URL'
-                                      : 'Workspace Domain'}
+                                      : 'Workspace domain'}
                                 </Label>
                                 <Input
                                   value={form.tenant_identifier}
@@ -1284,7 +1362,7 @@ export default function TenantPage() {
                                 />
                               </div>
                               <div className="space-y-2">
-                                <Label>Client Secret</Label>
+                                <Label>Client secret</Label>
                                 <Input
                                   type="password"
                                   value={form.client_secret}
@@ -1306,7 +1384,7 @@ export default function TenantPage() {
                             </div>
 
                             <div className="space-y-2">
-                              <Label>Allowed Email Domains</Label>
+                              <Label>Allowed email domains</Label>
                               <Input
                                 value={form.allowed_domains}
                                 onChange={(e) =>
@@ -1342,7 +1420,7 @@ export default function TenantPage() {
 
                             <div className="grid gap-4 sm:grid-cols-2">
                               <div className="space-y-2">
-                                <Label>Default Role</Label>
+                                <Label>Default role</Label>
                                 <Select
                                   value={form.default_role}
                                   onValueChange={(value) =>
@@ -1406,7 +1484,7 @@ export default function TenantPage() {
                                   ) : (
                                     <Save className="me-2 h-4 w-4" />
                                   )}
-                                  {isConfigured ? 'Save Changes' : 'Configure'}
+                                  {isConfigured ? 'Save changes' : 'Configure'}
                                 </Button>
                               </div>
                             )}
@@ -1439,12 +1517,12 @@ export default function TenantPage() {
             {/* IP Restrictions */}
             <Card>
               <CardHeader>
-                <CardTitle>IP Restrictions</CardTitle>
+                <CardTitle>IP restrictions</CardTitle>
                 <CardDescription>Limit access to specific IP addresses or ranges</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  <Label htmlFor="ip-whitelist">Allowed IP Addresses</Label>
+                  <Label htmlFor="ip-whitelist">Allowed IP addresses</Label>
                   <Textarea
                     id="ip-whitelist"
                     placeholder="Enter IP addresses or CIDR ranges, one per line&#10;Example: 192.168.1.0/24"
@@ -1461,51 +1539,19 @@ export default function TenantPage() {
                 </div>
               </CardContent>
             </Card>
-
-            <div className="flex justify-end">
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span>
-                      <Button
-                        onClick={handleSaveSecurity}
-                        disabled={isUpdatingSecurity || !canManageSecurityAndAPI}
-                      >
-                        {isUpdatingSecurity ? (
-                          <Loader2 className="me-2 h-4 w-4 animate-spin" />
-                        ) : !canManageSecurityAndAPI ? (
-                          <Lock className="me-2 h-4 w-4" />
-                        ) : (
-                          <Save className="me-2 h-4 w-4" />
-                        )}
-                        Save Security Settings
-                      </Button>
-                    </span>
-                  </TooltipTrigger>
-                  {!canManageSecurityAndAPI && (
-                    <TooltipContent>
-                      <p>Only the tenant owner can change these settings</p>
-                    </TooltipContent>
-                  )}
-                </Tooltip>
-              </TooltipProvider>
-            </div>
           </TabsContent>
 
           {/* API Tab */}
-          <TabsContent value="api" className="mt-4 space-y-6">
+          <TabsContent value="api" className="mt-5 space-y-5">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Key className="h-5 w-5" />
-                  API Access
-                </CardTitle>
+                <CardTitle>API access</CardTitle>
                 <CardDescription>Enable and manage API key access</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
-                    <Label>Enable API Access</Label>
+                    <Label>Enable API access</Label>
                     <p className="text-sm text-muted-foreground">
                       Allow programmatic access via API keys
                     </p>
@@ -1523,7 +1569,7 @@ export default function TenantPage() {
                   <>
                     <Separator />
                     <div className="space-y-2">
-                      <Label>API Key</Label>
+                      <Label>API key</Label>
                       <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
                         API key generation and rotation are coming soon. Once available, you&apos;ll
                         be able to create and manage keys here.
@@ -1537,7 +1583,7 @@ export default function TenantPage() {
             {/* Webhook */}
             <Card>
               <CardHeader>
-                <CardTitle>Webhook Configuration</CardTitle>
+                <CardTitle>Webhook configuration</CardTitle>
                 <CardDescription>Receive real-time notifications for events</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -1578,44 +1624,15 @@ export default function TenantPage() {
                   onClick={handleTestWebhook}
                   disabled={!canManageSecurityAndAPI}
                 >
-                  Test Webhook
+                  Test webhook
                 </Button>
               </CardContent>
             </Card>
-
-            <div className="flex justify-end">
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span>
-                      <Button
-                        onClick={handleSaveAPI}
-                        disabled={isUpdatingAPI || !canManageSecurityAndAPI}
-                      >
-                        {isUpdatingAPI ? (
-                          <Loader2 className="me-2 h-4 w-4 animate-spin" />
-                        ) : !canManageSecurityAndAPI ? (
-                          <Lock className="me-2 h-4 w-4" />
-                        ) : (
-                          <Save className="me-2 h-4 w-4" />
-                        )}
-                        Save API Settings
-                      </Button>
-                    </span>
-                  </TooltipTrigger>
-                  {!canManageSecurityAndAPI && (
-                    <TooltipContent>
-                      <p>Only the tenant owner can change these settings</p>
-                    </TooltipContent>
-                  )}
-                </Tooltip>
-              </TooltipProvider>
-            </div>
           </TabsContent>
 
           {/* Storage Tab */}
-          <TabsContent value="storage" className="mt-4 space-y-6">
-            <StorageConfigTab />
+          <TabsContent value="storage" className="mt-5 space-y-5">
+            <StorageConfigTab onStatusChange={onStorageStatus} />
           </TabsContent>
         </Tabs>
       </Main>

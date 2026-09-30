@@ -1,8 +1,20 @@
 'use client'
 
 import { useState, useMemo, useCallback, useEffect } from 'react'
+import type { ColumnDef } from '@tanstack/react-table'
 import { Main } from '@/components/layout'
-import { PageHeader, DataTableRowActions } from '@/features/shared'
+import {
+  PageHeader,
+  DataTable,
+  DataTableRowActions,
+  EmptyState,
+  MetricStrip,
+  type MetricStripItem,
+} from '@/features/shared'
+import { ConfirmDialog } from '@/components/confirm-dialog'
+import { useDebounce } from '@/hooks/use-debounce'
+import { useUrlFilter, useUrlFilterNumber } from '@/hooks/use-url-param'
+import { cn } from '@/lib/utils'
 import { Can, Permission, useHasPermission } from '@/lib/permissions'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -25,15 +37,7 @@ import { useDashboardStats } from '@/features/dashboard/hooks/use-dashboard-stat
 import { useTenant } from '@/context/tenant-provider'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+import { Tabs, TabsContent, TabsList, TabsTrigger, TabsCount } from '@/components/ui/tabs'
 import {
   Dialog,
   DialogContent,
@@ -63,7 +67,6 @@ import {
   GitBranch,
   Target,
   Ban,
-  Calendar,
   Play,
   Search as SearchIcon,
   AlertTriangle,
@@ -77,7 +80,6 @@ import {
   Link,
   Loader2,
 } from 'lucide-react'
-import { Pagination } from '@/components/ui/pagination'
 import { toast } from 'sonner'
 import {
   type ScopeTargetType,
@@ -213,45 +215,19 @@ const targetTypeCategories = [
   },
 ]
 
-const scanTypeConfig: Record<string, { label: string; color: string }> = {
-  vulnerability: { label: 'Vulnerability', color: 'bg-red-500/20 text-red-400' },
-  port_scan: { label: 'Port Scan', color: 'bg-blue-500/20 text-blue-400' },
-  pentest: { label: 'Pentest', color: 'bg-purple-500/20 text-purple-400' },
-  credential: { label: 'Credential', color: 'bg-orange-500/20 text-orange-400' },
-  secret_scan: { label: 'Secret Scan', color: 'bg-yellow-500/20 text-yellow-400' },
-  compliance: { label: 'Compliance', color: 'bg-cyan-500/20 text-cyan-400' },
-  configuration: { label: 'Config Audit', color: 'bg-indigo-500/20 text-indigo-400' },
+const scanTypeLabels: Record<string, string> = {
+  vulnerability: 'Vulnerability',
+  port_scan: 'Port scan',
+  pentest: 'Pentest',
+  credential: 'Credential',
+  secret_scan: 'Secret scan',
+  compliance: 'Compliance',
+  configuration: 'Config audit',
 }
 
-// Loading skeleton component - defined outside to avoid recreation on each render
-function TableSkeleton() {
-  return (
-    <>
-      {[1, 2, 3].map((i) => (
-        <TableRow key={i}>
-          <TableCell>
-            <Skeleton className="h-4 w-20" />
-          </TableCell>
-          <TableCell>
-            <Skeleton className="h-4 w-40" />
-          </TableCell>
-          <TableCell>
-            <Skeleton className="h-4 w-32" />
-          </TableCell>
-          <TableCell>
-            <Skeleton className="h-4 w-16" />
-          </TableCell>
-          <TableCell>
-            <Skeleton className="h-4 w-24" />
-          </TableCell>
-          <TableCell>
-            <Skeleton className="h-4 w-8" />
-          </TableCell>
-        </TableRow>
-      ))}
-    </>
-  )
-}
+const SCOPE_TABS = ['overview', 'targets', 'exclusions', 'schedules'] as const
+type ScopeTab = (typeof SCOPE_TABS)[number]
+const PAGE_SIZES = [10, 20, 30, 50, 100]
 
 export default function ScopeConfigPage() {
   // Permission check for write operations
@@ -278,40 +254,49 @@ export default function ScopeConfigPage() {
     }))
   }, [dashboardStats.assets.byStatus])
 
-  // Search & filter states
-  const [targetSearch, setTargetSearch] = useState('')
-  const [debouncedTargetSearch, setDebouncedTargetSearch] = useState('')
-  const [targetTypeFilter, setTargetTypeFilter] = useState<string>('all')
-  const [exclusionSearch, setExclusionSearch] = useState('')
-  const [debouncedExclusionSearch, setDebouncedExclusionSearch] = useState('')
-  const [exclusionTypeFilter, setExclusionTypeFilter] = useState<string>('all')
-  const [scheduleSearch, setScheduleSearch] = useState('')
-  const [debouncedScheduleSearch, setDebouncedScheduleSearch] = useState('')
-  const [scheduleTypeFilter, setScheduleTypeFilter] = useState<string>('all')
-
-  // Debounce search inputs (300ms)
+  // Tab, search, type filter and page live in the URL so a view can be linked
+  // to. One set of list params serves whichever table tab is open (they are
+  // cleared on tab change), and each API call only receives them for its own tab
+  // so the other tabs' counts stay unfiltered.
+  const [tabParam, setTabParam] = useUrlFilter('tab', 'overview')
+  const tab: ScopeTab = (SCOPE_TABS as readonly string[]).includes(tabParam)
+    ? (tabParam as ScopeTab)
+    : 'overview'
+  const [searchParam, setSearchParam] = useUrlFilter('q', '')
+  const [typeFilter, setTypeFilter] = useUrlFilter('type', 'all')
+  const [page, setPage] = useUrlFilterNumber('page', 1)
+  const [perPageParam, setPerPage] = useUrlFilterNumber('per_page', 20)
+  const perPage = PAGE_SIZES.includes(perPageParam) ? perPageParam : 20
+  const [searchValue, setSearchValue] = useState(searchParam)
+  const debouncedSearch = useDebounce(searchValue, 300)
   useEffect(() => {
-    const timer = setTimeout(() => setDebouncedTargetSearch(targetSearch), 300)
-    return () => clearTimeout(timer)
-  }, [targetSearch])
+    if (debouncedSearch !== searchParam) {
+      setSearchParam(debouncedSearch)
+      setPage(1)
+    }
+    // Only react to the debounced input, not to URL writes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearch])
 
-  useEffect(() => {
-    const timer = setTimeout(() => setDebouncedExclusionSearch(exclusionSearch), 300)
-    return () => clearTimeout(timer)
-  }, [exclusionSearch])
-
-  useEffect(() => {
-    const timer = setTimeout(() => setDebouncedScheduleSearch(scheduleSearch), 300)
-    return () => clearTimeout(timer)
-  }, [scheduleSearch])
-
-  // Pagination states
-  const [targetPage, setTargetPage] = useState(1)
-  const [targetPerPage, setTargetPerPage] = useState(20)
-  const [exclusionPage, setExclusionPage] = useState(1)
-  const [exclusionPerPage, setExclusionPerPage] = useState(20)
-  const [schedulePage, setSchedulePage] = useState(1)
-  const [schedulePerPage, setSchedulePerPage] = useState(20)
+  const selectTab = (next: string) => {
+    if (next === tab) return
+    setSearchValue('')
+    setSearchParam('')
+    setTypeFilter('all')
+    setPage(1)
+    setTabParam(next)
+  }
+  const setTypeFilterAndReset = (v: string) => {
+    setTypeFilter(v)
+    setPage(1)
+  }
+  const listParams = (forTab: ScopeTab) =>
+    tab === forTab
+      ? { search: searchParam || undefined, type: typeFilter !== 'all' ? typeFilter : undefined }
+      : { search: undefined, type: undefined }
+  const targetParams = listParams('targets')
+  const exclusionParams = listParams('exclusions')
+  const scheduleParams = listParams('schedules')
 
   // Validation error state
   const [validationError, setValidationError] = useState<string | null>(null)
@@ -352,24 +337,24 @@ export default function ScopeConfigPage() {
 
   // API hooks for fetching data (using debounced search values)
   const { data: targetsData, isLoading: targetsLoading } = useScopeTargetsApi({
-    search: debouncedTargetSearch || undefined,
-    target_type: targetTypeFilter !== 'all' ? targetTypeFilter : undefined,
-    page: targetPage,
-    per_page: targetPerPage,
+    search: targetParams.search,
+    target_type: targetParams.type,
+    page: tab === 'targets' ? page : 1,
+    per_page: tab === 'targets' ? perPage : 20,
   })
 
   const { data: exclusionsData, isLoading: exclusionsLoading } = useScopeExclusionsApi({
-    search: debouncedExclusionSearch || undefined,
-    exclusion_type: exclusionTypeFilter !== 'all' ? exclusionTypeFilter : undefined,
-    page: exclusionPage,
-    per_page: exclusionPerPage,
+    search: exclusionParams.search,
+    exclusion_type: exclusionParams.type,
+    page: tab === 'exclusions' ? page : 1,
+    per_page: tab === 'exclusions' ? perPage : 20,
   })
 
   const { data: schedulesData, isLoading: schedulesLoading } = useScanSchedulesApi({
-    search: debouncedScheduleSearch || undefined,
-    scan_type: scheduleTypeFilter !== 'all' ? (scheduleTypeFilter as ScanType) : undefined,
-    page: schedulePage,
-    per_page: schedulePerPage,
+    search: scheduleParams.search,
+    scan_type: scheduleParams.type as ScanType | undefined,
+    page: tab === 'schedules' ? page : 1,
+    per_page: tab === 'schedules' ? perPage : 20,
   })
 
   const { data: statsData, isLoading: statsLoading } = useScopeStatsApi()
@@ -833,7 +818,7 @@ export default function ScopeConfigPage() {
   const targetFormFields = (
     <div className="space-y-4">
       {validationError && (
-        <div className="flex items-center gap-2 rounded-md bg-red-500/10 px-3 py-2 text-sm text-red-500">
+        <div className="flex items-center gap-2 rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
           <AlertTriangle className="h-4 w-4" />
           {validationError}
         </div>
@@ -901,7 +886,7 @@ export default function ScopeConfigPage() {
   const exclusionFormFields = (
     <div className="space-y-4">
       {validationError && (
-        <div className="flex items-center gap-2 rounded-md bg-red-500/10 px-3 py-2 text-sm text-red-500">
+        <div className="flex items-center gap-2 rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
           <AlertTriangle className="h-4 w-4" />
           {validationError}
         </div>
@@ -978,7 +963,7 @@ export default function ScopeConfigPage() {
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label>Scan Type</Label>
+          <Label>Scan type</Label>
           <Select
             value={scheduleForm.type}
             disabled={!!editSchedule}
@@ -988,13 +973,13 @@ export default function ScopeConfigPage() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="vulnerability">Vulnerability Scan</SelectItem>
-              <SelectItem value="port_scan">Port Scan</SelectItem>
-              <SelectItem value="pentest">Penetration Test</SelectItem>
-              <SelectItem value="credential">Credential Monitor</SelectItem>
-              <SelectItem value="secret_scan">Secret Scan</SelectItem>
-              <SelectItem value="compliance">Compliance Check</SelectItem>
-              <SelectItem value="configuration">Config Audit</SelectItem>
+              <SelectItem value="vulnerability">Vulnerability scan</SelectItem>
+              <SelectItem value="port_scan">Port scan</SelectItem>
+              <SelectItem value="pentest">Penetration test</SelectItem>
+              <SelectItem value="credential">Credential monitor</SelectItem>
+              <SelectItem value="secret_scan">Secret scan</SelectItem>
+              <SelectItem value="compliance">Compliance check</SelectItem>
+              <SelectItem value="configuration">Config audit</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -1016,8 +1001,8 @@ export default function ScopeConfigPage() {
               <SelectItem value="monthly">Monthly</SelectItem>
               <SelectItem value="quarterly">Quarterly</SelectItem>
               <SelectItem value="continuous">Continuous</SelectItem>
-              <SelectItem value="on_commit">On Commit</SelectItem>
-              <SelectItem value="on_demand">On Demand</SelectItem>
+              <SelectItem value="on_commit">On commit</SelectItem>
+              <SelectItem value="on_demand">On demand</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -1041,123 +1026,471 @@ export default function ScopeConfigPage() {
     </div>
   )
 
+  const typeFilterSelect = (
+    <Select value={typeFilter} onValueChange={setTypeFilterAndReset}>
+      <SelectTrigger className="h-9 w-auto min-w-36" aria-label="Filter by type">
+        <SelectValue placeholder="Filter by type" />
+      </SelectTrigger>
+      {tab === 'schedules' ? (
+        <SelectContent>
+          <SelectItem value="all">All types</SelectItem>
+          {Object.entries(scanTypeLabels).map(([value, label]) => (
+            <SelectItem key={value} value={value}>
+              {label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      ) : (
+        <SelectContent className="max-h-80">
+          <SelectItem value="all">All types</SelectItem>
+          {targetTypeCategories.map((category) => (
+            <div key={category.label}>
+              <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
+                {category.label}
+              </div>
+              {category.types.map((type) => (
+                <SelectItem key={type} value={type}>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {targetTypeIcons[type]}
+                    {formatTypeLabel(type)}
+                  </div>
+                </SelectItem>
+              ))}
+            </div>
+          ))}
+        </SelectContent>
+      )}
+    </Select>
+  )
+
+  const toolbarStart = (
+    <>
+      <div className="relative min-w-0 flex-1 sm:max-w-sm">
+        <SearchIcon className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          placeholder={
+            tab === 'targets'
+              ? 'Search targets…'
+              : tab === 'exclusions'
+                ? 'Search exclusions…'
+                : 'Search schedules…'
+          }
+          aria-label={`Search ${tab}`}
+          value={searchValue}
+          onChange={(e) => setSearchValue(e.target.value)}
+          className="h-9 ps-9"
+        />
+      </div>
+      {typeFilterSelect}
+    </>
+  )
+
+  const onTablePagination = (p: { pageIndex: number; pageSize: number }) => {
+    if (p.pageSize !== perPage) {
+      setPerPage(p.pageSize)
+      setPage(1)
+    } else {
+      setPage(p.pageIndex + 1)
+    }
+  }
+
+  const filtersActive = !!searchParam || typeFilter !== 'all'
+
+  const targetColumns: ColumnDef<ApiScopeTarget>[] = [
+    {
+      accessorKey: 'pattern',
+      header: 'Pattern',
+      enableHiding: false,
+      cell: ({ row }) => (
+        <code className="rounded bg-muted px-2 py-1 text-sm">{row.original.pattern}</code>
+      ),
+    },
+    {
+      accessorKey: 'target_type',
+      header: 'Type',
+      cell: ({ row }) => (
+        <div className="flex items-center gap-2 text-muted-foreground">
+          {targetTypeIcons[row.original.target_type ?? '']}
+          <span className="text-sm capitalize text-foreground">
+            {(row.original.target_type ?? '').replace('_', ' ')}
+          </span>
+        </div>
+      ),
+    },
+    {
+      accessorKey: 'description',
+      header: 'Description',
+      cell: ({ row }) => (
+        <span className="text-sm text-muted-foreground">{row.original.description}</span>
+      ),
+    },
+    {
+      accessorKey: 'status',
+      header: 'Status',
+      cell: ({ row }) => {
+        const target = row.original
+        return (
+          <div className="flex items-center gap-2">
+            <Switch
+              checked={target.status === 'active'}
+              onCheckedChange={() => toggleTargetStatus(target)}
+              disabled={!canWriteScope}
+              aria-label={`Toggle ${target.pattern}`}
+            />
+            <span
+              className={cn(
+                'text-xs capitalize',
+                target.status !== 'active' && 'text-muted-foreground'
+              )}
+            >
+              {target.status}
+            </span>
+          </div>
+        )
+      },
+    },
+    {
+      accessorKey: 'created_by',
+      header: 'Created by',
+      cell: ({ row }) => (
+        <span className="text-sm text-muted-foreground">{row.original.created_by}</span>
+      ),
+    },
+    {
+      id: 'actions',
+      enableHiding: false,
+      cell: ({ row }) => (
+        <Can permission={[Permission.ScopeWrite, Permission.ScopeDelete]}>
+          <DataTableRowActions
+            actions={[
+              {
+                label: 'Edit',
+                icon: Pencil,
+                onClick: () => openEditTarget(row.original),
+                permission: Permission.ScopeWrite,
+              },
+              {
+                label: 'Remove',
+                icon: Trash2,
+                onClick: () => setDeleteTarget(row.original),
+                destructive: true,
+                permission: Permission.ScopeDelete,
+              },
+            ]}
+          />
+        </Can>
+      ),
+    },
+  ]
+
+  const exclusionColumns: ColumnDef<ApiScopeExclusion>[] = [
+    {
+      accessorKey: 'pattern',
+      header: 'Pattern',
+      enableHiding: false,
+      cell: ({ row }) => (
+        <code className="rounded bg-muted px-2 py-1 text-sm">{row.original.pattern}</code>
+      ),
+    },
+    {
+      accessorKey: 'exclusion_type',
+      header: 'Type',
+      cell: ({ row }) => (
+        <div className="flex items-center gap-2 text-muted-foreground">
+          {targetTypeIcons[row.original.exclusion_type ?? ''] || <Ban className="h-4 w-4" />}
+          <span className="text-sm capitalize text-foreground">
+            {(row.original.exclusion_type ?? '').replace('_', ' ')}
+          </span>
+        </div>
+      ),
+    },
+    {
+      accessorKey: 'reason',
+      header: 'Reason',
+      cell: ({ row }) => (
+        <span className="text-sm text-muted-foreground">{row.original.reason}</span>
+      ),
+    },
+    {
+      accessorKey: 'status',
+      header: 'Status',
+      cell: ({ row }) => {
+        const exclusion = row.original
+        return (
+          <div className="flex items-center gap-2">
+            <Switch
+              checked={exclusion.status === 'active'}
+              onCheckedChange={() => toggleExclusionStatus(exclusion)}
+              disabled={!canWriteScope}
+              aria-label={`Toggle ${exclusion.pattern}`}
+            />
+            <span
+              className={cn('text-xs', exclusion.status !== 'active' && 'text-muted-foreground')}
+            >
+              {exclusion.status === 'active' ? 'Excluded' : 'Inactive'}
+            </span>
+          </div>
+        )
+      },
+    },
+    {
+      accessorKey: 'created_by',
+      header: 'Created by',
+      cell: ({ row }) => (
+        <span className="text-sm text-muted-foreground">{row.original.created_by}</span>
+      ),
+    },
+    {
+      id: 'actions',
+      enableHiding: false,
+      cell: ({ row }) => (
+        <Can permission={[Permission.ScopeWrite, Permission.ScopeDelete]}>
+          <DataTableRowActions
+            actions={[
+              {
+                label: 'Edit',
+                icon: Pencil,
+                onClick: () => openEditExclusion(row.original),
+                permission: Permission.ScopeWrite,
+              },
+              {
+                label: 'Remove',
+                icon: Trash2,
+                onClick: () => setDeleteExclusion(row.original),
+                destructive: true,
+                permission: Permission.ScopeDelete,
+              },
+            ]}
+          />
+        </Can>
+      ),
+    },
+  ]
+
+  const scheduleColumns: ColumnDef<ApiScanSchedule>[] = [
+    {
+      accessorKey: 'name',
+      header: 'Name',
+      enableHiding: false,
+      cell: ({ row }) => {
+        const schedule = row.original
+        return (
+          <div>
+            <p className="font-medium">{schedule.name}</p>
+            <p className="text-xs text-muted-foreground">
+              {schedule.target_tags?.join(', ') || schedule.target_scope || 'All targets'}
+            </p>
+          </div>
+        )
+      },
+    },
+    {
+      accessorKey: 'scan_type',
+      header: 'Type',
+      cell: ({ row }) => (
+        <Badge variant="secondary">
+          {scanTypeLabels[row.original.scan_type ?? ''] ?? row.original.scan_type}
+        </Badge>
+      ),
+    },
+    {
+      id: 'schedule',
+      header: 'Schedule',
+      cell: ({ row }) => {
+        const schedule = row.original
+        return (
+          <div className="flex items-center gap-1 text-sm">
+            <Clock className="h-3 w-3 text-muted-foreground" />
+            {schedule.cron_expression ? (
+              <code className="text-xs">{schedule.cron_expression}</code>
+            ) : schedule.interval_hours ? (
+              `Every ${schedule.interval_hours}h`
+            ) : (
+              'On demand'
+            )}
+          </div>
+        )
+      },
+    },
+    {
+      accessorKey: 'last_run_at',
+      header: 'Last run',
+      cell: ({ row }) => <span className="text-sm">{formatDate(row.original.last_run_at)}</span>,
+    },
+    {
+      accessorKey: 'next_run_at',
+      header: 'Next run',
+      cell: ({ row }) => (
+        <span className="text-sm">
+          {row.original.next_run_at ? formatDate(row.original.next_run_at) : 'On trigger'}
+        </span>
+      ),
+    },
+    {
+      accessorKey: 'enabled',
+      header: 'Status',
+      cell: ({ row }) => {
+        const schedule = row.original
+        return (
+          <div className="flex items-center gap-2">
+            <Switch
+              checked={schedule.enabled}
+              onCheckedChange={() => toggleScheduleStatus(schedule)}
+              disabled={!canWriteScope}
+              aria-label={`Toggle ${schedule.name}`}
+            />
+            <span className={cn('text-xs', !schedule.enabled && 'text-muted-foreground')}>
+              {schedule.enabled ? 'Active' : 'Paused'}
+            </span>
+          </div>
+        )
+      },
+    },
+    {
+      id: 'actions',
+      enableHiding: false,
+      cell: ({ row }) => (
+        <Can permission={[Permission.ScansExecute, Permission.ScopeWrite, Permission.ScopeDelete]}>
+          <DataTableRowActions
+            actions={[
+              {
+                label: 'Run now',
+                icon: Play,
+                onClick: () => handleRunNow(row.original),
+                permission: Permission.ScansExecute,
+              },
+              {
+                label: 'Edit',
+                icon: Pencil,
+                onClick: () => openEditSchedule(row.original),
+                permission: Permission.ScopeWrite,
+              },
+              {
+                label: 'Delete',
+                icon: Trash2,
+                onClick: () => setDeleteSchedule(row.original),
+                destructive: true,
+                permission: Permission.ScopeDelete,
+              },
+            ]}
+          />
+        </Can>
+      ),
+    },
+  ]
+
+  const tableSkeleton = (
+    <div className="space-y-2 rounded-xl border p-3">
+      {[1, 2, 3, 4].map((i) => (
+        <Skeleton key={i} className="h-10 w-full" />
+      ))}
+    </div>
+  )
+
+  const metrics: MetricStripItem[] = [
+    {
+      key: 'targets',
+      label: 'In-scope targets',
+      value: stats.targets,
+      hint: `${stats.activeTargets} active`,
+      onClick: () => selectTab('targets'),
+    },
+    {
+      key: 'exclusions',
+      label: 'Exclusions',
+      value: stats.exclusions,
+      onClick: () => selectTab('exclusions'),
+    },
+    {
+      key: 'schedules',
+      label: 'Active schedules',
+      value: stats.activeSchedules,
+      onClick: () => selectTab('schedules'),
+    },
+    {
+      key: 'coverage',
+      label: 'Scope coverage',
+      value: `${stats.coverage}%`,
+      hint: `${stats.activeTargets} of ${stats.targets} targets active`,
+    },
+  ]
+
+  const addButton =
+    tab === 'exclusions' ? (
+      <Button size="sm" onClick={() => setIsAddExclusionOpen(true)}>
+        <Plus className="me-2 h-4 w-4" />
+        Add exclusion
+      </Button>
+    ) : tab === 'schedules' ? (
+      <Button size="sm" onClick={() => setIsAddScheduleOpen(true)}>
+        <Plus className="me-2 h-4 w-4" />
+        New schedule
+      </Button>
+    ) : (
+      <Button size="sm" onClick={() => setIsAddTargetOpen(true)}>
+        <Plus className="me-2 h-4 w-4" />
+        Add target
+      </Button>
+    )
+
   return (
     <>
       <Main>
         <PageHeader
-          title="Scope Configuration"
-          description="Configure scan targets, exclusions, and schedules"
-        />
+          title="Scope configuration"
+          description="What gets scanned: in-scope targets, exclusions and scan schedules."
+        >
+          <Can permission={Permission.ScopeWrite}>{addButton}</Can>
+        </PageHeader>
 
-        {/* Stats */}
-        <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription className="flex items-center gap-2">
-                <Target className="h-4 w-4" />
-                In-Scope Targets
-              </CardDescription>
-              {statsLoading ? (
-                <Skeleton className="h-9 w-16" />
-              ) : (
-                <CardTitle className="text-3xl">{stats.targets}</CardTitle>
-              )}
-            </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription className="flex items-center gap-2">
-                <Ban className="h-4 w-4" />
-                Exclusions
-              </CardDescription>
-              {statsLoading ? (
-                <Skeleton className="h-9 w-16" />
-              ) : (
-                <CardTitle className="text-3xl">{stats.exclusions}</CardTitle>
-              )}
-            </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription className="flex items-center gap-2">
-                <Calendar className="h-4 w-4" />
-                Scheduled Scans
-              </CardDescription>
-              {statsLoading ? (
-                <Skeleton className="h-9 w-16" />
-              ) : (
-                <CardTitle className="text-3xl">{stats.activeSchedules}</CardTitle>
-              )}
-            </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription className="flex items-center gap-2">
-                <Shield className="h-4 w-4" />
-                Scope Status
-              </CardDescription>
-              {statsLoading ? (
-                <Skeleton className="h-9 w-16" />
-              ) : (
-                <CardTitle
-                  className={`text-3xl ${stats.coverage >= 80 ? 'text-green-500' : stats.coverage >= 50 ? 'text-yellow-500' : 'text-red-500'}`}
-                >
-                  {stats.coverage}%
-                </CardTitle>
-              )}
-            </CardHeader>
-            <CardContent className="pt-0">
-              <p className="text-muted-foreground text-xs">
-                {stats.activeTargets} of {stats.targets} targets active
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Tabs */}
-        <Tabs defaultValue="overview" className="mt-6">
-          <div className="overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
+        <Tabs value={tab} onValueChange={selectTab} className="mt-4">
+          <div className="no-scrollbar -mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
             <TabsList>
-              <TabsTrigger value="overview">
-                <BarChart3 className="me-1.5 h-3.5 w-3.5" />
-                Overview
-              </TabsTrigger>
+              <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="targets">
-                In-Scope Targets ({targetsLoading ? '...' : (targetsData?.total ?? targets.length)})
+                Targets{' '}
+                <TabsCount value={targetsLoading ? '…' : (targetsData?.total ?? targets.length)} />
               </TabsTrigger>
               <TabsTrigger value="exclusions">
-                Exclusions (
-                {exclusionsLoading ? '...' : (exclusionsData?.total ?? exclusions.length)})
+                Exclusions{' '}
+                <TabsCount
+                  value={exclusionsLoading ? '…' : (exclusionsData?.total ?? exclusions.length)}
+                />
               </TabsTrigger>
               <TabsTrigger value="schedules">
-                Scan Schedules (
-                {schedulesLoading ? '...' : (schedulesData?.total ?? schedules.length)})
+                Schedules{' '}
+                <TabsCount
+                  value={schedulesLoading ? '…' : (schedulesData?.total ?? schedules.length)}
+                />
               </TabsTrigger>
             </TabsList>
           </div>
 
           {/* Overview */}
-          <TabsContent value="overview">
+          <TabsContent value="overview" className="mt-5 space-y-5">
+            <MetricStrip loading={statsLoading} items={metrics} />
             {dashboardLoading ? (
-              <div className="grid gap-6 lg:grid-cols-2">
-                {Array.from({ length: 3 }).map((_, i) => (
+              <div className="grid gap-5 lg:grid-cols-2">
+                {Array.from({ length: 2 }).map((_, i) => (
                   <Skeleton key={i} className="h-80 w-full rounded-xl" />
                 ))}
               </div>
             ) : (
-              <div className="grid gap-6 lg:grid-cols-2">
+              <div className="grid gap-5 lg:grid-cols-2">
                 <Card>
                   <CardHeader>
-                    <CardTitle>Scope by Asset Type</CardTitle>
-                    <CardDescription>
-                      Distribution of scoped assets across categories
-                    </CardDescription>
+                    <CardTitle className="text-base">Scope by asset type</CardTitle>
+                    <CardDescription>Scoped assets across categories</CardDescription>
                   </CardHeader>
                   <CardContent>
                     {assetTypeData.length === 0 ? (
-                      <div className="flex h-48 items-center justify-center text-muted-foreground">
-                        No asset types configured
-                      </div>
+                      <EmptyState
+                        icon={BarChart3}
+                        title="No asset types yet"
+                        description="Asset types appear once assets are in scope."
+                        card={false}
+                        className="py-8"
+                      />
                     ) : (
                       <div className="flex flex-col items-center gap-4">
                         {/* Chart area is its own flex item with a fixed
@@ -1210,14 +1543,18 @@ export default function ScopeConfigPage() {
 
                 <Card>
                   <CardHeader>
-                    <CardTitle>Asset Status Distribution</CardTitle>
-                    <CardDescription>Current management status of scoped assets</CardDescription>
+                    <CardTitle className="text-base">Asset status</CardTitle>
+                    <CardDescription>Management status of scoped assets</CardDescription>
                   </CardHeader>
                   <CardContent>
                     {assetStatusData.length === 0 ? (
-                      <div className="flex h-48 items-center justify-center text-muted-foreground">
-                        No status data available
-                      </div>
+                      <EmptyState
+                        icon={BarChart3}
+                        title="No status data"
+                        description="Status appears once assets are in scope."
+                        card={false}
+                        className="py-8"
+                      />
                     ) : (
                       <ResponsiveContainer width="100%" height={280}>
                         <BarChart data={assetStatusData}>
@@ -1234,22 +1571,24 @@ export default function ScopeConfigPage() {
 
                 <Card className="lg:col-span-2">
                   <CardHeader>
-                    <CardTitle>Scope Configuration Insights</CardTitle>
-                    <CardDescription>
-                      Recommendations for optimizing scope boundaries
-                    </CardDescription>
+                    <CardTitle className="text-base">Insights</CardTitle>
+                    <CardDescription>Where the scope boundaries could be tightened</CardDescription>
                   </CardHeader>
                   <CardContent>
                     {stats.targets === 0 && dashboardStats.assets.total === 0 ? (
-                      <div className="flex h-32 items-center justify-center text-muted-foreground">
-                        No targets configured. Add targets to begin scoping.
-                      </div>
+                      <EmptyState
+                        icon={Target}
+                        title="No targets configured"
+                        description="Add targets to begin scoping."
+                        card={false}
+                        className="py-8"
+                      />
                     ) : (
-                      <div className="space-y-4">
-                        <div className="rounded-lg bg-muted/50 p-4">
+                      <div className="divide-y">
+                        <div className="pb-4">
                           <div className="flex items-center justify-between">
-                            <p className="text-sm font-medium">Scope Coverage</p>
-                            <span className="text-sm font-semibold">
+                            <p className="text-sm font-medium">Scope coverage</p>
+                            <span className="text-sm font-semibold tabular-nums">
                               {stats.activeTargets} / {stats.targets} targets active
                             </span>
                           </div>
@@ -1260,14 +1599,14 @@ export default function ScopeConfigPage() {
                             schedule{stats.activeSchedules !== 1 ? 's' : ''}
                           </p>
                         </div>
-                        <div className="flex items-start gap-3 rounded-lg border p-4">
+                        <div className="flex items-start gap-3 py-4">
                           {stats.coverage < 80 ? (
-                            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-yellow-500" />
+                            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
                           ) : (
-                            <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-green-500" />
+                            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
                           )}
                           <div>
-                            <p className="font-medium">Target Coverage</p>
+                            <p className="text-sm font-medium">Target coverage</p>
                             <p className="text-sm text-muted-foreground">
                               {stats.coverage < 80
                                 ? `Only ${stats.activeTargets} of ${stats.targets} targets are active. Activate more targets to improve coverage.`
@@ -1275,10 +1614,10 @@ export default function ScopeConfigPage() {
                             </p>
                           </div>
                         </div>
-                        <div className="flex items-start gap-3 rounded-lg border p-4">
-                          <Info className="mt-0.5 h-5 w-5 shrink-0 text-blue-500" />
+                        <div className="flex items-start gap-3 py-4">
+                          <Info className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
                           <div>
-                            <p className="font-medium">Repository Integration</p>
+                            <p className="text-sm font-medium">Repository integration</p>
                             <p className="text-sm text-muted-foreground">
                               {dashboardStats.repositories.total > 0
                                 ? `${dashboardStats.repositories.total} repositories linked. ${dashboardStats.repositories.withFindings} have active findings.`
@@ -1287,10 +1626,10 @@ export default function ScopeConfigPage() {
                           </div>
                         </div>
                         {stats.activeSchedules === 0 && stats.targets > 0 && (
-                          <div className="flex items-start gap-3 rounded-lg border border-yellow-500/30 p-4">
-                            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-yellow-500" />
+                          <div className="flex items-start gap-3 pt-4">
+                            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
                             <div>
-                              <p className="font-medium">No Active Schedules</p>
+                              <p className="text-sm font-medium">No active schedules</p>
                               <p className="text-sm text-muted-foreground">
                                 You have {stats.targets} targets but no active scan schedules.
                                 Create a schedule to automate scanning.
@@ -1306,522 +1645,78 @@ export default function ScopeConfigPage() {
             )}
           </TabsContent>
 
-          {/* In-Scope Targets */}
-          <TabsContent value="targets">
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle>In-Scope Targets</CardTitle>
-                    <CardDescription>
-                      Assets and patterns included in security assessments
-                    </CardDescription>
-                  </div>
-                  <Can permission={Permission.ScopeWrite}>
-                    <Button size="sm" onClick={() => setIsAddTargetOpen(true)}>
-                      <Plus className="me-2 h-4 w-4" />
-                      Add Target
-                    </Button>
-                  </Can>
-                </div>
-                {/* Search & Filter */}
-                <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
-                  <div className="relative flex-1">
-                    <SearchIcon className="text-muted-foreground absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
-                    <Input
-                      placeholder="Search targets..."
-                      value={targetSearch}
-                      onChange={(e) => {
-                        setTargetSearch(e.target.value)
-                        setTargetPage(1)
-                      }}
-                      className="ps-9"
-                    />
-                  </div>
-                  <Select
-                    value={targetTypeFilter}
-                    onValueChange={(v) => {
-                      setTargetTypeFilter(v)
-                      setTargetPage(1)
-                    }}
-                  >
-                    <SelectTrigger className="w-[180px]">
-                      <SelectValue placeholder="Filter by type" />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-80">
-                      <SelectItem value="all">All Types</SelectItem>
-                      {targetTypeCategories.map((category) => (
-                        <div key={category.label}>
-                          <div className="text-muted-foreground px-2 py-1.5 text-xs font-semibold">
-                            {category.label}
-                          </div>
-                          {category.types.map((type) => (
-                            <SelectItem key={type} value={type}>
-                              <div className="flex flex-wrap items-center gap-2">
-                                {targetTypeIcons[type]}
-                                {formatTypeLabel(type)}
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </div>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Pattern</TableHead>
-                      <TableHead>Description</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Created By</TableHead>
-                      <TableHead className="w-[50px]" />
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {targetsLoading ? (
-                      <TableSkeleton />
-                    ) : targets.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={6} className="text-muted-foreground py-8 text-center">
-                          {targetSearch || targetTypeFilter !== 'all'
-                            ? `No results found for '${targetSearch || targetTypeFilter}'`
-                            : "No targets configured yet. Click 'Add Target' to get started."}
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      targets.map((target) => (
-                        <TableRow key={target.id}>
-                          <TableCell>
-                            <div className="flex flex-wrap items-center gap-2">
-                              {targetTypeIcons[target.target_type ?? '']}
-                              <span className="text-sm capitalize">
-                                {(target.target_type ?? '').replace('_', ' ')}
-                              </span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <code className="bg-muted rounded px-2 py-1 text-sm">
-                              {target.pattern}
-                            </code>
-                          </TableCell>
-                          <TableCell className="text-muted-foreground text-sm">
-                            {target.description}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex flex-wrap items-center gap-2">
-                              <Switch
-                                checked={target.status === 'active'}
-                                onCheckedChange={() => toggleTargetStatus(target)}
-                                disabled={!canWriteScope}
-                              />
-                              <span
-                                className={`text-xs ${target.status === 'active' ? 'text-green-400' : 'text-gray-400'}`}
-                              >
-                                {target.status}
-                              </span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-muted-foreground text-sm">
-                            {target.created_by}
-                          </TableCell>
-                          <TableCell>
-                            <Can permission={[Permission.ScopeWrite, Permission.ScopeDelete]}>
-                              <DataTableRowActions
-                                actions={[
-                                  {
-                                    label: 'Edit',
-                                    icon: Pencil,
-                                    onClick: () => openEditTarget(target),
-                                    permission: Permission.ScopeWrite,
-                                  },
-                                  {
-                                    label: 'Remove',
-                                    icon: Trash2,
-                                    onClick: () => setDeleteTarget(target),
-                                    destructive: true,
-                                    permission: Permission.ScopeDelete,
-                                  },
-                                ]}
-                              />
-                            </Can>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-                {targetsData && (targetsData.total_pages ?? 0) > 1 && (
-                  <Pagination
-                    currentPage={targetsData.page ?? 1}
-                    totalPages={targetsData.total_pages ?? 0}
-                    pageSize={targetPerPage}
-                    totalItems={targetsData.total ?? 0}
-                    onPageChange={setTargetPage}
-                    onPageSizeChange={(size) => {
-                      setTargetPerPage(size)
-                      setTargetPage(1)
-                    }}
-                    className="mt-4"
-                  />
-                )}
-              </CardContent>
-            </Card>
+          <TabsContent value="targets" className="mt-5">
+            {targetsLoading && !targetsData ? (
+              tableSkeleton
+            ) : (
+              <DataTable
+                columns={targetColumns}
+                data={targets}
+                showSearch={false}
+                toolbarStart={toolbarStart}
+                manualPagination
+                rowCount={targetsData?.total ?? 0}
+                pagination={{ pageIndex: page - 1, pageSize: perPage }}
+                onPaginationChange={onTablePagination}
+                pageSizeOptions={PAGE_SIZES}
+                emptyMessage={filtersActive ? 'No targets match' : 'No targets configured yet'}
+                emptyDescription={
+                  filtersActive
+                    ? 'Try adjusting your search or type filter.'
+                    : 'Add a target to bring it into scope.'
+                }
+              />
+            )}
           </TabsContent>
 
-          {/* Exclusions */}
-          <TabsContent value="exclusions">
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle>Exclusions</CardTitle>
-                    <CardDescription>
-                      Assets and patterns excluded from security assessments
-                    </CardDescription>
-                  </div>
-                  <Can permission={Permission.ScopeWrite}>
-                    <Button size="sm" onClick={() => setIsAddExclusionOpen(true)}>
-                      <Plus className="me-2 h-4 w-4" />
-                      Add Exclusion
-                    </Button>
-                  </Can>
-                </div>
-                {/* Search & Filter */}
-                <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
-                  <div className="relative flex-1">
-                    <SearchIcon className="text-muted-foreground absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
-                    <Input
-                      placeholder="Search exclusions..."
-                      value={exclusionSearch}
-                      onChange={(e) => {
-                        setExclusionSearch(e.target.value)
-                        setExclusionPage(1)
-                      }}
-                      className="ps-9"
-                    />
-                  </div>
-                  <Select
-                    value={exclusionTypeFilter}
-                    onValueChange={(v) => {
-                      setExclusionTypeFilter(v)
-                      setExclusionPage(1)
-                    }}
-                  >
-                    <SelectTrigger className="w-[180px]">
-                      <SelectValue placeholder="Filter by type" />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-80">
-                      <SelectItem value="all">All Types</SelectItem>
-                      {targetTypeCategories.map((category) => (
-                        <div key={category.label}>
-                          <div className="text-muted-foreground px-2 py-1.5 text-xs font-semibold">
-                            {category.label}
-                          </div>
-                          {category.types.map((type) => (
-                            <SelectItem key={type} value={type}>
-                              <div className="flex flex-wrap items-center gap-2">
-                                {targetTypeIcons[type]}
-                                {formatTypeLabel(type)}
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </div>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Pattern</TableHead>
-                      <TableHead>Reason</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Created By</TableHead>
-                      <TableHead className="w-[50px]" />
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {exclusionsLoading ? (
-                      <TableSkeleton />
-                    ) : exclusions.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={6} className="text-muted-foreground py-8 text-center">
-                          {exclusionSearch || exclusionTypeFilter !== 'all'
-                            ? `No results found for '${exclusionSearch || exclusionTypeFilter}'`
-                            : "No exclusions configured yet. Click 'Add Exclusion' to get started."}
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      exclusions.map((exclusion) => (
-                        <TableRow key={exclusion.id}>
-                          <TableCell>
-                            <div className="flex flex-wrap items-center gap-2">
-                              {targetTypeIcons[exclusion.exclusion_type ?? ''] || (
-                                <Ban className="h-4 w-4" />
-                              )}
-                              <span className="text-sm capitalize">
-                                {(exclusion.exclusion_type ?? '').replace('_', ' ')}
-                              </span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <code className="bg-muted rounded px-2 py-1 text-sm">
-                              {exclusion.pattern}
-                            </code>
-                          </TableCell>
-                          <TableCell className="text-muted-foreground text-sm">
-                            {exclusion.reason}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex flex-wrap items-center gap-2">
-                              <Switch
-                                checked={exclusion.status === 'active'}
-                                onCheckedChange={() => toggleExclusionStatus(exclusion)}
-                                disabled={!canWriteScope}
-                              />
-                              <span
-                                className={`text-xs ${exclusion.status === 'active' ? 'text-orange-400' : 'text-gray-400'}`}
-                              >
-                                {exclusion.status === 'active' ? 'Excluded' : 'Inactive'}
-                              </span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-muted-foreground text-sm">
-                            {exclusion.created_by}
-                          </TableCell>
-                          <TableCell>
-                            <Can permission={[Permission.ScopeWrite, Permission.ScopeDelete]}>
-                              <DataTableRowActions
-                                actions={[
-                                  {
-                                    label: 'Edit',
-                                    icon: Pencil,
-                                    onClick: () => openEditExclusion(exclusion),
-                                    permission: Permission.ScopeWrite,
-                                  },
-                                  {
-                                    label: 'Remove',
-                                    icon: Trash2,
-                                    onClick: () => setDeleteExclusion(exclusion),
-                                    destructive: true,
-                                    permission: Permission.ScopeDelete,
-                                  },
-                                ]}
-                              />
-                            </Can>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-                {exclusionsData && (exclusionsData.total_pages ?? 0) > 1 && (
-                  <Pagination
-                    currentPage={exclusionsData.page ?? 1}
-                    totalPages={exclusionsData.total_pages ?? 0}
-                    pageSize={exclusionPerPage}
-                    totalItems={exclusionsData.total ?? 0}
-                    onPageChange={setExclusionPage}
-                    onPageSizeChange={(size) => {
-                      setExclusionPerPage(size)
-                      setExclusionPage(1)
-                    }}
-                    className="mt-4"
-                  />
-                )}
-              </CardContent>
-            </Card>
+          <TabsContent value="exclusions" className="mt-5">
+            {exclusionsLoading && !exclusionsData ? (
+              tableSkeleton
+            ) : (
+              <DataTable
+                columns={exclusionColumns}
+                data={exclusions}
+                showSearch={false}
+                toolbarStart={toolbarStart}
+                manualPagination
+                rowCount={exclusionsData?.total ?? 0}
+                pagination={{ pageIndex: page - 1, pageSize: perPage }}
+                onPaginationChange={onTablePagination}
+                pageSizeOptions={PAGE_SIZES}
+                emptyMessage={
+                  filtersActive ? 'No exclusions match' : 'No exclusions configured yet'
+                }
+                emptyDescription={
+                  filtersActive
+                    ? 'Try adjusting your search or type filter.'
+                    : 'Add an exclusion to keep something out of scans.'
+                }
+              />
+            )}
           </TabsContent>
 
-          {/* Scan Schedules */}
-          <TabsContent value="schedules">
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle>Scan Schedules</CardTitle>
-                    <CardDescription>Automated scan configurations and schedules</CardDescription>
-                  </div>
-                  <Can permission={Permission.ScopeWrite}>
-                    <Button size="sm" onClick={() => setIsAddScheduleOpen(true)}>
-                      <Plus className="me-2 h-4 w-4" />
-                      Create Schedule
-                    </Button>
-                  </Can>
-                </div>
-                {/* Search & Filter */}
-                <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
-                  <div className="relative flex-1">
-                    <SearchIcon className="text-muted-foreground absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
-                    <Input
-                      placeholder="Search schedules..."
-                      value={scheduleSearch}
-                      onChange={(e) => {
-                        setScheduleSearch(e.target.value)
-                        setSchedulePage(1)
-                      }}
-                      className="ps-9"
-                    />
-                  </div>
-                  <Select
-                    value={scheduleTypeFilter}
-                    onValueChange={(v) => {
-                      setScheduleTypeFilter(v)
-                      setSchedulePage(1)
-                    }}
-                  >
-                    <SelectTrigger className="w-[180px]">
-                      <SelectValue placeholder="Filter by type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Types</SelectItem>
-                      <SelectItem value="vulnerability">Vulnerability</SelectItem>
-                      <SelectItem value="port_scan">Port Scan</SelectItem>
-                      <SelectItem value="pentest">Pentest</SelectItem>
-                      <SelectItem value="credential">Credential</SelectItem>
-                      <SelectItem value="secret_scan">Secret Scan</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Schedule</TableHead>
-                      <TableHead>Last Run</TableHead>
-                      <TableHead>Next Run</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="w-[50px]" />
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {schedulesLoading ? (
-                      <TableSkeleton />
-                    ) : schedules.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={7} className="text-muted-foreground py-8 text-center">
-                          {scheduleSearch || scheduleTypeFilter !== 'all'
-                            ? `No results found for '${scheduleSearch || scheduleTypeFilter}'`
-                            : "No schedules configured yet. Click 'Add Schedule' to get started."}
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      schedules.map((schedule) => {
-                        const typeConfig = scanTypeConfig[schedule.scan_type ?? ''] || {
-                          label: schedule.scan_type,
-                          color: 'bg-gray-500/20 text-gray-400',
-                        }
-                        return (
-                          <TableRow key={schedule.id}>
-                            <TableCell>
-                              <div>
-                                <p className="font-medium">{schedule.name}</p>
-                                <p className="text-muted-foreground text-xs">
-                                  {schedule.target_tags?.join(', ') ||
-                                    schedule.target_scope ||
-                                    'All targets'}
-                                </p>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <Badge className={`${typeConfig.color} border-0`}>
-                                {typeConfig.label}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-1 text-sm">
-                                <Clock className="text-muted-foreground h-3 w-3" />
-                                {schedule.cron_expression ||
-                                  (schedule.interval_hours
-                                    ? `Every ${schedule.interval_hours}h`
-                                    : 'On demand')}
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-sm">
-                              {formatDate(schedule.last_run_at)}
-                            </TableCell>
-                            <TableCell className="text-sm">
-                              {schedule.next_run_at
-                                ? formatDate(schedule.next_run_at)
-                                : 'On trigger'}
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex flex-wrap items-center gap-2">
-                                <Switch
-                                  checked={schedule.enabled}
-                                  onCheckedChange={() => toggleScheduleStatus(schedule)}
-                                  disabled={!canWriteScope}
-                                />
-                                <span className="text-xs capitalize">
-                                  {schedule.enabled ? 'Active' : 'Paused'}
-                                </span>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <Can
-                                permission={[
-                                  Permission.ScansExecute,
-                                  Permission.ScopeWrite,
-                                  Permission.ScopeDelete,
-                                ]}
-                              >
-                                <DataTableRowActions
-                                  actions={[
-                                    {
-                                      label: 'Run Now',
-                                      icon: Play,
-                                      onClick: () => handleRunNow(schedule),
-                                      permission: Permission.ScansExecute,
-                                    },
-                                    {
-                                      label: 'Edit',
-                                      icon: Pencil,
-                                      onClick: () => openEditSchedule(schedule),
-                                      permission: Permission.ScopeWrite,
-                                    },
-                                    {
-                                      label: 'Delete',
-                                      icon: Trash2,
-                                      onClick: () => setDeleteSchedule(schedule),
-                                      destructive: true,
-                                      permission: Permission.ScopeDelete,
-                                    },
-                                  ]}
-                                />
-                              </Can>
-                            </TableCell>
-                          </TableRow>
-                        )
-                      })
-                    )}
-                  </TableBody>
-                </Table>
-                {schedulesData && (schedulesData.total_pages ?? 0) > 1 && (
-                  <Pagination
-                    currentPage={schedulesData.page ?? 1}
-                    totalPages={schedulesData.total_pages ?? 0}
-                    pageSize={schedulePerPage}
-                    totalItems={schedulesData.total ?? 0}
-                    onPageChange={setSchedulePage}
-                    onPageSizeChange={(size) => {
-                      setSchedulePerPage(size)
-                      setSchedulePage(1)
-                    }}
-                    className="mt-4"
-                  />
-                )}
-              </CardContent>
-            </Card>
+          <TabsContent value="schedules" className="mt-5">
+            {schedulesLoading && !schedulesData ? (
+              tableSkeleton
+            ) : (
+              <DataTable
+                columns={scheduleColumns}
+                data={schedules}
+                showSearch={false}
+                toolbarStart={toolbarStart}
+                manualPagination
+                rowCount={schedulesData?.total ?? 0}
+                pagination={{ pageIndex: page - 1, pageSize: perPage }}
+                onPaginationChange={onTablePagination}
+                pageSizeOptions={PAGE_SIZES}
+                emptyMessage={filtersActive ? 'No schedules match' : 'No schedules configured yet'}
+                emptyDescription={
+                  filtersActive
+                    ? 'Try adjusting your search or type filter.'
+                    : 'Create a schedule to automate scanning.'
+                }
+              />
+            )}
           </TabsContent>
         </Tabs>
       </Main>
@@ -1838,7 +1733,7 @@ export default function ScopeConfigPage() {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add Target</DialogTitle>
+            <DialogTitle>Add target</DialogTitle>
             <DialogDescription>Add a new target to the scope</DialogDescription>
           </DialogHeader>
           {targetFormFields}
@@ -1866,7 +1761,7 @@ export default function ScopeConfigPage() {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit Target</DialogTitle>
+            <DialogTitle>Edit target</DialogTitle>
             <DialogDescription>Update target information</DialogDescription>
           </DialogHeader>
           {targetFormFields}
@@ -1883,25 +1778,16 @@ export default function ScopeConfigPage() {
       </Dialog>
 
       {/* Delete Target Dialog */}
-      <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Remove Target</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to remove &quot;{deleteTarget?.pattern}&quot; from scope?
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteTarget(null)}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleDeleteTarget} disabled={isRemovingTarget}>
-              {isRemovingTarget && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
-              Remove
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="Remove target?"
+        desc={<>Remove &quot;{deleteTarget?.pattern}&quot; from scope?</>}
+        confirmText="Remove"
+        destructive
+        isLoading={isRemovingTarget}
+        handleConfirm={handleDeleteTarget}
+      />
 
       {/* Add Exclusion Dialog */}
       <Dialog
@@ -1915,7 +1801,7 @@ export default function ScopeConfigPage() {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add Exclusion</DialogTitle>
+            <DialogTitle>Add exclusion</DialogTitle>
             <DialogDescription>Add a pattern to exclude from scope</DialogDescription>
           </DialogHeader>
           {exclusionFormFields}
@@ -1943,7 +1829,7 @@ export default function ScopeConfigPage() {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit Exclusion</DialogTitle>
+            <DialogTitle>Edit exclusion</DialogTitle>
             <DialogDescription>Update exclusion information</DialogDescription>
           </DialogHeader>
           {exclusionFormFields}
@@ -1960,36 +1846,22 @@ export default function ScopeConfigPage() {
       </Dialog>
 
       {/* Delete Exclusion Dialog */}
-      <Dialog open={!!deleteExclusion} onOpenChange={(open) => !open && setDeleteExclusion(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Remove Exclusion</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to remove &quot;{deleteExclusion?.pattern}&quot; from
-              exclusions?
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteExclusion(null)}>
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleDeleteExclusion}
-              disabled={isRemovingExclusion}
-            >
-              {isRemovingExclusion && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
-              Remove
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={!!deleteExclusion}
+        onOpenChange={(open) => !open && setDeleteExclusion(null)}
+        title="Remove exclusion?"
+        desc={<>Remove &quot;{deleteExclusion?.pattern}&quot; from exclusions?</>}
+        confirmText="Remove"
+        destructive
+        isLoading={isRemovingExclusion}
+        handleConfirm={handleDeleteExclusion}
+      />
 
       {/* Add Schedule Dialog */}
       <Dialog open={isAddScheduleOpen} onOpenChange={setIsAddScheduleOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Create Schedule</DialogTitle>
+            <DialogTitle>New schedule</DialogTitle>
             <DialogDescription>Create a new scan schedule</DialogDescription>
           </DialogHeader>
           {scheduleFormFields}
@@ -2009,7 +1881,7 @@ export default function ScopeConfigPage() {
       <Dialog open={!!editSchedule} onOpenChange={(open) => !open && setEditSchedule(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit Schedule</DialogTitle>
+            <DialogTitle>Edit schedule</DialogTitle>
             <DialogDescription>Update schedule configuration</DialogDescription>
           </DialogHeader>
           {scheduleFormFields}
@@ -2026,29 +1898,16 @@ export default function ScopeConfigPage() {
       </Dialog>
 
       {/* Delete Schedule Dialog */}
-      <Dialog open={!!deleteSchedule} onOpenChange={(open) => !open && setDeleteSchedule(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete Schedule</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete &quot;{deleteSchedule?.name}&quot;?
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteSchedule(null)}>
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleDeleteSchedule}
-              disabled={isRemovingSchedule}
-            >
-              {isRemovingSchedule && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
-              Delete
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={!!deleteSchedule}
+        onOpenChange={(open) => !open && setDeleteSchedule(null)}
+        title="Delete schedule?"
+        desc={<>Delete &quot;{deleteSchedule?.name}&quot;? This cannot be undone.</>}
+        confirmText="Delete"
+        destructive
+        isLoading={isRemovingSchedule}
+        handleConfirm={handleDeleteSchedule}
+      />
     </>
   )
 }

@@ -1,5 +1,11 @@
 'use client'
 
+import {
+  epssScoreToPercent,
+  formatEpssPercentile,
+  formatEpssScore,
+  formatEpssTopPercent,
+} from '@/lib/epss'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
@@ -14,11 +20,6 @@ interface ThreatIntelCardProps {
   reachableFromCount: number
   priorityClass: string | null
   priorityClassReason: string | null
-}
-
-function formatPercentage(value: number | null): string {
-  if (value === null || value === undefined) return 'N/A'
-  return `${(value * 100).toFixed(2)}%`
 }
 
 function formatDate(dateStr: string | null): string {
@@ -49,7 +50,7 @@ export function ThreatIntelCard({
         <div className="space-y-2">
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">EPSS Score</span>
-            <span className="font-mono font-medium">{formatPercentage(epssScore)}</span>
+            <span className="font-mono font-medium">{formatEpssScore(epssScore, 2, 'N/A')}</span>
           </div>
           {epssScore !== null && (
             <div className="h-2 w-full rounded-full bg-muted">
@@ -64,13 +65,14 @@ export function ThreatIntelCard({
                         ? 'bg-yellow-500'
                         : 'bg-green-500'
                 )}
-                style={{ width: `${Math.min(epssScore * 100, 100)}%` }}
+                style={{ width: `${epssScoreToPercent(epssScore)}%` }}
               />
             </div>
           )}
           {epssPercentile !== null && (
             <p className="text-xs text-muted-foreground">
-              Percentile: {formatPercentage(epssPercentile)} (higher = more likely exploited)
+              Percentile: {formatEpssPercentile(epssPercentile)} (
+              {formatEpssTopPercent(epssPercentile)})
             </p>
           )}
         </div>

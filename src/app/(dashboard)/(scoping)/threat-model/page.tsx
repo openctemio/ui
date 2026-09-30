@@ -26,6 +26,7 @@ import {
 } from '@/features/threat-model'
 import type { ThreatFilters } from '@/features/threat-model'
 import { useModuleEnabled } from '@/features/integrations/api/use-tenant-modules'
+import { useUrlFilter } from '@/hooks/use-url-param'
 
 const DEFAULT_FILTERS: ThreatFilters = {
   status: 'all',
@@ -35,7 +36,14 @@ const DEFAULT_FILTERS: ThreatFilters = {
 }
 
 export default function ThreatModelPage() {
-  const [selectedModelId, setSelectedModelId] = useState<string | null>(null)
+  // The open model and its tab live in the URL so a model can be linked to.
+  const [modelParam, setModelParam] = useUrlFilter('model', '')
+  const [tab, setTab] = useUrlFilter('tab', 'threats')
+  const selectedModelId = modelParam || null
+  const setSelectedModelId = (id: string | null) => {
+    setTab('threats')
+    setModelParam(id ?? '')
+  }
   const [isGenerating, setIsGenerating] = useState(false)
   const [filters, setFilters] = useState<ThreatFilters>(DEFAULT_FILTERS)
 
@@ -125,18 +133,14 @@ export default function ThreatModelPage() {
         </PageHeader>
 
         {modelLoading || !model ? (
-          <div className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-              {[...Array(5)].map((_, i) => (
-                <Skeleton key={i} className="h-28 w-full" />
-              ))}
-            </div>
+          <div className="mt-5 space-y-5">
+            <Skeleton className="h-[68px] w-full rounded-xl" />
             <Skeleton className="h-96 w-full" />
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className="mt-5 space-y-5">
             <CoverageStats model={model} />
-            <Tabs defaultValue="threats">
+            <Tabs value={tab} onValueChange={setTab}>
               <TabsList>
                 <TabsTrigger value="threats">Threats</TabsTrigger>
                 <TabsTrigger value="coverage">Coverage matrix</TabsTrigger>
@@ -165,10 +169,10 @@ export default function ThreatModelPage() {
   return (
     <Main>
       <PageHeader
-        title="Threat Model"
-        description="Continuous threat modeling — derived attack techniques per crown jewel, mapped to MITRE ATT&CK and scored by coverage."
+        title="Threat model"
+        description="Attack techniques derived per crown jewel, mapped to MITRE ATT&CK and scored by coverage."
       />
-      <div className="space-y-6">
+      <div className="mt-5 space-y-5">
         <ScopePicker
           crownJewels={crownJewels}
           isLoading={crownJewelsLoading}

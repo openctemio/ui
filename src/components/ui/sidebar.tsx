@@ -300,7 +300,9 @@ function SidebarInset({ className, ...props }: React.ComponentProps<'div'>) {
     <div
       data-slot="sidebar-inset"
       className={cn(
-        'bg-background relative flex w-full min-h-0 flex-1 flex-col overflow-hidden',
+        // min-w-0: as a flex-1 item its min-width would otherwise be its content's
+        // min-content width; this keeps the content column bounded by the viewport.
+        'bg-background relative flex w-full min-w-0 min-h-0 flex-1 flex-col overflow-hidden',
         'md:peer-data-[variant=inset]:m-2 md:peer-data-[variant=inset]:ms-0 md:peer-data-[variant=inset]:rounded-xl md:peer-data-[variant=inset]:shadow-sm md:peer-data-[variant=inset]:peer-data-[state=collapsed]:ms-2',
         className
       )}
@@ -364,13 +366,12 @@ function SidebarContent({ className, ...props }: React.ComponentProps<'div'>) {
         // as blocks either way. flex-1 + min-h-0 keep it bounded inside the
         // fixed sidebar so it scrolls instead of growing.
         'min-h-0 flex-1 overflow-auto',
-        // Touch-scroll hardening: overscroll-contain stops rubber-band chaining;
-        // a stable scrollbar gutter prevents the content width from oscillating
-        // on scroll — which was animating the buttons' transition-[width] and
-        // making the collapsed icons "wobble".
-        'overscroll-contain [scrollbar-gutter:stable]',
-        // Allow scrolling in collapsed icon mode but hide scrollbar for cleaner look
-        'group-data-[collapsible=icon]:overflow-y-auto group-data-[collapsible=icon]:no-scrollbar',
+        // Hide the scrollbar in both expanded and collapsed states (still
+        // scrolls). This also removes the earlier icon-"wobble": with no
+        // scrollbar there is nothing to appear/disappear and change the content
+        // width, so the stable-gutter workaround is no longer needed.
+        'no-scrollbar overscroll-contain',
+        'group-data-[collapsible=icon]:overflow-y-auto',
         className
       )}
       {...props}

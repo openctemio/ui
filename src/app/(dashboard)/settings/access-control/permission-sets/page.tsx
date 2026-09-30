@@ -47,7 +47,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabsList, TabsTrigger, TabsCount } from '@/components/ui/tabs'
 import { toast } from 'sonner'
 import {
   Shield,
@@ -441,14 +441,12 @@ export default function PermissionSetsPage() {
                   onValueChange={(v) => setTypeFilter(v as FilterType)}
                   className="mb-4"
                 >
-                  <TabsList className="w-max max-w-full overflow-x-auto">
+                  <TabsList className="overflow-x-auto">
                     {typeFilters.map((filter) => (
                       <TabsTrigger key={filter.value} value={filter.value} className="gap-1.5">
                         {filter.icon}
                         {filter.label}
-                        <Badge variant="secondary" className="h-5 px-1.5 text-xs">
-                          {typeCounts[filter.value]}
-                        </Badge>
+                        <TabsCount value={typeCounts[filter.value]} />
                       </TabsTrigger>
                     ))}
                   </TabsList>

@@ -43,7 +43,9 @@ export interface Vulnerability {
   severity: Severity
   cvss_score?: number
   cvss_vector?: string
+  /** EPSS probability, 0–1. Format with formatEpssScore (@/lib/epss). */
   epss_score?: number
+  /** EPSS percentile rank, 0–100. Format with formatEpssPercentile / formatEpssTopPercent. */
   epss_percentile?: number
   cisa_kev?: CISAKEVData
   exploit_available: boolean

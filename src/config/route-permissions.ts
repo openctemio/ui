@@ -48,8 +48,20 @@ export const Module = {
   Components: 'components',
   Pentest: 'pentest',
   Credentials: 'credentials',
+  // Exposures (non-CVE security issues) is its own toggleable module. The API
+  // gates /api/v1/exposures on ModuleExposures, so the route guard + sidebar
+  // must key off the same module — not `findings`, which used to be a stale
+  // mirror that let the toggle 403 the API while leaving the nav visible.
+  Exposures: 'exposures',
   Remediation: 'remediation',
   ThreatIntel: 'threat_intel',
+  // IOC catalogue — its own backend module (`iocs`, migration 000156)
+  // that gates /api/v1/iocs. Distinct from `threat_intel` so an operator
+  // can run threat-intel enrichment without exposing the runtime IOC
+  // catalogue, and so the ModuleIOCs toggle gates a real page.
+  Iocs: 'iocs',
+  // SLA is a real optional module (api gates registerSLARoutes on ModuleSLA).
+  Sla: 'sla',
   Integrations: 'integrations',
   Compliance: 'compliance',
   // Migration 000161 additions — these need their own constants so
@@ -62,6 +74,11 @@ export const Module = {
   CTEMCycles: 'ctem_cycles',
   AttackerProfiles: 'attacker_profiles',
   Relationships: 'relationships',
+  // Scoping split-outs (api migration 000214) — each toggleable on its
+  // own instead of sharing scope_config / attack_surface.
+  BusinessUnits: 'business_units',
+  CrownJewels: 'crown_jewels',
+  ThreatModel: 'threat_model',
   PriorityRules: 'priority_rules',
   RiskAnalysis: 'risk_analysis',
   RiskScoring: 'risk_scoring',
@@ -136,19 +153,19 @@ export const routePermissions: Record<string, RoutePermissionConfig> = {
   },
   '/business-units': {
     permission: Permission.ScopeRead,
-    module: Module.ScopeConfig,
+    module: Module.BusinessUnits,
   },
   '/business-units/**': {
     permission: Permission.ScopeRead,
-    module: Module.ScopeConfig,
+    module: Module.BusinessUnits,
   },
   '/crown-jewels': {
     permission: Permission.ScopeRead,
-    module: Module.ScopeConfig,
+    module: Module.CrownJewels,
   },
   '/crown-jewels/**': {
     permission: Permission.ScopeRead,
-    module: Module.ScopeConfig,
+    module: Module.CrownJewels,
   },
   '/scope-config': {
     permission: Permission.ScopeRead,
@@ -180,11 +197,11 @@ export const routePermissions: Record<string, RoutePermissionConfig> = {
   },
   '/threat-model': {
     permission: Permission.AssetsRead,
-    module: Module.AttackSurface,
+    module: Module.ThreatModel,
   },
   '/threat-model/**': {
     permission: Permission.AssetsRead,
-    module: Module.AttackSurface,
+    module: Module.ThreatModel,
   },
   '/relationships/**': {
     permission: Permission.AssetsRead,
@@ -222,15 +239,15 @@ export const routePermissions: Record<string, RoutePermissionConfig> = {
   },
 
   // ========================================
-  // Discovery Phase - Exposures (Module: findings)
+  // Discovery Phase - Exposures (Module: exposures)
   // ========================================
   '/exposures': {
     permission: Permission.FindingsRead,
-    module: Module.Findings,
+    module: Module.Exposures,
   },
   '/exposures/**': {
     permission: Permission.FindingsRead,
-    module: Module.Findings,
+    module: Module.Exposures,
   },
 
   // ========================================
@@ -264,6 +281,20 @@ export const routePermissions: Record<string, RoutePermissionConfig> = {
   '/threat-intel': {
     permission: Permission.VulnerabilitiesRead,
     module: Module.ThreatIntel,
+  },
+  // IOC catalogue page — its own module (`iocs`) so the ModuleIOCs
+  // toggle gates it end-to-end. Exact match takes precedence over the
+  // `/threat-intel/**` wildcard below. Permission is threat_intel:read,
+  // matching what the backend enforces on /api/v1/iocs.
+  '/threat-intel/iocs': {
+    permission: Permission.ThreatIntelRead,
+    module: Module.Iocs,
+  },
+  // Detections (Detect & Respond) — tenant-wide IOC match feed. Same `iocs`
+  // module + threat_intel:read as the catalogue; backend gates /api/v1/iocs/matches.
+  '/threat-intel/detections': {
+    permission: Permission.ThreatIntelRead,
+    module: Module.Iocs,
   },
   '/threat-intel/**': {
     permission: Permission.VulnerabilitiesRead,
@@ -365,6 +396,7 @@ export const routePermissions: Record<string, RoutePermissionConfig> = {
   },
   '/sla': {
     permission: Permission.SLARead,
+    module: Module.Sla,
   },
   '/exceptions': {
     permission: Permission.SuppressionsRead,
@@ -522,6 +554,7 @@ export const routePermissions: Record<string, RoutePermissionConfig> = {
   },
   '/settings/sla-policies': {
     permission: Permission.SLARead,
+    module: Module.Sla,
   },
   '/settings/pentest': {
     permission: Permission.PentestWrite,

@@ -1,25 +1,25 @@
 'use client'
 
+import type { ReactNode } from 'react'
 import Link from 'next/link'
 import { Main } from '@/components/layout'
-import { PageHeader, EmptyState } from '@/features/shared'
+import { PageHeader, EmptyState, StatsCard } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Package,
   ShieldAlert,
+  ShieldCheck,
   AlertTriangle,
   Scale,
   Download,
   ArrowRight,
-  TrendingUp,
   Clock,
-  CheckCircle,
   GitBranch,
-  Loader2,
 } from 'lucide-react'
 import {
   useComponentStatsApi,
@@ -27,17 +27,59 @@ import {
   useVulnerableComponentsApi,
 } from '@/features/components/api/use-components-api'
 import { EcosystemBadge } from '@/features/components'
+import { SEVERITY_BADGE_SOFT } from '@/lib/severity-colors'
+import { CRITICALITY_BADGE_SOFT, type CriticalityLevel } from '@/lib/criticality-colors'
+import { cn } from '@/lib/utils'
+
+const LICENSE_RISK_ORDER = ['critical', 'high', 'medium', 'low', 'unknown']
+
+/** A section card whose header carries a "View all" link to the full list. */
+function SectionCard({
+  title,
+  description,
+  href,
+  children,
+}: {
+  title: string
+  description: ReactNode
+  href: string
+  children: ReactNode
+}) {
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
+        <div className="min-w-0 space-y-1.5">
+          <CardTitle>{title}</CardTitle>
+          <CardDescription>{description}</CardDescription>
+        </div>
+        <Button variant="ghost" size="sm" asChild className="shrink-0">
+          <Link href={href}>
+            View all
+            <ArrowRight className="ms-2 h-4 w-4" />
+          </Link>
+        </Button>
+      </CardHeader>
+      <CardContent>{children}</CardContent>
+    </Card>
+  )
+}
+
+function RowsSkeleton({ rows = 3, height = 'h-10' }: { rows?: number; height?: string }) {
+  return (
+    <div className="space-y-3">
+      {Array.from({ length: rows }).map((_, i) => (
+        <Skeleton key={i} className={cn(height, 'w-full')} />
+      ))}
+    </div>
+  )
+}
 
 export default function ComponentsOverviewPage() {
-  // Fetch data from real API
   const { data: stats, isLoading: statsLoading } = useComponentStatsApi()
   const { data: ecosystemStats, isLoading: ecosystemLoading } = useEcosystemStatsApi()
   const { data: vulnerableData, isLoading: vulnerableLoading } = useVulnerableComponentsApi(1, 5)
   const vulnerableComponents = vulnerableData?.data
 
-  const _isLoading = statsLoading || ecosystemLoading || vulnerableLoading
-
-  // Extract values with defaults
   const totalComponents = stats?.total_components ?? 0
   const directDeps = stats?.direct_dependencies ?? 0
   const transitiveDeps = stats?.transitive_dependencies ?? 0
@@ -46,11 +88,9 @@ export default function ComponentsOverviewPage() {
   const outdatedCount = stats?.outdated_components ?? 0
   const kevCount = stats?.cisa_kev_components ?? 0
 
-  // Vulnerability severity breakdown
   const criticalVulns = stats?.vuln_by_severity?.critical ?? 0
   const highVulns = stats?.vuln_by_severity?.high ?? 0
 
-  // License risks
   const licenseRiskHigh = (stats?.license_risks?.high ?? 0) + (stats?.license_risks?.critical ?? 0)
 
   // License distribution for the compliance card. `license_risks` is always
@@ -58,397 +98,231 @@ export default function ComponentsOverviewPage() {
   // the object's presence: there is nothing worth showing when every bucket is
   // 0, or when the only populated bucket is "unknown" (a 100%-unknown breakdown
   // conveys no compliance signal — show the empty state instead).
-  const licenseRiskEntries = Object.entries(stats?.license_risks ?? {}).filter(
-    ([, count]) => count > 0
-  )
+  const licenseRiskEntries = Object.entries(stats?.license_risks ?? {})
+    .filter(([, count]) => count > 0)
+    .sort(([a], [b]) => LICENSE_RISK_ORDER.indexOf(a) - LICENSE_RISK_ORDER.indexOf(b))
   const hasMeaningfulLicenseData = licenseRiskEntries.some(([risk]) => risk !== 'unknown')
 
+  const outdatedShare = totalComponents > 0 ? (outdatedCount / totalComponents) * 100 : 0
+
   return (
-    <>
-      <Main>
-        <PageHeader
-          title="Software Components"
-          description="Software Bill of Materials (SBOM) and supply chain security"
-        >
-          <Link href="/components/sbom-export">
-            <Button>
-              <Download className="me-2 h-4 w-4" />
-              Export SBOM
-            </Button>
+    <Main>
+      <PageHeader
+        title="Components"
+        description="Your software bill of materials: the packages you depend on, their vulnerabilities and their licenses."
+      >
+        <Button variant="outline" size="sm" asChild>
+          <Link href="/components/all">
+            <Package className="me-2 h-4 w-4" />
+            All components
           </Link>
-        </PageHeader>
+        </Button>
+        <Button size="sm" asChild>
+          <Link href="/components/sbom-export">
+            <Download className="me-2 h-4 w-4" />
+            Export SBOM
+          </Link>
+        </Button>
+      </PageHeader>
 
-        {/* Key Metrics */}
-        <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Components</CardTitle>
-              <Package className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              {statsLoading ? (
-                <Skeleton className="h-8 w-16" />
-              ) : (
-                <>
-                  <div className="text-2xl font-bold">{totalComponents}</div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {directDeps} direct, {transitiveDeps} transitive
-                  </p>
-                </>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className={criticalVulns > 0 ? 'border-red-500/50' : ''}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Vulnerabilities</CardTitle>
-              <ShieldAlert
-                className={`h-4 w-4 ${criticalVulns > 0 ? 'text-red-500' : 'text-muted-foreground'}`}
-              />
-            </CardHeader>
-            <CardContent>
-              {statsLoading ? (
-                <Skeleton className="h-8 w-16" />
-              ) : (
-                <>
-                  <div className={`text-2xl font-bold ${criticalVulns > 0 ? 'text-red-500' : ''}`}>
-                    {totalVulns}
-                  </div>
-                  <div className="flex gap-2 mt-1">
-                    {criticalVulns > 0 && (
-                      <Badge variant="destructive" className="text-xs">
-                        {criticalVulns}C
-                      </Badge>
-                    )}
-                    {highVulns > 0 && (
-                      <Badge className="bg-orange-500/15 text-orange-600 text-xs">
-                        {highVulns}H
-                      </Badge>
-                    )}
-                  </div>
-                </>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">License Risks</CardTitle>
-              <Scale className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              {statsLoading ? (
-                <Skeleton className="h-8 w-16" />
-              ) : (
-                <>
-                  <div className="text-2xl font-bold">{licenseRiskHigh}</div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Components with compliance risks
-                  </p>
-                </>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Outdated</CardTitle>
-              <Clock className="h-4 w-4 text-yellow-500" />
-            </CardHeader>
-            <CardContent>
-              {statsLoading ? (
-                <Skeleton className="h-8 w-16" />
-              ) : (
-                <>
-                  <div className="text-2xl font-bold text-yellow-600">{outdatedCount}</div>
-                  <Progress
-                    value={totalComponents > 0 ? (outdatedCount / totalComponents) * 100 : 0}
-                    className="mt-2 h-1.5"
-                  />
-                </>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="mt-6 grid gap-6 lg:grid-cols-2">
-          {/* Vulnerable Components */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle className="flex items-center gap-2">
-                  <ShieldAlert className="h-5 w-5 text-red-500" />
-                  Vulnerable Components
-                </CardTitle>
-                <CardDescription>{vulnerableCount} components need attention</CardDescription>
-              </div>
-              <Link href="/components/vulnerable">
-                <Button variant="ghost" size="sm">
-                  View All
-                  <ArrowRight className="ms-2 h-4 w-4" />
-                </Button>
-              </Link>
-            </CardHeader>
-            <CardContent>
-              {vulnerableLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {vulnerableComponents && vulnerableComponents.length > 0 ? (
-                    vulnerableComponents.map((component) => (
-                      <div
-                        key={component.id}
-                        className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
-                      >
-                        <div className="flex items-center gap-3 min-w-0">
-                          <Package className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                          <div className="min-w-0">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <span className="font-medium truncate">{component.name}</span>
-                              <Badge variant="outline" className="text-xs font-mono">
-                                {component.version}
-                              </Badge>
-                            </div>
-                            <div className="flex items-center gap-2 mt-0.5">
-                              <EcosystemBadge
-                                ecosystem={component.ecosystem ?? 'unknown'}
-                                size="sm"
-                              />
-                              {component.in_cisa_kev && (
-                                <Badge className="bg-red-600 text-white text-xs">CISA KEV</Badge>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          {(component.critical_count ?? 0) > 0 && (
-                            <Badge variant="destructive">{component.critical_count}C</Badge>
-                          )}
-                          {(component.high_count ?? 0) > 0 && (
-                            <Badge className="bg-orange-500/15 text-orange-600">
-                              {component.high_count}H
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-center py-8 text-muted-foreground">
-                      <CheckCircle className="h-8 w-8 mx-auto mb-2 text-green-500" />
-                      <p>No vulnerable components found</p>
-                    </div>
-                  )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Ecosystems Distribution */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle className="flex items-center gap-2">
-                  <GitBranch className="h-5 w-5" />
-                  Ecosystem Distribution
-                </CardTitle>
-                <CardDescription>Components by package manager</CardDescription>
-              </div>
-              <Link href="/components/ecosystems">
-                <Button variant="ghost" size="sm">
-                  View All
-                  <ArrowRight className="ms-2 h-4 w-4" />
-                </Button>
-              </Link>
-            </CardHeader>
-            <CardContent>
-              {ecosystemLoading ? (
-                <div className="space-y-3">
-                  {[1, 2, 3].map((i) => (
-                    <Skeleton key={i} className="h-10 w-full" />
-                  ))}
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {ecosystemStats && ecosystemStats.length > 0 ? (
-                    ecosystemStats.slice(0, 5).map((eco) => (
-                      <div key={eco.ecosystem} className="space-y-1.5">
-                        <div className="flex items-center justify-between">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <EcosystemBadge ecosystem={eco.ecosystem ?? 'unknown'} />
-                            <span className="text-sm font-medium">{eco.total ?? 0}</span>
-                          </div>
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            {(eco.vulnerable ?? 0) > 0 && (
-                              <span className="text-red-500">{eco.vulnerable} vulns</span>
-                            )}
-                            {(eco.outdated ?? 0) > 0 && (
-                              <span className="text-yellow-500">{eco.outdated} outdated</span>
-                            )}
-                          </div>
-                        </div>
-                        <Progress
-                          value={
-                            totalComponents > 0 ? ((eco.total ?? 0) / totalComponents) * 100 : 0
-                          }
-                          className="h-1.5"
-                        />
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-center py-8 text-muted-foreground">
-                      <p>No ecosystem data available</p>
-                    </div>
-                  )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* License Overview */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle className="flex items-center gap-2">
-                  <Scale className="h-5 w-5" />
-                  License Compliance
-                </CardTitle>
-                <CardDescription>License distribution and risks</CardDescription>
-              </div>
-              <Link href="/components/licenses">
-                <Button variant="ghost" size="sm">
-                  View All
-                  <ArrowRight className="ms-2 h-4 w-4" />
-                </Button>
-              </Link>
-            </CardHeader>
-            <CardContent>
-              {statsLoading ? (
-                <div className="space-y-3">
-                  {[1, 2, 3].map((i) => (
-                    <Skeleton key={i} className="h-8 w-full" />
-                  ))}
-                </div>
-              ) : hasMeaningfulLicenseData ? (
-                <div className="space-y-3">
-                  {licenseRiskEntries
-                    .sort(([a], [b]) => {
-                      const order = ['critical', 'high', 'medium', 'low', 'unknown']
-                      return order.indexOf(a) - order.indexOf(b)
-                    })
-                    .map(([risk, count]) => (
-                      <div
-                        key={risk}
-                        className="flex items-center justify-between p-2 rounded-lg hover:bg-accent/50"
-                      >
-                        <Badge
-                          variant={
-                            risk === 'critical' || risk === 'high' ? 'destructive' : 'outline'
-                          }
-                          className={
-                            risk === 'medium'
-                              ? 'bg-yellow-500/15 text-yellow-600'
-                              : risk === 'low'
-                                ? 'bg-green-500/15 text-green-600'
-                                : risk === 'unknown'
-                                  ? 'bg-gray-500/15 text-gray-600'
-                                  : ''
-                          }
-                        >
-                          {risk.charAt(0).toUpperCase() + risk.slice(1)} Risk
-                        </Badge>
-                        <span className="text-sm text-muted-foreground">
-                          {count} component{count !== 1 ? 's' : ''}
-                        </span>
-                      </div>
-                    ))}
-                </div>
-              ) : (
-                <EmptyState
-                  card={false}
-                  icon={Scale}
-                  title="No license data yet"
-                  description="License compliance populates once SBOM ingestion captures component licenses."
-                />
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Quick Actions */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="h-5 w-5" />
-                Quick Actions
-              </CardTitle>
-              <CardDescription>Common tasks and reports</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-3">
-                <Link href="/components/all">
-                  <Button variant="outline" className="w-full justify-start">
-                    <Package className="me-2 h-4 w-4" />
-                    View All Components
-                  </Button>
-                </Link>
-                <Link href="/components/vulnerable">
-                  <Button variant="outline" className="w-full justify-start">
-                    <ShieldAlert className="me-2 h-4 w-4" />
-                    Review Vulnerable Components
-                    {vulnerableCount > 0 && (
-                      <Badge variant="destructive" className="ms-auto">
-                        {vulnerableCount}
-                      </Badge>
-                    )}
-                  </Button>
-                </Link>
-                <Link href="/components/licenses">
-                  <Button variant="outline" className="w-full justify-start">
-                    <Scale className="me-2 h-4 w-4" />
-                    License Compliance Report
-                    {licenseRiskHigh > 0 && (
-                      <Badge className="ms-auto bg-orange-500/15 text-orange-600">
-                        {licenseRiskHigh}
-                      </Badge>
-                    )}
-                  </Button>
-                </Link>
-                <Link href="/components/sbom-export">
-                  <Button variant="outline" className="w-full justify-start">
-                    <Download className="me-2 h-4 w-4" />
-                    Export SBOM
-                  </Button>
-                </Link>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* CISA KEV Alert */}
-        {kevCount > 0 && (
-          <Card className="mt-6 border-red-500/50 bg-red-500/5">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-red-600">
-                <AlertTriangle className="h-5 w-5" />
-                CISA Known Exploited Vulnerabilities
-              </CardTitle>
-              <CardDescription>
-                {kevCount} component(s) contain vulnerabilities listed in CISA KEV catalog. These
-                require immediate attention.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
+      {kevCount > 0 && (
+        <Alert variant="destructive" className="mt-5">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Known exploited vulnerabilities</AlertTitle>
+          <AlertDescription className="flex flex-wrap items-center gap-3">
+            {kevCount.toLocaleString()}{' '}
+            {kevCount === 1 ? 'component contains' : 'components contain'} vulnerabilities from the
+            CISA KEV catalog and need immediate attention.
+            <Button variant="outline" size="sm" asChild>
               <Link href="/components/vulnerable?cisaKev=true">
-                <Button variant="destructive">
-                  View KEV Components
-                  <ArrowRight className="ms-2 h-4 w-4" />
-                </Button>
+                View KEV components
+                <ArrowRight className="ms-2 h-4 w-4" />
               </Link>
-            </CardContent>
-          </Card>
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {statsLoading ? (
+          [1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-[104px] w-full rounded-xl" />)
+        ) : (
+          <>
+            <StatsCard
+              title="Total components"
+              value={totalComponents.toLocaleString()}
+              description={`${directDeps.toLocaleString()} direct, ${transitiveDeps.toLocaleString()} transitive`}
+              icon={Package}
+            />
+            <StatsCard
+              title="Vulnerabilities"
+              value={totalVulns.toLocaleString()}
+              valueClassName={criticalVulns > 0 ? 'text-destructive' : undefined}
+              description={`${criticalVulns.toLocaleString()} critical, ${highVulns.toLocaleString()} high`}
+              icon={ShieldAlert}
+            />
+            <StatsCard
+              title="License risks"
+              value={licenseRiskHigh.toLocaleString()}
+              description="Components with high or critical license risk"
+              icon={Scale}
+            />
+            <StatsCard
+              title="Outdated"
+              value={outdatedCount.toLocaleString()}
+              description={`${outdatedShare.toFixed(0)}% of components`}
+              icon={Clock}
+            />
+          </>
         )}
-      </Main>
-    </>
+      </div>
+
+      <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <SectionCard
+          title="Vulnerable components"
+          description={`${vulnerableCount.toLocaleString()} ${vulnerableCount === 1 ? 'component needs' : 'components need'} attention`}
+          href="/components/vulnerable"
+        >
+          {vulnerableLoading ? (
+            <RowsSkeleton rows={4} height="h-12" />
+          ) : vulnerableComponents && vulnerableComponents.length > 0 ? (
+            <ul className="divide-y">
+              {vulnerableComponents.map((component) => (
+                <li
+                  key={component.id}
+                  className="flex items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0"
+                >
+                  <div className="min-w-0">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span className="truncate font-medium">{component.name}</span>
+                      <span className="shrink-0 font-mono text-xs text-muted-foreground">
+                        {component.version}
+                      </span>
+                    </div>
+                    <div className="mt-1 flex items-center gap-2">
+                      <EcosystemBadge ecosystem={component.ecosystem ?? 'unknown'} size="sm" />
+                      {component.in_cisa_kev && (
+                        <Badge variant="destructive" className="text-xs">
+                          KEV
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    {(component.critical_count ?? 0) > 0 && (
+                      <Badge
+                        variant="outline"
+                        className={cn('tabular-nums', SEVERITY_BADGE_SOFT.critical)}
+                        title="Critical vulnerabilities"
+                      >
+                        {component.critical_count} critical
+                      </Badge>
+                    )}
+                    {(component.high_count ?? 0) > 0 && (
+                      <Badge
+                        variant="outline"
+                        className={cn('tabular-nums', SEVERITY_BADGE_SOFT.high)}
+                        title="High vulnerabilities"
+                      >
+                        {component.high_count} high
+                      </Badge>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <EmptyState
+              card={false}
+              icon={ShieldCheck}
+              title="No vulnerable components"
+              description="None of your components has a known vulnerability."
+            />
+          )}
+        </SectionCard>
+
+        <SectionCard
+          title="Ecosystems"
+          description="Components by package manager"
+          href="/components/ecosystems"
+        >
+          {ecosystemLoading ? (
+            <RowsSkeleton />
+          ) : ecosystemStats && ecosystemStats.length > 0 ? (
+            <div className="space-y-3">
+              {ecosystemStats.slice(0, 5).map((eco) => (
+                <div key={eco.ecosystem} className="space-y-1.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <EcosystemBadge ecosystem={eco.ecosystem ?? 'unknown'} />
+                      <span className="text-sm font-medium tabular-nums">
+                        {(eco.total ?? 0).toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground tabular-nums">
+                      {(eco.vulnerable ?? 0) > 0 && (
+                        <span className="text-destructive">{eco.vulnerable} vulnerable</span>
+                      )}
+                      {(eco.outdated ?? 0) > 0 && <span>{eco.outdated} outdated</span>}
+                    </div>
+                  </div>
+                  <Progress
+                    value={totalComponents > 0 ? ((eco.total ?? 0) / totalComponents) * 100 : 0}
+                    className="h-1.5"
+                  />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <EmptyState
+              card={false}
+              icon={GitBranch}
+              title="No ecosystem data yet"
+              description="Ecosystems appear once components are ingested from an SBOM or scan."
+            />
+          )}
+        </SectionCard>
+
+        <SectionCard
+          title="License compliance"
+          description="Components by license risk"
+          href="/components/licenses"
+        >
+          {statsLoading ? (
+            <RowsSkeleton height="h-8" />
+          ) : hasMeaningfulLicenseData ? (
+            <ul className="divide-y">
+              {licenseRiskEntries.map(([risk, count]) => (
+                <li
+                  key={risk}
+                  className="flex items-center justify-between gap-2 py-2 first:pt-0 last:pb-0"
+                >
+                  <Badge
+                    variant={risk === 'unknown' ? 'secondary' : 'outline'}
+                    className={
+                      risk in CRITICALITY_BADGE_SOFT
+                        ? CRITICALITY_BADGE_SOFT[risk as CriticalityLevel]
+                        : undefined
+                    }
+                  >
+                    {risk.charAt(0).toUpperCase() + risk.slice(1)} risk
+                  </Badge>
+                  <span className="text-sm text-muted-foreground tabular-nums">
+                    {count.toLocaleString()} component{count !== 1 ? 's' : ''}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <EmptyState
+              card={false}
+              icon={Scale}
+              title="No license data yet"
+              description="License compliance populates once SBOM ingestion captures component licenses."
+            />
+          )}
+        </SectionCard>
+      </div>
+    </Main>
   )
 }
