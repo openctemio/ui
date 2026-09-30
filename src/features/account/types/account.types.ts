@@ -18,6 +18,13 @@ export interface UserProfile {
   updated_at: string
   email_verified: boolean
   auth_provider: 'local' | 'google' | 'github' | 'microsoft'
+  /**
+   * True when the caller is an application (platform) administrator
+   * (PLATFORM_ADMIN_EMAILS allow-list on the API). Only platform admins may
+   * configure tenant SSO/SAML/identity-provider/verified-domain/SCIM settings.
+   * Set on the /users/me response only.
+   */
+  is_platform_admin?: boolean
 }
 
 export interface UpdateProfileInput {
