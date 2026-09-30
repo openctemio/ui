@@ -13,7 +13,8 @@
 
 import { useEffect, useState, type HTMLAttributes } from 'react'
 import { cn } from '@/lib/utils'
-import { SidebarTrigger } from '@/components/ui/sidebar'
+import { SidebarTrigger, useSidebar } from '@/components/ui/sidebar'
+import { useLayout } from '@/context/layout-provider'
 import { Separator } from '@/components/ui/separator'
 import { BreadcrumbNav } from './breadcrumb-nav'
 import { HeaderActions } from './header-actions'
@@ -45,6 +46,12 @@ export function Header({
   ...props
 }: HeaderProps) {
   const [offset, setOffset] = useState(0)
+  const { state, isMobile } = useSidebar()
+  const { collapsible } = useLayout()
+  // The desktop toggle lives in the sidebar's brand row. The header keeps one
+  // only where the sidebar cannot show its own: on phones (sheet), and when an
+  // offcanvas sidebar is collapsed fully off screen.
+  const showTrigger = isMobile || (collapsible === 'offcanvas' && state === 'collapsed')
 
   useEffect(() => {
     const handleScroll = () => {
@@ -73,8 +80,12 @@ export function Header({
             'after:absolute after:inset-0 after:-z-10 after:bg-background/40 after:backdrop-blur-md'
         )}
       >
-        <SidebarTrigger variant="outline" className="max-md:scale-125" />
-        <Separator orientation="vertical" className="h-6" />
+        {showTrigger && (
+          <>
+            <SidebarTrigger variant="outline" className="max-md:scale-125" />
+            <Separator orientation="vertical" className="h-6" />
+          </>
+        )}
         {/* From lg: at tablet width the sidebar and header actions leave no room for
             a readable trail, and the page title already says where you are. */}
         {showBreadcrumb && <BreadcrumbNav className="hidden lg:flex" />}

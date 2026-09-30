@@ -15,6 +15,7 @@ import { NavClusterLabel, NavGroup } from './nav-group'
 import { useTranslation } from '@/context/i18n-provider'
 import { SidebarUser } from './sidebar-user'
 import { TeamSwitcher } from './team-switcher'
+import { SidebarBrand } from './sidebar-brand'
 import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
 
@@ -33,8 +34,11 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible={collapsible} variant={variant}>
-      {/* Header - Team Switcher */}
-      <SidebarHeader>
+      {/* Header: brand row (logo + collapse), then the context row (which
+          organization you are in). The brand row is shared with shells that
+          have no tenant, such as the admin console. */}
+      <SidebarHeader className="gap-3">
+        <SidebarBrand href="/" />
         <TeamSwitcher />
         <Separator orientation="horizontal" />
       </SidebarHeader>
