@@ -261,6 +261,20 @@ export const sidebarData: SidebarData = {
           permission: Permission.AssetsRead,
           module: 'assets',
         },
+        // ----------------------------------------
+        // WHAT CHANGED (change detection)
+        // Discovery, not Scoping: it is the delta of the inventory above (assets
+        // that appeared, disappeared or became internet-facing), fed by the
+        // same scans. Scoping > Attack Surface decides what matters; this shows
+        // what moved. Same permission + module as the inventory it reads.
+        // ----------------------------------------
+        {
+          title: 'What changed',
+          url: '/assets/changes',
+          icon: History,
+          permission: Permission.AssetsRead,
+          module: 'assets',
+        },
         // /assets opens on the full, filterable list; the category cards are a
         // view switch on the same page (?view=categories). /assets/all redirects.
         // ----------------------------------------
