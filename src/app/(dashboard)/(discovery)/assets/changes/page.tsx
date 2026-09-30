@@ -98,7 +98,10 @@ const SOURCE_LABEL: Record<string, string> = {
 
 function sentence(value: string | undefined): string {
   if (!value) return '—'
-  const s = value.replace(/_/g, ' ')
+  const s = value
+    .replace(/_/g, ' ')
+    // Acronyms stay upper case: "ip_address" reads "IP address", not "Ip address".
+    .replace(/\b(ip|api|dns|iam|vpc|url)\b/gi, (m) => m.toUpperCase())
   return s.charAt(0).toUpperCase() + s.slice(1)
 }
 
