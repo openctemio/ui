@@ -255,15 +255,14 @@ export const sidebarData: SidebarData = {
         // Organized by CTEM categories for comprehensive attack surface visibility
         // ----------------------------------------
         {
-          title: 'Asset Inventory',
+          title: 'Assets',
           url: '/assets',
           icon: Container,
           permission: Permission.AssetsRead,
           module: 'assets',
         },
-        // The unified, filterable "All Assets" inventory (/assets/all) is reached
-        // from a button on the Assets Overview page, so it is intentionally not a
-        // separate sidebar entry (it duplicated the item above).
+        // /assets opens on the full, filterable list; the category cards are a
+        // view switch on the same page (?view=categories). /assets/all redirects.
         // ----------------------------------------
         // EXPOSURES (CVEs + non-CVE security issues)
         // ----------------------------------------

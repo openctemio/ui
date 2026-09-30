@@ -12,7 +12,7 @@
  * viewer's own tenant). Saved / named views are intentionally deferred to v2.
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { ListFilter, Lock, PanelLeftClose, RefreshCw, Search } from 'lucide-react'
 import { Main } from '@/components/layout'
@@ -118,7 +118,7 @@ function InventoryTableSkeleton() {
   )
 }
 
-export function AllAssetsInventory() {
+export function AllAssetsInventory({ viewSwitcher }: { viewSwitcher?: ReactNode } = {}) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -235,7 +235,7 @@ export function AllAssetsInventory() {
   if (!canRead) {
     return (
       <Main>
-        <PageHeader title="All assets" />
+        <PageHeader title="Assets" />
         <EmptyState
           className="mt-8 border-dashed"
           icon={Lock}
@@ -337,7 +337,7 @@ export function AllAssetsInventory() {
 
   return (
     <Main>
-      <PageHeader title="All assets" />
+      <PageHeader title="Assets">{viewSwitcher}</PageHeader>
 
       <InventoryStatStrip
         className="mt-5"
