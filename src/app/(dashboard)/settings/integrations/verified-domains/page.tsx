@@ -1,13 +1,13 @@
 'use client'
 
-import { ShieldAlert, ShieldCheck } from 'lucide-react'
+import { ShieldCheck } from 'lucide-react'
 
 import { Main } from '@/components/layout/main'
 import { EmptyState } from '@/features/shared/components/empty-state'
 import { ErrorState } from '@/features/shared/components/error-state'
 import { PageHeader } from '@/features/shared/components/page-header'
+import { PlatformAdminGate } from '@/features/shared/components/platform-admin-gate'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Can, Permission } from '@/lib/permissions'
 import {
   AddDomainDialog,
   VerifiedDomainsList,
@@ -54,23 +54,10 @@ function VerifiedDomainsContent() {
 
 export default function VerifiedDomainsPage() {
   return (
-    <Main>
-      <Can
-        permission={Permission.TeamUpdate}
-        fallback={
-          <>
-            <PageHeader title="Verified domains" description={DESCRIPTION} />
-            <EmptyState
-              className="mt-5"
-              icon={ShieldAlert}
-              title="Admin access required"
-              description="Only tenant admins can manage verified domains."
-            />
-          </>
-        }
-      >
+    <PlatformAdminGate title="Verified domains" description={DESCRIPTION}>
+      <Main>
         <VerifiedDomainsContent />
-      </Can>
-    </Main>
+      </Main>
+    </PlatformAdminGate>
   )
 }
