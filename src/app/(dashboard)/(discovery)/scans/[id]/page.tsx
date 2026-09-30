@@ -1,23 +1,16 @@
 'use client'
 
 import { useMemo } from 'react'
+import type { ColumnDef } from '@tanstack/react-table'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Main } from '@/components/layout'
-import { StatusBadge, EmptyState } from '@/features/shared'
+import { StatusBadge, RunStatusBadge, DataTable, DataTableColumnHeader } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { toast } from 'sonner'
 import { useState } from 'react'
@@ -50,9 +43,7 @@ import {
   SCAN_TYPE_LABELS,
   SCHEDULE_TYPE_LABELS,
   AGENT_PREFERENCE_LABELS,
-  SCAN_RUN_STATUS_LABELS,
   type PipelineRun,
-  type ScanRunStatus,
 } from '@/lib/api/scan-types'
 import { PIPELINE_TRIGGER_LABELS, type PipelineTriggerType } from '@/lib/api/pipeline-types'
 
@@ -79,41 +70,6 @@ function formatRunDuration(run: PipelineRun) {
   if (!run.started_at) return '-'
   const end = run.completed_at ? new Date(run.completed_at) : new Date()
   return formatDuration(end.getTime() - new Date(run.started_at).getTime())
-}
-
-// Run status badge component
-function RunStatusBadge({ status }: { status: ScanRunStatus }) {
-  const variants: Record<ScanRunStatus, { className: string; icon: React.ReactNode }> = {
-    queued: {
-      className: 'bg-purple-500/10 text-purple-500',
-      icon: <Layers className="h-3 w-3" />,
-    },
-    pending: { className: 'bg-yellow-500/10 text-yellow-500', icon: <Clock className="h-3 w-3" /> },
-    running: {
-      className: 'bg-blue-500/10 text-blue-500',
-      icon: <RefreshCw className="h-3 w-3 animate-spin" />,
-    },
-    completed: {
-      className: 'bg-green-500/10 text-green-500',
-      icon: <CheckCircle className="h-3 w-3" />,
-    },
-    failed: { className: 'bg-red-500/10 text-red-500', icon: <XCircle className="h-3 w-3" /> },
-    canceled: {
-      className: 'bg-gray-500/10 text-gray-500',
-      icon: <AlertTriangle className="h-3 w-3" />,
-    },
-    timeout: {
-      className: 'bg-orange-500/10 text-orange-500',
-      icon: <AlertTriangle className="h-3 w-3" />,
-    },
-  }
-  const variant = variants[status] || variants.pending
-  return (
-    <Badge variant="outline" className={`gap-1 ${variant.className}`}>
-      {variant.icon}
-      {SCAN_RUN_STATUS_LABELS[status]}
-    </Badge>
-  )
 }
 
 export default function ScanDetailPage() {
@@ -226,6 +182,121 @@ export default function ScanDetailPage() {
       setDeleteConfirmOpen(false)
     }
   }
+
+  // All ten recent runs are on the client, so the headers sort them. Rebuilt
+  // each render: the cancel action reads the in-flight run id.
+  const runColumns: ColumnDef<PipelineRun>[] = [
+    {
+      id: 'started',
+      accessorFn: (run) => (run.started_at ? new Date(run.started_at).getTime() : 0),
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Started" />,
+      cell: ({ row }) => <span className="font-medium">{formatDate(row.original.started_at)}</span>,
+    },
+    {
+      accessorKey: 'status',
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
+      cell: ({ row }) => {
+        const run = row.original
+        return (
+          <div className="flex items-center gap-1">
+            <RunStatusBadge status={run.status} />
+            {run.failed_steps > 0 && (
+              <Badge
+                variant="outline"
+                className="text-xs text-destructive"
+                title={run.error_message || `${run.failed_steps} step(s) failed`}
+              >
+                <AlertTriangle className="h-3 w-3 me-0.5" />
+                {run.failed_steps}
+              </Badge>
+            )}
+          </div>
+        )
+      },
+    },
+    {
+      accessorKey: 'trigger_type',
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Trigger" />,
+      cell: ({ row }) => (
+        <div className="flex flex-col">
+          <span>
+            {PIPELINE_TRIGGER_LABELS[row.original.trigger_type as PipelineTriggerType] ??
+              row.original.trigger_type}
+          </span>
+          {row.original.triggered_by && (
+            <span className="text-xs text-muted-foreground">{row.original.triggered_by}</span>
+          )}
+        </div>
+      ),
+    },
+    {
+      id: 'steps',
+      header: 'Steps',
+      cell: ({ row }) => (
+        <>
+          <span className="tabular-nums">
+            {row.original.completed_steps}/{row.original.total_steps}
+          </span>
+          {row.original.skipped_steps > 0 && (
+            <span className="ms-1 text-xs text-muted-foreground">
+              ({row.original.skipped_steps} skipped)
+            </span>
+          )}
+        </>
+      ),
+    },
+    {
+      accessorKey: 'total_findings',
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Findings" />,
+      cell: ({ row }) =>
+        row.original.total_findings > 0 ? (
+          <Badge variant="secondary" className="tabular-nums">
+            {row.original.total_findings}
+          </Badge>
+        ) : (
+          <span className="text-muted-foreground">-</span>
+        ),
+    },
+    {
+      id: 'duration',
+      header: 'Duration',
+      cell: ({ row }) => <span className="tabular-nums">{formatRunDuration(row.original)}</span>,
+    },
+    {
+      id: 'actions',
+      enableHiding: false,
+      cell: ({ row }) => {
+        const run = row.original
+        const isActive =
+          run.status === 'pending' || run.status === 'queued' || run.status === 'running'
+        if (!isActive) return null
+        return (
+          // PipelinesWrite, not ScansWrite. Cancel posts to
+          // POST /pipeline-runs/{id}/cancel, and that route
+          // requires pipelines:write. Gating on scans:write
+          // showed an enabled button to users the API would
+          // reject with a 403 — the button changed endpoint
+          // in #335 and the permission gate did not follow.
+          <Can permission={Permission.PipelinesWrite}>
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={stoppingRunId === run.id}
+              onClick={() => handleStopRun(run)}
+              aria-label={`Cancel run ${run.id}`}
+            >
+              {stoppingRunId === run.id ? (
+                <RefreshCw className="me-1 h-4 w-4 animate-spin" />
+              ) : (
+                <XCircle className="me-1 h-4 w-4" />
+              )}
+              Cancel
+            </Button>
+          </Can>
+        )
+      },
+    },
+  ]
 
   // Loading state
   if (isLoading) {
@@ -456,128 +527,19 @@ export default function ScanDetailPage() {
         </TabsList>
 
         {/* Runs Tab */}
-        <TabsContent value="runs">
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Runs</CardTitle>
-              <CardDescription>History of scan executions</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {isLoadingRuns ? (
-                <div className="space-y-2">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <Skeleton key={i} className="h-12 w-full" />
-                  ))}
-                </div>
-              ) : recentRuns.length === 0 ? (
-                <EmptyState
-                  card={false}
-                  icon={Activity}
-                  title="No runs yet"
-                  description="Trigger this scan to see run history"
-                />
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Trigger</TableHead>
-                      <TableHead>Steps</TableHead>
-                      <TableHead>Findings</TableHead>
-                      <TableHead>Duration</TableHead>
-                      <TableHead>Started</TableHead>
-                      <TableHead className="text-end">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {recentRuns.map((run: PipelineRun) => {
-                      const isActive =
-                        run.status === 'pending' ||
-                        run.status === 'queued' ||
-                        run.status === 'running'
-                      return (
-                        <TableRow key={run.id}>
-                          <TableCell>
-                            <div className="flex items-center gap-1">
-                              <RunStatusBadge status={run.status as ScanRunStatus} />
-                              {run.failed_steps > 0 && (
-                                <Badge
-                                  variant="outline"
-                                  className="text-xs text-red-500"
-                                  title={run.error_message || `${run.failed_steps} step(s) failed`}
-                                >
-                                  <AlertTriangle className="h-3 w-3 me-0.5" />
-                                  {run.failed_steps}
-                                </Badge>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell className="font-medium">
-                            <div className="flex flex-col">
-                              <span>
-                                {PIPELINE_TRIGGER_LABELS[run.trigger_type as PipelineTriggerType] ??
-                                  run.trigger_type}
-                              </span>
-                              {run.triggered_by && (
-                                <span className="text-muted-foreground text-xs">
-                                  {run.triggered_by}
-                                </span>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <span className="tabular-nums">
-                              {run.completed_steps}/{run.total_steps}
-                            </span>
-                            {run.skipped_steps > 0 && (
-                              <span className="text-muted-foreground ms-1 text-xs">
-                                ({run.skipped_steps} skipped)
-                              </span>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {run.total_findings > 0 ? (
-                              <Badge variant="secondary">{run.total_findings}</Badge>
-                            ) : (
-                              <span className="text-muted-foreground">-</span>
-                            )}
-                          </TableCell>
-                          <TableCell>{formatRunDuration(run)}</TableCell>
-                          <TableCell>{formatDate(run.started_at)}</TableCell>
-                          <TableCell className="text-end">
-                            {isActive && (
-                              // PipelinesWrite, not ScansWrite. Cancel posts to
-                              // POST /pipeline-runs/{id}/cancel, and that route
-                              // requires pipelines:write. Gating on scans:write
-                              // showed an enabled button to users the API would
-                              // reject with a 403 — the button changed endpoint
-                              // in #335 and the permission gate did not follow.
-                              <Can permission={Permission.PipelinesWrite}>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  disabled={stoppingRunId === run.id}
-                                  onClick={() => handleStopRun(run)}
-                                  aria-label={`Cancel run ${run.id}`}
-                                >
-                                  {stoppingRunId === run.id ? (
-                                    <RefreshCw className="me-1 h-4 w-4 animate-spin" />
-                                  ) : (
-                                    <XCircle className="me-1 h-4 w-4" />
-                                  )}
-                                  Cancel
-                                </Button>
-                              </Can>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      )
-                    })}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
+        <TabsContent value="runs" className="space-y-3">
+          <p className="text-sm text-muted-foreground">
+            The ten most recent executions of this scan
+          </p>
+          <DataTable
+            columns={runColumns}
+            data={recentRuns}
+            getRowId={(run) => run.id}
+            isLoading={isLoadingRuns}
+            showSearch={false}
+            emptyMessage="No runs yet"
+            emptyDescription="Trigger this scan to see run history"
+          />
         </TabsContent>
 
         {/* Configuration Tab */}

@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo } from 'react'
+import type { ColumnDef } from '@tanstack/react-table'
 import { formatChartDate } from '@/lib/format-chart-date'
 import useSWR from 'swr'
 import { Main } from '@/components/layout'
@@ -10,6 +11,8 @@ import {
   EmptyState,
   formatRiskScore,
   getRiskScoreChangeType,
+  DataTable,
+  DataTableColumnHeader,
 } from '@/features/shared'
 import { useDashboardStats } from '@/features/dashboard/hooks/use-dashboard-stats'
 import { useTenant } from '@/context/tenant-provider'
@@ -26,14 +29,6 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import { cn } from '@/lib/utils'
 import {
   SEVERITY_CHART_COLORS,
@@ -91,6 +86,45 @@ const SEVERITY_ORDER: SeverityKey[] = ['critical', 'high', 'medium', 'low', 'inf
 // arrive here as null/undefined and would otherwise throw on `.toFixed`.
 const num = (v: number | undefined | null): number => v ?? 0
 const fmt = (v: number | undefined | null, d = 1): string => num(v).toFixed(d)
+
+/** A count column of the risk trend table: right-aligned, tabular, optionally flagged. */
+function trendCount(
+  key: 'findings_open' | 'p0_open' | 'p1_open' | 'p2_open' | 'p3_open',
+  title: string,
+  flagClass?: string
+): ColumnDef<RiskTrendPoint> {
+  return {
+    id: key,
+    accessorFn: (p) => num(p[key]),
+    header: ({ column }) => <DataTableColumnHeader column={column} title={title} />,
+    cell: ({ row }) => {
+      const v = num(row.original[key])
+      return <span className={cn('tabular-nums', v > 0 && flagClass)}>{v}</span>
+    },
+  }
+}
+
+const RISK_TREND_COLUMNS: ColumnDef<RiskTrendPoint>[] = [
+  {
+    id: 'date',
+    accessorFn: (p) => new Date(p.date).getTime(),
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Date" />,
+    cell: ({ row }) => (
+      <span className="text-sm">{new Date(row.original.date).toLocaleDateString()}</span>
+    ),
+  },
+  {
+    id: 'risk_score_avg',
+    accessorFn: (p) => num(p.risk_score_avg),
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Risk score" />,
+    cell: ({ row }) => <span className="tabular-nums">{fmt(row.original.risk_score_avg, 1)}</span>,
+  },
+  trendCount('findings_open', 'Open findings'),
+  trendCount('p0_open', 'P0', 'font-medium text-destructive'),
+  trendCount('p1_open', 'P1', 'font-medium text-warning'),
+  trendCount('p2_open', 'P2'),
+  trendCount('p3_open', 'P3'),
+]
 
 function getSeverityBadgeClass(severity: string) {
   // "positive" is a good-news risk factor (not a severity level) — keep green.
@@ -558,62 +592,21 @@ export default function TrendingExposuresPage() {
 
           {/* RFC-005: Risk Trend Table */}
           {riskTrend.length > 0 && (
-            <Card className="mt-6">
-              <CardHeader>
-                <CardTitle>Risk Trend (90 days)</CardTitle>
-                <CardDescription>
+            <section className="mt-6 space-y-3">
+              <div>
+                <h2 className="text-base font-semibold">Risk trend (90 days)</h2>
+                <p className="text-sm text-muted-foreground">
                   Daily risk score and finding counts by priority class
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="max-h-[400px] overflow-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Date</TableHead>
-                        <TableHead className="text-end">Risk Score</TableHead>
-                        <TableHead className="text-end">Open Findings</TableHead>
-                        <TableHead className="text-end">P0</TableHead>
-                        <TableHead className="text-end">P1</TableHead>
-                        <TableHead className="text-end">P2</TableHead>
-                        <TableHead className="text-end">P3</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {riskTrend.map((point) => (
-                        <TableRow key={point.date}>
-                          <TableCell className="text-sm">
-                            {new Date(point.date).toLocaleDateString()}
-                          </TableCell>
-                          <TableCell className="text-end font-mono">
-                            {fmt(point.risk_score_avg, 1)}
-                          </TableCell>
-                          <TableCell className="text-end">{num(point.findings_open)}</TableCell>
-                          <TableCell className="text-end">
-                            <span
-                              className={cn(num(point.p0_open) > 0 && 'text-red-500 font-medium')}
-                            >
-                              {num(point.p0_open)}
-                            </span>
-                          </TableCell>
-                          <TableCell className="text-end">
-                            <span
-                              className={cn(
-                                num(point.p1_open) > 0 && 'text-orange-500 font-medium'
-                              )}
-                            >
-                              {num(point.p1_open)}
-                            </span>
-                          </TableCell>
-                          <TableCell className="text-end">{num(point.p2_open)}</TableCell>
-                          <TableCell className="text-end">{num(point.p3_open)}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
+                </p>
+              </div>
+              <DataTable
+                columns={RISK_TREND_COLUMNS}
+                data={riskTrend}
+                getRowId={(p) => p.date}
+                showSearch={false}
+                emptyMessage="No risk trend data yet"
+              />
+            </section>
           )}
         </>
       )}

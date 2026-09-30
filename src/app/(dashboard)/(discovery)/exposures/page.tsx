@@ -108,7 +108,7 @@ const SEVERITY_LABELS: Record<ExposureSeverity, string> = {
   info: 'Info',
 }
 
-const PAGE_SIZES = [10, 20, 50, 100]
+const PAGE_SIZES = [10, 20, 30, 50, 100]
 
 // CSV columns for the Export action — every exposure matching the filters.
 const EXPOSURE_EXPORT_FIELDS: ExportFieldConfig<ExposureEvent>[] = [

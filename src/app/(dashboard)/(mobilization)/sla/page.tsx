@@ -238,7 +238,6 @@ export default function SlaBreachBoardPage() {
             data={breached}
             searchKey="title"
             searchPlaceholder="Search findings..."
-            pageSize={10}
             onRowClick={(row) => router.push(`/findings/${row.id}`)}
           />
         )}

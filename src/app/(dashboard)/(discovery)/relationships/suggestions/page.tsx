@@ -77,7 +77,7 @@ const TYPE_LABELS: Record<string, string> = {
 }
 
 const ALL_RELATIONSHIP_TYPES = Object.keys(TYPE_LABELS)
-const PAGE_SIZES = [20, 50, 100]
+const PAGE_SIZES = [10, 20, 30, 50, 100]
 
 function AssetCell({ type, name, id }: { type: string; name: string; id: string }) {
   return (
