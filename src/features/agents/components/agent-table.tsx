@@ -191,7 +191,7 @@ export function AgentTable({
         enableSorting: false,
         header: 'Version',
         cell: ({ row }) => (
-          <span className="font-mono text-xs text-muted-foreground">
+          <span className="text-xs tabular-nums text-muted-foreground">
             {row.original.version ? `v${row.original.version}` : '—'}
           </span>
         ),

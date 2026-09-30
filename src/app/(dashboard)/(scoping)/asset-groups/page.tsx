@@ -834,7 +834,6 @@ export default function AssetGroupsPage() {
                 showSearch={false}
                 toolbarStart={toolbarStart}
                 toolbarEnd={toolbarEnd}
-                pageSize={20}
                 emptyMessage="No asset groups found"
                 emptyDescription={
                   activeFilterCount > 0 || searchQuery

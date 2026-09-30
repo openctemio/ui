@@ -50,15 +50,15 @@ export function FilteringResultBanner({
   // Fully compatible - show success
   if (status === 'full') {
     return (
-      <Alert className={cn('border-green-500/30 bg-green-500/5', className)}>
-        <Filter className="h-4 w-4 text-green-600" />
-        <AlertTitle className="flex items-center gap-2 text-green-600">
+      <Alert className={cn('border-success/30 bg-success/5', className)}>
+        <Filter className="h-4 w-4 text-success" />
+        <AlertTitle className="flex items-center gap-2 text-success">
           <span>All assets scanned</span>
-          <Badge variant="outline" className="border-green-500/30 bg-green-500/10 text-green-600">
+          <Badge variant="outline" className="border-success/30 bg-success/10 text-success">
             {result.scannedAssets} assets
           </Badge>
         </AlertTitle>
-        <AlertDescription className="text-green-600/80">
+        <AlertDescription className="text-success/80">
           All assets in the scan scope are compatible with {result.toolName || 'the selected tool'}.
         </AlertDescription>
         {dismissible && (
@@ -79,18 +79,18 @@ export function FilteringResultBanner({
     <Alert
       className={cn(
         'relative',
-        status === 'partial' && 'border-yellow-500/30 bg-yellow-500/5',
-        status === 'none' && 'border-red-500/30 bg-red-500/5',
+        status === 'partial' && 'border-warning/30 bg-warning/5',
+        status === 'none' && 'border-destructive/30 bg-destructive/5',
         className
       )}
     >
       <Filter
-        className={cn('h-4 w-4', status === 'partial' ? 'text-yellow-600' : 'text-red-600')}
+        className={cn('h-4 w-4', status === 'partial' ? 'text-warning' : 'text-destructive')}
       />
       <AlertTitle
         className={cn(
           'flex items-center gap-2',
-          status === 'partial' ? 'text-yellow-600' : 'text-red-600'
+          status === 'partial' ? 'text-warning' : 'text-destructive'
         )}
       >
         <span>Smart filtering applied</span>
@@ -101,7 +101,7 @@ export function FilteringResultBanner({
         )}
       </AlertTitle>
       <AlertDescription className="space-y-3">
-        <p className={cn(status === 'partial' ? 'text-yellow-600/80' : 'text-red-600/80')}>
+        <p className={cn(status === 'partial' ? 'text-warning/80' : 'text-destructive/80')}>
           {result.skippedAssets} of {result.totalAssets} assets were <strong>skipped</strong>{' '}
           because they are not compatible with the scanner.
         </p>
@@ -118,8 +118,8 @@ export function FilteringResultBanner({
             value={result.compatibilityPercent}
             className={cn(
               'h-2',
-              status === 'partial' && '[&>div]:bg-yellow-500',
-              status === 'none' && '[&>div]:bg-red-500'
+              status === 'partial' && '[&>div]:bg-warning',
+              status === 'none' && '[&>div]:bg-destructive'
             )}
           />
         </div>
@@ -129,9 +129,9 @@ export function FilteringResultBanner({
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Badge variant="outline" className="border-green-500/30 bg-green-500/10">
-                  <CheckCircle className="me-1 h-3 w-3 text-green-600" />
-                  <span className="text-green-600">{result.scannedAssets} scanned</span>
+                <Badge variant="outline" className="border-success/30 bg-success/10">
+                  <CheckCircle className="me-1 h-3 w-3 text-success" />
+                  <span className="text-success">{result.scannedAssets} scanned</span>
                 </Badge>
               </TooltipTrigger>
               <TooltipContent>
@@ -143,9 +143,9 @@ export function FilteringResultBanner({
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Badge variant="outline" className="border-red-500/30 bg-red-500/10">
-                  <XCircle className="me-1 h-3 w-3 text-red-600" />
-                  <span className="text-red-600">{result.skippedAssets} skipped</span>
+                <Badge variant="outline" className="border-destructive/30 bg-destructive/10">
+                  <XCircle className="me-1 h-3 w-3 text-destructive" />
+                  <span className="text-destructive">{result.skippedAssets} skipped</span>
                 </Badge>
               </TooltipTrigger>
               <TooltipContent>
@@ -184,10 +184,12 @@ export function FilteringResultBanner({
             </CollapsibleTrigger>
             <CollapsibleContent className="mt-2">
               <div className="rounded-md border bg-background/50 p-2">
+                {/* A few-row breakdown inside an alert, not a list: a plain table keeps
+                    it compact; DataTable's toolbar and paging would outweigh it. */}
                 <table className="w-full text-xs">
                   <thead>
                     <tr className="border-b text-muted-foreground">
-                      <th className="pb-1 text-start font-medium">Asset Type</th>
+                      <th className="pb-1 text-start font-medium">Asset type</th>
                       <th className="pb-1 text-end font-medium">Count</th>
                       <th className="pb-1 text-start font-medium">Reason</th>
                     </tr>
@@ -199,7 +201,7 @@ export function FilteringResultBanner({
                           {ASSET_TYPE_LABELS[item.assetType as keyof typeof ASSET_TYPE_LABELS] ||
                             item.assetType}
                         </td>
-                        <td className="py-1 text-end">{item.count}</td>
+                        <td className="py-1 text-end tabular-nums">{item.count}</td>
                         <td className="py-1 text-muted-foreground">{item.reason}</td>
                       </tr>
                     ))}
@@ -255,8 +257,8 @@ export function FilteringResultBadge({ result }: { result: FilteringResult }) {
             variant="outline"
             className={cn(
               'cursor-help',
-              status === 'partial' && 'border-yellow-500/30 bg-yellow-500/10 text-yellow-600',
-              status === 'none' && 'border-red-500/30 bg-red-500/10 text-red-600'
+              status === 'partial' && 'border-warning/30 bg-warning/10 text-warning',
+              status === 'none' && 'border-destructive/30 bg-destructive/10 text-destructive'
             )}
           >
             <Filter className="me-1 h-3 w-3" />

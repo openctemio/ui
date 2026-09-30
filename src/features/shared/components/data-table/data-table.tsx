@@ -27,6 +27,7 @@ import {
 } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -131,7 +132,17 @@ interface DataTableProps<TData, TValue> {
    * the scrolling table on phones.
    */
   mobileCards?: boolean
+  /**
+   * The rows are being fetched. The body shows skeleton rows instead of the
+   * empty message, while the toolbar stays mounted — a server-side search box
+   * must not lose focus (or its text) because a keystroke started a refetch.
+   * Rows already on screen stay visible; skeletons only replace an empty body.
+   */
+  isLoading?: boolean
 }
+
+/** Skeleton rows shown in an empty body while `isLoading`. */
+const LOADING_ROWS = 5
 
 /** Fixed width of the selection column, so the pinned column after it knows its offset. */
 const SELECT_COL_WIDTH = 40
@@ -292,6 +303,7 @@ export function DataTable<TData, TValue>({
   showSelectionCount = true,
   mobileRow,
   mobileCards = true,
+  isLoading = false,
 }: DataTableProps<TData, TValue>) {
   // Cards replace the table on phones. Decided in JS rather than by hiding one
   // with CSS, so only one of the two is ever rendered.
@@ -554,6 +566,15 @@ export function DataTable<TData, TValue>({
                   />
                 )
               )
+          ) : isLoading ? (
+            <div aria-busy="true" aria-label="Loading">
+              {Array.from({ length: LOADING_ROWS }).map((_, i) => (
+                <div key={i} className="space-y-2 px-3 py-3">
+                  <Skeleton className="h-4 w-2/3" />
+                  <Skeleton className="h-3 w-1/3" />
+                </div>
+              ))}
+            </div>
           ) : (
             <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
               <Inbox className="h-10 w-10 text-muted-foreground/50" />
@@ -616,6 +637,18 @@ export function DataTable<TData, TValue>({
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id} {...pinnedProps(cell.column.id)}>
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
+            ) : isLoading ? (
+              Array.from({ length: LOADING_ROWS }).map((_, i) => (
+                <TableRow key={`loading-${i}`} aria-busy="true" data-loading-row="">
+                  {table.getVisibleLeafColumns().map((column) => (
+                    <TableCell key={column.id}>
+                      <Skeleton
+                        className={cn('h-4', column.id === 'select' ? 'w-4' : 'w-full max-w-40')}
+                      />
                     </TableCell>
                   ))}
                 </TableRow>

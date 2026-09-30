@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+import type { ColumnDef } from '@tanstack/react-table'
 import { Main } from '@/components/layout'
-import { PageHeader } from '@/features/shared'
+import { PageHeader, DataTable, DataTableColumnHeader } from '@/features/shared'
 import { useTenant } from '@/context/tenant-provider'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -44,7 +45,6 @@ import type {
   RiskScoringSettings,
   RiskScorePreviewItem,
 } from '@/features/organization/types/settings.types'
-import { Pagination } from '@/components/ui/pagination'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { getErrorMessage } from '@/lib/api/error-handler'
 
@@ -206,6 +206,48 @@ function NumberInput({
   )
 }
 
+/** Sampled assets of the scoring preview, sortable on the client. */
+const PREVIEW_COLUMNS: ColumnDef<RiskScorePreviewItem>[] = [
+  {
+    accessorKey: 'asset_name',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Asset" />,
+    cell: ({ row }) => (
+      <span className="block max-w-[300px] truncate font-medium" title={row.original.asset_name}>
+        {row.original.asset_name}
+      </span>
+    ),
+  },
+  {
+    accessorKey: 'asset_type',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Type" />,
+    cell: ({ row }) => (
+      <span className="text-xs text-muted-foreground">{row.original.asset_type}</span>
+    ),
+  },
+  {
+    accessorKey: 'current_score',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Current" />,
+    cell: ({ row }) => <span className="tabular-nums">{row.original.current_score}</span>,
+  },
+  {
+    accessorKey: 'new_score',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="New" />,
+    cell: ({ row }) => <span className="tabular-nums">{row.original.new_score}</span>,
+  },
+  {
+    accessorKey: 'delta',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Delta" />,
+    cell: ({ row }) => (
+      <span
+        className={`font-medium tabular-nums ${row.original.delta > 0 ? 'text-destructive' : ''}`}
+      >
+        {row.original.delta > 0 ? '+' : ''}
+        {row.original.delta}
+      </span>
+    ),
+  },
+]
+
 export default function ScoringConfigurationPage() {
   const { currentTenant } = useTenant()
   const tenantId = currentTenant?.id
@@ -219,8 +261,6 @@ export default function ScoringConfigurationPage() {
   const [isDirty, setIsDirty] = useState(false)
   const [previewItems, setPreviewItems] = useState<RiskScorePreviewItem[] | null>(null)
   const [previewTotalAssets, setPreviewTotalAssets] = useState<number>(0)
-  const [previewPage, setPreviewPage] = useState(1)
-  const previewPageSize = 10
 
   // Initialize form from API data
   useEffect(() => {
@@ -332,7 +372,6 @@ export default function ScoringConfigurationPage() {
       if (result) {
         setPreviewItems(result.assets)
         setPreviewTotalAssets(result.total_assets)
-        setPreviewPage(1)
       }
     } catch (err) {
       toast.error(getErrorMessage(err))
@@ -360,12 +399,6 @@ export default function ScoringConfigurationPage() {
     window.addEventListener('beforeunload', handler)
     return () => window.removeEventListener('beforeunload', handler)
   }, [isDirty])
-
-  const paginatedPreviewItems = useMemo(() => {
-    if (!previewItems) return []
-    const start = (previewPage - 1) * previewPageSize
-    return previewItems.slice(start, start + previewPageSize)
-  }, [previewItems, previewPage])
 
   if (error && !config) {
     return (
@@ -1082,85 +1115,51 @@ export default function ScoringConfigurationPage() {
         </CardContent>
       </Card>
 
-      {/* Preview Changes — full width for table readability */}
-      <Card className="mt-5">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Preview changes</CardTitle>
-              <CardDescription>See how score changes affect a sample of assets</CardDescription>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handlePreview}
-              disabled={isPreviewing || !isDirty}
-            >
-              {isPreviewing ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Eye className="h-4 w-4" />
-              )}
-              Preview impact
-            </Button>
-          </div>
-        </CardHeader>
-        {previewItems && previewItems.length > 0 && (
-          <CardContent>
-            <p className="text-muted-foreground mb-2 text-xs">
-              Showing {previewItems.length} sampled assets out of{' '}
-              {previewTotalAssets.toLocaleString()} total (top risk, bottom risk, and random
-              sample).
+      {/* Preview Changes — full width for table readability. A section rather
+          than a card: the table draws its own frame. */}
+      <section className="mt-5 space-y-3">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h2 className="text-base font-semibold">Preview changes</h2>
+            <p className="text-sm text-muted-foreground">
+              See how score changes affect a sample of assets
             </p>
-            <div className="max-h-80 overflow-auto rounded border">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/50 sticky top-0">
-                  <tr>
-                    <th className="p-2 text-start font-medium">Asset</th>
-                    <th className="p-2 text-start font-medium">Type</th>
-                    <th className="p-2 text-end font-medium">Current</th>
-                    <th className="p-2 text-end font-medium">New</th>
-                    <th className="p-2 text-end font-medium">Delta</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {paginatedPreviewItems.map((item) => (
-                    <tr key={item.asset_id} className="border-t">
-                      <td className="max-w-[300px] truncate p-2">{item.asset_name}</td>
-                      <td className="text-muted-foreground p-2 text-xs">{item.asset_type}</td>
-                      <td className="p-2 text-end tabular-nums">{item.current_score}</td>
-                      <td className="p-2 text-end tabular-nums">{item.new_score}</td>
-                      <td
-                        className={`p-2 text-end font-medium tabular-nums ${item.delta > 0 ? 'text-destructive' : ''}`}
-                      >
-                        {item.delta > 0 ? '+' : ''}
-                        {item.delta}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            {previewItems.length > previewPageSize && (
-              <div className="mt-3">
-                <Pagination
-                  currentPage={previewPage}
-                  totalPages={Math.ceil(previewItems.length / previewPageSize)}
-                  pageSize={previewPageSize}
-                  totalItems={previewItems.length}
-                  onPageChange={setPreviewPage}
-                  showPageSizeSelector={false}
-                />
-              </div>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handlePreview}
+            disabled={isPreviewing || !isDirty}
+          >
+            {isPreviewing ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Eye className="h-4 w-4" />
             )}
-          </CardContent>
+            Preview impact
+          </Button>
+        </div>
+        {previewItems && (
+          <>
+            {previewItems.length > 0 && (
+              <p className="text-xs text-muted-foreground">
+                Showing {previewItems.length} sampled assets out of{' '}
+                {previewTotalAssets.toLocaleString()} total (top risk, bottom risk, and random
+                sample).
+              </p>
+            )}
+            <DataTable
+              columns={PREVIEW_COLUMNS}
+              data={previewItems}
+              getRowId={(item) => item.asset_id}
+              searchKey="asset_name"
+              searchPlaceholder="Search assets…"
+              emptyMessage="No assets to preview"
+              emptyDescription="There are no assets for the new weights to score yet"
+            />
+          </>
         )}
-        {previewItems && previewItems.length === 0 && (
-          <CardContent>
-            <p className="text-muted-foreground text-sm">No assets to preview.</p>
-          </CardContent>
-        )}
-      </Card>
+      </section>
 
       {/* Recalculate & How Scoring Works — side by side */}
       <div className="mt-5 grid gap-5 lg:grid-cols-2">

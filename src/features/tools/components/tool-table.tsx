@@ -133,11 +133,11 @@ export function ToolTable({
           const tool = row.original
           return (
             <div className="flex items-center gap-2">
-              <span className="font-mono text-xs">{tool.current_version || '–'}</span>
+              <span className="text-xs tabular-nums">{tool.current_version || '–'}</span>
               {tool.has_update && tool.latest_version && (
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Badge variant="secondary" className="gap-1 font-mono">
+                    <Badge variant="secondary" className="gap-1 tabular-nums">
                       <ArrowUpCircle className="h-3 w-3" />
                       {tool.latest_version}
                     </Badge>
