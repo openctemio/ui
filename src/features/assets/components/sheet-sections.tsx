@@ -6,8 +6,9 @@
 
 import * as React from 'react'
 import {
-  CheckCircle,
   Clock,
+  Info,
+  Tag as TagIcon,
   Trash2,
   Eye,
   EyeOff,
@@ -28,6 +29,7 @@ import { copyToClipboard } from '@/lib/clipboard'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { getErrorMessage } from '@/lib/api/error-handler'
+import { DetailSection, DetailField, DetailFieldGrid } from '@/features/shared'
 import type { AssetType } from '../types/asset.types'
 import { ASSET_TYPE_LABELS } from '../types/asset.types'
 
@@ -126,13 +128,13 @@ interface TimelineSectionProps {
 
 /**
  * Renders all 4 lifecycle timestamps an asset carries:
- *   - First Seen — when the asset was first observed by any scanner
- *   - Last Seen  — when the asset was last observed
+ *   - First seen — when the asset was first observed by any scanner
+ *   - Last seen  — when the asset was last observed
  *   - Created    — when the asset row was inserted in OpenCTEM
  *   - Updated    — when the asset row was last modified
  *
- * First/Last Seen describe the *real-world discovery* lifecycle.
- * Created/Updated describe the *database record* lifecycle. They can
+ * First/last seen describe the *real-world discovery* lifecycle.
+ * Created/updated describe the *database record* lifecycle. They can
  * differ — e.g. an asset was discovered yesterday (firstSeen) but the
  * description was edited today (updatedAt).
  */
@@ -142,56 +144,18 @@ export function TimelineSection({
   createdAt,
   updatedAt,
 }: TimelineSectionProps) {
+  const fmt = (iso: string) => new Date(iso).toLocaleString()
   return (
-    <div className="rounded-xl border p-4 bg-card">
-      <h4 className="text-sm font-medium mb-3">Timeline</h4>
-      <div className="space-y-3">
-        <div className="flex items-start gap-3">
-          <div className="h-6 w-6 rounded-full bg-green-500/20 flex items-center justify-center mt-0.5">
-            <CheckCircle className="h-3.5 w-3.5 text-green-500" />
-          </div>
-          <div>
-            <p className="text-sm font-medium">First Seen</p>
-            <p className="text-xs text-muted-foreground">{new Date(firstSeen).toLocaleString()}</p>
-          </div>
-        </div>
-        <div className="flex items-start gap-3">
-          <div className="h-6 w-6 rounded-full bg-blue-500/20 flex items-center justify-center mt-0.5">
-            <Clock className="h-3.5 w-3.5 text-blue-500" />
-          </div>
-          <div>
-            <p className="text-sm font-medium">Last Seen</p>
-            <p className="text-xs text-muted-foreground">{new Date(lastSeen).toLocaleString()}</p>
-          </div>
-        </div>
-        {createdAt && (
-          <div className="flex items-start gap-3">
-            <div className="h-6 w-6 rounded-full bg-purple-500/20 flex items-center justify-center mt-0.5">
-              <Clock className="h-3.5 w-3.5 text-purple-500" />
-            </div>
-            <div>
-              <p className="text-sm font-medium">Created</p>
-              <p className="text-xs text-muted-foreground">
-                {new Date(createdAt).toLocaleString()}
-              </p>
-            </div>
-          </div>
-        )}
+    <DetailSection title="Timeline" icon={Clock}>
+      <DetailFieldGrid>
+        <DetailField label="First seen">{fmt(firstSeen)}</DetailField>
+        <DetailField label="Last seen">{fmt(lastSeen)}</DetailField>
+        {createdAt && <DetailField label="Created">{fmt(createdAt)}</DetailField>}
         {updatedAt && updatedAt !== createdAt && (
-          <div className="flex items-start gap-3">
-            <div className="h-6 w-6 rounded-full bg-amber-500/20 flex items-center justify-center mt-0.5">
-              <Clock className="h-3.5 w-3.5 text-amber-500" />
-            </div>
-            <div>
-              <p className="text-sm font-medium">Updated</p>
-              <p className="text-xs text-muted-foreground">
-                {new Date(updatedAt).toLocaleString()}
-              </p>
-            </div>
-          </div>
+          <DetailField label="Updated">{fmt(updatedAt)}</DetailField>
         )}
-      </div>
-    </div>
+      </DetailFieldGrid>
+    </DetailSection>
   )
 }
 
@@ -207,29 +171,21 @@ interface TechnicalDetailsSectionProps {
 
 export function TechnicalDetailsSection({ id, type, groupId }: TechnicalDetailsSectionProps) {
   return (
-    <div className="rounded-xl border p-4 bg-card">
-      <h4 className="text-sm font-medium mb-3">Technical Details</h4>
-      <div className="space-y-2 text-sm">
-        <div className="flex items-center justify-between">
-          <span className="text-muted-foreground">ID</span>
-          <code className="text-xs bg-muted px-2 py-1 rounded">{id}</code>
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="text-muted-foreground">Type</span>
-          <span className="font-medium">{ASSET_TYPE_LABELS[type]}</span>
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="text-muted-foreground">Group</span>
+    <DetailSection title="Technical details" icon={Info}>
+      <DetailFieldGrid>
+        <DetailField label="Type">{ASSET_TYPE_LABELS[type]}</DetailField>
+        <DetailField label="Group">
           {groupId ? (
-            <code className="text-xs bg-muted px-2 py-1 rounded">{groupId}</code>
+            <code className="font-mono text-xs break-all">{groupId}</code>
           ) : (
-            <Badge variant="outline" className="text-xs text-muted-foreground">
-              Ungrouped
-            </Badge>
+            <span className="text-muted-foreground">Ungrouped</span>
           )}
-        </div>
-      </div>
-    </div>
+        </DetailField>
+        <DetailField label="ID" full>
+          <code className="font-mono text-xs break-all">{id}</code>
+        </DetailField>
+      </DetailFieldGrid>
+    </DetailSection>
   )
 }
 
@@ -242,18 +198,24 @@ interface DangerZoneSectionProps {
   assetTypeName: string
 }
 
+/** Kept distinct from the other sections through the destructive token only. */
 export function DangerZoneSection({ onDelete, assetTypeName }: DangerZoneSectionProps) {
   return (
-    <div className="rounded-xl border border-red-500/30 p-4 bg-red-500/5">
-      <h4 className="text-sm font-medium text-red-500 mb-2">Danger Zone</h4>
-      <p className="text-xs text-muted-foreground mb-3">
-        Permanently delete this {assetTypeName.toLowerCase()} from your inventory.
-      </p>
-      <Button variant="destructive" size="sm" className="w-full" onClick={onDelete}>
-        <Trash2 className="me-2 h-4 w-4" />
-        Delete {assetTypeName}
-      </Button>
-    </div>
+    <section className="space-y-3">
+      <h3 className="flex items-center gap-2 text-sm font-semibold text-destructive">
+        <AlertTriangle className="h-4 w-4" />
+        Danger zone
+      </h3>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-sm text-muted-foreground">
+          Permanently delete this {assetTypeName.toLowerCase()} from your inventory.
+        </p>
+        <Button variant="destructive" size="sm" className="shrink-0" onClick={onDelete}>
+          <Trash2 className="me-2 h-4 w-4" />
+          Delete {assetTypeName.toLowerCase()}
+        </Button>
+      </div>
+    </section>
   )
 }
 
@@ -267,18 +229,12 @@ interface MetadataGridProps {
   className?: string
 }
 
+/** Label/value grid. A thin wrapper over the shared DetailFieldGrid (no card). */
 export function MetadataGrid({ children, columns = 2, className }: MetadataGridProps) {
   return (
-    <div className={cn('rounded-xl border p-4 bg-card', className)}>
-      <div
-        className={cn(
-          'grid gap-4 text-sm',
-          columns === 1 ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2'
-        )}
-      >
-        {children}
-      </div>
-    </div>
+    <DetailFieldGrid className={cn(columns === 1 && 'sm:grid-cols-1', className)}>
+      {children}
+    </DetailFieldGrid>
   )
 }
 
@@ -297,10 +253,9 @@ export function MetadataRow({ label, value, children, colSpan }: MetadataRowProp
   if (!value && !children) return null
 
   return (
-    <div className={colSpan === 2 ? 'sm:col-span-2' : undefined}>
-      <p className="text-muted-foreground">{label}</p>
-      {children || <p className="font-medium">{value}</p>}
-    </div>
+    <DetailField label={label} full={colSpan === 2}>
+      {children || value}
+    </DetailField>
   )
 }
 
@@ -344,37 +299,50 @@ export function TagsSection({ tags, suggestions, onSave, className }: TagsSectio
   }
 
   return (
-    <div className={cn('rounded-xl border p-4 bg-card', className)}>
-      <div className="flex items-center justify-between mb-2">
-        <h4 className="text-sm font-medium">Tags</h4>
-        {onSave && !editing && (
-          <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={startEditing}>
-            <Pencil className="h-3.5 w-3.5" />
-          </Button>
-        )}
-        {editing && (
-          <div className="flex gap-1">
+    <DetailSection
+      title="Tags"
+      icon={TagIcon}
+      className={className}
+      actions={
+        <>
+          {onSave && !editing && (
             <Button
               variant="ghost"
               size="sm"
-              className="h-6 w-6 p-0"
-              onClick={handleSave}
-              disabled={saving}
+              className="h-7 w-7 p-0"
+              aria-label="Edit tags"
+              onClick={startEditing}
             >
-              <Save className="h-3.5 w-3.5" />
+              <Pencil className="h-3.5 w-3.5" />
             </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-6 w-6 p-0"
-              onClick={cancelEditing}
-              disabled={saving}
-            >
-              <X className="h-3.5 w-3.5" />
-            </Button>
-          </div>
-        )}
-      </div>
+          )}
+          {editing && (
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 p-0"
+                aria-label="Save tags"
+                onClick={handleSave}
+                disabled={saving}
+              >
+                <Save className="h-3.5 w-3.5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 p-0"
+                aria-label="Cancel"
+                onClick={cancelEditing}
+                disabled={saving}
+              >
+                <X className="h-3.5 w-3.5" />
+              </Button>
+            </>
+          )}
+        </>
+      }
+    >
       {editing ? (
         <TagInput value={editTags} onChange={setEditTags} suggestions={suggestions} maxTags={20} />
       ) : tags && tags.length > 0 ? (
@@ -388,7 +356,7 @@ export function TagsSection({ tags, suggestions, onSave, className }: TagsSectio
       ) : (
         <p className="text-sm text-muted-foreground">No tags</p>
       )}
-    </div>
+    </DetailSection>
   )
 }
 
@@ -402,7 +370,7 @@ interface SectionTitleProps {
 }
 
 export function SectionTitle({ children, className }: SectionTitleProps) {
-  return <h4 className={cn('text-sm font-medium mb-2', className)}>{children}</h4>
+  return <h3 className={cn('text-sm font-semibold mb-3', className)}>{children}</h3>
 }
 
 // ============================================
@@ -426,7 +394,7 @@ interface SecretValueFieldProps {
  */
 export function SecretValueField({
   value,
-  label = 'Secret Value',
+  label = 'Secret value',
   showWarning = true,
   className,
 }: SecretValueFieldProps) {

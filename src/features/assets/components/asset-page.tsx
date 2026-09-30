@@ -11,14 +11,11 @@ import {
   RiskScoreBadge,
   DataTable,
   DataTableColumnHeader,
+  DetailSection,
+  DetailField,
+  DetailFieldGrid,
 } from '@/features/shared'
-import {
-  AssetDetailSheet,
-  StatCardCentered,
-  StatsGrid,
-  SectionTitle,
-  ClassificationBadges,
-} from '@/features/assets'
+import { AssetDetailSheet, ClassificationBadges } from '@/features/assets'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -1332,9 +1329,6 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
         open={!!selectedAsset && !dialogs.editDialogOpen}
         onOpenChange={() => dialogs.setSelectedAsset(null)}
         icon={config.icon}
-        iconColor={config.iconColor}
-        gradientFrom={config.gradientFrom}
-        gradientVia={config.gradientVia}
         assetTypeName={config.label}
         // Tag CRUD: passes the inline tag editor save handler so the
         // TagsSection in the Overview tab is editable. Without this
@@ -1377,18 +1371,15 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
         }
         statsContent={
           selectedAsset && config.detailStats ? (
-            <StatsGrid columns={config.detailStats.length as 2 | 3}>
+            <DetailFieldGrid className="grid-cols-2 sm:grid-cols-3">
               {config.detailStats.map((stat, i) => (
-                <StatCardCentered
-                  key={i}
-                  icon={stat.icon}
-                  iconBg={stat.iconBg}
-                  iconColor={stat.iconColor}
-                  value={stat.getValue(selectedAsset)}
-                  label={stat.label}
-                />
+                <DetailField key={i} label={stat.label}>
+                  <span className="text-lg font-semibold tabular-nums">
+                    {stat.getValue(selectedAsset)}
+                  </span>
+                </DetailField>
               ))}
-            </StatsGrid>
+            </DetailFieldGrid>
           ) : undefined
         }
         overviewContent={
@@ -1409,17 +1400,15 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
                   .filter((f) => f.value !== null && f.value !== undefined)
                 if (resolvedFields.length === 0) return null
                 return (
-                  <div key={si} className="rounded-xl border p-4 bg-card space-y-3">
-                    <SectionTitle>{section.title}</SectionTitle>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
+                  <DetailSection key={si} title={section.title}>
+                    <DetailFieldGrid>
                       {resolvedFields.map((field, fi) => (
-                        <div key={fi} className={field.fullWidth ? 'col-span-2' : ''}>
-                          <p className="text-muted-foreground">{field.label}</p>
-                          <div className="font-medium mt-0.5">{field.value}</div>
-                        </div>
+                        <DetailField key={fi} label={field.label} full={field.fullWidth}>
+                          {field.value}
+                        </DetailField>
                       ))}
-                    </div>
-                  </div>
+                    </DetailFieldGrid>
+                  </DetailSection>
                 )
               })}
             </>
