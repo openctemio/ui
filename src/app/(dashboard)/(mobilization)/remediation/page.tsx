@@ -1275,7 +1275,6 @@ export default function RemediationPage() {
                       {secondaryActions}
                     </>
                   }
-                  pageSize={10}
                   emptyMessage="No tasks found"
                   emptyDescription={
                     activeFilterCount > 0 || quickFilter !== 'all'

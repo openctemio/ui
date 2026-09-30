@@ -224,7 +224,6 @@ export default function SlaPoliciesPage() {
             data={policies}
             searchKey="name"
             searchPlaceholder="Search policies…"
-            pageSize={10}
           />
         )}
       </div>

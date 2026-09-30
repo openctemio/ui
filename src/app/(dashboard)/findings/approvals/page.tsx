@@ -279,7 +279,7 @@ export default function ApprovalsPage() {
           return (
             <Link
               href={`/findings/${findingId}`}
-              className="font-mono text-xs text-blue-600 hover:underline dark:text-blue-400"
+              className="font-mono text-xs text-primary hover:underline"
             >
               {findingId.slice(0, 8)}...
             </Link>
@@ -520,24 +520,21 @@ export default function ApprovalsPage() {
               </div>
 
               <TabsContent value={activeTab}>
-                <Card className="mt-4">
-                  <CardContent className="pt-6">
-                    <DataTable
-                      columns={columns}
-                      data={filteredApprovals}
-                      searchPlaceholder="Search by justification..."
-                      searchKey="justification"
-                      showColumnToggle={false}
-                      emptyMessage="No approval requests"
-                      emptyDescription={
-                        activeTab === 'all'
-                          ? 'There are no approval requests to review at this time.'
-                          : `No ${activeTab} approval requests found.`
-                      }
-                      pageSize={20}
-                    />
-                  </CardContent>
-                </Card>
+                <div className="mt-4">
+                  <DataTable
+                    columns={columns}
+                    data={filteredApprovals}
+                    searchPlaceholder="Search by justification..."
+                    searchKey="justification"
+                    showColumnToggle={false}
+                    emptyMessage="No approval requests"
+                    emptyDescription={
+                      activeTab === 'all'
+                        ? 'There are no approval requests to review at this time.'
+                        : `No ${activeTab} approval requests found.`
+                    }
+                  />
+                </div>
               </TabsContent>
             </Tabs>
           </>

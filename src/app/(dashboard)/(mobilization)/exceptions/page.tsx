@@ -443,7 +443,6 @@ export default function ExceptionsPage() {
                   ? 'Create a rule to suppress false positives or accepted risks.'
                   : `No ${activeTab} suppression rules.`
               }
-              pageSize={20}
             />
           )}
         </div>

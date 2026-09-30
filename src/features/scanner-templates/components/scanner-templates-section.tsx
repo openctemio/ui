@@ -311,7 +311,9 @@ export function ScannerTemplatesSection() {
         header: 'Version',
         enableSorting: false,
         cell: ({ row }) => (
-          <span className="font-mono text-xs text-muted-foreground">v{row.original.version}</span>
+          <span className="text-xs tabular-nums text-muted-foreground">
+            v{row.original.version}
+          </span>
         ),
       },
       {

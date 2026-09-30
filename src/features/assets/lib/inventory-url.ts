@@ -136,7 +136,8 @@ export function serializeInventoryFilters(f: InventoryFilters): URLSearchParams 
   return sp
 }
 
-export const DEFAULT_PAGE_SIZE = 25
+/** Same default as the other server-paginated lists (Findings). */
+export const DEFAULT_PAGE_SIZE = 20
 
 /** True when no filter (other than pagination/sort) is active. */
 export function isInventoryFilterEmpty(f: InventoryFilters): boolean {
