@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import ScimTokensPage from '@/app/(dashboard)/settings/integrations/scim-tokens/page'
+import ScimTokensPage from '@/app/(dashboard)/admin/scim/page'
 
 // ── mocks ──────────────────────────────────────────────────
 
