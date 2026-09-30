@@ -201,7 +201,9 @@ export function TechnicalDetailsSection({
           <code className="font-mono text-xs break-all">{id}</code>
         </DetailField>
         <DetailField label="External ID" full>
-          {externalId ? <code className="font-mono text-xs break-all">{externalId}</code> : undefined}
+          {externalId ? (
+            <code className="font-mono text-xs break-all">{externalId}</code>
+          ) : undefined}
         </DetailField>
         <DetailField label="Parent asset" full>
           {parentId ? <code className="font-mono text-xs break-all">{parentId}</code> : undefined}

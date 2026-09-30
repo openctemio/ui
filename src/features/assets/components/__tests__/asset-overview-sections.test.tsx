@@ -80,7 +80,11 @@ describe('ExposureSection', () => {
   it('shows reachability, sensitivity and control-plane status', () => {
     render(
       <ExposureSection
-        asset={makeAsset({ isInternetAccessible: false, piiDataExposed: true, phiDataExposed: false })}
+        asset={makeAsset({
+          isInternetAccessible: false,
+          piiDataExposed: true,
+          phiDataExposed: false,
+        })}
         isControlPlane
       />
     )
@@ -97,7 +101,11 @@ describe('ExposureSection', () => {
 
 describe('DiscoverySection', () => {
   it('shows the source and tool', () => {
-    render(<DiscoverySection asset={makeAsset({ discoverySource: 'agent', discoveryTool: 'gitleaks' })} />)
+    render(
+      <DiscoverySection
+        asset={makeAsset({ discoverySource: 'agent', discoveryTool: 'gitleaks' })}
+      />
+    )
     expect(screen.getByText('Agent')).toBeInTheDocument()
     expect(screen.getByText('gitleaks')).toBeInTheDocument()
   })
@@ -118,7 +126,13 @@ describe('PropertiesSection', () => {
   it('renders non-empty properties and skips empty ones', () => {
     render(
       <PropertiesSection
-        properties={{ default_branch: 'main', stars: 12, archived: false, topics: ['go', 'sec'], empty: '' }}
+        properties={{
+          default_branch: 'main',
+          stars: 12,
+          archived: false,
+          topics: ['go', 'sec'],
+          empty: '',
+        }}
       />
     )
     expect(screen.getByText('Default branch')).toBeInTheDocument()

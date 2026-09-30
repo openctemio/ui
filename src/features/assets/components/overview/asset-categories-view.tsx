@@ -87,7 +87,6 @@ const ASSET_TYPE_URLS: Record<string, string> = {
   repository: '/assets/repositories',
 }
 
-
 // Mapping from asset type to sub-module slug (for filtering based on module visibility)
 const ASSET_TYPE_TO_SUBMODULE: Record<string, string> = {
   // Core types → sub-module slugs (must match Module Management config)
@@ -366,8 +365,7 @@ export function AssetCategoriesView({ viewSwitcher }: { viewSwitcher?: ReactNode
                       .filter((item) => statsLoading || getItemCount(item.countKey) > 0)
                       .slice(0, 8)
                       .map((item) => {
-                        const TypeIcon =
-                          getAssetTypeIcon(item.key)
+                        const TypeIcon = getAssetTypeIcon(item.key)
                         const count = getItemCount(item.countKey)
 
                         return (

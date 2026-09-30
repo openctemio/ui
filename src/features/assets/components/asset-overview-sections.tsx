@@ -11,14 +11,7 @@
 'use client'
 
 import * as React from 'react'
-import {
-  AlertTriangle,
-  Gauge,
-  ListTree,
-  Radar,
-  ShieldHalf,
-  UserRound,
-} from 'lucide-react'
+import { AlertTriangle, Gauge, ListTree, Radar, ShieldHalf, UserRound } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -191,7 +184,11 @@ export function ExposureSection({ asset, isControlPlane }: ExposureSectionProps)
           {asset.dataClassification ? humanize(asset.dataClassification) : undefined}
         </DetailField>
         <DetailField label="Sensitive data exposed">
-          {sensitivityKnown ? (sensitive.length ? sensitive.join(', ') : 'None flagged') : undefined}
+          {sensitivityKnown
+            ? sensitive.length
+              ? sensitive.join(', ')
+              : 'None flagged'
+            : undefined}
         </DetailField>
         <DetailField label="Compliance scope" full>
           {asset.complianceScope?.length ? (

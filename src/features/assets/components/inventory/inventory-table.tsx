@@ -57,7 +57,6 @@ interface InventoryTableProps {
   onAssetUpdated?: () => void
 }
 
-
 export function InventoryTable({
   assets,
   total,
@@ -114,7 +113,10 @@ export function InventoryTable({
         header: ({ column }) => <DataTableColumnHeader column={column} title="Name" />,
         cell: ({ row }) => (
           <div className="flex min-w-0 items-center gap-2">
-            <AssetTypeIcon type={row.original.type} className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <AssetTypeIcon
+              type={row.original.type}
+              className="h-4 w-4 shrink-0 text-muted-foreground"
+            />
             <div className="min-w-0">
               <p className="truncate font-medium">{row.original.name}</p>
               {row.original.description && (
@@ -289,7 +291,10 @@ export function InventoryTable({
               onClick={() => setSelectedAsset(a)}
               className="flex w-full items-start gap-3 px-3 py-3 text-start transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <AssetTypeIcon type={a.type} className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+              <AssetTypeIcon
+                type={a.type}
+                className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground"
+              />
               <div className="min-w-0 flex-1">
                 <p className="line-clamp-2 break-all text-sm font-medium">{a.name}</p>
                 <p className="mt-0.5 truncate text-xs text-muted-foreground">
