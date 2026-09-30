@@ -12,7 +12,7 @@ import { ComingSoonPage } from '@/features/shared'
 export default function ConnectedAppsPage() {
   return (
     <ComingSoonPage
-      title="Connected Apps"
+      title="Connected apps"
       description="Connect third-party security tools so their findings, assets, and scan data flow into the platform automatically."
       icon={Boxes}
       features={[

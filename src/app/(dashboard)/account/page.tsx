@@ -4,13 +4,20 @@ import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { User, Mail, Phone, Upload, Save, Loader2, AlertCircle, Check, X } from 'lucide-react'
+import { Upload, Save, Loader2, Check, X } from 'lucide-react'
 import { toast } from 'sonner'
+import { ErrorState } from '@/features/shared'
 import { useProfile, useUpdateProfile, useUpdateAvatar } from '@/features/account'
 import { getErrorMessage } from '@/lib/api/error-handler'
 
@@ -54,7 +61,7 @@ export default function ProfilePage() {
       if (result) {
         mutate(result)
         setHasChanges(false)
-        toast.success('Profile updated successfully')
+        toast.success('Profile updated')
       }
     } catch (error) {
       toast.error(getErrorMessage(error, 'Failed to update profile'))
@@ -120,10 +127,10 @@ export default function ProfilePage() {
       if (result) {
         mutate(result)
         setPendingAvatar(null)
-        toast.success('Avatar updated successfully')
+        toast.success('Profile picture updated')
       }
     } catch (error) {
-      toast.error(getErrorMessage(error, 'Failed to update avatar'))
+      toast.error(getErrorMessage(error, 'Failed to update profile picture'))
     }
   }
 
@@ -133,9 +140,9 @@ export default function ProfilePage() {
       await removeAvatar()
       mutate()
       setPendingAvatar(null)
-      toast.success('Avatar removed')
+      toast.success('Profile picture removed')
     } catch (error) {
-      toast.error(getErrorMessage(error, 'Failed to remove avatar'))
+      toast.error(getErrorMessage(error, 'Failed to remove profile picture'))
     }
   }
 
@@ -149,51 +156,48 @@ export default function ProfilePage() {
         .slice(0, 2)
     : profile?.email?.charAt(0).toUpperCase() || 'U'
 
-  // Loading state
   if (isLoading) {
     return (
-      <div className="grid gap-6">
+      <div className="grid gap-5">
         <Skeleton className="h-64 w-full" />
         <Skeleton className="h-48 w-full" />
       </div>
     )
   }
 
-  // Error state
   if (isError) {
-    return (
-      <Alert variant="destructive">
-        <AlertCircle className="h-4 w-4" />
-        <AlertDescription>
-          Failed to load profile: {error?.message || 'Unknown error'}
-        </AlertDescription>
-      </Alert>
-    )
+    return <ErrorState title="your profile" error={error} onRetry={() => void mutate()} />
   }
 
   return (
-    <div className="grid gap-6">
-      {/* Profile Card */}
+    <div className="grid gap-5">
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <User className="h-5 w-5" />
-            Profile Information
-          </CardTitle>
-          <CardDescription>Update your personal information and profile picture</CardDescription>
+          <CardTitle>Profile</CardTitle>
+          <CardDescription>Your name, contact details and profile picture.</CardDescription>
+          <CardAction>
+            <Button size="sm" onClick={handleSave} disabled={!hasChanges || isUpdating}>
+              {isUpdating ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4" />
+              )}
+              Save changes
+            </Button>
+          </CardAction>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col lg:flex-row gap-8">
-            {/* Avatar Section */}
+          <div className="flex flex-col gap-8 lg:flex-row">
+            {/* Avatar */}
             <div className="flex flex-col items-center gap-4">
-              {/* Avatar */}
-              <div className="relative group">
+              <div className="group relative">
                 <Avatar className="h-32 w-32 ring-2 ring-border">
                   <AvatarImage src={pendingAvatar || profile?.avatar_url} />
-                  <AvatarFallback className="text-3xl bg-primary/10">{initials}</AvatarFallback>
+                  <AvatarFallback className="bg-primary/10 text-3xl">{initials}</AvatarFallback>
                 </Avatar>
-                <label className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-full opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity">
-                  <Upload className="h-8 w-8 text-white" />
+                <label className="absolute inset-0 flex cursor-pointer items-center justify-center rounded-full bg-background/70 opacity-0 transition-opacity group-hover:opacity-100">
+                  <Upload className="h-8 w-8 text-foreground" />
+                  <span className="sr-only">Upload a profile picture</span>
                   <input
                     type="file"
                     accept="image/*"
@@ -203,11 +207,10 @@ export default function ProfilePage() {
                 </label>
               </div>
 
-              {/* Avatar Actions */}
               {pendingAvatar ? (
                 <div className="flex flex-col items-center gap-2">
-                  <span className="text-xs text-yellow-500 bg-yellow-500/10 px-2 py-1 rounded">
-                    Preview - Unsaved
+                  <span className="rounded bg-warning/15 px-2 py-1 text-xs text-warning">
+                    Unsaved preview
                   </span>
                   <div className="flex gap-2">
                     <Button
@@ -216,25 +219,36 @@ export default function ProfilePage() {
                       onClick={() => setPendingAvatar(null)}
                       disabled={isUpdatingAvatar}
                     >
-                      <X className="h-4 w-4 me-1" />
+                      <X className="h-4 w-4" />
                       Cancel
                     </Button>
                     <Button size="sm" onClick={handleSaveAvatar} disabled={isUpdatingAvatar}>
                       {isUpdatingAvatar ? (
-                        <Loader2 className="h-4 w-4 animate-spin me-1" />
+                        <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (
-                        <Check className="h-4 w-4 me-1" />
+                        <Check className="h-4 w-4" />
                       )}
-                      Save
+                      Save picture
                     </Button>
                   </div>
                 </div>
               ) : (
                 <div className="flex flex-col items-center gap-2">
-                  <p className="text-xs text-muted-foreground text-center">
-                    Click to upload
-                    <br />
-                    Max 5MB, 200x200px
+                  {/* A visible control: the hover overlay alone can't be reached on touch. */}
+                  <Button variant="outline" size="sm" asChild>
+                    <label className="cursor-pointer">
+                      <Upload className="h-4 w-4" />
+                      Upload picture
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleAvatarUpload}
+                      />
+                    </label>
+                  </Button>
+                  <p className="text-center text-xs text-muted-foreground">
+                    Up to 5 MB, resized to 200×200 px
                   </p>
                   {profile?.avatar_url && (
                     <Button
@@ -244,18 +258,17 @@ export default function ProfilePage() {
                       onClick={handleRemoveAvatar}
                       disabled={isUpdatingAvatar}
                     >
-                      Remove
+                      Remove picture
                     </Button>
                   )}
                 </div>
               )}
             </div>
 
-            {/* Form Section */}
+            {/* Fields */}
             <div className="flex-1 space-y-4">
-              {/* Name */}
               <div className="space-y-2">
-                <Label htmlFor="name">Full Name</Label>
+                <Label htmlFor="name">Full name</Label>
                 <Input
                   id="name"
                   value={formData.name}
@@ -264,21 +277,23 @@ export default function ProfilePage() {
                 />
               </div>
 
-              {/* Email (read-only) */}
               <div className="space-y-2">
-                <Label htmlFor="email" className="flex items-center gap-2">
-                  <Mail className="h-4 w-4" />
-                  Email
-                </Label>
+                <Label htmlFor="email">Email</Label>
                 <div className="flex items-center gap-2">
                   <Input id="email" value={profile?.email || ''} disabled className="bg-muted" />
                   {profile?.email_verified ? (
-                    <Badge variant="outline" className="text-green-500 border-green-500/50">
-                      <Check className="h-3 w-3 me-1" />
+                    <Badge
+                      variant="outline"
+                      className="shrink-0 border-success/30 bg-success/10 text-success"
+                    >
+                      <Check className="h-3 w-3" />
                       Verified
                     </Badge>
                   ) : (
-                    <Badge variant="outline" className="text-yellow-500 border-yellow-500/50">
+                    <Badge
+                      variant="outline"
+                      className="shrink-0 border-warning/30 bg-warning/10 text-warning"
+                    >
                       Unverified
                     </Badge>
                   )}
@@ -290,12 +305,8 @@ export default function ProfilePage() {
                 )}
               </div>
 
-              {/* Phone */}
               <div className="space-y-2">
-                <Label htmlFor="phone" className="flex items-center gap-2">
-                  <Phone className="h-4 w-4" />
-                  Phone Number
-                </Label>
+                <Label htmlFor="phone">Phone number</Label>
                 <Input
                   id="phone"
                   type="tel"
@@ -309,43 +320,30 @@ export default function ProfilePage() {
         </CardContent>
       </Card>
 
-      {/* Save Button */}
-      <div className="flex justify-end">
-        <Button onClick={handleSave} disabled={!hasChanges || isUpdating}>
-          {isUpdating ? (
-            <Loader2 className="me-2 h-4 w-4 animate-spin" />
-          ) : (
-            <Save className="me-2 h-4 w-4" />
-          )}
-          {isUpdating ? 'Saving...' : 'Save Changes'}
-        </Button>
-      </div>
-
-      {/* Account Info Card */}
       <Card>
         <CardHeader>
-          <CardTitle>Account Information</CardTitle>
-          <CardDescription>Details about your account</CardDescription>
+          <CardTitle>Account details</CardTitle>
+          <CardDescription>Read-only details about your account.</CardDescription>
         </CardHeader>
         <CardContent>
           <dl className="grid gap-4 sm:grid-cols-2">
             <div>
-              <dt className="text-sm font-medium text-muted-foreground">Account ID</dt>
-              <dd className="text-sm font-mono mt-1">{profile?.id || '-'}</dd>
+              <dt className="text-sm text-muted-foreground">Account ID</dt>
+              <dd className="mt-1 break-all font-mono text-sm">{profile?.id || '-'}</dd>
             </div>
             <div>
-              <dt className="text-sm font-medium text-muted-foreground">Auth Provider</dt>
-              <dd className="text-sm mt-1 capitalize">{profile?.auth_provider || 'local'}</dd>
+              <dt className="text-sm text-muted-foreground">Sign-in provider</dt>
+              <dd className="mt-1 text-sm capitalize">{profile?.auth_provider || 'local'}</dd>
             </div>
             <div>
-              <dt className="text-sm font-medium text-muted-foreground">Created</dt>
-              <dd className="text-sm mt-1">
+              <dt className="text-sm text-muted-foreground">Created</dt>
+              <dd className="mt-1 text-sm">
                 {profile?.created_at ? new Date(profile.created_at).toLocaleDateString() : '-'}
               </dd>
             </div>
             <div>
-              <dt className="text-sm font-medium text-muted-foreground">Last Updated</dt>
-              <dd className="text-sm mt-1">
+              <dt className="text-sm text-muted-foreground">Last updated</dt>
+              <dd className="mt-1 text-sm">
                 {profile?.updated_at ? new Date(profile.updated_at).toLocaleDateString() : '-'}
               </dd>
             </div>

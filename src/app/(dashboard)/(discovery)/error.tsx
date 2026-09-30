@@ -32,7 +32,7 @@ export default function DiscoveryError({ error, reset }: ErrorProps) {
           </div>
           <CardTitle className="flex items-center justify-center gap-2">
             <Search className="h-5 w-5" />
-            Discovery Error
+            Discovery error
           </CardTitle>
           <CardDescription>
             Failed to load discovery data. This could be due to a network issue or service

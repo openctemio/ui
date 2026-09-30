@@ -331,6 +331,53 @@ export function useVulnerableComponentsApi(
   )
 }
 
+/** Page size the vulnerable-components API allows at most (handler MaxPerPage). */
+const VULNERABLE_PAGE_SIZE = 100
+/** Stop after this many pages so a huge tenant can't turn one view into a crawl. */
+export const VULNERABLE_FETCH_LIMIT = 1000
+
+export interface AllVulnerableComponents {
+  data: ApiVulnerableComponent[]
+  /** Server-side count of vulnerable components (every page). */
+  total: number
+  /** True when `total` exceeded VULNERABLE_FETCH_LIMIT and `data` stops short. */
+  truncated: boolean
+}
+
+/**
+ * Every vulnerable component, fetched page by page.
+ *
+ * `/components/vulnerable` takes only `page`/`per_page` — no severity, KEV or
+ * search filter — so a view that filters or counts by those has to hold the
+ * whole set. Filtering one page client-side made the counts describe the
+ * first page only (the "All 20 of 35" bug).
+ */
+export function useAllVulnerableComponentsApi(config?: SWRConfiguration) {
+  const { currentTenant } = useTenant()
+  const { can } = usePermissions()
+  const shouldFetch = currentTenant && can(Permission.ComponentsRead)
+
+  return useSWR<AllVulnerableComponents>(
+    shouldFetch ? ['/api/v1/components/vulnerable', 'all'] : null,
+    async () => {
+      const data: ApiVulnerableComponent[] = []
+      let total = 0
+      for (let page = 1; data.length < VULNERABLE_FETCH_LIMIT; page++) {
+        const res = await get<{
+          data: ApiVulnerableComponent[]
+          total: number
+          total_pages: number
+        }>(`/api/v1/components/vulnerable?page=${page}&per_page=${VULNERABLE_PAGE_SIZE}`)
+        total = res.total ?? 0
+        data.push(...(res.data ?? []))
+        if (page >= (res.total_pages ?? 0) || !res.data?.length) break
+      }
+      return { data, total, truncated: data.length < total }
+    },
+    { ...defaultConfig, ...config }
+  )
+}
+
 /**
  * Fetch license stats for current tenant
  * Only fetches if user has components:read permission

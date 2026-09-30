@@ -116,9 +116,9 @@ export const RESULT_DISPLAY: Record<
   AuditResult,
   { label: string; color: string; bgColor: string }
 > = {
-  success: { label: 'Success', color: 'text-green-400', bgColor: 'bg-green-500/20' },
-  failure: { label: 'Failure', color: 'text-red-400', bgColor: 'bg-red-500/20' },
-  denied: { label: 'Denied', color: 'text-orange-400', bgColor: 'bg-orange-500/20' },
+  success: { label: 'Success', color: 'text-success', bgColor: 'bg-success/15' },
+  failure: { label: 'Failure', color: 'text-destructive', bgColor: 'bg-destructive/15' },
+  denied: { label: 'Denied', color: 'text-warning', bgColor: 'bg-warning/15' },
 }
 
 export const SEVERITY_DISPLAY: Record<

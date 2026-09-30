@@ -1,377 +1,421 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
+import type { ColumnDef, SortingState } from '@tanstack/react-table'
+import { AlertTriangle, Download, Eye, Package, Search } from 'lucide-react'
 import { Main } from '@/components/layout'
-import { PageHeader } from '@/features/shared'
+import {
+  PageHeader,
+  MetricStrip,
+  type MetricStripItem,
+  DataTable,
+  DataTableColumnHeader,
+  DataTableRowActions,
+  ErrorState,
+  RiskScoreBadge,
+} from '@/features/shared'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
-  AlertTriangle,
-  Shield,
-  Zap,
-  Target,
-  Search as SearchIcon,
-  Download,
-  Loader2,
-} from 'lucide-react'
-import {
-  ComponentTable,
   ComponentDetailSheet,
+  EcosystemBadge,
   transformVulnerableComponents,
 } from '@/features/components'
 import {
-  useVulnerableComponentsApi,
-  useComponentStatsApi,
+  useAllVulnerableComponentsApi,
+  VULNERABLE_FETCH_LIMIT,
 } from '@/features/components/api/use-components-api'
 import type { Component } from '@/features/components'
-import { toast } from 'sonner'
+import { useUrlFilter } from '@/hooks/use-url-param'
+import { exportToCsv, type ExportFieldConfig } from '@/hooks/use-csv-export'
+import { SEVERITY_DOT_COLORS } from '@/lib/severity-colors'
+import { cn } from '@/lib/utils'
 
-type SeverityFilter = 'all' | 'critical' | 'high' | 'medium' | 'kev'
+type SeverityFilter = 'critical' | 'high' | 'medium'
+const SEVERITY_FILTERS: SeverityFilter[] = ['critical', 'high', 'medium']
+const PAGE_SIZES = [10, 20, 30, 50, 100]
+
+const inKev = (c: Component) => c.vulnerabilities.some((v) => v.inCisaKev)
+
+/** Sort keys the URL accepts, with how each one orders two rows ascending. */
+const SORTERS: Record<string, (a: Component, b: Component) => number> = {
+  name: (a, b) => a.name.localeCompare(b.name),
+  ecosystem: (a, b) => a.ecosystem.localeCompare(b.ecosystem),
+  vulnerabilities: (a, b) => {
+    const score = (c: Component) =>
+      c.vulnerabilityCount.critical * 1e6 +
+      c.vulnerabilityCount.high * 1e4 +
+      c.vulnerabilityCount.medium * 1e2 +
+      c.vulnerabilityCount.low
+    return score(a) - score(b)
+  },
+  kev: (a, b) => Number(inKev(a)) - Number(inKev(b)),
+  riskScore: (a, b) => a.riskScore - b.riskScore,
+}
+
+function parseSort(value: string): SortingState {
+  const [id, dir] = value.split('.')
+  return id && SORTERS[id] ? [{ id, desc: dir !== 'asc' }] : []
+}
+
+const EXPORT_FIELDS: ExportFieldConfig<Component>[] = [
+  { header: 'Name', accessor: (c) => c.name },
+  { header: 'Version', accessor: (c) => c.version },
+  { header: 'Ecosystem', accessor: (c) => c.ecosystem },
+  { header: 'PURL', accessor: (c) => c.purl },
+  { header: 'Critical', accessor: (c) => c.vulnerabilityCount.critical },
+  { header: 'High', accessor: (c) => c.vulnerabilityCount.high },
+  { header: 'Medium', accessor: (c) => c.vulnerabilityCount.medium },
+  { header: 'Low', accessor: (c) => c.vulnerabilityCount.low },
+  { header: 'Risk score', accessor: (c) => c.riskScore },
+  { header: 'CISA KEV', accessor: (c) => (inKev(c) ? 'Yes' : 'No') },
+]
+
+/** "2 critical · 1 high" — the non-zero severities, most severe first. */
+function SeverityCounts({ counts }: { counts: Component['vulnerabilityCount'] }) {
+  const parts = (['critical', 'high', 'medium', 'low'] as const).filter((s) => counts[s] > 0)
+  if (parts.length === 0) return <span className="text-muted-foreground">—</span>
+  return (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+      {parts.map((s) => (
+        <span key={s} className="inline-flex items-center gap-1.5 whitespace-nowrap">
+          <span className={cn('h-2 w-2 rounded-full', SEVERITY_DOT_COLORS[s])} aria-hidden />
+          <span className="tabular-nums">{counts[s]}</span>
+          <span className="text-muted-foreground">{s}</span>
+        </span>
+      ))}
+    </div>
+  )
+}
 
 export default function VulnerableComponentsPage() {
-  const [page, _setPage] = useState(1)
-  const pageSize = 20
-  const { data: apiData, isLoading } = useVulnerableComponentsApi(page, pageSize)
-  const { data: apiStats } = useComponentStatsApi()
+  const { data: apiData, error, isLoading, mutate } = useAllVulnerableComponentsApi()
 
-  const vulnerableComponents = useMemo(() => {
-    if (!apiData?.data) return []
-    return transformVulnerableComponents(apiData.data)
-  }, [apiData])
+  // The whole view lives in the URL so a filtered list can be shared.
+  const [severityParam, setSeverityParam] = useUrlFilter('severity', '')
+  const [kevParam, setKevParam] = useUrlFilter('kev', 'false')
+  const [searchQuery, setSearchQuery] = useUrlFilter('q', '')
+  const [pageParam, setPageParam] = useUrlFilter('page', '1')
+  const [perPageParam, setPerPageParam] = useUrlFilter('per_page', '20')
+  const [sortParam, setSortParam] = useUrlFilter('sort', '')
 
-  const total = apiData?.total ?? 0
-  const totalPages = apiData?.total_pages ?? 0
+  const severity = SEVERITY_FILTERS.includes(severityParam as SeverityFilter)
+    ? (severityParam as SeverityFilter)
+    : null
+  const kevOnly = kevParam === 'true'
+  const sorting = useMemo(() => parseSort(sortParam), [sortParam])
+  const pagination = useMemo(
+    () => ({
+      pageIndex: Math.max(0, (parseInt(pageParam, 10) || 1) - 1),
+      pageSize: PAGE_SIZES.includes(parseInt(perPageParam, 10)) ? parseInt(perPageParam, 10) : 20,
+    }),
+    [pageParam, perPageParam]
+  )
 
-  const [searchQuery, setSearchQuery] = useState('')
-  const [severityFilter, setSeverityFilter] = useState<SeverityFilter>('all')
   const [selectedComponent, setSelectedComponent] = useState<Component | null>(null)
 
-  // Stats from dedicated stats API — accurate counts regardless of list limit
-  const stats = useMemo(() => {
-    const criticalCount = apiStats?.vuln_by_severity?.critical ?? 0
-    const highCount = apiStats?.vuln_by_severity?.high ?? 0
-    const kevCount = apiStats?.cisa_kev_components ?? 0
+  const components = useMemo(
+    () => (apiData?.data ? transformVulnerableComponents(apiData.data) : []),
+    [apiData]
+  )
+  const total = apiData?.total ?? 0
 
-    return {
-      total: apiStats?.vulnerable_components ?? vulnerableComponents.length,
-      critical: criticalCount,
-      high: highCount,
-      exploitable: 0,
-      kev: kevCount,
-    }
-  }, [apiStats, vulnerableComponents.length])
-
-  // Filter components
-  const filteredComponents = useMemo(() => {
-    let result = [...vulnerableComponents]
-
-    // Apply search
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase()
-      result = result.filter(
-        (c) =>
-          c.name.toLowerCase().includes(query) ||
-          c.version.toLowerCase().includes(query) ||
-          c.purl.toLowerCase().includes(query)
-      )
-    }
-
-    // Apply severity filter
-    switch (severityFilter) {
-      case 'critical':
-        result = result.filter((c) => c.vulnerabilityCount.critical > 0)
-        break
-      case 'high':
-        result = result.filter((c) => c.vulnerabilityCount.high > 0)
-        break
-      case 'medium':
-        result = result.filter((c) => c.vulnerabilityCount.medium > 0)
-        break
-      case 'kev':
-        result = result.filter((c) => c.vulnerabilities.some((v) => v.inCisaKev))
-        break
-    }
-
-    // Sort by risk score
-    result.sort((a, b) => b.riskScore - a.riskScore)
-
-    return result
-  }, [vulnerableComponents, searchQuery, severityFilter])
-
-  // Filter counts
-  const filterCounts = useMemo(
+  // Counts come from the full set, so each one matches what its filter shows.
+  const counts = useMemo(
     () => ({
-      all: vulnerableComponents.length,
-      critical: vulnerableComponents.filter((c) => c.vulnerabilityCount.critical > 0).length,
-      high: vulnerableComponents.filter((c) => c.vulnerabilityCount.high > 0).length,
-      medium: vulnerableComponents.filter((c) => c.vulnerabilityCount.medium > 0).length,
-      kev: vulnerableComponents.filter((c) => c.vulnerabilities.some((v) => v.inCisaKev)).length,
+      critical: components.filter((c) => c.vulnerabilityCount.critical > 0).length,
+      high: components.filter((c) => c.vulnerabilityCount.high > 0).length,
+      medium: components.filter((c) => c.vulnerabilityCount.medium > 0).length,
+      kev: components.filter(inKev).length,
     }),
-    [vulnerableComponents]
+    [components]
+  )
+
+  const filtered = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase()
+    const result = components.filter(
+      (c) =>
+        (!severity || c.vulnerabilityCount[severity] > 0) &&
+        (!kevOnly || inKev(c)) &&
+        (!q ||
+          c.name.toLowerCase().includes(q) ||
+          c.version.toLowerCase().includes(q) ||
+          c.purl.toLowerCase().includes(q))
+    )
+    const sort = sorting[0]
+    const cmp = sort ? SORTERS[sort.id] : SORTERS.riskScore
+    const desc = sort ? sort.desc : true
+    return result.sort((a, b) => (desc ? cmp(b, a) : cmp(a, b)))
+  }, [components, searchQuery, severity, kevOnly, sorting])
+
+  const pageRows = useMemo(
+    () =>
+      filtered.slice(
+        pagination.pageIndex * pagination.pageSize,
+        (pagination.pageIndex + 1) * pagination.pageSize
+      ),
+    [filtered, pagination]
+  )
+
+  // A filter change starts again from the first page.
+  const applyFilter = useCallback(
+    (next: { severity?: SeverityFilter | null; kev?: boolean }) => {
+      if (next.severity !== undefined) setSeverityParam(next.severity ?? '')
+      if (next.kev !== undefined) setKevParam(next.kev ? 'true' : 'false')
+      setPageParam('1')
+    },
+    [setSeverityParam, setKevParam, setPageParam]
+  )
+
+  const metrics: MetricStripItem[] = [
+    {
+      key: 'all',
+      label: 'Vulnerable components',
+      value: total,
+      onClick: () => applyFilter({ severity: null, kev: false }),
+      active: !severity && !kevOnly,
+    },
+    {
+      key: 'critical',
+      label: 'With critical',
+      value: counts.critical,
+      tone: 'danger',
+      onClick: () => applyFilter({ severity: severity === 'critical' ? null : 'critical' }),
+      active: severity === 'critical',
+    },
+    {
+      key: 'high',
+      label: 'With high',
+      value: counts.high,
+      onClick: () => applyFilter({ severity: severity === 'high' ? null : 'high' }),
+      active: severity === 'high',
+    },
+    {
+      key: 'medium',
+      label: 'With medium',
+      value: counts.medium,
+      onClick: () => applyFilter({ severity: severity === 'medium' ? null : 'medium' }),
+      active: severity === 'medium',
+    },
+    {
+      key: 'kev',
+      label: 'In CISA KEV',
+      value: counts.kev,
+      tone: 'danger',
+      onClick: () => applyFilter({ kev: !kevOnly }),
+      active: kevOnly,
+    },
+  ]
+
+  const columns = useMemo<ColumnDef<Component>[]>(
+    () => [
+      {
+        id: 'name',
+        accessorFn: (c) => c.name,
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Component" />,
+        cell: ({ row }) => {
+          const c = row.original
+          return (
+            <div className="flex min-w-0 items-center gap-2">
+              <Package className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="truncate font-medium">{c.name}</span>
+                  <Badge variant="outline" className="font-mono text-xs">
+                    {c.version}
+                  </Badge>
+                </div>
+                <p className="max-w-[320px] truncate font-mono text-xs text-muted-foreground">
+                  {c.purl}
+                </p>
+              </div>
+            </div>
+          )
+        },
+      },
+      {
+        id: 'ecosystem',
+        accessorFn: (c) => c.ecosystem,
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Ecosystem" />,
+        cell: ({ row }) => <EcosystemBadge ecosystem={row.original.ecosystem} size="sm" />,
+      },
+      {
+        id: 'vulnerabilities',
+        accessorFn: (c) => c.vulnerabilityCount.critical,
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Vulnerabilities" />,
+        cell: ({ row }) => <SeverityCounts counts={row.original.vulnerabilityCount} />,
+      },
+      {
+        id: 'kev',
+        accessorFn: (c) => inKev(c),
+        header: ({ column }) => <DataTableColumnHeader column={column} title="CISA KEV" />,
+        cell: ({ row }) =>
+          inKev(row.original) ? (
+            <Badge
+              variant="outline"
+              className="border-destructive/30 bg-destructive/10 text-destructive"
+            >
+              In KEV
+            </Badge>
+          ) : (
+            <span className="text-muted-foreground">—</span>
+          ),
+      },
+      {
+        id: 'riskScore',
+        accessorFn: (c) => c.riskScore,
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Risk" />,
+        cell: ({ row }) => <RiskScoreBadge score={row.original.riskScore} size="sm" />,
+      },
+      {
+        id: 'actions',
+        enableSorting: false,
+        cell: ({ row }) => (
+          <DataTableRowActions
+            actions={[
+              {
+                label: 'View details',
+                icon: Eye,
+                onClick: () => setSelectedComponent(row.original),
+              },
+            ]}
+          />
+        ),
+      },
+    ],
+    []
   )
 
   const handleExport = () => {
-    if (filteredComponents.length === 0) {
-      toast.error('No components to export')
-      return
-    }
-
-    const csv = [
-      [
-        'Name',
-        'Version',
-        'Ecosystem',
-        'PURL',
-        'Critical',
-        'High',
-        'Medium',
-        'Low',
-        'Risk Score',
-        'CISA KEV',
-      ].join(','),
-      ...filteredComponents.map((c) =>
-        [
-          `"${c.name}"`,
-          c.version,
-          c.ecosystem,
-          `"${c.purl}"`,
-          c.vulnerabilityCount.critical,
-          c.vulnerabilityCount.high,
-          c.vulnerabilityCount.medium,
-          c.vulnerabilityCount.low,
-          c.riskScore,
-          c.vulnerabilities.some((v) => v.inCisaKev) ? 'Yes' : 'No',
-        ].join(',')
-      ),
-    ].join('\n')
-
-    const blob = new Blob([csv], { type: 'text/csv' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'vulnerable-components.csv'
-    a.click()
-    URL.revokeObjectURL(url)
-    toast.success('Vulnerable components exported')
+    exportToCsv(filtered, EXPORT_FIELDS, 'vulnerable-components.csv')
   }
+
+  const searchBox = (
+    <div className="relative min-w-0 flex-1 sm:max-w-sm">
+      <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+      <Input
+        value={searchQuery}
+        onChange={(e) => {
+          setSearchQuery(e.target.value)
+          setPageParam('1')
+        }}
+        placeholder="Search name, version or PURL…"
+        aria-label="Search vulnerable components"
+        className="h-9 ps-9"
+      />
+    </div>
+  )
+
+  const exportButton = (
+    <Button
+      variant="outline"
+      size="sm"
+      className="h-9"
+      onClick={handleExport}
+      disabled={isLoading || filtered.length === 0}
+    >
+      <Download className="h-4 w-4 md:me-2" />
+      <span className="hidden md:inline">Export</span>
+    </Button>
+  )
 
   return (
     <>
       <Main>
         <PageHeader
-          title="Vulnerable Components"
-          description={
-            isLoading
-              ? 'Loading...'
-              : `${stats.total} components with known security vulnerabilities`
-          }
-        >
-          <Button
-            variant="outline"
-            onClick={handleExport}
-            disabled={isLoading || filteredComponents.length === 0}
-          >
-            <Download className="me-2 h-4 w-4" />
-            Export
-          </Button>
-        </PageHeader>
+          title="Vulnerable components"
+          description="Open-source packages with open vulnerabilities, riskiest first."
+        />
 
-        {/* Stats Cards */}
-        <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-          <Card
-            className={`cursor-pointer hover:border-red-500 transition-colors ${
-              severityFilter === 'all' ? 'border-red-500' : ''
-            }`}
-            onClick={() => setSeverityFilter('all')}
-          >
-            <CardHeader className="pb-2">
-              <CardDescription className="flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4 text-red-500" />
-                Total Vulnerable
-              </CardDescription>
-              {isLoading ? (
-                <Skeleton className="h-9 w-16" />
-              ) : (
-                <CardTitle className="text-3xl text-red-500">{stats.total}</CardTitle>
-              )}
-            </CardHeader>
-            <CardContent>
-              <p className="text-xs text-muted-foreground">Components with CVEs</p>
-            </CardContent>
-          </Card>
+        {error ? (
+          <div className="mt-5">
+            <ErrorState title="vulnerable components" error={error} onRetry={() => void mutate()} />
+          </div>
+        ) : (
+          <>
+            <MetricStrip className="mt-5" loading={isLoading} items={metrics} />
 
-          <Card
-            className={`cursor-pointer hover:border-purple-500 transition-colors ${
-              severityFilter === 'critical' ? 'border-purple-500' : ''
-            }`}
-            onClick={() => setSeverityFilter('critical')}
-          >
-            <CardHeader className="pb-2">
-              <CardDescription className="flex items-center gap-2">
-                <Shield className="h-4 w-4 text-purple-500" />
-                Critical Severity
-              </CardDescription>
-              {isLoading ? (
-                <Skeleton className="h-9 w-16" />
-              ) : (
-                <CardTitle className="text-3xl text-purple-500">{stats.critical}</CardTitle>
-              )}
-            </CardHeader>
-            <CardContent>
-              <p className="text-xs text-muted-foreground">CVSS 9.0+ vulnerabilities</p>
-            </CardContent>
-          </Card>
-
-          <Card className="transition-colors opacity-60 cursor-not-allowed" title="Coming soon">
-            <CardHeader className="pb-2">
-              <CardDescription className="flex items-center gap-2">
-                <Zap className="h-4 w-4 text-orange-500" />
-                Exploitable
-              </CardDescription>
-              {isLoading ? (
-                <Skeleton className="h-9 w-16" />
-              ) : (
-                <CardTitle className="text-3xl text-orange-500">{stats.exploitable}</CardTitle>
-              )}
-            </CardHeader>
-            <CardContent>
-              <p className="text-xs text-muted-foreground">Public exploits available</p>
-            </CardContent>
-          </Card>
-
-          <Card
-            className={`cursor-pointer hover:border-red-600 transition-colors ${
-              severityFilter === 'kev' ? 'border-red-600 bg-red-500/5' : ''
-            }`}
-            onClick={() => setSeverityFilter('kev')}
-          >
-            <CardHeader className="pb-2">
-              <CardDescription className="flex items-center gap-2">
-                <Target className="h-4 w-4 text-red-600" />
-                CISA KEV
-              </CardDescription>
-              {isLoading ? (
-                <Skeleton className="h-9 w-16" />
-              ) : (
-                <CardTitle className="text-3xl text-red-600">{stats.kev}</CardTitle>
-              )}
-            </CardHeader>
-            <CardContent>
-              <p className="text-xs text-muted-foreground">Known Exploited Vulnerabilities</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* CISA KEV Alert */}
-        {!isLoading && stats.kev > 0 && severityFilter !== 'kev' && (
-          <Card className="mt-4 border-red-500/50 bg-red-500/5">
-            <CardContent className="flex items-center justify-between py-4">
-              <div className="flex items-center gap-3">
-                <AlertTriangle className="h-5 w-5 text-red-600" />
-                <div>
-                  <p className="font-medium text-red-600">
-                    {stats.kev} component(s) in CISA Known Exploited Vulnerabilities catalog
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    These vulnerabilities are actively exploited and require immediate attention
-                  </p>
-                </div>
-              </div>
-              <Button variant="destructive" size="sm" onClick={() => setSeverityFilter('kev')}>
-                View KEV Components
-              </Button>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Table Card */}
-        <Card className="mt-6">
-          <CardHeader>
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <CardTitle className="flex items-center gap-2">
-                  <AlertTriangle className="h-5 w-5 text-red-500" />
-                  Vulnerable Components
-                </CardTitle>
-                <CardDescription>
-                  {isLoading
-                    ? 'Loading...'
-                    : `${total} vulnerable components (page ${page} of ${totalPages || 1})`}
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {/* Filter Tabs */}
-            <Tabs
-              value={severityFilter}
-              onValueChange={(v) => setSeverityFilter(v as SeverityFilter)}
-              className="mb-4"
-            >
-              <TabsList>
-                <TabsTrigger value="all" className="gap-1.5">
-                  All
-                  <Badge variant="secondary" className="h-5 px-1.5 text-xs">
-                    {isLoading ? '-' : filterCounts.all}
-                  </Badge>
-                </TabsTrigger>
-                <TabsTrigger value="critical" className="gap-1.5">
-                  Critical
-                  <Badge variant="destructive" className="h-5 px-1.5 text-xs">
-                    {isLoading ? '-' : filterCounts.critical}
-                  </Badge>
-                </TabsTrigger>
-                <TabsTrigger value="high" className="gap-1.5">
-                  High
-                  <Badge className="h-5 px-1.5 text-xs bg-orange-500/15 text-orange-600">
-                    {isLoading ? '-' : filterCounts.high}
-                  </Badge>
-                </TabsTrigger>
-                <TabsTrigger value="medium" className="gap-1.5">
-                  Medium
-                  <Badge className="h-5 px-1.5 text-xs bg-yellow-500/15 text-yellow-600">
-                    {isLoading ? '-' : filterCounts.medium}
-                  </Badge>
-                </TabsTrigger>
-                <TabsTrigger value="kev" className="gap-1.5">
-                  CISA KEV
-                  <Badge className="h-5 px-1.5 text-xs bg-red-600 text-white">
-                    {isLoading ? '-' : filterCounts.kev}
-                  </Badge>
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
-
-            {/* Search */}
-            <div className="flex flex-col gap-4 mb-4 sm:flex-row sm:items-center">
-              <div className="relative flex-1 max-w-sm">
-                <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search by name, version, or PURL..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="ps-9"
-                />
-              </div>
-            </div>
-
-            {/* Loading State */}
-            {isLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-              </div>
-            ) : (
-              <ComponentTable data={filteredComponents} onViewDetails={setSelectedComponent} />
+            {apiData?.truncated && (
+              <p className="mt-2 text-xs text-muted-foreground">
+                Showing the first {VULNERABLE_FETCH_LIMIT.toLocaleString()} of{' '}
+                {total.toLocaleString()} components; counts and filters cover those only.
+              </p>
             )}
-          </CardContent>
-        </Card>
+
+            {!isLoading && counts.kev > 0 && !kevOnly && (
+              <Alert variant="destructive" className="mt-5">
+                <AlertTriangle />
+                <AlertTitle className="line-clamp-none">
+                  {counts.kev === 1
+                    ? '1 component has a vulnerability in the CISA KEV catalog'
+                    : `${counts.kev} components have vulnerabilities in the CISA KEV catalog`}
+                </AlertTitle>
+                <AlertDescription>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <p>These are being exploited in the wild. Fix them first.</p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="shrink-0 self-start sm:self-auto"
+                      onClick={() => applyFilter({ severity: null, kev: true })}
+                    >
+                      Show KEV components
+                    </Button>
+                  </div>
+                </AlertDescription>
+              </Alert>
+            )}
+
+            <div className="mt-5">
+              {isLoading ? (
+                <div className="space-y-2">
+                  <Skeleton className="h-9 w-full sm:max-w-sm" />
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <Skeleton key={i} className="h-14 w-full" />
+                  ))}
+                </div>
+              ) : (
+                <DataTable
+                  columns={columns}
+                  data={pageRows}
+                  getRowId={(c) => c.id}
+                  showSearch={false}
+                  toolbarStart={searchBox}
+                  toolbarEnd={exportButton}
+                  manualPagination
+                  rowCount={filtered.length}
+                  pagination={pagination}
+                  onPaginationChange={(next) => {
+                    setPageParam(String(next.pageIndex + 1))
+                    setPerPageParam(String(next.pageSize))
+                  }}
+                  pageSizeOptions={PAGE_SIZES}
+                  sorting={sorting}
+                  onSortingChange={(next) => {
+                    const first = next[0]
+                    setSortParam(
+                      first && SORTERS[first.id] ? `${first.id}.${first.desc ? 'desc' : 'asc'}` : ''
+                    )
+                  }}
+                  onRowClick={setSelectedComponent}
+                  emptyMessage={
+                    total === 0 ? 'No vulnerable components' : 'No components match these filters'
+                  }
+                  emptyDescription={
+                    total === 0
+                      ? 'No component has an open vulnerability.'
+                      : 'Clear the search or pick another metric.'
+                  }
+                />
+              )}
+            </div>
+          </>
+        )}
       </Main>
 
-      {/* Component Detail Sheet */}
       <ComponentDetailSheet
         component={selectedComponent}
         open={!!selectedComponent}

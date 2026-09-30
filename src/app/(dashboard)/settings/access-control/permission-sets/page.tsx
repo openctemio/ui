@@ -350,7 +350,7 @@ export default function PermissionSetsPage() {
     <>
       <Main>
         <PageHeader
-          title="Permission Sets"
+          title="Permission sets"
           description="Manage permission sets that can be assigned to groups"
         >
           <Can permission={Permission.PermissionSetsWrite} mode="disable">
@@ -427,7 +427,7 @@ export default function PermissionSetsPage() {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle className="text-base">All Permission Sets</CardTitle>
+                    <CardTitle className="text-base">All permission sets</CardTitle>
                     <CardDescription>
                       System permission sets are read-only and cannot be modified
                     </CardDescription>

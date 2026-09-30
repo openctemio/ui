@@ -4,7 +4,14 @@ import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 import {
   Select,
   SelectContent,
@@ -14,7 +21,8 @@ import {
 } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Palette, Globe, Bell, Clock, Calendar, Save, Loader2, RotateCcw } from 'lucide-react'
+import { Save, Loader2, RotateCcw } from 'lucide-react'
+import { ErrorState } from '@/features/shared'
 import { toast } from 'sonner'
 import { getErrorMessage } from '@/lib/api/error-handler'
 import { useTheme } from 'next-themes'
@@ -40,7 +48,7 @@ const PREF_LANGUAGES = [
 
 export default function PreferencesPage() {
   const { theme, setTheme } = useTheme()
-  const { preferences, isLoading, mutate } = usePreferences()
+  const { preferences, isLoading, isError, error, mutate } = usePreferences()
   const { updatePreferences, isUpdating } = useUpdatePreferences()
 
   // Form state
@@ -149,7 +157,7 @@ export default function PreferencesPage() {
         mutate(result)
       }
       setHasChanges(false)
-      toast.success('Preferences saved successfully')
+      toast.success('Preferences saved')
     } catch (error) {
       toast.error(getErrorMessage(error, 'Failed to save preferences'))
     }
@@ -178,72 +186,79 @@ export default function PreferencesPage() {
     toast.info('Preferences reset to defaults (unsaved)')
   }
 
-  // Loading state
   if (isLoading) {
-    return (
-      <div className="grid gap-6">
-        <Skeleton className="h-48 w-full" />
-        <Skeleton className="h-48 w-full" />
-        <Skeleton className="h-64 w-full" />
-      </div>
-    )
+    return <Skeleton className="h-[640px] w-full" />
+  }
+
+  if (isError) {
+    return <ErrorState title="your preferences" error={error} onRetry={() => void mutate()} />
   }
 
   return (
-    <div className="grid gap-6">
-      {/* Appearance */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Palette className="h-5 w-5" />
-            Appearance
-          </CardTitle>
-          <CardDescription>Customize how OpenCTEM looks on your device</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label>Theme</Label>
-            <div className="flex gap-2">
-              {(['light', 'dark', 'system'] as const).map((t) => (
-                <Button
-                  key={t}
-                  variant={formData.theme === t ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => handleChange('theme', t)}
-                  className="flex-1"
-                >
-                  {t.charAt(0).toUpperCase() + t.slice(1)}
-                </Button>
-              ))}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {formData.theme === 'system'
-                ? 'Automatically switch based on your system settings'
-                : `Always use ${formData.theme} mode`}
+    <Card>
+      <CardHeader>
+        <CardTitle>Preferences</CardTitle>
+        <CardDescription>How OpenCTEM looks and behaves for you.</CardDescription>
+        <CardAction className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={handleReset}>
+            <RotateCcw className="h-4 w-4" />
+            <span className="hidden sm:inline">Reset</span>
+            <span className="sr-only sm:hidden">Reset to defaults</span>
+          </Button>
+          <Button size="sm" onClick={handleSave} disabled={!hasChanges || isUpdating}>
+            {isUpdating ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4" />
+            )}
+            Save changes
+          </Button>
+        </CardAction>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <section className="space-y-3">
+          <div>
+            <h3 className="text-sm font-semibold">Appearance</h3>
+            <p className="text-sm text-muted-foreground">Applies as soon as you pick it.</p>
+          </div>
+          <div className="flex gap-2" role="group" aria-label="Theme">
+            {(['light', 'dark', 'system'] as const).map((t) => (
+              <Button
+                key={t}
+                variant={formData.theme === t ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => handleChange('theme', t)}
+                className="flex-1"
+                aria-pressed={formData.theme === t}
+              >
+                {t.charAt(0).toUpperCase() + t.slice(1)}
+              </Button>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {formData.theme === 'system'
+              ? 'Follows your device setting.'
+              : `Always uses ${formData.theme} mode.`}
+          </p>
+        </section>
+
+        <Separator />
+
+        <section className="space-y-4">
+          <div>
+            <h3 className="text-sm font-semibold">Language and region</h3>
+            <p className="text-sm text-muted-foreground">
+              Language is saved to your account; time zone and formats are saved in this browser.
             </p>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Localization */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Globe className="h-5 w-5" />
-            Localization
-          </CardTitle>
-          <CardDescription>Language, timezone, and format preferences</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
           <div className="grid gap-4 sm:grid-cols-2">
-            {/* Language */}
-            <div className="space-y-2">
+            <div className="min-w-0 space-y-2">
               <Label htmlFor="language">Language</Label>
               <Select
                 value={formData.language}
                 onValueChange={(value) => handleChange('language', value)}
               >
-                <SelectTrigger id="language">
+                <SelectTrigger id="language" className="w-full min-w-0">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -256,17 +271,13 @@ export default function PreferencesPage() {
               </Select>
             </div>
 
-            {/* Timezone */}
-            <div className="space-y-2">
-              <Label htmlFor="timezone" className="flex items-center gap-2">
-                <Clock className="h-4 w-4" />
-                Timezone
-              </Label>
+            <div className="min-w-0 space-y-2">
+              <Label htmlFor="timezone">Time zone</Label>
               <Select
                 value={formData.timezone}
                 onValueChange={(value) => handleChange('timezone', value)}
               >
-                <SelectTrigger id="timezone">
+                <SelectTrigger id="timezone" className="w-full min-w-0">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -278,22 +289,14 @@ export default function PreferencesPage() {
                 </SelectContent>
               </Select>
             </div>
-          </div>
 
-          <Separator />
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            {/* Date Format */}
-            <div className="space-y-2">
-              <Label htmlFor="date-format" className="flex items-center gap-2">
-                <Calendar className="h-4 w-4" />
-                Date Format
-              </Label>
+            <div className="min-w-0 space-y-2">
+              <Label htmlFor="date-format">Date format</Label>
               <Select
                 value={formData.date_format}
                 onValueChange={(value) => handleChange('date_format', value)}
               >
-                <SelectTrigger id="date-format">
+                <SelectTrigger id="date-format" className="w-full min-w-0">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -306,14 +309,13 @@ export default function PreferencesPage() {
               </Select>
             </div>
 
-            {/* Time Format */}
-            <div className="space-y-2">
-              <Label htmlFor="time-format">Time Format</Label>
+            <div className="min-w-0 space-y-2">
+              <Label htmlFor="time-format">Time format</Label>
               <Select
                 value={formData.time_format}
                 onValueChange={(value) => handleChange('time_format', value as '12h' | '24h')}
               >
-                <SelectTrigger id="time-format">
+                <SelectTrigger id="time-format" className="w-full min-w-0">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -323,134 +325,95 @@ export default function PreferencesPage() {
               </Select>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </section>
 
-      {/* Notifications */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Bell className="h-5 w-5" />
-            Notifications
-          </CardTitle>
-          <CardDescription>Manage how you receive notifications</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Desktop Notifications */}
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label>Desktop Notifications</Label>
-              <p className="text-sm text-muted-foreground">
-                Receive push notifications in your browser
-              </p>
-            </div>
-            <Switch
-              checked={formData.desktop_notifications}
-              onCheckedChange={(checked) => handleChange('desktop_notifications', checked)}
-            />
+        <Separator />
+
+        <section className="space-y-4">
+          <div>
+            <h3 className="text-sm font-semibold">Notifications</h3>
+            <p className="text-sm text-muted-foreground">Saved in this browser.</p>
           </div>
 
-          <Separator />
+          <ToggleRow
+            id="desktop-notifications"
+            label="Desktop notifications"
+            description="Push notifications in your browser."
+            checked={!!formData.desktop_notifications}
+            onChange={(checked) => handleChange('desktop_notifications', checked)}
+          />
 
-          {/* Email Notifications */}
-          <div className="space-y-4">
-            <Label>Email Notifications</Label>
-
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium">Security Alerts</p>
-                  <p className="text-xs text-muted-foreground">
-                    Login attempts, password changes, and security events
-                  </p>
-                </div>
-                <Switch
-                  checked={formData.email_notifications?.security_alerts}
-                  onCheckedChange={(checked) =>
-                    handleEmailNotificationChange('security_alerts', checked)
-                  }
-                />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium">Weekly Digest</p>
-                  <p className="text-xs text-muted-foreground">
-                    Summary of findings and activity from the past week
-                  </p>
-                </div>
-                <Switch
-                  checked={formData.email_notifications?.weekly_digest}
-                  onCheckedChange={(checked) =>
-                    handleEmailNotificationChange('weekly_digest', checked)
-                  }
-                />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium">Scan Completed</p>
-                  <p className="text-xs text-muted-foreground">
-                    Get notified when security scans finish
-                  </p>
-                </div>
-                <Switch
-                  checked={formData.email_notifications?.scan_completed}
-                  onCheckedChange={(checked) =>
-                    handleEmailNotificationChange('scan_completed', checked)
-                  }
-                />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium">New Findings</p>
-                  <p className="text-xs text-muted-foreground">
-                    Alerts for critical and high severity findings
-                  </p>
-                </div>
-                <Switch
-                  checked={formData.email_notifications?.new_findings}
-                  onCheckedChange={(checked) =>
-                    handleEmailNotificationChange('new_findings', checked)
-                  }
-                />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium">Team Updates</p>
-                  <p className="text-xs text-muted-foreground">
-                    Member invitations, role changes, and team activity
-                  </p>
-                </div>
-                <Switch
-                  checked={formData.email_notifications?.team_updates}
-                  onCheckedChange={(checked) =>
-                    handleEmailNotificationChange('team_updates', checked)
-                  }
-                />
-              </div>
-            </div>
+          <div className="space-y-3">
+            <p className="text-sm font-medium">Email</p>
+            {EMAIL_TOGGLES.map((t) => (
+              <ToggleRow
+                key={t.key}
+                id={`email-${t.key}`}
+                label={t.label}
+                description={t.description}
+                checked={!!formData.email_notifications?.[t.key]}
+                onChange={(checked) => handleEmailNotificationChange(t.key, checked)}
+              />
+            ))}
           </div>
-        </CardContent>
-      </Card>
+        </section>
+      </CardContent>
+    </Card>
+  )
+}
 
-      {/* Actions */}
-      <div className="flex justify-between">
-        <Button variant="outline" onClick={handleReset}>
-          <RotateCcw className="me-2 h-4 w-4" />
-          Reset to Defaults
-        </Button>
-        <Button onClick={handleSave} disabled={!hasChanges || isUpdating}>
-          {isUpdating ? (
-            <Loader2 className="me-2 h-4 w-4 animate-spin" />
-          ) : (
-            <Save className="me-2 h-4 w-4" />
-          )}
-          {isUpdating ? 'Saving...' : 'Save Preferences'}
-        </Button>
+type EmailToggleKey = keyof NonNullable<UpdatePreferencesInput['email_notifications']>
+
+const EMAIL_TOGGLES: { key: EmailToggleKey; label: string; description: string }[] = [
+  {
+    key: 'security_alerts',
+    label: 'Security alerts',
+    description: 'Sign-in attempts, password changes and other security events.',
+  },
+  {
+    key: 'weekly_digest',
+    label: 'Weekly digest',
+    description: 'A summary of findings and activity from the past week.',
+  },
+  {
+    key: 'scan_completed',
+    label: 'Scan completed',
+    description: 'When a security scan finishes.',
+  },
+  {
+    key: 'new_findings',
+    label: 'New findings',
+    description: 'Critical and high severity findings.',
+  },
+  {
+    key: 'team_updates',
+    label: 'Team updates',
+    description: 'Invitations, role changes and team activity.',
+  },
+]
+
+function ToggleRow({
+  id,
+  label,
+  description,
+  checked,
+  onChange,
+}: {
+  id: string
+  label: string
+  description: string
+  checked: boolean
+  onChange: (checked: boolean) => void
+}) {
+  return (
+    <div className="flex items-center justify-between gap-4">
+      <div className="min-w-0">
+        <Label htmlFor={id} className="text-sm font-normal">
+          {label}
+        </Label>
+        <p className="text-xs text-muted-foreground">{description}</p>
       </div>
+      <Switch id={id} checked={checked} onCheckedChange={onChange} />
     </div>
   )
 }

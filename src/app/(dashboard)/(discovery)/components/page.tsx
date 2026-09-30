@@ -134,7 +134,7 @@ export default function ComponentsOverviewPage() {
             {kevCount === 1 ? 'component contains' : 'components contain'} vulnerabilities from the
             CISA KEV catalog and need immediate attention.
             <Button variant="outline" size="sm" asChild>
-              <Link href="/components/vulnerable?cisaKev=true">
+              <Link href="/components/vulnerable?kev=true">
                 View KEV components
                 <ArrowRight className="ms-2 h-4 w-4" />
               </Link>

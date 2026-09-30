@@ -426,7 +426,7 @@ export default function ApprovalsPage() {
         </div>
 
         <PageHeader
-          title="Approval Requests"
+          title="Approval requests"
           description={
             isInitialLoading
               ? 'Loading approvals...'

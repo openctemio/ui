@@ -131,7 +131,7 @@ export default function LicensesPage() {
     <>
       <Main>
         <PageHeader
-          title="License Compliance"
+          title="License compliance"
           description={
             isLoading
               ? 'Loading...'
@@ -258,7 +258,7 @@ export default function LicensesPage() {
           {/* License Categories */}
           <Card>
             <CardHeader>
-              <CardTitle>License Categories</CardTitle>
+              <CardTitle>License categories</CardTitle>
               <CardDescription>Distribution by license type</CardDescription>
             </CardHeader>
             <CardContent>
@@ -300,7 +300,7 @@ export default function LicensesPage() {
           {/* Risk Distribution */}
           <Card>
             <CardHeader>
-              <CardTitle>Risk Distribution</CardTitle>
+              <CardTitle>Risk distribution</CardTitle>
               <CardDescription>Components by license risk level</CardDescription>
             </CardHeader>
             <CardContent>
@@ -381,7 +381,7 @@ export default function LicensesPage() {
         {/* License Table */}
         <Card className="mt-6">
           <CardHeader>
-            <CardTitle>All Licenses</CardTitle>
+            <CardTitle>All licenses</CardTitle>
             <CardDescription>Complete list of licenses in use</CardDescription>
           </CardHeader>
           <CardContent>

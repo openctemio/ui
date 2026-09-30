@@ -15,7 +15,7 @@ export default function CreateTeamPage() {
     <>
       <Main>
         <PageHeader
-          title="Create New Team"
+          title="Create new team"
           description="Set up a new team to organize your security assets and collaborate with others"
         />
 

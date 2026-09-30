@@ -71,7 +71,7 @@ export function PlatformStatsCard({ className }: PlatformStatsCardProps) {
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-sm font-medium">
             <Zap className="h-4 w-4 text-primary" />
-            Platform Agents
+            Platform agents
           </CardTitle>
           {maxTier && <MaxTierBadge maxTier={maxTier} />}
         </div>
@@ -81,7 +81,7 @@ export function PlatformStatsCard({ className }: PlatformStatsCardProps) {
         {/* Usage Progress */}
         <div className="space-y-2">
           <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Active Jobs</span>
+            <span className="text-muted-foreground">Active jobs</span>
             <span className="font-medium">
               {currentActive} / {maxConcurrent}
             </span>
@@ -102,7 +102,7 @@ export function PlatformStatsCard({ className }: PlatformStatsCardProps) {
               <Clock className="h-3.5 w-3.5" />
               Queued
             </span>
-            <span className={cn('font-medium', currentQueued > 0 && 'text-amber-500')}>
+            <span className={cn('font-medium', currentQueued > 0 && 'text-warning')}>
               {currentQueued} / {maxQueued}
             </span>
           </div>
@@ -111,16 +111,16 @@ export function PlatformStatsCard({ className }: PlatformStatsCardProps) {
         {/* Available Slots */}
         <div className="flex items-center justify-between text-sm">
           <span className="flex items-center gap-1.5 text-muted-foreground">
-            <CheckCircle className="h-3.5 w-3.5 text-green-500" />
+            <CheckCircle className="h-3.5 w-3.5 text-success" />
             Available
           </span>
-          <span className="font-medium text-green-600 dark:text-green-400">{availableSlots}</span>
+          <span className="font-medium text-success">{availableSlots}</span>
         </div>
 
         {/* Tier Stats Grid */}
         {tierStats && (
           <div className="border-t pt-4">
-            <p className="mb-2 text-xs font-medium text-muted-foreground">Agents by Tier</p>
+            <p className="mb-2 text-xs font-medium text-muted-foreground">Agents by tier</p>
             <div className="grid grid-cols-3 gap-2">
               {PLATFORM_AGENT_TIERS.map((tier) => (
                 <TierStatItem key={tier} tier={tier} stats={tierStats[tier]} />
@@ -146,7 +146,7 @@ function TierStatItem({ tier, stats }: { tier: PlatformAgentTier; stats?: TierSt
       <Icon className="mb-1 h-4 w-4 text-muted-foreground" />
       <span className="text-xs font-medium">{PLATFORM_TIER_LABELS[tier]}</span>
       <span className="text-xs text-muted-foreground">
-        <span className={cn(online > 0 && 'text-green-500')}>{online}</span> / {total}
+        <span className={cn(online > 0 && 'text-success')}>{online}</span> / {total}
       </span>
     </div>
   )
@@ -160,7 +160,7 @@ function PlatformAgentsComingSoonCard({ className }: { className?: string }) {
   return (
     <Card className={cn('border-dashed', className)}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">Platform Agents</CardTitle>
+        <CardTitle className="text-sm font-medium">Platform agents</CardTitle>
         <Zap className="h-4 w-4 text-muted-foreground" />
       </CardHeader>
       <CardContent>
@@ -182,7 +182,7 @@ function PlatformAgentsDisabledCard({ className }: { className?: string }) {
   return (
     <Card className={cn('border-dashed', className)}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">Platform Agents</CardTitle>
+        <CardTitle className="text-sm font-medium">Platform agents</CardTitle>
         <Zap className="h-4 w-4 text-muted-foreground" />
       </CardHeader>
       <CardContent>
@@ -233,7 +233,7 @@ export function PlatformStatsInline({ className }: { className?: string }) {
       <span className="text-muted-foreground">
         Platform: {currentActive}/{maxConcurrent}
       </span>
-      <span className="text-green-500">{availableSlots} available</span>
+      <span className="text-success">{availableSlots} available</span>
       {maxTier && <TierBadge tier={maxTier} size="sm" />}
     </div>
   )

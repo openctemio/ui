@@ -295,7 +295,7 @@ export default function TrendingExposuresPage() {
   return (
     <Main>
       <PageHeader
-        title="Trending Exposures"
+        title="Trending exposures"
         description="Track emerging threats and vulnerability trends across your environment"
         className="mb-6"
       />
@@ -362,7 +362,7 @@ export default function TrendingExposuresPage() {
           ) : (
             <Card className="mb-6">
               <CardHeader>
-                <CardTitle>Finding Trends by Severity</CardTitle>
+                <CardTitle>Finding trends by severity</CardTitle>
                 <CardDescription>
                   Stacked area view of findings over time across all severity levels
                 </CardDescription>
@@ -435,7 +435,7 @@ export default function TrendingExposuresPage() {
           {/* Severity Momentum */}
           <Card className="mb-6">
             <CardHeader>
-              <CardTitle>Severity Momentum</CardTitle>
+              <CardTitle>Severity momentum</CardTitle>
               <CardDescription>
                 Direction of each severity level based on the last two data points
               </CardDescription>
@@ -500,7 +500,7 @@ export default function TrendingExposuresPage() {
           {/* Top Risk Factors */}
           <Card>
             <CardHeader>
-              <CardTitle>Top Risk Factors</CardTitle>
+              <CardTitle>Top risk factors</CardTitle>
               <CardDescription>Derived insights from current exposure trends</CardDescription>
             </CardHeader>
             <CardContent>
@@ -560,7 +560,7 @@ export default function TrendingExposuresPage() {
           {riskTrend.length > 0 && (
             <Card className="mt-6">
               <CardHeader>
-                <CardTitle>Risk Trend (90 days)</CardTitle>
+                <CardTitle>Risk trend (90 days)</CardTitle>
                 <CardDescription>
                   Daily risk score and finding counts by priority class
                 </CardDescription>

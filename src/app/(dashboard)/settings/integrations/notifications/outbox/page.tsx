@@ -352,7 +352,7 @@ export default function NotificationOutboxPage() {
             {/* Entries Table */}
             <Card className="mt-4">
               <CardHeader className="pb-3">
-                <CardTitle className="text-base">Queue Entries</CardTitle>
+                <CardTitle className="text-base">Queue entries</CardTitle>
                 <CardDescription>
                   {entriesData?.total ?? 0} entries found
                   {statusFilter !== 'all' && ` (filtered by ${statusFilter})`}

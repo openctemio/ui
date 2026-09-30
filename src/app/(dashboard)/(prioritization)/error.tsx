@@ -32,7 +32,7 @@ export default function PrioritizationError({ error, reset }: ErrorProps) {
           </div>
           <CardTitle className="flex items-center justify-center gap-2">
             <TrendingUp className="h-5 w-5" />
-            Prioritization Error
+            Prioritization error
           </CardTitle>
           <CardDescription>
             Failed to load risk prioritization data. Please try again.
