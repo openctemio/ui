@@ -635,8 +635,6 @@ export function AssetsDataTable({
           }
         }}
         icon={assetTypeIcon}
-        iconColor="text-primary"
-        gradientFrom="from-primary/20"
         assetTypeName={assetTypeName}
         onUpdateTags={handleUpdateTags}
         tagSuggestions={tagSuggestions}

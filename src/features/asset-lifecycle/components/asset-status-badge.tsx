@@ -36,8 +36,8 @@ const STATUS_CONFIG: Record<
   active: {
     label: 'Active',
     Icon: CheckCircle2,
-    className:
-      'border-green-300 bg-green-50 text-green-700 dark:border-green-900 dark:bg-green-950/30 dark:text-green-400',
+    // Healthy is the normal state, so it is not coloured (style contract §6).
+    className: 'text-foreground',
     description: 'Asset was recently observed by a scanner or integration.',
   },
   stale: {
@@ -50,15 +50,13 @@ const STATUS_CONFIG: Record<
   inactive: {
     label: 'Inactive',
     Icon: CircleSlash,
-    className:
-      'border-gray-300 bg-gray-50 text-gray-700 dark:border-gray-700 dark:bg-gray-900/30 dark:text-gray-400',
+    className: 'text-muted-foreground',
     description: 'The asset has been stale long enough to be marked inactive.',
   },
   archived: {
     label: 'Archived',
     Icon: Archive,
-    className:
-      'border-slate-400 bg-slate-100 text-slate-700 dark:border-slate-700 dark:bg-slate-900/30 dark:text-slate-400',
+    className: 'bg-muted text-muted-foreground',
     description: 'Archived — requires manual restore to return to active rotation.',
   },
 }
