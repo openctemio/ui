@@ -459,7 +459,7 @@ export default function ScanDetailPage() {
         <TabsContent value="runs">
           <Card>
             <CardHeader>
-              <CardTitle>Recent Runs</CardTitle>
+              <CardTitle>Recent runs</CardTitle>
               <CardDescription>History of scan executions</CardDescription>
             </CardHeader>
             <CardContent>
@@ -585,7 +585,7 @@ export default function ScanDetailPage() {
           <div className="grid gap-4 md:grid-cols-2">
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Schedule Settings</CardTitle>
+                <CardTitle className="text-base">Schedule settings</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
@@ -627,7 +627,7 @@ export default function ScanDetailPage() {
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Agent Settings</CardTitle>
+                <CardTitle className="text-base">Agent settings</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
@@ -764,7 +764,7 @@ export default function ScanDetailPage() {
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Technical Details</CardTitle>
+                <CardTitle className="text-base">Technical details</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex items-center justify-between">
@@ -809,7 +809,7 @@ export default function ScanDetailPage() {
             <Can permission={Permission.ScansDelete}>
               <Card className="md:col-span-2 border-red-500/30">
                 <CardHeader>
-                  <CardTitle className="text-base text-red-500">Danger Zone</CardTitle>
+                  <CardTitle className="text-base text-destructive">Danger zone</CardTitle>
                   <CardDescription>
                     Permanently delete this configuration and all associated data.
                   </CardDescription>

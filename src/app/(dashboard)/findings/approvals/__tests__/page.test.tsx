@@ -222,7 +222,7 @@ describe('ApprovalsPage', () => {
     it('renders the page title', () => {
       mockHook({ data: { data: [], total: 0, page: 1, per_page: 500 } })
       render(<ApprovalsPage />)
-      expect(screen.getByText('Approval Requests')).toBeInTheDocument()
+      expect(screen.getByText('Approval requests')).toBeInTheDocument()
     })
 
     it('renders description with counts', () => {

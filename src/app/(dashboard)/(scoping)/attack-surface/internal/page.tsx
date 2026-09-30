@@ -452,7 +452,7 @@ export default function InternalSurfacePage() {
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label>Operating System</Label>
+          <Label>Operating system</Label>
           <Input
             placeholder="e.g., Windows Server 2022"
             value={formData.operatingSystem}
@@ -460,7 +460,7 @@ export default function InternalSurfacePage() {
           />
         </div>
         <div className="space-y-2">
-          <Label>Risk Level</Label>
+          <Label>Risk level</Label>
           <Select
             value={formData.riskLevel}
             onValueChange={(v) => setFormData({ ...formData, riskLevel: v as RiskLevel })}
@@ -500,7 +500,7 @@ export default function InternalSurfacePage() {
     <>
       <Main>
         <PageHeader
-          title="Internal Attack Surface"
+          title="Internal attack surface"
           description="Map and monitor internal network assets and their security posture"
         >
           <div className="flex gap-2">
@@ -565,7 +565,7 @@ export default function InternalSurfacePage() {
         {/* Network Zone Distribution */}
         <Card className="mb-6">
           <CardHeader>
-            <CardTitle className="text-sm">Network Zone Distribution</CardTitle>
+            <CardTitle className="text-sm">Network zone distribution</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex gap-4">
@@ -667,7 +667,7 @@ export default function InternalSurfacePage() {
         {/* Assets Table */}
         <Card>
           <CardHeader>
-            <CardTitle>Internal Assets</CardTitle>
+            <CardTitle>Internal assets</CardTitle>
             <CardDescription>
               {filteredAssets.length} of {assets.length} assets
             </CardDescription>
@@ -864,7 +864,7 @@ export default function InternalSurfacePage() {
                     </Card>
                     <Card>
                       <CardHeader className="pb-2">
-                        <CardTitle className="text-sm">Risk Level</CardTitle>
+                        <CardTitle className="text-sm">Risk level</CardTitle>
                       </CardHeader>
                       <CardContent>
                         <Badge variant="outline" className={riskColors[viewAsset.riskLevel]}>
@@ -886,7 +886,7 @@ export default function InternalSurfacePage() {
 
                   <Card>
                     <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Network Details</CardTitle>
+                      <CardTitle className="text-sm">Network details</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-2 text-sm">
                       <div className="flex justify-between">
@@ -911,7 +911,7 @@ export default function InternalSurfacePage() {
                   {viewAsset.operatingSystem && (
                     <Card>
                       <CardHeader className="pb-2">
-                        <CardTitle className="text-sm">Operating System</CardTitle>
+                        <CardTitle className="text-sm">Operating system</CardTitle>
                       </CardHeader>
                       <CardContent>
                         <p className="text-sm">{viewAsset.operatingSystem}</p>
@@ -922,7 +922,7 @@ export default function InternalSurfacePage() {
                   {viewAsset.openPorts && viewAsset.openPorts.length > 0 && (
                     <Card>
                       <CardHeader className="pb-2">
-                        <CardTitle className="text-sm">Open Ports</CardTitle>
+                        <CardTitle className="text-sm">Open ports</CardTitle>
                       </CardHeader>
                       <CardContent>
                         <div className="flex flex-wrap gap-2">
@@ -997,7 +997,7 @@ export default function InternalSurfacePage() {
                         <span>{new Date(viewAsset.discoveredAt).toLocaleDateString()}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Last Seen</span>
+                        <span className="text-muted-foreground">Last seen</span>
                         <span>{new Date(viewAsset.lastSeen).toLocaleDateString()}</span>
                       </div>
                     </CardContent>

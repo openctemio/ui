@@ -2,8 +2,13 @@
 
 import { useState } from 'react'
 import { Main } from '@/components/layout'
-import { PageHeader, EmptyState } from '@/features/shared'
-import { StatsCard } from '@/features/shared/components/stats-card'
+import {
+  PageHeader,
+  EmptyState,
+  ErrorState,
+  MetricStrip,
+  type MetricStripItem,
+} from '@/features/shared'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -26,20 +31,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import {
-  ShieldCheck,
-  Plus,
-  Link2,
-  Clock,
-  ServerCog,
-  Info,
-  Pencil,
-  Trash2,
-  Upload,
-  Gauge,
-  Target,
-  AlertTriangle,
-} from 'lucide-react'
+import { ShieldCheck, Plus, Clock, ServerCog, Info, Pencil, Trash2, Upload } from 'lucide-react'
 import { useScanCoverage } from '@/lib/api/scan-coverage-hooks'
 import {
   useIntegrationsApi,
@@ -74,23 +66,14 @@ function getConfigString(integration: Integration, key: string): string {
 
 function StatusBadge({ status }: { status: IntegrationStatus }) {
   const config: Record<string, { className: string; label: string }> = {
-    connected: {
-      className: 'bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20',
-      label: 'Connected',
-    },
-    disconnected: { className: 'bg-muted text-muted-foreground', label: 'Not Connected' },
+    connected: { className: 'bg-success/10 text-success border-success/20', label: 'Connected' },
+    disconnected: { className: 'bg-muted text-muted-foreground', label: 'Not connected' },
     error: {
-      className: 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20',
+      className: 'bg-destructive/10 text-destructive border-destructive/20',
       label: 'Error',
     },
-    pending: {
-      className: 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-500/20',
-      label: 'Pending',
-    },
-    expired: {
-      className: 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20',
-      label: 'Expired',
-    },
+    pending: { className: 'bg-warning/10 text-warning border-warning/20', label: 'Pending' },
+    expired: { className: 'bg-warning/10 text-warning border-warning/20', label: 'Expired' },
     disabled: { className: 'bg-muted text-muted-foreground', label: 'Disabled' },
   }
   const { className, label } = config[status] ?? config.disconnected
@@ -158,9 +141,9 @@ function AgentModeNote() {
 
 function DirectModeWarning() {
   return (
-    <div className="flex gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
-      <Info className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
-      <p className="text-xs text-amber-700 dark:text-amber-300">
+    <div className="flex gap-2 rounded-lg border border-warning/30 bg-warning/10 p-3">
+      <Info className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
+      <p className="text-xs text-foreground">
         Direct mode stores Tenable API credentials in OpenCTEM and requires the backend to reach
         Tenable. Prefer runner mode for segmented networks.
       </p>
@@ -585,8 +568,8 @@ function ScannerCard({
 
   return (
     <Card>
-      <CardContent className="pt-6">
-        <div className="flex items-start justify-between gap-4">
+      <CardContent>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
           <div className="min-w-0 flex-1 space-y-2">
             <div className="flex flex-wrap items-center gap-2">
               <h3 className="truncate font-semibold">{integration.name}</h3>
@@ -601,23 +584,31 @@ function ScannerCard({
               )}
             </div>
             {integration.base_url && (
-              <p className="text-muted-foreground text-xs">{integration.base_url}</p>
+              <p className="break-all font-mono text-xs text-muted-foreground">
+                {integration.base_url}
+              </p>
             )}
             {integration.last_sync_at && (
               <span className="text-muted-foreground flex items-center gap-1 text-xs">
                 <Clock className="h-3 w-3" />
-                Last sync: {new Date(integration.last_sync_at).toLocaleString()}
+                Last sync {new Date(integration.last_sync_at).toLocaleString()}
               </span>
             )}
           </div>
           <div className="flex shrink-0 items-center gap-1">
             {mode === 'agent' && (
               <Button variant="outline" size="sm" onClick={() => setRunnerOpen(true)}>
-                <ServerCog className="me-2 h-4 w-4" />
+                <ServerCog className="h-4 w-4" />
                 Runner setup
               </Button>
             )}
-            <Button variant="ghost" size="icon" onClick={() => setEditOpen(true)} title="Edit">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setEditOpen(true)}
+              title="Edit"
+              aria-label={`Edit ${integration.name}`}
+            >
               <Pencil className="h-4 w-4" />
             </Button>
             <Button
@@ -625,7 +616,8 @@ function ScannerCard({
               size="icon"
               onClick={() => setDeleteOpen(true)}
               title="Remove"
-              className="text-red-500 hover:text-red-600"
+              aria-label={`Remove ${integration.name}`}
+              className="text-destructive hover:text-destructive"
             >
               <Trash2 className="h-4 w-4" />
             </Button>
@@ -658,38 +650,22 @@ function ScannerCard({
 // Page
 // ─────────────────────────────────────────────────────────
 
-function LoadingSkeleton() {
-  return (
-    <Main>
-      <Skeleton className="mb-6 h-8 w-56" />
-      <div className="grid gap-4 md:grid-cols-3">
-        {Array.from({ length: 3 }).map((_, i) => (
-          <Skeleton key={i} className="h-24 rounded-lg" />
-        ))}
-      </div>
-      <div className="mt-6 space-y-4">
-        {Array.from({ length: 2 }).map((_, i) => (
-          <Skeleton key={i} className="h-28 rounded-lg" />
-        ))}
-      </div>
-    </Main>
-  )
-}
+const PAGE_TITLE = 'Vulnerability scanners'
+const PAGE_DESCRIPTION =
+  'Connect Tenable (Nessus Pro or Tenable.sc) for license-aware scan coverage.'
 
 export default function SecurityScannersPage() {
   const [connectOpen, setConnectOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
   const {
     data,
+    error,
     isLoading,
     mutate: reload,
   } = useIntegrationsApi({ category: 'security', per_page: 50 })
 
   const scanners = data?.data ?? []
   const connected = scanners.filter((s) => s.status === 'connected').length
-  const agentMode = scanners.filter(
-    (s) => (getConfigString(s, 'execution_mode') || 'agent') === 'agent'
-  ).length
 
   const { data: coverage, isLoading: coverageLoading } = useScanCoverage(30)
 
@@ -701,123 +677,92 @@ export default function SecurityScannersPage() {
     void invalidateIntegrationsCache()
   }
 
-  if (isLoading) return <LoadingSkeleton />
+  const metrics: MetricStripItem[] = [
+    {
+      key: 'connected',
+      label: 'Connected',
+      value: connected,
+      hint: `of ${scanners.length} configured`,
+    },
+    ...(coverage
+      ? ([
+          {
+            key: 'coverage',
+            label: `Coverage (${coverage.window_days ?? 30} days)`,
+            value: `${coverage.coverage_percent.toFixed(1)}%`,
+            hint: `${coverage.covered_in_window} of ${coverage.total_scannable} assets`,
+          },
+          {
+            key: 'never',
+            label: 'Never scanned',
+            value: coverage.never_scanned,
+            tone: 'danger',
+          },
+          {
+            key: 'stale',
+            label: 'Stale',
+            value: coverage.stale,
+            hint: 'Older than the window',
+          },
+          {
+            key: 'critical-never',
+            label: 'Critical never scanned',
+            value: coverage.critical_never_scanned,
+            tone: 'danger',
+          },
+        ] satisfies MetricStripItem[])
+      : []),
+  ]
 
   return (
     <Main>
-      <PageHeader
-        title="Vulnerability Scanners"
-        description="Connect Tenable (Nessus Pro / Tenable.sc) for license-aware scan coverage"
-      >
+      <PageHeader title={PAGE_TITLE} description={PAGE_DESCRIPTION}>
         <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>
-          <Upload className="me-2 h-4 w-4" />
+          <Upload className="h-4 w-4" />
           Import .nessus
         </Button>
         <Button size="sm" onClick={() => setConnectOpen(true)}>
-          <Plus className="me-2 h-4 w-4" />
-          Connect Scanner
+          <Plus className="h-4 w-4" />
+          Connect scanner
         </Button>
       </PageHeader>
 
-      <div className="mt-6 grid gap-4 md:grid-cols-3">
-        <StatsCard
-          title="Connected Scanners"
-          value={connected}
-          icon={Link2}
-          changeType={connected > 0 ? 'positive' : 'neutral'}
-          description={`of ${scanners.length} configured`}
-        />
-        <StatsCard
-          title="Runner (agent) mode"
-          value={agentMode}
-          icon={ServerCog}
-          description="Credentials stay in your environment"
-        />
-        <StatsCard
-          title="Direct mode"
-          value={scanners.length - agentMode}
+      {error ? (
+        <div className="mt-5">
+          <ErrorState title="scanners" error={error} onRetry={() => void reload()} />
+        </div>
+      ) : isLoading ? (
+        <div className="mt-5 space-y-5">
+          <Skeleton className="h-20 w-full rounded-xl" />
+          <Skeleton className="h-28 w-full" />
+        </div>
+      ) : scanners.length === 0 ? (
+        <EmptyState
+          className="mt-5"
           icon={ShieldCheck}
-          description="Backend reaches Tenable"
+          title="No scanners connected"
+          description="Connect Tenable to ingest vulnerability findings with license-aware rolling coverage."
+          action={
+            <Button size="sm" onClick={() => setConnectOpen(true)}>
+              <Plus className="h-4 w-4" />
+              Connect Tenable
+            </Button>
+          }
         />
-      </div>
+      ) : (
+        <>
+          <MetricStrip className="mt-5" loading={coverageLoading} items={metrics} />
 
-      {scanners.length > 0 && (
-        <div className="mt-6">
-          <div className="mb-4 flex items-center gap-2">
-            <h2 className="text-lg font-semibold">Coverage</h2>
-            <span className="text-muted-foreground text-sm">
-              rolling scan freshness (last {coverage?.window_days ?? 30} days)
-            </span>
-          </div>
-          {coverageLoading ? (
-            <div className="grid gap-4 md:grid-cols-4">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <Skeleton key={i} className="h-28 w-full" />
+          <section className="mt-5">
+            <h2 className="mb-3 text-base font-semibold">Scanners</h2>
+            <div className="space-y-3">
+              {scanners.map((s) => (
+                <ScannerCard key={s.id} integration={s} onChanged={refresh} />
               ))}
             </div>
-          ) : coverage ? (
-            <div className="grid gap-4 md:grid-cols-4">
-              <StatsCard
-                title="Coverage"
-                value={`${coverage.coverage_percent.toFixed(1)}%`}
-                icon={Gauge}
-                changeType={
-                  coverage.coverage_percent >= 80
-                    ? 'positive'
-                    : coverage.coverage_percent >= 50
-                      ? 'neutral'
-                      : 'negative'
-                }
-                description={`${coverage.covered_in_window} of ${coverage.total_scannable} scanned in window`}
-              />
-              <StatsCard
-                title="Never scanned"
-                value={coverage.never_scanned}
-                icon={Target}
-                changeType={coverage.never_scanned > 0 ? 'negative' : 'positive'}
-                description={`of ${coverage.total_scannable} scannable assets`}
-              />
-              <StatsCard
-                title="Stale"
-                value={coverage.stale}
-                icon={Clock}
-                changeType={coverage.stale > 0 ? 'neutral' : 'positive'}
-                description="scanned, but older than the window"
-              />
-              <StatsCard
-                title="Critical never scanned"
-                value={coverage.critical_never_scanned}
-                icon={AlertTriangle}
-                changeType={coverage.critical_never_scanned > 0 ? 'negative' : 'positive'}
-                description="critical assets with no coverage"
-              />
-            </div>
-          ) : null}
-        </div>
+          </section>
+        </>
       )}
-
-      <div className="mt-6">
-        <h2 className="mb-4 text-lg font-semibold">Scanners</h2>
-        {scanners.length === 0 ? (
-          <EmptyState
-            icon={ShieldCheck}
-            title="No scanners connected"
-            description="Connect Tenable to ingest vulnerability findings with license-aware rolling coverage."
-            action={
-              <Button size="sm" onClick={() => setConnectOpen(true)}>
-                <Plus className="me-2 h-4 w-4" />
-                Connect Tenable
-              </Button>
-            }
-          />
-        ) : (
-          <div className="space-y-4">
-            {scanners.map((s) => (
-              <ScannerCard key={s.id} integration={s} onChanged={refresh} />
-            ))}
-          </div>
-        )}
-      </div>
 
       <ConnectTenableDialog open={connectOpen} onOpenChange={setConnectOpen} onSuccess={refresh} />
       <ImportResultsDialog open={importOpen} onOpenChange={setImportOpen} onSuccess={refresh} />

@@ -76,7 +76,7 @@ export default function NotificationsSettingsPage() {
     return (
       <Main>
         <PageHeader
-          title="Notification Settings"
+          title="Notification settings"
           description="Configure how and when you receive notifications"
         />
         <div className="mt-6 flex items-center justify-center py-12">
@@ -90,7 +90,7 @@ export default function NotificationsSettingsPage() {
     return (
       <Main>
         <PageHeader
-          title="Notification Settings"
+          title="Notification settings"
           description="Configure how and when you receive notifications"
         />
         <div className="mt-6 flex flex-col items-center justify-center py-12 text-muted-foreground">
@@ -106,7 +106,7 @@ export default function NotificationsSettingsPage() {
     <>
       <Main>
         <PageHeader
-          title="Notification Settings"
+          title="Notification settings"
           description="Configure how and when you receive notifications"
         >
           <Button onClick={handleSave} disabled={isSaving}>
@@ -148,7 +148,7 @@ export default function NotificationsSettingsPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Mail className="h-5 w-5" />
-                Email Digest
+                Email digest
               </CardTitle>
               <CardDescription>Receive a summary of security events (coming soon)</CardDescription>
             </CardHeader>
@@ -179,7 +179,7 @@ export default function NotificationsSettingsPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <AlertTriangle className="h-5 w-5" />
-                Severity Filter
+                Severity filter
               </CardTitle>
               <CardDescription>
                 Only receive notifications at or above this severity
@@ -214,7 +214,7 @@ export default function NotificationsSettingsPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Bell className="h-5 w-5" />
-                Notification Types
+                Notification types
               </CardTitle>
               <CardDescription>Toggle individual notification types on or off</CardDescription>
             </CardHeader>

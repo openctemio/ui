@@ -138,7 +138,7 @@ export default function GeneralSettingsPage() {
     <>
       <Main>
         <PageHeader
-          title="General Settings"
+          title="General settings"
           description="Configure general platform settings and preferences"
         >
           <div className="flex gap-2">
@@ -207,7 +207,7 @@ export default function GeneralSettingsPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Settings className="h-5 w-5" />
-                Display Preferences
+                Display preferences
               </CardTitle>
               <CardDescription>
                 Date, time, and layout preferences stored locally in your browser
@@ -277,7 +277,7 @@ export default function GeneralSettingsPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <RotateCcw className="h-5 w-5" />
-                Data Refresh
+                Data refresh
               </CardTitle>
               <CardDescription>
                 Configure automatic data refresh behavior (stored locally)

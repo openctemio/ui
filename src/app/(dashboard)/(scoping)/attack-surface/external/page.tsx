@@ -404,7 +404,7 @@ export default function ExternalSurfacePage() {
           </Select>
         </div>
         <div className="space-y-2">
-          <Label>Risk Level</Label>
+          <Label>Risk level</Label>
           <Select
             value={formData.riskLevel}
             onValueChange={(v) => setFormData({ ...formData, riskLevel: v as RiskLevel })}
@@ -436,7 +436,7 @@ export default function ExternalSurfacePage() {
     <>
       <Main>
         <PageHeader
-          title="External Attack Surface"
+          title="External attack surface"
           description="Monitor and manage internet-facing assets and their exposure"
         >
           <div className="flex gap-2">
@@ -573,7 +573,7 @@ export default function ExternalSurfacePage() {
         {/* Assets Table */}
         <Card>
           <CardHeader>
-            <CardTitle>External Assets</CardTitle>
+            <CardTitle>External assets</CardTitle>
             <CardDescription>
               {filteredAssets.length} of {assets.length} assets
             </CardDescription>
@@ -588,7 +588,7 @@ export default function ExternalSurfacePage() {
                   <TableHead>Status</TableHead>
                   <TableHead>Risk</TableHead>
                   <TableHead>Findings</TableHead>
-                  <TableHead>Last Seen</TableHead>
+                  <TableHead>Last seen</TableHead>
                   <TableHead className="w-[50px]" />
                 </TableRow>
               </TableHeader>
@@ -769,7 +769,7 @@ export default function ExternalSurfacePage() {
                     </Card>
                     <Card>
                       <CardHeader className="pb-2">
-                        <CardTitle className="text-sm">Risk Level</CardTitle>
+                        <CardTitle className="text-sm">Risk level</CardTitle>
                       </CardHeader>
                       <CardContent>
                         <Badge variant="outline" className={riskColors[viewAsset.riskLevel]}>
@@ -865,7 +865,7 @@ export default function ExternalSurfacePage() {
                         <span>{new Date(viewAsset.discoveredAt).toLocaleDateString()}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Last Seen</span>
+                        <span className="text-muted-foreground">Last seen</span>
                         <span>{new Date(viewAsset.lastSeen).toLocaleDateString()}</span>
                       </div>
                     </CardContent>

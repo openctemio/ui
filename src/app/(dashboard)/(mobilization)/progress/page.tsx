@@ -268,7 +268,7 @@ export default function ProgressTrackingPage() {
   return (
     <Main>
       <PageHeader
-        title="Remediation Progress"
+        title="Remediation progress"
         description="Track the overall progress of security finding remediation across your organization"
         className="mb-6"
       />

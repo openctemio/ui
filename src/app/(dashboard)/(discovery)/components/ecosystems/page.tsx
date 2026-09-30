@@ -326,7 +326,7 @@ export default function EcosystemsPage() {
     <>
       <Main>
         <PageHeader
-          title="Package Ecosystems"
+          title="Package ecosystems"
           description={`Components distributed across ${ecosystemStats.length} package ecosystems`}
         >
           <Link href="/components/all">
@@ -508,7 +508,7 @@ export default function EcosystemsPage() {
           /* Table View */
           <Card className="mt-6">
             <CardHeader>
-              <CardTitle>All Ecosystems</CardTitle>
+              <CardTitle>All ecosystems</CardTitle>
               <CardDescription>
                 {processedEcosystems.length} ecosystems
                 {searchQuery && ` matching "${searchQuery}"`}

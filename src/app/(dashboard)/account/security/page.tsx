@@ -4,7 +4,14 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 import {
   Dialog,
   DialogContent,
@@ -15,7 +22,6 @@ import {
 } from '@/components/ui/dialog'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Badge } from '@/components/ui/badge'
-import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   Key,
@@ -30,7 +36,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { getErrorMessage } from '@/lib/api/error-handler'
-import { EmptyState } from '@/features/shared'
+import { EmptyState, ErrorState } from '@/features/shared'
 import { useProfile } from '@/features/account'
 import {
   useChangePassword,
@@ -47,7 +53,12 @@ export default function SecurityPage() {
   const { profile } = useProfile()
   const { changePassword, isChanging } = useChangePassword()
   const { status: twoFactorStatus, isLoading: is2FALoading } = useTwoFactorStatus()
-  const { sessions, isLoading: isSessionsLoading, mutate: mutateSessions } = useSessions()
+  const {
+    sessions,
+    isLoading: isSessionsLoading,
+    error: sessionsError,
+    mutate: mutateSessions,
+  } = useSessions()
   const { revokeSession, isRevoking } = useRevokeSession()
   const { revokeAllSessions, isRevoking: isRevokingAll } = useRevokeAllSessions()
 
@@ -101,7 +112,7 @@ export default function SecurityPage() {
       await revokeSession(sessionToRevoke)
       mutateSessions()
       setSessionToRevoke(null)
-      toast.success('Session revoked')
+      toast.success('Device signed out')
     } catch (error) {
       toast.error(getErrorMessage(error, 'Failed to revoke session'))
     }
@@ -128,196 +139,147 @@ export default function SecurityPage() {
   }
 
   return (
-    <div className="grid gap-6">
-      {/* Password Section */}
+    <div className="grid gap-5">
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Key className="h-5 w-5" />
-            Password
-          </CardTitle>
+          <CardTitle>Password</CardTitle>
           <CardDescription>
             {isLocalAuth
-              ? 'Change your account password'
-              : `Your password is managed by ${profile?.auth_provider}`}
+              ? 'Use a strong password you do not use anywhere else.'
+              : `Your password is managed by ${profile?.auth_provider}.`}
           </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isLocalAuth ? (
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm">Use a strong password that you are not using elsewhere</p>
-              </div>
-              <Button onClick={() => setShowPasswordDialog(true)}>Change Password</Button>
-            </div>
-          ) : (
-            <div className="flex items-center gap-3 p-4 bg-muted rounded-lg">
-              <Shield className="h-5 w-5 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">
-                To change your password, please visit your {profile?.auth_provider} account
-                settings.
-              </p>
-            </div>
+          {isLocalAuth && (
+            <CardAction>
+              <Button variant="outline" size="sm" onClick={() => setShowPasswordDialog(true)}>
+                <Key className="h-4 w-4" />
+                Change password
+              </Button>
+            </CardAction>
           )}
-        </CardContent>
+        </CardHeader>
+        {!isLocalAuth && (
+          <CardContent>
+            <p className="flex items-start gap-3 text-sm text-muted-foreground">
+              <Shield className="mt-0.5 h-4 w-4 shrink-0" />
+              To change your password, go to your {profile?.auth_provider} account settings.
+            </p>
+          </CardContent>
+        )}
       </Card>
 
-      {/* Two-Factor Authentication */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Smartphone className="h-5 w-5" />
-            Two-Factor Authentication
-          </CardTitle>
-          <CardDescription>Add an extra layer of security to your account</CardDescription>
+          <CardTitle>Two-factor authentication</CardTitle>
+          <CardDescription>A second step at sign-in, on top of your password.</CardDescription>
         </CardHeader>
         <CardContent>
           {is2FALoading ? (
-            <Skeleton className="h-16 w-full" />
+            <Skeleton className="h-12 w-full" />
           ) : (
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                {twoFactorStatus?.enabled ? (
-                  <>
-                    <div className="h-10 w-10 rounded-full bg-green-500/10 flex items-center justify-center">
-                      <Check className="h-5 w-5 text-green-500" />
-                    </div>
-                    <div>
-                      <p className="font-medium">Enabled</p>
-                      <p className="text-sm text-muted-foreground">
-                        Your account is protected with 2FA
-                      </p>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="h-10 w-10 rounded-full bg-yellow-500/10 flex items-center justify-center">
-                      <AlertTriangle className="h-5 w-5 text-yellow-500" />
-                    </div>
-                    <div>
-                      <p className="font-medium">Not Enabled</p>
-                      <p className="text-sm text-muted-foreground">
-                        Enable 2FA to add extra security
-                      </p>
-                    </div>
-                  </>
-                )}
-              </div>
-              <Button
-                variant={twoFactorStatus?.enabled ? 'outline' : 'default'}
-                disabled
-                title="Coming soon"
-              >
-                {twoFactorStatus?.enabled ? 'Manage 2FA' : 'Enable 2FA'}
-              </Button>
+            <div className="flex items-center gap-3">
+              {twoFactorStatus?.enabled ? (
+                <>
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-success/10">
+                    <Check className="h-5 w-5 text-success" />
+                  </div>
+                  <div>
+                    <p className="font-medium">On</p>
+                    <p className="text-sm text-muted-foreground">
+                      Your account is protected with two-factor authentication.
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-warning/10">
+                    <AlertTriangle className="h-5 w-5 text-warning" />
+                  </div>
+                  <div>
+                    <p className="font-medium">Off</p>
+                    <p className="text-sm text-muted-foreground">
+                      Setting up two-factor authentication from this page is not available yet.
+                    </p>
+                  </div>
+                </>
+              )}
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Active Sessions */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <Monitor className="h-5 w-5" />
-                Active Sessions
-              </CardTitle>
-              <CardDescription>Manage your active login sessions</CardDescription>
-            </div>
-            {otherSessions.length > 0 && (
+          <CardTitle>Active sessions</CardTitle>
+          <CardDescription>Devices currently signed in to your account.</CardDescription>
+          {otherSessions.length > 0 && (
+            <CardAction>
               <Button variant="outline" size="sm" onClick={() => setShowRevokeAllDialog(true)}>
-                <LogOut className="h-4 w-4 me-2" />
-                Sign Out All Others
+                <LogOut className="h-4 w-4" />
+                <span className="hidden sm:inline">Sign out all others</span>
+                <span className="sm:hidden">Sign out others</span>
               </Button>
-            )}
-          </div>
+            </CardAction>
+          )}
         </CardHeader>
         <CardContent>
           {isSessionsLoading ? (
-            <div className="space-y-4">
-              <Skeleton className="h-20 w-full" />
-              <Skeleton className="h-20 w-full" />
+            <div className="space-y-3">
+              <Skeleton className="h-16 w-full" />
+              <Skeleton className="h-16 w-full" />
             </div>
+          ) : sessionsError ? (
+            <ErrorState
+              title="sessions"
+              error={sessionsError}
+              onRetry={() => void mutateSessions()}
+            />
           ) : sessions.length === 0 ? (
-            <EmptyState icon={Monitor} title="No active sessions found" card={false} />
+            <EmptyState icon={Monitor} title="No active sessions" card={false} />
           ) : (
-            <div className="space-y-4">
-              {/* Current Session */}
-              {currentSession && (
-                <>
-                  <div className="flex items-start justify-between p-4 border rounded-lg bg-primary/5">
-                    <div className="flex items-start gap-4">
-                      {(() => {
-                        const Icon = getDeviceIcon(currentSession.device)
-                        return (
-                          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                            <Icon className="h-5 w-5 text-primary" />
-                          </div>
-                        )
-                      })()}
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <p className="font-medium">
-                            {currentSession.browser} on {currentSession.os}
-                          </p>
-                          <Badge variant="secondary" className="text-xs">
-                            Current
-                          </Badge>
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                          {currentSession.ip_address}
-                          {currentSession.location && ` • ${currentSession.location}`}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Last active: {formatRelative(currentSession.last_active_at)}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {otherSessions.length > 0 && <Separator />}
-                </>
-              )}
-
-              {/* Other Sessions */}
-              {otherSessions.map((session) => {
+            <ul className="divide-y rounded-md border">
+              {[...(currentSession ? [currentSession] : []), ...otherSessions].map((session) => {
                 const Icon = getDeviceIcon(session.device)
+                const isCurrent = session.id === currentSession?.id
                 return (
-                  <div
-                    key={session.id}
-                    className="flex items-start justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-                  >
-                    <div className="flex items-start gap-4">
-                      <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
-                        <Icon className="h-5 w-5 text-muted-foreground" />
-                      </div>
-                      <div>
+                  <li key={session.id} className="flex items-start gap-3 p-3 sm:gap-4 sm:p-4">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted">
+                      <Icon className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
                         <p className="font-medium">
                           {session.browser} on {session.os}
                         </p>
-                        <p className="text-sm text-muted-foreground">
-                          {session.ip_address}
-                          {session.location && ` • ${session.location}`}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Last active: {formatRelative(session.last_active_at)}
-                        </p>
+                        {isCurrent && (
+                          <Badge variant="secondary" className="text-xs">
+                            This device
+                          </Badge>
+                        )}
                       </div>
+                      <p className="break-all text-sm text-muted-foreground">
+                        <span className="font-mono">{session.ip_address}</span>
+                        {session.location && ` · ${session.location}`}
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Last active {formatRelative(session.last_active_at)}
+                      </p>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-destructive hover:text-destructive"
-                      onClick={() => setSessionToRevoke(session.id)}
-                    >
-                      <LogOut className="h-4 w-4" />
-                    </Button>
-                  </div>
+                    {!isCurrent && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 shrink-0 text-destructive hover:text-destructive"
+                        onClick={() => setSessionToRevoke(session.id)}
+                        aria-label={`Sign out ${session.browser} on ${session.os}`}
+                        title="Sign out this device"
+                      >
+                        <LogOut className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </li>
                 )
               })}
-            </div>
+            </ul>
           )}
         </CardContent>
       </Card>
@@ -326,12 +288,12 @@ export default function SecurityPage() {
       <Dialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Change Password</DialogTitle>
+            <DialogTitle>Change password</DialogTitle>
             <DialogDescription>Enter your current password and choose a new one.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="current-password">Current Password</Label>
+              <Label htmlFor="current-password">Current password</Label>
               <Input
                 id="current-password"
                 type="password"
@@ -342,7 +304,7 @@ export default function SecurityPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="new-password">New Password</Label>
+              <Label htmlFor="new-password">New password</Label>
               <Input
                 id="new-password"
                 type="password"
@@ -352,7 +314,7 @@ export default function SecurityPage() {
               <p className="text-xs text-muted-foreground">At least 8 characters</p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="confirm-password">Confirm New Password</Label>
+              <Label htmlFor="confirm-password">Confirm new password</Label>
               <Input
                 id="confirm-password"
                 type="password"
@@ -370,7 +332,7 @@ export default function SecurityPage() {
             </Button>
             <Button onClick={handleChangePassword} disabled={isChanging}>
               {isChanging && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
-              Change Password
+              Change password
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -380,12 +342,12 @@ export default function SecurityPage() {
       <ConfirmDialog
         open={!!sessionToRevoke}
         onOpenChange={(open) => !open && setSessionToRevoke(null)}
-        title="Revoke Session"
+        title="Sign out this device?"
         desc="This will sign out the device. You will need to sign in again on that device."
         confirmText={
           <>
             {isRevoking && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
-            Revoke
+            Sign out
           </>
         }
         destructive
@@ -397,12 +359,12 @@ export default function SecurityPage() {
       <ConfirmDialog
         open={showRevokeAllDialog}
         onOpenChange={setShowRevokeAllDialog}
-        title="Sign Out All Other Devices"
+        title="Sign out all other devices?"
         desc="This will sign out all devices except this one. They will need to sign in again."
         confirmText={
           <>
             {isRevokingAll && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
-            Sign Out All
+            Sign out all
           </>
         }
         destructive

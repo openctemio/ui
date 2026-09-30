@@ -11,9 +11,10 @@ import {
   RelativeTime,
   StackedCell,
   ErrorState,
+  MetricStrip,
+  type MetricStripItem,
 } from '@/features/shared'
-import { StatsCard } from '@/features/shared/components/stats-card'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { useUrlFilter } from '@/hooks/use-url-param'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
@@ -36,17 +37,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { ConfirmDialog } from '@/components/confirm-dialog'
-import {
-  KeyRound,
-  Plus,
-  ShieldCheck,
-  AlertTriangle,
-  Eye,
-  Ban,
-  Trash2,
-  Copy,
-  Check,
-} from 'lucide-react'
+import { KeyRound, Plus, Search, Ban, Trash2, Copy, Check } from 'lucide-react'
 import {
   useApiKeys,
   useCreateApiKey,
@@ -82,20 +73,27 @@ function isActive(k: APIKey): boolean {
   return k.status !== 'revoked' && !k.revoked_at && !isExpired(k)
 }
 
+function isRevoked(k: APIKey): boolean {
+  return k.status === 'revoked' || !!k.revoked_at
+}
+
+type KeyStatus = 'active' | 'expired' | 'revoked'
+
+function keyStatus(k: APIKey): KeyStatus {
+  if (isRevoked(k)) return 'revoked'
+  if (isExpired(k)) return 'expired'
+  return 'active'
+}
+
+const STATUS_BADGE: Record<KeyStatus, { label: string; className: string }> = {
+  active: { label: 'Active', className: 'bg-success/15 text-success' },
+  expired: { label: 'Expired', className: 'bg-warning/15 text-warning' },
+  revoked: { label: 'Revoked', className: 'bg-destructive/15 text-destructive' },
+}
+
 function StatusBadge({ k }: { k: APIKey }) {
-  if (k.status === 'revoked' || k.revoked_at) {
-    return <Badge className="border-0 bg-red-500/10 text-red-600 dark:text-red-400">Revoked</Badge>
-  }
-  if (isExpired(k)) {
-    return (
-      <Badge className="border-0 bg-orange-500/10 text-orange-600 dark:text-orange-400">
-        Expired
-      </Badge>
-    )
-  }
-  return (
-    <Badge className="border-0 bg-green-500/10 text-green-600 dark:text-green-400">Active</Badge>
-  )
+  const s = STATUS_BADGE[keyStatus(k)]
+  return <Badge className={`border-0 ${s.className}`}>{s.label}</Badge>
 }
 
 // ─────────────────────────────────────────────────────────
@@ -229,8 +227,8 @@ function RevealKeyDialog({ value, onClose }: { value: string; onClose: () => voi
         </DialogHeader>
         <div className="bg-muted flex items-center gap-2 rounded-md p-3">
           <code className="flex-1 break-all text-xs">{value}</code>
-          <Button size="icon" variant="ghost" onClick={copy} title="Copy">
-            {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+          <Button size="icon" variant="ghost" onClick={copy} title="Copy" aria-label="Copy API key">
+            {copied ? <Check className="h-4 w-4 text-success" /> : <Copy className="h-4 w-4" />}
           </Button>
         </div>
         <DialogFooter>
@@ -279,8 +277,9 @@ function KeyRowActions({ k, onChanged }: { k: APIKey; onChanged: () => void }) {
           onClick={handleRevoke}
           disabled={revoking}
           title="Revoke"
+          aria-label={`Revoke ${k.name}`}
         >
-          <Ban className="h-4 w-4 text-orange-500" />
+          <Ban className="h-4 w-4 text-warning" />
         </Button>
       )}
       <Button
@@ -288,7 +287,8 @@ function KeyRowActions({ k, onChanged }: { k: APIKey; onChanged: () => void }) {
         size="icon"
         onClick={() => setDeleteOpen(true)}
         title="Delete"
-        className="text-red-500 hover:text-red-600"
+        aria-label={`Delete ${k.name}`}
+        className="text-destructive hover:text-destructive"
       >
         <Trash2 className="h-4 w-4" />
       </Button>
@@ -306,28 +306,16 @@ function KeyRowActions({ k, onChanged }: { k: APIKey; onChanged: () => void }) {
   )
 }
 
-// ─────────────────────────────────────────────────────────
-// Page
-// ─────────────────────────────────────────────────────────
-
-function LoadingSkeleton() {
-  return (
-    <Main>
-      <Skeleton className="mb-6 h-8 w-48" />
-      <div className="grid gap-4 md:grid-cols-4">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <Skeleton key={i} className="h-24 rounded-lg" />
-        ))}
-      </div>
-      <Skeleton className="mt-6 h-64 rounded-lg" />
-    </Main>
-  )
-}
+const PAGE_TITLE = 'API keys'
+const PAGE_DESCRIPTION = 'Scoped keys for programmatic access to the API.'
 
 export default function APIKeysPage() {
   const { data, error, isLoading, mutate } = useApiKeys()
   const [genOpen, setGenOpen] = useState(false)
   const [newKey, setNewKey] = useState('')
+  const [statusParam, setStatusParam] = useUrlFilter('status', '')
+  const [searchQuery, setSearchQuery] = useUrlFilter('q', '')
+  const statusFilter = (['active', 'expired', 'revoked'] as const).find((s) => s === statusParam)
 
   const keys = useMemo(() => data?.data ?? [], [data])
 
@@ -399,93 +387,122 @@ export default function APIKeysPage() {
     [mutate]
   )
 
-  const stats = useMemo(() => {
-    const active = keys.filter(isActive).length
-    const expired = keys.filter(isExpired).length
-    const scopes = new Set<string>()
-    keys.forEach((k) => k.scopes.forEach((s) => scopes.add(s)))
-    return { total: keys.length, active, expired, scopes: scopes.size }
+  const counts = useMemo(() => {
+    const c = { active: 0, expired: 0, revoked: 0 }
+    keys.forEach((k) => c[keyStatus(k)]++)
+    return c
   }, [keys])
 
-  if (isLoading) return <LoadingSkeleton />
-  // A failed read must not render as "No API keys yet" with all-zero stats —
+  const visibleKeys = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase()
+    return keys.filter(
+      (k) =>
+        (!statusFilter || keyStatus(k) === statusFilter) &&
+        (!q ||
+          k.name.toLowerCase().includes(q) ||
+          k.key_prefix?.toLowerCase().includes(q) ||
+          k.scopes.some((s) => s.toLowerCase().includes(q)))
+    )
+  }, [keys, statusFilter, searchQuery])
+
+  const toggleStatus = (s: KeyStatus) => setStatusParam(statusFilter === s ? '' : s)
+
+  const metrics: MetricStripItem[] = [
+    {
+      key: 'all',
+      label: 'All keys',
+      value: keys.length,
+      onClick: () => setStatusParam(''),
+      active: !statusFilter,
+    },
+    {
+      key: 'active',
+      label: 'Active',
+      value: counts.active,
+      onClick: () => toggleStatus('active'),
+      active: statusFilter === 'active',
+    },
+    {
+      key: 'expired',
+      label: 'Expired',
+      value: counts.expired,
+      hint: counts.expired > 0 ? 'Rotate or delete' : undefined,
+      tone: 'danger',
+      onClick: () => toggleStatus('expired'),
+      active: statusFilter === 'expired',
+    },
+    {
+      key: 'revoked',
+      label: 'Revoked',
+      value: counts.revoked,
+      onClick: () => toggleStatus('revoked'),
+      active: statusFilter === 'revoked',
+    },
+  ]
+
+  const generateButton = (
+    <Button size="sm" onClick={() => setGenOpen(true)}>
+      <Plus className="h-4 w-4" />
+      Generate API key
+    </Button>
+  )
+
+  // A failed read must not render as "No API keys yet" with all-zero counts —
   // an admin could conclude none exist and mint a duplicate key.
   if (error)
     return (
       <Main>
-        <PageHeader title="API Keys" description="Manage API keys for programmatic access" />
-        <ErrorState title="API keys" error={error} onRetry={() => void mutate()} />
+        <PageHeader title={PAGE_TITLE} description={PAGE_DESCRIPTION} />
+        <div className="mt-5">
+          <ErrorState title="API keys" error={error} onRetry={() => void mutate()} />
+        </div>
       </Main>
     )
 
   return (
     <Main>
-      <PageHeader title="API Keys" description="Manage API keys for programmatic access">
-        <Button size="sm" onClick={() => setGenOpen(true)}>
-          <Plus className="me-2 h-4 w-4" />
-          Generate API Key
-        </Button>
+      <PageHeader title={PAGE_TITLE} description={PAGE_DESCRIPTION}>
+        {generateButton}
       </PageHeader>
 
-      <div className="mt-6 grid gap-4 md:grid-cols-4">
-        <StatsCard title="Total Keys" value={stats.total} icon={KeyRound} description="All keys" />
-        <StatsCard
-          title="Active Keys"
-          value={stats.active}
-          icon={ShieldCheck}
-          changeType={stats.active > 0 ? 'positive' : 'neutral'}
-          description="Currently valid"
+      {!isLoading && keys.length === 0 ? (
+        <EmptyState
+          className="mt-5"
+          icon={KeyRound}
+          title="No API keys yet"
+          description="Generate a scoped key for programmatic access to the API."
+          action={generateButton}
         />
-        <StatsCard
-          title="Expired Keys"
-          value={stats.expired}
-          icon={AlertTriangle}
-          changeType={stats.expired > 0 ? 'negative' : 'neutral'}
-          description="Need rotation"
-        />
-        <StatsCard
-          title="Unique Scopes"
-          value={stats.scopes}
-          icon={Eye}
-          description="Permissions granted"
-        />
-      </div>
-
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <KeyRound className="h-5 w-5" />
-            API Key Management
-          </CardTitle>
-          <CardDescription>
-            Each key is scoped to specific permissions and can be set to expire automatically.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {keys.length === 0 ? (
-            <EmptyState
-              icon={KeyRound}
-              title="No API keys yet"
-              description="Generate a scoped key for programmatic access to the API."
-              card={false}
-              action={
-                <Button size="sm" onClick={() => setGenOpen(true)}>
-                  <Plus className="me-2 h-4 w-4" />
-                  Generate API Key
-                </Button>
-              }
-            />
-          ) : (
-            <DataTable
-              columns={columns}
-              data={keys}
-              searchPlaceholder="Search API keys..."
-              emptyMessage="No API keys"
-              emptyDescription="No API keys match your search."
-            />
-          )}
-        </CardContent>
-      </Card>
+      ) : (
+        <>
+          <MetricStrip className="mt-5" loading={isLoading} items={metrics} />
+          <div className="mt-5">
+            {isLoading ? (
+              <Skeleton className="h-64 w-full" />
+            ) : (
+              <DataTable
+                columns={columns}
+                data={visibleKeys}
+                showSearch={false}
+                toolbarStart={
+                  <div className="relative min-w-0 flex-1 sm:max-w-sm">
+                    <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Search name, prefix or scope…"
+                      aria-label="Search API keys"
+                      className="h-9 ps-9"
+                    />
+                  </div>
+                }
+                emptyMessage="No API keys match"
+                emptyDescription="Clear the search or pick another metric."
+              />
+            )}
+          </div>
+        </>
+      )}
 
       <GenerateKeyDialog
         open={genOpen}

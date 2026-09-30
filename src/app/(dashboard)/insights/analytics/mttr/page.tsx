@@ -312,7 +312,7 @@ export default function MTTRPage() {
             {/* Resolution Trend */}
             <Card>
               <CardHeader>
-                <CardTitle>Resolution Trend</CardTitle>
+                <CardTitle>Resolution trend</CardTitle>
                 <CardDescription>
                   Total finding counts over time across all severities
                 </CardDescription>
@@ -352,7 +352,7 @@ export default function MTTRPage() {
             {/* Performance Indicators */}
             <Card>
               <CardHeader>
-                <CardTitle>Performance Indicators</CardTitle>
+                <CardTitle>Performance indicators</CardTitle>
                 <CardDescription>Key metrics for remediation effectiveness</CardDescription>
               </CardHeader>
               <CardContent>

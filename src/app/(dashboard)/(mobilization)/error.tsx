@@ -32,7 +32,7 @@ export default function MobilizationError({ error, reset }: ErrorProps) {
           </div>
           <CardTitle className="flex items-center justify-center gap-2">
             <Rocket className="h-5 w-5" />
-            Mobilization Error
+            Mobilization error
           </CardTitle>
           <CardDescription>
             Failed to load mobilization data. Remediation workflows may be temporarily unavailable.

@@ -1077,7 +1077,7 @@ function OverviewTab({
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <History className="h-4 w-4" />
-              Recent Activity
+              Recent activity
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -1258,7 +1258,7 @@ function BranchesTab({
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <GitMerge className="h-4 w-4" />
-            Compare Branches
+            Compare branches
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -1363,7 +1363,7 @@ function BranchesTab({
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <GitBranch className="h-4 w-4" />
-            All Branches
+            All branches
           </CardTitle>
           <CardDescription>
             {branches.length} branches in {repositoryName}
@@ -1696,7 +1696,7 @@ function FindingsTab({
                     <SelectValue placeholder="Branch" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Branches</SelectItem>
+                    <SelectItem value="all">All branches</SelectItem>
                     {branches.map((b) => (
                       <SelectItem key={b.id} value={b.name}>
                         <span className="flex items-center gap-1">
@@ -1886,7 +1886,7 @@ function ActivityTab({ activities }: { activities: ActivityLog[] }) {
             <div>
               <CardTitle className="flex items-center gap-2 text-base">
                 <History className="h-4 w-4" />
-                Activity Timeline
+                Activity timeline
               </CardTitle>
               <CardDescription>{filteredActivities.length} events</CardDescription>
             </div>
@@ -2124,7 +2124,7 @@ function SettingsTab({ repository, onDelete }: { repository: Repository; onDelet
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <Play className="h-4 w-4" />
-            Scan Configuration
+            Scan configuration
           </CardTitle>
           <CardDescription>Configure automated scanning for this repository</CardDescription>
         </CardHeader>
@@ -2267,7 +2267,7 @@ function SettingsTab({ repository, onDelete }: { repository: Repository; onDelet
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <Shield className="h-4 w-4" />
-            Security Features
+            Security features
           </CardTitle>
           <CardDescription>Repository security configuration from SCM provider</CardDescription>
         </CardHeader>
@@ -2298,7 +2298,7 @@ function SettingsTab({ repository, onDelete }: { repository: Repository; onDelet
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base text-red-500">
             <AlertTriangle className="h-4 w-4" />
-            Danger Zone
+            Danger zone
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">

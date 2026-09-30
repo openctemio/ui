@@ -120,7 +120,7 @@ export default function SimulationScenariosPage() {
     return (
       <Main>
         <PageHeader
-          title="Simulation Scenarios"
+          title="Simulation scenarios"
           description="Configure and manage attack simulation scenarios"
         />
         <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -140,7 +140,7 @@ export default function SimulationScenariosPage() {
   return (
     <Main>
       <PageHeader
-        title="Simulation Scenarios"
+        title="Simulation scenarios"
         description="Configure and manage attack simulation scenarios"
       />
 
@@ -184,7 +184,7 @@ export default function SimulationScenariosPage() {
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Scenario Targets by Severity</CardTitle>
+            <CardTitle>Scenario targets by severity</CardTitle>
             <CardDescription>Finding severity guiding scenario priority</CardDescription>
           </CardHeader>
           <CardContent>
@@ -219,7 +219,7 @@ export default function SimulationScenariosPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Asset Type Distribution</CardTitle>
+            <CardTitle>Asset type distribution</CardTitle>
             <CardDescription>Scenario targets across asset categories</CardDescription>
           </CardHeader>
           <CardContent>
@@ -243,7 +243,7 @@ export default function SimulationScenariosPage() {
 
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle>Scenario Recommendations</CardTitle>
+            <CardTitle>Scenario recommendations</CardTitle>
             <CardDescription>Suggested scenarios based on current threat landscape</CardDescription>
           </CardHeader>
           <CardContent>

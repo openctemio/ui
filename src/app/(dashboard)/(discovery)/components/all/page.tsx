@@ -157,7 +157,7 @@ export default function AllComponentsPage() {
     <>
       <Main>
         <PageHeader
-          title="All Components"
+          title="All components"
           description={`${stats.totalComponents} software components in your organization`}
         >
           <Button variant="outline" onClick={handleExport} disabled={isExporting}>
@@ -270,7 +270,7 @@ export default function AllComponentsPage() {
               <div>
                 <CardTitle className="flex items-center gap-2">
                   <Package className="h-5 w-5" />
-                  Component Inventory
+                  Component inventory
                 </CardTitle>
                 <CardDescription>
                   {/* When filters are active, the API still returns total
@@ -331,7 +331,7 @@ export default function AllComponentsPage() {
                     <SelectValue placeholder="Ecosystem" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Ecosystems</SelectItem>
+                    <SelectItem value="all">All ecosystems</SelectItem>
                     {ecosystems.map((eco) => (
                       <SelectItem key={eco} value={eco}>
                         {eco}

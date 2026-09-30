@@ -49,9 +49,7 @@ export function ComingSoonPage({
                     {phase}
                   </Badge>
                 )}
-                <Badge className="bg-yellow-500/20 text-yellow-600 dark:text-yellow-400">
-                  Coming Soon
-                </Badge>
+                <Badge className="bg-warning/15 text-warning">Coming soon</Badge>
               </div>
               <CardTitle className="text-2xl">{title}</CardTitle>
               <CardDescription className="text-base">{description}</CardDescription>

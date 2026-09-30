@@ -6,7 +6,7 @@ import { useUrlParam } from '@/hooks/use-url-param'
 import { formatDistanceToNow } from 'date-fns'
 import { Main } from '@/components/layout'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -31,11 +31,10 @@ import {
   AlertTriangle,
   Info,
   ExternalLink,
-  Send,
-  TrendingUp,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { EmptyState } from '@/features/shared'
+import { EmptyState, ErrorState, MetricStrip } from '@/features/shared'
+import { SEVERITY_BADGE_SOFT, type SeverityLevel } from '@/lib/severity-colors'
 import { Can, Permission } from '@/lib/permissions'
 import {
   useNotificationIntegrationsApi,
@@ -54,52 +53,37 @@ const STATUS_CONFIG: Record<
 > = {
   completed: {
     icon: CheckCircle2,
-    color: 'text-green-600 dark:text-green-400',
-    bgColor: 'bg-green-50 dark:bg-green-900/20',
+    color: 'text-success',
+    bgColor: 'bg-success/5',
     label: 'Sent',
   },
   failed: {
     icon: XCircle,
-    color: 'text-red-600 dark:text-red-400',
-    bgColor: 'bg-red-50 dark:bg-red-900/20',
+    color: 'text-destructive',
+    bgColor: 'bg-destructive/5',
     label: 'Failed',
   },
   skipped: {
     icon: MinusCircle,
-    color: 'text-gray-600 dark:text-gray-400',
-    bgColor: 'bg-gray-50 dark:bg-gray-900/20',
+    color: 'text-muted-foreground',
+    bgColor: 'bg-muted/40',
     label: 'Skipped',
   },
 }
 
-// Severity configuration
-const SEVERITY_CONFIG: Record<
-  string,
-  { icon: typeof AlertCircle; color: string; bgColor: string }
-> = {
-  critical: {
-    icon: AlertCircle,
-    color: 'text-red-700 dark:text-red-400',
-    bgColor: 'bg-red-100 dark:bg-red-900/30',
-  },
-  high: {
-    icon: AlertTriangle,
-    color: 'text-orange-700 dark:text-orange-400',
-    bgColor: 'bg-orange-100 dark:bg-orange-900/30',
-  },
-  medium: {
-    icon: AlertTriangle,
-    color: 'text-yellow-700 dark:text-yellow-400',
-    bgColor: 'bg-yellow-100 dark:bg-yellow-900/30',
-  },
-  low: {
-    icon: Info,
-    color: 'text-blue-700 dark:text-blue-400',
-    bgColor: 'bg-blue-100 dark:bg-blue-900/30',
-  },
+// Severity: icon here, colours from the shared severity source.
+const SEVERITY_ICONS: Record<string, typeof AlertCircle> = {
+  critical: AlertCircle,
+  high: AlertTriangle,
+  medium: AlertTriangle,
+  low: Info,
 }
 
-// Summary Stats component
+function severityClass(severity: string): string {
+  return SEVERITY_BADGE_SOFT[severity as SeverityLevel] ?? SEVERITY_BADGE_SOFT.medium
+}
+
+// Summary numbers for the selected channel
 function SummaryStats({
   total,
   successCount,
@@ -114,52 +98,15 @@ function SummaryStats({
   const successRate = total > 0 ? Math.round((successCount / total) * 100) : 0
 
   return (
-    <div className="grid grid-cols-3 gap-4 mb-6">
-      <Card>
-        <CardHeader className="pb-2">
-          <CardDescription className="flex items-center gap-2">
-            <Send className="h-4 w-4" />
-            Total Sent
-          </CardDescription>
-          <CardTitle className="text-2xl">
-            {isLoading ? <Skeleton className="h-8 w-12" /> : total}
-          </CardTitle>
-        </CardHeader>
-      </Card>
-      <Card>
-        <CardHeader className="pb-2">
-          <CardDescription className="flex items-center gap-2">
-            <TrendingUp className="h-4 w-4" />
-            Success Rate
-          </CardDescription>
-          <CardTitle
-            className={cn(
-              'text-2xl',
-              successRate >= 90
-                ? 'text-green-600 dark:text-green-400'
-                : successRate >= 70
-                  ? 'text-yellow-600 dark:text-yellow-400'
-                  : 'text-red-600 dark:text-red-400'
-            )}
-          >
-            {isLoading ? <Skeleton className="h-8 w-16" /> : `${successRate}%`}
-          </CardTitle>
-        </CardHeader>
-      </Card>
-      <Card>
-        <CardHeader className="pb-2">
-          <CardDescription className="flex items-center gap-2">
-            <XCircle className="h-4 w-4" />
-            Failed
-          </CardDescription>
-          <CardTitle
-            className={cn('text-2xl', failedCount > 0 ? 'text-red-600 dark:text-red-400' : '')}
-          >
-            {isLoading ? <Skeleton className="h-8 w-12" /> : failedCount}
-          </CardTitle>
-        </CardHeader>
-      </Card>
-    </div>
+    <MetricStrip
+      className="mb-5"
+      loading={isLoading}
+      items={[
+        { key: 'total', label: 'Sent', value: total },
+        { key: 'rate', label: 'Success rate', value: `${successRate}%` },
+        { key: 'failed', label: 'Failed', value: failedCount, tone: 'danger' },
+      ]}
+    />
   )
 }
 
@@ -178,9 +125,9 @@ function HistoryItem({ entry }: { entry: NotificationEventEntry }) {
 
   const statusConfig =
     STATUS_CONFIG[integrationStatus as NotificationEventStatus] || STATUS_CONFIG.completed
-  const severityConfig = SEVERITY_CONFIG[entry.severity] || SEVERITY_CONFIG.medium
+  const severityBadge = severityClass(entry.severity)
   const StatusIcon = statusConfig.icon
-  const SeverityIcon = severityConfig.icon
+  const SeverityIcon = SEVERITY_ICONS[entry.severity] ?? AlertTriangle
 
   return (
     <div
@@ -205,10 +152,7 @@ function HistoryItem({ entry }: { entry: NotificationEventEntry }) {
             )}
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
-            <Badge
-              variant="outline"
-              className={cn('text-xs', severityConfig.color, severityConfig.bgColor)}
-            >
+            <Badge variant="outline" className={cn('text-xs', severityBadge)}>
               <SeverityIcon className="h-3 w-3 me-1" />
               {entry.severity}
             </Badge>
@@ -220,7 +164,7 @@ function HistoryItem({ entry }: { entry: NotificationEventEntry }) {
 
         {/* Error message if failed */}
         {sendResult?.status === 'failed' && sendResult?.error && (
-          <div className="text-sm text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/30 rounded px-2 py-1">
+          <div className="rounded bg-destructive/10 px-2 py-1 text-sm text-destructive">
             <span className="font-medium">Error:</span> {sendResult.error}
           </div>
         )}
@@ -360,16 +304,7 @@ function HistoryList({
   }
 
   if (error && allEntries.length === 0) {
-    return (
-      <div className="text-center py-12">
-        <XCircle className="mx-auto h-12 w-12 text-red-500 mb-4" />
-        <p className="text-red-500">Failed to load notifications</p>
-        <Button variant="outline" size="sm" className="mt-4" onClick={handleRefresh}>
-          <RefreshCw className="h-4 w-4 me-2" />
-          Retry
-        </Button>
-      </div>
-    )
+    return <ErrorState title="notifications" error={error} onRetry={handleRefresh} />
   }
 
   if (allEntries.length === 0) {
@@ -423,7 +358,7 @@ function HistoryList({
                     Loading...
                   </>
                 ) : (
-                  <>Load More ({total - allEntries.length} remaining)</>
+                  <>Load more ({total - allEntries.length} remaining)</>
                 )}
               </Button>
             </div>
@@ -465,7 +400,7 @@ function HistoryContent() {
   return (
     <>
       {/* Header row with back button and channel selector */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-4">
           <Button
             variant="ghost"
@@ -478,13 +413,13 @@ function HistoryContent() {
           </Button>
           <div className="h-6 w-px bg-border" />
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Notification Events</h1>
+            <h1 className="text-2xl font-bold tracking-tight">Notification events</h1>
           </div>
         </div>
 
         {/* Channel selector inline */}
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-muted-foreground">Channel:</span>
+        <div className="flex w-full min-w-0 items-center gap-3 sm:w-auto">
+          <span className="text-sm text-muted-foreground">Channel</span>
           {loadingIntegrations ? (
             <Skeleton className="h-9 w-[200px]" />
           ) : integrations.length === 0 ? (
@@ -494,12 +429,12 @@ function HistoryContent() {
                 size="sm"
                 onClick={() => router.push('/settings/integrations/notifications')}
               >
-                Add Channel
+                Add channel
               </Button>
             </Can>
           ) : (
             <Select value={selectedId} onValueChange={setSelectedId}>
-              <SelectTrigger className="w-[220px]">
+              <SelectTrigger className="w-full min-w-0 sm:w-[220px]">
                 <SelectValue placeholder="Select channel..." />
               </SelectTrigger>
               <SelectContent>
@@ -534,7 +469,7 @@ function HistoryContent() {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
             <History className="h-4 w-4" />
-            Events Log
+            Events log
             {selectedIntegration && (
               <Badge variant="secondary" className="ms-2 font-normal">
                 {selectedIntegration.name}

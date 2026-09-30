@@ -479,7 +479,7 @@ export default function CloudSurfacePage() {
           </Select>
         </div>
         <div className="space-y-2">
-          <Label>Risk Level</Label>
+          <Label>Risk level</Label>
           <Select
             value={formData.riskLevel}
             onValueChange={(v) => setFormData({ ...formData, riskLevel: v as RiskLevel })}
@@ -529,7 +529,7 @@ export default function CloudSurfacePage() {
     <>
       <Main>
         <PageHeader
-          title="Cloud Attack Surface"
+          title="Cloud attack surface"
           description="Discover and monitor cloud resources across AWS, Azure, and GCP"
         >
           <div className="flex gap-2">
@@ -580,7 +580,7 @@ export default function CloudSurfacePage() {
           />
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Clean Resources</CardTitle>
+              <CardTitle className="text-sm font-medium">Clean resources</CardTitle>
               <CheckCircle2 className="h-4 w-4 text-green-500" />
             </CardHeader>
             <CardContent>
@@ -594,7 +594,7 @@ export default function CloudSurfacePage() {
         {/* Provider Distribution */}
         <Card className="mb-6">
           <CardHeader>
-            <CardTitle className="text-sm">Cloud Provider Distribution</CardTitle>
+            <CardTitle className="text-sm">Cloud provider distribution</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex gap-6">
@@ -691,7 +691,7 @@ export default function CloudSurfacePage() {
         {/* Resources Table */}
         <Card>
           <CardHeader>
-            <CardTitle>Cloud Resources</CardTitle>
+            <CardTitle>Cloud resources</CardTitle>
             <CardDescription>
               {filteredResources.length} of {resources.length} resources
             </CardDescription>
@@ -900,7 +900,7 @@ export default function CloudSurfacePage() {
                     </Card>
                     <Card>
                       <CardHeader className="pb-2">
-                        <CardTitle className="text-sm">Risk Level</CardTitle>
+                        <CardTitle className="text-sm">Risk level</CardTitle>
                       </CardHeader>
                       <CardContent>
                         <Badge variant="outline" className={riskColors[viewResource.riskLevel]}>
@@ -912,7 +912,7 @@ export default function CloudSurfacePage() {
 
                   <Card>
                     <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Resource Details</CardTitle>
+                      <CardTitle className="text-sm">Resource details</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-2 text-sm">
                       <div className="flex justify-between">
@@ -990,7 +990,7 @@ export default function CloudSurfacePage() {
                     </Card>
                     <Card>
                       <CardHeader className="pb-2">
-                        <CardTitle className="text-sm">Last Seen</CardTitle>
+                        <CardTitle className="text-sm">Last seen</CardTitle>
                       </CardHeader>
                       <CardContent>
                         <p className="text-sm">

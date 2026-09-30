@@ -609,7 +609,7 @@ function AssetGroupDetailContent({ params }: PageProps) {
               {/* Asset Distribution */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">Asset Distribution</CardTitle>
+                  <CardTitle className="text-lg">Asset distribution</CardTitle>
                   <CardDescription>Breakdown by asset type</CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -639,7 +639,7 @@ function AssetGroupDetailContent({ params }: PageProps) {
               {/* Finding Severity */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">Finding Severity</CardTitle>
+                  <CardTitle className="text-lg">Finding severity</CardTitle>
                   <CardDescription>Breakdown by severity level</CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -661,7 +661,7 @@ function AssetGroupDetailContent({ params }: PageProps) {
               {/* Risk Score */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">Risk Assessment</CardTitle>
+                  <CardTitle className="text-lg">Risk assessment</CardTitle>
                   <CardDescription>Overall group risk score</CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -694,7 +694,7 @@ function AssetGroupDetailContent({ params }: PageProps) {
               {/* Group Info */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">Group Information</CardTitle>
+                  <CardTitle className="text-lg">Group information</CardTitle>
                   <CardDescription>Metadata and details</CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -897,7 +897,7 @@ function AssetGroupDetailContent({ params }: PageProps) {
                             <TableHead>Status</TableHead>
                             <TableHead>Risk Score</TableHead>
                             <TableHead>Findings</TableHead>
-                            <TableHead>Last Seen</TableHead>
+                            <TableHead>Last seen</TableHead>
                             <TableHead className="w-12"></TableHead>
                           </TableRow>
                         </TableHeader>
