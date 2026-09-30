@@ -83,7 +83,6 @@ import { useAssetTags } from '../hooks/use-asset-tags'
 import { updateAsset } from '../hooks/use-assets'
 import { AssetFormDialogShared } from './asset-form-dialog-shared'
 import { AssetDeleteDialogShared } from './asset-delete-dialog-shared'
-import { AssetOwnersTab } from './asset-owners-tab'
 
 type StatusFilter = string
 
@@ -554,6 +553,17 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
   // pulls the global tag list cached for ~5min so we don't hit the
   // network for every keystroke.
   const { tags: tagSuggestions } = useAssetTags()
+
+  // AssetDetailSheet now shows risk score and findings (with the severity
+  // breakdown) for every asset, so drop those from the per-type stat configs
+  // and keep only the type-specific ones (stars, record count, ...).
+  const typeSpecificStats = useMemo(
+    () =>
+      (config.detailStats ?? []).filter(
+        (stat) => !/^(risk( score)?|findings)$/i.test(stat.label.trim())
+      ),
+    [config.detailStats]
+  )
 
   // Tag editor save handler. Used by `<TagsSection onSave>` inside the
   // AssetDetailSheet's Overview tab. Without this prop the section
@@ -1336,20 +1346,14 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
         // Was the user-reported "no add/edit/delete tag" bug.
         onUpdateTags={handleUpdateTags}
         tagSuggestions={tagSuggestions}
+        // The Owners tab is built into AssetDetailSheet; only per-type tabs here.
         extraTabs={
-          selectedAsset
-            ? [
-                {
-                  value: 'owners',
-                  label: 'Owners',
-                  content: <AssetOwnersTab assetId={selectedAsset.id} />,
-                },
-                ...(config.detailTabs?.map((tab) => ({
-                  value: tab.id,
-                  label: tab.label,
-                  content: tab.render(selectedAsset),
-                })) ?? []),
-              ]
+          selectedAsset && config.detailTabs?.length
+            ? config.detailTabs.map((tab) => ({
+                value: tab.id,
+                label: tab.label,
+                content: tab.render(selectedAsset),
+              }))
             : undefined
         }
         onEdit={() => selectedAsset && dialogs.openEdit(selectedAsset)}
@@ -1370,9 +1374,9 @@ export function AssetPage({ config, headerExtra }: AssetPageProps) {
           ) : undefined
         }
         statsContent={
-          selectedAsset && config.detailStats ? (
+          selectedAsset && typeSpecificStats.length > 0 ? (
             <DetailFieldGrid className="grid-cols-2 sm:grid-cols-3">
-              {config.detailStats.map((stat, i) => (
+              {typeSpecificStats.map((stat, i) => (
                 <DetailField key={i} label={stat.label}>
                   <span className="text-lg font-semibold tabular-nums">
                     {stat.getValue(selectedAsset)}
