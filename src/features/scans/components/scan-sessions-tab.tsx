@@ -32,7 +32,7 @@ import {
   SheetDescription,
 } from '@/components/ui/sheet'
 import { SheetBody } from '@/features/shared'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabsList, TabsTrigger, TabsCount } from '@/components/ui/tabs'
 import {
   SearchIcon,
   ArrowUpDown,
@@ -402,9 +402,7 @@ export function ScanSessionsTab() {
               {statusFilters.map((filter) => (
                 <TabsTrigger key={filter.value} value={filter.value} className="gap-1.5">
                   {filter.label}
-                  <Badge variant="secondary" className="h-5 px-1.5 text-xs">
-                    {statusCounts[filter.value as keyof typeof statusCounts]}
-                  </Badge>
+                  <TabsCount value={statusCounts[filter.value as keyof typeof statusCounts]} />
                 </TabsTrigger>
               ))}
             </TabsList>

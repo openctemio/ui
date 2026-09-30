@@ -6,8 +6,7 @@ import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabsList, TabsTrigger, TabsCount } from '@/components/ui/tabs'
 import {
   Select,
   SelectContent,
@@ -501,19 +500,11 @@ export function ToolsSection({ onToolSelect, selectedToolId }: ToolsSectionProps
         <TabsList>
           <TabsTrigger value="platform">
             Platform
-            {platformCount != null && (
-              <Badge variant="secondary" className="ms-1.5 tabular-nums">
-                {platformCount}
-              </Badge>
-            )}
+            {platformCount != null && <TabsCount value={platformCount} />}
           </TabsTrigger>
           <TabsTrigger value="custom">
             Custom
-            {customCount != null && (
-              <Badge variant="secondary" className="ms-1.5 tabular-nums">
-                {customCount}
-              </Badge>
-            )}
+            {customCount != null && <TabsCount value={customCount} />}
           </TabsTrigger>
         </TabsList>
       </Tabs>

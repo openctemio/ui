@@ -37,7 +37,7 @@ import { useDashboardStats } from '@/features/dashboard/hooks/use-dashboard-stat
 import { useTenant } from '@/context/tenant-provider'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabsContent, TabsList, TabsTrigger, TabsCount } from '@/components/ui/tabs'
 import {
   Dialog,
   DialogContent,
@@ -1448,14 +1448,20 @@ export default function ScopeConfigPage() {
             <TabsList>
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="targets">
-                Targets ({targetsLoading ? '…' : (targetsData?.total ?? targets.length)})
+                Targets{' '}
+                <TabsCount value={targetsLoading ? '…' : (targetsData?.total ?? targets.length)} />
               </TabsTrigger>
               <TabsTrigger value="exclusions">
-                Exclusions ({exclusionsLoading ? '…' : (exclusionsData?.total ?? exclusions.length)}
-                )
+                Exclusions{' '}
+                <TabsCount
+                  value={exclusionsLoading ? '…' : (exclusionsData?.total ?? exclusions.length)}
+                />
               </TabsTrigger>
               <TabsTrigger value="schedules">
-                Schedules ({schedulesLoading ? '…' : (schedulesData?.total ?? schedules.length)})
+                Schedules{' '}
+                <TabsCount
+                  value={schedulesLoading ? '…' : (schedulesData?.total ?? schedules.length)}
+                />
               </TabsTrigger>
             </TabsList>
           </div>
