@@ -12,12 +12,7 @@
 import * as React from 'react'
 import { devLog } from '@/lib/logger'
 import { useRouter } from 'next/navigation'
-import {
-  ChevronsUpDown,
-  Plus,
-  Check,
-  Loader2,
-} from 'lucide-react'
+import { ChevronsUpDown, Plus, Check, Loader2 } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -41,7 +36,10 @@ import { getErrorMessage } from '@/lib/api/error-handler'
 
 /** Up to two initials, e.g. "ORG tenant" -> "OT", "acme" -> "AC". */
 function orgInitials(name: string): string {
-  const words = name.trim().split(/[\s_-]+/).filter(Boolean)
+  const words = name
+    .trim()
+    .split(/[\s_-]+/)
+    .filter(Boolean)
   if (words.length === 0) return '?'
   if (words.length === 1) return words[0].slice(0, 2).toUpperCase()
   return (words[0][0] + words[1][0]).toUpperCase()
