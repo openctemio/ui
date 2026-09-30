@@ -1,28 +1,28 @@
 /**
- * SAML SP config hooks — SWR over /api/v1/settings/saml (Get/Save/Delete).
- * Tenant is determined from the JWT token. A 404 means "not configured yet"
- * and resolves to null (no error toast).
+ * SAML SP config hooks for one organization, used by the platform admin
+ * console (RFC-022): SWR over /api/v1/admin/tenants/{tenantId}/sso/saml.
+ * SSO setup is an application-administrator operation, so there is no
+ * tenant-context variant. A 404 means "not configured yet" and resolves to
+ * null (no error toast).
  */
 
 'use client'
 
 import useSWR from 'swr'
 import useSWRMutation from 'swr/mutation'
-import { get, put, del } from '@/lib/api/client'
-import { useTenant } from '@/context/tenant-provider'
+import { adminFetch, AdminApiError } from '@/features/admin-console/api/admin-client'
 import type { SamlConfig } from '../types/saml.types'
 
-const BASE_URL = '/api/v1/settings/saml'
+const path = (tenantId: string) => `/tenants/${tenantId}/sso/saml`
 
-export function useSamlConfig() {
-  const { currentTenant } = useTenant()
+export function useSamlConfig(tenantId: string | null) {
   return useSWR<SamlConfig | null>(
-    currentTenant ? BASE_URL : null,
-    async (url: string) => {
+    tenantId ? path(tenantId) : null,
+    async (p: string) => {
       try {
-        return await get<SamlConfig>(url)
+        return await adminFetch<SamlConfig>(p)
       } catch (e) {
-        if ((e as { statusCode?: number })?.statusCode === 404) return null
+        if (e instanceof AdminApiError && e.status === 404) return null
         throw e
       }
     },
@@ -30,15 +30,16 @@ export function useSamlConfig() {
   )
 }
 
-export function useSaveSamlConfig() {
-  const { currentTenant } = useTenant()
+export function useSaveSamlConfig(tenantId: string | null) {
   return useSWRMutation(
-    currentTenant ? BASE_URL : null,
-    async (url: string, { arg }: { arg: SamlConfig }) => put<SamlConfig>(url, arg)
+    tenantId ? path(tenantId) : null,
+    async (p: string, { arg }: { arg: SamlConfig }) =>
+      adminFetch<SamlConfig>(p, { method: 'PUT', body: arg })
   )
 }
 
-export function useDeleteSamlConfig() {
-  const { currentTenant } = useTenant()
-  return useSWRMutation(currentTenant ? BASE_URL : null, async (url: string) => del<void>(url))
+export function useDeleteSamlConfig(tenantId: string | null) {
+  return useSWRMutation(tenantId ? path(tenantId) : null, async (p: string) =>
+    adminFetch<void>(p, { method: 'DELETE' })
+  )
 }

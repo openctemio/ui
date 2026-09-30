@@ -22,11 +22,19 @@ import type { VerifiedDomain } from '../types/verified-domain.types'
 import { DnsInstructions } from './dns-instructions'
 import { VerifiedDomainStatusBadge } from './verified-domain-status-badge'
 
-function DomainActions({ domain, onChanged }: { domain: VerifiedDomain; onChanged: () => void }) {
+function DomainActions({
+  tenantId,
+  domain,
+  onChanged,
+}: {
+  tenantId: string
+  domain: VerifiedDomain
+  onChanged: () => void
+}) {
   const [dnsOpen, setDnsOpen] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
-  const { trigger: verify, isMutating: isVerifying } = useVerifyDomain()
-  const { trigger: remove, isMutating: isDeleting } = useDeleteVerifiedDomain()
+  const { trigger: verify, isMutating: isVerifying } = useVerifyDomain(tenantId)
+  const { trigger: remove, isMutating: isDeleting } = useDeleteVerifiedDomain(tenantId)
 
   const hasInstructions = domain.status !== 'verified' && !!domain.instructions
 
@@ -120,11 +128,17 @@ function lastActivity(domain: VerifiedDomain): { label: string; date: string } {
 }
 
 export function VerifiedDomainsList({
+  tenantId,
   domains,
   onChanged,
+  canManage = true,
 }: {
+  /** Organization the domains belong to (admin console, RFC-022). */
+  tenantId: string
   domains: VerifiedDomain[]
   onChanged: () => void
+  /** False for a read-only administrator: actions are hidden. */
+  canManage?: boolean
 }) {
   const columns: ColumnDef<VerifiedDomain>[] = [
     {
@@ -150,12 +164,16 @@ export function VerifiedDomainsList({
         )
       },
     },
-    {
+  ]
+  if (canManage) {
+    columns.push({
       id: 'actions',
       enableSorting: false,
-      cell: ({ row }) => <DomainActions domain={row.original} onChanged={onChanged} />,
-    },
-  ]
+      cell: ({ row }) => (
+        <DomainActions tenantId={tenantId} domain={row.original} onChanged={onChanged} />
+      ),
+    })
+  }
 
   return (
     <DataTable
