@@ -808,30 +808,53 @@ export const sidebarData: SidebarData = {
               subModuleKey: 'siem',
             },
             {
-              title: 'SCIM Provisioning',
-              url: '/settings/integrations/scim-tokens',
-              icon: Users,
-              subModuleKey: 'scim',
-              // SSO setup is an application-administrator operation (Tenable-style
-              // system-level config), not a tenant one — hidden from tenant admins.
-              platformAdmin: true,
+              title: 'AI Access (MCP)',
+              url: '/settings/integrations/mcp',
+              icon: Bot,
             },
+          ],
+        },
+      ],
+    },
+
+    // ========================================
+    // ADMINISTRATION - Application administrator only
+    // ========================================
+    // Tenable-style system-level configuration, separate from tenant Settings.
+    // Every item is platformAdmin-gated, so the whole group disappears for
+    // tenant users (empty groups are dropped by the sidebar filter).
+    {
+      title: 'Administration',
+      icon: ShieldCheck,
+      items: [
+        {
+          title: 'Overview',
+          url: '/admin',
+          icon: LayoutDashboard,
+          platformAdmin: true,
+        },
+        {
+          title: 'Single Sign-On',
+          icon: ShieldCheck,
+          platformAdmin: true,
+          items: [
             {
               title: 'SAML SSO',
-              url: '/settings/integrations/saml',
+              url: '/admin/saml',
               icon: ShieldCheck,
               platformAdmin: true,
             },
             {
-              title: 'Verified Domains',
-              url: '/settings/integrations/verified-domains',
-              icon: BadgeCheck,
+              title: 'SCIM Provisioning',
+              url: '/admin/scim',
+              icon: Users,
               platformAdmin: true,
             },
             {
-              title: 'AI Access (MCP)',
-              url: '/settings/integrations/mcp',
-              icon: Bot,
+              title: 'Verified Domains',
+              url: '/admin/verified-domains',
+              icon: BadgeCheck,
+              platformAdmin: true,
             },
           ],
         },
