@@ -36,7 +36,12 @@ export function PageHeader({ title, description, children, className }: PageHead
         )}
       </div>
       {children && (
-        <div className="flex max-w-full shrink-0 flex-wrap items-center gap-2">{children}</div>
+        // Pages often wrap their buttons in their own <div className="flex gap-2">,
+        // which does not wrap and pushed the last button off-screen on narrow
+        // widths. Direct child groups wrap too, so the actions always fit.
+        <div className="flex max-w-full shrink-0 flex-wrap items-center gap-2 [&>div]:max-w-full [&>div]:flex-wrap">
+          {children}
+        </div>
       )}
     </div>
   )
