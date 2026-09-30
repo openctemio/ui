@@ -1,5 +1,6 @@
 'use client'
 
+import { formatEpssScore } from '@/lib/epss'
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -549,7 +550,7 @@ export function FindingDetailDrawer({
                         className="border-amber-500/40 font-mono text-xs text-amber-700 dark:text-amber-400"
                         title="EPSS — probability of exploitation in the next 30 days"
                       >
-                        EPSS {(finding.epssScore * 100).toFixed(1)}%
+                        EPSS {formatEpssScore(finding.epssScore)}
                       </Badge>
                     )}
                     {finding.cve && (

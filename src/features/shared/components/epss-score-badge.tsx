@@ -3,6 +3,12 @@
 import { Badge } from '@/components/ui/badge'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
+import {
+  epssScoreToPercent,
+  formatEpssPercentile,
+  formatEpssScore,
+  formatEpssTopPercent,
+} from '@/lib/epss'
 import { TrendingUp, AlertTriangle, Shield, ShieldCheck } from 'lucide-react'
 
 /**
@@ -58,6 +64,7 @@ function getEPSSLevel(score: number): {
 
 interface EPSSScoreBadgeProps {
   score: number | null | undefined
+  /** EPSS percentile rank, 0–100 (the API's canonical scale). */
   percentile?: number | null
   showPercentile?: boolean
   size?: 'sm' | 'md' | 'lg'
@@ -84,7 +91,7 @@ export function EPSSScoreBadge({
   }
 
   const { color, textColor, description } = getEPSSLevel(score)
-  const displayScore = (score * 100).toFixed(1)
+  const displayScore = formatEpssScore(score)
 
   const sizeClasses = {
     sm: 'text-xs px-1.5 py-0.5',
@@ -98,17 +105,19 @@ export function EPSSScoreBadge({
         <TooltipTrigger asChild>
           <Badge className={cn(color, textColor, sizeClasses[size], className)}>
             <TrendingUp className="me-1 h-3 w-3" />
-            {displayScore}%
+            {displayScore}
             {showPercentile && percentile !== null && percentile !== undefined && (
-              <span className="ms-1 opacity-80">({percentile.toFixed(0)}th)</span>
+              <span className="ms-1 opacity-80">({formatEpssPercentile(percentile, 0)})</span>
             )}
           </Badge>
         </TooltipTrigger>
         <TooltipContent side="top" className="max-w-xs">
           <div className="space-y-1">
-            <p className="font-semibold">EPSS Score: {displayScore}%</p>
+            <p className="font-semibold">EPSS Score: {displayScore}</p>
             {percentile !== null && percentile !== undefined && (
-              <p className="text-sm">Percentile: {percentile.toFixed(1)}%</p>
+              <p className="text-sm">
+                Percentile: {formatEpssPercentile(percentile)} ({formatEpssTopPercent(percentile)})
+              </p>
             )}
             <p className="text-xs text-muted-foreground">{description}</p>
             <p className="text-xs text-muted-foreground">
@@ -142,7 +151,7 @@ export function EPSSScoreMeter({
   }
 
   const { color } = getEPSSLevel(score)
-  const percentage = score * 100
+  const percentage = epssScoreToPercent(score)
 
   const sizeConfig = {
     sm: { height: 'h-1.5', text: 'text-xs', width: 'w-16' },
@@ -161,7 +170,7 @@ export function EPSSScoreMeter({
         />
       </div>
       {showLabel && (
-        <span className={cn('font-medium tabular-nums', text)}>{percentage.toFixed(1)}%</span>
+        <span className={cn('font-medium tabular-nums', text)}>{formatEpssScore(score)}</span>
       )}
     </div>
   )
@@ -196,7 +205,7 @@ export function EPSSIndicator({ score, compact = false, className }: EPSSIndicat
           </TooltipTrigger>
           <TooltipContent>
             <p>
-              EPSS: {(score * 100).toFixed(1)}% ({label})
+              EPSS: {formatEpssScore(score)} ({label})
             </p>
           </TooltipContent>
         </Tooltip>
@@ -207,7 +216,7 @@ export function EPSSIndicator({ score, compact = false, className }: EPSSIndicat
   return (
     <div className={cn('flex items-center gap-1 px-2 py-1 rounded text-sm', bgColor, className)}>
       <Icon className="h-4 w-4" />
-      <span>{(score * 100).toFixed(1)}%</span>
+      <span>{formatEpssScore(score)}</span>
     </div>
   )
 }

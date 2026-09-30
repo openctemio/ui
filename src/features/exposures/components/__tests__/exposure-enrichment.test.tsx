@@ -127,7 +127,8 @@ describe('ExposureSecurityContext', () => {
           is_in_kev: true,
           kev_due_date: '2026-09-01T00:00:00Z',
           epss_score: 0.5,
-          epss_percentile: 0.97,
+          // The API serves the percentile on the canonical 0–100 scale.
+          epss_percentile: 97.4,
           cve_id: 'CVE-2026-1234',
         })}
       />
@@ -137,5 +138,20 @@ describe('ExposureSecurityContext', () => {
     expect(screen.getByText('EPSS')).toBeInTheDocument()
     expect(screen.getByText(/97th pct/)).toBeInTheDocument()
     expect(screen.getByText('CVE-2026-1234')).toBeInTheDocument()
+  })
+
+  it('does not rescale a 0–100 percentile (it used to render 9990th)', async () => {
+    const { ExposureSecurityContext } = await import('../exposure-enrichment')
+    render(
+      <ExposureSecurityContext
+        exposure={makeExposure({
+          epss_score: 0.97565,
+          epss_percentile: 99.9,
+          cve_id: 'CVE-2021-44228',
+        })}
+      />
+    )
+    expect(screen.getByText(/99th pct/)).toBeInTheDocument()
+    expect(screen.queryByText(/9990/)).not.toBeInTheDocument()
   })
 })
