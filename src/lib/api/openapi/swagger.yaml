@@ -5852,7 +5852,8 @@ definitions:
         maxLength: 10000
         type: string
       epss_percentile:
-        maximum: 1
+        description: 0-100 percentile; a 0-1 fraction is rescaled
+        maximum: 100
         minimum: 0
         type: number
       epss_score:
@@ -7367,6 +7368,14 @@ definitions:
       status_message:
         example: ""
         type: string
+      supported:
+        description: |-
+          Supported is false for a provider that is declared but has no client in
+          this version (e.g. a Linear row created before creation was refused).
+          Such an integration never runs; clients should show it as not supported
+          rather than as pending or connected.
+        example: true
+        type: boolean
       sync_error:
         example: ""
         type: string
@@ -7459,6 +7468,14 @@ definitions:
       status_message:
         example: ""
         type: string
+      supported:
+        description: |-
+          Supported is false for a provider that is declared but has no client in
+          this version (e.g. a Linear row created before creation was refused).
+          Such an integration never runs; clients should show it as not supported
+          rather than as pending or connected.
+        example: true
+        type: boolean
       sync_error:
         example: ""
         type: string
@@ -10511,7 +10528,8 @@ definitions:
         maxLength: 10000
         type: string
       epss_percentile:
-        maximum: 1
+        description: 0-100 percentile; a 0-1 fraction is rescaled
+        maximum: 100
         minimum: 0
         type: number
       epss_score:
@@ -10639,6 +10657,7 @@ definitions:
       description:
         type: string
       epss_percentile:
+        description: 0-100 percentile rank
         type: number
       epss_score:
         type: number

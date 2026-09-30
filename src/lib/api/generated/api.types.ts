@@ -27634,6 +27634,7 @@ export interface components {
       cvss_score?: number
       cvss_vector?: string
       description?: string
+      /** @description 0-100 percentile; a 0-1 fraction is rescaled */
       epss_percentile?: number
       epss_score?: number
       exploit_available?: boolean
@@ -28423,6 +28424,14 @@ export interface components {
       status?: 'pending' | 'connected' | 'disconnected' | 'error'
       /** @example  */
       status_message?: string
+      /**
+       * @description Supported is false for a provider that is declared but has no client in
+       *     this version (e.g. a Linear row created before creation was refused).
+       *     Such an integration never runs; clients should show it as not supported
+       *     rather than as pending or connected.
+       * @example true
+       */
+      supported?: boolean
       /** @example  */
       sync_error?: string
       /** @example 60 */
@@ -28482,6 +28491,14 @@ export interface components {
       status?: 'pending' | 'connected' | 'disconnected' | 'error'
       /** @example  */
       status_message?: string
+      /**
+       * @description Supported is false for a provider that is declared but has no client in
+       *     this version (e.g. a Linear row created before creation was refused).
+       *     Such an integration never runs; clients should show it as not supported
+       *     rather than as pending or connected.
+       * @example true
+       */
+      supported?: boolean
       /** @example  */
       sync_error?: string
       /** @example 60 */
@@ -29990,6 +30007,7 @@ export interface components {
       cvss_score?: number
       cvss_vector?: string
       description?: string
+      /** @description 0-100 percentile; a 0-1 fraction is rescaled */
       epss_percentile?: number
       epss_score?: number
       exploit_available?: boolean
@@ -30048,6 +30066,7 @@ export interface components {
       cvss_score?: number
       cvss_vector?: string
       description?: string
+      /** @description 0-100 percentile rank */
       epss_percentile?: number
       epss_score?: number
       exploit_available?: boolean
