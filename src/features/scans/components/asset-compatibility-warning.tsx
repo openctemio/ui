@@ -36,10 +36,10 @@ export function AssetCompatibilityWarning({
   // Don't show if fully compatible
   if (status === 'full') {
     return (
-      <Alert className={cn('border-green-500/30 bg-green-500/5', className)}>
-        <CheckCircle className="h-4 w-4 text-green-600" />
-        <AlertTitle className="text-green-600">All assets compatible</AlertTitle>
-        <AlertDescription className="text-green-600/80">
+      <Alert className={cn('border-success/30 bg-success/5', className)}>
+        <CheckCircle className="h-4 w-4 text-success" />
+        <AlertTitle className="text-success">All assets compatible</AlertTitle>
+        <AlertDescription className="text-success/80">
           All {preview.totalAssets} assets in the selected group(s) can be scanned by{' '}
           {preview.toolName || 'this tool'}.
         </AlertDescription>
@@ -52,16 +52,16 @@ export function AssetCompatibilityWarning({
   return (
     <Alert
       variant={status === 'none' ? 'destructive' : 'default'}
-      className={cn(status === 'partial' && 'border-yellow-500/30 bg-yellow-500/5', className)}
+      className={cn(status === 'partial' && 'border-warning/30 bg-warning/5', className)}
     >
       <StatusIcon
-        className={cn('h-4 w-4', status === 'partial' ? 'text-yellow-600' : 'text-red-600')}
+        className={cn('h-4 w-4', status === 'partial' ? 'text-warning' : 'text-destructive')}
       />
-      <AlertTitle className={cn(status === 'partial' ? 'text-yellow-600' : 'text-red-600')}>
+      <AlertTitle className={cn(status === 'partial' ? 'text-warning' : 'text-destructive')}>
         {status === 'partial' ? 'Some assets incompatible' : 'No compatible assets'}
       </AlertTitle>
       <AlertDescription className="space-y-3">
-        <p className={cn(status === 'partial' ? 'text-yellow-600/80' : 'text-red-600/80')}>
+        <p className={cn(status === 'partial' ? 'text-warning/80' : 'text-destructive/80')}>
           {status === 'partial' ? (
             <>
               {preview.incompatibleAssets} of {preview.totalAssets} assets will be{' '}
@@ -86,8 +86,8 @@ export function AssetCompatibilityWarning({
             value={preview.compatibilityPercent}
             className={cn(
               'h-2',
-              status === 'partial' && '[&>div]:bg-yellow-500',
-              status === 'none' && '[&>div]:bg-red-500'
+              status === 'partial' && '[&>div]:bg-warning',
+              status === 'none' && '[&>div]:bg-destructive'
             )}
           />
         </div>
@@ -98,8 +98,8 @@ export function AssetCompatibilityWarning({
             <Tooltip>
               <TooltipTrigger asChild>
                 <div className="flex items-center gap-1">
-                  <CheckCircle className="h-3.5 w-3.5 text-green-600" />
-                  <span className="text-green-600">{preview.compatibleAssets} compatible</span>
+                  <CheckCircle className="h-3.5 w-3.5 text-success" />
+                  <span className="text-success">{preview.compatibleAssets} compatible</span>
                 </div>
               </TooltipTrigger>
               <TooltipContent>
@@ -112,8 +112,10 @@ export function AssetCompatibilityWarning({
             <Tooltip>
               <TooltipTrigger asChild>
                 <div className="flex items-center gap-1">
-                  <XCircle className="h-3.5 w-3.5 text-red-600" />
-                  <span className="text-red-600">{preview.incompatibleAssets} incompatible</span>
+                  <XCircle className="h-3.5 w-3.5 text-destructive" />
+                  <span className="text-destructive">
+                    {preview.incompatibleAssets} incompatible
+                  </span>
                 </div>
               </TooltipTrigger>
               <TooltipContent>
@@ -166,10 +168,12 @@ export function AssetCompatibilityWarning({
             </CollapsibleTrigger>
             <CollapsibleContent className="mt-2">
               <div className="rounded-md border bg-background/50 p-2">
+                {/* A few-row breakdown inside an alert, not a list: a plain table keeps
+                    it compact; DataTable's toolbar and paging would outweigh it. */}
                 <table className="w-full text-xs">
                   <thead>
                     <tr className="border-b text-muted-foreground">
-                      <th className="pb-1 text-start font-medium">Asset Type</th>
+                      <th className="pb-1 text-start font-medium">Asset type</th>
                       <th className="pb-1 text-end font-medium">Count</th>
                       <th className="pb-1 text-end font-medium">Status</th>
                     </tr>
@@ -181,12 +185,12 @@ export function AssetCompatibilityWarning({
                           {ASSET_TYPE_LABELS[item.assetType as keyof typeof ASSET_TYPE_LABELS] ||
                             item.assetType}
                         </td>
-                        <td className="py-1 text-end">{item.count}</td>
+                        <td className="py-1 text-end tabular-nums">{item.count}</td>
                         <td className="py-1 text-end">
                           {item.isCompatible ? (
                             <Badge
                               variant="outline"
-                              className="border-green-500/30 bg-green-500/10 text-green-600"
+                              className="border-success/30 bg-success/10 text-success"
                             >
                               Compatible
                             </Badge>
@@ -196,7 +200,7 @@ export function AssetCompatibilityWarning({
                                 <TooltipTrigger asChild>
                                   <Badge
                                     variant="outline"
-                                    className="border-red-500/30 bg-red-500/10 text-red-600"
+                                    className="border-destructive/30 bg-destructive/10 text-destructive"
                                   >
                                     Skipped
                                   </Badge>

@@ -24,7 +24,7 @@ import { getAsset } from '../../hooks'
 import { ASSET_TYPE_LABELS, type Asset } from '../../types/asset.types'
 import { SORT_FIELDS, sortToSorting, sortingToSort } from '../../lib/inventory-url'
 
-const PAGE_SIZES = [10, 25, 50, 100]
+const PAGE_SIZES = [10, 20, 30, 50, 100]
 
 function daysSinceISO(iso?: string | null): number | undefined {
   if (!iso) return undefined

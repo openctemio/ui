@@ -227,7 +227,7 @@ const scanTypeLabels: Record<string, string> = {
 
 const SCOPE_TABS = ['overview', 'targets', 'exclusions', 'schedules'] as const
 type ScopeTab = (typeof SCOPE_TABS)[number]
-const PAGE_SIZES = [10, 20, 50, 100]
+const PAGE_SIZES = [10, 20, 30, 50, 100]
 
 export default function ScopeConfigPage() {
   // Permission check for write operations

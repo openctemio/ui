@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   countActiveFilters,
+  DEFAULT_PAGE_SIZE,
   isInventoryFilterEmpty,
   parseInventoryFilters,
   serializeInventoryFilters,
@@ -29,7 +30,7 @@ describe('inventory URL codec', () => {
   })
 
   it('omits page 1 and the default page size from the URL', () => {
-    const qs = serializeInventoryFilters({ page: 1, pageSize: 25 })
+    const qs = serializeInventoryFilters({ page: 1, pageSize: DEFAULT_PAGE_SIZE })
     expect(qs.toString()).toBe('')
   })
 
