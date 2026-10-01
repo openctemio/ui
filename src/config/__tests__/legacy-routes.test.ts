@@ -13,6 +13,7 @@ import {
   LEGACY_ROUTE_REDIRECTS,
   applyLegacyRoute,
   resolveLegacyRoute,
+  splitSource,
   type LegacyRouteRedirect,
 } from '../legacy-routes'
 import nextConfig from '../../../next.config'
@@ -46,7 +47,11 @@ const redirectOnce = (url: string) => resolveLegacyRoute(url)
 
 /** A concrete URL that a rule's source matches. */
 function sampleSource(r: LegacyRouteRedirect): string {
-  const path = r.source.replace('/:path*', '')
+  const path =
+    '/' +
+    splitSource(r.source.replace('/:path*', ''))
+      .map((seg) => (seg.startsWith(':') ? 'sample1' : seg))
+      .join('/')
   const q = new URLSearchParams()
   for (const h of r.has ?? []) q.set(h.key, h.value ?? 'x')
   const qs = q.toString()
@@ -111,6 +116,11 @@ describe('legacy route redirects', () => {
     expect(redirectOnce('/pentest/mitre-coverage')).toBe('/validation/attack-coverage')
     expect(redirectOnce('/pentest/templates/abc/edit')).toBe('/settings/pentest/templates/abc/edit')
     expect(redirectOnce('/pentest/campaigns')).toBeNull()
+    // Notification deep links.
+    expect(redirectOnce('/pentest/campaigns?id=c9')).toBe('/pentest/campaigns/c9?id=c9')
+    expect(redirectOnce('/pentest/findings/f7')).toBe('/findings/f7')
+    expect(redirectOnce('/pentest/findings/new')).toBeNull()
+    expect(redirectOnce('/pentest/findings/f7/edit')).toBeNull()
     expect(redirectOnce('/settings/notifications')).toBe('/account/notifications')
     expect(redirectOnce('/settings/users')).toBe('/settings/members')
     expect(redirectOnce('/settings/access-control/groups/abc')).toBe('/settings/teams/abc')
