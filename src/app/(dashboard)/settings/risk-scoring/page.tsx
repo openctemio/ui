@@ -1,5 +1,10 @@
 'use client'
 
+import Link from 'next/link'
+import { ListOrdered } from 'lucide-react'
+import { useHasPermission, Permission } from '@/lib/permissions'
+import { useModuleEnabled } from '@/features/integrations/api/use-tenant-modules'
+
 import { useState, useEffect, useCallback } from 'react'
 import type { ColumnDef } from '@tanstack/react-table'
 import { Main } from '@/components/layout'
@@ -48,7 +53,7 @@ import type {
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { getErrorMessage } from '@/lib/api/error-handler'
 
-const PAGE_TITLE = 'Scoring'
+const PAGE_TITLE = 'Risk scoring'
 const PAGE_DESCRIPTION =
   "Configure the weights and parameters that make up each asset's risk score."
 
@@ -249,6 +254,9 @@ const PREVIEW_COLUMNS: ColumnDef<RiskScorePreviewItem>[] = [
 ]
 
 export default function ScoringConfigurationPage() {
+  const mayPriorityRules = useHasPermission(Permission.PriorityRulesRead)
+  const priorityRulesOn = useModuleEnabled('priority_rules')
+  const canSeePriorityRules = mayPriorityRules && priorityRulesOn
   const { currentTenant } = useTenant()
   const tenantId = currentTenant?.id
   const { settings, isLoading, error, mutate } = useRiskScoringSettings(tenantId)
@@ -438,6 +446,15 @@ export default function ScoringConfigurationPage() {
   return (
     <Main>
       <PageHeader title={PAGE_TITLE} description={PAGE_DESCRIPTION}>
+        {/* The other lever on a finding's priority: per-finding override rules. */}
+        {canSeePriorityRules && (
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/priority-rules">
+              <ListOrdered className="h-4 w-4" />
+              Priority rules
+            </Link>
+          </Button>
+        )}
         <Button variant="outline" size="sm" onClick={handleReset} disabled={!isDirty}>
           <RotateCcw className="h-4 w-4" />
           Reset

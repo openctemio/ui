@@ -305,11 +305,12 @@ export const routePermissions: Record<string, RoutePermissionConfig> = {
     permission: Permission.VulnerabilitiesRead,
     module: Module.BusinessImpact,
   },
-  '/settings/priority-rules': {
+  // A CTEM working object in Prioritization (was /settings/priority-rules).
+  '/priority-rules': {
     permission: Permission.PriorityRulesRead,
     module: Module.PriorityRules,
   },
-  '/settings/priority-rules/**': {
+  '/priority-rules/**': {
     permission: Permission.PriorityRulesRead,
     module: Module.PriorityRules,
   },
@@ -692,11 +693,11 @@ export const routePermissions: Record<string, RoutePermissionConfig> = {
   },
 
   // Risk scoring config — its own module
-  '/settings/scoring': {
+  '/settings/risk-scoring': {
     permission: Permission.TeamUpdate,
     module: Module.RiskScoring,
   },
-  '/settings/scoring/**': {
+  '/settings/risk-scoring/**': {
     permission: Permission.TeamUpdate,
     module: Module.RiskScoring,
   },

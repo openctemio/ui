@@ -1,5 +1,10 @@
 'use client'
 
+import Link from 'next/link'
+import { Scale } from 'lucide-react'
+import { useHasPermission } from '@/lib/permissions'
+import { useModuleEnabled } from '@/features/integrations/api/use-tenant-modules'
+
 import { useMemo, useState } from 'react'
 import type { ColumnDef } from '@tanstack/react-table'
 import useSWR from 'swr'
@@ -152,6 +157,9 @@ const emptyForm: FormState = {
 }
 
 export default function PriorityRulesPage() {
+  const mayRiskScoring = useHasPermission(Permission.TeamUpdate)
+  const riskScoringOn = useModuleEnabled('risk_scoring')
+  const canSeeRiskScoring = mayRiskScoring && riskScoringOn
   const { data, error, mutate, isLoading } = useSWR<ListResponse>(
     '/api/v1/priority-rules',
     (url: string) => get<ListResponse>(url)
@@ -519,6 +527,15 @@ export default function PriorityRulesPage() {
         title="Priority rules"
         description="Define rules that override the calculated finding priority based on conditions."
       >
+        {/* The other lever: how the underlying risk score is weighted. */}
+        {canSeeRiskScoring && (
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/settings/risk-scoring">
+              <Scale className="h-4 w-4" />
+              Tune risk scoring
+            </Link>
+          </Button>
+        )}
         <Can permission={Permission.PriorityRulesWrite}>
           <Button size="sm" onClick={openCreate}>
             <Plus className="h-4 w-4" />
