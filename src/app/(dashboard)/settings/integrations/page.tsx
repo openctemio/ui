@@ -7,13 +7,13 @@ import {
   DataTable,
   EmptyState,
   ErrorState,
+  LinkCard,
   MetricStrip,
   PageHeader,
   RelativeTime,
   StackedCell,
   type MetricStripItem,
 } from '@/features/shared'
-import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -154,36 +154,21 @@ export default function IntegrationsPage() {
       {/* Categories — navigation to the pages that own each connect flow */}
       <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {integrationCategories.map((category) => (
-          <Link
+          <LinkCard
             key={category.id}
             href={category.href}
-            className="group rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <Card className="h-full transition-colors group-hover:border-primary/50">
-              <CardContent className="flex items-start gap-3 p-4">
-                <category.icon className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" />
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-medium">{category.title}</span>
-                    {category.badge && (
-                      <Badge
-                        variant="outline"
-                        className="shrink-0 rounded-full border-dashed px-1.5 py-0 text-[10px] text-muted-foreground"
-                      >
-                        {category.badge}
-                      </Badge>
-                    )}
-                    {category.id === 'scm' && scmConnections.length > 0 && (
-                      <Badge variant="secondary" className="tabular-nums">
-                        {scmConnectedCount}/{scmConnections.length}
-                      </Badge>
-                    )}
-                  </div>
-                  <p className="mt-1 text-xs text-muted-foreground">{category.description}</p>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
+            icon={category.icon}
+            title={category.title}
+            description={category.description}
+            badge={category.badge}
+            aside={
+              category.id === 'scm' && scmConnections.length > 0 ? (
+                <Badge variant="secondary" className="tabular-nums">
+                  {scmConnectedCount}/{scmConnections.length}
+                </Badge>
+              ) : undefined
+            }
+          />
         ))}
       </div>
 
