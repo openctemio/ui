@@ -200,3 +200,41 @@ export interface AdminAuditEntry {
   error_message?: string
   created_at: string
 }
+
+/** Scanner target type -> asset type (GET /admin/target-mappings). */
+export interface TargetMapping {
+  id: string
+  target_type: string
+  asset_type: string
+  /** Lower sorts first; 10 is the primary mapping. */
+  priority: number
+  is_active: boolean
+  is_primary: boolean
+  description?: string
+  created_by?: string
+  created_at: string
+  updated_at: string
+}
+
+export interface TargetMappingStats {
+  total: number
+  by_target_type: Record<string, number>
+  by_asset_type: Record<string, number>
+  active_count: number
+  inactive_count: number
+}
+
+export interface CreateTargetMappingInput {
+  target_type: string
+  asset_type: string
+  priority?: number
+  is_active?: boolean
+  description?: string
+}
+
+/** The pair (target type, asset type) cannot change after creation. */
+export interface UpdateTargetMappingInput {
+  priority?: number
+  is_active?: boolean
+  description?: string
+}
