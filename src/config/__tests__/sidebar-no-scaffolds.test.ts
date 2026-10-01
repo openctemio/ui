@@ -231,3 +231,12 @@ describe('"Soon" badges and placeholder pages match both ways', () => {
     ).toEqual([])
   })
 })
+
+describe('Integrations overview cards follow the settings rail', () => {
+  it('same order and names as Settings › Integrations (catalog page excluded)', () => {
+    const rail = settingsNavItems
+      .filter((i) => i.url.startsWith('/settings/integrations/'))
+      .map((i) => [i.title, i.url])
+    expect(INTEGRATION_CATEGORIES.map((c) => [c.title, c.href])).toEqual(rail)
+  })
+})

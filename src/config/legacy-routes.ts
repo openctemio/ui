@@ -59,6 +59,12 @@ export const LEGACY_SETTINGS_ROUTE_REDIRECTS: LegacyRouteRedirect[] = [
     destination: '/settings/risk-scoring/:path*',
     permanent: true,
   },
+  // Integrations: the Tenable connectors page says what it is.
+  {
+    source: '/settings/integrations/security',
+    destination: '/settings/integrations/scanners',
+    permanent: true,
+  },
   // Scanning catalogs: configured at onboarding, rarely touched, so they live
   // in Settings › Scanning (owner decision D3). Detail and sub-pages follow.
   {
