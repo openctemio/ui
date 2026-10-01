@@ -97,6 +97,8 @@ describe('sensor vocabulary guard', () => {
     expect(findViolations('src/features/x/y.ts', "fetch('/api/v1/agents')")).toHaveLength(1)
     expect(findViolations('src/features/x/y.tsx', '<p>Deploy an Agent</p>')).toHaveLength(1)
     expect(findViolations('src/features/x/y.ts', 'const ua = navigator.userAgent')).toHaveLength(0)
+    expect(findViolations('src/features/x/y.ts', 'describeUserAgent(s.user_agent)')).toHaveLength(0)
+    expect(findViolations('src/features/x/y.ts', 'describeUserAgent(agent)')).toHaveLength(1)
     expect(findViolations('src/features/x/y.ts', 'const s = useSensor()')).toHaveLength(0)
   })
 
