@@ -111,6 +111,22 @@ export const authEndpoints = {
    */
   createFirstTeam: () => `${API_BASE.AUTH}/create-first-team`,
 
+  /**
+   * Second login step: verify a TOTP or recovery code against the challenge
+   * a password login returned (mfa_token). Public, rate limited.
+   */
+  mfaVerify: () => `${API_BASE.AUTH}/mfa/verify`,
+
+  /**
+   * Required 2FA enrollment during login (organization policy): get a secret.
+   */
+  mfaEnrollStart: () => `${API_BASE.AUTH}/mfa/enroll/start`,
+
+  /**
+   * Required 2FA enrollment during login: confirm with a code and sign in.
+   */
+  mfaEnrollConfirm: () => `${API_BASE.AUTH}/mfa/enroll/confirm`,
+
   // ============================================
   // SOCIAL/OAUTH AUTH
   // ============================================
@@ -203,6 +219,15 @@ export const userEndpoints = {
    * Revoke specific session
    */
   revokeSession: (sessionId: string) => `${API_BASE.USERS}/me/sessions/${sessionId}`,
+
+  /**
+   * Two-factor authentication (signed-in user)
+   */
+  twoFactor: () => `${API_BASE.USERS}/me/2fa`,
+  twoFactorSetup: () => `${API_BASE.USERS}/me/2fa/setup`,
+  twoFactorEnable: () => `${API_BASE.USERS}/me/2fa/enable`,
+  twoFactorDisable: () => `${API_BASE.USERS}/me/2fa/disable`,
+  twoFactorRecoveryCodes: () => `${API_BASE.USERS}/me/2fa/recovery-codes`,
 
   // ============================================
   // USER MANAGEMENT (Admin)

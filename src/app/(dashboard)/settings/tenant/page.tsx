@@ -954,9 +954,11 @@ export default function TenantPage() {
               <CardContent className="space-y-6">
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
-                    <Label>Require MFA</Label>
+                    <Label>Require two-factor authentication</Label>
                     <p className="text-sm text-muted-foreground">
-                      All users must enable two-factor authentication
+                      Members who sign in with a password must set up an authenticator app at their
+                      next sign-in. Members who sign in through SSO use your identity
+                      provider&apos;s two-factor settings.
                     </p>
                   </div>
                   <Switch

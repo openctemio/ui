@@ -91,7 +91,7 @@ export function NavUser({ user }: NavUserProps) {
 
               <DropdownMenuGroup>
                 <DropdownMenuItem asChild>
-                  <Link href="/settings/account" className="flex items-center gap-2">
+                  <Link href="/account" className="flex items-center gap-2">
                     <BadgeCheck className="h-4 w-4" />
                     Account
                   </Link>

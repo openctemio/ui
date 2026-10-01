@@ -34,7 +34,8 @@ import { validateRedirectUrl } from '@/lib/redirect'
 
 // Import schema and server actions
 import { loginSchema, type LoginInput } from '../schemas/auth.schema'
-import { loginAction } from '../actions/local-auth-actions'
+import { loginAction, type LoginResult, type MfaPurpose } from '../actions/local-auth-actions'
+import { MfaStep } from './mfa-step'
 import { initiateSocialLogin, type SocialProvider } from '../actions/social-auth-actions'
 
 // SSO imports
@@ -81,6 +82,14 @@ const socialProviders: {
   { id: 'microsoft', name: 'Microsoft', icon: IconMicrosoft },
 ]
 
+/**
+ * Full page navigation after login, so the cookies set by the Server Action
+ * are picked up (router.push would keep the old auth state).
+ */
+function hardNavigate(url: string) {
+  window.location.href = url
+}
+
 // ============================================
 // COMPONENT
 // ============================================
@@ -95,6 +104,8 @@ export function LoginForm({
   const [isPending, startTransition] = useTransition()
   const [loadingProvider, setLoadingProvider] = useState<SocialProvider | null>(null)
   const [loadingSSOProvider, setLoadingSSOProvider] = useState<SSOProviderType | null>(null)
+  // Set when the password was right but a second factor is needed.
+  const [mfaPurpose, setMfaPurpose] = useState<MfaPurpose | null>(null)
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -139,60 +150,73 @@ export function LoginForm({
         password: data.password,
       })
 
-      if (result.success) {
-        // Store user data in sessionStorage for sidebar display
-        if (result.user) {
-          try {
-            sessionStorage.setItem(
-              'app_user',
-              JSON.stringify({
-                id: result.user.id,
-                name: result.user.name,
-                email: result.user.email,
-              })
-            )
-          } catch {
-            // Ignore sessionStorage errors
-          }
-        }
-
-        // Platform administrator: the admin console (it asks for the TOTP code).
-        if (result.platformAdmin) {
-          const toConsole = safeRedirectTo === '/admin' || safeRedirectTo.startsWith('/admin/')
-          window.location.href = toConsole ? safeRedirectTo : '/admin'
-          return
-        }
-
-        // Case 1: Multiple tenants - redirect to tenant selection
-        if (result.requiresTenantSelection) {
-          toast.success('Please select a team to continue')
-          router.push('/select-tenant')
-          return
-        }
-
-        // Case 2: No tenants - check if user has a specific destination (e.g., invitation)
-        if (result.tenants && result.tenants.length === 0) {
-          // If returnTo is an invitation page, go there first (user can accept and get a tenant)
-          if (safeRedirectTo.includes('/invitations/')) {
-            toast.success('Logged in successfully')
-            window.location.href = safeRedirectTo
-            return
-          }
-          // Otherwise, redirect to onboarding to create first team
-          toast.success('Please create your first team to get started')
-          window.location.href = '/onboarding/create-team'
-          return
-        }
-
-        // Case 3: Single tenant - proceed to dashboard
-        // IMPORTANT: Use window.location.href for full page navigation
-        // to ensure cookies set by Server Action are picked up properly
-        toast.success('Logged in successfully')
-        window.location.href = safeRedirectTo
-      } else {
-        toast.error(result.error || 'Login failed')
+      if (result.success && result.mfaRequired && result.mfaPurpose) {
+        form.resetField('password')
+        setMfaPurpose(result.mfaPurpose)
+        return
       }
+
+      handleLoginResult(result)
     })
+  }
+
+  /**
+   * Route a finished login (password only, or after the second factor).
+   */
+  function handleLoginResult(result: LoginResult) {
+    if (result.success) {
+      // Store user data in sessionStorage for sidebar display
+      if (result.user) {
+        try {
+          sessionStorage.setItem(
+            'app_user',
+            JSON.stringify({
+              id: result.user.id,
+              name: result.user.name,
+              email: result.user.email,
+            })
+          )
+        } catch {
+          // Ignore sessionStorage errors
+        }
+      }
+
+      // Platform administrator: the admin console (it asks for the TOTP code).
+      if (result.platformAdmin) {
+        const toConsole = safeRedirectTo === '/admin' || safeRedirectTo.startsWith('/admin/')
+        hardNavigate(toConsole ? safeRedirectTo : '/admin')
+        return
+      }
+
+      // Case 1: Multiple tenants - redirect to tenant selection
+      if (result.requiresTenantSelection) {
+        toast.success('Please select a team to continue')
+        router.push('/select-tenant')
+        return
+      }
+
+      // Case 2: No tenants - check if user has a specific destination (e.g., invitation)
+      if (result.tenants && result.tenants.length === 0) {
+        // If returnTo is an invitation page, go there first (user can accept and get a tenant)
+        if (safeRedirectTo.includes('/invitations/')) {
+          toast.success('Logged in successfully')
+          hardNavigate(safeRedirectTo)
+          return
+        }
+        // Otherwise, redirect to onboarding to create first team
+        toast.success('Please create your first team to get started')
+        hardNavigate('/onboarding/create-team')
+        return
+      }
+
+      // Case 3: Single tenant - proceed to dashboard
+      // IMPORTANT: Use window.location.href for full page navigation
+      // to ensure cookies set by Server Action are picked up properly
+      toast.success('Logged in successfully')
+      hardNavigate(safeRedirectTo)
+    } else {
+      toast.error(result.error || 'Login failed')
+    }
   }
 
   /**
@@ -226,6 +250,21 @@ export function LoginForm({
   }
 
   const isLoading = isPending || loadingProvider !== null || loadingSSOProvider !== null
+
+  if (mfaPurpose) {
+    return (
+      <div className={cn('grid gap-3', className)}>
+        <MfaStep
+          purpose={mfaPurpose}
+          onDone={handleLoginResult}
+          onCancel={(message) => {
+            setMfaPurpose(null)
+            if (message) toast.error(message)
+          }}
+        />
+      </div>
+    )
+  }
 
   return (
     <Form {...form}>
