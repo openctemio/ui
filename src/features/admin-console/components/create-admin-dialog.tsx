@@ -23,7 +23,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { copyToClipboard } from '@/lib/clipboard'
-import { createAdminUser } from '../api/use-admin-users'
+import { provisionAdministrator } from '../api/use-admin-users'
 import { AdminApiError } from '../api/admin-client'
 import type { AdminRole } from '../types'
 
@@ -38,8 +38,9 @@ export const ADMIN_ROLE_OPTIONS: { value: AdminRole; label: string; hint: string
 ]
 
 /**
- * Create a platform administrator. The API key is shown once: the new admin
- * uses it to set their console password, then signs in and enrolls MFA.
+ * Make someone a platform administrator. They sign in on the normal sign-in
+ * page with their account; when the API had to create the account, its
+ * temporary password is shown here once.
  */
 export function CreateAdminDialog({ onCreated }: { onCreated: () => void }) {
   const [open, setOpen] = useState(false)
@@ -48,7 +49,7 @@ export function CreateAdminDialog({ onCreated }: { onCreated: () => void }) {
   const [role, setRole] = useState<AdminRole>('readonly')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [apiKey, setApiKey] = useState<string | null>(null)
+  const [created, setCreated] = useState<{ email: string; password?: string } | null>(null)
   const [copied, setCopied] = useState(false)
 
   const close = () => {
@@ -57,7 +58,7 @@ export function CreateAdminDialog({ onCreated }: { onCreated: () => void }) {
     setName('')
     setRole('readonly')
     setError(null)
-    setApiKey(null)
+    setCreated(null)
     setCopied(false)
   }
 
@@ -66,8 +67,8 @@ export function CreateAdminDialog({ onCreated }: { onCreated: () => void }) {
     setBusy(true)
     setError(null)
     try {
-      const res = await createAdminUser({ email: email.trim(), name: name.trim(), role })
-      setApiKey(res.api_key)
+      const res = await provisionAdministrator({ email: email.trim(), name: name.trim(), role })
+      setCreated({ email: res.admin.email, password: res.temporary_password })
       onCreated()
     } catch (err) {
       setError(err instanceof AdminApiError ? err.message : 'Could not create the administrator')
@@ -85,31 +86,43 @@ export function CreateAdminDialog({ onCreated }: { onCreated: () => void }) {
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
-        {apiKey ? (
+        {created ? (
           <>
             <DialogHeader>
-              <DialogTitle>Administrator created</DialogTitle>
+              <DialogTitle>Administrator added</DialogTitle>
               <DialogDescription>
-                Send this API key to them securely. It is shown only once. They use it to set their
-                console password, then sign in at /admin/login and set up two-step verification.
+                {created.password
+                  ? 'A sign-in account was created. Send these details to them securely; the password is shown only once. They sign in on the normal sign-in page, change the password, and set up two-step verification when they open the console.'
+                  : 'Their existing account is now an administrator. They sign in on the normal sign-in page with their own password and set up two-step verification when they open the console.'}
               </DialogDescription>
             </DialogHeader>
-            <div className="flex items-center gap-2 py-4">
-              <code className="min-w-0 flex-1 rounded bg-muted px-2 py-1.5 text-xs break-all select-all">
-                {apiKey}
-              </code>
-              <Button
-                type="button"
-                size="icon"
-                variant="outline"
-                aria-label="Copy API key"
-                onClick={async () => {
-                  if (await copyToClipboard(apiKey)) setCopied(true)
-                }}
-              >
-                {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
-              </Button>
-            </div>
+            <dl className="grid grid-cols-[auto_1fr] items-center gap-x-3 gap-y-2 py-4 text-sm">
+              <dt className="text-muted-foreground">Email</dt>
+              <dd className="min-w-0 break-all">{created.email}</dd>
+              {created.password && (
+                <>
+                  <dt className="text-muted-foreground">Temporary password</dt>
+                  <dd className="flex min-w-0 items-center gap-2">
+                    <code className="min-w-0 flex-1 rounded bg-muted px-2 py-1.5 text-xs break-all select-all">
+                      {created.password}
+                    </code>
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="outline"
+                      aria-label="Copy temporary password"
+                      onClick={async () => {
+                        if (created.password && (await copyToClipboard(created.password))) {
+                          setCopied(true)
+                        }
+                      }}
+                    >
+                      {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
+                    </Button>
+                  </dd>
+                </>
+              )}
+            </dl>
             <DialogFooter>
               <Button onClick={close}>Done</Button>
             </DialogFooter>
@@ -119,7 +132,8 @@ export function CreateAdminDialog({ onCreated }: { onCreated: () => void }) {
             <DialogHeader>
               <DialogTitle>New administrator</DialogTitle>
               <DialogDescription>
-                Platform administrators are separate from organization accounts.
+                An administrator signs in on the normal sign-in page but belongs to no organization.
+                Use an email that is not a member of any organization.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">

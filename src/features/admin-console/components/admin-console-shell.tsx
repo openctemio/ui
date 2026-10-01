@@ -7,6 +7,7 @@ import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/s
 import { Skeleton } from '@/components/ui/skeleton'
 import { ThemeSwitch } from '@/components/theme-switch'
 import { AdminConsoleSidebar } from './admin-console-sidebar'
+import { localLogoutAction } from '@/features/auth/actions/local-auth-actions'
 import { adminLogout, useAdminSession } from '../api/use-admin-session'
 import type { AdminIdentity } from '../types'
 
@@ -20,8 +21,9 @@ export function useAdmin(): AdminIdentity {
 }
 
 /**
- * Layout for every console page except sign-in. It owns the console session:
- * no valid session sends the browser to /admin/login. It deliberately has none
+ * Layout for every console page except verification. It owns the console
+ * session: no valid session sends the browser to /admin/login, which asks for
+ * the TOTP code (or, when not signed in, sends on to the normal /login). It deliberately has none
  * of the tenant shell's providers (TenantGate, bootstrap, permissions), since
  * an administrator has no tenant.
  */
@@ -38,12 +40,14 @@ export function AdminConsoleShell({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     try {
+      // Ends the console session and the /login session it was opened from.
       await adminLogout()
     } catch {
       toast.error('Sign-out failed; the session will still expire on its own.')
     }
-    // Full reload (not router.push): drops every cached console response.
-    window.location.replace('/admin/login')
+    // Clears the /login cookies and navigates (a full load, so no cached
+    // console response survives).
+    await localLogoutAction('/login')
   }
 
   if (error) {
