@@ -17,7 +17,6 @@ import {
   LayoutDashboard,
   FolderKanban,
   ClipboardCheck,
-  BadgeCheck,
   Target,
   Settings2,
   Radar,
@@ -745,7 +744,11 @@ export const sidebarData: SidebarData = {
               title: 'Pentest',
               url: '/settings/pentest',
               icon: Crosshair,
-              permission: Permission.TeamUpdate,
+              // Same permission the route guard enforces on this page; with
+              // team:update here, a pentest lead saw no entry for a page they
+              // can open, and an admin without validation:write was shown an
+              // entry that ended in Access Denied.
+              permission: Permission.PentestWrite,
               module: 'pentest',
             },
             {
@@ -801,10 +804,9 @@ export const sidebarData: SidebarData = {
             {
               title: 'SIEM',
               url: '/settings/integrations/siem',
-              // This route renders ComingSoonPage. The badge is what keeps the entry
-              // honest: without it the item looks like every other live integration
-              // and the click is a dead end.
-              badge: 'Soon',
+              // Shipped (Splunk HEC: create, test, delete), so no "Soon" badge.
+              // sidebar-no-scaffolds.test.ts now fails a "Soon" badge on a page
+              // that is not a ComingSoonPage, which is how this one went stale.
               icon: Shield,
               subModuleKey: 'siem',
             },
@@ -814,7 +816,9 @@ export const sidebarData: SidebarData = {
               title: 'SCIM Provisioning',
               url: '/settings/integrations/scim-tokens',
               icon: Users,
-              subModuleKey: 'scim',
+              // No subModuleKey: the API has no `scim` sub-module (see
+              // integrations sub-modules in api migrations/000004), so the
+              // key that was here hid this entry from every tenant.
             },
             {
               title: 'AI Access (MCP)',
