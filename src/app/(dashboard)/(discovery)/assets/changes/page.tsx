@@ -85,6 +85,7 @@ const CHANGE_LABEL: Record<string, string> = {
   recovered: 'Seen again',
   exposure_changed: 'Exposure',
   internet_exposure_changed: 'Internet reachability',
+  renamed: 'Renamed',
 }
 
 const SOURCE_LABEL: Record<string, string> = {
