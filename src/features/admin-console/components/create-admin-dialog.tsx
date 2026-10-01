@@ -13,6 +13,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -47,6 +48,7 @@ export function CreateAdminDialog({ onCreated }: { onCreated: () => void }) {
   const [email, setEmail] = useState('')
   const [name, setName] = useState('')
   const [role, setRole] = useState<AdminRole>('readonly')
+  const [breakGlass, setBreakGlass] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [created, setCreated] = useState<{ email: string; password?: string } | null>(null)
@@ -57,6 +59,7 @@ export function CreateAdminDialog({ onCreated }: { onCreated: () => void }) {
     setEmail('')
     setName('')
     setRole('readonly')
+    setBreakGlass(false)
     setError(null)
     setCreated(null)
     setCopied(false)
@@ -67,7 +70,13 @@ export function CreateAdminDialog({ onCreated }: { onCreated: () => void }) {
     setBusy(true)
     setError(null)
     try {
-      const res = await provisionAdministrator({ email: email.trim(), name: name.trim(), role })
+      const res = await provisionAdministrator({
+        email: email.trim(),
+        name: name.trim(),
+        // A break-glass account must be able to fix anything.
+        role: breakGlass ? 'super_admin' : role,
+        break_glass: breakGlass,
+      })
       setCreated({ email: res.admin.email, password: res.temporary_password })
       onCreated()
     } catch (err) {
@@ -158,7 +167,11 @@ export function CreateAdminDialog({ onCreated }: { onCreated: () => void }) {
               </div>
               <div className="space-y-2">
                 <Label>Role</Label>
-                <Select value={role} onValueChange={(v) => setRole(v as AdminRole)}>
+                <Select
+                  value={breakGlass ? 'super_admin' : role}
+                  disabled={breakGlass}
+                  onValueChange={(v) => setRole(v as AdminRole)}
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -171,8 +184,27 @@ export function CreateAdminDialog({ onCreated }: { onCreated: () => void }) {
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground">
-                  {ADMIN_ROLE_OPTIONS.find((o) => o.value === role)?.hint}
+                  {
+                    ADMIN_ROLE_OPTIONS.find((o) => o.value === (breakGlass ? 'super_admin' : role))
+                      ?.hint
+                  }
                 </p>
+              </div>
+              <div className="flex items-start gap-3 rounded-md border p-3">
+                <Checkbox
+                  id="adm-break-glass"
+                  checked={breakGlass}
+                  onCheckedChange={(v) => setBreakGlass(v === true)}
+                />
+                <div className="space-y-1">
+                  <Label htmlFor="adm-break-glass">Break-glass (emergency access) account</Label>
+                  <p className="text-xs text-muted-foreground">
+                    A local super admin for when the identity provider is down: never bound to it,
+                    allowed to use its password when the IdP is required, and every sign-in alerts
+                    all administrators. Keep its credentials offline and test it at least every 90
+                    days.
+                  </p>
+                </div>
               </div>
               {error && (
                 <Alert variant="destructive">
