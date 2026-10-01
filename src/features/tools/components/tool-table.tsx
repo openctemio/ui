@@ -27,6 +27,7 @@ import type { Tool } from '@/lib/api/tool-types'
 import type { ToolCategory } from '@/lib/api/tool-category-types'
 import { INSTALL_METHOD_DISPLAY_NAMES } from '@/lib/api/tool-types'
 import { getCategoryNameById, getCategoryDisplayNameById } from '@/lib/api/tool-category-hooks'
+import { sanitizeExternalUrl } from '@/lib/utils'
 import { ToolCategoryIcon } from './tool-category-icon'
 
 interface ToolTableProps {
@@ -46,7 +47,12 @@ interface ToolTableProps {
   emptyMessage?: string
 }
 
-const openExternal = (url: string) => window.open(url, '_blank', 'noopener,noreferrer')
+// SECURITY: tool github_url / docs_url are tenant-authored and the API's URL
+// validator accepts opaque schemes such as `javascript:`. Route through the
+// shared sanitizer (same guard every other window.open site uses) so a stored
+// `javascript:`/`data:` URL cannot execute when another user clicks the action.
+const openExternal = (url: string) =>
+  window.open(sanitizeExternalUrl(url), '_blank', 'noopener,noreferrer')
 
 export function ToolTable({
   tools,
