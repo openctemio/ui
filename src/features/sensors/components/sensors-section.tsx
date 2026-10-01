@@ -60,7 +60,7 @@ import {
 
 type ModeFilter = 'all' | 'daemon' | 'standalone'
 /**
- * Settings → Sensors tabs: one per role the data supports today (RFC-023 §9.3
+ * Discovery → Sensors tabs: one per role the data supports today (RFC-023 §9.3
  * R0), plus the scan zones those sensors serve (RFC-023 §7).
  */
 type RoleTab = 'all' | 'scanners' | 'collectors'

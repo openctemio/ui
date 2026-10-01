@@ -17,5 +17,14 @@ describe('breadcrumbLabel', () => {
     expect(breadcrumbLabel('/x/some-new-page', 'some-new-page')).toBe('Some new page')
     // A generic menu title is not a useful trail label.
     expect(breadcrumbLabel('/settings/integrations', 'integrations')).toBe('Integrations')
+    expect(breadcrumbLabel('/account', 'account')).toBe('Account')
+  })
+
+  it('names settings pages as the settings rail does', () => {
+    expect(breadcrumbLabel('/settings/scanning/credentials', 'credentials')).toBe(
+      'Source credentials'
+    )
+    expect(breadcrumbLabel('/settings/scim', 'scim')).toBe('Directory sync (SCIM)')
+    expect(breadcrumbLabel('/settings/scanning', 'scanning')).toBe('Scanning')
   })
 })
