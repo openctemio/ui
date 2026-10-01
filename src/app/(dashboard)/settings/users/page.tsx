@@ -12,7 +12,6 @@ import {
 } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -58,9 +57,7 @@ import {
   UserPlus,
   Shield,
   CheckCircle,
-  Mail,
   MoreHorizontal,
-  Link,
   Trash2,
   Send,
   Ban,
@@ -79,12 +76,12 @@ import { useTenant } from '@/context/tenant-provider'
 import {
   useMembers,
   useInvitations,
-  useCreateInvitation,
   type MemberWithUser,
   type MemberRole,
   type MemberRBACRole,
   STATUS_DISPLAY,
   AddUserDialog,
+  InviteUserDialog,
   RoleChecklist,
   SetupLinkDialog,
   issueSetupLink,
@@ -100,7 +97,6 @@ const MemberRolesContext = createContext<MemberRolesMap>(new Map())
 import { fetcherWithOptions } from '@/lib/api/client'
 import { tenantEndpoints } from '@/lib/api/endpoints'
 import { getErrorMessage } from '@/lib/api/error-handler'
-import { copyToClipboard } from '@/lib/clipboard'
 import { Can, Permission } from '@/lib/permissions'
 import { MemberMfaBadge } from '@/features/organization/components/member-mfa-badge'
 
@@ -444,7 +440,6 @@ export default function UsersPage() {
     return map
   }, [members])
   const { invitations: rawInvitations, mutate: mutateInvitations } = useInvitations(tenantSlug)
-  const { createInvitation, isCreating } = useCreateInvitation(tenantSlug)
 
   // Filter out expired invitations (safety net - API should already filter)
   const invitations = useMemo(() => {
@@ -503,15 +498,8 @@ export default function UsersPage() {
   const roleFilter: RoleFilter = roleFilters.some((f) => f.value === roleParam)
     ? (roleParam as RoleFilter)
     : 'all'
-  const [inviteForm, setInviteForm] = useState({
-    email: '',
-    roleIds: [] as string[], // RBAC roles to assign when user joins
-  })
-
-  // Lazy load roles - only fetch when invite dialog is open (avoids unnecessary API call on page load)
-  const { roles: availableRolesForInvite, isLoading: rolesLoading } = useRoles({
-    skip: !inviteDialogOpen,
-  })
+  // Role names for the pending-invitations table (only fetched when there are any).
+  const { roles: availableRolesForInvite } = useRoles({ skip: invitations.length === 0 })
 
   // Refresh all data
   const refreshData = useCallback(() => {
@@ -768,53 +756,8 @@ export default function UsersPage() {
     }
   }
 
-  const handleInviteUser = async () => {
-    if (!inviteForm.email) {
-      toast.error('Please enter an email address')
-      return
-    }
-
-    if (inviteForm.roleIds.length === 0) {
-      toast.error('Please select at least one role')
-      return
-    }
-
-    try {
-      // Create invitation with role_ids only
-      // Backend auto-sets membership to "member" - permissions come from RBAC roles
-      await createInvitation({
-        email: inviteForm.email,
-        role_ids: inviteForm.roleIds,
-      })
-
-      const rolesCount = inviteForm.roleIds.length
-      toast.success(
-        `Invitation sent to ${inviteForm.email} with ${rolesCount} role${rolesCount > 1 ? 's' : ''}`
-      )
-
-      setInviteDialogOpen(false)
-      setInviteForm({ email: '', roleIds: [] })
-      refreshData()
-    } catch (error) {
-      toast.error(getErrorMessage(error, 'Failed to send invitation'))
-    }
-  }
-
   // Pending invitations table. Actions are the per-row menu like every other list.
   type Invitation = (typeof invitations)[number]
-  const copyInviteLink = async (invitation: Invitation) => {
-    if (!invitation.token) {
-      toast.error('Invitation token not available')
-      return
-    }
-    const inviteLink = `${window.location.origin}/invitations/${invitation.token}`
-    const ok = await copyToClipboard(inviteLink)
-    if (ok) {
-      toast.success('Invitation link copied to clipboard')
-    } else {
-      toast.error('Failed to copy link')
-    }
-  }
   const resendInvite = async (invitation: Invitation) => {
     if (!tenantSlug) return
     try {
@@ -922,11 +865,6 @@ export default function UsersPage() {
       cell: ({ row }) => (
         <DataTableRowActions
           actions={[
-            {
-              label: 'Copy invitation link',
-              icon: Link,
-              onClick: () => copyInviteLink(row.original),
-            },
             { label: 'Resend email', icon: Send, onClick: () => resendInvite(row.original) },
             {
               label: 'Cancel invitation',
@@ -1201,83 +1139,12 @@ export default function UsersPage() {
         </SheetContent>
       </Sheet>
 
-      {/* Invite User Dialog - Improved Design */}
-      <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Invite user</DialogTitle>
-            <DialogDescription>
-              Send an invitation email to add a new member to your team.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-6 py-4">
-            {/* Email Input */}
-            <div className="space-y-2">
-              <Label htmlFor="invite-email" className="text-sm font-medium">
-                Email address
-              </Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="invite-email"
-                  type="email"
-                  placeholder="colleague@company.com"
-                  value={inviteForm.email}
-                  onChange={(e) => setInviteForm({ ...inviteForm, email: e.target.value })}
-                  className="ps-10 h-11"
-                />
-              </div>
-            </div>
-
-            {/* Roles Selection */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label className="text-sm font-medium">Assign roles</Label>
-                  <p className="text-xs text-muted-foreground">
-                    Select roles to define permissions for this user
-                  </p>
-                </div>
-                {inviteForm.roleIds.length > 0 && (
-                  <Badge variant="secondary" className="text-xs">
-                    {inviteForm.roleIds.length} selected
-                  </Badge>
-                )}
-              </div>
-
-              <RoleChecklist
-                roles={availableRolesForInvite}
-                selected={inviteForm.roleIds}
-                onChange={(roleIds) => setInviteForm((prev) => ({ ...prev, roleIds }))}
-                loading={rolesLoading}
-              />
-            </div>
-          </div>
-
-          <DialogFooter className="gap-2">
-            <Button
-              variant="ghost"
-              onClick={() => setInviteDialogOpen(false)}
-              className="flex-1 sm:flex-none"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleInviteUser}
-              disabled={isCreating || !inviteForm.email}
-              className="flex-1 sm:flex-none"
-            >
-              {isCreating ? (
-                <Loader2 className="me-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Send className="me-2 h-4 w-4" />
-              )}
-              Send invitation
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <InviteUserDialog
+        tenantSlug={tenantSlug}
+        open={inviteDialogOpen}
+        onOpenChange={setInviteDialogOpen}
+        onInvited={refreshData}
+      />
 
       <AddUserDialog
         tenantSlug={tenantSlug}
