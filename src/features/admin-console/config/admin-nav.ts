@@ -1,4 +1,11 @@
-import { Building2, LayoutDashboard, ScrollText, UserCog, type LucideIcon } from 'lucide-react'
+import {
+  Building2,
+  KeyRound,
+  LayoutDashboard,
+  ScrollText,
+  UserCog,
+  type LucideIcon,
+} from 'lucide-react'
 import type { AdminRole } from '../types'
 
 export interface AdminNavItem {
@@ -38,6 +45,14 @@ export const adminNav: AdminNavSection[] = [
   },
   {
     title: 'System',
-    items: [{ title: 'System logs', url: '/admin/system-logs', icon: ScrollText }],
+    items: [
+      {
+        title: 'Admin sign-in',
+        url: '/admin/system/admin-sign-in',
+        icon: KeyRound,
+        minRole: 'super_admin',
+      },
+      { title: 'System logs', url: '/admin/system-logs', icon: ScrollText },
+    ],
   },
 ]

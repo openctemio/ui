@@ -17,7 +17,9 @@ import {
 } from '@/features/shared'
 import { ShieldAlert } from 'lucide-react'
 import {
+  confirmBreakGlassTest,
   resetAdminCredentials,
+  unbindAdminIdP,
   updateAdminUser,
   useAdminUsers,
 } from '@/features/admin-console/api/use-admin-users'
@@ -35,6 +37,38 @@ type Pending =
   | { kind: 'reset'; admin: AdminUserRecord }
   | { kind: 'toggle'; admin: AdminUserRecord }
   | { kind: 'role'; admin: AdminUserRecord; role: AdminRole }
+  | { kind: 'breakglass'; admin: AdminUserRecord }
+  | { kind: 'test'; admin: AdminUserRecord }
+  | { kind: 'unbind'; admin: AdminUserRecord }
+
+/** Badges for how an administrator signs in. */
+function SignInBadges({ a }: { a: AdminUserRecord }) {
+  return (
+    <div className="flex flex-wrap gap-1">
+      {a.is_break_glass && <Badge variant="destructive">Break-glass</Badge>}
+      {a.idp_bound && <Badge variant="secondary">Identity provider</Badge>}
+      {a.password_change_required && <Badge variant="outline">Temporary password</Badge>}
+      {!a.is_break_glass && !a.idp_bound && !a.password_change_required && (
+        <span className="text-sm text-muted-foreground">Password</span>
+      )}
+    </div>
+  )
+}
+
+/** Last confirmed test of a break-glass account, flagged after 90 days. */
+function BreakGlassTested({ a }: { a: AdminUserRecord }) {
+  if (!a.is_break_glass) return <span className="text-sm text-muted-foreground">-</span>
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      {a.break_glass_tested_at ? (
+        <RelativeTime date={a.break_glass_tested_at} className="text-sm" />
+      ) : (
+        <span className="text-sm text-muted-foreground">Never</span>
+      )}
+      {a.break_glass_test_overdue && <Badge variant="outline">Test overdue</Badge>}
+    </div>
+  )
+}
 
 export default function AdministratorsPage() {
   const me = useAdmin()
@@ -57,9 +91,22 @@ export default function AdministratorsPage() {
         toast.success(
           pending.admin.is_active ? 'Administrator deactivated' : 'Administrator reactivated'
         )
-      } else {
+      } else if (pending.kind === 'role') {
         await updateAdminUser(pending.admin.id, { role: pending.role })
         toast.success(`${pending.admin.email} is now ${roleLabel(pending.role)}`)
+      } else if (pending.kind === 'breakglass') {
+        await updateAdminUser(pending.admin.id, { is_break_glass: !pending.admin.is_break_glass })
+        toast.success(
+          pending.admin.is_break_glass
+            ? `${pending.admin.email} is no longer a break-glass account`
+            : `${pending.admin.email} is now a break-glass account`
+        )
+      } else if (pending.kind === 'test') {
+        await confirmBreakGlassTest(pending.admin.id)
+        toast.success(`Test of ${pending.admin.email} recorded`)
+      } else {
+        await unbindAdminIdP(pending.admin.id)
+        toast.success(`${pending.admin.email} is bound again on their next IdP sign-in`)
       }
       void mutate()
       setPending(null)
@@ -83,6 +130,18 @@ export default function AdministratorsPage() {
         accessorKey: 'role',
         header: 'Role',
         cell: ({ row }) => <span className="text-sm">{roleLabel(row.original.role)}</span>,
+      },
+      {
+        id: 'sign_in',
+        header: 'Sign-in',
+        enableSorting: false,
+        cell: ({ row }) => <SignInBadges a={row.original} />,
+      },
+      {
+        id: 'break_glass_tested',
+        header: 'Last tested',
+        enableSorting: false,
+        cell: ({ row }) => <BreakGlassTested a={row.original} />,
       },
       {
         accessorKey: 'is_active',
@@ -117,6 +176,31 @@ export default function AdministratorsPage() {
                   label: `Make ${o.label.toLowerCase()}`,
                   onClick: () => setPending({ kind: 'role', admin: a, role: o.value }),
                 })),
+                ...(a.is_break_glass && a.last_used_at
+                  ? [
+                      {
+                        label: 'Confirm last sign-in was a test',
+                        onClick: () => setPending({ kind: 'test', admin: a }),
+                        separatorBefore: true,
+                      },
+                    ]
+                  : []),
+                ...(a.role === 'super_admin' && !a.idp_bound
+                  ? [
+                      {
+                        label: a.is_break_glass ? 'Unmark break-glass' : 'Mark as break-glass',
+                        onClick: () => setPending({ kind: 'breakglass', admin: a }),
+                      },
+                    ]
+                  : []),
+                ...(a.idp_bound
+                  ? [
+                      {
+                        label: 'Remove identity provider binding',
+                        onClick: () => setPending({ kind: 'unbind', admin: a }),
+                      },
+                    ]
+                  : []),
                 {
                   label: 'Reset two-step verification',
                   onClick: () => setPending({ kind: 'reset', admin: a }),
@@ -155,11 +239,19 @@ export default function AdministratorsPage() {
       ? `${pending.admin.email} will be signed out of the console and must set up two-step verification again the next time they open it. Use this when they lose their authenticator. Their password is their account's and is reset from the sign-in page.`
       : pending?.kind === 'toggle'
         ? pending.admin.is_active
-          ? `${pending.admin.email} will no longer be able to sign in or use their API key.`
+          ? `${pending.admin.email} will no longer be able to open the console.`
           : `${pending.admin.email} will be able to sign in again.`
         : pending?.kind === 'role'
           ? `${pending.admin.email} becomes ${roleLabel(pending.role)}.`
-          : ''
+          : pending?.kind === 'breakglass'
+            ? pending.admin.is_break_glass
+              ? `${pending.admin.email} becomes a normal administrator: it can be bound to the identity provider and is subject to "require IdP".`
+              : `${pending.admin.email} becomes a local emergency-access account: never bound to the identity provider, allowed to use its password when the IdP is required, and every sign-in alerts all administrators.`
+            : pending?.kind === 'test'
+              ? `Records ${pending.admin.email}'s last sign-in as its periodic test. Confirm only if that sign-in was a planned test, not an emergency or an unexpected use.`
+              : pending?.kind === 'unbind'
+                ? `${pending.admin.email} is signed out of the console. Their next identity-provider sign-in binds them again by verified email.`
+                : ''
 
   return (
     <Main>
@@ -195,12 +287,22 @@ export default function AdministratorsPage() {
               ? pending.admin.is_active
                 ? 'Deactivate administrator?'
                 : 'Reactivate administrator?'
-              : 'Change role?'
+              : pending?.kind === 'breakglass'
+                ? pending.admin.is_break_glass
+                  ? 'Unmark break-glass?'
+                  : 'Mark as break-glass?'
+                : pending?.kind === 'test'
+                  ? 'Confirm break-glass test?'
+                  : pending?.kind === 'unbind'
+                    ? 'Remove identity provider binding?'
+                    : 'Change role?'
         }
         desc={desc}
         confirmText="Confirm"
         destructive={
-          pending?.kind !== 'role' && !(pending?.kind === 'toggle' && !pending.admin.is_active)
+          pending?.kind === 'reset' ||
+          pending?.kind === 'unbind' ||
+          (pending?.kind === 'toggle' && pending.admin.is_active)
         }
         isLoading={busy}
         handleConfirm={() => void confirm()}
