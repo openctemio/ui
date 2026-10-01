@@ -36,8 +36,8 @@ base('SCIM tokens: no Generate token for a member or viewer', async ({ page }) =
   if (!cfg.ok) return
 
   await loginAs(page, { ...cfg.config, userEmail: email!, userPassword: password! })
-  await page.goto('/settings/integrations/scim-tokens')
-  await expect(page.getByRole('heading', { name: 'SCIM provisioning' })).toBeVisible({
+  await page.goto('/settings/scim')
+  await expect(page.getByRole('heading', { name: 'Directory sync (SCIM)' })).toBeVisible({
     timeout: 30_000,
   })
   await expect(page.getByText("Managed by your team's owners and admins")).toBeVisible()

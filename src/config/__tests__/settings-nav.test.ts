@@ -14,6 +14,7 @@ import {
   settingsNavItems,
 } from '../settings-nav'
 import { matchRoutePermission } from '../route-permissions'
+import { resolveLegacyRoute } from '../legacy-routes'
 import { sidebarData } from '../sidebar-data'
 import en from '@/lib/i18n/dictionaries/en.json'
 import vi from '@/lib/i18n/dictionaries/vi.json'
@@ -172,7 +173,7 @@ describe('settings shell', () => {
   it('owns /settings, /account and every item url (with sub-pages)', () => {
     for (const p of [
       '/settings',
-      '/settings/users',
+      '/settings/members',
       '/settings/integrations/notifications/history',
       '/account',
       '/account/security',
@@ -280,9 +281,11 @@ describe('nothing left the command palette', () => {
     return urls
   }
 
-  it('each is in the main sidebar or the settings nav (both feed ⌘K)', () => {
+  it('each is in the main sidebar or the settings nav (both feed ⌘K), at its current URL', () => {
     const indexed = new Set([...sidebarUrls(), ...settingsNavItems.map((i) => i.url)])
-    expect(FORMER_SETTINGS_URLS.filter((u) => !indexed.has(u))).toEqual([])
+    // A moved page counts through its 308 (the query part, e.g. a tab, is dropped).
+    const current = (u: string) => (resolveLegacyRoute(u) ?? u).split('?')[0]
+    expect(FORMER_SETTINGS_URLS.filter((u) => !indexed.has(current(u)))).toEqual([])
   })
 
   it('the main sidebar keeps a single Settings link and no settings pages', () => {

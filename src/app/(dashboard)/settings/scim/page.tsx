@@ -324,7 +324,7 @@ export default function ScimTokensPage() {
   return (
     <Main>
       <PageHeader
-        title="SCIM provisioning"
+        title="Directory sync (SCIM)"
         description="Automate user provisioning and deprovisioning from your identity provider."
       >
         {canManage && (

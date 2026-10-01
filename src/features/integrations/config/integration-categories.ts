@@ -63,7 +63,7 @@ export const INTEGRATION_CATEGORIES: IntegrationCategoryCard[] = [
     title: 'API keys',
     description: 'Issue and revoke programmatic access keys',
     icon: KeyRound,
-    href: '/settings/integrations/api-keys',
+    href: '/settings/api-keys',
   },
   {
     id: 'security',

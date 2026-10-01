@@ -924,8 +924,8 @@ export default function UsersPage() {
     <MemberRolesContext.Provider value={memberRolesMap}>
       <Main>
         <PageHeader
-          title="Users"
-          description="Members of this workspace, their roles and pending invitations."
+          title="Members"
+          description="People in this organization, their roles and pending invitations."
         >
           {/* Accounts are created by owners/admins (no self-registration);
               inviting someone who already has an account stays available. */}

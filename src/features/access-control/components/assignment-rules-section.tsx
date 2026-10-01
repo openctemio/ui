@@ -1,10 +1,10 @@
 'use client'
 
+import type { ReactNode } from 'react'
+
 import { useState, useMemo, useCallback } from 'react'
 import type { ColumnDef } from '@tanstack/react-table'
-import { Main } from '@/components/layout'
 import {
-  PageHeader,
   DataTable,
   DataTableColumnHeader,
   DataTableRowActions,
@@ -97,7 +97,17 @@ const CONDITION_OPTIONS: Record<string, string[]> = {
   // matched. Removed until the backend supports them.
 }
 
-export default function AssignmentRulesPage() {
+interface SectionProps {
+  /**
+   * Renders the page header with this section's actions (its Create button),
+   * so the page keeps one header and one set of tabs while each section keeps
+   * its own dialogs and state.
+   */
+  header: (actions: ReactNode) => ReactNode
+}
+
+/** The Assignment rules tab of /settings/teams (moved from its own page; content unchanged). */
+export function AssignmentRulesSection({ header }: SectionProps) {
   // API Hooks
   const { assignmentRules, isLoading, isError, mutate: mutateRules } = useAssignmentRules()
   const { createAssignmentRule, isCreating } = useCreateAssignmentRule()
@@ -340,127 +350,124 @@ export default function AssignmentRulesPage() {
 
   return (
     <>
-      <Main>
-        <PageHeader
-          title="Assignment rules"
-          description="Rules that assign assets to teams automatically, evaluated in priority order."
-        >
+      {header(
+        <>
           <Can permission={Permission.AssignmentRulesWrite} mode="disable">
             <Button size="sm" onClick={() => setCreateDialogOpen(true)}>
               <Plus className="me-2 h-4 w-4" />
               Create rule
             </Button>
           </Can>
-        </PageHeader>
+        </>
+      )}
 
-        {isError && !isLoading ? (
-          <Alert variant="destructive" className="mt-5">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Failed to load assignment rules</AlertTitle>
-            <AlertDescription>
-              <p>The rule list could not be loaded.</p>
-              <Button variant="outline" size="sm" className="mt-2" onClick={refreshData}>
-                <RefreshCw className="me-2 h-4 w-4" />
-                Retry
-              </Button>
-            </AlertDescription>
-          </Alert>
-        ) : (
-          <>
-            <MetricStrip
-              className="mt-5"
-              loading={isLoading}
-              items={[
-                {
-                  key: 'all',
-                  label: 'Rules',
-                  value: typeCounts.all,
-                  onClick: () => setTypeFilter('all'),
-                  active: typeFilter === 'all',
-                },
-                {
-                  key: 'active',
-                  label: 'Active',
-                  value: typeCounts.active,
-                  onClick: () => setTypeFilter(typeFilter === 'active' ? 'all' : 'active'),
-                  active: typeFilter === 'active',
-                },
-                {
-                  key: 'inactive',
-                  label: 'Inactive',
-                  value: typeCounts.inactive,
-                  onClick: () => setTypeFilter(typeFilter === 'inactive' ? 'all' : 'inactive'),
-                  active: typeFilter === 'inactive',
-                },
-              ]}
-            />
+      {isError && !isLoading ? (
+        <Alert variant="destructive" className="mt-5">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Failed to load assignment rules</AlertTitle>
+          <AlertDescription>
+            <p>The rule list could not be loaded.</p>
+            <Button variant="outline" size="sm" className="mt-2" onClick={refreshData}>
+              <RefreshCw className="me-2 h-4 w-4" />
+              Retry
+            </Button>
+          </AlertDescription>
+        </Alert>
+      ) : (
+        <>
+          <MetricStrip
+            className="mt-5"
+            loading={isLoading}
+            items={[
+              {
+                key: 'all',
+                label: 'Rules',
+                value: typeCounts.all,
+                onClick: () => setTypeFilter('all'),
+                active: typeFilter === 'all',
+              },
+              {
+                key: 'active',
+                label: 'Active',
+                value: typeCounts.active,
+                onClick: () => setTypeFilter(typeFilter === 'active' ? 'all' : 'active'),
+                active: typeFilter === 'active',
+              },
+              {
+                key: 'inactive',
+                label: 'Inactive',
+                value: typeCounts.inactive,
+                onClick: () => setTypeFilter(typeFilter === 'inactive' ? 'all' : 'inactive'),
+                active: typeFilter === 'inactive',
+              },
+            ]}
+          />
 
-            <div className="mt-5">
-              {isLoading ? (
-                <div className="space-y-2">
-                  <Skeleton className="h-9 w-full max-w-sm" />
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <Skeleton key={i} className="h-12 w-full" />
-                  ))}
-                </div>
-              ) : assignmentRules.length === 0 ? (
-                <EmptyState
-                  icon={GitBranch}
-                  title="No assignment rules yet"
-                  description="Rules assign assets to teams automatically, in priority order."
-                  action={
-                    <Can permission={Permission.AssignmentRulesWrite}>
-                      <Button size="sm" onClick={() => setCreateDialogOpen(true)}>
-                        <Plus className="me-2 h-4 w-4" />
-                        Create rule
-                      </Button>
-                    </Can>
-                  }
-                />
-              ) : (
-                <DataTable
-                  columns={columns}
-                  data={filteredData}
-                  getRowId={(r) => r.id}
-                  showSearch={false}
-                  showColumnToggle={false}
-                  onRowClick={(r) => setSelectedRuleId(r.id)}
-                  toolbarStart={
-                    <>
-                      <div className="relative min-w-0 flex-1 sm:max-w-sm">
-                        <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                        <Input
-                          placeholder="Search assignment rules..."
-                          value={searchQuery}
-                          onChange={(e) => setSearchQuery(e.target.value)}
-                          className="ps-9"
-                          aria-label="Search assignment rules"
-                        />
-                      </div>
-                      <Select
-                        value={typeFilter}
-                        onValueChange={(v) => setTypeFilter(v as FilterType)}
-                      >
-                        <SelectTrigger className="h-9 w-[140px]" aria-label="Status">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {typeFilters.map((f) => (
-                            <SelectItem key={f.value} value={f.value}>
-                              {f.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </>
-                  }
-                  emptyMessage="No assignment rules match these filters"
-                />
-              )}
-            </div>
-          </>
-        )}
-      </Main>
+          <div className="mt-5">
+            {isLoading ? (
+              <div className="space-y-2">
+                <Skeleton className="h-9 w-full max-w-sm" />
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Skeleton key={i} className="h-12 w-full" />
+                ))}
+              </div>
+            ) : assignmentRules.length === 0 ? (
+              <EmptyState
+                icon={GitBranch}
+                title="No assignment rules yet"
+                description="Rules assign assets to teams automatically, in priority order."
+                action={
+                  <Can permission={Permission.AssignmentRulesWrite}>
+                    <Button size="sm" onClick={() => setCreateDialogOpen(true)}>
+                      <Plus className="me-2 h-4 w-4" />
+                      Create rule
+                    </Button>
+                  </Can>
+                }
+              />
+            ) : (
+              <DataTable
+                columns={columns}
+                data={filteredData}
+                getRowId={(r) => r.id}
+                showSearch={false}
+                showColumnToggle={false}
+                onRowClick={(r) => setSelectedRuleId(r.id)}
+                toolbarStart={
+                  <>
+                    <div className="relative min-w-0 flex-1 sm:max-w-sm">
+                      <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        placeholder="Search assignment rules..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="ps-9"
+                        aria-label="Search assignment rules"
+                      />
+                    </div>
+                    <Select
+                      value={typeFilter}
+                      onValueChange={(v) => setTypeFilter(v as FilterType)}
+                    >
+                      <SelectTrigger className="h-9 w-[140px]" aria-label="Status">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {typeFilters.map((f) => (
+                          <SelectItem key={f.value} value={f.value}>
+                            {f.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </>
+                }
+                emptyMessage="No assignment rules match these filters"
+              />
+            )}
+          </div>
+        </>
+      )}
 
       {/* Detail Sheet */}
       <AssignmentRuleDetailSheet
