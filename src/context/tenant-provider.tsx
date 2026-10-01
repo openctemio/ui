@@ -17,6 +17,7 @@ import { useMyTenants, invalidateMyTenantsCache } from '@/lib/api/user-tenant-ho
 import type { TenantMembership, TenantRole } from '@/lib/api/user-tenant-types'
 import { getCookie, setCookie, removeCookie } from '@/lib/cookies'
 import { env } from '@/lib/env'
+import { csrfHeaders } from '@/lib/csrf-client'
 import { removeStoredPermissions } from '@/lib/permission-storage'
 import { clearAllLogoCaches, clearTenantLogoCache } from '@/lib/logo-storage'
 
@@ -179,6 +180,7 @@ export function TenantProvider({ children }: TenantProviderProps) {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            ...csrfHeaders(),
           },
           credentials: 'include',
           body: JSON.stringify({

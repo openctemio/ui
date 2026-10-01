@@ -1123,11 +1123,14 @@ export async function createFirstTeamAction(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Cookie: `refresh_token=${refreshToken}`, // Send refresh token in cookie
       },
+      // Server-to-server: the refresh token goes in the body. A refresh_token
+      // cookie is treated as an ambient browser credential by the API and
+      // needs the CSRF pair.
       body: JSON.stringify({
         team_name: input.teamName,
         team_slug: input.teamSlug,
+        refresh_token: refreshToken,
       }),
     })
 

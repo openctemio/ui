@@ -15,6 +15,7 @@ import { redirect } from 'next/navigation'
 
 import { env } from '@/lib/env'
 import { setServerCookie, removeServerCookie } from '@/lib/cookies-server'
+import { rotatedRefreshToken } from '@/lib/server-auth-cookies'
 import { validateRedirectUrl } from '@/lib/redirect'
 
 import type { AuthSuccessResponse, AuthErrorResponse } from '../schemas/auth.schema'
@@ -197,8 +198,10 @@ export async function handleOAuthCallback(
       maxAge: tokens.expires_in || 300, // Default 5 minutes
     })
 
-    if (tokens.refresh_token) {
-      await setServerCookie(env.auth.refreshCookieName, tokens.refresh_token, {
+    // The API sends the rotated refresh token in Set-Cookie only.
+    const rotated = rotatedRefreshToken(response, tokens)
+    if (rotated) {
+      await setServerCookie(env.auth.refreshCookieName, rotated, {
         httpOnly: true,
         secure: process.env.SECURE_COOKIES !== 'false',
         sameSite: 'lax',
@@ -268,14 +271,19 @@ export async function refreshTokenAction(): Promise<RefreshTokenResult> {
       }
     }
 
-    // Refresh the access token via backend API
+    // Refresh the access token via backend API. Server-to-server: the refresh
+    // token and tenant go in the body (the API requires tenant_id, and treats
+    // a refresh_token cookie as an ambient browser credential needing CSRF).
+    let tenantId: string | undefined
+    try {
+      tenantId = JSON.parse(cookieStore.get(env.cookies.tenant)?.value ?? '{}').id
+    } catch {
+      tenantId = undefined
+    }
     const response = await fetch(`${env.api.url}/api/v1/auth/refresh`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Cookie: `${env.auth.refreshCookieName}=${refreshToken}`,
-      },
-      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: refreshToken, tenant_id: tenantId }),
     })
 
     if (!response.ok) {
