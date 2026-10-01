@@ -50,6 +50,25 @@ const nextConfig: NextConfig = {
   },
 
   /**
+   * WebSocket on the UI's own origin (/api/v1/ws). In `next dev` this rewrite
+   * proxies the upgrade to the API; it is read when the dev server starts.
+   * Production builds leave it out: rewrites are frozen into the build, so the
+   * production entry (server-with-ws.mjs) forwards the upgrade instead, to the
+   * BACKEND_API_URL of the running deployment.
+   */
+  async rewrites() {
+    if (process.env.NODE_ENV === 'production')
+      return { beforeFiles: [], afterFiles: [], fallback: [] }
+    const backend = (process.env.BACKEND_API_URL || 'http://localhost:8080').replace(/\/+$/, '')
+    return {
+      // Before the /api/v1/[...path] route handler, which cannot proxy upgrades.
+      beforeFiles: [{ source: '/api/v1/ws', destination: `${backend}/api/v1/ws` }],
+      afterFiles: [],
+      fallback: [],
+    }
+  },
+
+  /**
    * Security Headers
    *
    * Implements security best practices to protect against common vulnerabilities
