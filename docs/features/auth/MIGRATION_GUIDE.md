@@ -456,9 +456,9 @@ Already removed in new `auth-store.ts`.
 ```typescript
 // ❌ UPDATE THIS
 user: {
-  name: 'satnaing',
-  email: 'satnaingdev@gmail.com',
-  avatar: '/avatars/shadcn.jpg',
+  name: 'Jane Doe',
+  email: 'jane@example.com',
+  avatar: '',
 }
 ```
 
