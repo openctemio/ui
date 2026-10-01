@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Search } from 'lucide-react'
 import {
   SidebarInput,
   SidebarMenu,
@@ -121,20 +121,28 @@ export function SettingsSidebarNav() {
         </SidebarMenuItem>
       </SidebarMenu>
       {/* The filter needs room to type; on the icon rail it is hidden. */}
-      <SidebarInput
-        type="search"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === 'Escape' && query) {
-            e.stopPropagation()
-            setQuery('')
-          }
-        }}
-        placeholder={`${filterLabel}…`}
-        aria-label={filterLabel}
-        className="my-1 group-data-[collapsible=icon]:hidden"
-      />
+      <div className="relative mt-1 group-data-[collapsible=icon]:hidden">
+        {/* The icon sits on the nav icons' axis and the text starts where the
+            item labels start, so the filter lines up with the rows below. */}
+        <Search
+          aria-hidden
+          className="pointer-events-none absolute start-2 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+        />
+        <SidebarInput
+          type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape' && query) {
+              e.stopPropagation()
+              setQuery('')
+            }
+          }}
+          placeholder={`${filterLabel}…`}
+          aria-label={filterLabel}
+          className="ps-[34px] text-sm in-data-[mobile=true]:h-11 in-data-[mobile=true]:text-base"
+        />
+      </div>
       <GroupedNav sections={sections} activeUrl={activeUrl} />
       {noMatch && (
         <p
