@@ -127,5 +127,6 @@ describe('legacy route redirects', () => {
     expect(redirectOnce('/agents/abc?status=offline')).toBe('/sensors/abc?status=offline')
     expect(redirectOnce('/settings/integrations/apps?x=1')).toBe('/settings/integrations?x=1')
     expect(redirectOnce('/settings/integrations')).toBeNull()
+    expect(redirectOnce('/settings/notifications')).toBe('/account/notifications')
   })
 })

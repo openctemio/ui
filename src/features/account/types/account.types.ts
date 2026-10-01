@@ -96,16 +96,11 @@ export interface UserPreferences {
   timezone: string
   date_format: string
   time_format: '12h' | '24h'
-  email_notifications: EmailNotificationPreferences
-  desktop_notifications: boolean
-}
-
-export interface EmailNotificationPreferences {
-  security_alerts: boolean
-  weekly_digest: boolean
-  scan_completed: boolean
-  new_findings: boolean
-  team_updates: boolean
+  /**
+   * Browser-local (no server field): set on /account/notifications, under
+   * "This browser". Optional because older stored objects may lack it.
+   */
+  desktop_notifications?: boolean
 }
 
 export interface UpdatePreferencesInput {
@@ -114,8 +109,6 @@ export interface UpdatePreferencesInput {
   timezone?: string
   date_format?: string
   time_format?: '12h' | '24h'
-  email_notifications?: Partial<EmailNotificationPreferences>
-  desktop_notifications?: boolean
 }
 
 // ============================================

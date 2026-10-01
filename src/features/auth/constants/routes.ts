@@ -62,7 +62,7 @@ export const PROTECTED_ROUTES = {
   SETTINGS: '/settings',
   SETTINGS_ACCOUNT: '/account',
   SETTINGS_APPEARANCE: '/settings/appearance',
-  SETTINGS_NOTIFICATIONS: '/settings/notifications',
+  SETTINGS_NOTIFICATIONS: '/account/notifications',
   SETTINGS_DISPLAY: '/settings/display',
 
   /**

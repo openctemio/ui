@@ -2,7 +2,7 @@
 
 import { useDisplayUser } from '@/hooks/use-display-user'
 import Link from 'next/link'
-import { Bell, Building2, History, LogOut, Settings, Shield, User, Users } from 'lucide-react'
+import { LogOut, Settings } from 'lucide-react'
 import useDialogState from '@/hooks/use-dialog-state'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -17,11 +17,21 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { SignOutDialog } from '@/components/sign-out-dialog'
 import { LanguageSwitcher } from '@/components/language-switcher'
-import { Can, Permission } from '@/lib/permissions'
+import { useTranslation } from '@/context/i18n-provider'
+import { useSettingsNav } from '@/hooks/use-settings-nav'
 
+/**
+ * The user menu (header avatar). The only one: the sidebar no longer has its
+ * own. Its personal links are the "My account" group of
+ * src/config/settings-nav.ts, so the menu, the settings rail and the /settings
+ * overview list the same pages under the same names. Organization settings
+ * are one click away through "All settings".
+ */
 export function ProfileDropdown() {
   const [open, setOpen] = useDialogState()
   const user = useDisplayUser()
+  const { t } = useTranslation()
+  const account = useSettingsNav().find((g) => g.id === 'account')
 
   // Generate initials from name or email
   const initials = user?.name
@@ -37,7 +47,11 @@ export function ProfileDropdown() {
     <>
       <DropdownMenu modal={false}>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+          <Button
+            variant="ghost"
+            className="relative h-8 w-8 rounded-full"
+            aria-label={t('userMenu.open', 'Open user menu')}
+          >
             <Avatar className="h-8 w-8">
               <AvatarFallback>{initials}</AvatarFallback>
             </Avatar>
@@ -53,81 +67,38 @@ export function ProfileDropdown() {
 
           <DropdownMenuSeparator />
 
-          {/* Personal Account Section */}
-          <DropdownMenuLabel className="text-muted-foreground text-xs font-medium">
-            Personal
-          </DropdownMenuLabel>
-          <DropdownMenuGroup>
-            <DropdownMenuItem asChild>
-              <Link href="/account" className="flex items-center gap-2">
-                <User className="h-4 w-4" />
-                Profile
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link href="/account/security" className="flex items-center gap-2">
-                <Shield className="h-4 w-4" />
-                Security
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link href="/account/preferences" className="flex items-center gap-2">
-                <Settings className="h-4 w-4" />
-                Preferences
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link href="/account/activity" className="flex items-center gap-2">
-                <History className="h-4 w-4" />
-                Activity
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link href="/settings/notifications" className="flex items-center gap-2">
-                <Bell className="h-4 w-4" />
-                Notifications
-              </Link>
-            </DropdownMenuItem>
-          </DropdownMenuGroup>
+          {account && (
+            <>
+              <DropdownMenuLabel className="text-muted-foreground text-xs font-medium">
+                {account.label}
+              </DropdownMenuLabel>
+              <DropdownMenuGroup>
+                {account.items.map((item) => (
+                  <DropdownMenuItem key={item.id} asChild>
+                    <Link href={item.url} className="flex items-center gap-2">
+                      <item.icon className="h-4 w-4" />
+                      {item.label}
+                    </Link>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuGroup>
+              <DropdownMenuSeparator />
+            </>
+          )}
 
-          <DropdownMenuSeparator />
-
-          {/* Language */}
+          <DropdownMenuItem asChild>
+            <Link href="/settings" className="flex items-center gap-2">
+              <Settings className="h-4 w-4" />
+              {t('userMenu.allSettings', 'All settings')}
+            </Link>
+          </DropdownMenuItem>
           <LanguageSwitcher />
 
           <DropdownMenuSeparator />
 
-          {/* Organization section: only the links the user can open, gated on
-              the same permissions as the route guard, so the menu never leads
-              to Access Denied. Members without either see no section. */}
-          <Can permission={[Permission.TeamUpdate, Permission.MembersRead]}>
-            <DropdownMenuLabel className="text-muted-foreground text-xs font-medium">
-              Organization
-            </DropdownMenuLabel>
-            <DropdownMenuGroup>
-              <Can permission={Permission.TeamUpdate}>
-                <DropdownMenuItem asChild>
-                  <Link href="/settings/tenant" className="flex items-center gap-2">
-                    <Building2 className="h-4 w-4" />
-                    General settings
-                  </Link>
-                </DropdownMenuItem>
-              </Can>
-              <Can permission={Permission.MembersRead}>
-                <DropdownMenuItem asChild>
-                  <Link href="/settings/users" className="flex items-center gap-2">
-                    <Users className="h-4 w-4" />
-                    Members
-                  </Link>
-                </DropdownMenuItem>
-              </Can>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-          </Can>
-
           <DropdownMenuItem variant="destructive" onClick={() => setOpen(true)}>
             <LogOut className="me-2 h-4 w-4" />
-            Sign out
+            {t('userMenu.signOut', 'Sign out')}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
