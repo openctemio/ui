@@ -326,7 +326,9 @@ export function InvitationView({ token, hasSession }: InvitationViewProps) {
             <div className="flex items-center justify-between py-2 border-b">
               <span className="text-muted-foreground">Invited by</span>
               <span className="font-medium">
-                {invitation?.invitation.inviter_name || 'A team member'}
+                {/* The API names the inviter (display name only, never an
+                    email); an unnamed account falls back to a neutral label. */}
+                {invitation?.invitation.inviter_name?.trim() || 'A team member'}
               </span>
             </div>
             <div className="flex items-center justify-between py-2">
