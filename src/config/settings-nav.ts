@@ -210,7 +210,6 @@ export const settingsNav: SettingsNavGroup[] = [
         icon: UserCog,
         permission: Permission.IntegrationsRead,
         module: 'integrations',
-        subModuleKey: 'scim',
         keywords: ['scim', 'provisioning', 'okta', 'entra', 'azure ad', 'directory'],
       },
       {
@@ -379,6 +378,7 @@ export const settingsNav: SettingsNavGroup[] = [
         icon: ShieldCheck,
         permission: Permission.IntegrationsRead,
         module: 'integrations',
+        subModuleKey: 'scanners',
         keywords: ['tenable', 'nessus', 'import'],
       },
       {
