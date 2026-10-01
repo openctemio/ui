@@ -82,8 +82,8 @@ export function SensorMonitoringCard({
       className={cn(
         'transition-all hover:border-primary/50 cursor-pointer',
         isOnline && 'border-green-500/30',
-        !isOnline && sensor.status === 'active' && !hasError && 'border-yellow-500/30',
-        sensor.status === 'disabled' && 'border-gray-500/30 opacity-75',
+        !isOnline && sensor.status === 'active' && !hasError && 'border-warning/30',
+        sensor.status === 'disabled' && 'border-border opacity-75',
         hasError && 'border-red-500/30'
       )}
       onClick={() => onViewDetails(sensor)}
@@ -138,12 +138,12 @@ export function SensorMonitoringCard({
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               {sensor.status === 'disabled' || sensor.status === 'revoked' ? (
-                <DropdownMenuItem onClick={() => onActivate(sensor)} className="text-green-500">
+                <DropdownMenuItem onClick={() => onActivate(sensor)} className="text-success">
                   <Power className="me-2 h-4 w-4" />
                   Activate
                 </DropdownMenuItem>
               ) : sensor.status === 'active' ? (
-                <DropdownMenuItem onClick={() => onDeactivate(sensor)} className="text-amber-500">
+                <DropdownMenuItem onClick={() => onDeactivate(sensor)} className="text-warning">
                   <PowerOff className="me-2 h-4 w-4" />
                   Deactivate
                 </DropdownMenuItem>
