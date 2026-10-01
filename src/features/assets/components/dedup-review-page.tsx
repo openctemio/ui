@@ -24,6 +24,7 @@ import {
   rejectDedupReview,
   type DedupReview,
 } from '../api/use-asset-dedup'
+import { dedupReasonLabel, describeEvidence } from '../lib/asset-identity'
 
 // DedupReviewPage surfaces the identity/dedup pipeline that was previously
 // invisible: the correlator enqueues a pending review when several assets share
@@ -66,6 +67,22 @@ export function DedupReviewPage() {
             </Badge>
           </div>
         ),
+      },
+      {
+        id: 'reason',
+        accessorFn: (r) => dedupReasonLabel(r.reason),
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Reason" />,
+        cell: ({ row }) => {
+          const evidence = describeEvidence(row.original.evidence)
+          return (
+            <div className="min-w-0">
+              <div className="text-sm">{dedupReasonLabel(row.original.reason)}</div>
+              {evidence && (
+                <div className="mt-0.5 break-words text-xs text-muted-foreground">{evidence}</div>
+              )}
+            </div>
+          )
+        },
       },
       {
         accessorKey: 'keep_asset_name',

@@ -30,6 +30,7 @@ import {
   TagsSection,
 } from './sheet-sections'
 import { AssetMergeHistory } from './asset-merge-history'
+import { AssetIdentitySections } from './asset-identity-sections'
 import { RelationshipPreview } from './relationships'
 import { AssetRelationshipsTab } from './asset-relationships-tab'
 import { AssetOwnersTab } from './asset-owners-tab'
@@ -446,6 +447,11 @@ export function AssetDetailSheet<T extends Asset>({
                   provider={asset.provider}
                   externalId={asset.externalId}
                   parentId={asset.parentId}
+                />
+                <AssetIdentitySections
+                  assetId={asset.id}
+                  assetName={asset.name}
+                  properties={asset.metadata}
                 />
                 <AssetMergeHistory assetId={asset.id} />
                 {canDelete && (
