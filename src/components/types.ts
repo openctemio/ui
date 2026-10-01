@@ -95,9 +95,10 @@ type NavGroup = {
   /**
    * Visual cluster the group belongs to. `cycle` marks the five CTEM stages
    * (Scoping → Mobilization), which the sidebar renders together, in order,
-   * under a "CTEM cycle" label.
+   * under a "CTEM cycle" label. `end` is pinned after everything else (the
+   * single Settings link).
    */
-  cluster?: 'cycle'
+  cluster?: 'cycle' | 'end'
   items: NavItem[]
 }
 

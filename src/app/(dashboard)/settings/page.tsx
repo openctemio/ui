@@ -1,69 +1,46 @@
 'use client'
 
-import { useEffect, useMemo } from 'react'
-import { useRouter } from 'next/navigation'
-import { Settings } from 'lucide-react'
 import { Main } from '@/components/layout'
-import { Skeleton } from '@/components/ui/skeleton'
-import { EmptyState } from '@/features/shared'
-import { usePermissions } from '@/context/permission-provider'
-import { Permission } from '@/lib/permissions'
+import { LinkCard, PageHeader, SettingsSection } from '@/features/shared'
+import { useTranslation } from '@/context/i18n-provider'
+import { useSettingsNav } from '@/hooks/use-settings-nav'
 
 /**
- * `/settings` has no content of its own — every section lives under a child
- * route, each gated by its own permission. Previously this path 404'd. Rather
- * than redirect to a fixed section (which would bounce non-admins to an
- * access-denied page), send the user to the first section they can actually
- * reach, in the same order the sidebar lists them.
+ * /settings: every settings page the user can open, grouped as in the settings
+ * rail and built from the same config (src/config/settings-nav.ts), so this
+ * page, the rail and ⌘K never disagree. Everyone sees at least "My account",
+ * so the user-menu "Settings" link never ends on Access Denied.
  */
-const SETTINGS_SECTIONS: { path: string; permission: string }[] = [
-  { path: '/settings/tenant', permission: Permission.TeamUpdate },
-  { path: '/settings/users', permission: Permission.MembersRead },
-  { path: '/settings/roles', permission: Permission.RolesRead },
-  { path: '/settings/access-control/groups', permission: Permission.GroupsRead },
-  { path: '/settings/access-control/assignment-rules', permission: Permission.AssignmentRulesRead },
-  { path: '/settings/audit', permission: Permission.AuditRead },
-  { path: '/settings/scoring', permission: Permission.TeamUpdate },
-  { path: '/settings/asset-lifecycle', permission: Permission.TeamUpdate },
-  { path: '/settings/modules', permission: Permission.TeamUpdate },
-  { path: '/settings/pentest', permission: Permission.PentestWrite },
-  { path: '/settings/integrations', permission: Permission.IntegrationsRead },
-  { path: '/settings/sla-policies', permission: Permission.SLARead },
-]
-
 export default function SettingsIndexPage() {
-  const router = useRouter()
-  const { hasPermission, isLoading } = usePermissions()
+  const { t } = useTranslation()
+  const groups = useSettingsNav()
 
-  const target = useMemo(
-    () =>
-      isLoading ? undefined : SETTINGS_SECTIONS.find((s) => hasPermission(s.permission))?.path,
-    [isLoading, hasPermission]
-  )
-
-  useEffect(() => {
-    if (target) router.replace(target)
-  }, [target, router])
-
-  // No accessible section — show an honest message instead of bouncing.
-  if (!isLoading && !target) {
-    return (
-      <Main>
-        <EmptyState
-          icon={Settings}
-          title="No settings available"
-          description="You don't have access to any settings sections. Contact your administrator if you need access."
-        />
-      </Main>
-    )
-  }
-
-  // Loading permissions, or redirect in flight.
   return (
     <Main>
-      <div className="space-y-4 py-8">
-        <Skeleton className="h-8 w-48" />
-        <Skeleton className="h-4 w-72" />
+      <PageHeader
+        title={t('nav.item.settings', 'Settings')}
+        description={t(
+          'settings.overview.description',
+          'Your account, and how your organization is set up.'
+        )}
+      />
+      <div className="mt-5 space-y-8">
+        {groups.map((group) => (
+          <SettingsSection key={group.id} id={`settings-${group.id}`} title={group.label}>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              {group.items.map((item) => (
+                <LinkCard
+                  key={item.id}
+                  href={item.url}
+                  icon={item.icon}
+                  title={item.label}
+                  description={item.desc}
+                  badge={item.badge ? t('settings.badge.soon', 'Soon') : undefined}
+                />
+              ))}
+            </div>
+          </SettingsSection>
+        ))}
       </div>
     </Main>
   )

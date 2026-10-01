@@ -21,8 +21,9 @@
  *   3. The reverse: a "Soon" badge must point at a `ComingSoonPage`. SIEM kept
  *      its badge for months after Splunk HEC shipped because only rule 2
  *      existed. The Integrations overview cards follow the same two rules.
- *   4. Every `ComingSoonPage` in src/app is linked from the nav or a card with a
- *      "Soon" badge, so a placeholder can be neither unlabelled nor orphaned.
+ *   4. Every `ComingSoonPage` in src/app is linked from the nav (main sidebar or
+ *      settings rail) or a card with a "Soon" badge, so a placeholder can be
+ *      neither unlabelled nor orphaned.
  *
  * Rule 1 deliberately keys on the `useDashboardStats` import rather than on
  * "has a domain-scoped hook". The looser form is unreliable here: most real pages
@@ -37,6 +38,7 @@ import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { sidebarData } from '../sidebar-data'
 import { INTEGRATION_CATEGORIES } from '@/features/integrations/config/integration-categories'
+import { settingsNavItems } from '../settings-nav'
 import type { NavCollapsible, NavItem } from '@/components/types'
 
 const APP_DIR = join(process.cwd(), 'src', 'app')
@@ -216,6 +218,7 @@ describe('"Soon" badges and placeholder pages match both ways', () => {
         .filter((l) => l.badge === 'Soon')
         .map((l) => l.url),
       ...INTEGRATION_CATEGORIES.filter((c) => c.badge === 'Soon').map((c) => c.href),
+      ...settingsNavItems.filter((i) => i.badge === 'Soon').map((i) => i.url),
     ])
     const placeholders = allPages()
       .filter((p) => readFileSync(p.file, 'utf8').includes('ComingSoonPage'))
