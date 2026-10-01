@@ -20,6 +20,12 @@
       "reason": "Product names of other vendors' agents (Elastic Agent + Fleet, Datadog Agent), cited as prior art."
     },
     {
+      "id": "endpoint-agent-role",
+      "files": ".*",
+      "pattern": "endpoint[- ]agents?",
+      "reason": "'Agent' now names one sensor role only: the endpoint agent (RFC-023 §9.1, D18)."
+    },
+    {
       "id": "historical-audit-spelling",
       "files": "^src/lib/api/audit-types\\.ts$",
       "pattern": "HISTORICAL_SENSOR_[A-Z_]+\\s*=\\s*'agent[._]?'",
@@ -28,13 +34,13 @@
     {
       "id": "historical-audit-spelling-tests",
       "files": "^src/lib/api/__tests__/audit-types\\.test\\.ts$",
-      "pattern": "'agent[._a-z]*'",
+      "pattern": ".*",
       "reason": "Tests that rows written before the rename are labelled."
     },
     {
       "id": "legacy-route-redirects",
       "files": "^(next\\.config\\.ts|src/config/legacy-sensor-routes\\.ts|src/config/__tests__/legacy-sensor-routes\\.test\\.ts)$",
-      "pattern": "/agents",
+      "pattern": "/agents|'agents'",
       "reason": "Bookmarked /agents URLs redirect permanently to /sensors."
     },
     {

@@ -12,7 +12,7 @@ Frontend dashboard for the OpenCTEM Continuous Threat Exposure Management platfo
 ### CTEM 5-Stage Process
 
 - **Scoping** - Attack surface definition, asset groups, scope targets/exclusions
-- **Discovery** - 24 asset type pages, automated discovery via agents, SCM sync
+- **Discovery** - 24 asset type pages, automated discovery via sensors, SCM sync
 - **Prioritization** - Risk scoring (0-100), AI-powered triage, finding severity classification
 - **Validation** - Pentest campaigns, attack simulation, control testing
 - **Mobilization** - Remediation workflows, compliance tracking, SLA enforcement

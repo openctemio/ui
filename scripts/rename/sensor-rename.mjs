@@ -103,7 +103,12 @@ function isAllowedAt(relPath, text, offset, length) {
   if (lineEnd === -1) lineEnd = text.length
   const line = text.slice(lineStart, lineEnd)
   const s = offset - lineStart
-  return allowedSpans(relPath, line).some(([a, b]) => s >= a && s + length <= b)
+  const spans = allowedSpans(relPath, line)
+  // Protocol v1 (/api/v1/agent/*) is what deployed sensors speak and did not
+  // move; there is no /api/v1/sensor/*. Never rewrite it: the UI must not call
+  // it at all, and the vocabulary guard reports any use for a human to remove.
+  for (const m of line.matchAll(/\/api\/v1\/agent\b/g)) spans.push([m.index, m.index + m[0].length])
+  return spans.some(([a, b]) => s >= a && s + length <= b)
 }
 
 // ---------------------------------------------------------------------------
