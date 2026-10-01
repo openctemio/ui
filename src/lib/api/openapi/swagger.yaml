@@ -2372,8 +2372,6 @@ definitions:
         type: object
       first_seen_at:
         type: string
-      has_secret:
-        type: boolean
       id:
         type: string
       identifier:
@@ -2384,9 +2382,7 @@ definitions:
         type: boolean
       last_seen_at:
         type: string
-      secret_fingerprint:
-        type: string
-      secret_masked:
+      secret_value:
         type: string
       severity:
         type: string
@@ -2560,8 +2556,6 @@ definitions:
         type: object
       first_seen_at:
         type: string
-      has_secret:
-        type: boolean
       id:
         type: string
       identifier:
@@ -2572,9 +2566,7 @@ definitions:
         type: boolean
       last_seen_at:
         type: string
-      secret_fingerprint:
-        type: string
-      secret_masked:
+      secret_value:
         type: string
       severity:
         type: string
@@ -9152,13 +9144,6 @@ definitions:
     required:
     - new_password
     - token
-    type: object
-  internal_infra_http_handler.RevealCredentialResponse:
-    properties:
-      id:
-        type: string
-      secret_value:
-        type: string
     type: object
   internal_infra_http_handler.RunResponse:
     properties:
@@ -16574,47 +16559,6 @@ paths:
           schema:
             $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
       summary: Mark credential as resolved
-      tags:
-      - Credentials
-  /credentials/{id}/reveal:
-    post:
-      description: Returns the plaintext secret of one leaked credential. Requires
-        findings:credentials:reveal; every call is written to the audit log before
-        the secret is returned, and the call fails if it cannot be audited.
-      parameters:
-      - description: Credential ID
-        in: path
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/internal_infra_http_handler.RevealCredentialResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
-        "403":
-          description: Forbidden
-          schema:
-            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
-        "503":
-          description: Service Unavailable
-          schema:
-            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
-      summary: Reveal a leaked credential's secret
       tags:
       - Credentials
   /credentials/enums:

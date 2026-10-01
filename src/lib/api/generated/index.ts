@@ -97,8 +97,6 @@ export type CriterionOutcome =
 
 // Credentials (leaked-credential inventory)
 export type CredentialItem = Schemas['github_com_openctemio_api_internal_app.CredentialItem']
-export type RevealCredentialResponse =
-  Schemas['internal_infra_http_handler.RevealCredentialResponse']
 export type CredentialListResult =
   Schemas['github_com_openctemio_api_internal_app.CredentialListResult']
 export type IdentityListResult =
