@@ -394,10 +394,10 @@ export function ScannerTemplatesSection() {
           usageData.quota.max_templates_semgrep
         ),
         quotaMetric(
-          'gitleaks',
-          'Gitleaks',
-          usageData.usage.gitleaks_templates,
-          usageData.quota.max_templates_gitleaks
+          'betterleaks',
+          'Betterleaks',
+          usageData.usage.betterleaks_templates,
+          usageData.quota.max_templates_betterleaks
         ),
         quotaMetric(
           'storage',
@@ -461,7 +461,7 @@ export function ScannerTemplatesSection() {
       <EmptyState
         icon={FileCode2}
         title="No scanner templates"
-        description="Upload custom templates for Nuclei, Semgrep, or Gitleaks scanners."
+        description="Upload custom templates for Nuclei, Semgrep, or Betterleaks scanners."
         action={
           <Can permission={Permission.ScannerTemplatesWrite}>
             <Button size="sm" onClick={() => setAddDialogOpen(true)}>
@@ -492,7 +492,7 @@ export function ScannerTemplatesSection() {
     <>
       <PageHeader
         title="Scanner templates"
-        description="Custom Nuclei, Semgrep and Gitleaks templates — uploaded here or synced from template sources, validated and versioned."
+        description="Custom Nuclei, Semgrep and Betterleaks templates — uploaded here or synced from template sources, validated and versioned."
       >
         <Can permission={Permission.ScannerTemplatesWrite}>
           <Button size="sm" onClick={() => setAddDialogOpen(true)}>

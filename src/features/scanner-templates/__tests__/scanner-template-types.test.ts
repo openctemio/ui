@@ -29,7 +29,7 @@ describe('TEMPLATE_TYPES', () => {
   it('should have all expected template types', () => {
     expect(TEMPLATE_TYPES).toContain('nuclei')
     expect(TEMPLATE_TYPES).toContain('semgrep')
-    expect(TEMPLATE_TYPES).toContain('gitleaks')
+    expect(TEMPLATE_TYPES).toContain('betterleaks')
     expect(TEMPLATE_TYPES).toHaveLength(3)
   })
 })
@@ -55,7 +55,7 @@ describe('TEMPLATE_TYPE_DISPLAY_NAMES', () => {
   it('should have correct display names', () => {
     expect(TEMPLATE_TYPE_DISPLAY_NAMES.nuclei).toBe('Nuclei')
     expect(TEMPLATE_TYPE_DISPLAY_NAMES.semgrep).toBe('Semgrep')
-    expect(TEMPLATE_TYPE_DISPLAY_NAMES.gitleaks).toBe('Gitleaks')
+    expect(TEMPLATE_TYPE_DISPLAY_NAMES.betterleaks).toBe('Betterleaks')
   })
 })
 
@@ -72,7 +72,7 @@ describe('TEMPLATE_TYPE_EXTENSIONS', () => {
   it('should have correct file extensions', () => {
     expect(TEMPLATE_TYPE_EXTENSIONS.nuclei).toBe('.yaml')
     expect(TEMPLATE_TYPE_EXTENSIONS.semgrep).toBe('.yaml')
-    expect(TEMPLATE_TYPE_EXTENSIONS.gitleaks).toBe('.toml')
+    expect(TEMPLATE_TYPE_EXTENSIONS.betterleaks).toBe('.toml')
   })
 })
 
@@ -80,7 +80,7 @@ describe('TEMPLATE_TYPE_MAX_SIZES', () => {
   it('should have correct max sizes', () => {
     expect(TEMPLATE_TYPE_MAX_SIZES.nuclei).toBe(1024 * 1024) // 1MB
     expect(TEMPLATE_TYPE_MAX_SIZES.semgrep).toBe(512 * 1024) // 512KB
-    expect(TEMPLATE_TYPE_MAX_SIZES.gitleaks).toBe(256 * 1024) // 256KB
+    expect(TEMPLATE_TYPE_MAX_SIZES.betterleaks).toBe(256 * 1024) // 256KB
   })
 })
 
@@ -88,7 +88,7 @@ describe('TEMPLATE_TYPE_MAX_RULES', () => {
   it('should have correct max rule counts', () => {
     expect(TEMPLATE_TYPE_MAX_RULES.nuclei).toBe(100)
     expect(TEMPLATE_TYPE_MAX_RULES.semgrep).toBe(500)
-    expect(TEMPLATE_TYPE_MAX_RULES.gitleaks).toBe(1000)
+    expect(TEMPLATE_TYPE_MAX_RULES.betterleaks).toBe(1000)
   })
 })
 

@@ -1037,7 +1037,7 @@ export interface Asset {
   externalId?: string
   /** How the asset entered the inventory: sensor, integration, manual, import... */
   discoverySource?: string
-  /** Tool that discovered it, e.g. "gitleaks", "subfinder". */
+  /** Tool that discovered it, e.g. "betterleaks", "subfinder". */
   discoveryTool?: string
   discoveredAt?: string
   complianceScope?: string[]

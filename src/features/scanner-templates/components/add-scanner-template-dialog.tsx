@@ -225,7 +225,7 @@ export function AddScannerTemplateDialog({
             Upload Scanner Template
           </DialogTitle>
           <DialogDescription>
-            Upload a custom template for Nuclei, Semgrep, or Gitleaks scanners.
+            Upload a custom template for Nuclei, Semgrep, or Betterleaks scanners.
           </DialogDescription>
         </DialogHeader>
 

@@ -22,7 +22,7 @@ export interface SuppressionRule {
   suppression_type: SuppressionType
   /** Tool rule ID pattern, e.g. "semgrep.sql-injection". */
   rule_id?: string
-  /** Tool name, e.g. "semgrep", "gitleaks". */
+  /** Tool name, e.g. "semgrep", "betterleaks". */
   tool_name?: string
   /** File path glob, e.g. "tests/**". */
   path_pattern?: string

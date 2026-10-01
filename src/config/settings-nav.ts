@@ -284,12 +284,12 @@ export const settingsNav: SettingsNavGroup[] = [
       {
         id: 'scanner-templates',
         title: 'Scanner templates',
-        description: 'Custom Nuclei, Semgrep and Gitleaks templates.',
+        description: 'Custom Nuclei, Semgrep and Betterleaks templates.',
         url: '/scanner-templates',
         icon: FileCode2,
         permission: Permission.ScannerTemplatesRead,
         module: 'scanner_templates',
-        keywords: ['nuclei', 'semgrep', 'gitleaks', 'rules'],
+        keywords: ['nuclei', 'semgrep', 'betterleaks', 'gitleaks', 'rules'],
       },
       {
         id: 'template-sources',
