@@ -312,6 +312,12 @@ export function useSensorTimeSeries(
 // ============================================
 // MUTATION HOOKS
 // ============================================
+//
+// Hooks that act on one existing sensor take its id when they are
+// triggered (`trigger(sensor.id)`), not when the hook is created. A row
+// action sets the selection and triggers in the same handler, before React
+// re-renders, so a hook bound to the selection would still point at the
+// previous sensor (or at none at all).
 
 /**
  * Create a new sensor
@@ -344,13 +350,13 @@ export function useUpdateSensor(sensorId: string) {
 /**
  * Delete a sensor
  */
-export function useDeleteSensor(sensorId: string) {
+export function useDeleteSensor() {
   const { currentTenant } = useTenant()
 
   return useSWRMutation(
-    currentTenant && sensorId ? sensorEndpoints.delete(sensorId) : null,
-    async (url: string) => {
-      return del<void>(url)
+    currentTenant ? 'sensor-delete' : null,
+    async (_key: string, { arg: sensorId }: { arg: string }) => {
+      return del<void>(sensorEndpoints.delete(sensorId))
     }
   )
 }
@@ -388,13 +394,13 @@ export function useBulkDeleteSensors() {
 /**
  * Regenerate sensor API key
  */
-export function useRegenerateSensorKey(sensorId: string) {
+export function useRegenerateSensorKey() {
   const { currentTenant } = useTenant()
 
   return useSWRMutation(
-    currentTenant && sensorId ? sensorEndpoints.regenerateKey(sensorId) : null,
-    async (url: string) => {
-      return post<RegenerateAPIKeyResponse>(url, {})
+    currentTenant ? 'sensor-regenerate-key' : null,
+    async (_key: string, { arg: sensorId }: { arg: string }) => {
+      return post<RegenerateAPIKeyResponse>(sensorEndpoints.regenerateKey(sensorId), {})
     },
     {
       // Don't revalidate other SWR hooks after mutation
@@ -408,13 +414,13 @@ export function useRegenerateSensorKey(sensorId: string) {
 /**
  * Activate a sensor (set status to active)
  */
-export function useActivateSensor(sensorId: string) {
+export function useActivateSensor() {
   const { currentTenant } = useTenant()
 
   return useSWRMutation(
-    currentTenant && sensorId ? sensorEndpoints.activate(sensorId) : null,
-    async (url: string) => {
-      return post<Sensor>(url, {})
+    currentTenant ? 'sensor-activate' : null,
+    async (_key: string, { arg: sensorId }: { arg: string }) => {
+      return post<Sensor>(sensorEndpoints.activate(sensorId), {})
     }
   )
 }
@@ -422,13 +428,13 @@ export function useActivateSensor(sensorId: string) {
 /**
  * Deactivate a sensor (set status to disabled)
  */
-export function useDeactivateSensor(sensorId: string) {
+export function useDeactivateSensor() {
   const { currentTenant } = useTenant()
 
   return useSWRMutation(
-    currentTenant && sensorId ? sensorEndpoints.deactivate(sensorId) : null,
-    async (url: string) => {
-      return post<Sensor>(url, {})
+    currentTenant ? 'sensor-deactivate' : null,
+    async (_key: string, { arg: sensorId }: { arg: string }) => {
+      return post<Sensor>(sensorEndpoints.deactivate(sensorId), {})
     }
   )
 }
@@ -436,13 +442,13 @@ export function useDeactivateSensor(sensorId: string) {
 /**
  * Revoke a sensor (permanently revoke access)
  */
-export function useRevokeSensor(sensorId: string) {
+export function useRevokeSensor() {
   const { currentTenant } = useTenant()
 
   return useSWRMutation(
-    currentTenant && sensorId ? sensorEndpoints.revoke(sensorId) : null,
-    async (url: string) => {
-      return post<Sensor>(url, {})
+    currentTenant ? 'sensor-revoke' : null,
+    async (_key: string, { arg: sensorId }: { arg: string }) => {
+      return post<Sensor>(sensorEndpoints.revoke(sensorId), {})
     }
   )
 }

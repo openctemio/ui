@@ -194,9 +194,7 @@ export default function NotificationOutboxPage() {
   })
 
   // Mutations
-  const { trigger: retryEntry, isMutating: isRetrying } = useRetryOutboxEntryApi(
-    selectedEntry?.id || ''
-  )
+  const { trigger: retryEntry, isMutating: isRetrying } = useRetryOutboxEntryApi()
   const { trigger: deleteEntry, isMutating: isDeleting } = useDeleteOutboxEntryApi(
     selectedEntry?.id || ''
   )
@@ -229,10 +227,9 @@ export default function NotificationOutboxPage() {
   const handleRetry = async (entry: OutboxEntry) => {
     if (actionInProgress) return
     setActionInProgress(entry.id)
-    setSelectedEntry(entry)
 
     try {
-      await retryEntry()
+      await retryEntry(entry.id)
       await invalidateNotificationOutboxCache()
       await invalidateNotificationOutboxStatsCache()
       await Promise.all([mutateStats(), mutateEntries()])
@@ -241,7 +238,6 @@ export default function NotificationOutboxPage() {
       toast.error(getErrorMessage(error, 'Failed to retry entry'))
     } finally {
       setActionInProgress(null)
-      setSelectedEntry(null)
     }
   }
 

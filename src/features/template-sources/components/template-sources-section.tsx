@@ -100,15 +100,9 @@ export function TemplateSourcesSection() {
   const { trigger: deleteSource, isMutating: isDeleting } = useDeleteTemplateSource(
     selectedSource?.id || ''
   )
-  const { trigger: enableSource, isMutating: isEnabling } = useEnableTemplateSource(
-    selectedSource?.id || ''
-  )
-  const { trigger: disableSource, isMutating: isDisabling } = useDisableTemplateSource(
-    selectedSource?.id || ''
-  )
-  const { trigger: syncSource, isMutating: isSyncing } = useSyncTemplateSource(
-    selectedSource?.id || ''
-  )
+  const { trigger: enableSource, isMutating: isEnabling } = useEnableTemplateSource()
+  const { trigger: disableSource, isMutating: isDisabling } = useDisableTemplateSource()
+  const { trigger: syncSource, isMutating: isSyncing } = useSyncTemplateSource()
 
   // Handlers
   const handleRefresh = useCallback(async () => {
@@ -142,13 +136,12 @@ export function TemplateSourcesSection() {
 
   const handleToggleEnabled = useCallback(
     async (source: TemplateSource) => {
-      setSelectedSource(source)
       try {
         if (source.is_enabled) {
-          await disableSource()
+          await disableSource(source.id)
           toast.success(`Source "${source.name}" disabled`)
         } else {
-          await enableSource()
+          await enableSource(source.id)
           toast.success(`Source "${source.name}" enabled`)
         }
         await invalidateTemplateSourcesCache()
@@ -161,9 +154,8 @@ export function TemplateSourcesSection() {
 
   const handleSync = useCallback(
     async (source: TemplateSource) => {
-      setSelectedSource(source)
       try {
-        const result = await syncSource()
+        const result = await syncSource(source.id)
         if (result?.status === 'success') {
           toast.success(`Synced ${result.templates_found} templates from "${source.name}"`)
         } else {

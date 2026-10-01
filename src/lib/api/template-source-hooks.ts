@@ -206,13 +206,16 @@ export function useDeleteTemplateSource(sourceId: string) {
 /**
  * Enable a template source
  */
-export function useEnableTemplateSource(sourceId: string) {
+export function useEnableTemplateSource() {
   const { currentTenant } = useTenant()
 
+  // The source id is passed to trigger(), not bound to the hook: the row
+  // toggle selects and triggers in one handler, before a hook keyed on the
+  // selection could see the new row.
   return useSWRMutation(
-    currentTenant && sourceId ? templateSourceEndpoints.enable(sourceId) : null,
-    async (url: string) => {
-      return post<TemplateSource>(url, {})
+    currentTenant ? 'template-source-enable' : null,
+    async (_key: string, { arg: sourceId }: { arg: string }) => {
+      return post<TemplateSource>(templateSourceEndpoints.enable(sourceId), {})
     }
   )
 }
@@ -220,13 +223,16 @@ export function useEnableTemplateSource(sourceId: string) {
 /**
  * Disable a template source
  */
-export function useDisableTemplateSource(sourceId: string) {
+export function useDisableTemplateSource() {
   const { currentTenant } = useTenant()
 
+  // The source id is passed to trigger(), not bound to the hook: the row
+  // toggle selects and triggers in one handler, before a hook keyed on the
+  // selection could see the new row.
   return useSWRMutation(
-    currentTenant && sourceId ? templateSourceEndpoints.disable(sourceId) : null,
-    async (url: string) => {
-      return post<TemplateSource>(url, {})
+    currentTenant ? 'template-source-disable' : null,
+    async (_key: string, { arg: sourceId }: { arg: string }) => {
+      return post<TemplateSource>(templateSourceEndpoints.disable(sourceId), {})
     }
   )
 }
@@ -234,13 +240,16 @@ export function useDisableTemplateSource(sourceId: string) {
 /**
  * Force sync a template source
  */
-export function useSyncTemplateSource(sourceId: string) {
+export function useSyncTemplateSource() {
   const { currentTenant } = useTenant()
 
+  // The source id is passed to trigger(), not bound to the hook: the row
+  // toggle selects and triggers in one handler, before a hook keyed on the
+  // selection could see the new row.
   return useSWRMutation(
-    currentTenant && sourceId ? templateSourceEndpoints.sync(sourceId) : null,
-    async (url: string) => {
-      return post<TemplateSyncResult>(url, {})
+    currentTenant ? 'template-source-sync' : null,
+    async (_key: string, { arg: sourceId }: { arg: string }) => {
+      return post<TemplateSyncResult>(templateSourceEndpoints.sync(sourceId), {})
     }
   )
 }
