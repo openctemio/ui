@@ -8,6 +8,7 @@
 import { useAuthStore } from '@/stores/auth-store'
 import type { ApiError, ApiRequestOptions, ApiResponse } from './types'
 import { ApiClientError } from './error-handler'
+import { IP_NOT_ALLOWED_MESSAGE, isIpNotAllowed, notifyIpNotAllowed } from './ip-not-allowed'
 import { dispatchPermissionStaleEvent } from '@/context/permission-provider'
 import { env } from '@/lib/env'
 import { devLog } from '@/lib/logger'
@@ -335,6 +336,19 @@ export async function apiClient<T = unknown>(
       }
 
       const error = await parseErrorResponse(response)
+
+      // The organization's IP allowlist blocked this request. Replace the
+      // server text with a message that says what happened, and toast once.
+      if (isIpNotAllowed(error)) {
+        notifyIpNotAllowed()
+        throw new ApiClientError(
+          IP_NOT_ALLOWED_MESSAGE,
+          error.code,
+          error.statusCode,
+          error.details
+        )
+      }
+
       throw new ApiClientError(error.message, error.code, error.statusCode, error.details)
     }
 

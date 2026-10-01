@@ -68,4 +68,31 @@ describe('admin API proxy', () => {
     expect(sentCookie()).toContain('admin_idp=idp-state')
     expect(sentCookie()).not.toContain('refresh_token')
   })
+
+  describe('client IP headers', () => {
+    afterEach(() => vi.unstubAllEnvs())
+
+    function callWithIp() {
+      const req = new NextRequest('http://ui.test/api/v1/admin/tenants', {
+        method: 'GET',
+        headers: { 'x-real-ip': '203.0.113.7', 'x-forwarded-for': '203.0.113.7' },
+      })
+      return GET(req, { params: Promise.resolve({ path: ['tenants'] }) })
+    }
+    const sent = () => fetchMock.mock.calls[0][1].headers as Headers
+
+    it('drops browser-supplied forwarding headers by default', async () => {
+      vi.stubEnv('TRUST_PROXY_HEADERS', '')
+      await callWithIp()
+      expect(sent().get('x-real-ip')).toBeNull()
+      expect(sent().get('x-forwarded-for')).toBeNull()
+    })
+
+    it('forwards them when TRUST_PROXY_HEADERS=true', async () => {
+      vi.stubEnv('TRUST_PROXY_HEADERS', 'true')
+      await callWithIp()
+      expect(sent().get('x-real-ip')).toBe('203.0.113.7')
+      expect(sent().get('x-forwarded-for')).toBe('203.0.113.7')
+    })
+  })
 })
