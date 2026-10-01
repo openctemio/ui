@@ -310,6 +310,17 @@ export const tenantEndpoints = {
   removeMember: (tenantIdOrSlug: string, memberId: string) =>
     `${API_BASE.TENANTS}/${tenantIdOrSlug}/members/${memberId}`,
 
+  /**
+   * Create a user account directly (POST, owner/admin) — no self-registration
+   */
+  createUser: (tenantIdOrSlug: string) => `${API_BASE.TENANTS}/${tenantIdOrSlug}/users`,
+
+  /**
+   * Issue a fresh one-time setup link for a member still pending setup (POST)
+   */
+  userSetupLink: (tenantIdOrSlug: string, userId: string) =>
+    `${API_BASE.TENANTS}/${tenantIdOrSlug}/users/${userId}/setup-link`,
+
   // ============================================
   // INVITATION MANAGEMENT
   // ============================================
