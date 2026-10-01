@@ -25,7 +25,7 @@ export function ScanStepper({ currentStep, onStepClick }: ScanStepperProps) {
   const currentIndex = STEPS.findIndex((s) => s.id === currentStep)
 
   return (
-    <div className="flex items-center justify-between px-4 sm:px-6 py-3">
+    <div className="flex min-w-0 items-center justify-between overflow-x-auto px-4 py-3 sm:px-6">
       {STEPS.map((step, index) => {
         const isCompleted = index < currentIndex
         const isCurrent = index === currentIndex
@@ -58,7 +58,9 @@ export function ScanStepper({ currentStep, onStepClick }: ScanStepperProps) {
                   {index + 1}
                 </span>
               )}
-              <span>{step.label}</span>
+              {/* Phone width: only the current step keeps its label, so the
+                  four steps fit without widening the dialog. */}
+              <span className={cn(!isCurrent && 'sr-only sm:not-sr-only')}>{step.label}</span>
             </button>
 
             {/* Connector line */}

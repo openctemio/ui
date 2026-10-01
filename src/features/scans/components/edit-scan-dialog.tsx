@@ -344,7 +344,7 @@ export function EditScanDialog({ scanConfig, open, onOpenChange, onSuccess }: Ed
         </DialogHeader>
 
         {/* Stepper */}
-        <div className="border-b">
+        <div className="min-w-0 border-b">
           <ScanStepper currentStep={currentStep} onStepClick={handleStepClick} />
         </div>
 

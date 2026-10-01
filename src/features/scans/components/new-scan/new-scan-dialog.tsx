@@ -409,7 +409,7 @@ export function NewScanDialog({ open, onOpenChange, onSubmit }: NewScanDialogPro
         </DialogHeader>
 
         {/* Stepper */}
-        <div className="border-b">
+        <div className="min-w-0 border-b">
           <ScanStepper currentStep={currentStep} onStepClick={handleStepClick} />
         </div>
 
