@@ -59,6 +59,38 @@ export const LEGACY_SETTINGS_ROUTE_REDIRECTS: LegacyRouteRedirect[] = [
     destination: '/settings/risk-scoring/:path*',
     permanent: true,
   },
+  // Scanning catalogs: configured at onboarding, rarely touched, so they live
+  // in Settings › Scanning (owner decision D3). Detail and sub-pages follow.
+  {
+    source: '/scan-profiles/:path*',
+    destination: '/settings/scanning/profiles/:path*',
+    permanent: true,
+  },
+  {
+    source: '/scanner-templates/:path*',
+    destination: '/settings/scanning/templates/:path*',
+    permanent: true,
+  },
+  {
+    source: '/template-sources/:path*',
+    destination: '/settings/scanning/template-sources/:path*',
+    permanent: true,
+  },
+  {
+    source: '/secret-store/:path*',
+    destination: '/settings/scanning/credentials/:path*',
+    permanent: true,
+  },
+  {
+    source: '/tools/:path*',
+    destination: '/settings/scanning/tools/:path*',
+    permanent: true,
+  },
+  {
+    source: '/capabilities/:path*',
+    destination: '/settings/scanning/capabilities/:path*',
+    permanent: true,
+  },
   {
     source: '/settings/priority-rules/:path*',
     destination: '/priority-rules/:path*',

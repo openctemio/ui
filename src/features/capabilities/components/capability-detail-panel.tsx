@@ -153,7 +153,7 @@ export const CapabilityDetailPanel = memo(function CapabilityDetailPanel({
                 </h4>
                 {stats && stats.tool_count > 0 && (
                   <Link
-                    href="/tools"
+                    href="/settings/scanning/tools"
                     className="text-xs text-primary hover:underline flex items-center gap-1"
                   >
                     View All
