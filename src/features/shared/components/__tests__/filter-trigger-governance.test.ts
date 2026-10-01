@@ -17,6 +17,9 @@
  *   2. No button-like element (Button, button, a Radix trigger) carries the
  *      bare label "Filter(s)" / "Add filter" / "More filters" as its text — the
  *      text version this replaced, whatever icon sits next to it.
+ *   3. The filter sheet (the panel below `lg`) is the shared `FilterSheet`:
+ *      no other file opens a left-side sheet. Five pages had their own
+ *      `w-80 p-4` copy whose close button sat on top of "Clear all".
  */
 import { describe, it, expect } from 'vitest'
 import { readFileSync, readdirSync, statSync } from 'node:fs'
@@ -24,6 +27,7 @@ import { join, relative, sep } from 'node:path'
 
 const SRC = join(process.cwd(), 'src')
 const SHARED_COMPONENT = 'src/features/shared/components/filter-button.tsx'
+const SHARED_SHEET = 'src/features/shared/components/filter-sheet.tsx'
 
 const FILTER_ICONS = new Set([
   'Filter',
@@ -174,6 +178,17 @@ describe('filter trigger governance', () => {
       for (const hit of textFilterTriggers(f.source)) offenders.push(`${f.path}: ${hit}`)
     }
     expect(offenders, 'Use the icon-only <FilterButton> from @/features/shared.').toEqual([])
+  })
+
+  it('only FilterSheet opens a left-side sheet (rule 3)', () => {
+    const offenders = files
+      .filter((f) => f.path !== SHARED_SHEET && !f.path.startsWith('src/components/ui/'))
+      .filter((f) => /<SheetContent\b[^>]*\bside=["']left["']/.test(f.source))
+      .map((f) => f.path)
+    expect(
+      offenders,
+      'Use <FilterSheet> from @/features/shared for the filter panel below lg.'
+    ).toEqual([])
   })
 
   it('the detectors catch the patterns this replaced', () => {

@@ -23,6 +23,7 @@ import {
   DangerZone,
   DangerZoneItem,
   FilterPanelToggle,
+  FilterSheet,
 } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -39,7 +40,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -1033,14 +1034,13 @@ function ConfigurationsTab() {
         </Can>
       </BulkActionBar>
 
-      <Sheet open={filterSheetOpen} onOpenChange={setFilterSheetOpen}>
-        <SheetContent side="left" className="w-80 overflow-y-auto p-4">
-          <SheetHeader className="sr-only">
-            <SheetTitle>Scan configuration filters</SheetTitle>
-          </SheetHeader>
-          {facetPanel}
-        </SheetContent>
-      </Sheet>
+      <FilterSheet
+        open={filterSheetOpen}
+        onOpenChange={setFilterSheetOpen}
+        title="Scan configuration filters"
+      >
+        {facetPanel}
+      </FilterSheet>
 
       {/* Config Details Sheet */}
       <Sheet open={!!selectedConfig} onOpenChange={() => setSelectedConfig(null)}>

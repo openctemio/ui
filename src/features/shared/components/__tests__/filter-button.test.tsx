@@ -4,6 +4,7 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { FilterButton, FilterPanelToggle } from '../filter-button'
+import { FilterSheet } from '../filter-sheet'
 
 // Radix Popover/Tooltip measure their content; jsdom has no ResizeObserver.
 globalThis.ResizeObserver ??= class {
@@ -92,5 +93,20 @@ describe('FilterPanelToggle', () => {
     fireEvent.click(sheet)
     expect(onToggle).toHaveBeenCalledOnce()
     expect(onOpenSheet).toHaveBeenCalledOnce()
+  })
+})
+
+describe('FilterSheet', () => {
+  it('shows the panel under its own title and closes from the footer', async () => {
+    const onOpenChange = vi.fn()
+    render(
+      <FilterSheet open onOpenChange={onOpenChange} title="Task filters" resultLabel="Show 3 tasks">
+        <p>panel</p>
+      </FilterSheet>
+    )
+    expect(screen.getByRole('dialog', { name: 'Task filters' })).toBeInTheDocument()
+    expect(screen.getByText('panel')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Show 3 tasks' }))
+    expect(onOpenChange).toHaveBeenCalledWith(false)
   })
 })

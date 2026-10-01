@@ -18,6 +18,7 @@ import {
   FacetOption,
   BulkActionBar,
   FilterPanelToggle,
+  FilterSheet,
 } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -54,7 +55,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Badge } from '@/components/ui/badge'
@@ -868,14 +868,13 @@ export default function AssetGroupsPage() {
           </Can>
         </BulkActionBar>
 
-        <Sheet open={filterSheetOpen} onOpenChange={setFilterSheetOpen}>
-          <SheetContent side="left" className="w-80 overflow-y-auto p-4">
-            <SheetHeader className="sr-only">
-              <SheetTitle>Asset group filters</SheetTitle>
-            </SheetHeader>
-            {facetPanel}
-          </SheetContent>
-        </Sheet>
+        <FilterSheet
+          open={filterSheetOpen}
+          onOpenChange={setFilterSheetOpen}
+          title="Asset group filters"
+        >
+          {facetPanel}
+        </FilterSheet>
       </Main>
 
       {/* Quick View Sheet */}
