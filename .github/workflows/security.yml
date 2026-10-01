@@ -9,6 +9,14 @@ on:
     # Run every Monday at 00:00 UTC
     - cron: '0 0 * * 1'
 
+# A newer push to the same PR or branch cancels the older run: force-pushed
+# and rebased branches otherwise queue every superseded commit and starve the
+# organisation's concurrent-job limit. Tags (releases) and the scheduled scan
+# are never cancelled.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'schedule' && !startsWith(github.ref, 'refs/tags/') }}
+
 permissions:
   contents: read
   security-events: write
