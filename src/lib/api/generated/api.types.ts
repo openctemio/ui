@@ -769,6 +769,45 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/admin/target-mappings/types': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * List accepted target-mapping types (platform admin)
+     * @description The target types and asset types that POST /admin/target-mappings accepts. Any admin role.
+     */
+    get: {
+      parameters: {
+        query?: never
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['internal_infra_http_handler.TargetMappingTypesResponse']
+          }
+        }
+      }
+    }
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/admin/tenants': {
     parameters: {
       query?: never
@@ -1383,6 +1422,142 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/admin/threat-intel/sync': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Threat-intelligence feed sync status (platform admin)
+     * @description Status of the platform-wide EPSS and CISA KEV feed syncs.
+     */
+    get: {
+      parameters: {
+        query?: never
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': {
+              [key: string]: unknown
+            }
+          }
+        }
+      }
+    }
+    put?: never
+    /**
+     * Run a threat-intelligence feed sync (platform admin)
+     * @description Syncs the platform-wide EPSS and/or CISA KEV feed now. ops_admin or super_admin; audited.
+     */
+    post: {
+      parameters: {
+        query?: never
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      /** @description Feed (epss, kev, all); empty = all */
+      requestBody?: {
+        content: {
+          'application/json': components['schemas']['internal_infra_http_handler.TriggerSyncRequest']
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': {
+              [key: string]: unknown
+            }
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+      }
+    }
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/admin/threat-intel/sync/{source}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    /**
+     * Enable or disable a threat-intelligence feed sync (platform admin)
+     * @description Turns the platform-wide sync of one feed on or off for every organization. ops_admin or super_admin; audited.
+     */
+    patch: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          /** @description Feed (epss, kev) */
+          source: string
+        }
+        cookie?: never
+      }
+      /** @description Enabled */
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['internal_infra_http_handler.SetSyncEnabledRequest']
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['internal_infra_http_handler.SyncStatusResponse']
+          }
+        }
+        /** @description Not Found */
+        404: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+      }
+    }
+    trace?: never
+  }
   '/admin/users/{id}/break-glass-test': {
     parameters: {
       query?: never
@@ -1916,12 +2091,15 @@ export interface paths {
     put?: never
     /**
      * Sensor heartbeat
-     * @description Send a heartbeat to indicate sensor is alive
+     * @description Send a heartbeat to indicate sensor is alive. The response is also a doorbell (RFC-023 §9.2a): pending_jobs > 0 means poll GET /agent/commands now; next_heartbeat_seconds is the advised interval; actions are typed directives (pause, resume, drain, rotate_key, update). A sensor that sends X-OpenCTEM-Sensor-Features: doorbell also gets config_version and, while disabled, a 200 with the pause action instead of a 401.
      */
     post: {
       parameters: {
         query?: never
-        header?: never
+        header?: {
+          /** @description Optional protocol features, comma-separated (doorbell) */
+          'X-OpenCTEM-Sensor-Features'?: string
+        }
         path?: never
         cookie?: never
       }
@@ -2303,7 +2481,14 @@ export interface paths {
      */
     post: {
       parameters: {
-        query?: never
+        query?: {
+          /** @description Repository the log was produced from, when the log has no runs[].versionControlProvenance. Required in that case unless the artifact URIs name a github.com/gitlab.com/bitbucket.org repository. */
+          repository_url?: string
+          /** @description Branch that was scanned */
+          branch?: string
+          /** @description Commit that was scanned */
+          commit_sha?: string
+        }
         header?: never
         path?: never
         cookie?: never
@@ -2632,6 +2817,63 @@ export interface paths {
         }
       }
     }
+    trace?: never
+  }
+  '/agent/suppressions': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Active suppression rules for the sensor's tenant
+     * @description Approved, unexpired suppression rules of the authenticated sensor's tenant, for the sensor-side security gate. Empty when the suppressions module is disabled. Platform sensors (no tenant) get 403.
+     */
+    get: {
+      parameters: {
+        query?: never
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['internal_infra_http_handler.SensorSuppressionsResponse']
+          }
+        }
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+      }
+    }
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
     trace?: never
   }
   '/agents': {
@@ -8384,8 +8626,10 @@ export interface paths {
     get: {
       parameters: {
         query?: {
-          /** @description Limit results */
-          limit?: number
+          /** @description Page number */
+          page?: number
+          /** @description Items per page */
+          per_page?: number
         }
         header?: never
         path?: never
@@ -8399,7 +8643,7 @@ export interface paths {
             [name: string]: unknown
           }
           content: {
-            'application/json': components['schemas']['github_com_openctemio_api_pkg_domain_component.VulnerableComponent'][]
+            'application/json': components['schemas']['internal_infra_http_handler.ListResponse-github_com_openctemio_api_pkg_domain_component_VulnerableComponent']
           }
         }
         /** @description Bad Request */
@@ -8857,6 +9101,93 @@ export interface paths {
         }
         /** @description Not Found */
         404: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+      }
+    }
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/credentials/{id}/reveal': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Reveal a leaked credential's secret
+     * @description Returns the plaintext secret of one leaked credential. Requires findings:credentials:reveal; every call is written to the audit log before the secret is returned, and the call fails if it cannot be audited.
+     */
+    post: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          /** @description Credential ID */
+          id: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['internal_infra_http_handler.RevealCredentialResponse']
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Not Found */
+        404: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Service Unavailable */
+        503: {
           headers: {
             [name: string]: unknown
           }
@@ -12570,7 +12901,12 @@ export interface paths {
      */
     get: {
       parameters: {
-        query?: never
+        query?: {
+          /** @description Page size */
+          limit?: number
+          /** @description Offset */
+          offset?: number
+        }
         header?: never
         path: {
           /** @description Group ID */
@@ -12586,7 +12922,9 @@ export interface paths {
             [name: string]: unknown
           }
           content: {
-            'application/json': components['schemas']['internal_infra_http_handler.GroupOwnershipResponse'][]
+            'application/json': components['schemas']['internal_infra_http_handler.PaginatedResponse'] & {
+              items?: components['schemas']['internal_infra_http_handler.GroupOwnershipResponse'][]
+            }
           }
         }
         /** @description Not Found */
@@ -12768,7 +13106,12 @@ export interface paths {
      */
     get: {
       parameters: {
-        query?: never
+        query?: {
+          /** @description Page size */
+          limit?: number
+          /** @description Offset */
+          offset?: number
+        }
         header?: never
         path: {
           /** @description Group ID */
@@ -12784,7 +13127,9 @@ export interface paths {
             [name: string]: unknown
           }
           content: {
-            'application/json': components['schemas']['internal_infra_http_handler.GroupMemberWithUserResponse'][]
+            'application/json': components['schemas']['internal_infra_http_handler.PaginatedResponse'] & {
+              items?: components['schemas']['internal_infra_http_handler.GroupMemberWithUserResponse'][]
+            }
           }
         }
         /** @description Not Found */
@@ -17571,6 +17916,599 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/scan-zones': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * List scan zones
+     * @description Every scan zone of the tenant with its ranges and assigned sensors
+     */
+    get: {
+      parameters: {
+        query?: never
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['internal_infra_http_handler.ScanZoneListResponse']
+          }
+        }
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Internal Server Error */
+        500: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+      }
+    }
+    put?: never
+    /**
+     * Create scan zone
+     * @description Ranges are validated and normalized: no overlap with the built-in deny list (loopback, link-local/metadata, multicast, unspecified), IPv4 no wider than /8, IPv6 no wider than /32, at most 256 ranges. Only the default zone may have no ranges.
+     */
+    post: {
+      parameters: {
+        query?: never
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      /** @description Scan zone */
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['internal_infra_http_handler.CreateScanZoneRequest']
+        }
+      }
+      responses: {
+        /** @description Created */
+        201: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['internal_infra_http_handler.ScanZoneResponse']
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description name taken, or a default zone already exists */
+        409: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+      }
+    }
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/scan-zones/{id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Get scan zone */
+    get: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          /** @description Scan zone ID */
+          id: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['internal_infra_http_handler.ScanZoneResponse']
+          }
+        }
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Not Found */
+        404: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+      }
+    }
+    put?: never
+    post?: never
+    /**
+     * Delete scan zone
+     * @description Refused with 409 while jobs routed to the zone are queued or running.
+     */
+    delete: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          /** @description Scan zone ID */
+          id: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description No Content */
+        204: {
+          headers: {
+            [name: string]: unknown
+          }
+          content?: never
+        }
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            '*/*': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            '*/*': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Not Found */
+        404: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            '*/*': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Conflict */
+        409: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            '*/*': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+      }
+    }
+    options?: never
+    head?: never
+    /**
+     * Update scan zone
+     * @description Omitted fields are unchanged. New ranges apply to the next scan trigger; jobs already routed keep their zone.
+     */
+    patch: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          /** @description Scan zone ID */
+          id: string
+        }
+        cookie?: never
+      }
+      /** @description Changes */
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['internal_infra_http_handler.UpdateScanZoneRequest']
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['internal_infra_http_handler.ScanZoneResponse']
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Not Found */
+        404: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Conflict */
+        409: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+      }
+    }
+    trace?: never
+  }
+  '/scan-zones/{id}/sensors/{sensorId}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    /**
+     * Assign a sensor to a scan zone
+     * @description Idempotent. The sensor must belong to the same tenant; platform sensors cannot be assigned.
+     */
+    put: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          /** @description Scan zone ID */
+          id: string
+          /** @description Sensor ID */
+          sensorId: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['internal_infra_http_handler.ScanZoneResponse']
+          }
+        }
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Not Found */
+        404: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+      }
+    }
+    post?: never
+    /**
+     * Remove a sensor from a scan zone
+     * @description Jobs of the zone still queued for that sensor go back to the zone's pool.
+     */
+    delete: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          /** @description Scan zone ID */
+          id: string
+          /** @description Sensor ID */
+          sensorId: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description No Content */
+        204: {
+          headers: {
+            [name: string]: unknown
+          }
+          content?: never
+        }
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            '*/*': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            '*/*': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Not Found */
+        404: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            '*/*': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+      }
+    }
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/scan-zones/coverage': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Scan zone coverage
+     * @description How inventory IP addresses fall into zones (outside_private are skipped by scans), per-zone sensor health, and warnings such as private ranges without a healthy sensor.
+     */
+    get: {
+      parameters: {
+        query?: never
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['internal_infra_http_handler.ScanZoneCoverageResponse']
+          }
+        }
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+      }
+    }
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/scan-zones/preview': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Preview scan zone routing
+     * @description For a scan about to be created: which targets go to which zone and sensor, which scope excludes, and which are not scanned and why. Computed with the trigger's routing code; creates nothing. Hostnames are resolved now, as at trigger time. What a trigger would refuse is reported in `error` (NO_TARGETS, ALL_TARGETS_EXCLUDED, NO_ZONE_COVERAGE, ZONE_SPLIT_REQUIRED, TOO_MANY_JOBS, INVALID_TARGET).
+     */
+    post: {
+      parameters: {
+        query?: never
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      /** @description Scan targets and settings */
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['internal_infra_http_handler.ScanZonePreviewRequest']
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_internal_app_scan.ZoneRoutingPreview']
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description scan zone or asset group not in this tenant */
+        404: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+      }
+    }
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/scanner-templates': {
     parameters: {
       query?: never
@@ -17585,7 +18523,7 @@ export interface paths {
     get: {
       parameters: {
         query?: {
-          /** @description Filter by template type (nuclei, semgrep, gitleaks) */
+          /** @description Filter by template type (nuclei, semgrep, betterleaks) */
           template_type?: string
           /** @description Filter by status (active, pending_review, deprecated, revoked) */
           status?: string
@@ -17636,7 +18574,7 @@ export interface paths {
     put?: never
     /**
      * Create scanner template
-     * @description Create a new custom scanner template (Nuclei, Semgrep, or Gitleaks)
+     * @description Create a new custom scanner template (Nuclei, Semgrep, or Betterleaks)
      */
     post: {
       parameters: {
@@ -24083,7 +25021,7 @@ export interface paths {
         query?: {
           /** @description Filter by source type (git, s3, http) */
           source_type?: string
-          /** @description Filter by template type (nuclei, semgrep, gitleaks) */
+          /** @description Filter by template type (nuclei, semgrep, betterleaks) */
           template_type?: string
           /** @description Filter by enabled status */
           enabled?: boolean
@@ -25206,6 +26144,57 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/tenants/{tenant}/invitations': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * List pending invitations
+     * @description Pending invitations of the organization. No token: tokens are stored hashed and the raw token is returned only once, by the create call.
+     */
+    get: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          /** @description Tenant ID or slug */
+          tenant: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['internal_infra_http_handler.InvitationListResponse']
+          }
+        }
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+      }
+    }
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/tenants/{tenant}/users': {
     parameters: {
       query?: never
@@ -25340,6 +26329,87 @@ export interface paths {
     options?: never
     head?: never
     patch?: never
+    trace?: never
+  }
+  '/threat-intel/sync': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Run the threat-intelligence feed sync (not allowed)
+     * @description Always 403. The EPSS and CISA KEV feed syncs are shared by every organization; a platform administrator runs or toggles them from the admin console.
+     */
+    post: {
+      parameters: {
+        query?: never
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+      }
+    }
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/threat-intel/sync/{source}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    /**
+     * Change the threat-intelligence feed sync (not allowed)
+     * @description Always 403. The EPSS and CISA KEV feed syncs are shared by every organization; a platform administrator runs or toggles them from the admin console.
+     */
+    patch: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          /** @description Feed (epss, kev) */
+          source: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+      }
+    }
     trace?: never
   }
   '/tools': {
@@ -26773,8 +27843,8 @@ export interface paths {
     }
     put?: never
     /**
-     * Create vulnerability
-     * @description Creates a new CVE vulnerability record
+     * Write the shared CVE catalog (not allowed)
+     * @description Always 403. The CVE catalog is shared by every organization and is maintained from sensor reports and the threat-intelligence feeds; an organization cannot create, edit or delete its entries.
      */
     post: {
       parameters: {
@@ -26783,42 +27853,15 @@ export interface paths {
         path?: never
         cookie?: never
       }
-      /** @description Vulnerability data */
-      requestBody: {
-        content: {
-          'application/json': components['schemas']['internal_infra_http_handler.CreateVulnerabilityRequest']
-        }
-      }
+      requestBody?: never
       responses: {
-        /** @description Created */
-        201: {
+        /** @description Forbidden */
+        403: {
           headers: {
             [name: string]: unknown
           }
           content: {
-            'application/json': components['schemas']['internal_infra_http_handler.VulnerabilityResponse']
-          }
-        }
-        /** @description Bad Request */
-        400: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            'application/json': {
-              [key: string]: string
-            }
-          }
-        }
-        /** @description Conflict */
-        409: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            'application/json': {
-              [key: string]: string
-            }
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
           }
         }
       }
@@ -26886,8 +27929,8 @@ export interface paths {
       }
     }
     /**
-     * Update vulnerability
-     * @description Updates a vulnerability
+     * Edit or delete a shared CVE catalog entry (not allowed)
+     * @description Always 403. The CVE catalog is shared by every organization and is maintained from sensor reports and the threat-intelligence feeds; an organization cannot create, edit or delete its entries.
      */
     put: {
       parameters: {
@@ -26899,50 +27942,23 @@ export interface paths {
         }
         cookie?: never
       }
-      /** @description Vulnerability data */
-      requestBody: {
-        content: {
-          'application/json': components['schemas']['internal_infra_http_handler.UpdateVulnerabilityRequest']
-        }
-      }
+      requestBody?: never
       responses: {
-        /** @description OK */
-        200: {
+        /** @description Forbidden */
+        403: {
           headers: {
             [name: string]: unknown
           }
           content: {
-            'application/json': components['schemas']['internal_infra_http_handler.VulnerabilityResponse']
-          }
-        }
-        /** @description Bad Request */
-        400: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            'application/json': {
-              [key: string]: string
-            }
-          }
-        }
-        /** @description Not Found */
-        404: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            'application/json': {
-              [key: string]: string
-            }
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
           }
         }
       }
     }
     post?: never
     /**
-     * Delete vulnerability
-     * @description Deletes a vulnerability
+     * Edit or delete a shared CVE catalog entry (not allowed)
+     * @description Always 403. The CVE catalog is shared by every organization and is maintained from sensor reports and the threat-intelligence feeds; an organization cannot create, edit or delete its entries.
      */
     delete: {
       parameters: {
@@ -26956,33 +27972,13 @@ export interface paths {
       }
       requestBody?: never
       responses: {
-        /** @description No Content */
-        204: {
-          headers: {
-            [name: string]: unknown
-          }
-          content?: never
-        }
-        /** @description Bad Request */
-        400: {
+        /** @description Forbidden */
+        403: {
           headers: {
             [name: string]: unknown
           }
           content: {
-            '*/*': {
-              [key: string]: string
-            }
-          }
-        }
-        /** @description Not Found */
-        404: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            '*/*': {
-              [key: string]: string
-            }
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
           }
         }
       }
@@ -28602,12 +29598,14 @@ export interface components {
         [key: string]: unknown
       }
       first_seen_at?: string
+      has_secret?: boolean
       id?: string
       identifier?: string
       is_revoked?: boolean
       is_verified?: boolean
       last_seen_at?: string
-      secret_value?: string
+      secret_fingerprint?: string
+      secret_masked?: string
       severity?: string
       source?: string
       state?: string
@@ -28721,12 +29719,14 @@ export interface components {
         [key: string]: unknown
       }
       first_seen_at?: string
+      has_secret?: boolean
       id?: string
       identifier?: string
       is_revoked?: boolean
       is_verified?: boolean
       last_seen_at?: string
-      secret_value?: string
+      secret_fingerprint?: string
+      secret_masked?: string
       severity?: string
       source?: string
       state?: string
@@ -28793,6 +29793,48 @@ export interface components {
       pending?: number
       rate_pct?: number
     }
+    'github_com_openctemio_api_internal_app_scan.PreviewError': {
+      code?: string
+      message?: string
+    }
+    'github_com_openctemio_api_internal_app_scan.PreviewTarget': {
+      /** @description what a hostname resolved to */
+      addresses?: string[]
+      reason?: string
+      /** @description the sensor its job would be pinned to */
+      sensor_id?: string
+      /** @description zone | unzoned | uncovered */
+      status?: string
+      target?: string
+      zone_id?: string
+      zone_name?: string
+    }
+    'github_com_openctemio_api_internal_app_scan.PreviewZone': {
+      jobs?: number
+      /** @description jobs with no online sensor yet: they wait in the zone */
+      queued_jobs?: number
+      sensor_ids?: string[]
+      targets?: number
+      zone_id?: string
+      zone_name?: string
+    }
+    'github_com_openctemio_api_internal_app_scan.ZoneRoutingPreview': {
+      error?: components['schemas']['github_com_openctemio_api_internal_app_scan.PreviewError']
+      excluded?: string[]
+      excluded_targets?: number
+      jobs?: number
+      not_routed_reason?: string
+      resolved_targets?: number
+      routed?: boolean
+      selected_zone_id?: string
+      targets?: components['schemas']['github_com_openctemio_api_internal_app_scan.PreviewTarget'][]
+      targets_per_job?: number
+      uncovered_targets?: number
+      unzoned_targets?: number
+      warnings?: string[]
+      zones?: components['schemas']['github_com_openctemio_api_internal_app_scan.PreviewZone'][]
+      zones_enabled?: boolean
+    }
     'github_com_openctemio_api_internal_app_scancoverage.CoverageStats': {
       /** @description CoveragePercent = CoveredInWindow / TotalScannable * 100 (0 when none). */
       coverage_percent?: number
@@ -28829,6 +29871,7 @@ export interface components {
       | 'SERVICE_UNAVAILABLE'
       | 'VALIDATION_FAILED'
       | 'RATE_LIMIT_EXCEEDED'
+      | 'UPSTREAM_ERROR'
       | 'MFA_ENROLLMENT_REQUIRED'
     'github_com_openctemio_api_pkg_apierror.Error': {
       /** @description Machine-readable error code */
@@ -29154,7 +30197,28 @@ export interface components {
       type?: string
     }
     'github_com_openctemio_api_pkg_sensorproto_legacyv1.Heartbeat': {
+      /**
+       * @description Actions are typed control directives from a closed set: pause,
+       *     resume, drain, rotate_key, update. Never free-form text.
+       */
+      actions?: string[]
       agent_id?: string
+      /**
+       * @description ConfigVersion is an opaque digest of what the platform governs about
+       *     the sensor; it changes when that changes. Sent to doorbell-aware
+       *     sensors only.
+       */
+      config_version?: string
+      /**
+       * @description NextHeartbeatSeconds is the server-advised interval to the next
+       *     heartbeat, already bounded by the server.
+       */
+      next_heartbeat_seconds?: number
+      /**
+       * @description PendingJobs is how many commands this sensor could claim right now
+       *     (capped at 100): poll GET /api/v1/agent/commands when it is > 0.
+       */
+      pending_jobs?: number
       status?: string
       tenant_id?: string
     }
@@ -30363,6 +31427,8 @@ export interface components {
       run_on_tenant_runner?: boolean
       /** @enum {string} */
       scan_type: 'workflow' | 'single'
+      /** @description ScanZoneID pins every target to one scan zone; empty = Automatic routing. */
+      scan_zone_id?: string
       scanner_config?: {
         [key: string]: unknown
       }
@@ -30398,6 +31464,12 @@ export interface components {
       target_scope?: string
       target_tags?: string[]
     }
+    'internal_infra_http_handler.CreateScanZoneRequest': {
+      description?: string
+      is_default?: boolean
+      name?: string
+      ranges?: string[]
+    }
     'internal_infra_http_handler.CreateScannerTemplateRequest': {
       /** @description Base64 encoded */
       content: string
@@ -30405,7 +31477,7 @@ export interface components {
       name: string
       tags?: string[]
       /** @enum {string} */
-      template_type: 'nuclei' | 'semgrep' | 'gitleaks'
+      template_type: 'nuclei' | 'semgrep' | 'betterleaks'
     }
     'internal_infra_http_handler.CreateScopeExclusionRequest': {
       exclusion_type: string
@@ -30448,7 +31520,7 @@ export interface components {
       /** @enum {string} */
       source_type: 'git' | 's3' | 'http'
       /** @enum {string} */
-      template_type: 'nuclei' | 'semgrep' | 'gitleaks'
+      template_type: 'nuclei' | 'semgrep' | 'betterleaks'
     }
     'internal_infra_http_handler.CreateTenantUserRequest': {
       email: string
@@ -30480,21 +31552,6 @@ export interface components {
       update_cmd?: string
       version_cmd?: string
       version_regex?: string
-    }
-    'internal_infra_http_handler.CreateVulnerabilityRequest': {
-      cve_id: string
-      cvss_score?: number
-      cvss_vector?: string
-      description?: string
-      /** @description 0-100 percentile; a 0-1 fraction is rescaled */
-      epss_percentile?: number
-      epss_score?: number
-      exploit_available?: boolean
-      exploit_maturity?: string
-      fixed_versions?: string[]
-      remediation?: string
-      severity: string
-      title: string
     }
     'internal_infra_http_handler.CredentialContextReq': {
       domain?: string
@@ -31182,6 +32239,21 @@ export interface components {
       status?: string
       timestamp?: string
     }
+    'internal_infra_http_handler.HeartbeatOutbox': {
+      /** @description DeadLetterCount is the number of items the platform refused for good. */
+      dead_letter_count?: number
+      /**
+       * @description EvictedCount is the number of items dropped by the size/age cap since
+       *     the sensor process started.
+       */
+      evicted_count?: number
+      /** @description OldestAgeSeconds is the age of the oldest pending item (0 when empty). */
+      oldest_age_seconds?: number
+      /** @description PendingBytes is the size on disk of those items. */
+      pending_bytes?: number
+      /** @description PendingCount is the number of items waiting to be delivered. */
+      pending_count?: number
+    }
     'internal_infra_http_handler.HeartbeatRequest': {
       active_jobs?: number
       collectors?: string[]
@@ -31200,6 +32272,13 @@ export interface components {
       name?: string
       network_rx_mbps?: number
       network_tx_mbps?: number
+      /**
+       * @description Outbox is the state of the sensor's durable outbox (results queued on
+       *     disk, waiting to be delivered). Optional: SDKs without an outbox omit
+       *     it, and a heartbeat without it leaves the stored snapshot untouched.
+       *     Display data only; values are clamped before they are stored.
+       */
+      outbox?: components['schemas']['internal_infra_http_handler.HeartbeatOutbox']
       region?: string
       scanners?: string[]
       status?: string
@@ -31360,6 +32439,20 @@ export interface components {
       /** @example 2024-01-15T10:30:00Z */
       updated_at?: string
     }
+    'internal_infra_http_handler.InvitationListItem': {
+      created_at?: string
+      email?: string
+      expires_at?: string
+      id?: string
+      invited_by?: string
+      pending?: boolean
+      role?: string
+      role_ids?: string[]
+    }
+    'internal_infra_http_handler.InvitationListResponse': {
+      data?: components['schemas']['internal_infra_http_handler.InvitationListItem'][]
+      total?: number
+    }
     'internal_infra_http_handler.LicensingModuleResponse': {
       category?: string
       description?: string
@@ -31377,6 +32470,14 @@ export interface components {
       page?: number
       page_size?: number
       total_count?: number
+    }
+    'internal_infra_http_handler.ListResponse-github_com_openctemio_api_pkg_domain_component_VulnerableComponent': {
+      data?: components['schemas']['github_com_openctemio_api_pkg_domain_component.VulnerableComponent'][]
+      links?: components['schemas']['internal_infra_http_handler.PaginationLinks']
+      page?: number
+      per_page?: number
+      total?: number
+      total_pages?: number
     }
     'internal_infra_http_handler.ListResponse-internal_infra_http_handler_AssetGroupResponse': {
       data?: components['schemas']['internal_infra_http_handler.AssetGroupResponse'][]
@@ -31720,6 +32821,12 @@ export interface components {
       name?: string
       type?: string
     }
+    'internal_infra_http_handler.PaginatedResponse': {
+      items?: unknown
+      limit?: number
+      offset?: number
+      total_count?: number
+    }
     'internal_infra_http_handler.PaginationLinks': {
       first?: string
       last?: string
@@ -31992,11 +33099,28 @@ export interface components {
       new_password: string
       token: string
     }
+    'internal_infra_http_handler.RevealCredentialResponse': {
+      id?: string
+      secret_value?: string
+    }
+    'internal_infra_http_handler.RunDispatchResponse': {
+      excluded_targets?: number
+      resolved_targets?: number
+      /**
+       * @description SensorRouting is where the run's commands were queued: "tenant" or
+       *     "platform" (shared platform sensors), decided at trigger time.
+       */
+      sensor_routing?: string
+      uncovered_targets?: components['schemas']['internal_infra_http_handler.RunUncoveredTarget'][]
+      warnings?: string[]
+      zone_routing?: components['schemas']['internal_infra_http_handler.RunZoneRouting']
+    }
     'internal_infra_http_handler.RunResponse': {
       asset_id?: string
       completed_at?: string
       completed_steps?: number
       created_at?: string
+      dispatch?: components['schemas']['internal_infra_http_handler.RunDispatchResponse']
       error_message?: string
       failed_steps?: number
       filtering_result?: components['schemas']['internal_infra_http_handler.FilteringResultResponse']
@@ -32014,6 +33138,31 @@ export interface components {
       total_steps?: number
       trigger_type?: string
       triggered_by?: string
+      /** @description display name, when triggered_by is a user id */
+      triggered_by_name?: string
+    }
+    'internal_infra_http_handler.RunUncoveredTarget': {
+      reason?: string
+      target?: string
+    }
+    'internal_infra_http_handler.RunZoneRoute': {
+      jobs?: number
+      /** @description waiting for a healthy sensor of the zone */
+      queued_jobs?: number
+      /** @description sensors the jobs were pinned to */
+      sensor_ids?: string[]
+      targets?: number
+      zone_id?: string
+      zone_name?: string
+    }
+    'internal_infra_http_handler.RunZoneRouting': {
+      jobs?: number
+      targets_per_job?: number
+      uncovered_targets?: number
+      unzoned_targets?: number
+      /** @description workflow runs: the one zone the run is bound to */
+      zone_id?: string
+      zones?: components['schemas']['internal_infra_http_handler.RunZoneRoute'][]
     }
     'internal_infra_http_handler.SCMExtensionResponse': {
       /** @example false */
@@ -32106,6 +33255,8 @@ export interface components {
       retry_backoff_seconds?: number
       run_on_tenant_runner?: boolean
       scan_type?: string
+      /** @description null = Automatic routing */
+      scan_zone_id?: string
       scanner_config?: {
         [key: string]: unknown
       }
@@ -32176,7 +33327,8 @@ export interface components {
       }
       schedule_type?: string
       target_ids?: string[]
-      target_scope?: string
+      /** @enum {string} */
+      target_scope?: 'all' | 'selected' | 'tag'
       target_tags?: string[]
       tenant_id?: string
       updated_at?: string
@@ -32218,6 +33370,58 @@ export interface components {
       disabled?: number
       paused?: number
       total?: number
+    }
+    'internal_infra_http_handler.ScanZoneCoverageResponse': {
+      has_default_zone?: boolean
+      in_zones?: number
+      inventory_addresses?: number
+      outside_private?: number
+      outside_public?: number
+      warnings?: components['schemas']['internal_infra_http_handler.ScanZoneCoverageWarning'][]
+      zones?: components['schemas']['internal_infra_http_handler.ScanZoneCoverageZone'][]
+    }
+    'internal_infra_http_handler.ScanZoneCoverageWarning': {
+      code?: string
+      message?: string
+      zone_id?: string
+    }
+    'internal_infra_http_handler.ScanZoneCoverageZone': {
+      addresses?: number
+      assigned_sensors?: number
+      has_private_range?: boolean
+      healthy_sensors?: number
+      is_default?: boolean
+      name?: string
+      zone_id?: string
+    }
+    'internal_infra_http_handler.ScanZoneListResponse': {
+      data?: components['schemas']['internal_infra_http_handler.ScanZoneResponse'][]
+      total?: number
+    }
+    'internal_infra_http_handler.ScanZonePreviewRequest': {
+      asset_group_ids?: string[]
+      /**
+       * @description PipelineID is accepted so a client can send its whole draft; a workflow
+       *     is routed the same whatever its steps, so it does not change the result.
+       */
+      pipeline_id?: string
+      scan_type?: string
+      scan_zone_id?: string
+      scanner_name?: string
+      targets?: string[]
+      targets_per_job?: number
+    }
+    'internal_infra_http_handler.ScanZoneResponse': {
+      created_at?: string
+      created_by?: string
+      description?: string
+      id?: string
+      is_default?: boolean
+      name?: string
+      ranges?: string[]
+      sensor_ids?: string[]
+      tenant_id?: string
+      updated_at?: string
     }
     'internal_infra_http_handler.ScannerTemplateResponse': {
       content_hash?: string
@@ -32297,6 +33501,14 @@ export interface components {
     'internal_infra_http_handler.SensorDisableRequest': {
       reason?: string
     }
+    'internal_infra_http_handler.SensorOutboxResponse': {
+      dead_letter_count?: number
+      evicted_count?: number
+      oldest_age_seconds?: number
+      pending_bytes?: number
+      pending_count?: number
+      reported_at?: string
+    }
     'internal_infra_http_handler.SensorRegenerateAPIKeyResponse': {
       api_key?: string
     }
@@ -32327,6 +33539,17 @@ export interface components {
       max_concurrent_jobs?: number
       memory_percent?: number
       name?: string
+      /**
+       * @description Outbox is the last outbox state the sensor reported on its heartbeat;
+       *     null when it never reported one (an SDK without a durable outbox).
+       */
+      outbox?: components['schemas']['internal_infra_http_handler.SensorOutboxResponse']
+      /**
+       * @description OutboxWarning is true when the last snapshot shows lost or stuck
+       *     results: dead_letter_count > 0, evicted_count > 0, or
+       *     oldest_age_seconds > 3600. False when there is no snapshot.
+       */
+      outbox_warning?: boolean
       region?: string
       /** @description Admin-controlled: active, disabled, revoked */
       status?: string
@@ -32359,8 +33582,22 @@ export interface components {
       online_active?: number
       total?: number
     }
+    'internal_infra_http_handler.SensorSuppressionRule': {
+      asset_id?: string
+      expires_at?: string
+      path_pattern?: string
+      rule_id?: string
+      tool_name?: string
+    }
+    'internal_infra_http_handler.SensorSuppressionsResponse': {
+      count?: number
+      rules?: components['schemas']['internal_infra_http_handler.SensorSuppressionRule'][]
+    }
     'internal_infra_http_handler.SessionsResponse': {
       sessions?: components['schemas']['github_com_openctemio_api_internal_app.SessionInfo'][]
+    }
+    'internal_infra_http_handler.SetSyncEnabledRequest': {
+      enabled?: boolean
     }
     'internal_infra_http_handler.SetTagsRequest': {
       tags?: string[]
@@ -32433,9 +33670,24 @@ export interface components {
       synced_at?: string
       updated_fields?: string[]
     }
+    'internal_infra_http_handler.SyncStatusResponse': {
+      enabled?: boolean
+      last_error?: string
+      last_sync_at?: string
+      last_sync_status?: string
+      next_sync_at?: string
+      records_synced?: number
+      source?: string
+    }
+    'internal_infra_http_handler.TargetMappingTypesResponse': {
+      /** @description AssetTypes are the asset types a target type can map to. */
+      asset_types?: string[]
+      /** @description TargetTypes are the scanner target types (tool supported_targets values). */
+      target_types?: string[]
+    }
     'internal_infra_http_handler.TemplateQuotaData': {
       max_templates?: number
-      max_templates_gitleaks?: number
+      max_templates_betterleaks?: number
       max_templates_nuclei?: number
       max_templates_semgrep?: number
       max_total_storage_bytes?: number
@@ -32465,7 +33717,7 @@ export interface components {
       updated_at?: string
     }
     'internal_infra_http_handler.TemplateUsageData': {
-      gitleaks_templates?: number
+      betterleaks_templates?: number
       nuclei_templates?: number
       semgrep_templates?: number
       total_storage_bytes?: number
@@ -32677,6 +33929,10 @@ export interface components {
       context?: {
         [key: string]: unknown
       }
+    }
+    'internal_infra_http_handler.TriggerSyncRequest': {
+      /** @description empty or "all" for all sources */
+      source?: string
     }
     'internal_infra_http_handler.UnreadCountResponse': {
       count?: number
@@ -32903,6 +34159,8 @@ export interface components {
       profile_id?: string
       retry_backoff_seconds?: number
       run_on_tenant_runner?: boolean
+      /** @description ScanZoneID: omitted = unchanged, "" = Automatic routing, id = pin to that zone. */
+      scan_zone_id?: string
       scanner_config?: {
         [key: string]: unknown
       }
@@ -32932,7 +34190,8 @@ export interface components {
       }
       schedule_type?: string
       target_ids?: string[]
-      target_scope?: string
+      /** @enum {string} */
+      target_scope?: 'all' | 'selected' | 'tag'
       target_tags?: string[]
     }
     'internal_infra_http_handler.UpdateScanSessionRequest': {
@@ -32945,6 +34204,12 @@ export interface components {
       findings_total?: number
       /** @enum {string} */
       status: 'completed' | 'failed' | 'canceled'
+    }
+    'internal_infra_http_handler.UpdateScanZoneRequest': {
+      description?: string
+      is_default?: boolean
+      name?: string
+      ranges?: string[]
     }
     'internal_infra_http_handler.UpdateScannerTemplateRequest': {
       /** @description Base64 encoded, optional */
@@ -33011,21 +34276,6 @@ export interface components {
       version_cmd?: string
       version_regex?: string
     }
-    'internal_infra_http_handler.UpdateVulnerabilityRequest': {
-      cvss_score?: number
-      cvss_vector?: string
-      description?: string
-      /** @description 0-100 percentile; a 0-1 fraction is rescaled */
-      epss_percentile?: number
-      epss_score?: number
-      exploit_available?: boolean
-      exploit_maturity?: string
-      fixed_versions?: string[]
-      remediation?: string
-      severity?: string
-      status?: string
-      title?: string
-    }
     'internal_infra_http_handler.UserInfo': {
       email?: string
       id?: string
@@ -33072,7 +34322,7 @@ export interface components {
       /** @description Base64 encoded */
       content: string
       /** @enum {string} */
-      template_type: 'nuclei' | 'semgrep' | 'gitleaks'
+      template_type: 'nuclei' | 'semgrep' | 'betterleaks'
     }
     'internal_infra_http_handler.ValidationErrorResponse': {
       code?: string
