@@ -23,6 +23,11 @@ export const maxDuration = 60 // seconds
 export const dynamic = 'force-dynamic'
 import { isInSwitchCooldown } from '@/lib/api/switch-cooldown'
 import { applyClientIpHeaders } from '@/lib/api/client-ip-headers'
+import {
+  isSensorProtocolPath,
+  SENSOR_PROTOCOL_REFUSAL,
+  SENSOR_PROTOCOL_REFUSAL_STATUS,
+} from '@/lib/api/sensor-protocol-guard'
 import { devLog } from '@/lib/logger'
 import { rotatedRefreshToken } from '@/lib/server-auth-cookies'
 
@@ -179,6 +184,11 @@ async function proxyRequest(
   request: NextRequest,
   params: { path: string[] }
 ): Promise<NextResponse> {
+  // A sensor pointed at the web UI: it must talk to the API directly.
+  if (isSensorProtocolPath(params.path)) {
+    return NextResponse.json(SENSOR_PROTOCOL_REFUSAL, { status: SENSOR_PROTOCOL_REFUSAL_STATUS })
+  }
+
   const path = params.path.join('/')
   const url = new URL(request.url)
   // Route is /api/v1/[...path], so we need to add /api/v1/ prefix for backend
