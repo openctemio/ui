@@ -1,6 +1,6 @@
 import { request } from '@playwright/test'
 import { test, expect } from '../fixtures/authenticated-page'
-import { LEGACY_VALIDATION_ROUTE_REDIRECTS } from '../../src/config/legacy-routes'
+import { LEGACY_VALIDATION_ROUTE_REDIRECTS, splitSource } from '../../src/config/legacy-routes'
 
 /**
  * Validation, campaign-first (two levels: group, then item).
@@ -35,12 +35,20 @@ test('every Validation entry opens', async ({ page }) => {
 test('old pentest list URLs answer 308', async ({ e2eConfig }) => {
   const ctx = await request.newContext({ baseURL: e2eConfig.baseURL })
   for (const r of LEGACY_VALIDATION_ROUTE_REDIRECTS) {
-    const from = r.source.replace('/:path*', '')
+    // Concrete URL: params become "c1", a has-condition key gets "c1".
+    const from =
+      '/' +
+      splitSource(r.source.replace('/:path*', ''))
+        .map((seg) => (seg.startsWith(':') ? 'c1' : seg))
+        .join('/')
     const q = new URLSearchParams({ e2e: '1' })
     for (const h of r.has ?? []) q.set(h.key, h.value ?? 'c1')
     const res = await ctx.get(`${from}?${q}`, { maxRedirects: 0 })
     expect(res.status(), from).toBe(308)
-    const expected = r.destination.replace('/:path*', '').replace(':campaign', 'c1').split('?')[0]
+    const expected = r.destination
+      .replace('/:path*', '')
+      .replace(/:[A-Za-z_]+/g, 'c1')
+      .split('?')[0]
     expect((res.headers()['location'] ?? '').split('?')[0], from).toBe(expected)
   }
   await ctx.dispose()

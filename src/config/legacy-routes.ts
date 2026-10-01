@@ -76,6 +76,21 @@ export const LEGACY_VALIDATION_ROUTE_REDIRECTS: LegacyRouteRedirect[] = [
   },
   { source: '/pentest/reports', destination: '/reports?tab=pentest', permanent: true },
   { source: '/pentest/retests', destination: '/validation/retests', permanent: true },
+  // In-app notifications (api compliance/pentest.go) link to a campaign as
+  // /pentest/campaigns?id=X and to a finding as /pentest/findings/X. The
+  // first opened the list, the second had no page at all; a pentest finding
+  // is a row of the unified findings table, so it opens at /findings/X.
+  {
+    source: '/pentest/campaigns',
+    has: [{ type: 'query', key: 'id' }],
+    destination: '/pentest/campaigns/:id',
+    permanent: true,
+  },
+  {
+    source: '/pentest/findings/:id((?!new$)[^/]+)',
+    destination: '/findings/:id',
+    permanent: true,
+  },
   {
     source: '/pentest/mitre-coverage',
     destination: '/validation/attack-coverage',
@@ -125,16 +140,10 @@ export function applyLegacyRoute(r: LegacyRouteRedirect, url: string): string | 
   for (const m of r.missing ?? []) {
     if (query.has(m.key) && (m.value === undefined || query.get(m.key) === m.value)) return null
   }
-  let dest: string
-  if (r.source.endsWith('/:path*')) {
-    const prefix = r.source.slice(0, -'/:path*'.length)
-    if (path !== prefix && !path.startsWith(`${prefix}/`)) return null
-    dest = r.destination.replace('/:path*', path.slice(prefix.length))
-  } else {
-    if (path !== r.source) return null
-    dest = r.destination
-  }
-  for (const [k, v] of Object.entries(captured)) {
+  const params = matchSource(r.source, path)
+  if (!params) return null
+  let dest = r.destination.replace('/:path*', params.rest)
+  for (const [k, v] of Object.entries({ ...params.named, ...captured })) {
     dest = dest.replace(`:${k}`, encodeURIComponent(v))
   }
   const [dPath, dQs = ''] = dest.split('?')
@@ -144,4 +153,55 @@ export function applyLegacyRoute(r: LegacyRouteRedirect, url: string): string | 
   })
   const out = merged.toString()
   return out ? `${dPath}?${out}` : dPath
+}
+
+/**
+ * Match a Next.js redirect source against a path, segment by segment:
+ * literals, `:name` (one segment), `:name(regex)` (one segment matching the
+ * regex, e.g. `:id((?!new$)[^/]+)`) and a trailing `:path*` (the rest, zero
+ * or more segments). Returns the captured params, or null.
+ */
+function matchSource(
+  source: string,
+  path: string
+): { named: Record<string, string>; rest: string } | null {
+  const src = splitSource(source)
+  const segs = path.split('/').filter(Boolean)
+  const named: Record<string, string> = {}
+  for (let i = 0; i < src.length; i++) {
+    const part = src[i]
+    if (part === ':path*' && i === src.length - 1) {
+      const rest = segs.slice(i)
+      return { named, rest: rest.length ? `/${rest.join('/')}` : '' }
+    }
+    const seg = segs[i]
+    if (seg === undefined) return null
+    const param = /^:([A-Za-z_]+)(?:\((.+)\))?$/.exec(part)
+    if (param) {
+      if (param[2] && !new RegExp(`^(?:${param[2]})$`).test(seg)) return null
+      named[param[1]] = decodeURIComponent(seg)
+    } else if (part !== seg) {
+      return null
+    }
+  }
+  return segs.length === src.length ? { named, rest: '' } : null
+}
+
+/** Split a redirect source on "/" outside parentheses (a param regex may contain "/"). */
+export function splitSource(source: string): string[] {
+  const out: string[] = []
+  let depth = 0
+  let cur = ''
+  for (const ch of source) {
+    if (ch === '(') depth++
+    if (ch === ')') depth--
+    if (ch === '/' && depth === 0) {
+      if (cur) out.push(cur)
+      cur = ''
+    } else {
+      cur += ch
+    }
+  }
+  if (cur) out.push(cur)
+  return out
 }
