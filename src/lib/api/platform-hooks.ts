@@ -1,7 +1,7 @@
 /**
- * Platform Agent API Hooks
+ * Platform Sensor API Hooks
  *
- * SWR hooks for Tiered Platform Agents feature
+ * SWR hooks for Tiered Platform Sensors feature
  *
  * NOTE: Platform Stats API is not yet implemented on backend.
  * Set PLATFORM_STATS_ENABLED to true when backend endpoint is ready.
@@ -15,9 +15,9 @@ import { handleApiError } from './error-handler'
 import { platformEndpoints } from './endpoints'
 import type {
   PlatformStatsResponse,
-  PlatformAgentListResponse,
-  PlatformAgentListFilters,
-  PlatformAgentTier,
+  PlatformSensorListResponse,
+  PlatformSensorListFilters,
+  PlatformSensorTier,
 } from './platform-types'
 
 // ============================================
@@ -65,9 +65,9 @@ const defaultConfig: SWRConfiguration = {
 export const platformKeys = {
   all: ['platform'] as const,
   stats: () => [...platformKeys.all, 'stats'] as const,
-  agents: () => [...platformKeys.all, 'agents'] as const,
-  agentList: (filters?: PlatformAgentListFilters) =>
-    [...platformKeys.agents(), 'list', filters] as const,
+  sensors: () => [...platformKeys.all, 'sensors'] as const,
+  sensorList: (filters?: PlatformSensorListFilters) =>
+    [...platformKeys.sensors(), 'list', filters] as const,
 }
 
 // ============================================
@@ -95,7 +95,7 @@ export async function invalidatePlatformStatsCache() {
 // ============================================
 
 /**
- * Fetch platform agent stats
+ * Fetch platform sensor stats
  * Returns tier stats, usage limits, and available slots
  *
  * @example
@@ -118,19 +118,19 @@ export function usePlatformStats(config?: SWRConfiguration) {
 }
 
 /**
- * Fetch platform agents list
+ * Fetch platform sensors list
  * Can filter by tier, status, health
  *
  * @example
  * ```tsx
- * const { data } = usePlatformAgents({ tier: 'dedicated', health: 'online' });
+ * const { data } = usePlatformSensors({ tier: 'dedicated', health: 'online' });
  * ```
  */
-export function usePlatformAgents(filters?: PlatformAgentListFilters, config?: SWRConfiguration) {
-  return useSWR<PlatformAgentListResponse>(
+export function usePlatformSensors(filters?: PlatformSensorListFilters, config?: SWRConfiguration) {
+  return useSWR<PlatformSensorListResponse>(
     // Return null key to disable fetching when feature is not enabled
-    PLATFORM_STATS_ENABLED ? platformKeys.agentList(filters) : null,
-    () => get<PlatformAgentListResponse>(platformEndpoints.agents(filters)),
+    PLATFORM_STATS_ENABLED ? platformKeys.sensorList(filters) : null,
+    () => get<PlatformSensorListResponse>(platformEndpoints.sensors(filters)),
     { ...defaultConfig, ...config }
   )
 }
@@ -140,7 +140,7 @@ export function usePlatformAgents(filters?: PlatformAgentListFilters, config?: S
 // ============================================
 
 /**
- * Hook to check if platform agents are enabled and get usage info
+ * Hook to check if platform sensors are enabled and get usage info
  *
  * @example
  * ```tsx
@@ -155,10 +155,10 @@ export function usePlatformUsage(config?: SWRConfiguration) {
   const { data, isLoading, error } = usePlatformStats(config)
 
   return {
-    /** Whether platform agents are enabled for this tenant */
+    /** Whether platform sensors are enabled for this tenant */
     isEnabled: data?.enabled ?? false,
     /** Maximum tier accessible to this tenant */
-    maxTier: data?.max_tier as PlatformAgentTier | undefined,
+    maxTier: data?.max_tier as PlatformSensorTier | undefined,
     /** Accessible tiers based on plan */
     accessibleTiers: data?.accessible_tiers ?? [],
     /** Maximum concurrent jobs allowed */

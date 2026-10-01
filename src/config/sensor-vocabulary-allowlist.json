@@ -1,0 +1,73 @@
+{
+  "$comment": "Where the word 'agent' may still appear in src/ after the agent -> sensor rename (RFC-023 §9.5). Read by src/config/__tests__/sensor-vocabulary.test.ts (the guard) and by scripts/rename/sensor-rename.mjs (which leaves these occurrences alone). An occurrence is allowed when the file matches `files` and the occurrence lies inside a match of `pattern` on its line. Do not add an entry to name a sensor concept 'agent': use the sensor vocabulary.",
+  "entries": [
+    {
+      "id": "http-user-agent",
+      "files": ".*",
+      "pattern": "[Uu]ser[-_ ]?[Aa]gent|USER_AGENT",
+      "reason": "The HTTP User-Agent header, the user_agent session/IOC field and navigator.userAgent are not sensors."
+    },
+    {
+      "id": "ai-triage-agent-mode",
+      "files": "^src/features/ai-triage/",
+      "pattern": "\\bagent\\b",
+      "reason": "The AI-triage mode 'agent' (self-hosted LLM agent, module ai_triage.agent) is an LLM agent, not a sensor."
+    },
+    {
+      "id": "third-party-agent-products",
+      "files": ".*",
+      "pattern": "(Elastic|Datadog) Agent",
+      "reason": "Product names of other vendors' agents (Elastic Agent + Fleet, Datadog Agent), cited as prior art."
+    },
+    {
+      "id": "endpoint-agent-role",
+      "files": ".*",
+      "pattern": "endpoint[- ]agents?",
+      "reason": "'Agent' now names one sensor role only: the endpoint agent (RFC-023 §9.1, D18)."
+    },
+    {
+      "id": "historical-audit-spelling",
+      "files": "^src/lib/api/audit-types\\.ts$",
+      "pattern": "HISTORICAL_SENSOR_[A-Z_]+\\s*=\\s*'agent[._]?'",
+      "reason": "Audit rows written before the rename keep action agent.*, resource type agent and metadata agent_* (hash-chained, never rewritten). One constant per spelling; the UI labels both."
+    },
+    {
+      "id": "historical-audit-spelling-tests",
+      "files": "^src/lib/api/__tests__/audit-types\\.test\\.ts$",
+      "pattern": ".*",
+      "reason": "Tests that rows written before the rename are labelled."
+    },
+    {
+      "id": "legacy-route-redirects",
+      "files": "^(next\\.config\\.ts|src/config/legacy-sensor-routes\\.ts|src/config/__tests__/legacy-sensor-routes\\.test\\.ts)$",
+      "pattern": "/agents|'agents'",
+      "reason": "Bookmarked /agents URLs redirect permanently to /sensors."
+    },
+    {
+      "id": "browser-storage-migration",
+      "files": "^src/lib/(__tests__/)?sensor-storage-migration(\\.test)?\\.ts$",
+      "pattern": ".*",
+      "reason": "Migrates browser storage written before the rename (old keys and agents:* values) once, on load."
+    },
+    {
+      "id": "formerly-agents",
+      "files": ".*",
+      "pattern": "[Ff]ormerly (called )?[Aa]gents?",
+      "reason": "'Sensors (formerly Agents)' keeps users oriented for two releases after the rename (RFC-023 §9.4)."
+    },
+    {
+      "id": "vocabulary-guard",
+      "files": "^src/config/(__tests__/sensor-vocabulary\\.test\\.ts|sensor-vocabulary-allowlist\\.json)$",
+      "pattern": ".*",
+      "reason": "The guard and its allow-list name the word they guard."
+    },
+    {
+      "id": "generated-relationship-catalogue",
+      "files": "^src/features/assets/types/relationship\\.types\\.generated\\.ts$",
+      "pattern": "runtime security agents",
+      "reason": "Generated from the relationship-type catalogue; describes third-party EDR agents, not our sensors."
+    }
+  ],
+  "excludedPaths": ["^src/lib/api/openapi/", "^src/lib/api/generated/"],
+  "excludedPathsReason": "The vendored OpenAPI spec and the types generated from it are copies of the API's spec, which still documents protocol v1 (/api/v1/agent/*, agent_id) on purpose. They change only by re-vendoring (npm run generate:api-types)."
+}

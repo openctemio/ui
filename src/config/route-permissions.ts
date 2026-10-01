@@ -43,6 +43,7 @@ export const Module = {
   Assets: 'assets',
   Findings: 'findings',
   Scans: 'scans',
+  Sensors: 'sensors',
   Reports: 'reports',
   Audit: 'audit',
   Components: 'components',
@@ -493,22 +494,24 @@ export const routePermissions: Record<string, RoutePermissionConfig> = {
   },
 
   // ========================================
-  // Settings - Agents (Module: scans)
-  // Backend uses AgentsRead for agent management routes
+  // Settings - Sensors (Module: sensors)
+  // The API gates /api/v1/sensors with sensors:* and serves the sensors module
+  // to members holding sensors:read; gating on the scans module would lock out
+  // a member who may read sensors but not scans.
   // ========================================
-  '/agents': {
-    permission: Permission.AgentsRead,
-    module: Module.Scans,
+  '/sensors': {
+    permission: Permission.SensorsRead,
+    module: Module.Sensors,
   },
-  '/agents/**': {
-    permission: Permission.AgentsRead,
-    module: Module.Scans,
+  '/sensors/**': {
+    permission: Permission.SensorsRead,
+    module: Module.Sensors,
   },
-  // /runners renders the same agent/runner inventory as /agents (typeFilter)
+  // /runners renders the same sensor/runner inventory as /sensors (typeFilter)
   // — mirror its guard so it isn't left fail-open.
   '/runners': {
-    permission: Permission.AgentsRead,
-    module: Module.Scans,
+    permission: Permission.SensorsRead,
+    module: Module.Sensors,
   },
   '/scan-profiles': {
     permission: Permission.ScanProfilesRead,

@@ -340,7 +340,7 @@ interface ScanRunsResponse {
 /**
  * Runs of one scan.
  *
- * Not to be confused with useScanSessions: a scan session is an agent's
+ * Not to be confused with useScanSessions: a scan session is a sensor's
  * execution record and carries no scan_id, so it cannot be narrowed to a
  * single scan. Pipeline runs do carry scan_id, which makes this the only
  * hook that can answer "what has this scan done".

@@ -216,7 +216,7 @@ export interface ToolWithConfig {
   tenant_config?: TenantToolConfig
   effective_config: Record<string, unknown>
   is_enabled: boolean
-  is_available: boolean // True if at least one agent (tenant or platform) supports this tool
+  is_available: boolean // True if at least one sensor (tenant or platform) supports this tool
 }
 
 /**
@@ -267,7 +267,7 @@ export interface ToolExecution {
   id: string
   tenant_id: string
   tool_id: string
-  agent_id?: string
+  sensor_id?: string
   pipeline_run_id?: string
   step_run_id?: string
   status: ExecutionStatus
@@ -297,7 +297,7 @@ export interface ToolExecutionListResponse {
  */
 export interface ToolExecutionListFilters {
   tool_id?: string
-  agent_id?: string
+  sensor_id?: string
   pipeline_run_id?: string
   status?: ExecutionStatus
   page?: number

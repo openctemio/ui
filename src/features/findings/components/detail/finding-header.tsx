@@ -40,7 +40,7 @@ import {
   useUnassignFindingApi,
   useRequestVerificationScanApi,
   useRequestValidationApi,
-  isNoValidationAgentError,
+  isNoValidationSensorError,
   invalidateFindingsCache,
 } from '../../api/use-findings-api'
 import { FINDING_STATUS_CONFIG, SEVERITY_CONFIG, requiresApproval } from '../../types'
@@ -332,15 +332,15 @@ export function FindingHeader({
     try {
       await requestValidation()
       toast.success('Re-verification queued', {
-        description: 'A safe-check validation job was dispatched to an agent.',
+        description: 'A safe-check validation job was dispatched to a sensor.',
         duration: 5000,
       })
     } catch (error) {
-      // The API returns 400 when no validation-capable agent is online — surface
+      // The API returns 400 when no validation-capable sensor is online — surface
       // an actionable hint rather than a generic failure.
-      if (isNoValidationAgentError(error)) {
-        toast.error('No validation agent is online', {
-          description: 'Deploy a validation agent to run re-verification.',
+      if (isNoValidationSensorError(error)) {
+        toast.error('No validation sensor is online', {
+          description: 'Deploy a validation sensor to run re-verification.',
           duration: 6000,
         })
         return

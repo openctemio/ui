@@ -2271,11 +2271,11 @@ function SessionDetailSheet({ session }: SessionDetailSheetProps) {
                   </Button>
                 </div>
               </div>
-              {session.agent_id && (
+              {session.sensor_id && (
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Agent ID</span>
+                  <span className="text-sm text-muted-foreground">Sensor ID</span>
                   <code className="text-xs bg-muted px-2 py-1 rounded truncate max-w-[150px]">
-                    {session.agent_id.substring(0, 8)}...
+                    {session.sensor_id.substring(0, 8)}...
                   </code>
                 </div>
               )}

@@ -1,23 +1,25 @@
 import { z } from 'zod'
 
-// Agent type options (CTEM framework)
+// Sensor type options (CTEM framework)
+// Legacy v1 type values (RFC-023 §9.1). "Sensor" is now the umbrella term, so
+// the old 'sensor' type (an EASM vantage point) is labelled External (EASM).
 // runner = CI/CD one-shot, worker = daemon, collector = asset discovery, sensor = EASM
-export const AGENT_TYPE_OPTIONS = [
+export const SENSOR_TYPE_OPTIONS = [
   { value: 'runner', label: 'Runner', description: 'CI/CD pipeline runner (one-shot execution)' },
   { value: 'worker', label: 'Worker', description: 'Long-running daemon worker' },
   { value: 'collector', label: 'Collector', description: 'Asset discovery collector' },
-  { value: 'sensor', label: 'Sensor', description: 'EASM external sensor' },
+  { value: 'sensor', label: 'External (EASM)', description: 'Internet-facing EASM vantage point' },
 ] as const
 
-// Agent status options (admin-controlled)
-export const AGENT_STATUS_OPTIONS = [
+// Sensor status options (admin-controlled)
+export const SENSOR_STATUS_OPTIONS = [
   { value: 'active', label: 'Active' },
   { value: 'disabled', label: 'Disabled' },
   { value: 'revoked', label: 'Revoked' },
 ] as const
 
-// Agent health options (heartbeat-based, automatic)
-export const AGENT_HEALTH_OPTIONS = [
+// Sensor health options (heartbeat-based, automatic)
+export const SENSOR_HEALTH_OPTIONS = [
   { value: 'unknown', label: 'Unknown' },
   { value: 'online', label: 'Online' },
   { value: 'offline', label: 'Offline' },
@@ -25,22 +27,22 @@ export const AGENT_HEALTH_OPTIONS = [
 ] as const
 
 // Execution mode options
-export const AGENT_EXECUTION_MODE_OPTIONS = [
+export const SENSOR_EXECUTION_MODE_OPTIONS = [
   { value: 'standalone', label: 'Standalone' },
   { value: 'daemon', label: 'Daemon' },
 ] as const
 
 // Note: Capability and Tool options are now dynamically loaded from the API
-// See: useAgentFormOptions hook in ../hooks/use-agent-form-options.ts
+// See: useSensorFormOptions hook in ../hooks/use-sensor-form-options.ts
 
 // Enum schemas
-export const agentTypeSchema = z.enum(['runner', 'worker', 'collector', 'sensor'])
-export const agentStatusSchema = z.enum(['active', 'disabled', 'revoked'])
-export const agentHealthSchema = z.enum(['unknown', 'online', 'offline', 'error'])
+export const sensorTypeSchema = z.enum(['runner', 'worker', 'collector', 'sensor'])
+export const sensorStatusSchema = z.enum(['active', 'disabled', 'revoked'])
+export const sensorHealthSchema = z.enum(['unknown', 'online', 'offline', 'error'])
 export const executionModeSchema = z.enum(['standalone', 'daemon'])
 
-// Create agent form data type (for form)
-export interface CreateAgentFormData {
+// Create sensor form data type (for form)
+export interface CreateSensorFormData {
   name: string
   type: 'runner' | 'worker' | 'collector' | 'sensor'
   description?: string
@@ -50,10 +52,10 @@ export interface CreateAgentFormData {
   labels?: Record<string, string>
 }
 
-// Create agent schema
-export const createAgentSchema = z.object({
+// Create sensor schema
+export const createSensorSchema = z.object({
   name: z.string().min(1, 'Name is required').max(255, 'Name must be less than 255 characters'),
-  type: agentTypeSchema,
+  type: sensorTypeSchema,
   description: z.string().max(1000).optional(),
   capabilities: z.array(z.string()),
   tools: z.array(z.string()),
@@ -61,8 +63,8 @@ export const createAgentSchema = z.object({
   labels: z.record(z.string(), z.string()).optional(),
 })
 
-// Update agent form data type (for form)
-export interface UpdateAgentFormData {
+// Update sensor form data type (for form)
+export interface UpdateSensorFormData {
   name?: string
   description?: string
   capabilities?: string[]
@@ -72,8 +74,8 @@ export interface UpdateAgentFormData {
   labels?: Record<string, string>
 }
 
-// Update agent schema
-export const updateAgentSchema = z.object({
+// Update sensor schema
+export const updateSensorSchema = z.object({
   name: z
     .string()
     .min(1, 'Name is required')
@@ -83,6 +85,6 @@ export const updateAgentSchema = z.object({
   capabilities: z.array(z.string()).optional(),
   tools: z.array(z.string()).optional(),
   execution_mode: executionModeSchema.optional(),
-  status: agentStatusSchema.optional(),
+  status: sensorStatusSchema.optional(),
   labels: z.record(z.string(), z.string()).optional(),
 })

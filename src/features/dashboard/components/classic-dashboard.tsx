@@ -328,8 +328,8 @@ export function ClassicDashboard() {
       )}
 
       {/* Operations Row — rich-content cards grouped together so heights balance.
-          Platform Agents lived in the stats row before, but its 4-row body
-          (Active Jobs / Queued / Available / Agents-by-Tier) forced the four
+          Platform Sensors lived in the stats row before, but its 4-row body
+          (Active Jobs / Queued / Available / Sensors-by-Tier) forced the four
           scalar stat cards to match its height, leaving them visually empty. */}
       {!isLoading && !error && (
         <section className="mb-6 grid gap-4 md:grid-cols-2 lg:grid-cols-3">

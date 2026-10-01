@@ -28,24 +28,24 @@ import {
   BarChart3,
 } from 'lucide-react'
 
-import type { Agent } from '@/lib/api/agent-types'
+import type { Sensor } from '@/lib/api/sensor-types'
 import { CapabilityBadge } from '@/components/capability-badge'
-import { AgentTypeIcon, AGENT_TYPE_LABELS, AGENT_TYPE_COLORS } from './agent-type-icon'
-import { AgentAuditLog } from './agent-audit-log'
-import { AgentAnalytics } from './agent-analytics'
+import { SensorTypeIcon, SENSOR_TYPE_LABELS, SENSOR_TYPE_COLORS } from './sensor-type-icon'
+import { SensorAuditLog } from './sensor-audit-log'
+import { SensorAnalytics } from './sensor-analytics'
 import { Can, Permission } from '@/lib/permissions'
 
-interface AgentDetailSheetProps {
-  agent: Agent | null
+interface SensorDetailSheetProps {
+  sensor: Sensor | null
   open: boolean
   onOpenChange: (open: boolean) => void
-  onEdit: (agent: Agent) => void
-  onRegenerateKey: (agent: Agent) => void
-  onViewConfig: (agent: Agent) => void
-  onDelete: (agent: Agent) => void
-  onActivate?: (agent: Agent) => void
-  onDeactivate?: (agent: Agent) => void
-  onRevoke?: (agent: Agent) => void
+  onEdit: (sensor: Sensor) => void
+  onRegenerateKey: (sensor: Sensor) => void
+  onViewConfig: (sensor: Sensor) => void
+  onDelete: (sensor: Sensor) => void
+  onActivate?: (sensor: Sensor) => void
+  onDeactivate?: (sensor: Sensor) => void
+  onRevoke?: (sensor: Sensor) => void
 }
 
 // Status config for admin-controlled status (active, disabled, revoked)
@@ -104,8 +104,8 @@ const healthConfig: Record<
   },
 }
 
-export function AgentDetailSheet({
-  agent,
+export function SensorDetailSheet({
+  sensor,
   open,
   onOpenChange,
   onEdit,
@@ -115,23 +115,23 @@ export function AgentDetailSheet({
   onActivate,
   onDeactivate,
   onRevoke,
-}: AgentDetailSheetProps) {
-  if (!agent) return null
+}: SensorDetailSheetProps) {
+  if (!sensor) return null
 
-  // Use health for display when agent is active, otherwise show admin status
+  // Use health for display when sensor is active, otherwise show admin status
   const displayHealth =
-    agent.status === 'active'
-      ? healthConfig[agent.health] || healthConfig.unknown
-      : statusConfig[agent.status] || statusConfig.disabled
-  const isDaemon = agent.execution_mode === 'daemon'
+    sensor.status === 'active'
+      ? healthConfig[sensor.health] || healthConfig.unknown
+      : statusConfig[sensor.status] || statusConfig.disabled
+  const isDaemon = sensor.execution_mode === 'daemon'
 
-  // Gradient based on health (for active agents) or status
+  // Gradient based on health (for active sensors) or status
   const gradientClass =
-    agent.status !== 'active'
+    sensor.status !== 'active'
       ? 'from-gray-500/20 via-gray-500/10'
-      : agent.health === 'online'
+      : sensor.health === 'online'
         ? 'from-green-500/20 via-green-500/10'
-        : agent.health === 'error'
+        : sensor.health === 'error'
           ? 'from-red-500/20 via-red-500/10'
           : 'from-gray-500/20 via-gray-500/10'
 
@@ -142,18 +142,18 @@ export function AgentDetailSheet({
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <VisuallyHidden>
-          <SheetTitle>Agent Details</SheetTitle>
+          <SheetTitle>Sensor Details</SheetTitle>
         </VisuallyHidden>
 
         {/* Toolbar */}
         <TooltipProvider>
           <SheetDetailToolbar
-            title="Agent Details"
+            title="Sensor Details"
             onClose={() => onOpenChange(false)}
-            onEdit={() => onEdit(agent)}
+            onEdit={() => onEdit(sensor)}
             onCopyId={() => {
-              copyToClipboard(agent.id)
-              toast.success('Agent ID copied')
+              copyToClipboard(sensor.id)
+              toast.success('Sensor ID copied')
             }}
             className={`bg-gradient-to-br ${gradientClass} to-transparent`}
           />
@@ -163,14 +163,14 @@ export function AgentDetailSheet({
         <div className={`bg-gradient-to-br px-6 pb-4 ${gradientClass} to-transparent`}>
           <div className="mb-3 flex items-center gap-3">
             <div
-              className={`flex h-12 w-12 items-center justify-center rounded-xl ${AGENT_TYPE_COLORS[agent.type]}`}
+              className={`flex h-12 w-12 items-center justify-center rounded-xl ${SENSOR_TYPE_COLORS[sensor.type]}`}
             >
-              <AgentTypeIcon type={agent.type} className="h-6 w-6" />
+              <SensorTypeIcon type={sensor.type} className="h-6 w-6" />
             </div>
             <div className="flex-1">
-              <h2 className="text-xl font-bold">{agent.name}</h2>
+              <h2 className="text-xl font-bold">{sensor.name}</h2>
               <p className="text-sm text-muted-foreground">
-                {agent.description || AGENT_TYPE_LABELS[agent.type]}
+                {sensor.description || SENSOR_TYPE_LABELS[sensor.type]}
               </p>
             </div>
             <Badge className={`${displayHealth.bgColor} text-white gap-1`}>
@@ -192,43 +192,43 @@ export function AgentDetailSheet({
                 Standalone Mode
               </Badge>
             )}
-            <Badge variant="outline">{AGENT_TYPE_LABELS[agent.type]}</Badge>
+            <Badge variant="outline">{SENSOR_TYPE_LABELS[sensor.type]}</Badge>
           </div>
 
           {/* Quick Actions */}
           <div className="flex flex-wrap gap-2">
-            <Can permission={Permission.AgentsWrite}>
-              <Button size="sm" variant="secondary" onClick={() => onEdit(agent)}>
+            <Can permission={Permission.SensorsWrite}>
+              <Button size="sm" variant="secondary" onClick={() => onEdit(sensor)}>
                 <Settings className="me-2 h-4 w-4" />
                 Edit
               </Button>
             </Can>
-            <Button size="sm" variant="outline" onClick={() => onViewConfig(agent)}>
+            <Button size="sm" variant="outline" onClick={() => onViewConfig(sensor)}>
               <FileCode className="me-2 h-4 w-4" />
               View Config
             </Button>
-            <Can permission={Permission.AgentsWrite}>
-              <Button size="sm" variant="outline" onClick={() => onRegenerateKey(agent)}>
+            <Can permission={Permission.SensorsWrite}>
+              <Button size="sm" variant="outline" onClick={() => onRegenerateKey(sensor)}>
                 <KeyRound className="me-2 h-4 w-4" />
                 Regenerate Key
               </Button>
-              {(agent.status === 'disabled' || agent.status === 'revoked') && onActivate && (
+              {(sensor.status === 'disabled' || sensor.status === 'revoked') && onActivate && (
                 <Button
                   size="sm"
                   variant="outline"
                   className="border-green-500/30 text-green-500 hover:bg-green-500/10"
-                  onClick={() => onActivate(agent)}
+                  onClick={() => onActivate(sensor)}
                 >
                   <Power className="me-2 h-4 w-4" />
                   Activate
                 </Button>
               )}
-              {agent.status === 'active' && onDeactivate && (
+              {sensor.status === 'active' && onDeactivate && (
                 <Button
                   size="sm"
                   variant="outline"
                   className="border-amber-500/30 text-amber-500 hover:bg-amber-500/10"
-                  onClick={() => onDeactivate(agent)}
+                  onClick={() => onDeactivate(sensor)}
                 >
                   <PowerOff className="me-2 h-4 w-4" />
                   Deactivate
@@ -259,35 +259,35 @@ export function AgentDetailSheet({
             <div className="grid grid-cols-3 gap-3">
               <div className="rounded-xl border bg-card p-4 text-center">
                 <Activity className="mx-auto mb-2 h-5 w-5 text-blue-500" />
-                <p className="text-2xl font-bold">{agent.total_scans.toLocaleString()}</p>
+                <p className="text-2xl font-bold">{sensor.total_scans.toLocaleString()}</p>
                 <p className="text-xs text-muted-foreground">Total Scans</p>
               </div>
               <div className="rounded-xl border bg-card p-4 text-center">
                 <AlertTriangle
                   className={`mx-auto mb-2 h-5 w-5 ${
-                    agent.total_findings > 0 ? 'text-amber-500' : 'text-muted-foreground'
+                    sensor.total_findings > 0 ? 'text-warning' : 'text-muted-foreground'
                   }`}
                 />
-                <p className="text-2xl font-bold">{agent.total_findings.toLocaleString()}</p>
+                <p className="text-2xl font-bold">{sensor.total_findings.toLocaleString()}</p>
                 <p className="text-xs text-muted-foreground">Findings</p>
               </div>
               <div className="rounded-xl border bg-card p-4 text-center">
                 <AlertCircle
                   className={`mx-auto mb-2 h-5 w-5 ${
-                    agent.error_count > 0 ? 'text-red-500' : 'text-muted-foreground'
+                    sensor.error_count > 0 ? 'text-destructive' : 'text-muted-foreground'
                   }`}
                 />
-                <p className="text-2xl font-bold">{agent.error_count.toLocaleString()}</p>
+                <p className="text-2xl font-bold">{sensor.error_count.toLocaleString()}</p>
                 <p className="text-xs text-muted-foreground">Errors</p>
               </div>
             </div>
 
             {/* Tools */}
-            {(agent.tools?.length ?? 0) > 0 && (
+            {(sensor.tools?.length ?? 0) > 0 && (
               <div className="rounded-xl border bg-card p-4">
                 <h4 className="mb-2 text-sm font-medium">Tools</h4>
                 <div className="flex flex-wrap gap-1">
-                  {(agent.tools ?? []).map((tool) => (
+                  {(sensor.tools ?? []).map((tool) => (
                     <Badge key={tool} variant="secondary">
                       {tool}
                     </Badge>
@@ -297,11 +297,11 @@ export function AgentDetailSheet({
             )}
 
             {/* Labels */}
-            {agent.labels && Object.keys(agent.labels).length > 0 && (
+            {sensor.labels && Object.keys(sensor.labels).length > 0 && (
               <div className="rounded-xl border bg-card p-4">
                 <h4 className="mb-2 text-sm font-medium">Labels</h4>
                 <div className="flex flex-wrap gap-1">
-                  {Object.entries(agent.labels).map(([key, value]) => (
+                  {Object.entries(sensor.labels).map(([key, value]) => (
                     <Badge key={key} variant="outline">
                       {key}: {value}
                     </Badge>
@@ -311,10 +311,10 @@ export function AgentDetailSheet({
             )}
 
             {/* Status Message */}
-            {agent.status_message && (
+            {sensor.status_message && (
               <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
                 <h4 className="mb-1 text-sm font-medium text-amber-500">Status Message</h4>
-                <p className="text-sm text-muted-foreground">{agent.status_message}</p>
+                <p className="text-sm text-muted-foreground">{sensor.status_message}</p>
               </div>
             )}
           </TabsContent>
@@ -325,7 +325,7 @@ export function AgentDetailSheet({
                 <BarChart3 className="h-4 w-4" />
                 Session Analytics (Last 30 Days)
               </h4>
-              <AgentAnalytics agentId={agent.id} />
+              <SensorAnalytics sensorId={sensor.id} />
             </div>
           </TabsContent>
 
@@ -333,9 +333,9 @@ export function AgentDetailSheet({
             {/* Capabilities */}
             <div className="rounded-xl border bg-card p-4">
               <h4 className="mb-3 text-sm font-medium">Capabilities</h4>
-              {(agent.capabilities?.length ?? 0) > 0 ? (
+              {(sensor.capabilities?.length ?? 0) > 0 ? (
                 <div className="grid grid-cols-2 gap-2">
-                  {(agent.capabilities ?? []).map((cap) => (
+                  {(sensor.capabilities ?? []).map((cap) => (
                     <div key={cap} className="flex items-center gap-2 rounded-lg bg-muted/50 p-2">
                       <CheckCircle className="h-4 w-4 text-green-500" />
                       <CapabilityBadge name={cap} showIcon />
@@ -352,10 +352,10 @@ export function AgentDetailSheet({
               <h4 className="mb-2 text-sm font-medium">API Key</h4>
               <div className="flex items-center justify-between">
                 <code className="rounded bg-muted px-2 py-1 text-xs">
-                  {agent.api_key_prefix}...
+                  {sensor.api_key_prefix}...
                 </code>
-                <Can permission={Permission.AgentsWrite}>
-                  <Button size="sm" variant="outline" onClick={() => onRegenerateKey(agent)}>
+                <Can permission={Permission.SensorsWrite}>
+                  <Button size="sm" variant="outline" onClick={() => onRegenerateKey(sensor)}>
                     <KeyRound className="me-2 h-3 w-3" />
                     Regenerate
                   </Button>
@@ -370,69 +370,71 @@ export function AgentDetailSheet({
                 <History className="h-4 w-4" />
                 Activity Log
               </h4>
-              <AgentAuditLog agentId={agent.id} />
+              <SensorAuditLog sensorId={sensor.id} />
             </div>
           </TabsContent>
 
           <TabsContent value="details" className="mt-0 space-y-4">
-            {/* Agent Information */}
+            {/* Sensor Information */}
             <div className="rounded-xl border bg-card p-4">
-              <h4 className="mb-3 text-sm font-medium">Agent Information</h4>
+              <h4 className="mb-3 text-sm font-medium">Sensor Information</h4>
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Type</span>
-                  <Badge variant="outline">{AGENT_TYPE_LABELS[agent.type]}</Badge>
+                  <Badge variant="outline">{SENSOR_TYPE_LABELS[sensor.type]}</Badge>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Execution Mode</span>
                   <span className="text-sm">
-                    {agent.execution_mode === 'daemon' ? 'Daemon' : 'Standalone'}
+                    {sensor.execution_mode === 'daemon' ? 'Daemon' : 'Standalone'}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Version</span>
-                  <span className="font-mono text-sm">{agent.version || 'Unknown'}</span>
+                  <span className="font-mono text-sm">{sensor.version || 'Unknown'}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Hostname</span>
-                  <span className="text-sm">{agent.hostname || 'N/A'}</span>
+                  <span className="text-sm">{sensor.hostname || 'N/A'}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">IP Address</span>
                   <code className="rounded bg-muted px-2 py-1 text-xs">
-                    {agent.ip_address || 'N/A'}
+                    {sensor.ip_address || 'N/A'}
                   </code>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Last Seen</span>
                   <span className="text-sm">
-                    {agent.last_seen_at ? new Date(agent.last_seen_at).toLocaleString() : 'Never'}
+                    {sensor.last_seen_at ? new Date(sensor.last_seen_at).toLocaleString() : 'Never'}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Created</span>
-                  <span className="text-sm">{new Date(agent.created_at).toLocaleDateString()}</span>
+                  <span className="text-sm">
+                    {new Date(sensor.created_at).toLocaleDateString()}
+                  </span>
                 </div>
               </div>
             </div>
 
             {/* Danger Zone */}
-            <Can permission={Permission.AgentsDelete}>
+            <Can permission={Permission.SensorsDelete}>
               <div className="rounded-xl border border-red-500/30 bg-red-500/5 p-4">
                 <h4 className="mb-2 text-sm font-medium text-red-500">Danger Zone</h4>
                 <div className="space-y-3">
                   {/* Revoke - only show if not already revoked */}
-                  {agent.status !== 'revoked' && onRevoke && (
+                  {sensor.status !== 'revoked' && onRevoke && (
                     <div>
                       <p className="mb-2 text-xs text-muted-foreground">
-                        Permanently revoke this agent&apos;s access. The agent will not be able to
+                        Permanently revoke this sensor&apos;s access. The sensor will not be able to
                         authenticate.
                       </p>
                       <Button
                         variant="outline"
                         size="sm"
                         className="w-full border-red-500/50 text-red-500 hover:bg-red-500/10"
-                        onClick={() => onRevoke(agent)}
+                        onClick={() => onRevoke(sensor)}
                       >
                         <AlertCircle className="me-2 h-4 w-4" />
                         Revoke Access
@@ -443,19 +445,19 @@ export function AgentDetailSheet({
                   {/* Delete */}
                   <div>
                     <p className="mb-2 text-xs text-muted-foreground">
-                      Permanently delete this agent and invalidate its API key.
+                      Permanently delete this sensor and invalidate its API key.
                     </p>
                     <Button
                       variant="destructive"
                       size="sm"
                       className="w-full"
                       onClick={() => {
-                        onDelete(agent)
+                        onDelete(sensor)
                         onOpenChange(false)
                       }}
                     >
                       <Trash2 className="me-2 h-4 w-4" />
-                      Delete Agent
+                      Delete Sensor
                     </Button>
                   </div>
                 </div>

@@ -42,7 +42,7 @@ import { scanEndpoints, pipelineRunEndpoints } from '@/lib/api/endpoints'
 import {
   SCAN_TYPE_LABELS,
   SCHEDULE_TYPE_LABELS,
-  AGENT_PREFERENCE_LABELS,
+  SENSOR_PREFERENCE_LABELS,
   type PipelineRun,
 } from '@/lib/api/scan-types'
 import { PIPELINE_TRIGGER_LABELS, type PipelineTriggerType } from '@/lib/api/pipeline-types'
@@ -87,7 +87,7 @@ export default function ScanDetailPage() {
   // Fetch scan config
   const { data: config, isLoading, error } = useScanConfig(scanId)
 
-  // Runs of THIS scan. This used to list scan sessions, which are an agent's
+  // Runs of THIS scan. This used to list scan sessions, which are a sensor's
   // execution records and carry no scan_id — so the list showed the tenant's
   // last 10 sessions no matter which scan you opened. Pipeline runs carry
   // scan_id, so this endpoint answers the question the page is asking.
@@ -589,16 +589,16 @@ export default function ScanDetailPage() {
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Agent Settings</CardTitle>
+                <CardTitle className="text-base">Sensor Settings</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Settings className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">Agent Preference</span>
+                    <span className="text-sm">Sensor Preference</span>
                   </div>
                   <span className="text-sm font-medium">
-                    {AGENT_PREFERENCE_LABELS[config.agent_preference]}
+                    {SENSOR_PREFERENCE_LABELS[config.sensor_preference]}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">

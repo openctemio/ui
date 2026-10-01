@@ -31,7 +31,7 @@ import type {
   ScanConfig,
   UpdateScanConfigRequest,
   ScheduleType,
-  AgentPreference,
+  SensorPreference,
 } from '@/lib/api/scan-types'
 
 interface EditScanDialogProps {
@@ -81,7 +81,7 @@ function scanConfigToFormData(config: ScanConfig): NewScanFormData {
     mode: config.scan_type === 'workflow' ? 'workflow' : 'single',
     type: 'full',
     workflowId: config.pipeline_id,
-    agentPreference: config.agent_preference || 'auto',
+    sensorPreference: config.sensor_preference || 'auto',
     targets: {
       type: 'asset_groups',
       assetGroupIds:
@@ -228,7 +228,7 @@ export function EditScanDialog({ scanConfig, open, onOpenChange, onSuccess }: Ed
         max_retries: formData.maxRetries,
         retry_backoff_seconds: formData.retryBackoffSeconds,
         schedule_type: scheduleType as ScheduleType,
-        agent_preference: formData.agentPreference as AgentPreference,
+        sensor_preference: formData.sensorPreference as SensorPreference,
       }
 
       if (formData.mode === 'workflow' && formData.workflowId) {

@@ -91,7 +91,7 @@ const SOURCE_LABEL: Record<string, string> = {
   scan: 'Scan',
   manual: 'Manual',
   system: 'System',
-  agent: 'Agent',
+  sensor: 'Sensor',
   integration: 'Integration',
   api: 'API',
 }

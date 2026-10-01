@@ -310,7 +310,7 @@ export const runnerEndpoints = {
   // Get runner scans
   scans: (runnerId: string) => `${SECURITY_API_BASE.RUNNERS}/${runnerId}/scans`,
 
-  // Download runner agent
+  // Download runner sensor
   download: () => `${SECURITY_API_BASE.RUNNERS}/download`,
 
   // Generate runner token

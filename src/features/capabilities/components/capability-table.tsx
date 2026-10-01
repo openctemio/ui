@@ -48,7 +48,7 @@ function getColorClass(color: string) {
   return colorMap[color] || 'bg-primary/10 text-primary'
 }
 
-// Usage badges (tool + agent counts) with tooltips — unchanged from the original.
+// Usage badges (tool + sensor counts) with tooltips — unchanged from the original.
 function UsageCell({ stats }: { stats?: CapabilityUsageStatsBatchResponse[string] }) {
   if (!stats) return <span className="text-muted-foreground">-</span>
   return (
@@ -82,25 +82,25 @@ function UsageCell({ stats }: { stats?: CapabilityUsageStatsBatchResponse[string
       <Tooltip>
         <TooltipTrigger asChild>
           <Badge
-            variant={stats.agent_count > 0 ? 'default' : 'outline'}
+            variant={stats.sensor_count > 0 ? 'default' : 'outline'}
             className="gap-1 cursor-help"
           >
             <Bot className="h-3 w-3" />
-            {stats.agent_count}
+            {stats.sensor_count}
           </Badge>
         </TooltipTrigger>
         <TooltipContent>
           <p className="font-medium">
-            {stats.agent_count === 0
-              ? 'No agents with this capability'
-              : `${stats.agent_count} agent${stats.agent_count > 1 ? 's' : ''}`}
+            {stats.sensor_count === 0
+              ? 'No sensors with this capability'
+              : `${stats.sensor_count} sensor${stats.sensor_count > 1 ? 's' : ''}`}
           </p>
-          {stats.agent_names && stats.agent_names.length > 0 && (
+          {stats.sensor_names && stats.sensor_names.length > 0 && (
             <ul className="mt-1 text-xs text-muted-foreground">
-              {stats.agent_names.slice(0, 5).map((name) => (
+              {stats.sensor_names.slice(0, 5).map((name) => (
                 <li key={name}>• {name}</li>
               ))}
-              {stats.agent_names.length > 5 && <li>• +{stats.agent_names.length - 5} more</li>}
+              {stats.sensor_names.length > 5 && <li>• +{stats.sensor_names.length - 5} more</li>}
             </ul>
           )}
         </TooltipContent>

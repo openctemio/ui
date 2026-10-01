@@ -35,28 +35,28 @@ export const SCAN_MODE_CONFIG: Record<
 }
 
 // ============================================
-// AGENT PREFERENCE (Platform Agent Selection)
+// SENSOR PREFERENCE (Platform Sensor Selection)
 // ============================================
 
-export type AgentPreference = 'auto' | 'tenant' | 'platform'
+export type SensorPreference = 'auto' | 'tenant' | 'platform'
 
-export const AGENT_PREFERENCE_CONFIG: Record<
-  AgentPreference,
+export const SENSOR_PREFERENCE_CONFIG: Record<
+  SensorPreference,
   { label: string; description: string; icon: string }
 > = {
   auto: {
     label: 'Auto',
-    description: 'System selects the best available agent automatically',
+    description: 'System selects the best available sensor automatically',
     icon: 'sparkles',
   },
   tenant: {
-    label: 'Your Agent',
-    description: "Use only your organization's deployed agent",
+    label: 'Your Sensor',
+    description: "Use only your organization's deployed sensor",
     icon: 'server',
   },
   platform: {
-    label: 'Platform Agent',
-    description: "Use OpenCTEM's managed cloud agents for faster execution",
+    label: 'Platform Sensor',
+    description: "Use OpenCTEM's managed cloud sensors for faster execution",
     icon: 'cloud',
   },
 }
@@ -327,7 +327,7 @@ export interface NewScanFormData {
   mode: ScanMode
   type: ScanType
   workflowId?: string // Only used when mode is "workflow"
-  agentPreference: AgentPreference // Platform agent selection
+  sensorPreference: SensorPreference // Platform sensor selection
   profileId?: string // Optional scan profile (drives quality gate evaluation)
 
   // Step 2: Targets
@@ -354,7 +354,7 @@ export const DEFAULT_NEW_SCAN: NewScanFormData = {
   mode: 'single',
   type: 'quick',
   workflowId: undefined,
-  agentPreference: 'auto',
+  sensorPreference: 'auto',
   profileId: undefined,
   targets: DEFAULT_TARGETS,
   options: DEFAULT_SCAN_OPTIONS,
@@ -373,22 +373,22 @@ export const DEFAULT_NEW_SCAN: NewScanFormData = {
 }
 
 // ============================================
-// AGENT TYPE (tenant vs platform)
+// SENSOR TYPE (tenant vs platform)
 // ============================================
 
-export type AgentType = 'tenant' | 'platform'
+export type SensorType = 'tenant' | 'platform'
 
-export const AGENT_TYPE_CONFIG: Record<
-  AgentType,
+export const SENSOR_TYPE_CONFIG: Record<
+  SensorType,
   { label: string; description: string; color: string }
 > = {
   tenant: {
-    label: 'Your Agent',
-    description: "Running on your organization's deployed agent",
+    label: 'Your Sensor',
+    description: "Running on your organization's deployed sensor",
     color: 'blue',
   },
   platform: {
-    label: 'Platform Agent',
+    label: 'Platform Sensor',
     description: "Running on OpenCTEM's managed cloud infrastructure",
     color: 'purple',
   },
@@ -425,11 +425,11 @@ export interface Scan {
   createdAt: string
   updatedAt: string
 
-  // Platform agent fields
-  agentPreference: AgentPreference
-  agentType?: AgentType // Actual agent type assigned
-  agentId?: string // Agent ID if assigned
-  agentName?: string // Agent name for display
+  // Platform sensor fields
+  sensorPreference: SensorPreference
+  sensorType?: SensorType // Actual sensor type assigned
+  sensorId?: string // Sensor ID if assigned
+  sensorName?: string // Sensor name for display
   queuePosition?: number // Position in queue (for platform jobs)
 }
 

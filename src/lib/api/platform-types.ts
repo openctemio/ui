@@ -1,24 +1,24 @@
 /**
- * Platform Agent API Types
+ * Platform Sensor API Types
  *
- * TypeScript types for Tiered Platform Agents feature
+ * TypeScript types for Tiered Platform Sensors feature
  * Supports three tiers: shared, dedicated, premium
  */
 
 // =============================================================================
-// Platform Agent Tiers
+// Platform Sensor Tiers
 // =============================================================================
 
 /**
- * Platform agent tier levels
+ * Platform sensor tier levels
  */
-export const PLATFORM_AGENT_TIERS = ['shared', 'dedicated', 'premium'] as const
-export type PlatformAgentTier = (typeof PLATFORM_AGENT_TIERS)[number]
+export const PLATFORM_SENSOR_TIERS = ['shared', 'dedicated', 'premium'] as const
+export type PlatformSensorTier = (typeof PLATFORM_SENSOR_TIERS)[number]
 
 /**
  * Human-readable labels for each tier
  */
-export const PLATFORM_TIER_LABELS: Record<PlatformAgentTier, string> = {
+export const PLATFORM_TIER_LABELS: Record<PlatformSensorTier, string> = {
   shared: 'Shared',
   dedicated: 'Dedicated',
   premium: 'Premium',
@@ -27,16 +27,16 @@ export const PLATFORM_TIER_LABELS: Record<PlatformAgentTier, string> = {
 /**
  * Descriptions for each tier
  */
-export const PLATFORM_TIER_DESCRIPTIONS: Record<PlatformAgentTier, string> = {
-  shared: 'Shared agents with best-effort processing',
-  dedicated: 'Dedicated agents with faster processing and less queue',
-  premium: 'Premium high-performance agents with priority processing',
+export const PLATFORM_TIER_DESCRIPTIONS: Record<PlatformSensorTier, string> = {
+  shared: 'Shared sensors with best-effort processing',
+  dedicated: 'Dedicated sensors with faster processing and less queue',
+  premium: 'Premium high-performance sensors with priority processing',
 }
 
 /**
  * Tailwind color classes for each tier
  */
-export const PLATFORM_TIER_COLORS: Record<PlatformAgentTier, string> = {
+export const PLATFORM_TIER_COLORS: Record<PlatformSensorTier, string> = {
   shared: 'text-muted-foreground',
   dedicated: 'text-blue-500',
   premium: 'text-purple-500',
@@ -45,7 +45,7 @@ export const PLATFORM_TIER_COLORS: Record<PlatformAgentTier, string> = {
 /**
  * Background color classes for tier badges
  */
-export const PLATFORM_TIER_BG_COLORS: Record<PlatformAgentTier, string> = {
+export const PLATFORM_TIER_BG_COLORS: Record<PlatformSensorTier, string> = {
   shared: 'bg-muted/50',
   dedicated: 'bg-blue-500/10',
   premium: 'bg-purple-500/10',
@@ -54,7 +54,7 @@ export const PLATFORM_TIER_BG_COLORS: Record<PlatformAgentTier, string> = {
 /**
  * Border color classes for tier badges
  */
-export const PLATFORM_TIER_BORDER_COLORS: Record<PlatformAgentTier, string> = {
+export const PLATFORM_TIER_BORDER_COLORS: Record<PlatformSensorTier, string> = {
   shared: 'border-muted-foreground/30',
   dedicated: 'border-blue-500/30',
   premium: 'border-purple-500/30',
@@ -63,7 +63,7 @@ export const PLATFORM_TIER_BORDER_COLORS: Record<PlatformAgentTier, string> = {
 /**
  * Lucide icon names for each tier
  */
-export const PLATFORM_TIER_ICONS: Record<PlatformAgentTier, string> = {
+export const PLATFORM_TIER_ICONS: Record<PlatformSensorTier, string> = {
   shared: 'server',
   dedicated: 'cloud',
   premium: 'crown',
@@ -77,9 +77,9 @@ export const PLATFORM_TIER_ICONS: Record<PlatformAgentTier, string> = {
  * Statistics for a single tier
  */
 export interface TierStats {
-  total_agents: number
-  online_agents: number
-  offline_agents: number
+  total_sensors: number
+  online_sensors: number
+  offline_sensors: number
   total_capacity: number
   current_load: number
   available_slots: number
@@ -90,27 +90,27 @@ export interface TierStats {
  */
 export interface PlatformStatsResponse {
   enabled: boolean
-  max_tier: PlatformAgentTier
+  max_tier: PlatformSensorTier
   max_concurrent: number
   max_queued: number
   current_active: number
   current_queued: number
   available_slots: number
-  accessible_tiers: PlatformAgentTier[]
-  tier_stats: Record<PlatformAgentTier, TierStats>
+  accessible_tiers: PlatformSensorTier[]
+  tier_stats: Record<PlatformSensorTier, TierStats>
 }
 
 // =============================================================================
-// Platform Agent Types
+// Platform Sensor Types
 // =============================================================================
 
 /**
- * Platform agent entity
+ * Platform sensor entity
  */
-export interface PlatformAgent {
+export interface PlatformSensor {
   id: string
   name: string
-  tier: PlatformAgentTier
+  tier: PlatformSensorTier
   tier_priority: number
   status: 'active' | 'disabled' | 'revoked'
   health: 'online' | 'offline' | 'unknown'
@@ -126,10 +126,10 @@ export interface PlatformAgent {
 }
 
 /**
- * Platform agent list filters
+ * Platform sensor list filters
  */
-export interface PlatformAgentListFilters {
-  tier?: PlatformAgentTier
+export interface PlatformSensorListFilters {
+  tier?: PlatformSensorTier
   status?: 'active' | 'disabled' | 'revoked'
   health?: 'online' | 'offline' | 'unknown'
   search?: string
@@ -138,10 +138,10 @@ export interface PlatformAgentListFilters {
 }
 
 /**
- * Platform agent list response
+ * Platform sensor list response
  */
-export interface PlatformAgentListResponse {
-  items: PlatformAgent[]
+export interface PlatformSensorListResponse {
+  items: PlatformSensor[]
   total: number
   page: number
   per_page: number
@@ -154,8 +154,8 @@ export interface PlatformAgentListResponse {
 /**
  * Get tier priority for sorting (higher = better)
  */
-export function getTierPriority(tier: PlatformAgentTier): number {
-  const priorities: Record<PlatformAgentTier, number> = {
+export function getTierPriority(tier: PlatformSensorTier): number {
+  const priorities: Record<PlatformSensorTier, number> = {
     shared: 0,
     dedicated: 50,
     premium: 100,
@@ -166,14 +166,14 @@ export function getTierPriority(tier: PlatformAgentTier): number {
 /**
  * Check if a tier is accessible based on max tier
  */
-export function isTierAccessible(tier: PlatformAgentTier, maxTier: PlatformAgentTier): boolean {
+export function isTierAccessible(tier: PlatformSensorTier, maxTier: PlatformSensorTier): boolean {
   return getTierPriority(tier) <= getTierPriority(maxTier)
 }
 
 /**
  * Get all accessible tiers based on max tier
  */
-export function getAccessibleTiers(maxTier: PlatformAgentTier): PlatformAgentTier[] {
+export function getAccessibleTiers(maxTier: PlatformSensorTier): PlatformSensorTier[] {
   const maxPriority = getTierPriority(maxTier)
-  return PLATFORM_AGENT_TIERS.filter((tier) => getTierPriority(tier) <= maxPriority)
+  return PLATFORM_SENSOR_TIERS.filter((tier) => getTierPriority(tier) <= maxPriority)
 }

@@ -35,25 +35,25 @@ import {
 import { copyToClipboard } from '@/lib/clipboard'
 import { cn } from '@/lib/utils'
 
-import { AgentTypeIcon } from './agent-type-icon'
+import { SensorTypeIcon } from './sensor-type-icon'
 import { ToolSelection, type ToolOption } from './tool-selection'
 import {
-  createAgentSchema,
-  type CreateAgentFormData,
-  AGENT_TYPE_OPTIONS,
-  AGENT_EXECUTION_MODE_OPTIONS,
-} from '../schemas/agent-schema'
-import { useAgentFormOptions } from '../hooks'
-import { useCreateAgent, invalidateAgentsCache } from '@/lib/api/agent-hooks'
-import type { AgentType } from '@/lib/api/agent-types'
+  createSensorSchema,
+  type CreateSensorFormData,
+  SENSOR_TYPE_OPTIONS,
+  SENSOR_EXECUTION_MODE_OPTIONS,
+} from '../schemas/sensor-schema'
+import { useSensorFormOptions } from '../hooks'
+import { useCreateSensor, invalidateSensorsCache } from '@/lib/api/sensor-hooks'
+import type { SensorType } from '@/lib/api/sensor-types'
 
-interface AddAgentDialogProps {
+interface AddSensorDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onSuccess?: () => void
 }
 
-export function AddAgentDialog({ open, onOpenChange, onSuccess }: AddAgentDialogProps) {
+export function AddSensorDialog({ open, onOpenChange, onSuccess }: AddSensorDialogProps) {
   const [step, setStep] = useState<1 | 2>(1)
   const [apiKey, setApiKey] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
@@ -65,15 +65,15 @@ export function AddAgentDialog({ open, onOpenChange, onSuccess }: AddAgentDialog
     isLoading: isLoadingOptions,
     error: optionsError,
     getCapabilitiesForTools,
-  } = useAgentFormOptions()
+  } = useSensorFormOptions()
 
-  const { trigger: createAgent, isMutating } = useCreateAgent()
+  const { trigger: createSensor, isMutating } = useCreateSensor()
 
-  const form = useForm<CreateAgentFormData>({
-    resolver: zodResolver(createAgentSchema),
+  const form = useForm<CreateSensorFormData>({
+    resolver: zodResolver(createSensorSchema),
     defaultValues: {
       name: '',
-      type: 'worker', // Default to daemon agent type
+      type: 'worker', // Default to daemon sensor type
       description: '',
       capabilities: [],
       tools: [],
@@ -103,8 +103,9 @@ export function AddAgentDialog({ open, onOpenChange, onSuccess }: AddAgentDialog
       setSelectedTools([])
       form.reset()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open])
+    // useForm returns the same object on every render, so listing it does not
+    // re-run the reset while the dialog is open.
+  }, [open, form])
 
   const handleNextStep = (e: React.MouseEvent) => {
     e.preventDefault()
@@ -116,11 +117,11 @@ export function AddAgentDialog({ open, onOpenChange, onSuccess }: AddAgentDialog
     }
   }
 
-  const onSubmit = async (data: CreateAgentFormData) => {
+  const onSubmit = async (data: CreateSensorFormData) => {
     try {
       const capabilities = getCapabilitiesForTools(selectedTools)
 
-      const result = await createAgent({
+      const result = await createSensor({
         name: data.name,
         type: data.type,
         description: data.description,
@@ -129,8 +130,8 @@ export function AddAgentDialog({ open, onOpenChange, onSuccess }: AddAgentDialog
         execution_mode: data.execution_mode,
       })
 
-      toast.success(`Agent "${data.name}" created successfully`)
-      await invalidateAgentsCache()
+      toast.success(`Sensor "${data.name}" created successfully`)
+      await invalidateSensorsCache()
 
       if (result?.api_key) {
         setApiKey(result.api_key)
@@ -140,7 +141,7 @@ export function AddAgentDialog({ open, onOpenChange, onSuccess }: AddAgentDialog
         onSuccess?.()
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to create agent')
+      toast.error(error instanceof Error ? error.message : 'Failed to create sensor')
     }
   }
 
@@ -174,7 +175,7 @@ export function AddAgentDialog({ open, onOpenChange, onSuccess }: AddAgentDialog
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-green-600">
               <Check className="h-5 w-5" />
-              Agent Created Successfully
+              Sensor Created Successfully
             </DialogTitle>
             <DialogDescription>
               Save this API key now. You won&apos;t be able to see it again.
@@ -240,12 +241,12 @@ export function AddAgentDialog({ open, onOpenChange, onSuccess }: AddAgentDialog
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Bot className="h-5 w-5" />
-            Add Agent
+            Add Sensor
           </DialogTitle>
           <DialogDescription>
             {step === 1
-              ? 'Configure the basic settings for your agent'
-              : 'Select the tools this agent will use'}
+              ? 'Configure the basic settings for your sensor'
+              : 'Select the tools this sensor will use'}
           </DialogDescription>
         </DialogHeader>
 
@@ -279,18 +280,21 @@ export function AddAgentDialog({ open, onOpenChange, onSuccess }: AddAgentDialog
                 name="type"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Agent Type</FormLabel>
+                    <FormLabel>Sensor Type</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select agent type" />
+                          <SelectValue placeholder="Select sensor type" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {AGENT_TYPE_OPTIONS.map((option) => (
+                        {SENSOR_TYPE_OPTIONS.map((option) => (
                           <SelectItem key={option.value} value={option.value}>
                             <div className="flex items-center gap-2">
-                              <AgentTypeIcon type={option.value as AgentType} className="h-4 w-4" />
+                              <SensorTypeIcon
+                                type={option.value as SensorType}
+                                className="h-4 w-4"
+                              />
                               <span>{option.label}</span>
                             </div>
                           </SelectItem>
@@ -327,7 +331,7 @@ export function AddAgentDialog({ open, onOpenChange, onSuccess }: AddAgentDialog
                     </FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder="What does this agent do?"
+                        placeholder="What does this sensor do?"
                         className="resize-none"
                         rows={2}
                         {...field}
@@ -345,7 +349,7 @@ export function AddAgentDialog({ open, onOpenChange, onSuccess }: AddAgentDialog
                   <FormItem>
                     <FormLabel>Execution Mode</FormLabel>
                     <div className="grid grid-cols-2 gap-3">
-                      {AGENT_EXECUTION_MODE_OPTIONS.map((option) => (
+                      {SENSOR_EXECUTION_MODE_OPTIONS.map((option) => (
                         <div
                           key={option.value}
                           onClick={() => field.onChange(option.value)}
@@ -410,7 +414,7 @@ export function AddAgentDialog({ open, onOpenChange, onSuccess }: AddAgentDialog
               </Button>
               <Button onClick={form.handleSubmit(onSubmit)} disabled={isMutating}>
                 {isMutating && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
-                Create Agent
+                Create Sensor
               </Button>
             </>
           )}

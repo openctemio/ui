@@ -59,11 +59,11 @@ export const mockScans: Scan[] = [
     createdByName: 'Nguyen Van An',
     createdAt: daysAgo(7),
     updatedAt: daysAgo(0),
-    // Platform agent
-    agentPreference: 'platform',
-    agentType: 'platform',
-    agentId: 'agent-platform-us-east-1',
-    agentName: 'Platform Agent US-East-1',
+    // Platform sensor
+    sensorPreference: 'platform',
+    sensorType: 'platform',
+    sensorId: 'sensor-platform-us-east-1',
+    sensorName: 'Platform Sensor US-East-1',
   },
   {
     id: 'scan-002',
@@ -109,11 +109,11 @@ export const mockScans: Scan[] = [
     createdByName: 'Tran Thi Binh',
     createdAt: daysAgo(2),
     updatedAt: daysAgo(2),
-    // Tenant agent
-    agentPreference: 'tenant',
-    agentType: 'tenant',
-    agentId: 'agent-tenant-001',
-    agentName: 'Tenant Agent 1',
+    // Tenant sensor
+    sensorPreference: 'tenant',
+    sensorType: 'tenant',
+    sensorId: 'sensor-tenant-001',
+    sensorName: 'Tenant Sensor 1',
   },
   {
     id: 'scan-003',
@@ -162,11 +162,11 @@ export const mockScans: Scan[] = [
     createdByName: 'Le Van Cuong',
     createdAt: daysAgo(5),
     updatedAt: daysAgo(5),
-    // Platform agent
-    agentPreference: 'auto',
-    agentType: 'platform',
-    agentId: 'agent-platform-ap-southeast-1',
-    agentName: 'Platform Agent AP-Southeast-1',
+    // Platform sensor
+    sensorPreference: 'auto',
+    sensorType: 'platform',
+    sensorId: 'sensor-platform-ap-southeast-1',
+    sensorName: 'Platform Sensor AP-Southeast-1',
   },
   {
     id: 'scan-004',
@@ -214,11 +214,11 @@ export const mockScans: Scan[] = [
     createdByName: 'Pham Thi Dung',
     createdAt: daysAgo(1),
     updatedAt: daysAgo(0),
-    // Tenant agent
-    agentPreference: 'tenant',
-    agentType: 'tenant',
-    agentId: 'agent-tenant-002',
-    agentName: 'Tenant Agent 2',
+    // Tenant sensor
+    sensorPreference: 'tenant',
+    sensorType: 'tenant',
+    sensorId: 'sensor-tenant-002',
+    sensorName: 'Tenant Sensor 2',
   },
   {
     id: 'scan-005',
@@ -264,11 +264,11 @@ export const mockScans: Scan[] = [
     createdByName: 'Nguyen Van An',
     createdAt: daysAgo(3),
     updatedAt: daysAgo(3),
-    // Platform agent
-    agentPreference: 'platform',
-    agentType: 'platform',
-    agentId: 'agent-platform-us-west-2',
-    agentName: 'Platform Agent US-West-2',
+    // Platform sensor
+    sensorPreference: 'platform',
+    sensorType: 'platform',
+    sensorId: 'sensor-platform-us-west-2',
+    sensorName: 'Platform Sensor US-West-2',
   },
   {
     id: 'scan-006',
@@ -314,7 +314,7 @@ export const mockScans: Scan[] = [
     createdAt: daysAgo(1),
     updatedAt: daysAgo(1),
     // Pending platform job with queue position
-    agentPreference: 'platform',
+    sensorPreference: 'platform',
     queuePosition: 3,
   },
   {
@@ -364,11 +364,11 @@ export const mockScans: Scan[] = [
     createdByName: 'Le Van Cuong',
     createdAt: daysAgo(7),
     updatedAt: daysAgo(6),
-    // Auto preference selected tenant agent
-    agentPreference: 'auto',
-    agentType: 'tenant',
-    agentId: 'agent-tenant-001',
-    agentName: 'Tenant Agent 1',
+    // Auto preference selected tenant sensor
+    sensorPreference: 'auto',
+    sensorType: 'tenant',
+    sensorId: 'sensor-tenant-001',
+    sensorName: 'Tenant Sensor 1',
   },
   {
     id: 'scan-008',
@@ -412,11 +412,11 @@ export const mockScans: Scan[] = [
     createdByName: 'Pham Thi Dung',
     createdAt: daysAgo(4),
     updatedAt: daysAgo(4),
-    // Failed tenant agent job
-    agentPreference: 'tenant',
-    agentType: 'tenant',
-    agentId: 'agent-tenant-002',
-    agentName: 'Tenant Agent 2',
+    // Failed tenant sensor job
+    sensorPreference: 'tenant',
+    sensorType: 'tenant',
+    sensorId: 'sensor-tenant-002',
+    sensorName: 'Tenant Sensor 2',
   },
 ]
 

@@ -6,10 +6,10 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Activity, Search, Bug, CheckCircle, Timer, BarChart3, Clock } from 'lucide-react'
 import { formatRelative } from '@/lib/format-date'
 
-import { useAgentSessionStats, useActiveAgentSession } from '@/lib/api/agent-hooks'
+import { useSensorSessionStats, useActiveSensorSession } from '@/lib/api/sensor-hooks'
 
-interface AgentAnalyticsProps {
-  agentId: string
+interface SensorAnalyticsProps {
+  sensorId: string
   showActiveSession?: boolean
 }
 
@@ -20,7 +20,7 @@ function formatUptime(seconds: number): string {
   return `${Math.floor(seconds / 86400)}d`
 }
 
-export function AgentAnalytics({ agentId, showActiveSession = true }: AgentAnalyticsProps) {
+export function SensorAnalytics({ sensorId, showActiveSession = true }: SensorAnalyticsProps) {
   // Get session stats for the last 30 days
   const thirtyDaysAgo = useMemo(() => {
     const date = new Date()
@@ -28,12 +28,12 @@ export function AgentAnalytics({ agentId, showActiveSession = true }: AgentAnaly
     return date.toISOString()
   }, [])
 
-  const { data: sessionStats, isLoading: statsLoading } = useAgentSessionStats(agentId, {
+  const { data: sessionStats, isLoading: statsLoading } = useSensorSessionStats(sensorId, {
     started_at: thirtyDaysAgo,
   })
 
-  const { data: activeSession, isLoading: sessionLoading } = useActiveAgentSession(
-    showActiveSession ? agentId : null
+  const { data: activeSession, isLoading: sessionLoading } = useActiveSensorSession(
+    showActiveSession ? sensorId : null
   )
 
   const isLoading = statsLoading || sessionLoading
@@ -56,7 +56,7 @@ export function AgentAnalytics({ agentId, showActiveSession = true }: AgentAnaly
         <BarChart3 className="mb-4 h-12 w-12 text-muted-foreground opacity-50" />
         <p className="text-muted-foreground">No analytics data available</p>
         <p className="text-sm text-muted-foreground">
-          Analytics will appear once the agent starts processing jobs
+          Analytics will appear once the sensor starts processing jobs
         </p>
       </div>
     )

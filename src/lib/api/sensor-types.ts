@@ -1,24 +1,40 @@
 /**
- * Agent API Types
+ * Sensor API Types
  *
- * TypeScript types for Agent Management
- * API endpoint: /api/v1/agents
+ * TypeScript types for Sensor Management
+ * API endpoint: /api/v1/sensors
  */
 
-// Agent types - maps to backend AgentType
+// Sensor types - maps to backend SensorType
 // runner = CI/CD one-shot, worker = daemon, collector = asset discovery, sensor = EASM
-export type AgentType = 'runner' | 'worker' | 'collector' | 'sensor'
+export type SensorType = 'runner' | 'worker' | 'collector' | 'sensor'
+
+/**
+ * Sensor role (RFC-023 §9.1, decision D18): what a sensor does, as opposed to
+ * its legacy `type`, which mixes what it does with how it runs. The API does
+ * not send a role yet (it arrives with RFC-023 Phase 2, together with the
+ * endpoint-agent and monitor roles); until then the role is derived from the
+ * legacy type exactly as the RFC maps it: worker, runner and the old EASM
+ * 'sensor' type scan, a collector collects.
+ */
+export type SensorRole = 'scanner' | 'collector'
+
+export const SENSOR_ROLES: readonly SensorRole[] = ['scanner', 'collector']
+
+export function sensorRoleOf(type: SensorType): SensorRole {
+  return type === 'collector' ? 'collector' : 'scanner'
+}
 
 // Admin-controlled status
-export type AgentStatus = 'active' | 'disabled' | 'revoked'
+export type SensorStatus = 'active' | 'disabled' | 'revoked'
 
 // Heartbeat-based health (automatic)
-export type AgentHealth = 'unknown' | 'online' | 'offline' | 'error'
+export type SensorHealth = 'unknown' | 'online' | 'offline' | 'error'
 
 export type ExecutionMode = 'standalone' | 'daemon'
 
-// Agent capabilities
-export const AGENT_CAPABILITIES = [
+// Sensor capabilities
+export const SENSOR_CAPABILITIES = [
   'sast',
   'sca',
   'dast',
@@ -30,10 +46,10 @@ export const AGENT_CAPABILITIES = [
   'cloud',
 ] as const
 
-export type AgentCapability = (typeof AGENT_CAPABILITIES)[number]
+export type SensorCapability = (typeof SENSOR_CAPABILITIES)[number]
 
-// Agent tools
-export const AGENT_TOOLS = [
+// Sensor tools
+export const SENSOR_TOOLS = [
   'semgrep',
   'trivy',
   'nuclei',
@@ -45,22 +61,22 @@ export const AGENT_TOOLS = [
   'custom',
 ] as const
 
-export type AgentTool = (typeof AGENT_TOOLS)[number]
+export type SensorTool = (typeof SENSOR_TOOLS)[number]
 
 /**
- * Agent entity (maps to Agent in backend)
+ * Sensor entity (maps to Sensor in backend)
  */
-export interface Agent {
+export interface Sensor {
   id: string
   tenant_id: string
   name: string
-  type: AgentType
+  type: SensorType
   description?: string
-  capabilities: AgentCapability[]
-  tools: AgentTool[]
+  capabilities: SensorCapability[]
+  tools: SensorTool[]
   execution_mode: ExecutionMode
-  status: AgentStatus // Admin-controlled: active, disabled, revoked
-  health: AgentHealth // Automatic heartbeat: unknown, online, offline, error
+  status: SensorStatus // Admin-controlled: active, disabled, revoked
+  health: SensorHealth // Automatic heartbeat: unknown, online, offline, error
   status_message?: string
   api_key_prefix: string
   version?: string
@@ -88,14 +104,14 @@ export interface Agent {
 }
 
 /**
- * Create agent request
+ * Create sensor request
  */
-export interface CreateAgentRequest {
+export interface CreateSensorRequest {
   name: string
-  type: AgentType
+  type: SensorType
   description?: string
-  capabilities?: AgentCapability[]
-  tools?: AgentTool[]
+  capabilities?: SensorCapability[]
+  tools?: SensorTool[]
   execution_mode?: ExecutionMode
   max_concurrent_jobs?: number
   labels?: Record<string, string>
@@ -103,23 +119,23 @@ export interface CreateAgentRequest {
 }
 
 /**
- * Create agent response (includes API key)
+ * Create sensor response (includes API key)
  */
-export interface CreateAgentResponse {
-  agent: Agent // Backend returns "agent" field
+export interface CreateSensorResponse {
+  sensor: Sensor // Backend returns "sensor" field
   api_key: string // Only returned on create
 }
 
 /**
- * Update agent request
+ * Update sensor request
  */
-export interface UpdateAgentRequest {
+export interface UpdateSensorRequest {
   name?: string
   description?: string
-  capabilities?: AgentCapability[]
-  tools?: AgentTool[]
+  capabilities?: SensorCapability[]
+  tools?: SensorTool[]
   execution_mode?: ExecutionMode
-  status?: AgentStatus
+  status?: SensorStatus
   max_concurrent_jobs?: number
   labels?: Record<string, string>
   config?: Record<string, unknown>
@@ -134,21 +150,21 @@ export interface RegenerateAPIKeyResponse {
 }
 
 /**
- * Agent list response
+ * Sensor list response
  */
-export interface AgentListResponse {
-  items: Agent[]
+export interface SensorListResponse {
+  items: Sensor[]
   total: number
   page: number
   page_size: number
 }
 
 /**
- * Agent list filters
+ * Sensor list filters
  */
-export interface AgentListFilters {
-  type?: AgentType
-  status?: AgentStatus
+export interface SensorListFilters {
+  type?: SensorType
+  status?: SensorStatus
   search?: string
   page?: number
   page_size?: number
@@ -156,22 +172,22 @@ export interface AgentListFilters {
 
 /**
  * Available capabilities response
- * Returns all unique capability names from all agents accessible to the tenant
+ * Returns all unique capability names from all sensors accessible to the tenant
  */
 export interface AvailableCapabilitiesResponse {
   capabilities: string[]
 }
 
 // =============================================================================
-// Agent Analytics Types
+// Sensor Analytics Types
 // =============================================================================
 
 /**
- * Agent Session - tracks each online session with stats
+ * Sensor Session - tracks each online session with stats
  */
-export interface AgentSession {
+export interface SensorSession {
   id: string
-  agent_id: string
+  sensor_id: string
   started_at: string
   ended_at?: string
   duration_seconds?: number
@@ -187,11 +203,11 @@ export interface AgentSession {
 }
 
 /**
- * Agent Daily Stats - aggregated daily statistics
+ * Sensor Daily Stats - aggregated daily statistics
  */
-export interface AgentDailyStats {
+export interface SensorDailyStats {
   id: string
-  agent_id: string
+  sensor_id: string
   date: string
   total_findings: number
   total_scans: number
@@ -205,9 +221,9 @@ export interface AgentDailyStats {
 }
 
 /**
- * Agent Session Stats - aggregate stats for an agent over a time range
+ * Sensor Session Stats - aggregate stats for a sensor over a time range
  */
-export interface AgentSessionStats {
+export interface SensorSessionStats {
   total_sessions: number
   total_findings: number
   total_scans: number
@@ -218,10 +234,10 @@ export interface AgentSessionStats {
 }
 
 /**
- * Agent Session List Response
+ * Sensor Session List Response
  */
-export interface AgentSessionListResponse {
-  data: AgentSession[]
+export interface SensorSessionListResponse {
+  data: SensorSession[]
   total: number
   page: number
   per_page: number
@@ -229,10 +245,10 @@ export interface AgentSessionListResponse {
 }
 
 /**
- * Agent Daily Stats List Response
+ * Sensor Daily Stats List Response
  */
-export interface AgentDailyStatsListResponse {
-  data: AgentDailyStats[]
+export interface SensorDailyStatsListResponse {
+  data: SensorDailyStats[]
   total: number
   page: number
   per_page: number
@@ -240,9 +256,9 @@ export interface AgentDailyStatsListResponse {
 }
 
 /**
- * Agent Session List Filters
+ * Sensor Session List Filters
  */
-export interface AgentSessionListFilters {
+export interface SensorSessionListFilters {
   is_active?: boolean
   started_at?: string
   ended_at?: string
@@ -251,9 +267,9 @@ export interface AgentSessionListFilters {
 }
 
 /**
- * Agent Daily Stats List Filters
+ * Sensor Daily Stats List Filters
  */
-export interface AgentDailyStatsListFilters {
+export interface SensorDailyStatsListFilters {
   from?: string
   to?: string
   page?: number

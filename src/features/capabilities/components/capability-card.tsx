@@ -167,26 +167,26 @@ export const CapabilityCard = memo(function CapabilityCard({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Badge
-                    variant={usageStats.agent_count > 0 ? 'default' : 'outline'}
+                    variant={usageStats.sensor_count > 0 ? 'default' : 'outline'}
                     className="gap-1 cursor-help"
                   >
                     <Bot className="h-3 w-3" />
-                    {usageStats.agent_count}
+                    {usageStats.sensor_count}
                   </Badge>
                 </TooltipTrigger>
                 <TooltipContent>
                   <p className="font-medium">
-                    {usageStats.agent_count === 0
-                      ? 'No agents with this capability'
-                      : `${usageStats.agent_count} agent${usageStats.agent_count > 1 ? 's' : ''} with this capability`}
+                    {usageStats.sensor_count === 0
+                      ? 'No sensors with this capability'
+                      : `${usageStats.sensor_count} sensor${usageStats.sensor_count > 1 ? 's' : ''} with this capability`}
                   </p>
-                  {usageStats.agent_names && usageStats.agent_names.length > 0 && (
+                  {usageStats.sensor_names && usageStats.sensor_names.length > 0 && (
                     <ul className="mt-1 text-xs text-muted-foreground">
-                      {usageStats.agent_names.slice(0, 5).map((name) => (
+                      {usageStats.sensor_names.slice(0, 5).map((name) => (
                         <li key={name}>• {name}</li>
                       ))}
-                      {usageStats.agent_names.length > 5 && (
-                        <li>• +{usageStats.agent_names.length - 5} more</li>
+                      {usageStats.sensor_names.length > 5 && (
+                        <li>• +{usageStats.sensor_names.length - 5} more</li>
                       )}
                     </ul>
                   )}

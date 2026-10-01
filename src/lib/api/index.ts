@@ -483,7 +483,7 @@ export type {
   StepConditionType,
   PipelineRunStatus,
   StepRunStatus,
-  PipelineAgentPreference,
+  PipelineSensorPreference,
 } from './pipeline-types'
 
 export {
@@ -495,9 +495,9 @@ export {
   PIPELINE_RUN_STATUS_LABELS,
   STEP_RUN_STATUSES,
   DEFAULT_PIPELINE_SETTINGS,
-  PIPELINE_AGENT_PREFERENCES,
-  PIPELINE_AGENT_PREFERENCE_LABELS,
-  PIPELINE_AGENT_PREFERENCE_DESCRIPTIONS,
+  PIPELINE_SENSOR_PREFERENCES,
+  PIPELINE_SENSOR_PREFERENCE_LABELS,
+  PIPELINE_SENSOR_PREFERENCE_DESCRIPTIONS,
 } from './pipeline-types'
 
 // ============================================
@@ -665,49 +665,49 @@ export {
 export { capabilityEndpoints, customCapabilityEndpoints } from './endpoints'
 
 // ============================================
-// AGENT HOOKS & TYPES
+// SENSOR HOOKS & TYPES
 // ============================================
 
 export {
-  // Agent list/detail hooks
-  useAgents,
-  useAgent,
+  // Sensor list/detail hooks
+  useSensors,
+  useSensor,
   useAvailableCapabilities,
 
-  // Agent mutation hooks
-  useCreateAgent,
-  useUpdateAgent,
-  useDeleteAgent,
-  useBulkDeleteAgents,
-  useRegenerateAgentKey,
-  useActivateAgent,
-  useDeactivateAgent,
-  useRevokeAgent,
+  // Sensor mutation hooks
+  useCreateSensor,
+  useUpdateSensor,
+  useDeleteSensor,
+  useBulkDeleteSensors,
+  useRegenerateSensorKey,
+  useActivateSensor,
+  useDeactivateSensor,
+  useRevokeSensor,
 
   // Cache utilities
-  agentKeys,
-  invalidateAgentsCache,
-} from './agent-hooks'
+  sensorKeys,
+  invalidateSensorsCache,
+} from './sensor-hooks'
 
 export type {
-  Agent,
-  AgentType,
-  AgentStatus,
-  AgentHealth,
-  AgentListFilters,
-  AgentListResponse,
-  CreateAgentRequest,
-  CreateAgentResponse,
-  UpdateAgentRequest,
+  Sensor,
+  SensorType,
+  SensorStatus,
+  SensorHealth,
+  SensorListFilters,
+  SensorListResponse,
+  CreateSensorRequest,
+  CreateSensorResponse,
+  UpdateSensorRequest,
   RegenerateAPIKeyResponse,
   AvailableCapabilitiesResponse,
-} from './agent-types'
+} from './sensor-types'
 
 // ============================================
-// AGENT ENDPOINTS
+// SENSOR ENDPOINTS
 // ============================================
 
-export { agentEndpoints } from './endpoints'
+export { sensorEndpoints } from './endpoints'
 
 // ============================================
 // SCAN PROFILE HOOKS & TYPES
@@ -930,13 +930,13 @@ export {
 } from './secret-store-types'
 
 // ============================================
-// PLATFORM AGENT HOOKS & TYPES
+// PLATFORM SENSOR HOOKS & TYPES
 // ============================================
 
 export {
   // Platform hooks
   usePlatformStats,
-  usePlatformAgents,
+  usePlatformSensors,
   usePlatformUsage,
 
   // Cache utilities
@@ -946,16 +946,16 @@ export {
 } from './platform-hooks'
 
 export type {
-  PlatformAgentTier,
+  PlatformSensorTier,
   TierStats,
   PlatformStatsResponse,
-  PlatformAgent,
-  PlatformAgentListFilters,
-  PlatformAgentListResponse,
+  PlatformSensor,
+  PlatformSensorListFilters,
+  PlatformSensorListResponse,
 } from './platform-types'
 
 export {
-  PLATFORM_AGENT_TIERS,
+  PLATFORM_SENSOR_TIERS,
   PLATFORM_TIER_LABELS,
   PLATFORM_TIER_DESCRIPTIONS,
   PLATFORM_TIER_COLORS,

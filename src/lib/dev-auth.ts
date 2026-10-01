@@ -63,11 +63,11 @@ export const DEV_USER: AuthUser & {
     'scans:tools:read',
     'scans:tenant_tools:read',
     'scans:tenant_tools:write',
-    // Agents
-    'agents:read',
-    'agents:write',
-    'agents:commands:read',
-    'agents:commands:write',
+    // Sensors
+    'sensors:read',
+    'sensors:write',
+    'sensors:commands:read',
+    'sensors:commands:write',
     // Team
     'team:read',
     'team:update',

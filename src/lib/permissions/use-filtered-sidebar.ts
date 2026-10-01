@@ -16,7 +16,7 @@
  * - dashboard: Dashboard
  * - assets: Attack Surface, Asset Groups, Scope Config, Asset Inventory
  * - findings: Exposures, Findings, Threat Intel, Risk Analysis, Business Impact
- * - scans: Scans, Scan Profiles, Tools, Agents
+ * - scans: Scans, Scan Profiles, Tools, Sensors
  * - reports: Reports
  * - audit: Audit Log
  * - components: Components (SBOM)

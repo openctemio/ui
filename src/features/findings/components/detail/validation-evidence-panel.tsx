@@ -126,7 +126,7 @@ export function ValidationEvidencePanel({ findingId }: ValidationEvidencePanelPr
       await requestValidation()
       toast.success('Validation requested', {
         description:
-          'A safe-check job was dispatched. Evidence appears here once an agent reports back.',
+          'A safe-check job was dispatched. Evidence appears here once a sensor reports back.',
       })
       // Give the async completion a moment, then refresh the evidence list.
       setTimeout(() => {

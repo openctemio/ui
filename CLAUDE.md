@@ -147,6 +147,24 @@ All state-changing requests from the browser must carry an `X-CSRF-Token` header
 
 Rendered markdown (notes, finding descriptions, etc.) goes through `src/lib/sanitize-markdown.ts` wired as a `rehypeRewrite` plugin on the markdown editor. It strips `<script>/<iframe>/<object>/<embed>/<style>/<link>/<meta>/<base>/<form>`, `on*` handlers, inline `style`, and `javascript:`/`data:`/`vbscript:` URLs. Do not disable it. If you need to render a new dangerous-looking tag, extend the allowlist in that file and add a test case in `sanitize-markdown.test.ts`.
 
+## Sensors (formerly "agents") — RFC-023
+
+The customer-side runtimes are **sensors**: route `/sensors` (Settings → Sensors,
+tabs by role), `src/features/sensors`, `src/lib/api/sensor-*`, API
+`/api/v1/sensors`, permissions `sensors:*`, module `sensors`. Contract:
+openctemio/api `docs/rfcs/RFC-023-sensor-rename-contract.md`.
+
+- Never name a sensor concept "agent". `src/config/__tests__/sensor-vocabulary.test.ts`
+  fails on the word outside `src/config/sensor-vocabulary-allowlist.json`
+  (HTTP User-Agent, the AI-triage agent mode, the endpoint-agent role,
+  historical audit rows, the `/agents` redirects, the storage migration).
+- The UI never calls protocol v1 (`/api/v1/agent/*`); that is the sensors' wire.
+- Old `/agents` URLs redirect (`src/config/legacy-sensor-routes.ts`); browser
+  state from before the rename is migrated on load (`src/lib/sensor-storage-migration.ts`).
+- Audit rows written before the rename keep `agent.*`; label through
+  `canonicalAuditAction` / `canonicalAuditResourceType` / `canonicalAuditMetadataKey`.
+- A branch written before the rename catches up with `node scripts/rename/sensor-rename.mjs`.
+
 ## Access Control (RBAC)
 
 ```

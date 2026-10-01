@@ -1031,7 +1031,7 @@ export interface Asset {
   parentId?: string
   /** ID in the source system (cloud provider, SCM, scanner). */
   externalId?: string
-  /** How the asset entered the inventory: agent, integration, manual, import... */
+  /** How the asset entered the inventory: sensor, integration, manual, import... */
   discoverySource?: string
   /** Tool that discovered it, e.g. "gitleaks", "subfinder". */
   discoveryTool?: string

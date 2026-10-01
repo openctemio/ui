@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Loader2, Settings } from 'lucide-react'
@@ -30,23 +30,23 @@ import { cn } from '@/lib/utils'
 
 import { ToolSelection, type ToolOption } from './tool-selection'
 import {
-  updateAgentSchema,
-  type UpdateAgentFormData,
-  AGENT_STATUS_OPTIONS,
-  AGENT_EXECUTION_MODE_OPTIONS,
-} from '../schemas/agent-schema'
-import { useAgentFormOptions } from '../hooks'
-import { useUpdateAgent, invalidateAgentsCache } from '@/lib/api/agent-hooks'
-import type { Agent } from '@/lib/api/agent-types'
+  updateSensorSchema,
+  type UpdateSensorFormData,
+  SENSOR_STATUS_OPTIONS,
+  SENSOR_EXECUTION_MODE_OPTIONS,
+} from '../schemas/sensor-schema'
+import { useSensorFormOptions } from '../hooks'
+import { useUpdateSensor, invalidateSensorsCache } from '@/lib/api/sensor-hooks'
+import type { Sensor } from '@/lib/api/sensor-types'
 
-interface EditAgentDialogProps {
+interface EditSensorDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  agent: Agent
+  sensor: Sensor
   onSuccess?: () => void
 }
 
-export function EditAgentDialog({ open, onOpenChange, agent, onSuccess }: EditAgentDialogProps) {
+export function EditSensorDialog({ open, onOpenChange, sensor, onSuccess }: EditSensorDialogProps) {
   const [selectedTools, setSelectedTools] = useState<string[]>([])
 
   const {
@@ -54,19 +54,19 @@ export function EditAgentDialog({ open, onOpenChange, agent, onSuccess }: EditAg
     isLoading: isLoadingOptions,
     error: optionsError,
     getCapabilitiesForTools,
-  } = useAgentFormOptions()
+  } = useSensorFormOptions()
 
-  const { trigger: updateAgent, isMutating } = useUpdateAgent(agent.id)
+  const { trigger: updateSensor, isMutating } = useUpdateSensor(sensor.id)
 
-  const form = useForm<UpdateAgentFormData>({
-    resolver: zodResolver(updateAgentSchema),
+  const form = useForm<UpdateSensorFormData>({
+    resolver: zodResolver(updateSensorSchema),
     defaultValues: {
-      name: agent.name,
-      description: agent.description || '',
-      capabilities: agent.capabilities || [],
-      tools: agent.tools || [],
-      execution_mode: agent.execution_mode,
-      status: agent.status,
+      name: sensor.name,
+      description: sensor.description || '',
+      capabilities: sensor.capabilities || [],
+      tools: sensor.tools || [],
+      execution_mode: sensor.execution_mode,
+      status: sensor.status,
     },
   })
 
@@ -78,27 +78,34 @@ export function EditAgentDialog({ open, onOpenChange, agent, onSuccess }: EditAg
     category: t.category,
   }))
 
-  // Reset state when dialog opens
+  // Reset the form when the dialog opens or another sensor is edited, but not
+  // when the same sensor is refetched while open (that would wipe the user's
+  // edits). The latest sensor and form are read through a ref so the effect
+  // depends only on what should trigger a reset.
+  const latest = useRef({ sensor, form })
   useEffect(() => {
-    if (open) {
-      setSelectedTools(agent.tools || [])
-      form.reset({
-        name: agent.name,
-        description: agent.description || '',
-        capabilities: agent.capabilities || [],
-        tools: agent.tools || [],
-        execution_mode: agent.execution_mode,
-        status: agent.status,
-      })
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, agent.id])
+    latest.current = { sensor, form }
+  })
+  const sensorId = sensor.id
+  useEffect(() => {
+    if (!open) return
+    const { sensor: s, form: f } = latest.current
+    setSelectedTools(s.tools || [])
+    f.reset({
+      name: s.name,
+      description: s.description || '',
+      capabilities: s.capabilities || [],
+      tools: s.tools || [],
+      execution_mode: s.execution_mode,
+      status: s.status,
+    })
+  }, [open, sensorId])
 
-  const onSubmit = async (data: UpdateAgentFormData) => {
+  const onSubmit = async (data: UpdateSensorFormData) => {
     try {
       const capabilities = getCapabilitiesForTools(selectedTools)
 
-      await updateAgent({
+      await updateSensor({
         name: data.name,
         description: data.description,
         capabilities: capabilities as never[],
@@ -107,12 +114,12 @@ export function EditAgentDialog({ open, onOpenChange, agent, onSuccess }: EditAg
         status: data.status,
       })
 
-      toast.success(`Agent "${data.name || agent.name}" updated successfully`)
-      await invalidateAgentsCache()
+      toast.success(`Sensor "${data.name || sensor.name}" updated successfully`)
+      await invalidateSensorsCache()
       onOpenChange(false)
       onSuccess?.()
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to update agent')
+      toast.error(error instanceof Error ? error.message : 'Failed to update sensor')
     }
   }
 
@@ -128,10 +135,10 @@ export function EditAgentDialog({ open, onOpenChange, agent, onSuccess }: EditAg
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Settings className="h-5 w-5" />
-            Edit Agent
+            Edit Sensor
           </DialogTitle>
           <DialogDescription>
-            Update configuration for <strong>{agent.name}</strong>
+            Update configuration for <strong>{sensor.name}</strong>
           </DialogDescription>
         </DialogHeader>
 
@@ -173,7 +180,7 @@ export function EditAgentDialog({ open, onOpenChange, agent, onSuccess }: EditAg
                       </FormLabel>
                       <FormControl>
                         <Textarea
-                          placeholder="What does this agent do?"
+                          placeholder="What does this sensor do?"
                           className="resize-none"
                           rows={2}
                           {...field}
@@ -191,7 +198,7 @@ export function EditAgentDialog({ open, onOpenChange, agent, onSuccess }: EditAg
                     <FormItem>
                       <FormLabel>Status</FormLabel>
                       <div className="grid grid-cols-3 gap-2">
-                        {AGENT_STATUS_OPTIONS.map((option) => (
+                        {SENSOR_STATUS_OPTIONS.map((option) => (
                           <div
                             key={option.value}
                             onClick={() => field.onChange(option.value)}
@@ -218,7 +225,7 @@ export function EditAgentDialog({ open, onOpenChange, agent, onSuccess }: EditAg
                     <FormItem>
                       <FormLabel>Execution Mode</FormLabel>
                       <div className="grid grid-cols-2 gap-3">
-                        {AGENT_EXECUTION_MODE_OPTIONS.map((option) => (
+                        {SENSOR_EXECUTION_MODE_OPTIONS.map((option) => (
                           <div
                             key={option.value}
                             onClick={() => field.onChange(option.value)}
