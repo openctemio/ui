@@ -413,14 +413,14 @@ export default function APIKeysPage() {
   if (error)
     return (
       <Main>
-        <PageHeader title="API Keys" description="Manage API keys for programmatic access" />
+        <PageHeader title="API keys" description="Keys for scripts and tools that call the API." />
         <ErrorState title="API keys" error={error} onRetry={() => void mutate()} />
       </Main>
     )
 
   return (
     <Main>
-      <PageHeader title="API Keys" description="Manage API keys for programmatic access">
+      <PageHeader title="API keys" description="Keys for scripts and tools that call the API.">
         <Button size="sm" onClick={() => setGenOpen(true)}>
           <Plus className="me-2 h-4 w-4" />
           Generate API Key

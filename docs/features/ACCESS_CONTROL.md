@@ -61,7 +61,7 @@ Group Level (group_members.role)
 
 ### Groups Management
 
-**Route:** `/settings/access-control/groups`
+**Route:** `/settings/teams` (was `/settings/access-control/groups`, 308)
 
 Features:
 - Create, edit, delete groups
@@ -99,7 +99,7 @@ Features:
 
 ### Assignment Rules
 
-**Route:** `/settings/access-control/assignment-rules` (gated by
+**Route:** `/settings/teams?tab=assignment-rules` (a tab of Teams; was `/settings/access-control/assignment-rules`, 308; gated by
 `Permission.AssignmentRulesRead`)
 
 The third Access Control sub-page. Defines rules that auto-assign findings/assets
@@ -418,7 +418,7 @@ The Access Control feature has a solid foundation with proper structure, type sa
 - `ui/src/features/access-control/components/permission-set-detail-sheet.tsx`
 
 **Pages:**
-- `ui/src/app/(dashboard)/settings/access-control/groups/page.tsx`
+- `ui/src/app/(dashboard)/settings/teams/page.tsx` (tabs: `features/access-control/components/teams-section.tsx`, `assignment-rules-section.tsx`)
 - `ui/src/app/(dashboard)/settings/access-control/permission-sets/page.tsx`
 
 ---
