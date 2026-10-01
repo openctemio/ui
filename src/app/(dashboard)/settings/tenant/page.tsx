@@ -7,7 +7,6 @@ import { PageHeader } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import { Save, Building, Shield, Key, Upload, Loader2, AlertCircle, Lock } from 'lucide-react'
 import { usePermissions, Permission } from '@/lib/permissions'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
@@ -43,6 +42,9 @@ import {
   SESSION_TIMEOUT_OPTIONS,
   WEBHOOK_EVENTS,
   type WebhookEvent,
+  AccessRestrictionsCard,
+  isIpLockoutError,
+  parseLines,
 } from '@/features/organization'
 
 const STORAGE_FORM_ID = 'storage-config-form'
@@ -337,6 +339,8 @@ export default function TenantPage() {
     website: '',
   })
 
+  // Inline error under the IP allowlist (the API's lockout refusal).
+  const [ipAllowlistError, setIpAllowlistError] = useState<string | null>(null)
   const [securityForm, setSecurityForm] = useState({
     mfa_required: false,
     session_timeout_min: 60,
@@ -497,15 +501,10 @@ export default function TenantPage() {
   const handleSaveGeneral = handleSaveSettings
 
   const handleSaveSecurity = async () => {
+    setIpAllowlistError(null)
     try {
-      const ipWhitelist = securityForm.ip_whitelist
-        .split('\n')
-        .map((ip) => ip.trim())
-        .filter(Boolean)
-      const allowedDomains = securityForm.allowed_domains
-        .split('\n')
-        .map((d) => d.trim())
-        .filter(Boolean)
+      const ipWhitelist = parseLines(securityForm.ip_whitelist)
+      const allowedDomains = parseLines(securityForm.allowed_domains)
 
       const result = await updateSecuritySettings({
         mfa_required: securityForm.mfa_required,
@@ -520,6 +519,11 @@ export default function TenantPage() {
         toast.success('Security settings saved successfully')
       }
     } catch (error) {
+      // The API refuses an allowlist that would lock the caller out; show that
+      // next to the field, not only in a toast.
+      if (isIpLockoutError(error)) {
+        setIpAllowlistError(error.message)
+      }
       toast.error(getErrorMessage(error, 'Failed to save security settings'))
     }
   }
@@ -1075,31 +1079,21 @@ export default function TenantPage() {
               </CardContent>
             </Card>
 
-            {/* IP Restrictions */}
-            <Card>
-              <CardHeader>
-                <CardTitle>IP restrictions</CardTitle>
-                <CardDescription>Limit access to specific IP addresses or ranges</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <Label htmlFor="ip-whitelist">Allowed IP addresses</Label>
-                  <Textarea
-                    id="ip-whitelist"
-                    placeholder="Enter IP addresses or CIDR ranges, one per line&#10;Example: 192.168.1.0/24"
-                    value={securityForm.ip_whitelist}
-                    onChange={(e) =>
-                      setSecurityForm({ ...securityForm, ip_whitelist: e.target.value })
-                    }
-                    rows={4}
-                    disabled={!canManageSecurityAndAPI}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Leave empty to allow access from any IP address
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+            {/* Allowed email domains + IP allowlist (both enforced by the API) */}
+            <AccessRestrictionsCard
+              ipAllowlist={securityForm.ip_whitelist}
+              allowedDomains={securityForm.allowed_domains}
+              onIpAllowlistChange={(value) => {
+                setIpAllowlistError(null)
+                setSecurityForm({ ...securityForm, ip_whitelist: value })
+              }}
+              onAllowedDomainsChange={(value) =>
+                setSecurityForm({ ...securityForm, allowed_domains: value })
+              }
+              currentIp={settings?.security?.current_ip}
+              ipAllowlistError={ipAllowlistError}
+              disabled={!canManageSecurityAndAPI}
+            />
           </TabsContent>
 
           {/* API Tab */}

@@ -43,6 +43,11 @@ export interface SecuritySettings {
   email_verification_mode: EmailVerificationMode
   /** Fail-closed data scope: non-admins see only assigned assets/findings. */
   restricted_data_scope?: boolean
+  /**
+   * The caller's IP as the API sees it (read-only, GET only). Shown next to the
+   * IP allowlist so an owner does not lock themselves out.
+   */
+  current_ip?: string
 }
 
 export interface UpdateSecuritySettingsInput {
