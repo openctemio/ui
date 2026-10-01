@@ -1,19 +1,12 @@
 'use client'
 
 import { useLayout } from '@/context/layout-provider'
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarHeader,
-  SidebarRail,
-} from '@/components/ui/sidebar'
+import { Sidebar, SidebarContent, SidebarHeader, SidebarRail } from '@/components/ui/sidebar'
 // Use centralized sidebar data from features
 import { sidebarData } from '@/config/sidebar-data'
 import { useFilteredSidebarData } from '@/lib/permissions'
 import { NavClusterLabel, NavGroup } from './nav-group'
 import { useTranslation } from '@/context/i18n-provider'
-import { SidebarUser } from './sidebar-user'
 import { TeamSwitcher } from './team-switcher'
 import { SidebarBrand } from './sidebar-brand'
 import { Separator } from '@/components/ui/separator'
@@ -94,12 +87,7 @@ export function AppSidebar() {
         )}
       </SidebarContent>
 
-      {/* Footer - User profile and logout (separator inset like the header's) */}
-      <SidebarFooter>
-        <Separator orientation="horizontal" />
-        <SidebarUser />
-      </SidebarFooter>
-
+      {/* No footer user menu: the header avatar menu is the one user menu. */}
       {/* Sidebar toggle rail */}
       <SidebarRail />
     </Sidebar>

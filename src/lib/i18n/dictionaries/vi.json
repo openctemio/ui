@@ -185,5 +185,8 @@
   "settings.filter": "Lọc cài đặt",
   "settings.noMatch": "Không có cài đặt nào khớp bộ lọc.",
   "settings.badge.soon": "Sắp có",
-  "settings.overview.description": "Tài khoản của bạn và cách tổ chức được thiết lập."
+  "settings.overview.description": "Tài khoản của bạn và cách tổ chức được thiết lập.",
+  "userMenu.open": "Mở menu người dùng",
+  "userMenu.allSettings": "Tất cả cài đặt",
+  "userMenu.signOut": "Đăng xuất"
 }

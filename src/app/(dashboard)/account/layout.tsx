@@ -1,49 +1,33 @@
 'use client'
 
+import { usePathname } from 'next/navigation'
 import { Main } from '@/components/layout'
-import { PageHeader, SectionTabs } from '@/features/shared'
-import { User, Shield, Settings, History } from 'lucide-react'
+import { PageHeader } from '@/features/shared'
+import { useTranslation } from '@/context/i18n-provider'
+import { activeSettingsItem } from '@/config/settings-nav'
 
-const accountTabs = [
-  {
-    title: 'Profile',
-    href: '/account',
-    icon: User,
-    description: 'Manage your personal information',
-  },
-  {
-    title: 'Security',
-    href: '/account/security',
-    icon: Shield,
-    description: 'Password, 2FA, and sessions',
-  },
-  {
-    title: 'Preferences',
-    href: '/account/preferences',
-    icon: Settings,
-    description: 'Customize your experience',
-  },
-  {
-    title: 'Activity',
-    href: '/account/activity',
-    icon: History,
-    description: 'View your account activity',
-  },
-]
-
+/**
+ * Personal settings (/account/*). The settings rail ("My account" group) is
+ * the navigation, so there are no tabs here; the header is the current item's
+ * title and description from src/config/settings-nav.ts, the same words the
+ * rail and the /settings overview use.
+ */
 export default function AccountLayout({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname()
+  const { t } = useTranslation()
+  const item = activeSettingsItem(pathname)
+
   return (
     <Main>
       <PageHeader
-        title="Account settings"
-        description="Your profile, sign-in security and preferences."
+        title={
+          item
+            ? t(`settings.item.${item.id}`, item.title)
+            : t('settings.group.account', 'My account')
+        }
+        description={item ? t(`settings.desc.${item.id}`, item.description) : undefined}
       />
-      <SectionTabs
-        label="Account sections"
-        className="mt-5"
-        tabs={accountTabs.map((t) => ({ label: t.title, href: t.href, icon: t.icon }))}
-      />
-      <div>{children}</div>
+      <div className="mt-5">{children}</div>
     </Main>
   )
 }
