@@ -1,6 +1,5 @@
 import {
   GitBranch,
-  KeyRound,
   MessageSquare,
   Shield,
   ShieldCheck,
@@ -29,48 +28,35 @@ export interface IntegrationCategoryCard {
  * read it (an App Router page may only export its component).
  */
 export const INTEGRATION_CATEGORIES: IntegrationCategoryCard[] = [
+  // Same order and names as Settings › Integrations in the settings rail.
+  // API keys are not an integration; they live in Settings › Access.
   {
     id: 'scm',
-    title: 'SCM connections',
+    title: 'Source control',
     description: 'Connect GitHub, GitLab, Bitbucket, or Azure DevOps',
     icon: GitBranch,
     href: '/settings/integrations/scm',
-  },
-  {
-    id: 'notifications',
-    title: 'Notifications',
-    description: 'Slack, Teams, Telegram, and webhook alerts',
-    icon: MessageSquare,
-    href: '/settings/integrations/notifications',
-  },
-  {
-    id: 'cicd',
-    title: 'CI/CD pipelines',
-    description: 'Integrate with Jenkins, GitHub Actions, GitLab CI',
-    icon: Workflow,
-    href: '/settings/integrations/cicd',
-    badge: 'Soon',
-  },
-  {
-    id: 'ticketing',
-    title: 'Ticketing systems',
-    description: 'Connect Jira, ServiceNow, or Linear',
-    icon: TicketCheck,
-    href: '/settings/integrations/ticketing',
-  },
-  {
-    id: 'api-keys',
-    title: 'API keys',
-    description: 'Issue and revoke programmatic access keys',
-    icon: KeyRound,
-    href: '/settings/api-keys',
   },
   {
     id: 'security',
     title: 'Vulnerability scanners',
     description: 'Connect Tenable (Nessus Pro / Tenable.sc)',
     icon: ShieldCheck,
-    href: '/settings/integrations/security',
+    href: '/settings/integrations/scanners',
+  },
+  {
+    id: 'ticketing',
+    title: 'Ticketing',
+    description: 'Connect Jira, ServiceNow, or Linear',
+    icon: TicketCheck,
+    href: '/settings/integrations/ticketing',
+  },
+  {
+    id: 'notifications',
+    title: 'Notification channels',
+    description: 'Slack, Teams, Telegram, and webhook alerts',
+    icon: MessageSquare,
+    href: '/settings/integrations/notifications',
   },
   {
     id: 'siem',
@@ -78,5 +64,13 @@ export const INTEGRATION_CATEGORIES: IntegrationCategoryCard[] = [
     description: 'Forward security events to Splunk',
     icon: Shield,
     href: '/settings/integrations/siem',
+  },
+  {
+    id: 'cicd',
+    title: 'CI/CD',
+    description: 'Integrate with Jenkins, GitHub Actions, GitLab CI',
+    icon: Workflow,
+    href: '/settings/integrations/cicd',
+    badge: 'Soon',
   },
 ]

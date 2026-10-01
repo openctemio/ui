@@ -708,7 +708,7 @@ export default function SecurityScannersPage() {
   return (
     <Main>
       <PageHeader
-        title="Vulnerability Scanners"
+        title="Vulnerability scanners"
         description="Connect Tenable (Nessus Pro / Tenable.sc) for license-aware scan coverage"
       >
         <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>

@@ -31,10 +31,10 @@ import type {
 // Per-category label + the sub-page that manages it.
 const categoryMeta: Record<IntegrationCategory, { label: string; href: string }> = {
   scm: { label: 'Source control', href: '/settings/integrations/scm' },
-  security: { label: 'Security', href: '/settings/integrations/security' },
+  security: { label: 'Vulnerability scanners', href: '/settings/integrations/scanners' },
   ticketing: { label: 'Ticketing', href: '/settings/integrations/ticketing' },
   cloud: { label: 'Cloud', href: '/settings/integrations' },
-  notification: { label: 'Notification', href: '/settings/integrations/notifications' },
+  notification: { label: 'Notification channels', href: '/settings/integrations/notifications' },
 }
 
 // Status badge for every IntegrationStatus the API can return. Only a problem
