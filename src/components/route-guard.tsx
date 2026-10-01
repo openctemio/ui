@@ -99,7 +99,12 @@ export function RouteGuard({ children }: RouteGuardProps) {
     // Layer 1: Check module access (Licensing)
     if (routeConfig.module) {
       if (!hasModuleAccess(routeConfig.module)) {
-        return { hasAccess: false, deniedReason: 'module' as AccessDeniedReason }
+        // The API filters the module list by the user's permissions, so a
+        // missing module also means "you may not use this", not only "your
+        // plan does not include it". Without the route's permission, say so
+        // instead of telling the user to upgrade a plan that has the feature.
+        const reason: AccessDeniedReason = can(routeConfig.permission) ? 'module' : 'permission'
+        return { hasAccess: false, deniedReason: reason }
       }
     }
 
