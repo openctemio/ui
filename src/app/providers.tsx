@@ -6,6 +6,15 @@ import { DirectionProvider } from '@/context/direction-provider'
 import { I18nProvider } from '@/context/i18n-provider'
 import { SWRProvider } from '@/lib/swr-config'
 import { Toaster } from 'sonner'
+import { migrateSensorBrowserStorage } from '@/lib/sensor-storage-migration'
+
+// Browser state written before the sensor rename (RFC-023: cached permissions,
+// app keys) is migrated once, when this module first loads in the browser:
+// before any component renders, so nothing reads the old spelling. Idempotent
+// and exception-safe; see src/lib/sensor-storage-migration.ts.
+if (typeof window !== 'undefined') {
+  migrateSensorBrowserStorage()
+}
 
 export function Providers({
   children,
