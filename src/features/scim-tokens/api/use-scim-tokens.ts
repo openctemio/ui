@@ -18,9 +18,10 @@ import type {
 
 const BASE_URL = '/api/v1/scim-tokens'
 
-export function useScimTokens() {
+/** Lists the tenant's SCIM tokens. Pass `enabled: false` for a user the API would refuse (not owner/admin). */
+export function useScimTokens({ enabled = true }: { enabled?: boolean } = {}) {
   const { currentTenant } = useTenant()
-  return useSWR<ScimTokenListResponse>(currentTenant ? BASE_URL : null, (url: string) =>
+  return useSWR<ScimTokenListResponse>(currentTenant && enabled ? BASE_URL : null, (url: string) =>
     get<ScimTokenListResponse>(url)
   )
 }
