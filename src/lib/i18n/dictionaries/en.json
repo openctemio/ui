@@ -23,7 +23,7 @@
   "nav.item.assignment-rules": "Assignment Rules",
   "nav.item.attacker-profiles": "Attacker Profiles",
   "nav.item.attack-paths": "Attack Paths",
-  "nav.item.attack-simulation": "Attack Simulation",
+  "nav.item.attack-simulation": "Attack simulation",
   "nav.item.attack-surface": "Attack Surface",
   "nav.item.audit-log": "Audit Log",
   "nav.item.business-impact": "Business Impact",
@@ -39,7 +39,7 @@
   "nav.item.compliance": "Compliance",
   "nav.item.components": "Components",
   "nav.item.containers-k8s": "Containers & K8s",
-  "nav.item.control-testing": "Control Testing",
+  "nav.item.control-testing": "Control testing",
   "nav.item.credential-leaks": "Credential Leaks",
   "nav.item.crown-jewels": "Crown Jewels",
   "nav.item.ctem-cycles": "CTEM Cycles",
@@ -188,5 +188,8 @@
   "settings.filter": "Filter settings",
   "settings.noMatch": "No settings match your filter.",
   "settings.badge.soon": "Soon",
-  "settings.overview.description": "Your account, and how your organization is set up."
+  "settings.overview.description": "Your account, and how your organization is set up.",
+  "nav.item.pentest-campaigns": "Pentest campaigns",
+  "nav.item.retest-queue": "Retest queue",
+  "nav.item.att-ck-coverage": "ATT&CK coverage"
 }

@@ -131,6 +131,8 @@ export function useControlTests(filters?: {
   framework?: string
   status?: string
   search?: string
+  /** When false, skip the request (e.g. control_testing module disabled). Defaults true. */
+  enabled?: boolean
 }) {
   const params = new URLSearchParams()
   if (filters?.framework) params.set('framework', filters.framework)
@@ -138,7 +140,9 @@ export function useControlTests(filters?: {
   if (filters?.search) params.set('search', filters.search)
   params.set('per_page', '100')
   const url = `/api/v1/control-tests?${params.toString()}`
-  return useSWR<PaginatedResponse<ControlTest>>(url, get, { revalidateOnFocus: false })
+  return useSWR<PaginatedResponse<ControlTest>>(filters?.enabled === false ? null : url, get, {
+    revalidateOnFocus: false,
+  })
 }
 
 export function useControlTestStats() {
