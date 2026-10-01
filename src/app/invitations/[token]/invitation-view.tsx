@@ -85,6 +85,13 @@ export function InvitationView({ token, hasSession }: InvitationViewProps) {
     }
   }, [token])
 
+  // Accepting sets fresh auth/tenant cookies: navigate client-side, then refresh
+  // so server components and the session are re-read with them.
+  function navigateWithFreshSession(path: string) {
+    router.push(path)
+    router.refresh()
+  }
+
   // Accept invitation - tries access token first, then refresh token
   function handleAccept() {
     setAcceptError(null)
@@ -98,7 +105,7 @@ export function InvitationView({ token, hasSession }: InvitationViewProps) {
 
         if (response.ok) {
           toast.success('You have joined the team!')
-          window.location.href = '/dashboard'
+          navigateWithFreshSession('/dashboard')
           return
         }
 
@@ -114,13 +121,13 @@ export function InvitationView({ token, hasSession }: InvitationViewProps) {
 
           if (refreshResponse.ok) {
             toast.success('You have joined the team!')
-            window.location.href = '/dashboard'
+            navigateWithFreshSession('/dashboard')
             return
           }
 
           if (refreshResponse.status === 401) {
-            // No valid session - redirect to login (use window.location for full page reload)
-            window.location.href = invitationLoginHref
+            // No valid session - send the visitor to sign in, then back here
+            router.push(invitationLoginHref)
             return
           }
 
