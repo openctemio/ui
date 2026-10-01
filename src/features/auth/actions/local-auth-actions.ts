@@ -94,6 +94,9 @@ export interface LoginBackendResponse {
     name: string
     role: string
   }>
+  // True for a platform administrator (RFC-022). The account belongs to no
+  // organization; it goes to the admin console, not onboarding.
+  platform_admin?: boolean
 }
 
 // Token exchange response (tenant-scoped access token)
@@ -126,6 +129,8 @@ export interface LoginResult {
   // The login form surfaces this so the user knows why they have no
   // accessible team, instead of being routed to create-team onboarding.
   suspendedTenants?: LoginTenant[]
+  // A platform administrator: the client opens the admin console.
+  platformAdmin?: boolean
 }
 
 // ============================================
@@ -312,6 +317,12 @@ export async function loginAction(input: LoginInput): Promise<LoginResult> {
       roles: [],
       emailVerified: true, // Assume verified if can login
       authProvider: 'local',
+    }
+
+    // A platform administrator belongs to no organization: send them to the
+    // admin console (which asks for the TOTP code) instead of onboarding.
+    if (loginData.platform_admin) {
+      return { success: true, user, platformAdmin: true, tenants: [] }
     }
 
     // Case 1: No tenants - user needs to create or join a team.

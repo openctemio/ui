@@ -5,7 +5,8 @@
  * Once verified, email-domain SSO auto-join can be safely gated to people
  * whose address is at a domain the tenant controls.
  *
- * Backend: /api/v1/settings/verified-domains (RequireAdmin, tenant-scoped).
+ * Backend: /api/v1/admin/tenants/{tenantId}/sso/verified-domains (platform
+ * administrator, per organization; RFC-022).
  */
 
 export type VerifiedDomainStatus = 'pending' | 'verified' | 'failed'
