@@ -192,6 +192,7 @@ function SyncStatusRow({ status, onUpdate }: SyncStatusRowProps) {
             {status.enabled ? 'Enabled' : 'Disabled'}
           </span>
           <Switch
+            aria-label={`${config.name} sync enabled`}
             checked={status.enabled}
             onCheckedChange={handleToggleEnabled}
             disabled={isToggling}

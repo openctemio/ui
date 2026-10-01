@@ -5,7 +5,7 @@
  */
 
 export { Header } from './app-header'
-export { Main } from './main'
+export { Main, MainRegion } from './main'
 export { TopNav, type TopNavLink } from './top-nav'
 export { AppSidebar } from './app-sidebar'
 export { NavGroup } from './nav-group'

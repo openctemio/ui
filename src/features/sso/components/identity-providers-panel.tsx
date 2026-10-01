@@ -345,6 +345,7 @@ export function IdentityProvidersPanel({
                           </p>
                         </div>
                         <Switch
+                          aria-label="Auto-provision users"
                           checked={form.auto_provision}
                           onCheckedChange={(checked) =>
                             updateSsoForm(providerDef.value, 'auto_provision', checked)
@@ -380,6 +381,7 @@ export function IdentityProvidersPanel({
                             <Label>Status</Label>
                             <div className="flex items-center gap-2 pt-1">
                               <Switch
+                                aria-label="Status"
                                 checked={form.is_active}
                                 onCheckedChange={(checked) =>
                                   updateSsoForm(providerDef.value, 'is_active', checked)

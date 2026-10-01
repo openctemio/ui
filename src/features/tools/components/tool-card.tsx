@@ -229,6 +229,7 @@ export function ToolCard({
                 {tool.is_active ? 'Active' : 'Inactive'}
               </span>
               <Switch
+                aria-label={`${tool.display_name} active`}
                 checked={tool.is_active}
                 onCheckedChange={() => (tool.is_active ? onDeactivate?.(tool) : onActivate?.(tool))}
                 onClick={(e) => e.stopPropagation()}

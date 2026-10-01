@@ -362,6 +362,7 @@ export function AssignmentRuleDetailSheet({
                   <div className="flex items-center justify-between">
                     <Label>Active</Label>
                     <Switch
+                      aria-label="Active"
                       checked={editForm.is_active}
                       onCheckedChange={(v) => setEditForm({ ...editForm, is_active: v })}
                     />

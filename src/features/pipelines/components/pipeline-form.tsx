@@ -772,7 +772,11 @@ export function PipelineForm({ pipeline, onSubmit, onCancel, isSubmitting }: Pip
               <Label className="text-sm">Notify on Failure</Label>
               <p className="text-xs text-muted-foreground">Send alerts when pipeline fails</p>
             </div>
-            <Switch checked={notifyOnFailure} onCheckedChange={setNotifyOnFailure} />
+            <Switch
+              aria-label="Notify on Failure"
+              checked={notifyOnFailure}
+              onCheckedChange={setNotifyOnFailure}
+            />
           </div>
         </TabsContent>
       </Tabs>

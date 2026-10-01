@@ -392,6 +392,7 @@ export default function PriorityRulesPage() {
         enableSorting: false,
         cell: ({ row }) => (
           <Switch
+            aria-label={`${row.original.name} active`}
             checked={row.original.is_active}
             onCheckedChange={(checked) => toggleActive(row.original, checked)}
           />
