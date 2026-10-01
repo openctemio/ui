@@ -69,6 +69,7 @@ export const DEV_USER: AuthUser & {
     'sensors:write',
     'sensors:commands:read',
     'sensors:commands:write',
+    'sensors:zones:read',
     // Team
     'team:read',
     'team:update',

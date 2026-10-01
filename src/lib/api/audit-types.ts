@@ -143,6 +143,12 @@ export type AuditAction =
   // Sensor actions, and the spelling rows written before the rename carry
   | `sensor.${SensorAuditVerb}`
   | `${typeof HISTORICAL_SENSOR_ACTION_PREFIX}${SensorAuditVerb}`
+  // Scan zone actions (RFC-023)
+  | 'scan_zone.created'
+  | 'scan_zone.updated'
+  | 'scan_zone.deleted'
+  | 'scan_zone.sensor_assigned'
+  | 'scan_zone.sensor_unassigned'
 
 /**
  * Resource types - maps to backend audit.ResourceType
@@ -164,6 +170,7 @@ export type AuditResourceType =
   | 'settings'
   | 'token'
   | 'sensor'
+  | 'scan_zone'
   | typeof HISTORICAL_SENSOR_RESOURCE_TYPE
 
 /**
@@ -348,6 +355,12 @@ export function getActionLabel(action: AuditAction): string {
     'sensor.key_renewed': 'Sensor API Key Renewed',
     'sensor.connected': 'Sensor Connected',
     'sensor.disconnected': 'Sensor Disconnected',
+    // Scan zone actions
+    'scan_zone.created': 'Scan Zone Created',
+    'scan_zone.updated': 'Scan Zone Updated',
+    'scan_zone.deleted': 'Scan Zone Deleted',
+    'scan_zone.sensor_assigned': 'Sensor Assigned to Scan Zone',
+    'scan_zone.sensor_unassigned': 'Sensor Unassigned from Scan Zone',
   }
   const canonical = canonicalAuditAction(action)
   return labels[canonical] || action

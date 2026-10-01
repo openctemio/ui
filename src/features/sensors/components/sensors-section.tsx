@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useCallback } from 'react'
 import { Plus, RadioTower, Loader2, Search, Download, Trash2, Ban } from 'lucide-react'
+import { ScanZonesPanel } from '@/features/scan-zones'
 import { toast } from 'sonner'
 import { getErrorMessage } from '@/lib/api/error-handler'
 
@@ -26,7 +27,7 @@ import {
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { RefreshButton, TableSkeleton } from '@/components/list-page-parts'
 import { useUrlFilter } from '@/hooks/use-url-param'
-import { Can, Permission } from '@/lib/permissions'
+import { Can, Permission, useHasPermission } from '@/lib/permissions'
 
 import { AddSensorDialog } from './add-sensor-dialog'
 import { EditSensorDialog } from './edit-sensor-dialog'
@@ -58,8 +59,12 @@ import {
 } from '@/features/shared'
 
 type ModeFilter = 'all' | 'daemon' | 'standalone'
-/** Settings → Sensors tabs: one per role the data supports today (RFC-023 §9.3 R0). */
+/**
+ * Settings → Sensors tabs: one per role the data supports today (RFC-023 §9.3
+ * R0), plus the scan zones those sensors serve (RFC-023 §7).
+ */
 type RoleTab = 'all' | 'scanners' | 'collectors'
+type SensorsTab = RoleTab | 'zones'
 const ROLE_OF_TAB: Record<Exclude<RoleTab, 'all'>, SensorRole> = {
   scanners: 'scanner',
   collectors: 'collector',
@@ -175,6 +180,10 @@ export function SensorsSection({
     : tabParam in ROLE_OF_TAB
       ? (tabParam as RoleTab)
       : 'all'
+  const canReadZones = useHasPermission(Permission.ScanZonesRead)
+  const zonesTab = !legacyCollectorMode && tabParam === 'zones' && canReadZones && !typeFilter
+  const activeTab: SensorsTab = zonesTab ? 'zones' : activeRoleTab
+  const [zoneCreateOpen, setZoneCreateOpen] = useState(false)
   const setRoleTab = useCallback(
     (next: string) => {
       if (legacyCollectorMode) setModeFilter('all')
@@ -579,20 +588,31 @@ export function SensorsSection({
   return (
     <>
       <PageHeader title={title} description={description}>
-        <Button variant="outline" size="sm" onClick={handleExport}>
-          <Download className="h-4 w-4" />
-          Export
-        </Button>
-        <Can permission={Permission.SensorsWrite}>
-          <Button size="sm" onClick={() => setAddDialogOpen(true)}>
-            <Plus className="h-4 w-4" />
-            Add sensor
-          </Button>
-        </Can>
+        {zonesTab ? (
+          <Can permission={Permission.ScanZonesWrite}>
+            <Button size="sm" onClick={() => setZoneCreateOpen(true)}>
+              <Plus className="h-4 w-4" />
+              Add zone
+            </Button>
+          </Can>
+        ) : (
+          <>
+            <Button variant="outline" size="sm" onClick={handleExport}>
+              <Download className="h-4 w-4" />
+              Export
+            </Button>
+            <Can permission={Permission.SensorsWrite}>
+              <Button size="sm" onClick={() => setAddDialogOpen(true)}>
+                <Plus className="h-4 w-4" />
+                Add sensor
+              </Button>
+            </Can>
+          </>
+        )}
       </PageHeader>
 
       {!typeFilter && (
-        <Tabs value={activeRoleTab} onValueChange={setRoleTab} className="mt-4">
+        <Tabs value={activeTab} onValueChange={setRoleTab} className="mt-4">
           <TabsList>
             <TabsTrigger value="all">
               All <TabsCount value={isLoading ? null : typeFilteredSensors.length} />
@@ -603,17 +623,24 @@ export function SensorsSection({
             <TabsTrigger value="collectors">
               Collectors <TabsCount value={isLoading ? null : roleCounts.collector} />
             </TabsTrigger>
+            {canReadZones && <TabsTrigger value="zones">Scan zones</TabsTrigger>}
           </TabsList>
         </Tabs>
       )}
 
-      <MetricStrip className="mt-5" loading={isLoading} items={metrics} />
+      {zonesTab ? (
+        <ScanZonesPanel createOpen={zoneCreateOpen} onCreateOpenChange={setZoneCreateOpen} />
+      ) : (
+        <>
+          <MetricStrip className="mt-5" loading={isLoading} items={metrics} />
 
-      <div className="mt-5">{body}</div>
+          <div className="mt-5">{body}</div>
 
-      {/* Cloud-hosted platform sensors: capacity and queue, separate from the
-          tenant's own sensors listed above, so it follows the table. */}
-      <PlatformStatsCard className="mt-5" />
+          {/* Cloud-hosted platform sensors: capacity and queue, separate from the
+              tenant's own sensors listed above, so it follows the table. */}
+          <PlatformStatsCard className="mt-5" />
+        </>
+      )}
 
       <Can permission={Permission.SensorsDelete}>
         <BulkActionBar count={selectedIds.length} onClear={clearSelection} noun="sensors selected">
