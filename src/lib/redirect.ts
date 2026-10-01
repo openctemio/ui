@@ -46,12 +46,22 @@ export function validateRedirectUrl(
     return defaultUrl
   }
 
+  // Reject any embedded ASCII control character (tab, newline, CR, etc.).
+  // Browsers STRIP these while parsing a navigation target, so a value like
+  // "/\t/evil.com" (from "?redirect=/%09/evil.com") collapses to "//evil.com"
+  // — a protocol-relative external redirect — after it passes the checks below.
+  // .trim() only removes leading/trailing whitespace, not interior controls.
+  if (/[\u0000-\u001f\u007f]/.test(trimmedUrl)) {
+    return defaultUrl
+  }
+
   try {
-    // Rule 1: Simple internal path (starts with / but not //)
-    if (trimmedUrl.startsWith('/') && !trimmedUrl.startsWith('//')) {
+    // Rule 1: Simple internal path (starts with /)
+    if (trimmedUrl.startsWith('/')) {
       // Reject backslash / protocol-relative tricks: browsers normalise
-      // "\" to "/", so "/\evil.com" or "/\/evil.com" become external
-      // protocol-relative redirects. Block a leading "/" followed by "/" or "\".
+      // "\" to "/", so "//evil.com", "/\evil.com" or "/\/evil.com" become
+      // external protocol-relative redirects. Block a leading "/" followed
+      // by "/" or "\".
       if (/^\/[/\\]/.test(trimmedUrl)) {
         return defaultUrl
       }
@@ -74,8 +84,16 @@ export function validateRedirectUrl(
     const appOrigin = new URL(env.app.url).origin
 
     if (parsed.origin === appOrigin) {
-      // Return pathname + search + hash (no origin)
-      return parsed.pathname + parsed.search + parsed.hash
+      // Return pathname + search + hash (no origin). The pathname of a
+      // same-origin absolute URL can itself be protocol-relative, e.g.
+      // "https://app//evil.com" parses to pathname "//evil.com", and
+      // "https://app/\evil.com" normalises to "//evil.com" too. Re-apply the
+      // leading-"//"/"/\" guard to the extracted path before trusting it.
+      const safePath = parsed.pathname + parsed.search + parsed.hash
+      if (!safePath.startsWith('/') || /^\/[/\\]/.test(safePath)) {
+        return defaultUrl
+      }
+      return safePath
     }
 
     // Different origin - not allowed
