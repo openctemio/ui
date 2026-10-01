@@ -6,7 +6,13 @@ import { useFindingsApi } from '@/features/findings/api/use-findings-api'
 import type { ApiFinding } from '@/features/findings/api/finding-api.types'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { Main } from '@/components/layout'
-import { RiskScoreBadge, DataTableRowActions, EmptyState } from '@/features/shared'
+import {
+  RiskScoreBadge,
+  DataTableRowActions,
+  EmptyState,
+  DangerZone,
+  DangerZoneItem,
+} from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
@@ -2296,48 +2302,32 @@ function SettingsTab({ repository, onDelete }: { repository: Repository; onDelet
         </CardContent>
       </Card>
 
-      {/* Danger Zone */}
-      <Card className="border-red-500/20">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base text-red-500">
-            <AlertTriangle className="h-4 w-4" />
-            Danger Zone
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
+      <Can permission={[Permission.AssetsWrite, Permission.AssetsDelete]}>
+        <DangerZone>
           <Can permission={Permission.AssetsWrite}>
-            <div className="flex items-center justify-between p-4 rounded-lg border border-red-500/20">
-              <div>
-                <p className="font-medium">Archive Repository</p>
-                <p className="text-sm text-muted-foreground">
-                  Archive this repository. It can be restored later.
-                </p>
-              </div>
-              <Button
-                variant="outline"
-                className="text-red-500 border-red-500/50 hover:bg-red-500/10"
-                disabled
-                title="Archiving is not yet available"
-              >
-                Archive
-              </Button>
-            </div>
+            <DangerZoneItem
+              title="Archive repository"
+              description="Archive this repository. It can be restored later."
+              action={
+                <Button variant="outline" size="sm" disabled title="Archiving is not yet available">
+                  Archive
+                </Button>
+              }
+            />
           </Can>
           <Can permission={Permission.AssetsDelete}>
-            <div className="flex items-center justify-between p-4 rounded-lg border border-red-500/20">
-              <div>
-                <p className="font-medium">Delete Repository</p>
-                <p className="text-sm text-muted-foreground">
-                  Permanently delete this repository and all associated data.
-                </p>
-              </div>
-              <Button variant="destructive" onClick={onDelete} disabled={!onDelete}>
-                Delete
-              </Button>
-            </div>
+            <DangerZoneItem
+              title="Delete repository"
+              description="Permanently delete this repository and all associated data."
+              action={
+                <Button variant="destructive" size="sm" onClick={onDelete} disabled={!onDelete}>
+                  Delete
+                </Button>
+              }
+            />
           </Can>
-        </CardContent>
-      </Card>
+        </DangerZone>
+      </Can>
     </div>
   )
 }

@@ -19,7 +19,7 @@ import { getE2EConfig } from '../helpers/env'
 
 test.describe('Landmarks', () => {
   test('dashboard pages have exactly one main landmark, and it is #content', async ({ page }) => {
-    for (const path of ['/', '/findings', '/sensors', '/settings/tenant']) {
+    for (const path of ['/', '/findings', '/sensors', '/settings/general']) {
       await page.goto(path)
       await expect(page.locator('main#content'), path).toHaveCount(1, { timeout: 30_000 })
       await expect(page.getByRole('main'), path).toHaveCount(1)
@@ -36,7 +36,7 @@ base.describe('Access denied view', () => {
     if (!cfg.ok) return
 
     await loginAs(page, { ...cfg.config, userEmail: email!, userPassword: password! })
-    await page.goto('/settings/tenant')
+    await page.goto('/settings/general')
     await expect(page.getByText('Access Denied', { exact: true })).toBeVisible({ timeout: 30_000 })
 
     await expect(page.getByRole('main')).toHaveCount(1)
@@ -48,10 +48,9 @@ base.describe('Access denied view', () => {
   })
 })
 
-test.describe('Tenant security settings', () => {
+test.describe('Organization authentication settings', () => {
   test('the two-factor switch has an accessible name', async ({ page }) => {
-    await page.goto('/settings/tenant')
-    await page.getByRole('tab', { name: /security/i }).click()
+    await page.goto('/settings/authentication')
     await expect(
       page.getByRole('switch', { name: 'Require two-factor authentication' })
     ).toBeVisible({ timeout: 30_000 })
