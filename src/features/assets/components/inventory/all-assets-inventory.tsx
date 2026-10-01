@@ -14,9 +14,9 @@
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { ListFilter, Lock, PanelLeftClose, RefreshCw, Search } from 'lucide-react'
+import { Lock, RefreshCw, Search } from 'lucide-react'
 import { Main } from '@/components/layout'
-import { PageHeader, EmptyState } from '@/features/shared'
+import { PageHeader, EmptyState, FilterPanelToggle } from '@/features/shared'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -257,48 +257,14 @@ export function AllAssetsInventory({ viewSwitcher }: { viewSwitcher?: ReactNode 
     />
   )
 
-  // Icon-only filter toggle; the active-filter count sits on its corner.
-  const filterCountDot =
-    activeCount > 0 ? (
-      <span className="absolute -end-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-medium tabular-nums text-primary-foreground">
-        {activeCount}
-      </span>
-    ) : null
-  const filterLabel = activeCount > 0 ? `Filters (${activeCount} active)` : 'Filters'
   const filterButtons = (
-    <>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="outline"
-            size="icon"
-            className="relative hidden h-9 w-9 shrink-0 lg:inline-flex"
-            onClick={() => setFiltersOpen((o) => !o)}
-            aria-pressed={filtersOpen}
-            aria-controls="asset-filters"
-            aria-label={filterLabel}
-          >
-            {filtersOpen ? (
-              <PanelLeftClose className="h-4 w-4" />
-            ) : (
-              <ListFilter className="h-4 w-4" />
-            )}
-            {filterCountDot}
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>{filtersOpen ? 'Hide filters' : 'Show filters'}</TooltipContent>
-      </Tooltip>
-      <Button
-        variant="outline"
-        size="icon"
-        className="relative h-9 w-9 shrink-0 lg:hidden"
-        onClick={() => setFilterSheetOpen(true)}
-        aria-label={filterLabel}
-      >
-        <ListFilter className="h-4 w-4" />
-        {filterCountDot}
-      </Button>
-    </>
+    <FilterPanelToggle
+      open={filtersOpen}
+      onToggle={() => setFiltersOpen((o) => !o)}
+      onOpenSheet={() => setFilterSheetOpen(true)}
+      activeCount={activeCount}
+      controlsId="asset-filters"
+    />
   )
 
   const searchBox = (

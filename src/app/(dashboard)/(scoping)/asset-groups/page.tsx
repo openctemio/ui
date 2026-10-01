@@ -17,6 +17,7 @@ import {
   FacetSection,
   FacetOption,
   BulkActionBar,
+  FilterPanelToggle,
 } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -38,8 +39,6 @@ import {
   Tags,
   Search as SearchIcon,
   Package,
-  ListFilter,
-  PanelLeftClose,
 } from 'lucide-react'
 import {
   DropdownMenu,
@@ -701,48 +700,15 @@ export default function AssetGroupsPage() {
     </FacetPanel>
   )
 
-  // Icon-only filter toggle; the active-filter count sits on its corner (as on Findings).
-  const filterCountDot =
-    activeFilterCount > 0 ? (
-      <span className="absolute -end-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-medium tabular-nums text-primary-foreground">
-        {activeFilterCount}
-      </span>
-    ) : null
-  const filterLabel = activeFilterCount > 0 ? `Filters (${activeFilterCount} active)` : 'Filters'
-
   const toolbarStart = (
     <>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="outline"
-            size="icon"
-            className="relative hidden h-9 w-9 lg:inline-flex"
-            onClick={toggleFiltersOpen}
-            aria-pressed={filtersOpen}
-            aria-controls="asset-group-filters"
-            aria-label={filterLabel}
-          >
-            {filtersOpen ? (
-              <PanelLeftClose className="h-4 w-4" />
-            ) : (
-              <ListFilter className="h-4 w-4" />
-            )}
-            {filterCountDot}
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>{filtersOpen ? 'Hide filters' : 'Show filters'}</TooltipContent>
-      </Tooltip>
-      <Button
-        variant="outline"
-        size="icon"
-        className="relative h-9 w-9 lg:hidden"
-        onClick={() => setFilterSheetOpen(true)}
-        aria-label={filterLabel}
-      >
-        <ListFilter className="h-4 w-4" />
-        {filterCountDot}
-      </Button>
+      <FilterPanelToggle
+        open={filtersOpen}
+        onToggle={toggleFiltersOpen}
+        onOpenSheet={() => setFilterSheetOpen(true)}
+        activeCount={activeFilterCount}
+        controlsId="asset-group-filters"
+      />
       <div className="relative min-w-0 flex-1 sm:max-w-sm">
         <SearchIcon className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input

@@ -25,6 +25,7 @@ import {
   FacetToggle,
   FacetGroupLabel,
   BulkActionBar,
+  FilterPanelToggle,
 } from '@/features/shared'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
@@ -69,8 +70,6 @@ import {
   AlertOctagon,
   Ticket,
   Wrench,
-  ListFilter,
-  PanelLeftClose,
   Search,
   ArrowLeft,
   Layers,
@@ -1475,48 +1474,14 @@ function FindingsContent() {
 
   const total = findingsResponse?.total ?? 0
 
-  // Icon-only filter toggle; the active-filter count sits on its corner.
-  const filterCountDot =
-    activeCount > 0 ? (
-      <span className="absolute -end-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-medium tabular-nums text-primary-foreground">
-        {activeCount}
-      </span>
-    ) : null
-  const filterLabel = activeCount > 0 ? `Filters (${activeCount} active)` : 'Filters'
   const filterButtons = (
-    <>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="outline"
-            size="icon"
-            className="relative hidden h-9 w-9 lg:inline-flex"
-            onClick={() => setFiltersOpen((o) => !o)}
-            aria-pressed={filtersOpen}
-            aria-controls="finding-filters"
-            aria-label={filterLabel}
-          >
-            {filtersOpen ? (
-              <PanelLeftClose className="h-4 w-4" />
-            ) : (
-              <ListFilter className="h-4 w-4" />
-            )}
-            {filterCountDot}
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>{filtersOpen ? 'Hide filters' : 'Show filters'}</TooltipContent>
-      </Tooltip>
-      <Button
-        variant="outline"
-        size="icon"
-        className="relative h-9 w-9 lg:hidden"
-        onClick={() => setFilterSheetOpen(true)}
-        aria-label={filterLabel}
-      >
-        <ListFilter className="h-4 w-4" />
-        {filterCountDot}
-      </Button>
-    </>
+    <FilterPanelToggle
+      open={filtersOpen}
+      onToggle={() => setFiltersOpen((o) => !o)}
+      onOpenSheet={() => setFilterSheetOpen(true)}
+      activeCount={activeCount}
+      controlsId="finding-filters"
+    />
   )
 
   const searchBox = (
