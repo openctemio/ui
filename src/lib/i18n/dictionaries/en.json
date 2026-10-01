@@ -185,5 +185,8 @@
   "settings.filter": "Filter settings",
   "settings.noMatch": "No settings match your filter.",
   "settings.badge.soon": "Soon",
-  "settings.overview.description": "Your account, and how your organization is set up."
+  "settings.overview.description": "Your account, and how your organization is set up.",
+  "userMenu.open": "Open user menu",
+  "userMenu.allSettings": "All settings",
+  "userMenu.signOut": "Sign out"
 }

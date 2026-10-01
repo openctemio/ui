@@ -259,7 +259,7 @@ describe('nothing left the command palette', () => {
     '/settings/integrations/siem',
     '/settings/integrations/scim-tokens',
     '/settings/integrations/mcp',
-    '/settings/notifications',
+    '/account/notifications', // was /settings/notifications (308)
     '/account',
     '/account/security',
     '/account/preferences',
