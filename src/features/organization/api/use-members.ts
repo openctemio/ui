@@ -213,29 +213,6 @@ export function useInvitations(tenantIdOrSlug: string | undefined) {
 // INVITATION MUTATIONS
 // ============================================
 
-async function createInvitation(url: string, { arg }: { arg: CreateInvitationInput }) {
-  return fetcherWithOptions<Invitation>(url, {
-    method: 'POST',
-    body: JSON.stringify(arg),
-  })
-}
-
-/**
- * Hook to create an invitation
- */
-export function useCreateInvitation(tenantIdOrSlug: string | undefined) {
-  const { trigger, isMutating, error } = useSWRMutation(
-    tenantIdOrSlug ? tenantEndpoints.createInvitation(tenantIdOrSlug) : null,
-    createInvitation
-  )
-
-  return {
-    createInvitation: trigger,
-    isCreating: isMutating,
-    error,
-  }
-}
-
 async function deleteInvitation(url: string) {
   return fetcherWithOptions<void>(url, {
     method: 'DELETE',
@@ -266,6 +243,17 @@ export function useDeleteInvitation(
 // ============================================
 // ADMIN-CREATED USERS
 // ============================================
+
+/**
+ * Create an invitation. The response is the only place the raw invitation token
+ * appears (the API stores a hash), so the caller shows the link from it.
+ */
+export function createTenantInvitation(tenantIdOrSlug: string, input: CreateInvitationInput) {
+  return fetcherWithOptions<Invitation>(tenantEndpoints.createInvitation(tenantIdOrSlug), {
+    method: 'POST',
+    body: JSON.stringify(input),
+  })
+}
 
 /**
  * Create a user account in this organization (owner/admin). The response may
