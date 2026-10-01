@@ -5,11 +5,18 @@ import type { ColumnDef } from '@tanstack/react-table'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Main } from '@/components/layout'
-import { StatusBadge, RunStatusBadge, DataTable, DataTableColumnHeader } from '@/features/shared'
+import {
+  StatusBadge,
+  RunStatusBadge,
+  DataTable,
+  DataTableColumnHeader,
+  DangerZone,
+  DangerZoneItem,
+} from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { toast } from 'sonner'
@@ -784,26 +791,24 @@ export default function ScanDetailPage() {
               </CardContent>
             </Card>
 
-            {/* Danger Zone */}
             <Can permission={Permission.ScansDelete}>
-              <Card className="md:col-span-2 border-red-500/30">
-                <CardHeader>
-                  <CardTitle className="text-base text-red-500">Danger Zone</CardTitle>
-                  <CardDescription>
-                    Permanently delete this configuration and all associated data.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Button
-                    variant="destructive"
-                    onClick={() => setDeleteConfirmOpen(true)}
-                    disabled={isDeleting}
-                  >
-                    <Trash2 className="me-2 h-4 w-4" />
-                    Delete Configuration
-                  </Button>
-                </CardContent>
-              </Card>
+              <DangerZone className="md:col-span-2">
+                <DangerZoneItem
+                  title="Delete configuration"
+                  description="Permanently delete this configuration and all associated data."
+                  action={
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => setDeleteConfirmOpen(true)}
+                      disabled={isDeleting}
+                    >
+                      <Trash2 className="me-2 h-4 w-4" />
+                      Delete configuration
+                    </Button>
+                  }
+                />
+              </DangerZone>
             </Can>
           </div>
         </TabsContent>

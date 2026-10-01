@@ -44,6 +44,7 @@ export const PATHS_WITHOUT_PAGE: ReadonlySet<string> = new Set([
   '/pipelines/[id]',
   '/relationships',
   '/settings/access-control',
+  '/settings/tenant',
   '/simulation',
 ])
 

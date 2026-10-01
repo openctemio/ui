@@ -20,6 +20,8 @@ import {
   FacetOption,
   EmptyState,
   SheetStatCard,
+  DangerZone,
+  DangerZoneItem,
 } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -1558,23 +1560,19 @@ function ConfigDetailSheet({ config, onClose: _onClose, onDelete }: ConfigDetail
             </div>
           </div>
 
-          {/* Danger Zone */}
           <Can permission={Permission.ScansDelete}>
-            <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4">
-              <h4 className="text-sm font-medium text-destructive mb-2">Danger zone</h4>
-              <p className="text-xs text-muted-foreground mb-3">
-                Permanently delete this configuration and all associated data.
-              </p>
-              <Button
-                variant="destructive"
-                size="sm"
-                className="w-full"
-                onClick={handleDeleteConfig}
-              >
-                <Trash2 className="me-2 h-4 w-4" />
-                Delete configuration
-              </Button>
-            </div>
+            <DangerZone as="h3">
+              <DangerZoneItem
+                title="Delete configuration"
+                description="Permanently delete this configuration and all associated data."
+                action={
+                  <Button variant="destructive" size="sm" onClick={handleDeleteConfig}>
+                    <Trash2 className="me-2 h-4 w-4" />
+                    Delete configuration
+                  </Button>
+                }
+              />
+            </DangerZone>
           </Can>
         </TabsContent>
       </Tabs>

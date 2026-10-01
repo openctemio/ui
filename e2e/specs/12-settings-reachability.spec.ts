@@ -76,7 +76,9 @@ test('moved settings URLs answer 308 with the query kept', async ({ e2eConfig })
   const ctx = await request.newContext({ baseURL: e2eConfig.baseURL })
   for (const r of LEGACY_SETTINGS_ROUTE_REDIRECTS) {
     const from = r.source.replace('/:path*', '')
-    const res = await ctx.get(`${from}?e2e=1`, { maxRedirects: 0 })
+    const q = new URLSearchParams({ e2e: '1' })
+    for (const h of r.has ?? []) q.set(h.key, h.value ?? 'x')
+    const res = await ctx.get(`${from}?${q}`, { maxRedirects: 0 })
     expect(res.status(), from).toBe(308)
     const location = res.headers()['location'] ?? ''
     expect(location, from).toContain('e2e=1')
@@ -120,7 +122,7 @@ base('a member opens their own settings and sees no admin entries', async ({ pag
   await expect(page).toHaveURL(/\/settings$/)
   await expect(page.getByText('Access Denied')).toHaveCount(0)
   // Owner/admin-only entries are hidden, not shown and refused.
-  for (const adminOnly of ['/settings/tenant', '/settings/modules']) {
+  for (const adminOnly of ['/settings/general', '/settings/modules']) {
     await expect(page.locator(`${rail} a[href="${adminOnly}"]`), adminOnly).toHaveCount(0)
   }
 })
