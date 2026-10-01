@@ -51,8 +51,9 @@ Every page, top to bottom:
   - Facet panel (Findings layout): pass `filterToggle` (`open`, `onToggle`,
     `onOpenSheet`, `activeCount`, `controlsId`) to `<DataTable>`, or render
     `<FilterPanelToggle>` yourself when the toolbar is not a DataTable's. It
-    toggles the side panel from `lg` up and opens the same panel in a left
-    sheet below `lg`.
+    toggles the side panel from `lg` up and opens the same panel below `lg`
+    in `<FilterSheet>` (full width, close button on its own row, a "Show N
+    results" footer). No other left-side sheet.
   - Popover / sheet / dialog of filters: put `<FilterButton activeCount={n} />`
     inside `<PopoverTrigger asChild>` (it forwards its ref and props).
   - The filter icons (`ListFilter`, `Filter`, `Funnel`, …) are imported only by

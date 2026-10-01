@@ -26,10 +26,10 @@ import {
   FacetGroupLabel,
   BulkActionBar,
   FilterPanelToggle,
+  FilterSheet,
 } from '@/features/shared'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { SEVERITY_DOT_COLORS } from '@/lib/severity-colors'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -1818,19 +1818,14 @@ function FindingsContent() {
             </DropdownMenu>
           </BulkActionBar>
 
-          <Sheet open={filterSheetOpen} onOpenChange={setFilterSheetOpen}>
-            <SheetContent side="left" className="w-full gap-0 p-0">
-              <SheetHeader className="sr-only">
-                <SheetTitle>Finding filters</SheetTitle>
-              </SheetHeader>
-              <div className="flex min-h-0 flex-1 flex-col px-4 pt-14">{facetPanel}</div>
-              <div className="border-t p-4">
-                <Button className="w-full" onClick={() => setFilterSheetOpen(false)}>
-                  Show {total.toLocaleString()} {total === 1 ? 'finding' : 'findings'}
-                </Button>
-              </div>
-            </SheetContent>
-          </Sheet>
+          <FilterSheet
+            open={filterSheetOpen}
+            onOpenChange={setFilterSheetOpen}
+            title="Finding filters"
+            resultLabel={`Show ${total.toLocaleString()} ${total === 1 ? 'finding' : 'findings'}`}
+          >
+            {facetPanel}
+          </FilterSheet>
         </>
       </Main>
 

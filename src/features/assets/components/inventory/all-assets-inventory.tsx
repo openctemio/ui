@@ -16,12 +16,11 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { Lock, RefreshCw, Search } from 'lucide-react'
 import { Main } from '@/components/layout'
-import { PageHeader, EmptyState, FilterPanelToggle } from '@/features/shared'
+import { PageHeader, EmptyState, FilterPanelToggle, FilterSheet } from '@/features/shared'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { usePermissions, Permission } from '@/lib/permissions'
@@ -397,21 +396,14 @@ export function AllAssetsInventory({ viewSwitcher }: { viewSwitcher?: ReactNode 
         }}
       />
 
-      <Sheet open={filterSheetOpen} onOpenChange={setFilterSheetOpen}>
-        <SheetContent side="left" className="w-full gap-0 p-0">
-          <SheetHeader className="sr-only">
-            <SheetTitle>Asset filters</SheetTitle>
-          </SheetHeader>
-          {/* Top padding gives the sheet's close button its own row, clear of
-              "Clear all"; the list scrolls between it and the footer. */}
-          <div className="flex min-h-0 flex-1 flex-col px-4 pt-14">{facetPanel}</div>
-          <div className="border-t p-4">
-            <Button className="w-full" onClick={() => setFilterSheetOpen(false)}>
-              Show {total.toLocaleString()} {total === 1 ? 'asset' : 'assets'}
-            </Button>
-          </div>
-        </SheetContent>
-      </Sheet>
+      <FilterSheet
+        open={filterSheetOpen}
+        onOpenChange={setFilterSheetOpen}
+        title="Asset filters"
+        resultLabel={`Show ${total.toLocaleString()} ${total === 1 ? 'asset' : 'assets'}`}
+      >
+        {facetPanel}
+      </FilterSheet>
     </Main>
   )
 }

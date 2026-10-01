@@ -21,6 +21,7 @@ import {
   DangerZone,
   DangerZoneItem,
   FilterPanelToggle,
+  FilterSheet,
 } from '@/features/shared'
 
 const REMEDIATION_TABS = [
@@ -1305,12 +1306,9 @@ export default function RemediationPage() {
         </BulkActionBar>
       </Main>
 
-      <Sheet open={filterSheetOpen} onOpenChange={setFilterSheetOpen}>
-        <SheetContent side="left" className="w-80 overflow-y-auto p-4">
-          <SheetTitle className="sr-only">Task filters</SheetTitle>
-          {filterPanel}
-        </SheetContent>
-      </Sheet>
+      <FilterSheet open={filterSheetOpen} onOpenChange={setFilterSheetOpen} title="Task filters">
+        {filterPanel}
+      </FilterSheet>
 
       {/* ─── View Task Sheet ─────────────────────────────────────────── */}
       <TaskDetailSheet
