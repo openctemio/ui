@@ -1,10 +1,10 @@
 'use client'
 
+import type { ReactNode } from 'react'
+
 import { useState, useCallback } from 'react'
 import type { ColumnDef } from '@tanstack/react-table'
-import { Main } from '@/components/layout'
 import {
-  PageHeader,
   DataTable,
   DataTableColumnHeader,
   DataTableRowActions,
@@ -47,7 +47,17 @@ const formatDate = (dateString: string) => {
   })
 }
 
-export default function GroupsPage() {
+interface SectionProps {
+  /**
+   * Renders the page header with this section's actions (its Create button),
+   * so the page keeps one header and one set of tabs while each section keeps
+   * its own dialogs and state.
+   */
+  header: (actions: ReactNode) => ReactNode
+}
+
+/** The Teams tab of /settings/teams (moved from its own page; content unchanged). */
+export function TeamsSection({ header }: SectionProps) {
   const { mutate } = useSWRConfig()
 
   // API Hooks
@@ -191,80 +201,77 @@ export default function GroupsPage() {
 
   return (
     <>
-      <Main>
-        <PageHeader
-          title="Teams"
-          description="Organize users into teams to control access to assets."
-        >
+      {header(
+        <>
           <Can permission={Permission.GroupsWrite} mode="disable">
             <Button size="sm" onClick={() => setCreateDialogOpen(true)}>
               <Plus className="me-2 h-4 w-4" />
               Create team
             </Button>
           </Can>
-        </PageHeader>
+        </>
+      )}
 
-        {isError && !isLoading ? (
-          <Alert variant="destructive" className="mt-5">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Failed to load teams</AlertTitle>
-            <AlertDescription>
-              <p>The team list could not be loaded.</p>
-              <Button variant="outline" size="sm" className="mt-2" onClick={refreshData}>
-                <RefreshCw className="me-2 h-4 w-4" />
-                Retry
-              </Button>
-            </AlertDescription>
-          </Alert>
-        ) : (
-          <>
-            <MetricStrip
-              className="mt-5"
-              loading={isLoading}
-              items={[
-                { key: 'teams', label: 'Teams', value: totalGroups },
-                { key: 'members', label: 'Members', value: uniqueMemberCount },
-                { key: 'assets', label: 'Assigned assets', value: totalAssets },
-              ]}
-            />
+      {isError && !isLoading ? (
+        <Alert variant="destructive" className="mt-5">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Failed to load teams</AlertTitle>
+          <AlertDescription>
+            <p>The team list could not be loaded.</p>
+            <Button variant="outline" size="sm" className="mt-2" onClick={refreshData}>
+              <RefreshCw className="me-2 h-4 w-4" />
+              Retry
+            </Button>
+          </AlertDescription>
+        </Alert>
+      ) : (
+        <>
+          <MetricStrip
+            className="mt-5"
+            loading={isLoading}
+            items={[
+              { key: 'teams', label: 'Teams', value: totalGroups },
+              { key: 'members', label: 'Members', value: uniqueMemberCount },
+              { key: 'assets', label: 'Assigned assets', value: totalAssets },
+            ]}
+          />
 
-            <div className="mt-5">
-              {isLoading ? (
-                <div className="space-y-2">
-                  <Skeleton className="h-9 w-full max-w-sm" />
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <Skeleton key={i} className="h-12 w-full" />
-                  ))}
-                </div>
-              ) : groups.length === 0 ? (
-                <EmptyState
-                  icon={FolderKey}
-                  title="No teams yet"
-                  description="Create a team to group users and scope their access to assets."
-                  action={
-                    <Can permission={Permission.GroupsWrite}>
-                      <Button size="sm" onClick={() => setCreateDialogOpen(true)}>
-                        <Plus className="me-2 h-4 w-4" />
-                        Create team
-                      </Button>
-                    </Can>
-                  }
-                />
-              ) : (
-                <DataTable
-                  columns={columns}
-                  data={groups}
-                  getRowId={(g) => g.id}
-                  searchPlaceholder="Search teams..."
-                  onRowClick={(g) => setSelectedGroupId(g.id)}
-                  showColumnToggle={false}
-                  emptyMessage="No teams match your search"
-                />
-              )}
-            </div>
-          </>
-        )}
-      </Main>
+          <div className="mt-5">
+            {isLoading ? (
+              <div className="space-y-2">
+                <Skeleton className="h-9 w-full max-w-sm" />
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Skeleton key={i} className="h-12 w-full" />
+                ))}
+              </div>
+            ) : groups.length === 0 ? (
+              <EmptyState
+                icon={FolderKey}
+                title="No teams yet"
+                description="Create a team to group users and scope their access to assets."
+                action={
+                  <Can permission={Permission.GroupsWrite}>
+                    <Button size="sm" onClick={() => setCreateDialogOpen(true)}>
+                      <Plus className="me-2 h-4 w-4" />
+                      Create team
+                    </Button>
+                  </Can>
+                }
+              />
+            ) : (
+              <DataTable
+                columns={columns}
+                data={groups}
+                getRowId={(g) => g.id}
+                searchPlaceholder="Search teams..."
+                onRowClick={(g) => setSelectedGroupId(g.id)}
+                showColumnToggle={false}
+                emptyMessage="No teams match your search"
+              />
+            )}
+          </div>
+        </>
+      )}
 
       {/* Group Detail Sheet */}
       <GroupDetailSheet

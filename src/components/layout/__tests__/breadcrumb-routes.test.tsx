@@ -54,7 +54,7 @@ describe('BreadcrumbNav', () => {
   })
 
   it('does not link a parent that has no page', () => {
-    pathname.current = '/settings/access-control/groups'
+    pathname.current = '/settings/access-control/permission-sets'
     render(<BreadcrumbNav />)
     expect(screen.getByRole('link', { name: 'Settings' })).toHaveAttribute('href', '/settings')
     expect(screen.queryByRole('link', { name: 'Access control' })).toBeNull()

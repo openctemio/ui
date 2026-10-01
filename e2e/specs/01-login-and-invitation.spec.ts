@@ -72,7 +72,7 @@ base('public invitation preview handles unknown token gracefully', async ({ page
 })
 
 authedTest('admin can see pending invitations on the users page', async ({ page }) => {
-  await page.goto('/settings/users')
+  await page.goto('/settings/members')
   await page.waitForLoadState('networkidle')
 
   // The users page surfaces pending invitations as a "Pending Invites" stat

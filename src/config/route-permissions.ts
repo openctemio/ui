@@ -566,10 +566,10 @@ export const routePermissions: Record<string, RoutePermissionConfig> = {
     module: Module.Pentest,
     message: 'You need pentest write access to manage pentest settings.',
   },
-  '/settings/users': {
+  '/settings/members': {
     permission: Permission.MembersRead,
   },
-  '/settings/users/**': {
+  '/settings/members/**': {
     permission: Permission.MembersRead,
   },
   '/settings/roles': {
@@ -580,17 +580,13 @@ export const routePermissions: Record<string, RoutePermissionConfig> = {
   },
   // Access control is three distinct resources with distinct API permissions —
   // gate each path on its own read permission rather than one coarse GroupsRead.
-  '/settings/access-control/groups': {
+  // Teams, with Assignment rules as a tab (the tab is hidden without
+  // assignment_rules:read; its API calls carry their own permission).
+  '/settings/teams': {
     permission: Permission.GroupsRead,
   },
-  '/settings/access-control/groups/**': {
+  '/settings/teams/**': {
     permission: Permission.GroupsRead,
-  },
-  '/settings/access-control/assignment-rules': {
-    permission: Permission.AssignmentRulesRead,
-  },
-  '/settings/access-control/assignment-rules/**': {
-    permission: Permission.AssignmentRulesRead,
   },
   '/settings/access-control/permission-sets': {
     permission: Permission.PermissionSetsRead,
@@ -623,6 +619,25 @@ export const routePermissions: Record<string, RoutePermissionConfig> = {
   '/settings/billing/**': {
     permission: Permission.BillingRead,
     message: 'Billing information requires admin or owner privileges.',
+  },
+
+  // ========================================
+  // Settings - Access: machine and directory access. No module gate: the API
+  // gates none of these on the integrations module (api routes/misc.go
+  // registerAPIKeyRoutes, routes/scim.go), so a tenant that turns
+  // Integrations off keeps its API keys and SCIM.
+  // ========================================
+  '/settings/api-keys': {
+    permission: Permission.ApiKeysRead,
+  },
+  // MCP access is issued as API keys (oct_ keys).
+  '/settings/mcp': {
+    permission: Permission.ApiKeysRead,
+  },
+  // Members and viewers see a read-only page; token management is owner/admin
+  // in the API (RequireAdmin) and in the page.
+  '/settings/scim': {
+    permission: Permission.MembersRead,
   },
 
   // ========================================

@@ -13,7 +13,7 @@ describe('public routes', () => {
     }
   )
 
-  it.each(['/', '/dashboard', '/settings/users', '/findings'])(
+  it.each(['/', '/dashboard', '/settings/members', '/findings'])(
     '%s still requires a session',
     (path) => {
       expect(requiresAuth(path)).toBe(true)
