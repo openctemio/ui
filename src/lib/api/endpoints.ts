@@ -39,7 +39,6 @@ export const API_BASE = {
   CUSTOM_CAPABILITIES: '/api/v1/custom-capabilities',
   SCANS: '/api/v1/scans',
   EXPOSURES: '/api/v1/exposures',
-  SENSOR_INGEST: '/api/v1/sensor/ingest',
   THREAT_INTEL: '/api/v1/threat-intel',
   PLATFORM: '/api/v1/platform',
 } as const
@@ -2074,25 +2073,6 @@ export const threatIntelEndpoints = {
 } as const
 
 // ============================================
-// INGEST ENDPOINTS
-// ============================================
-
-/**
- * Ingest endpoints for importing security data from various sources.
- */
-export const ingestEndpoints = {
-  /**
-   * Ingest SARIF format data (Static Analysis Results Interchange Format)
-   */
-  sarif: () => `${API_BASE.SENSOR_INGEST}/sarif`,
-
-  /**
-   * Ingest CTIS format data (CTEM Ingest Schema)
-   */
-  ctis: () => `${API_BASE.SENSOR_INGEST}/ctis`,
-} as const
-
-// ============================================
 // PLATFORM SENSOR ENDPOINTS
 // ============================================
 
@@ -2184,7 +2164,6 @@ export const endpoints = {
   scans: scanEndpoints,
   exposures: exposureEndpoints,
   threatIntel: threatIntelEndpoints,
-  ingest: ingestEndpoints,
   workflows: workflowEndpoints,
   workflowRuns: workflowRunEndpoints,
   platform: platformEndpoints,
@@ -2221,7 +2200,6 @@ export {
   scanEndpoints as scans,
   exposureEndpoints as exposures,
   threatIntelEndpoints as threatIntel,
-  ingestEndpoints as ingest,
   workflowEndpoints as workflows,
   workflowRunEndpoints as workflowRuns,
   platformEndpoints as platform,
