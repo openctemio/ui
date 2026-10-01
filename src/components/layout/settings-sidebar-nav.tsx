@@ -5,11 +5,11 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
 import {
-  SidebarGroup,
   SidebarInput,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebarActions,
 } from '@/components/ui/sidebar'
 import { useTranslation } from '@/context/i18n-provider'
 import { useSettingsNav } from '@/hooks/use-settings-nav'
@@ -19,6 +19,7 @@ import {
   matchesSettingsQuery,
 } from '@/config/settings-nav'
 import { GroupedNav, type GroupedNavSection } from './grouped-nav'
+import { NAV_BUTTON_CLASS } from './nav-group'
 
 const RETURN_KEY = 'openctem:settings-return-to'
 
@@ -64,6 +65,7 @@ export function SettingsSidebarNav() {
   const groups = useSettingsNav()
   const [query, setQuery] = useState('')
   const [backHref, setBackHref] = useState('/')
+  const { setOpenMobile } = useSidebarActions()
 
   // Read after mount: sessionStorage does not exist during server rendering.
   useEffect(() => {
@@ -107,36 +109,38 @@ export function SettingsSidebarNav() {
   const filterLabel = t('settings.filter', 'Filter settings')
 
   return (
-    <nav aria-label={t('nav.item.settings', 'Settings')} className="flex flex-col">
-      <SidebarGroup className="gap-2 py-1">
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild tooltip={backLabel} className="text-muted-foreground">
-              <Link href={backHref} prefetch={false}>
-                <ArrowLeft className="rtl:rotate-180" />
-                <span>{backLabel}</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-        <SidebarInput
-          type="search"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Escape' && query) {
-              e.stopPropagation()
-              setQuery('')
-            }
-          }}
-          placeholder={`${filterLabel}…`}
-          aria-label={filterLabel}
-          className="group-data-[collapsible=icon]:hidden"
-        />
-      </SidebarGroup>
+    <nav aria-label={t('nav.item.settings', 'Settings')} className="flex flex-col gap-1">
+      <SidebarMenu>
+        <SidebarMenuItem>
+          <SidebarMenuButton asChild tooltip={backLabel} className={NAV_BUTTON_CLASS}>
+            <Link href={backHref} prefetch={false} onClick={() => setOpenMobile(false)}>
+              <ArrowLeft className="rtl:rotate-180" />
+              <span>{backLabel}</span>
+            </Link>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      </SidebarMenu>
+      {/* The filter needs room to type; on the icon rail it is hidden. */}
+      <SidebarInput
+        type="search"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape' && query) {
+            e.stopPropagation()
+            setQuery('')
+          }
+        }}
+        placeholder={`${filterLabel}…`}
+        aria-label={filterLabel}
+        className="my-1 group-data-[collapsible=icon]:hidden"
+      />
       <GroupedNav sections={sections} activeUrl={activeUrl} />
       {noMatch && (
-        <p role="status" className="px-4 py-2 text-sm text-muted-foreground">
+        <p
+          role="status"
+          className="px-1.5 py-2 text-sm text-muted-foreground group-data-[collapsible=icon]:hidden"
+        >
           {t('settings.noMatch', 'No settings match your filter.')}
         </p>
       )}

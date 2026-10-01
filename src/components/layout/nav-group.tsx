@@ -76,7 +76,7 @@ function NavLabel({ title }: { title: string }) {
  * collapse animation (and the rail's freshly-mounted section triggers start from
  * the middle of the wide menu).
  */
-const NAV_BUTTON_CLASS = cn(
+export const NAV_BUTTON_CLASS = cn(
   'px-1.5 group-data-[collapsible=icon]:p-1.5! [&>svg:first-child]:size-5 [&>svg]:stroke-[1.75]',
   // Quiet at rest, full ink on hover and for the current page / the section
   // that owns it (`data-current`), so where you are reads at a glance even with
@@ -89,6 +89,13 @@ const NAV_BUTTON_CLASS = cn(
   // label is never half-clipped while the sidebar animates.
   'group-data-[collapsible=icon]:[&>:not(svg:first-child)]:opacity-0'
 )
+
+/**
+ * The sidebar's one content column: the same 8px inset in both states (so rail
+ * icons line up with the expanded ones) and an even gap between sections.
+ * Shared by the main nav, the settings rail and the admin console.
+ */
+export const NAV_COLUMN_CLASS = 'flex flex-col gap-1 px-2 py-2'
 
 /** Second-level rows: smaller and lighter than their section header. */
 const SUB_BUTTON_CLASS = cn(
@@ -217,7 +224,7 @@ function NavGroupComponent({ title, icon, items }: NavGroupProps) {
   )
 }
 
-function NavBadge({
+export function NavBadge({
   children,
   variant,
 }: {
