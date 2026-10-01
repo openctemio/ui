@@ -34,6 +34,7 @@ import { SensorTypeIcon, SENSOR_TYPE_LABELS, SENSOR_TYPE_COLORS } from './sensor
 import { SensorAuditLog } from './sensor-audit-log'
 import { SensorAnalytics } from './sensor-analytics'
 import { Can, Permission } from '@/lib/permissions'
+import { SensorZonesSection } from '@/features/scan-zones'
 
 interface SensorDetailSheetProps {
   sensor: Sensor | null
@@ -295,6 +296,9 @@ export function SensorDetailSheet({
                 </div>
               </div>
             )}
+
+            {/* Scan zones this sensor serves (RFC-023) */}
+            <SensorZonesSection sensorId={sensor.id} />
 
             {/* Labels */}
             {sensor.labels && Object.keys(sensor.labels).length > 0 && (

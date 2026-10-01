@@ -209,6 +209,11 @@ export const Permission = {
   CommandsWrite: 'sensors:commands:write',
   CommandsDelete: 'sensors:commands:delete',
 
+  // Scan zones (sensors:zones:*): RFC-023
+  ScanZonesRead: 'sensors:zones:read',
+  ScanZonesWrite: 'sensors:zones:write',
+  ScanZonesDelete: 'sensors:zones:delete',
+
   // ===========================================
   // TEAM MODULE (Access Control)
   // ===========================================
@@ -418,6 +423,7 @@ export const PermissionGroups = {
     Permission.SecretStoreRead,
     Permission.SensorsRead,
     Permission.CommandsRead,
+    Permission.ScanZonesRead,
     Permission.TeamRead,
     Permission.MembersRead,
     Permission.GroupsRead,
@@ -471,6 +477,7 @@ export const PermissionGroups = {
     Permission.SecretStoreWrite,
     Permission.SensorsWrite,
     Permission.CommandsWrite,
+    Permission.ScanZonesWrite,
     Permission.TeamUpdate,
     Permission.MembersWrite,
     Permission.GroupsWrite,
@@ -518,6 +525,7 @@ export const PermissionGroups = {
     Permission.SecretStoreDelete,
     Permission.SensorsDelete,
     Permission.CommandsDelete,
+    Permission.ScanZonesDelete,
     Permission.TeamDelete,
     Permission.GroupsDelete,
     Permission.RolesDelete,
@@ -659,6 +667,9 @@ export const PermissionLabels: Partial<Record<PermissionString, string>> = {
   [Permission.CommandsRead]: 'View Commands',
   [Permission.CommandsWrite]: 'Send Commands',
   [Permission.CommandsDelete]: 'Delete Commands',
+  [Permission.ScanZonesRead]: 'View Scan Zones',
+  [Permission.ScanZonesWrite]: 'Manage Scan Zones',
+  [Permission.ScanZonesDelete]: 'Delete Scan Zones',
 
   // Team
   [Permission.TeamRead]: 'View Team Settings',
@@ -857,6 +868,9 @@ export const RolePermissions: Record<RoleString, PermissionString[]> = {
     Permission.CommandsRead,
     Permission.CommandsWrite,
     Permission.CommandsDelete,
+    Permission.ScanZonesRead,
+    Permission.ScanZonesWrite,
+    Permission.ScanZonesDelete,
     // Team
     Permission.TeamRead,
     Permission.TeamUpdate,
@@ -1019,6 +1033,9 @@ export const RolePermissions: Record<RoleString, PermissionString[]> = {
     Permission.CommandsRead,
     Permission.CommandsWrite,
     Permission.CommandsDelete,
+    Permission.ScanZonesRead,
+    Permission.ScanZonesWrite,
+    Permission.ScanZonesDelete,
     // Team (no team:delete)
     Permission.TeamRead,
     Permission.TeamUpdate,
@@ -1148,6 +1165,7 @@ export const RolePermissions: Record<RoleString, PermissionString[]> = {
     Permission.SensorsWrite,
     Permission.CommandsRead,
     Permission.CommandsWrite,
+    Permission.ScanZonesRead,
     // Team (read only)
     Permission.TeamRead,
     Permission.MembersRead,
@@ -1228,6 +1246,7 @@ export const RolePermissions: Record<RoleString, PermissionString[]> = {
     // Sensors (read only)
     Permission.SensorsRead,
     Permission.CommandsRead,
+    Permission.ScanZonesRead,
     // Team (read only)
     Permission.TeamRead,
     Permission.MembersRead,

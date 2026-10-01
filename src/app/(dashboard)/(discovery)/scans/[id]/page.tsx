@@ -34,6 +34,8 @@ import {
   Activity,
 } from 'lucide-react'
 import { copyToClipboard } from '@/lib/clipboard'
+import { triggerErrorHint } from '@/features/scan-zones'
+import { RunDetailSheet } from '@/features/scans/components/run-detail-sheet'
 import { Can, Permission } from '@/lib/permissions'
 import { useScanConfig, useScanRuns, invalidateScanConfigsCache } from '@/lib/api/scan-hooks'
 import { post, del } from '@/lib/api/client'
@@ -88,6 +90,8 @@ export default function ScanDetailPage() {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [stoppingRunId, setStoppingRunId] = useState<string | null>(null)
+  // Run detail sheet (dispatch: routing, targets not scanned and why).
+  const [openRunId, setOpenRunId] = useState<string | null>(null)
 
   // Fetch scan config
   const { data: config, isLoading, error } = useScanConfig(scanId)
@@ -122,7 +126,9 @@ export default function ScanDetailPage() {
       await invalidateScanConfigsCache()
     } catch (error) {
       console.error('Failed to trigger scan:', error)
-      toast.error(getErrorMessage(error, `Failed to trigger scan "${config.name}"`))
+      toast.error(getErrorMessage(error, `Failed to trigger scan "${config.name}"`), {
+        description: triggerErrorHint(error),
+      })
     } finally {
       setIsTriggering(false)
     }
@@ -547,6 +553,7 @@ export default function ScanDetailPage() {
             getRowId={(run) => run.id}
             isLoading={isLoadingRuns}
             showSearch={false}
+            onRowClick={(run) => setOpenRunId(run.id)}
             emptyMessage="No runs yet"
             emptyDescription="Trigger this scan to see run history"
           />
@@ -818,6 +825,7 @@ export default function ScanDetailPage() {
         isLoading={isDeleting}
         handleConfirm={handleDeleteConfig}
       />
+      <RunDetailSheet runId={openRunId} onOpenChange={(o) => !o && setOpenRunId(null)} />
     </Main>
   )
 }

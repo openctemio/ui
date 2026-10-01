@@ -7,7 +7,10 @@
 
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
+import { ScanRoutingSection, toZonePreviewRequest } from '@/features/scan-zones'
+import { useScanZones } from '@/lib/api/scan-zone-hooks'
+import { Permission, useHasPermission } from '@/lib/permissions'
 import {
   Dialog,
   DialogContent,
@@ -113,6 +116,7 @@ function scanConfigToFormData(config: ScanConfig): NewScanFormData {
       notifyOnComplete: false,
       autoCreateTasks: false,
     },
+    scanZoneId: config.scan_zone_id ?? null,
   }
 }
 
@@ -120,6 +124,26 @@ export function EditScanDialog({ scanConfig, open, onOpenChange, onSuccess }: Ed
   const [currentStep, setCurrentStep] = useState<ScanWizardStep>('basic')
   const [formData, setFormData] = useState<NewScanFormData>(DEFAULT_NEW_SCAN)
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Scan zones (RFC-023): same picker and preview as New scan.
+  const canReadZones = useHasPermission(Permission.ScanZonesRead)
+  const { data: zonesData } = useScanZones(canReadZones && open)
+  const zones = useMemo(() => zonesData?.data ?? [], [zonesData?.data])
+  const previewRequest = useMemo(
+    () =>
+      toZonePreviewRequest(
+        {
+          targets: formData.targets.customTargets,
+          asset_group_ids: formData.targets.assetGroupIds,
+          scan_type: formData.mode === 'workflow' ? 'workflow' : 'single',
+          scanner_name: formData.mode === 'single' ? 'nuclei' : undefined,
+          pipeline_id: formData.mode === 'workflow' ? formData.workflowId : undefined,
+          targets_per_job: formData.maxConcurrent || 10,
+        },
+        formData.scanZoneId
+      ),
+    [formData]
+  )
 
   const { trigger: updateScanConfig, isMutating: isUpdating } = useUpdateScanConfig(
     scanConfig?.id ?? ''
@@ -230,6 +254,11 @@ export function EditScanDialog({ scanConfig, open, onOpenChange, onSuccess }: Ed
         schedule_type: scheduleType as ScheduleType,
         sensor_preference: formData.sensorPreference as SensorPreference,
       }
+      // Only someone who can see the zones may change the zone: otherwise an
+      // empty picker would reset a restricted scan to Automatic.
+      if (canReadZones) {
+        request.scan_zone_id = formData.scanZoneId ?? ''
+      }
 
       if (formData.mode === 'workflow' && formData.workflowId) {
         request.pipeline_id = formData.workflowId
@@ -284,7 +313,19 @@ export function EditScanDialog({ scanConfig, open, onOpenChange, onSuccess }: Ed
       case 'options':
         return <OptionsStep data={formData} onChange={handleDataChange} />
       case 'schedule':
-        return <ScheduleStep data={formData} onChange={handleDataChange} />
+        return (
+          <>
+            <ScheduleStep data={formData} onChange={handleDataChange} />
+            {canReadZones && zones.length > 0 && (
+              <ScanRoutingSection
+                zones={zones}
+                value={formData.scanZoneId}
+                onChange={(scanZoneId) => handleDataChange({ scanZoneId })}
+                request={previewRequest}
+              />
+            )}
+          </>
+        )
       default:
         return null
     }
@@ -303,7 +344,7 @@ export function EditScanDialog({ scanConfig, open, onOpenChange, onSuccess }: Ed
         </DialogHeader>
 
         {/* Stepper */}
-        <div className="border-b">
+        <div className="min-w-0 border-b">
           <ScanStepper currentStep={currentStep} onStepClick={handleStepClick} />
         </div>
 
