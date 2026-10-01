@@ -265,6 +265,7 @@ export default function GeneralSettingsPage() {
                   </p>
                 </div>
                 <Switch
+                  aria-label="Compact Mode"
                   checked={display.compactMode}
                   onCheckedChange={(checked) => setDisplay({ ...display, compactMode: checked })}
                 />
@@ -292,6 +293,7 @@ export default function GeneralSettingsPage() {
                   </p>
                 </div>
                 <Switch
+                  aria-label="Auto Refresh"
                   checked={display.autoRefresh}
                   onCheckedChange={(checked) => setDisplay({ ...display, autoRefresh: checked })}
                 />

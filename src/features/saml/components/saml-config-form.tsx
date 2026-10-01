@@ -272,6 +272,7 @@ export function SamlConfigForm({
                       </p>
                     </div>
                     <Switch
+                      aria-label="Auto-provision users"
                       checked={form.auto_provision}
                       disabled={!canManage}
                       onCheckedChange={(v) => set('auto_provision', v)}
@@ -285,6 +286,7 @@ export function SamlConfigForm({
                       </p>
                     </div>
                     <Switch
+                      aria-label="Enable SAML login"
                       checked={form.enabled}
                       disabled={!canManage}
                       onCheckedChange={(v) => set('enabled', v)}

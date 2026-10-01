@@ -345,6 +345,7 @@ export default function PreferencesPage() {
               </p>
             </div>
             <Switch
+              aria-label="Desktop Notifications"
               checked={formData.desktop_notifications}
               onCheckedChange={(checked) => handleChange('desktop_notifications', checked)}
             />
@@ -365,6 +366,7 @@ export default function PreferencesPage() {
                   </p>
                 </div>
                 <Switch
+                  aria-label="Security Alerts"
                   checked={formData.email_notifications?.security_alerts}
                   onCheckedChange={(checked) =>
                     handleEmailNotificationChange('security_alerts', checked)
@@ -380,6 +382,7 @@ export default function PreferencesPage() {
                   </p>
                 </div>
                 <Switch
+                  aria-label="Weekly Digest"
                   checked={formData.email_notifications?.weekly_digest}
                   onCheckedChange={(checked) =>
                     handleEmailNotificationChange('weekly_digest', checked)
@@ -395,6 +398,7 @@ export default function PreferencesPage() {
                   </p>
                 </div>
                 <Switch
+                  aria-label="Scan Completed"
                   checked={formData.email_notifications?.scan_completed}
                   onCheckedChange={(checked) =>
                     handleEmailNotificationChange('scan_completed', checked)
@@ -410,6 +414,7 @@ export default function PreferencesPage() {
                   </p>
                 </div>
                 <Switch
+                  aria-label="New Findings"
                   checked={formData.email_notifications?.new_findings}
                   onCheckedChange={(checked) =>
                     handleEmailNotificationChange('new_findings', checked)
@@ -425,6 +430,7 @@ export default function PreferencesPage() {
                   </p>
                 </div>
                 <Switch
+                  aria-label="Team Updates"
                   checked={formData.email_notifications?.team_updates}
                   onCheckedChange={(checked) =>
                     handleEmailNotificationChange('team_updates', checked)

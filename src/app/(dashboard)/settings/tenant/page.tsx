@@ -958,14 +958,16 @@ export default function TenantPage() {
               <CardContent className="space-y-6">
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
-                    <Label>Require two-factor authentication</Label>
-                    <p className="text-sm text-muted-foreground">
+                    <Label htmlFor="tenant-mfa-required">Require two-factor authentication</Label>
+                    <p className="text-sm text-muted-foreground" id="tenant-mfa-required-desc">
                       Members who sign in with a password must set up an authenticator app at their
                       next sign-in. Members who sign in through SSO use your identity
                       provider&apos;s two-factor settings.
                     </p>
                   </div>
                   <Switch
+                    id="tenant-mfa-required"
+                    aria-describedby="tenant-mfa-required-desc"
                     checked={securityForm.mfa_required}
                     onCheckedChange={(checked) =>
                       setSecurityForm({ ...securityForm, mfa_required: checked })
@@ -978,8 +980,8 @@ export default function TenantPage() {
 
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
-                    <Label>Restricted data scope</Label>
-                    <p className="text-sm text-muted-foreground">
+                    <Label htmlFor="tenant-restricted-scope">Restricted data scope</Label>
+                    <p className="text-sm text-muted-foreground" id="tenant-restricted-scope-desc">
                       Non-admins see only the assets they&apos;re assigned (directly or via a team)
                       and their findings. When off, a user with no assignment sees everything.
                       Assign members to teams with their assets before turning this on, or
@@ -987,6 +989,8 @@ export default function TenantPage() {
                     </p>
                   </div>
                   <Switch
+                    id="tenant-restricted-scope"
+                    aria-describedby="tenant-restricted-scope-desc"
                     checked={securityForm.restricted_data_scope}
                     onCheckedChange={(checked) =>
                       setSecurityForm({ ...securityForm, restricted_data_scope: checked })
@@ -1108,12 +1112,14 @@ export default function TenantPage() {
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
-                    <Label>Enable API access</Label>
-                    <p className="text-sm text-muted-foreground">
+                    <Label htmlFor="tenant-api-access">Enable API access</Label>
+                    <p className="text-sm text-muted-foreground" id="tenant-api-access-desc">
                       Allow programmatic access via API keys
                     </p>
                   </div>
                   <Switch
+                    id="tenant-api-access"
+                    aria-describedby="tenant-api-access-desc"
                     checked={apiForm.api_key_enabled}
                     onCheckedChange={(checked) =>
                       setApiForm({ ...apiForm, api_key_enabled: checked })

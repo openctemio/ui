@@ -49,4 +49,13 @@ describe('RouteGuard', () => {
     render(<RouteGuard>page</RouteGuard>)
     expect(screen.getByText('page')).toBeInTheDocument()
   })
+
+  it('is the main landmark and the skip link target when access is denied', () => {
+    // The denied view replaces the layout's <main id="content">, so without its
+    // own landmark the page had none and "Skip to Main" went nowhere.
+    render(<RouteGuard>page</RouteGuard>)
+    const main = screen.getByRole('main')
+    expect(main).toHaveAttribute('id', 'content')
+    expect(main).toHaveTextContent('Access Denied')
+  })
 })

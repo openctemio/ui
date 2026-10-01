@@ -2156,6 +2156,7 @@ function SettingsTab({ repository, onDelete }: { repository: Repository; onDelet
                 <p className="text-xs text-muted-foreground">Automatically scan on schedule</p>
               </div>
               <Switch
+                aria-label="Auto Scan"
                 checked={autoScan}
                 onCheckedChange={(v) => handleToggle('Auto Scan', v, setAutoScan)}
               />
@@ -2166,6 +2167,7 @@ function SettingsTab({ repository, onDelete }: { repository: Repository; onDelet
                 <p className="text-xs text-muted-foreground">Trigger scan when code is pushed</p>
               </div>
               <Switch
+                aria-label="Scan on Push"
                 checked={scanOnPush}
                 onCheckedChange={(v) => handleToggle('Scan on Push', v, setScanOnPush)}
               />
@@ -2178,6 +2180,7 @@ function SettingsTab({ repository, onDelete }: { repository: Repository; onDelet
                 </p>
               </div>
               <Switch
+                aria-label="Scan on Pull Request"
                 checked={scanOnPR}
                 onCheckedChange={(v) => handleToggle('Scan on PR', v, setScanOnPR)}
               />
