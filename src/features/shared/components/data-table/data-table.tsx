@@ -26,6 +26,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
+import { FilterPanelToggle, type FilterPanelToggleProps } from '../filter-button'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
@@ -101,7 +102,12 @@ interface DataTableProps<TData, TValue> {
    */
   sorting?: SortingState
   onSortingChange?: (sorting: SortingState) => void
-  /** Rendered at the start of the toolbar (e.g. a filter toggle + search). */
+  /**
+   * The page's facet-filter panel: renders the shared Filters toggle first in
+   * the toolbar. Pass this rather than drawing a filter button in `toolbarStart`.
+   */
+  filterToggle?: FilterPanelToggleProps
+  /** Rendered at the start of the toolbar, after the filter toggle (e.g. search). */
   toolbarStart?: React.ReactNode
   /** Rendered at the end of the toolbar, before the column toggle. */
   toolbarEnd?: React.ReactNode
@@ -296,6 +302,7 @@ export function DataTable<TData, TValue>({
   getRowId,
   sorting: sortingProp,
   onSortingChange,
+  filterToggle,
   toolbarStart,
   toolbarEnd,
   stickyFirstColumn = true,
@@ -462,12 +469,15 @@ export function DataTable<TData, TValue>({
       {/* Toolbar: one row where it fits; on narrow screens filters wrap onto a
           second row rather than squeezing the search box to a few letters. */}
       <div className="flex flex-wrap items-center gap-2">
-        {toolbarStart && (
+        {toolbarStart ? (
           // No min-w-0: the group must not shrink below its widest control, or a
           // button spills over the search box beside it. It wraps instead.
           <div className="flex flex-1 flex-wrap items-center gap-2 [&>.relative:has(input)]:min-w-36">
+            {filterToggle && <FilterPanelToggle {...filterToggle} />}
             {toolbarStart}
           </div>
+        ) : (
+          filterToggle && <FilterPanelToggle {...filterToggle} />
         )}
         {/* Search */}
         {showSearch && (

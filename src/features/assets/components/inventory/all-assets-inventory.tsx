@@ -14,14 +14,13 @@
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { ListFilter, Lock, PanelLeftClose, RefreshCw, Search } from 'lucide-react'
+import { Lock, RefreshCw, Search } from 'lucide-react'
 import { Main } from '@/components/layout'
-import { PageHeader, EmptyState } from '@/features/shared'
+import { PageHeader, EmptyState, FilterPanelToggle, FilterSheet } from '@/features/shared'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { usePermissions, Permission } from '@/lib/permissions'
@@ -257,48 +256,14 @@ export function AllAssetsInventory({ viewSwitcher }: { viewSwitcher?: ReactNode 
     />
   )
 
-  // Icon-only filter toggle; the active-filter count sits on its corner.
-  const filterCountDot =
-    activeCount > 0 ? (
-      <span className="absolute -end-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-medium tabular-nums text-primary-foreground">
-        {activeCount}
-      </span>
-    ) : null
-  const filterLabel = activeCount > 0 ? `Filters (${activeCount} active)` : 'Filters'
   const filterButtons = (
-    <>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="outline"
-            size="icon"
-            className="relative hidden h-9 w-9 shrink-0 lg:inline-flex"
-            onClick={() => setFiltersOpen((o) => !o)}
-            aria-pressed={filtersOpen}
-            aria-controls="asset-filters"
-            aria-label={filterLabel}
-          >
-            {filtersOpen ? (
-              <PanelLeftClose className="h-4 w-4" />
-            ) : (
-              <ListFilter className="h-4 w-4" />
-            )}
-            {filterCountDot}
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>{filtersOpen ? 'Hide filters' : 'Show filters'}</TooltipContent>
-      </Tooltip>
-      <Button
-        variant="outline"
-        size="icon"
-        className="relative h-9 w-9 shrink-0 lg:hidden"
-        onClick={() => setFilterSheetOpen(true)}
-        aria-label={filterLabel}
-      >
-        <ListFilter className="h-4 w-4" />
-        {filterCountDot}
-      </Button>
-    </>
+    <FilterPanelToggle
+      open={filtersOpen}
+      onToggle={() => setFiltersOpen((o) => !o)}
+      onOpenSheet={() => setFilterSheetOpen(true)}
+      activeCount={activeCount}
+      controlsId="asset-filters"
+    />
   )
 
   const searchBox = (
@@ -431,21 +396,14 @@ export function AllAssetsInventory({ viewSwitcher }: { viewSwitcher?: ReactNode 
         }}
       />
 
-      <Sheet open={filterSheetOpen} onOpenChange={setFilterSheetOpen}>
-        <SheetContent side="left" className="w-full gap-0 p-0">
-          <SheetHeader className="sr-only">
-            <SheetTitle>Asset filters</SheetTitle>
-          </SheetHeader>
-          {/* Top padding gives the sheet's close button its own row, clear of
-              "Clear all"; the list scrolls between it and the footer. */}
-          <div className="flex min-h-0 flex-1 flex-col px-4 pt-14">{facetPanel}</div>
-          <div className="border-t p-4">
-            <Button className="w-full" onClick={() => setFilterSheetOpen(false)}>
-              Show {total.toLocaleString()} {total === 1 ? 'asset' : 'assets'}
-            </Button>
-          </div>
-        </SheetContent>
-      </Sheet>
+      <FilterSheet
+        open={filterSheetOpen}
+        onOpenChange={setFilterSheetOpen}
+        title="Asset filters"
+        resultLabel={`Show ${total.toLocaleString()} ${total === 1 ? 'asset' : 'assets'}`}
+      >
+        {facetPanel}
+      </FilterSheet>
     </Main>
   )
 }

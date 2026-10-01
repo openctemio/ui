@@ -33,7 +33,6 @@ import {
   Unlock,
   RefreshCw,
   Download,
-  Filter,
   X,
   Search as SearchIcon,
   ArrowUpRight,
@@ -520,12 +519,11 @@ export default function ExternalSurfacePage() {
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <Filter className="h-4 w-4 text-muted-foreground" />
                 <Select
                   value={filterType}
                   onValueChange={(v) => setFilterType(v as AssetType | 'all')}
                 >
-                  <SelectTrigger className="w-32">
+                  <SelectTrigger className="w-32" aria-label="Filter by type">
                     <SelectValue placeholder="Type" />
                   </SelectTrigger>
                   <SelectContent>
@@ -540,7 +538,7 @@ export default function ExternalSurfacePage() {
                   value={filterRisk}
                   onValueChange={(v) => setFilterRisk(v as RiskLevel | 'all')}
                 >
-                  <SelectTrigger className="w-32">
+                  <SelectTrigger className="w-32" aria-label="Filter by risk">
                     <SelectValue placeholder="Risk" />
                   </SelectTrigger>
                   <SelectContent>

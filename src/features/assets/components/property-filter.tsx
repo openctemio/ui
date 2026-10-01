@@ -4,7 +4,6 @@ import { useState, useMemo } from 'react'
 import useSWR from 'swr'
 import { get } from '@/lib/api/client'
 import { endpoints } from '@/lib/api/endpoints'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import {
@@ -15,7 +14,8 @@ import {
   CommandItem,
   CommandList,
 } from '@/components/ui/command'
-import { ListFilter, X, Check } from 'lucide-react'
+import { X, Check } from 'lucide-react'
+import { FilterButton } from '@/features/shared'
 import type { AssetType } from '../types'
 
 interface PropertyFacet {
@@ -67,6 +67,10 @@ export function PropertyFilter({
 
   // All facets are available (user can add more values to existing keys)
   const availableFacets = useMemo(() => facets ?? [], [facets])
+  const activeCount = useMemo(
+    () => Object.values(value).reduce((n, vals) => n + vals.length, 0),
+    [value]
+  )
 
   const handleSelectKey = (facet: PropertyFacet) => {
     setSelectedKey(facet.Key)
@@ -100,10 +104,7 @@ export function PropertyFilter({
         }}
       >
         <PopoverTrigger asChild>
-          <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs">
-            <ListFilter className="h-3.5 w-3.5" />
-            Add Filter
-          </Button>
+          <FilterButton label="Filter by property" activeCount={activeCount} />
         </PopoverTrigger>
         <PopoverContent className="w-[240px] p-0" align="start">
           {step === 'key' ? (

@@ -23,7 +23,6 @@ import {
   Clock,
   Search as SearchIcon,
   Download,
-  Filter,
 } from 'lucide-react'
 import {
   ComponentTable,
@@ -325,9 +324,8 @@ export default function AllComponentsPage() {
                 />
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <Filter className="h-4 w-4 text-muted-foreground" />
                 <Select value={ecosystemFilter} onValueChange={setEcosystemFilter}>
-                  <SelectTrigger className="w-[150px]">
+                  <SelectTrigger className="w-[150px]" aria-label="Filter by ecosystem">
                     <SelectValue placeholder="Ecosystem" />
                   </SelectTrigger>
                   <SelectContent>

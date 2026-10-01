@@ -20,6 +20,8 @@ import {
   type RowAction,
   DangerZone,
   DangerZoneItem,
+  FilterPanelToggle,
+  FilterSheet,
 } from '@/features/shared'
 
 const REMEDIATION_TABS = [
@@ -39,7 +41,6 @@ import { format } from 'date-fns'
 import {
   Plus,
   Download,
-  SlidersHorizontal,
   List,
   Columns3,
   ListTodo,
@@ -459,6 +460,8 @@ export default function RemediationPage() {
   )
   // Filter panel is closed by default, like the Findings page.
   const [filtersOpen, setFiltersOpen] = useState(false)
+  // Below lg there is no room for the side panel; the filters open in a sheet.
+  const [filterSheetOpen, setFilterSheetOpen] = useState(false)
   // Bumped to clear the table's own checkbox state along with ours.
   const [selectionEpoch, setSelectionEpoch] = useState(0)
   const [viewTask, setViewTask] = useState<RemediationTask | null>(null)
@@ -981,22 +984,13 @@ export default function RemediationPage() {
   }
 
   const filterButton = (
-    <Button
-      variant={filtersOpen ? 'secondary' : 'outline'}
-      size="sm"
-      className="h-9"
-      onClick={() => setFiltersOpen(!filtersOpen)}
-      aria-expanded={filtersOpen}
-      aria-controls="task-filters"
-    >
-      <SlidersHorizontal className="me-2 h-4 w-4" />
-      Filters
-      {activeFilterCount > 0 && (
-        <span className="ms-2 rounded-full bg-primary px-1.5 text-[11px] font-medium tabular-nums text-primary-foreground">
-          {activeFilterCount}
-        </span>
-      )}
-    </Button>
+    <FilterPanelToggle
+      open={filtersOpen}
+      onToggle={() => setFiltersOpen(!filtersOpen)}
+      onOpenSheet={() => setFilterSheetOpen(true)}
+      activeCount={activeFilterCount}
+      controlsId="task-filters"
+    />
   )
 
   const viewToggle = (
@@ -1311,6 +1305,10 @@ export default function RemediationPage() {
           </DropdownMenu>
         </BulkActionBar>
       </Main>
+
+      <FilterSheet open={filterSheetOpen} onOpenChange={setFilterSheetOpen} title="Task filters">
+        {filterPanel}
+      </FilterSheet>
 
       {/* ─── View Task Sheet ─────────────────────────────────────────── */}
       <TaskDetailSheet
