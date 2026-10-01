@@ -31,6 +31,7 @@ import {
 import { useTenant } from '@/context/tenant-provider'
 import { useBootstrapContextSafe } from '@/context/bootstrap-provider'
 import { cn } from '@/lib/utils'
+import { SIDEBAR_CHIP_CLASS, SIDEBAR_CONTEXT_ROW_CLASS } from './sidebar-brand'
 import { toast } from 'sonner'
 import { getErrorMessage } from '@/lib/api/error-handler'
 
@@ -55,8 +56,8 @@ function OrgAvatar({ name, size = 'md' }: { name: string; size?: 'sm' | 'md' }) 
     <span
       aria-hidden
       className={cn(
-        'flex shrink-0 items-center justify-center rounded-md bg-sidebar-primary font-semibold text-sidebar-primary-foreground',
-        size === 'md' ? 'size-8 text-xs' : 'size-6 text-[10px]'
+        'flex shrink-0 items-center justify-center rounded-md bg-sidebar-accent font-semibold text-sidebar-accent-foreground ring-1 ring-sidebar-border',
+        size === 'md' ? 'size-7 text-[11px]' : 'size-6 text-[10px]'
       )}
     >
       {orgInitials(name)}
@@ -157,18 +158,11 @@ export function TeamSwitcher() {
     return (
       <SidebarMenu>
         <SidebarMenuItem>
-          <SidebarMenuButton
-            size="lg"
-            className="ps-0 group-data-[collapsible=icon]:h-12!"
-            disabled
-          >
-            <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary/50 animate-pulse">
-              <Loader2 className="size-4 animate-spin text-sidebar-primary-foreground/50" />
+          <SidebarMenuButton className={SIDEBAR_CONTEXT_ROW_CLASS} disabled>
+            <div className={cn(SIDEBAR_CHIP_CLASS, 'animate-pulse')}>
+              <Loader2 className="size-4 animate-spin text-muted-foreground" />
             </div>
-            <div className="grid flex-1 gap-1">
-              <div className="h-4 w-24 bg-muted rounded animate-pulse" />
-              <div className="h-3 w-16 bg-muted rounded animate-pulse" />
-            </div>
+            <div className="h-4 w-24 rounded bg-muted animate-pulse group-data-[collapsible=icon]:hidden" />
           </SidebarMenuButton>
         </SidebarMenuItem>
       </SidebarMenu>
@@ -181,17 +175,16 @@ export function TeamSwitcher() {
       <SidebarMenu>
         <SidebarMenuItem>
           <SidebarMenuButton
-            size="lg"
-            className="ps-0 group-data-[collapsible=icon]:h-12!"
+            className={SIDEBAR_CONTEXT_ROW_CLASS}
+            tooltip="Create team"
             onClick={() => router.push('/settings/tenant/create')}
           >
-            <div className="flex aspect-square size-8 items-center justify-center rounded-lg border border-dashed">
+            <div className={cn(SIDEBAR_CHIP_CLASS, 'bg-transparent ring-0 border border-dashed')}>
               <Plus className="size-4" />
             </div>
-            <div className="grid flex-1 text-start text-sm leading-tight">
-              <span className="truncate font-semibold">Create Team</span>
-              <span className="truncate text-xs text-muted-foreground">Get started</span>
-            </div>
+            <span className="truncate font-semibold group-data-[collapsible=icon]:hidden">
+              Create team
+            </span>
           </SidebarMenuButton>
         </SidebarMenuItem>
       </SidebarMenu>
@@ -213,11 +206,14 @@ export function TeamSwitcher() {
         >
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton
-              size="lg"
-              className="ps-0 group-data-[collapsible=icon]:h-12! data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+              className={cn(
+                SIDEBAR_CONTEXT_ROW_CLASS,
+                'data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground'
+              )}
+              tooltip={currentTeamName}
               disabled={isTransitioning}
             >
-              <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 shrink-0 items-center justify-center rounded-md text-xs font-semibold">
+              <div className={SIDEBAR_CHIP_CLASS}>
                 {isTransitioning ? (
                   <Loader2 className="size-4 animate-spin" />
                 ) : (

@@ -43,7 +43,8 @@ export function AppSidebar() {
       <SidebarHeader className="gap-3">
         <SidebarBrand href="/" />
         <TeamSwitcher />
-        <Separator orientation="horizontal" />
+        {/* mt-1: 16px above the line, as below it (header gap 12 + 4). */}
+        <Separator orientation="horizontal" className="mt-1" />
       </SidebarHeader>
 
       {/* Content */}

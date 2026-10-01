@@ -76,7 +76,15 @@ function NavLabel({ title }: { title: string }) {
  * collapse animation (and the rail's freshly-mounted section triggers start from
  * the middle of the wide menu).
  */
+/**
+ * In the phone sheet (the sidebar's mobile Sheet carries data-mobile="true"):
+ * 44px touch rows and 16px text, the same size as the filter input (16px also
+ * keeps iOS from zooming into the input). Desktop keeps the 32px rows.
+ */
+export const MOBILE_ROW_CLASS = 'in-data-[mobile=true]:h-11 in-data-[mobile=true]:text-base'
+
 export const NAV_BUTTON_CLASS = cn(
+  MOBILE_ROW_CLASS,
   'px-1.5 group-data-[collapsible=icon]:p-1.5! [&>svg:first-child]:size-5 [&>svg]:stroke-[1.75]',
   // Quiet at rest, full ink on hover and for the current page / the section
   // that owns it (`data-current`), so where you are reads at a glance even with
@@ -100,6 +108,7 @@ export const NAV_COLUMN_CLASS = 'flex flex-col gap-1 px-2 py-2'
 /** Second-level rows: smaller and lighter than their section header. */
 const SUB_BUTTON_CLASS = cn(
   'h-auto min-h-7 w-full py-1 text-[13px] text-sidebar-foreground/80 [&>svg]:stroke-[1.75]',
+  'in-data-[mobile=true]:min-h-11 in-data-[mobile=true]:text-base',
   '[&>svg:first-child]:text-muted-foreground hover:[&>svg:first-child]:text-sidebar-accent-foreground',
   'data-[active=true]:font-medium data-[active=true]:[&>svg:first-child]:text-sidebar-accent-foreground',
   // Stay laid out while the parent collapse animates shut on the rail.
@@ -161,7 +170,9 @@ export function NavClusterLabel({ label }: { label?: string }) {
   return (
     <div
       role={label ? undefined : 'separator'}
-      className="relative flex h-7 shrink-0 items-end px-1.5 pb-1"
+      // Labelled: 16px from the row above to the label, the same as the
+      // spacing around the header separator. Unlabelled dividers stay h-7.
+      className={cn('relative flex shrink-0 items-end px-1.5 pb-1', label ? 'h-8' : 'h-7')}
     >
       {label ? (
         <span className="truncate text-xs font-medium text-muted-foreground transition-opacity group-data-[collapsible=icon]:opacity-0">
