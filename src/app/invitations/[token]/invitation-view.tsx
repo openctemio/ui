@@ -237,11 +237,9 @@ export function InvitationView({ token, hasSession }: InvitationViewProps) {
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <div
-              className={`mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full ${isExpired ? 'bg-yellow-500/10' : 'bg-green-500/10'}`}
+              className={`mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full ${isExpired ? 'bg-warning/10' : 'bg-success/10'}`}
             >
-              <StatusIcon
-                className={`h-6 w-6 ${isExpired ? 'text-yellow-500' : 'text-green-500'}`}
-              />
+              <StatusIcon className={`h-6 w-6 ${isExpired ? 'text-warning' : 'text-success'}`} />
             </div>
             <CardTitle className="text-xl">Invitation {statusText}</CardTitle>
             <CardDescription>
@@ -306,7 +304,7 @@ export function InvitationView({ token, hasSession }: InvitationViewProps) {
                     {invitation?.invitation.role}
                   </Badge>
                   {daysUntilExpiry <= 3 && daysUntilExpiry > 0 && (
-                    <Badge variant="outline" className="text-yellow-600 border-yellow-600/50">
+                    <Badge variant="outline" className="text-warning border-warning/50">
                       <Clock className="h-3 w-3 me-1" />
                       Expires in {daysUntilExpiry} day{daysUntilExpiry > 1 ? 's' : ''}
                     </Badge>
