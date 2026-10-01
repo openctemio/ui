@@ -34,6 +34,7 @@ import { matchRoutePermission } from '@/config/route-permissions'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+import { MainRegion } from '@/components/layout/main'
 
 interface RouteGuardProps {
   children: React.ReactNode
@@ -194,8 +195,10 @@ function AccessDenied({ reason, permission, module, message }: AccessDeniedProps
     ? 'This feature is not included in your current plan.'
     : "You don't have permission to access this page."
 
+  // This view replaces the page header and the layout's <main>, so it is the
+  // page's main landmark and the skip link's #content target itself.
   return (
-    <div className="flex flex-1 items-center justify-center p-8">
+    <MainRegion className="flex flex-1 items-center justify-center p-8">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div
@@ -241,7 +244,7 @@ function AccessDenied({ reason, permission, module, message }: AccessDeniedProps
           </div>
         </CardContent>
       </Card>
-    </div>
+    </MainRegion>
   )
 }
 

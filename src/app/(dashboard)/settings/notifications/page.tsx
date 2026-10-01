@@ -138,7 +138,11 @@ export default function NotificationsSettingsPage() {
                     </p>
                   </div>
                 </div>
-                <Switch checked={inAppEnabled} onCheckedChange={setInAppEnabled} />
+                <Switch
+                  aria-label="Enable In-App Notifications"
+                  checked={inAppEnabled}
+                  onCheckedChange={setInAppEnabled}
+                />
               </div>
             </CardContent>
           </Card>
@@ -231,6 +235,7 @@ export default function NotificationsSettingsPage() {
                           <p className="text-sm text-muted-foreground">{notifType.description}</p>
                         </div>
                         <Switch
+                          aria-label={notifType.name}
                           checked={!isMuted}
                           onCheckedChange={() => toggleMutedType(notifType.id)}
                           disabled={!inAppEnabled}
