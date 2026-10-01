@@ -169,13 +169,16 @@ export function useDeleteScanProfile(profileId: string) {
 /**
  * Set a scan profile as the default for the tenant
  */
-export function useSetDefaultScanProfile(profileId: string) {
+export function useSetDefaultScanProfile() {
   const { currentTenant } = useTenant()
 
+  // The profile id is passed to trigger(), not bound to the hook: a row
+  // action sets the selection and triggers in the same handler, so a hook
+  // keyed on the selection would still target the previous row.
   return useSWRMutation(
-    currentTenant && profileId ? scanProfileEndpoints.setDefault(profileId) : null,
-    async (url: string) => {
-      return post<ScanProfile>(url, {})
+    currentTenant ? 'scan-profile-set-default' : null,
+    async (_key: string, { arg: profileId }: { arg: string }) => {
+      return post<ScanProfile>(scanProfileEndpoints.setDefault(profileId), {})
     }
   )
 }

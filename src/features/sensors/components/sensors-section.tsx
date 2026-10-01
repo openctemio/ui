@@ -197,14 +197,14 @@ export function SensorsSection({
   // top stat cards always reflect the FULL dataset, not just the current page.
   const { data: tenantSensorStats } = useTenantSensorStats()
 
-  // Mutations
-  const { trigger: deleteSensorTrigger, isMutating: isDeleting } = useDeleteSensor(
-    selectedSensor?.id || ''
-  )
+  // Mutations. Each takes the target sensor's id when triggered: the row
+  // handlers below select a sensor and trigger in the same call, so a hook
+  // bound to `selectedSensor` would act on the previously selected one.
+  const { trigger: deleteSensorTrigger, isMutating: isDeleting } = useDeleteSensor()
   const { trigger: bulkDeleteSensorsTrigger, isMutating: isBulkDeleting } = useBulkDeleteSensors()
-  const { trigger: activateSensorTrigger } = useActivateSensor(selectedSensor?.id || '')
-  const { trigger: deactivateSensorTrigger } = useDeactivateSensor(selectedSensor?.id || '')
-  const { trigger: revokeSensorTrigger } = useRevokeSensor(selectedSensor?.id || '')
+  const { trigger: activateSensorTrigger } = useActivateSensor()
+  const { trigger: deactivateSensorTrigger } = useDeactivateSensor()
+  const { trigger: revokeSensorTrigger } = useRevokeSensor()
 
   // Apply type filter first if provided
   const typeFilteredSensors = useMemo(() => {
@@ -341,7 +341,7 @@ export function SensorsSection({
   const handleDeleteConfirm = useCallback(async () => {
     if (!selectedSensor) return
     try {
-      await deleteSensorTrigger()
+      await deleteSensorTrigger(selectedSensor.id)
       toast.success(`Sensor "${selectedSensor.name}" deleted`)
       await invalidateSensorsCache()
       setDeleteDialogOpen(false)
@@ -379,7 +379,7 @@ export function SensorsSection({
     async (sensor: Sensor) => {
       setSelectedSensor(sensor)
       try {
-        const updatedSensor = await activateSensorTrigger()
+        const updatedSensor = await activateSensorTrigger(sensor.id)
         toast.success(`Sensor "${sensor.name}" activated`)
         await invalidateSensorsCache()
         await mutate()
@@ -398,7 +398,7 @@ export function SensorsSection({
     async (sensor: Sensor) => {
       setSelectedSensor(sensor)
       try {
-        const updatedSensor = await deactivateSensorTrigger()
+        const updatedSensor = await deactivateSensorTrigger(sensor.id)
         toast.success(`Sensor "${sensor.name}" deactivated`)
         await invalidateSensorsCache()
         await mutate()
@@ -425,7 +425,7 @@ export function SensorsSection({
     if (!selectedSensor) return
     setIsRevoking(true)
     try {
-      const updatedSensor = await revokeSensorTrigger()
+      const updatedSensor = await revokeSensorTrigger(selectedSensor.id)
       toast.success(`Sensor "${selectedSensor.name}" access revoked`)
       await invalidateSensorsCache()
       await mutate()

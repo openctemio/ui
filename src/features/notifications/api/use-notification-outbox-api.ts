@@ -149,13 +149,15 @@ export function useNotificationOutboxEntryApi(entryId: string | null, config?: S
 /**
  * Retry a failed/dead outbox entry
  */
-export function useRetryOutboxEntryApi(entryId: string) {
+export function useRetryOutboxEntryApi() {
   const { currentTenant } = useTenant()
 
+  // The entry id is passed to trigger(): the row handler selects and retries
+  // in one go, before a hook keyed on the selection could see the new row.
   return useSWRMutation(
-    currentTenant && entryId ? `${BASE_URL}/${entryId}/retry` : null,
-    async (url: string) => {
-      return post<OutboxEntry>(url, {})
+    currentTenant ? 'notification-outbox-retry' : null,
+    async (_key: string, { arg: entryId }: { arg: string }) => {
+      return post<OutboxEntry>(`${BASE_URL}/${entryId}/retry`, {})
     }
   )
 }

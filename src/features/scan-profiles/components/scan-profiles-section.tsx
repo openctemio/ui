@@ -68,9 +68,7 @@ export function ScanProfilesSection() {
   )
 
   // Set default mutation
-  const { trigger: setDefaultProfile, isMutating: isSettingDefault } = useSetDefaultScanProfile(
-    selectedProfile?.id || ''
-  )
+  const { trigger: setDefaultProfile, isMutating: isSettingDefault } = useSetDefaultScanProfile()
 
   // Handlers
   const handleRefresh = useCallback(async () => {
@@ -109,9 +107,8 @@ export function ScanProfilesSection() {
 
   const handleSetDefault = useCallback(
     async (profile: ScanProfile) => {
-      setSelectedProfile(profile)
       try {
-        await setDefaultProfile()
+        await setDefaultProfile(profile.id)
         toast.success(`"${profile.name}" set as default profile`)
         await invalidateScanProfilesCache()
       } catch (err) {
