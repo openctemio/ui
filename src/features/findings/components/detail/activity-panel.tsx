@@ -555,38 +555,40 @@ export function ActivityPanel({
       {/* Activity Timeline - Scrollable */}
       <div className="flex-1 min-h-0 overflow-y-auto">
         <div className="space-y-2 p-2">
-          {sortedActivities.map((activity) => {
-            const config = ACTIVITY_TYPE_CONFIG[activity.type]
+          <ul aria-label="Activity" className="space-y-2">
+            {sortedActivities.map((activity) => {
+              const config = ACTIVITY_TYPE_CONFIG[activity.type]
 
-            return (
-              <div key={activity.id} className="flex gap-2">
-                {/* Avatar */}
-                <div className="flex-shrink-0">
-                  <Avatar className="h-7 w-7">
-                    <AvatarFallback
-                      className={`text-xs ${activity.actor === 'ai' ? 'bg-purple-500/20 text-purple-400' : activity.actor === 'system' ? 'bg-blue-500/20 text-blue-400' : ''}`}
-                    >
-                      {getActorInitials(activity.actor)}
-                    </AvatarFallback>
-                  </Avatar>
-                </div>
-
-                {/* Content */}
-                <div className="min-w-0 flex-1">
-                  <div className="mb-0.5 flex items-center gap-1.5 flex-wrap">
-                    <span className="text-xs font-medium">{getActorName(activity.actor)}</span>
-                    <div className={`flex items-center gap-0.5 ${config.color}`}>
-                      {ACTIVITY_ICONS[activity.type]}
-                    </div>
-                    <span className="text-muted-foreground text-xs">
-                      {formatTimeAgo(activity.createdAt)}
-                    </span>
+              return (
+                <li key={activity.id} className="flex gap-2">
+                  {/* Avatar */}
+                  <div className="flex-shrink-0">
+                    <Avatar className="h-7 w-7">
+                      <AvatarFallback
+                        className={`text-xs ${activity.actor === 'ai' ? 'bg-purple-500/20 text-purple-400' : activity.actor === 'system' ? 'bg-blue-500/20 text-blue-400' : ''}`} // palette-ok: actor avatar accents, unchanged (only re-indented into the list)
+                      >
+                        {getActorInitials(activity.actor)}
+                      </AvatarFallback>
+                    </Avatar>
                   </div>
-                  {renderActivityContent(activity)}
-                </div>
-              </div>
-            )
-          })}
+
+                  {/* Content */}
+                  <div className="min-w-0 flex-1">
+                    <div className="mb-0.5 flex items-center gap-1.5 flex-wrap">
+                      <span className="text-xs font-medium">{getActorName(activity.actor)}</span>
+                      <div className={`flex items-center gap-0.5 ${config.color}`}>
+                        {ACTIVITY_ICONS[activity.type]}
+                      </div>
+                      <span className="text-muted-foreground text-xs">
+                        {formatTimeAgo(activity.createdAt)}
+                      </span>
+                    </div>
+                    {renderActivityContent(activity)}
+                  </div>
+                </li>
+              )
+            })}
+          </ul>
 
           {/* Load More Button */}
           {hasMore && onLoadMore && (

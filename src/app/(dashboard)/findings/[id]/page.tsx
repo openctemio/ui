@@ -29,6 +29,7 @@ import type {
   AssetType,
 } from '@/features/findings/types'
 import { findingAssetType } from '@/features/findings/lib/finding-asset-type'
+import { mergeFindingActivities } from '@/features/findings/lib/finding-activities'
 import type { Severity } from '@/features/shared/types'
 import {
   FindingHeader,
@@ -480,16 +481,15 @@ export default function FindingDetailPage() {
   const orderedTabs = getOrderedTabs(layout)
   const SourcePanel = layout.sourcePanel
 
-  // Merge real-time + API + synthetic activities (deduplicate by ID).
-  // React Compiler memoises this automatically; the previous explicit
-  // useMemo with `finding` in deps tripped the preserve-manual-memoization
-  // rule (Compiler couldn't prove `finding` would not be reassigned later).
-  const baseActivities = apiActivities.length > 0 ? apiActivities : []
-  const baseActivityIds = new Set(baseActivities.map((a) => a.id))
-  const uniqueRealtimeActivities = realtimeActivities.filter((a) => !baseActivityIds.has(a.id))
-  const syntheticActivities =
-    finding?.activities?.filter((a) => a.type === 'created' && !baseActivityIds.has(a.id)) ?? []
-  const allActivities = [...uniqueRealtimeActivities, ...baseActivities, ...syntheticActivities]
+  // Merge real-time + API + synthetic activities (deduplicate by ID). The
+  // count covers exactly what the feed shows. Recomputed each render (cheap);
+  // `finding` is rebuilt every render, so a useMemo keyed on it never hits.
+  const { activities: allActivities, count: activityCount } = mergeFindingActivities({
+    fetched: apiActivities,
+    fetchedTotal: activitiesTotal,
+    realtime: realtimeActivities,
+    fromFinding: finding?.activities,
+  })
 
   // Handler for adding new comments
   const handleAddComment = async (content: string, _isInternal: boolean) => {
@@ -628,7 +628,7 @@ export default function FindingDetailPage() {
                   ))}
                   {/* Activity tab — mobile only (desktop has side panel) */}
                   <TabsTrigger value="activity" className="lg:hidden">
-                    Activity <TabsCount value={activitiesTotal + realtimeActivities.length} />
+                    Activity <TabsCount value={activityCount} />
                   </TabsTrigger>
                 </TabsList>
               </div>
@@ -679,9 +679,7 @@ export default function FindingDetailPage() {
             <div className="flex h-full flex-col">
               <CardHeader className="flex-shrink-0 border-b [.border-b]:pb-3 py-1">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-base">
-                    Activity ({activitiesTotal + realtimeActivities.length})
-                  </CardTitle>
+                  <CardTitle className="text-base">Activity ({activityCount})</CardTitle>
                   {/* Real-time connection indicator */}
                   <div
                     className="flex items-center gap-1"

@@ -22,7 +22,7 @@ test.describe('Finding drawer', () => {
       .locator('tbody tr')
       .filter({ hasNotText: /Confirmed|In progress|Resolved|Duplicate|False positive/i })
       .first()
-      .getByRole('button', { name: 'View finding details' })
+      .getByRole('button', { name: /, view details$/ })
     if (!(await open.isVisible().catch(() => false))) {
       test.skip(true, 'No finding in "New" — seed findings to enable this test')
       return
@@ -78,7 +78,10 @@ test.describe('Finding drawer', () => {
       return
     }
 
-    await page.getByRole('button', { name: 'View finding details' }).first().click()
+    await page
+      .getByRole('button', { name: /, view details$/ })
+      .first()
+      .click()
     const drawer = page.getByRole('dialog')
     await expect(drawer.getByText(apiType, { exact: true }).first()).toBeVisible()
   })
