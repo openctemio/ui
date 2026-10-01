@@ -14,7 +14,6 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
-import { Checkbox } from '@/components/ui/checkbox'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -73,6 +72,7 @@ import {
   Loader2,
   AlertCircle,
   RefreshCw,
+  KeyRound,
 } from 'lucide-react'
 import { useUrlFilter } from '@/hooks/use-url-param'
 import { useTenant } from '@/context/tenant-provider'
@@ -84,7 +84,13 @@ import {
   type MemberRole,
   type MemberRBACRole,
   STATUS_DISPLAY,
+  AddUserDialog,
+  RoleChecklist,
+  SetupLinkDialog,
+  issueSetupLink,
+  type SetupLinkTarget,
 } from '@/features/organization'
+import { PendingSetupBadge } from '@/features/shared'
 import { useUserRoles, useRoles, useSetUserRoles, type Role } from '@/features/access-control'
 import { createContext, useContext } from 'react'
 
@@ -163,7 +169,10 @@ const MEMBER_STATUS_LABEL: Record<string, string> = {
   suspended: 'Suspended',
 }
 
-function MemberStatusBadge({ status }: { status: string }) {
+function MemberStatusBadge({ status, pendingSetup }: { status: string; pendingSetup?: boolean }) {
+  // An admin-created account whose password is not set yet: the membership is
+  // active, but the person cannot sign in until they use their setup link.
+  if (pendingSetup && status !== 'suspended') return <PendingSetupBadge />
   const label =
     MEMBER_STATUS_LABEL[status] ??
     STATUS_DISPLAY[status as keyof typeof STATUS_DISPLAY]?.label ??
@@ -364,21 +373,7 @@ function EditUserRolesDialog({
     }
   }
 
-  const toggleRole = (roleId: string) => {
-    setSelectedRoleIds((prev) =>
-      prev.includes(roleId) ? prev.filter((id) => id !== roleId) : [...prev, roleId]
-    )
-  }
-
   const isLoading = userRolesLoading || allRolesLoading
-  // Filter out owner role and roles with invalid data
-  const availableRoles = allRoles.filter(
-    (r) => r.slug !== 'owner' && r.id && r.name && typeof r.name === 'string'
-  )
-
-  // Separate system and custom roles
-  const systemRoles = availableRoles.filter((r) => r.is_system)
-  const customRoles = availableRoles.filter((r) => !r.is_system)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -389,143 +384,14 @@ function EditUserRolesDialog({
         </DialogHeader>
 
         <div className="py-4">
-          {isLoading ? (
-            <div className="space-y-3">
-              {[1, 2, 3].map((i) => (
-                <Skeleton key={i} className="h-16 w-full rounded-xl" />
-              ))}
-            </div>
-          ) : (
-            <div className="space-y-4 max-h-[400px] overflow-y-auto pe-1">
-              {/* System Roles */}
-              {systemRoles.length > 0 && (
-                <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-xs font-medium text-muted-foreground">System roles</span>
-                    <div className="flex-1 h-px bg-border" />
-                  </div>
-                  <div className="space-y-2">
-                    {systemRoles.map((role) => {
-                      const isSelected = selectedRoleIds.includes(role.id)
-                      const roleColor = getRoleColor(role)
-                      return (
-                        <div
-                          key={role.id}
-                          onClick={() => toggleRole(role.id)}
-                          className={`
-                            flex items-start gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all
-                            ${
-                              isSelected
-                                ? 'border-primary bg-primary/5 shadow-sm'
-                                : 'border-transparent bg-muted/30 hover:bg-muted/50 hover:border-muted'
-                            }
-                          `}
-                        >
-                          <div className="pt-0.5">
-                            <Checkbox checked={isSelected} className="pointer-events-none" />
-                          </div>
-                          <div className={`p-2 rounded-lg ${roleColor}`}>
-                            <Shield className="h-4 w-4" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium text-sm">
-                                {role.name || 'System Role'}
-                              </span>
-                            </div>
-                            {role.description && (
-                              <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                                {role.description}
-                              </p>
-                            )}
-                            <div className="flex items-center gap-2 mt-2">
-                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
-                                {role.permission_count ?? 0} permissions
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* Custom Roles */}
-              {customRoles.length > 0 && (
-                <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-xs font-medium text-muted-foreground">Custom roles</span>
-                    <div className="flex-1 h-px bg-border" />
-                  </div>
-                  <div className="space-y-2">
-                    {customRoles.map((role) => {
-                      const isSelected = selectedRoleIds.includes(role.id)
-                      const roleColor = getRoleColor(role)
-                      // Sanitize role name - truncate and remove potentially problematic chars
-                      const displayName = role.name
-                        ? role.name.slice(0, 100).replace(/[<>]/g, '')
-                        : 'Unnamed Role'
-                      const displayDescription = role.description
-                        ? role.description.slice(0, 200).replace(/[<>]/g, '')
-                        : ''
-                      return (
-                        <div
-                          key={role.id}
-                          onClick={() => toggleRole(role.id)}
-                          className={`
-                            flex items-start gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all
-                            ${
-                              isSelected
-                                ? 'border-primary bg-primary/5 shadow-sm'
-                                : 'border-transparent bg-muted/30 hover:bg-muted/50 hover:border-muted'
-                            }
-                          `}
-                        >
-                          <div className="pt-0.5">
-                            <Checkbox checked={isSelected} className="pointer-events-none" />
-                          </div>
-                          <div className={`p-2 rounded-lg ${roleColor}`}>
-                            <Shield className="h-4 w-4" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span
-                                className="font-medium text-sm truncate max-w-[250px]"
-                                title={role.name}
-                              >
-                                {displayName}
-                              </span>
-                            </div>
-                            {displayDescription && (
-                              <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                                {displayDescription}
-                              </p>
-                            )}
-                            <div className="flex items-center gap-2 mt-2">
-                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
-                                {role.permission_count ?? 0} permissions
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {availableRoles.length === 0 && (
-                <div className="text-center py-8">
-                  <Shield className="h-12 w-12 mx-auto text-muted-foreground/30 mb-3" />
-                  <p className="text-sm text-muted-foreground">No roles available</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Create roles in Access Control settings
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
+          <RoleChecklist
+            roles={allRoles}
+            selected={selectedRoleIds}
+            onChange={setSelectedRoleIds}
+            loading={isLoading}
+            disabled={isSetting}
+            className="max-h-[400px]"
+          />
         </div>
 
         <DialogFooter className="border-t pt-4 gap-2">
@@ -588,6 +454,8 @@ export default function UsersPage() {
   // UI State
   const [selectedMember, setSelectedMember] = useState<MemberWithUser | null>(null)
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false)
+  const [addUserOpen, setAddUserOpen] = useState(false)
+  const [setupLinkTarget, setSetupLinkTarget] = useState<SetupLinkTarget | null>(null)
   const [editRolesMember, setEditRolesMember] = useState<MemberWithUser | null>(null)
   const [editRolesDialogOpen, setEditRolesDialogOpen] = useState(false)
   // Track pending roles edit (used when transitioning from sheet to dialog)
@@ -643,10 +511,6 @@ export default function UsersPage() {
   const { roles: availableRolesForInvite, isLoading: rolesLoading } = useRoles({
     skip: !inviteDialogOpen,
   })
-  const selectableRoles = availableRolesForInvite.filter((r) => r.slug !== 'owner')
-  // Separate system and custom roles for invite dialog
-  const systemRolesForInvite = selectableRoles.filter((r) => r.is_system)
-  const customRolesForInvite = selectableRoles.filter((r) => !r.is_system)
 
   // Refresh all data
   const refreshData = useCallback(() => {
@@ -737,7 +601,9 @@ export default function UsersPage() {
     {
       accessorKey: 'status',
       header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
-      cell: ({ row }) => <MemberStatusBadge status={row.original.status} />,
+      cell: ({ row }) => (
+        <MemberStatusBadge status={row.original.status} pendingSetup={row.original.pending_setup} />
+      ),
     },
     {
       id: 'actions',
@@ -778,6 +644,21 @@ export default function UsersPage() {
                     </DropdownMenuItem>
                   </Can>
                   <Can permission={Permission.MembersManage} minRole="admin">
+                    {member.pending_setup && (
+                      <DropdownMenuItem
+                        onSelect={(e) => {
+                          e.preventDefault()
+                          setSetupLinkTarget({
+                            userId: member.user_id,
+                            email: member.email,
+                            name: member.name,
+                          })
+                        }}
+                      >
+                        <KeyRound className="me-2 h-4 w-4" />
+                        Get setup link
+                      </DropdownMenuItem>
+                    )}
                     <DropdownMenuSeparator />
                     {member.status === 'suspended' ? (
                       <DropdownMenuItem
@@ -1096,10 +977,18 @@ export default function UsersPage() {
           title="Users"
           description="Members of this workspace, their roles and pending invitations."
         >
+          {/* Accounts are created by owners/admins (no self-registration);
+              inviting someone who already has an account stays available. */}
           <Can permission={Permission.MembersInvite} minRole="admin" mode="disable">
-            <Button size="sm" onClick={() => setInviteDialogOpen(true)}>
-              <UserPlus className="me-2 h-4 w-4" />
+            <Button size="sm" variant="outline" onClick={() => setInviteDialogOpen(true)}>
+              <Send className="me-2 h-4 w-4" />
               Invite user
+            </Button>
+          </Can>
+          <Can permission={Permission.MembersManage} minRole="admin" mode="disable">
+            <Button size="sm" onClick={() => setAddUserOpen(true)}>
+              <UserPlus className="me-2 h-4 w-4" />
+              Add user
             </Button>
           </Can>
         </PageHeader>
@@ -1221,7 +1110,10 @@ export default function UsersPage() {
                   <h2 className="mt-4 text-xl font-semibold">{selectedMember.name}</h2>
                   <p className="text-sm text-muted-foreground">{selectedMember.email}</p>
                   <div className="mt-2">
-                    <MemberStatusBadge status={selectedMember.status} />
+                    <MemberStatusBadge
+                      status={selectedMember.status}
+                      pendingSetup={selectedMember.pending_setup}
+                    />
                   </div>
                 </div>
               </div>
@@ -1342,142 +1234,12 @@ export default function UsersPage() {
                 )}
               </div>
 
-              {rolesLoading ? (
-                <div className="space-y-2">
-                  {[1, 2, 3].map((i) => (
-                    <Skeleton key={i} className="h-14 w-full rounded-lg" />
-                  ))}
-                </div>
-              ) : (
-                <div className="space-y-4 max-h-[320px] overflow-y-auto pe-1">
-                  {/* System Roles */}
-                  {systemRolesForInvite.length > 0 && (
-                    <div>
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-xs font-medium text-muted-foreground">
-                          System roles
-                        </span>
-                        <div className="flex-1 h-px bg-border" />
-                      </div>
-                      <div className="space-y-2">
-                        {systemRolesForInvite.map((role) => {
-                          const isSelected = inviteForm.roleIds.includes(role.id)
-                          const displayName = role.name?.slice(0, 50) || 'System Role'
-                          return (
-                            <div
-                              key={role.id}
-                              onClick={() => {
-                                setInviteForm((prev) => ({
-                                  ...prev,
-                                  roleIds: isSelected
-                                    ? prev.roleIds.filter((id) => id !== role.id)
-                                    : [...prev.roleIds, role.id],
-                                }))
-                              }}
-                              className={`
-                                flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all
-                                ${
-                                  isSelected
-                                    ? 'border-primary bg-primary/5 shadow-sm'
-                                    : 'border-transparent bg-muted/30 hover:bg-muted/50 hover:border-muted'
-                                }
-                              `}
-                            >
-                              <Checkbox checked={isSelected} className="pointer-events-none" />
-                              <div className={`p-2 rounded-lg ${getRoleColor(role)}`}>
-                                <Shield className="h-4 w-4" />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-medium text-sm">{displayName}</span>
-                                </div>
-                                {role.description && (
-                                  <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
-                                    {role.description}
-                                  </p>
-                                )}
-                                <p className="text-[10px] text-muted-foreground mt-1">
-                                  {role.permission_count ?? 0} permissions
-                                </p>
-                              </div>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Custom Roles */}
-                  {customRolesForInvite.length > 0 && (
-                    <div>
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-xs font-medium text-muted-foreground">
-                          Custom roles
-                        </span>
-                        <div className="flex-1 h-px bg-border" />
-                      </div>
-                      <div className="space-y-2">
-                        {customRolesForInvite.map((role) => {
-                          const isSelected = inviteForm.roleIds.includes(role.id)
-                          const displayName =
-                            role.name?.slice(0, 50).replace(/[<>]/g, '') || 'Custom Role'
-                          return (
-                            <div
-                              key={role.id}
-                              onClick={() => {
-                                setInviteForm((prev) => ({
-                                  ...prev,
-                                  roleIds: isSelected
-                                    ? prev.roleIds.filter((id) => id !== role.id)
-                                    : [...prev.roleIds, role.id],
-                                }))
-                              }}
-                              className={`
-                                flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all
-                                ${
-                                  isSelected
-                                    ? 'border-primary bg-primary/5 shadow-sm'
-                                    : 'border-transparent bg-muted/30 hover:bg-muted/50 hover:border-muted'
-                                }
-                              `}
-                            >
-                              <Checkbox checked={isSelected} className="pointer-events-none" />
-                              <div className={`p-2 rounded-lg ${getRoleColor(role)}`}>
-                                <Shield className="h-4 w-4" />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-medium text-sm truncate">
-                                    {displayName}
-                                  </span>
-                                </div>
-                                {role.description && (
-                                  <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
-                                    {role.description.slice(0, 100)}
-                                  </p>
-                                )}
-                                <p className="text-[10px] text-muted-foreground mt-1">
-                                  {role.permission_count ?? 0} permissions
-                                </p>
-                              </div>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {selectableRoles.length === 0 && (
-                    <div className="text-center py-6">
-                      <Shield className="h-10 w-10 mx-auto text-muted-foreground/30 mb-2" />
-                      <p className="text-sm text-muted-foreground">No roles available</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Create roles in Access Control settings
-                      </p>
-                    </div>
-                  )}
-                </div>
-              )}
+              <RoleChecklist
+                roles={availableRolesForInvite}
+                selected={inviteForm.roleIds}
+                onChange={(roleIds) => setInviteForm((prev) => ({ ...prev, roleIds }))}
+                loading={rolesLoading}
+              />
             </div>
           </div>
 
@@ -1504,6 +1266,24 @@ export default function UsersPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AddUserDialog
+        tenantSlug={tenantSlug}
+        open={addUserOpen}
+        onOpenChange={setAddUserOpen}
+        onCreated={refreshData}
+      />
+
+      <SetupLinkDialog
+        target={setupLinkTarget}
+        onOpenChange={(open) => {
+          if (!open) setSetupLinkTarget(null)
+        }}
+        issue={(userId) => {
+          if (!tenantSlug) return Promise.reject(new Error('No organization selected'))
+          return issueSetupLink(tenantSlug, userId)
+        }}
+      />
 
       {/* Edit User Roles Dialog - Prevent overlap with sheet animation */}
       {!isSheetAnimating && (

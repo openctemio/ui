@@ -16,3 +16,8 @@ export * from './api/use-audit-logs'
 
 // Hooks
 export * from './hooks/use-tenant-logo'
+
+// Components
+export * from './components/role-checklist'
+export * from './components/add-user-dialog'
+export * from './components/setup-link-dialog'

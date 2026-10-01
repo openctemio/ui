@@ -17,6 +17,8 @@ import type {
   CreateInvitationInput,
   UpdateMemberRoleInput,
   MemberWithUser,
+  CreateTenantUserInput,
+  CreatedTenantUser,
 } from '../types/member.types'
 
 // ============================================
@@ -259,6 +261,33 @@ export function useDeleteInvitation(
     isDeleting: isMutating,
     error,
   }
+}
+
+// ============================================
+// ADMIN-CREATED USERS
+// ============================================
+
+/**
+ * Create a user account in this organization (owner/admin). The response may
+ * carry a one-time `setup_token`: a plain call (not SWR) so it is never cached —
+ * show it once and drop it.
+ */
+export function createTenantUser(tenantIdOrSlug: string, input: CreateTenantUserInput) {
+  return fetcherWithOptions<CreatedTenantUser>(tenantEndpoints.createUser(tenantIdOrSlug), {
+    method: 'POST',
+    body: JSON.stringify(input),
+  })
+}
+
+/**
+ * Issue a fresh one-time setup link for a member whose account is still
+ * pending setup. Invalidates any earlier link.
+ */
+export function issueSetupLink(tenantIdOrSlug: string, userId: string) {
+  return fetcherWithOptions<CreatedTenantUser>(
+    tenantEndpoints.userSetupLink(tenantIdOrSlug, userId),
+    { method: 'POST' }
+  )
 }
 
 // ============================================
