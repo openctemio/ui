@@ -111,6 +111,21 @@ function isAllowedAt(relPath, text, offset, length) {
   return spans.some(([a, b]) => s >= a && s + length <= b)
 }
 
+/**
+ * `text[start, start+length)` with every "agent" the allow-list does not keep
+ * mapped to "sensor". Each occurrence is judged on its own, so a name holding
+ * both (describeUserAgent, user-agent.ts) keeps the allowed one.
+ */
+function renameUnallowed(relPath, text, start, length) {
+  const piece = text.slice(start, start + length)
+  return piece.replace(/agent/gi, (m, off) =>
+    isAllowedAt(relPath, text, start + off, m.length) ? m : mapCase(m)
+  )
+}
+function hasUnallowed(relPath, text, start, length) {
+  return renameUnallowed(relPath, text, start, length) !== text.slice(start, start + length)
+}
+
 // ---------------------------------------------------------------------------
 // 1. paths
 // ---------------------------------------------------------------------------
@@ -128,16 +143,23 @@ function movePaths() {
     let next = null
     for (const f of files) {
       const segs = f.split('/')
-      const i = segs.findIndex(
-        (s) => /agent/i.test(s) && !isAllowedAt(f, f, f.indexOf(s), s.length)
-      )
+      let offset = 0
+      const i = segs.findIndex((s) => {
+        const hit = hasUnallowed(f, f, offset, s.length)
+        offset += s.length + 1
+        return hit
+      })
       if (i === -1) continue
       const from = segs.slice(0, i + 1).join('/')
       if (!next || from.split('/').length < next.split('/').length) next = from
     }
     if (!next) break
     const segs = next.split('/')
-    const to = [...segs.slice(0, -1), mapWord(segs[segs.length - 1])].join('/')
+    const last = segs[segs.length - 1]
+    const to = [
+      ...segs.slice(0, -1),
+      renameUnallowed(next, next, next.length - last.length, last.length),
+    ].join('/')
     moves.push([next, to])
     if (DRY) break
     fs.mkdirSync(path.join(ROOT, path.dirname(to)), { recursive: true })
@@ -158,13 +180,14 @@ function rewriteSpecifiers(files) {
   for (const f of files) {
     const abs = path.join(ROOT, f)
     const text = fs.readFileSync(abs, 'utf8')
-    const out = text.replace(SPECIFIER, (all, pre, q, spec) => {
+    const out = text.replace(SPECIFIER, (all, pre, q, spec, offset) => {
       if (!/^(@\/|\.)/.test(spec)) return all
-      const next = spec
-        .split('/')
-        .map((seg) => mapWord(seg))
-        .join('/')
-      return `${pre}${q}${next}${q}`
+      // Judge each "agent" in the path as the allow-list sees the path itself
+      // (a module named user-agent keeps its name).
+      const next = renameUnallowed(f, spec, 0, spec.length)
+      return next === spec || !hasUnallowed(f, text, offset + pre.length + 1, spec.length)
+        ? all
+        : `${pre}${q}${next}${q}`
     })
     if (out !== text) {
       changed++
@@ -234,7 +257,7 @@ function renameIdentifiers() {
         (ts.isIdentifier(node) || ts.isPrivateIdentifier(node)) &&
         /agent/i.test(node.text) &&
         !covered.has(`${sf.fileName}:${node.getStart(sf)}`) &&
-        !isAllowedAt(relPath, text, node.getStart(sf), node.getWidth(sf))
+        hasUnallowed(relPath, text, node.getStart(sf), node.getWidth(sf))
       ) {
         const pos = node.getStart(sf)
         const info = service.getRenameInfo(sf.fileName, pos, { allowRenameOfImportPath: false })
@@ -250,7 +273,7 @@ function renameIdentifiers() {
             const lrel = rel(l.fileName)
             if (isExcluded(lrel) || lrel.startsWith('node_modules/')) continue
             const ltext = host.getScriptSnapshot(l.fileName).getText(0, Infinity)
-            if (isAllowedAt(lrel, ltext, l.textSpan.start, l.textSpan.length)) continue
+            if (!hasUnallowed(lrel, ltext, l.textSpan.start, l.textSpan.length)) continue
             add(l.fileName, l.textSpan.start, l.textSpan.length)
           }
         }
@@ -262,11 +285,14 @@ function renameIdentifiers() {
 
   let total = 0
   for (const [file, spans] of edits) {
-    let text = fs.readFileSync(file, 'utf8')
+    const original = fs.readFileSync(file, 'utf8')
+    const frel = rel(file)
+    let text = original
     const ordered = [...spans.entries()].sort((a, b) => b[0] - a[0])
     for (const [start, length] of ordered) {
-      const old = text.slice(start, start + length)
-      text = text.slice(0, start) + mapWord(old) + text.slice(start + length)
+      // Judged against the original text, where the allow-list spans are.
+      const renamed = renameUnallowed(frel, original, start, length)
+      text = text.slice(0, start) + renamed + text.slice(start + length)
       total++
     }
     if (!DRY) fs.writeFileSync(file, text)
