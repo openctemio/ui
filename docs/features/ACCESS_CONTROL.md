@@ -118,7 +118,7 @@ Access Control is enforced at two layers, not just in the UI chrome:
   **module + permission** pair. A user lacking either is blocked before the page
   renders.
 
-Recently-added route gates include `/secret-store`, `/runners`,
+Recently-added route gates include `/settings/scanning/credentials` (was `/secret-store`), `/runners`,
 `/exceptions` (→ `SuppressionsRead`), `/simulation/scenarios` and
 `/attack-simulation`, and the three `/settings/access-control/*` sub-pages
 (`groups`, `permission-sets`, `assignment-rules`).

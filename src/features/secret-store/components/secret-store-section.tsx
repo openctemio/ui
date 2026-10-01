@@ -251,7 +251,7 @@ export function SecretStoreSection() {
   return (
     <>
       <PageHeader
-        title="Secret store"
+        title="Source credentials"
         description="Encrypted credentials that template sources use to authenticate (Git tokens, cloud keys and more)."
       >
         <Can permission={Permission.CredentialsWrite}>

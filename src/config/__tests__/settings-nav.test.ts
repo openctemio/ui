@@ -177,11 +177,11 @@ describe('settings shell', () => {
       '/settings/integrations/notifications/history',
       '/account',
       '/account/security',
-      '/scan-profiles',
-      '/scan-profiles/abc',
-      '/secret-store',
-      '/tools',
-      '/capabilities',
+      '/settings/scanning/profiles',
+      '/settings/scanning/profiles/abc',
+      '/settings/scanning/credentials',
+      '/settings/scanning/tools',
+      '/settings/scanning/capabilities',
     ]) {
       expect(isSettingsShellPath(p), p).toBe(true)
     }
@@ -193,7 +193,7 @@ describe('settings shell', () => {
       '/',
       '/scans',
       '/sensors',
-      '/scan-profilesx',
+      '/scan-profiles',
       '/priority-rules',
       '/priority-rules/abc',
       '/settings/tenant/create',
@@ -210,7 +210,7 @@ describe('settings shell', () => {
     )
     expect(activeSettingsItem('/account')?.id).toBe('profile')
     expect(activeSettingsItem('/account/security')?.id).toBe('account-security')
-    expect(activeSettingsItem('/scan-profiles/123')?.id).toBe('scan-profiles')
+    expect(activeSettingsItem('/settings/scanning/profiles/123')?.id).toBe('scan-profiles')
   })
 
   it('every static page in the shell is an item, a sub-page of one, or a known exception', () => {

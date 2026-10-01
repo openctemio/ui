@@ -1,8 +1,9 @@
 import { sidebarData } from '@/config/sidebar-data'
+import { settingsNavItems } from '@/config/settings-nav'
 
 /**
- * Breadcrumb labels come from the sidebar, the one place pages are named, so
- * the trail always says what the menu says. Only paths the sidebar does not
+ * Breadcrumb labels come from the navs (main sidebar and settings rail), the
+ * places pages are named, so the trail always says what the menu says. Only paths the sidebar does not
  * list fall back to FALLBACK_LABELS, then to the segment itself.
  */
 
@@ -18,6 +19,8 @@ function collect(nodes: NavNode[] | undefined, into: Map<string, string>) {
 const SIDEBAR_LABELS: Map<string, string> = (() => {
   const map = new Map<string, string>()
   for (const group of sidebarData.navGroups as NavNode[]) collect(group.items, map)
+  // Settings pages live in the settings rail, not the main sidebar.
+  collect(settingsNavItems, map)
   return map
 })()
 
@@ -28,6 +31,7 @@ const FALLBACK_LABELS: Record<string, string> = {
   admin: 'Administration',
   integrations: 'Integrations',
   'access-control': 'Access control',
+  scanning: 'Scanning',
   account: 'Account',
   insights: 'Insights',
   pentest: 'Penetration testing',
@@ -53,8 +57,12 @@ function humanize(segment: string): string {
   return words.charAt(0).toUpperCase() + words.slice(1)
 }
 
-/** Menu titles that only make sense inside their menu group ("Overview"). */
-const GENERIC_TITLES = new Set(['Overview', 'All'])
+/**
+ * Menu titles that only make sense inside their menu group ("Overview"), or
+ * that name a section's index page ("All integrations", "Profile" for
+ * /account): as a crumb, the section's own name reads better.
+ */
+const GENERIC_TITLES = new Set(['Overview', 'All', 'All integrations', 'Profile'])
 
 /** Label for the breadcrumb item at `path` whose last segment is `segment`. */
 export function breadcrumbLabel(path: string, segment: string): string {
