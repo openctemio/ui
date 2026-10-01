@@ -84,29 +84,6 @@ function isStaleLinkError(message: string) {
 
 export function PasswordTokenForm({ mode, token }: { mode: PasswordTokenMode; token: string }) {
   const copy = PASSWORD_TOKEN_COPY[mode]
-  const [isPending, startTransition] = useTransition()
-  const [isSuccess, setIsSuccess] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  const form = useForm<ResetPasswordInput>({
-    resolver: zodResolver(resetPasswordSchema),
-    defaultValues: { password: '', confirmPassword: '', token },
-  })
-
-  function onSubmit(data: ResetPasswordInput) {
-    setError(null)
-    startTransition(async () => {
-      const result = await resetPasswordAction(data.token, data.password)
-      if (result.success) {
-        setIsSuccess(true)
-        toast.success(copy.successDescription)
-      } else {
-        const errorMessage = 'error' in result ? result.error : `${copy.submit} failed`
-        setError(errorMessage)
-        toast.error(errorMessage)
-      }
-    })
-  }
 
   if (!token) {
     return (
@@ -129,6 +106,38 @@ export function PasswordTokenForm({ mode, token }: { mode: PasswordTokenMode; to
         </CardContent>
       </Card>
     )
+  }
+
+  // The page reads the token from the URL after hydration, so the first render
+  // has none. Mount the form only once the token is known (keyed by it), so the
+  // form state carries the real token instead of the empty first-render value.
+  return <TokenPasswordForm key={token} mode={mode} token={token} />
+}
+
+function TokenPasswordForm({ mode, token }: { mode: PasswordTokenMode; token: string }) {
+  const copy = PASSWORD_TOKEN_COPY[mode]
+  const [isPending, startTransition] = useTransition()
+  const [isSuccess, setIsSuccess] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const form = useForm<ResetPasswordInput>({
+    resolver: zodResolver(resetPasswordSchema),
+    defaultValues: { password: '', confirmPassword: '', token },
+  })
+
+  function onSubmit(data: ResetPasswordInput) {
+    setError(null)
+    startTransition(async () => {
+      const result = await resetPasswordAction(data.token, data.password)
+      if (result.success) {
+        setIsSuccess(true)
+        toast.success(copy.successDescription)
+      } else {
+        const errorMessage = 'error' in result ? result.error : `${copy.submit} failed`
+        setError(errorMessage)
+        toast.error(errorMessage)
+      }
+    })
   }
 
   if (isSuccess) {

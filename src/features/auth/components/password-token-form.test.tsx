@@ -47,6 +47,18 @@ describe('PasswordTokenForm', () => {
     expect(await screen.findByText('Password reset successful')).toBeInTheDocument()
   })
 
+  // The page reads the token from the URL after hydration, so the first render
+  // has no token. The form must still submit the token that arrives later
+  // (before this fix the form kept the empty first-render token and silently
+  // refused to submit).
+  it('submits a token that arrives after the first render', async () => {
+    mockReset.mockResolvedValue({ success: true, data: null, message: 'ok' })
+    const { rerender } = render(<PasswordTokenForm mode="setup" token="" />)
+    rerender(<PasswordTokenForm mode="setup" token="tok-late" />)
+    await fillAndSubmit(/^set password$/i)
+    await waitFor(() => expect(mockReset).toHaveBeenCalledWith('tok-late', PASSWORD))
+  })
+
   it('setup mode without a token says to ask the administrator (no self-service reset link)', () => {
     render(<PasswordTokenForm mode="setup" token="" />)
     expect(screen.getByText('Invalid setup link')).toBeInTheDocument()
