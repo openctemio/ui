@@ -339,6 +339,7 @@ export function EditRoleSheet({ role, open, onOpenChange, onSuccess }: EditRoleS
                       </div>
                     </div>
                     <Switch
+                      aria-label="Full Data Access"
                       checked={form.hasFullDataAccess}
                       onCheckedChange={(checked) =>
                         setForm((prev) => ({ ...prev, hasFullDataAccess: checked }))

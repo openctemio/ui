@@ -3,7 +3,13 @@ import { cn } from '@/lib/utils'
 import { LayoutProvider } from '@/context/layout-provider'
 import { SearchProvider } from '@/context/search-provider'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
-import { DashboardHeader, DashboardProviders, AppSidebar, TenantGate } from '@/components/layout'
+import {
+  DashboardHeader,
+  DashboardProviders,
+  AppSidebar,
+  TenantGate,
+  MainRegion,
+} from '@/components/layout'
 import { SkipToMain } from '@/components/skip-to-main'
 import { RouteGuard } from '@/components/route-guard'
 
@@ -57,12 +63,11 @@ export default async function SiteLayout({ children }: SiteLayoutProps) {
                     The overflow-hidden scope is gated by data-layout=fixed
                     so "normal" pages still scroll naturally at the body.
                   */}
-                  <main
-                    id="content"
-                    className="min-h-0 flex-1 overflow-y-auto overscroll-contain has-[[data-layout=fixed]]:flex has-[[data-layout=fixed]]:flex-col has-[[data-layout=fixed]]:overflow-hidden"
-                  >
+                  {/* The page's one `main` landmark: a page's own <Main> inside
+                      it renders as a plain container. */}
+                  <MainRegion className="min-h-0 flex-1 overflow-y-auto overscroll-contain has-[[data-layout=fixed]]:flex has-[[data-layout=fixed]]:flex-col has-[[data-layout=fixed]]:overflow-hidden">
                     {children}
-                  </main>
+                  </MainRegion>
                 </RouteGuard>
               </SidebarInset>
             </SidebarProvider>
