@@ -76,7 +76,11 @@ export function mapCredentialToAsset(credential: ApiCredential): Asset {
       source,
       username: username || email,
       leakDate: firstSeen.split('T')[0] || '',
-      secretValue: credential.secret_value,
+      // The API never returns the plaintext: only a mask and a keyed
+      // fingerprint. The plaintext comes from POST /credentials/{id}/reveal.
+      hasSecret: credential.has_secret ?? false,
+      secretMasked: credential.secret_masked,
+      secretFingerprint: credential.secret_fingerprint,
       credentialType: credTypeMap[credType] || credType,
     },
     tags: [],

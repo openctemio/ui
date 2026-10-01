@@ -933,8 +933,12 @@ export interface AssetMetadata {
   // ============================================
   // Credential Leak specific (for credential assets)
   // ============================================
-  /** The actual leaked secret value (password, API key, etc.) */
-  secretValue?: string
+  /** Whether the leak carries a stored secret (password, API key, etc.) */
+  hasSecret?: boolean
+  /** Display-safe mask of the secret; the plaintext is revealed on demand */
+  secretMasked?: string
+  /** Keyed fingerprint: the same value means the same secret leaked again */
+  secretFingerprint?: string
   /** Type of credential (password, api_key, aws_key, database_cred, etc.) */
   credentialType?: string
 
