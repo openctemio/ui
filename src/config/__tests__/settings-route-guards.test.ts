@@ -13,6 +13,7 @@
 import { describe, expect, it } from 'vitest'
 import { matchRoutePermission } from '../route-permissions'
 import { sidebarData } from '../sidebar-data'
+import { settingsNavItems } from '../settings-nav'
 import { Permission } from '@/lib/permissions'
 import type { NavCollapsible, NavItem } from '@/components/types'
 
@@ -101,8 +102,9 @@ describe('sub-module keys exist', () => {
     'pipelines_int',
   ]
 
-  it('every sidebar subModuleKey is a real integrations sub-module', () => {
-    const keys: string[] = []
+  it('every sidebar and settings-rail subModuleKey is a real integrations sub-module', () => {
+    const keys: string[] = settingsNavItems.flatMap((i) => (i.subModuleKey ? [i.subModuleKey] : []))
+    expect(keys.length).toBeGreaterThan(3)
     for (const group of sidebarData.navGroups) {
       for (const item of group.items) {
         if (isCollapsible(item)) {
