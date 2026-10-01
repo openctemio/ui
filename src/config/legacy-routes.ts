@@ -54,9 +54,44 @@ export const LEGACY_SETTINGS_ROUTE_REDIRECTS: LegacyRouteRedirect[] = [
   { source: '/settings/audit/:path*', destination: '/settings/audit-log/:path*', permanent: true },
 ]
 
+/**
+ * Validation, campaign-first: a campaign's findings, retests and report are
+ * tabs of its page. An old list link that carried ?campaign= lands on that
+ * campaign's tab; without it, findings go to the main Findings list filtered
+ * to pentest, reports to Insights › Reports › Pentest.
+ */
+export const LEGACY_VALIDATION_ROUTE_REDIRECTS: LegacyRouteRedirect[] = [
+  {
+    source: '/pentest/findings',
+    has: [{ type: 'query', key: 'campaign' }],
+    destination: '/pentest/campaigns/:campaign?view=findings',
+    permanent: true,
+  },
+  { source: '/pentest/findings', destination: '/findings?sources=pentest', permanent: true },
+  {
+    source: '/pentest/reports',
+    has: [{ type: 'query', key: 'campaign' }],
+    destination: '/pentest/campaigns/:campaign?view=report',
+    permanent: true,
+  },
+  { source: '/pentest/reports', destination: '/reports?tab=pentest', permanent: true },
+  { source: '/pentest/retests', destination: '/validation/retests', permanent: true },
+  {
+    source: '/pentest/mitre-coverage',
+    destination: '/validation/attack-coverage',
+    permanent: true,
+  },
+  {
+    source: '/pentest/templates/:path*',
+    destination: '/settings/pentest/templates/:path*',
+    permanent: true,
+  },
+]
+
 export const LEGACY_ROUTE_REDIRECTS: LegacyRouteRedirect[] = [
   ...LEGACY_SENSOR_ROUTE_REDIRECTS,
   ...LEGACY_SETTINGS_ROUTE_REDIRECTS,
+  ...LEGACY_VALIDATION_ROUTE_REDIRECTS,
 ]
 
 /**
@@ -80,8 +115,12 @@ export function resolveLegacyRoute(
 export function applyLegacyRoute(r: LegacyRouteRedirect, url: string): string | null {
   const [path, qs = ''] = url.split('?')
   const query = new URLSearchParams(qs)
+  const captured: Record<string, string> = {}
   for (const h of r.has ?? []) {
     if (!query.has(h.key) || (h.value !== undefined && query.get(h.key) !== h.value)) return null
+    // Next.js makes a `has` value without a fixed `value` available to the
+    // destination as :key.
+    if (h.value === undefined) captured[h.key] = query.get(h.key) ?? ''
   }
   for (const m of r.missing ?? []) {
     if (query.has(m.key) && (m.value === undefined || query.get(m.key) === m.value)) return null
@@ -94,6 +133,9 @@ export function applyLegacyRoute(r: LegacyRouteRedirect, url: string): string | 
   } else {
     if (path !== r.source) return null
     dest = r.destination
+  }
+  for (const [k, v] of Object.entries(captured)) {
+    dest = dest.replace(`:${k}`, encodeURIComponent(v))
   }
   const [dPath, dQs = ''] = dest.split('?')
   const merged = new URLSearchParams(dQs)
