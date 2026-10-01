@@ -48,6 +48,7 @@ export const DEV_USER: AuthUser & {
     'findings:vulnerabilities:read',
     'findings:credentials:read',
     'findings:credentials:write',
+    'findings:credentials:reveal',
     'findings:remediation:read',
     'findings:remediation:write',
     'findings:workflows:read',

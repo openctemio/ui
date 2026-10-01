@@ -8872,6 +8872,93 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/credentials/{id}/reveal': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Reveal a leaked credential's secret
+     * @description Returns the plaintext secret of one leaked credential. Requires findings:credentials:reveal; every call is written to the audit log before the secret is returned, and the call fails if it cannot be audited.
+     */
+    post: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          /** @description Credential ID */
+          id: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['internal_infra_http_handler.RevealCredentialResponse']
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Not Found */
+        404: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Service Unavailable */
+        503: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+      }
+    }
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/credentials/enums': {
     parameters: {
       query?: never
@@ -28602,12 +28689,14 @@ export interface components {
         [key: string]: unknown
       }
       first_seen_at?: string
+      has_secret?: boolean
       id?: string
       identifier?: string
       is_revoked?: boolean
       is_verified?: boolean
       last_seen_at?: string
-      secret_value?: string
+      secret_fingerprint?: string
+      secret_masked?: string
       severity?: string
       source?: string
       state?: string
@@ -28721,12 +28810,14 @@ export interface components {
         [key: string]: unknown
       }
       first_seen_at?: string
+      has_secret?: boolean
       id?: string
       identifier?: string
       is_revoked?: boolean
       is_verified?: boolean
       last_seen_at?: string
-      secret_value?: string
+      secret_fingerprint?: string
+      secret_masked?: string
       severity?: string
       source?: string
       state?: string
@@ -31991,6 +32082,10 @@ export interface components {
     'internal_infra_http_handler.ResetPasswordRequest': {
       new_password: string
       token: string
+    }
+    'internal_infra_http_handler.RevealCredentialResponse': {
+      id?: string
+      secret_value?: string
     }
     'internal_infra_http_handler.RunResponse': {
       asset_id?: string

@@ -15,9 +15,12 @@ import type {
   CredentialListResult,
   IdentityExposure,
   IdentityListResult,
+  RevealCredentialResponse,
 } from '@/lib/api/generated'
 
 export type ApiCredential = CredentialItem
+/** POST /credentials/{id}/reveal — the plaintext secret (audited server-side). */
+export type ApiRevealCredentialResponse = RevealCredentialResponse
 export type ApiCredentialListResponse = CredentialListResult
 export type ApiIdentityListResponse = IdentityListResult
 

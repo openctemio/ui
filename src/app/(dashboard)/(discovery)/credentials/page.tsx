@@ -24,7 +24,6 @@ import {
   MetadataRow,
   SectionTitle,
   ClassificationBadges,
-  SecretValueField,
 } from '@/features/assets'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -79,6 +78,7 @@ import {
   useIdentityExposuresApi,
   mapCredentialsToAssets,
   invalidateCredentialsCache,
+  LeakedSecretField,
 } from '@/features/credentials'
 import { getErrorMessage } from '@/lib/api/error-handler'
 import type {
@@ -806,8 +806,11 @@ export default function CredentialsPage() {
           selectedCredential && (
             <>
               {/* Secret Value Section */}
-              <SecretValueField
-                value={selectedCredential.metadata.secretValue}
+              <LeakedSecretField
+                credentialId={selectedCredential.id}
+                hasSecret={selectedCredential.metadata.hasSecret ?? false}
+                masked={selectedCredential.metadata.secretMasked}
+                fingerprint={selectedCredential.metadata.secretFingerprint}
                 label="Leaked Secret"
                 showWarning={selectedCredential.status === 'active'}
               />
