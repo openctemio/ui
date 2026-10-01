@@ -145,7 +145,7 @@ All state-changing requests from the browser must carry an `X-CSRF-Token` header
 
 ### Markdown sanitisation
 
-Rendered markdown (notes, finding descriptions, etc.) goes through `src/lib/sanitize-markdown.ts` wired as a `rehypeRewrite` plugin on the markdown editor. It strips `<script>/<iframe>/<object>/<embed>/<style>/<link>/<meta>/<base>/<form>`, `on*` handlers, inline `style`, and `javascript:`/`data:`/`vbscript:` URLs. Do not disable it. If you need to render a new dangerous-looking tag, extend the allowlist in that file and add a test case in `sanitize-markdown.test.ts`.
+Rendered markdown (notes, finding descriptions, etc.) goes through `src/lib/sanitize-markdown.ts`. Every preview spreads `markdownPreviewSecurityProps` onto `MDEditor.Markdown` (and the editor's `previewOptions`): a `rehypeRewrite` pass plus a `rehypeSanitiseTree` plugin that runs after `rehype-attr`, because `rehype-attr` (enabled by @uiw/react-markdown-preview) adds attributes from `<!--rehype:...-->` comments after the rewrite hook. It neutralises `<script>/<iframe>/<object>/<embed>/<style>/<link>/<meta>/<base>/<form>`, svg/math and form controls, keeps only allowlisted attributes (no `style`, `on*`, `name`, `target`), keeps only the pipeline's own classes (`language-*`, `anchor`, ...), prefixes ids with `user-content-`, and rewrites non-http(s)/mailto/relative URLs to `#`. Do not disable it or render markdown without those props. If you need a new tag, attribute or class, extend the allowlist in that file and add a test in `sanitize-markdown.test.ts` / `src/components/ui/markdown-preview-xss.test.tsx`.
 
 ## Sensors (formerly "agents") — RFC-023
 
