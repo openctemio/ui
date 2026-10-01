@@ -179,7 +179,13 @@ function EnrollStep({ onDone, onCancel }: Omit<MfaStepProps, 'purpose'>) {
 
   // Each start issues a new secret and replaces the previous one, so it must
   // run exactly once (React StrictMode runs effects twice in development).
+  // onCancel is read through a ref so a new callback identity from the parent
+  // never restarts enrollment.
   const started = useRef(false)
+  const onCancelRef = useRef(onCancel)
+  useEffect(() => {
+    onCancelRef.current = onCancel
+  }, [onCancel])
   useEffect(() => {
     if (started.current) return
     started.current = true
@@ -187,11 +193,9 @@ function EnrollStep({ onDone, onCancel }: Omit<MfaStepProps, 'purpose'>) {
       if (res.success && res.secret && res.otpauthUri) {
         setSetup({ secret: res.secret, uri: res.otpauthUri })
       } else {
-        onCancel(res.error || 'Could not start two-factor setup. Please sign in again.')
+        onCancelRef.current(res.error || 'Could not start two-factor setup. Please sign in again.')
       }
     })
-    // Runs once per enrollment challenge.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   function confirm(e: React.FormEvent) {
