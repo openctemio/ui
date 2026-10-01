@@ -12,6 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { fetchAllPages } from '@/lib/api/fetch-all-pages'
 import { API_BASE } from '@/lib/api/endpoints'
 import type { ScanZone, ScanZoneCoverage } from '@/lib/api/scan-zone-types'
+import { Permission, useHasPermission } from '@/lib/permissions'
 
 import { isPrivatePrefix, parsePrefix, prefixContainsAddr } from '../lib/ranges'
 
@@ -89,7 +90,10 @@ interface ZoneCoverageCardProps {
  */
 export function ZoneCoverageCard({ coverage, zones }: ZoneCoverageCardProps) {
   const outside = coverage.outside_private + coverage.outside_public
-  const { data, isLoading, error } = useInventoryAddresses(outside > 0)
+  // Listing the addresses reads the asset inventory; without assets:read only
+  // the API's counts are shown.
+  const canReadAssets = useHasPermission(Permission.AssetsRead)
+  const { data, isLoading, error } = useInventoryAddresses(outside > 0 && canReadAssets)
   const listed = useMemo(() => (data ? addressesOutsideZones(data.rows, zones) : []), [data, zones])
 
   const unhealthyPrivate = coverage.zones.filter(
@@ -114,17 +118,24 @@ export function ZoneCoverageCard({ coverage, zones }: ZoneCoverageCardProps) {
             <h3 id="zone-outside-heading" className="text-sm font-semibold">
               Addresses outside every zone
             </h3>
-            <Button asChild variant="link" size="sm" className="h-auto p-0">
-              <Link href="/assets/ip-addresses">
-                Asset inventory
-                <ArrowUpRight className="h-3.5 w-3.5" />
-              </Link>
-            </Button>
+            {canReadAssets && (
+              <Button asChild variant="link" size="sm" className="h-auto p-0">
+                <Link href="/assets/ip-addresses">
+                  Asset inventory
+                  <ArrowUpRight className="h-3.5 w-3.5" />
+                </Link>
+              </Button>
+            )}
           </div>
           {outside === 0 ? (
             <p className="flex items-center gap-2 text-sm text-muted-foreground">
               <CheckCircle2 className="h-4 w-4 text-success" />
               Every inventory address is inside a zone.
+            </p>
+          ) : !canReadAssets ? (
+            <p className="text-sm text-muted-foreground">
+              {outside.toLocaleString()} addresses are outside every zone. Listing them needs access
+              to the asset inventory.
             </p>
           ) : isLoading ? (
             <div className="space-y-1.5">

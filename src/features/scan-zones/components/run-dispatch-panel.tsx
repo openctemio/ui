@@ -85,7 +85,7 @@ export function RunDispatchPanel({ dispatch }: { dispatch: RunDispatch }) {
           so a plain table rather than DataTable. */}
       {routing?.zones && routing.zones.length > 0 && (
         <div className="overflow-x-auto rounded-md border">
-          <table className="w-full min-w-[28rem] text-sm">
+          <table className="w-full text-sm">
             <caption className="sr-only">Targets per scan zone</caption>
             <thead className="bg-muted/50 text-xs text-muted-foreground">
               <tr>
