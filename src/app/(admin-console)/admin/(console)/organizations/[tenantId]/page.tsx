@@ -17,6 +17,7 @@ import {
 } from '@/features/shared'
 import { useOrganization } from '@/features/admin-console/api/use-admin-organizations'
 import { useAdmin } from '@/features/admin-console/components/admin-console-shell'
+import { OrganizationUsersSection } from '@/features/admin-console/components/organization-users-section'
 import { SSOEnforcementCard } from '@/features/admin-console/components/sso-enforcement-card'
 import { SSOPostureBadges } from '@/features/admin-console/components/sso-posture-badges'
 import { adminCan } from '@/features/admin-console/types'
@@ -70,6 +71,8 @@ export default function AdminOrganizationPage({
   const admin = useAdmin()
   // SSO decides who can sign in to the organization: super admins only.
   const canManageSSO = adminCan(admin.role, 'super_admin')
+  // Adding people to an organization: operations admins and up.
+  const canManageUsers = adminCan(admin.role, 'ops_admin')
   const { data: org, error, isLoading, mutate } = useOrganization(tenantId)
   const refresh = () => void mutate()
 
@@ -98,6 +101,7 @@ export default function AdminOrganizationPage({
           <Tabs defaultValue="overview" className="mt-5">
             <TabsList>
               <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="users">Users</TabsTrigger>
               <TabsTrigger value="sso">Single sign-on</TabsTrigger>
             </TabsList>
 
@@ -121,6 +125,14 @@ export default function AdminOrganizationPage({
                   </DetailFieldGrid>
                 </CardContent>
               </Card>
+            </TabsContent>
+
+            <TabsContent value="users" className="mt-4">
+              <OrganizationUsersSection
+                tenantId={org.id}
+                canManage={canManageUsers}
+                onChanged={refresh}
+              />
             </TabsContent>
 
             <TabsContent value="sso" className="mt-4 space-y-5">
