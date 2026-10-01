@@ -258,6 +258,8 @@ export interface PipelineRun {
   scan_id?: string
   trigger_type: string
   triggered_by?: string
+  /** Display name of the user in triggered_by, when it is a user id (API fills it). */
+  triggered_by_name?: string
   status: string
   started_at?: string
   completed_at?: string
