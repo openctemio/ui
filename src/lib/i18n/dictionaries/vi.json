@@ -188,5 +188,8 @@
   "settings.filter": "Lọc cài đặt",
   "settings.noMatch": "Không có cài đặt nào khớp bộ lọc.",
   "settings.badge.soon": "Sắp có",
-  "settings.overview.description": "Tài khoản của bạn và cách tổ chức được thiết lập."
+  "settings.overview.description": "Tài khoản của bạn và cách tổ chức được thiết lập.",
+  "nav.item.pentest-campaigns": "Chiến dịch pentest",
+  "nav.item.retest-queue": "Hàng đợi kiểm tra lại",
+  "nav.item.att-ck-coverage": "Độ phủ ATT&CK"
 }

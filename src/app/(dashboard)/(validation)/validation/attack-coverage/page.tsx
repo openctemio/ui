@@ -400,7 +400,7 @@ export default function MitreCoveragePage() {
   return (
     <Main>
       <PageHeader
-        title="MITRE ATT&CK coverage"
+        title="ATT&CK coverage"
         description={
           simulationEnabled
             ? 'Which ATT&CK techniques your pentest findings and attack simulations have exercised.'

@@ -331,11 +331,30 @@ export const routePermissions: Record<string, RoutePermissionConfig> = {
     permission: Permission.PentestFindingsWrite,
     module: Module.Pentest,
   },
-  '/pentest/templates/new': {
+  // Validation overview: the coverage KPI is findings:read; each module's
+  // section on the page checks its own module.
+  '/validation': {
+    permission: Permission.FindingsRead,
+  },
+  '/validation/retests': {
+    permission: Permission.PentestRead,
+    module: Module.Pentest,
+  },
+  '/validation/attack-coverage': {
+    permission: Permission.PentestRead,
+    module: Module.MITRECoverage,
+  },
+  // Finding library (finding templates), under Settings › Pentest methodology.
+  // Longer patterns win over '/settings/pentest'.
+  '/settings/pentest/templates': {
+    permission: Permission.PentestRead,
+    module: Module.Pentest,
+  },
+  '/settings/pentest/templates/new': {
     permission: Permission.PentestTemplatesWrite,
     module: Module.Pentest,
   },
-  '/pentest/templates/*/edit': {
+  '/settings/pentest/templates/*/edit': {
     permission: Permission.PentestTemplatesWrite,
     module: Module.Pentest,
   },
@@ -483,10 +502,6 @@ export const routePermissions: Record<string, RoutePermissionConfig> = {
   '/insights/ctem-maturity': {
     permission: Permission.DashboardRead,
     module: Module.CTEMMaturity,
-  },
-  '/pentest/mitre-coverage': {
-    permission: Permission.PentestRead,
-    module: Module.MITRECoverage,
   },
   '/components/sbom-export': {
     permission: Permission.ComponentsRead,
