@@ -103,8 +103,9 @@ export function AddSensorDialog({ open, onOpenChange, onSuccess }: AddSensorDial
       setSelectedTools([])
       form.reset()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open])
+    // useForm returns the same object on every render, so listing it does not
+    // re-run the reset while the dialog is open.
+  }, [open, form])
 
   const handleNextStep = (e: React.MouseEvent) => {
     e.preventDefault()
