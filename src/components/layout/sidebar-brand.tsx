@@ -12,7 +12,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
  * the logo and the nav icons, collapsed and expanded. Use with
  * `SidebarMenuButton` (default size).
  */
-export const SIDEBAR_CONTEXT_ROW_CLASS = 'ps-0.5 group-data-[collapsible=icon]:p-0.5!'
+export const SIDEBAR_CONTEXT_ROW_CLASS =
+  'ps-0.5 group-data-[collapsible=icon]:p-0.5! in-data-[mobile=true]:h-11 in-data-[mobile=true]:text-base'
 
 /**
  * The 28px context chip (organization initials, the admin shield): a soft
@@ -65,7 +66,7 @@ export function SidebarBrand({ href = '/', badge }: SidebarBrandProps) {
   }
 
   return (
-    <div className="flex h-8 items-center gap-2 ps-0.5">
+    <div className="flex h-8 items-center gap-2 ps-0.5 in-data-[mobile=true]:h-11">
       <Link
         href={href}
         className="flex min-w-0 items-center gap-2 rounded-md text-sidebar-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:outline-none"
