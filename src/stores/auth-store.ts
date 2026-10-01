@@ -15,6 +15,7 @@ import { devtools } from 'zustand/middleware'
 import { clearAllStoredPermissions } from '@/lib/permission-storage'
 import { clearAllLogoCaches } from '@/lib/logo-storage'
 import { devLog } from '@/lib/logger'
+import { csrfHeaders } from '@/lib/csrf-client'
 
 // ============================================
 // TYPES
@@ -337,6 +338,7 @@ async function attemptTokenRefresh(): Promise<void> {
     const response = await fetch('/api/auth/refresh', {
       method: 'POST',
       credentials: 'include',
+      headers: csrfHeaders(),
     })
 
     const data = await response.json()

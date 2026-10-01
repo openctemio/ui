@@ -17,6 +17,7 @@
 
 import { cookies } from 'next/headers'
 import { env, serverEnv } from './env'
+import { CSRF_COOKIE, csrfCookieOptions, newCsrfToken } from './server-auth-cookies'
 
 interface ServerCookieOptions {
   httpOnly?: boolean
@@ -77,6 +78,11 @@ export async function setServerCookie(
     ...SECURE_DEFAULTS,
     ...options,
   })
+  // Whenever a session is established or renewed, make sure the browser has
+  // the JS-readable CSRF cookie its state-changing calls must echo back.
+  if (name === env.auth.cookieName && !cookieStore.get(CSRF_COOKIE)?.value) {
+    cookieStore.set(CSRF_COOKIE, newCsrfToken(), csrfCookieOptions())
+  }
 }
 
 /**
