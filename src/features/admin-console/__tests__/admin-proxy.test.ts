@@ -14,7 +14,7 @@ vi.mock('@/lib/env', () => ({
 import { POST, GET } from '@/app/api/v1/admin/[...path]/route'
 
 const COOKIES =
-  'auth_token=tenant-access; refresh_token=signed-in-refresh; csrf_token=tenant-csrf; admin_session=console; admin_csrf=c1'
+  'auth_token=tenant-access; refresh_token=signed-in-refresh; csrf_token=tenant-csrf; admin_session=console; admin_csrf=c1; admin_idp=idp-state'
 
 function call(handler: typeof POST, method: string, path: string[]) {
   const req = new NextRequest(`http://ui.test/api/v1/admin/${path.join('/')}`, {
@@ -61,5 +61,11 @@ describe('admin API proxy', () => {
     expect(sentCookie()).not.toContain('auth_token')
     expect(sentCookie()).not.toContain('csrf_token')
     expect(sentAuth()).toBeNull()
+  })
+
+  it('forwards the identity-provider sign-in cookie to the callback', async () => {
+    await call(POST, 'POST', ['auth', 'idp', 'callback'])
+    expect(sentCookie()).toContain('admin_idp=idp-state')
+    expect(sentCookie()).not.toContain('refresh_token')
   })
 })

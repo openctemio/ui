@@ -1,12 +1,15 @@
 'use client'
 
 import { createContext, useContext, useEffect, type ReactNode } from 'react'
+import { Siren } from 'lucide-react'
 import { usePathname, useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ThemeSwitch } from '@/components/theme-switch'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { AdminConsoleSidebar } from './admin-console-sidebar'
+import { ChangePasswordGate } from './change-password-gate'
 import { localLogoutAction } from '@/features/auth/actions/local-auth-actions'
 import { adminLogout, useAdminSession } from '../api/use-admin-session'
 import type { AdminIdentity } from '../types'
@@ -69,6 +72,12 @@ export function AdminConsoleShell({ children }: { children: ReactNode }) {
     )
   }
 
+  // The API refuses every other console call until the temporary password is
+  // changed; show only the change form.
+  if (admin.password_change_required) {
+    return <ChangePasswordGate admin={admin} />
+  }
+
   return (
     <AdminContext.Provider value={admin}>
       <SidebarProvider>
@@ -86,6 +95,18 @@ export function AdminConsoleShell({ children }: { children: ReactNode }) {
           </header>
           {/* A div, not <main>: every page renders <Main>, which is the landmark. */}
           <div id="content" className="min-h-0 flex-1 overflow-y-auto">
+            {admin.is_break_glass && (
+              <div className="px-4 pt-2">
+                <Alert variant="destructive">
+                  <Siren className="size-4" />
+                  <AlertTitle>Break-glass session</AlertTitle>
+                  <AlertDescription>
+                    You signed in with an emergency-access account. Every other administrator was
+                    alerted. Use it only to restore normal access, then sign out.
+                  </AlertDescription>
+                </Alert>
+              </div>
+            )}
             {children}
           </div>
         </SidebarInset>
