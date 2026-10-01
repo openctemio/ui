@@ -47,10 +47,13 @@ const WebSocketContext = createContext<WebSocketContextValue | null>(null)
 // HELPERS
 // ============================================
 
-function buildWsUrl(): string {
+export function buildWsUrl(): string {
   if (typeof window === 'undefined') return ''
 
-  // Priority: explicit WS URL > derive from current hostname + API port
+  // An explicit WS URL wins (a deployment that serves WebSocket from its own
+  // host). Otherwise use the UI's own origin: the UI server proxies the
+  // /api/v1/ws upgrade to the API (next.config.ts rewrites), so the browser
+  // never needs the API port and HTTPS deployments get wss on 443.
   const explicitUrl = process.env.NEXT_PUBLIC_WS_BASE_URL || env.api.wsBaseUrl
   if (explicitUrl) {
     const wsProtocol = explicitUrl.startsWith('https') ? 'wss' : 'ws'
@@ -58,13 +61,9 @@ function buildWsUrl(): string {
     return `${wsProtocol}://${wsHost}/api/v1/ws`
   }
 
-  // No explicit WS URL — connect directly to API server.
-  // In Docker dev: UI is on port 80, API is on port 8080, same host.
-  // Auth is carried by a single-use ticket (see fetchWsTicket below), not
-  // by cookies — cross-port WS upgrades cannot rely on cookie flow.
-  const apiPort = process.env.NEXT_PUBLIC_API_PORT || '8080'
+  // Auth is a single-use ticket (see fetchWsTicket below), not a cookie.
   const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws'
-  return `${wsProtocol}://${window.location.hostname}:${apiPort}/api/v1/ws`
+  return `${wsProtocol}://${window.location.host}/api/v1/ws`
 }
 
 /**
