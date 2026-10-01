@@ -8,7 +8,8 @@
  *   tenant token would fail as a bad key and hide the admin session. This proxy
  *   never forwards tenant credentials.
  * - Admin auth is a server-side session in the `admin_session` cookie (plus
- *   `admin_mfa` during login and the readable `admin_csrf`). Only those cookies
+ *   `admin_mfa` during login, `admin_idp` during an identity-provider sign-in,
+ *   and the readable `admin_csrf`). Only those cookies
  *   are forwarded, and the backend's Set-Cookie headers are passed back so the
  *   browser stores them under the same paths.
  * - The exceptions are POST /auth/session, which starts the console from the
@@ -28,7 +29,7 @@ const REFRESH_PATHS = new Set(['auth/session', 'auth/logout'])
 
 export const dynamic = 'force-dynamic'
 
-const ADMIN_COOKIES = ['admin_session', 'admin_mfa', 'admin_csrf'] as const
+const ADMIN_COOKIES = ['admin_session', 'admin_mfa', 'admin_csrf', 'admin_idp'] as const
 const FORWARD_HEADERS = ['x-csrf-token', 'x-request-id', 'user-agent'] as const
 const MAX_BODY_BYTES = 1024 * 1024
 

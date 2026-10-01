@@ -10,9 +10,65 @@ export interface AdminIdentity {
   email: string
   name: string
   role: AdminRole
+  /** How this console session was opened. */
+  auth_method?: 'password' | 'idp'
+  /** Emergency-access (break-glass) administrator: every sign-in is alerted. */
+  is_break_glass?: boolean
+  /** The session may only change the temporary password. */
+  password_change_required?: boolean
 }
 
 export type AdminLoginStatus = 'mfa_required' | 'mfa_enrollment_required'
+
+/** Outcome of the identity-provider callback. */
+export interface AdminIdPCallbackResult {
+  /** signed_in: the IdP's MFA was trusted and the console session is open. */
+  status: AdminLoginStatus | 'signed_in'
+  otpauth_uri?: string
+  secret?: string
+  admin?: AdminIdentity
+}
+
+/** What the console sign-in page may know about the administrators' IdP. */
+export interface AdminIdPInfo {
+  enabled: boolean
+  display_name?: string
+}
+
+/** The administrators' identity provider (RFC-022 revision 4). */
+export interface PlatformIdP {
+  configured: boolean
+  enabled: boolean
+  display_name?: string
+  issuer?: string
+  client_id?: string
+  /** The secret itself is write-only and never returned. */
+  has_client_secret: boolean
+  redirect_uri?: string
+  scopes?: string[]
+  require_idp: boolean
+  trusted_acr_values: string[]
+  trusted_amr_values: string[]
+  authorization_endpoint?: string
+  token_endpoint?: string
+  jwks_uri?: string
+  token_endpoint_auth_method?: string
+  updated_at?: string
+}
+
+export interface PlatformIdPInput {
+  enabled: boolean
+  display_name: string
+  issuer: string
+  client_id: string
+  /** Empty keeps the stored secret. */
+  client_secret?: string
+  redirect_uri: string
+  scopes?: string[]
+  require_idp: boolean
+  trusted_acr_values?: string[]
+  trusted_amr_values?: string[]
+}
 
 export interface AdminLoginResult {
   status: AdminLoginStatus
@@ -66,6 +122,12 @@ export interface AdminUserRecord {
   last_used_ip?: string
   created_at: string
   updated_at: string
+  is_break_glass: boolean
+  break_glass_tested_at?: string
+  break_glass_test_overdue: boolean
+  password_change_required: boolean
+  idp_bound: boolean
+  idp_bound_at?: string
 }
 
 export interface Paged<T> {
