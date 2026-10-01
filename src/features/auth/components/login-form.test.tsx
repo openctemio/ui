@@ -8,7 +8,7 @@
 
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 import { LoginForm } from './login-form'
 import { useAuthProviders } from '../api/use-auth-providers'
@@ -17,8 +17,18 @@ import { useTenantSSOProviders } from '@/features/sso/api/use-sso-api'
 vi.mock('../api/use-auth-providers')
 vi.mock('@/features/sso/api/use-sso-api')
 const loginAction = vi.fn()
+const verifyMfaAction = vi.fn()
+const startMfaEnrollmentAction = vi.fn()
+const confirmMfaEnrollmentAction = vi.fn()
+const cancelMfaAction = vi.fn()
+const finishMfaEnrollmentAction = vi.fn()
 vi.mock('../actions/local-auth-actions', () => ({
   loginAction: (...a: unknown[]) => loginAction(...a),
+  verifyMfaAction: (...a: unknown[]) => verifyMfaAction(...a),
+  startMfaEnrollmentAction: (...a: unknown[]) => startMfaEnrollmentAction(...a),
+  confirmMfaEnrollmentAction: (...a: unknown[]) => confirmMfaEnrollmentAction(...a),
+  cancelMfaAction: (...a: unknown[]) => cancelMfaAction(...a),
+  finishMfaEnrollmentAction: (...a: unknown[]) => finishMfaEnrollmentAction(...a),
 }))
 
 const mockUseAuthProviders = vi.mocked(useAuthProviders)
@@ -113,5 +123,140 @@ describe('LoginForm platform administrator', () => {
     expect(href).toHaveBeenCalledWith('/admin')
     expect(href).not.toHaveBeenCalledWith('/onboarding/create-team')
     Object.defineProperty(window, 'location', { configurable: true, value: originalLocation })
+  })
+})
+
+describe('LoginForm two-factor step', () => {
+  const originalLocation = window.location
+  let href: ReturnType<typeof vi.fn<(v: string) => void>>
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockUseTenantSSOProviders.mockReturnValue({
+      data: undefined,
+    } as ReturnType<typeof useTenantSSOProviders>)
+    setAuthProviders({ google: false, github: false, microsoft: false })
+    href = vi.fn<(v: string) => void>()
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: {
+        ...originalLocation,
+        set href(v: string) {
+          href(v)
+        },
+      },
+    })
+  })
+
+  afterEach(() => {
+    Object.defineProperty(window, 'location', { configurable: true, value: originalLocation })
+  })
+
+  async function signIn() {
+    const user = userEvent.setup()
+    render(<LoginForm redirectTo="/findings" />)
+    await user.type(screen.getByLabelText('Email'), 'qa@acme.io')
+    await user.type(screen.getByLabelText('Password'), 'Correct-Horse-9')
+    await user.click(screen.getByRole('button', { name: /sign in/i }))
+    return user
+  }
+
+  it('asks for the authenticator code instead of navigating', async () => {
+    loginAction.mockResolvedValueOnce({ success: true, mfaRequired: true, mfaPurpose: 'verify' })
+    await signIn()
+    expect(await screen.findByText('Two-factor authentication')).toBeInTheDocument()
+    expect(screen.getByLabelText('Authentication code')).toBeInTheDocument()
+    expect(href).not.toHaveBeenCalled()
+  })
+
+  it('verifies the code and continues the normal login', async () => {
+    loginAction.mockResolvedValueOnce({ success: true, mfaRequired: true, mfaPurpose: 'verify' })
+    verifyMfaAction.mockResolvedValueOnce({
+      success: true,
+      user: { id: 'u1', name: 'QA', email: 'qa@acme.io' },
+      requiresTenantSelection: false,
+    })
+    const user = await signIn()
+    const verify = screen.getByRole('button', { name: /verify/i })
+    expect(verify).toBeDisabled()
+    await user.type(await screen.findByLabelText('Authentication code'), '12a3456')
+    expect(screen.getByLabelText('Authentication code')).toHaveValue('123456')
+    await user.click(verify)
+    await vi.waitFor(() => expect(href).toHaveBeenCalledWith('/findings'))
+    expect(verifyMfaAction).toHaveBeenCalledWith({ code: '123456' })
+  })
+
+  it('shows a wrong code inline and stays on the step', async () => {
+    loginAction.mockResolvedValueOnce({ success: true, mfaRequired: true, mfaPurpose: 'verify' })
+    verifyMfaAction.mockResolvedValueOnce({ success: false, error: 'Invalid verification code' })
+    const user = await signIn()
+    await user.type(await screen.findByLabelText('Authentication code'), '000000')
+    await user.click(screen.getByRole('button', { name: /verify/i }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Invalid verification code')
+    expect(screen.getByText('Two-factor authentication')).toBeInTheDocument()
+    expect(href).not.toHaveBeenCalled()
+  })
+
+  it('accepts a recovery code', async () => {
+    loginAction.mockResolvedValueOnce({ success: true, mfaRequired: true, mfaPurpose: 'verify' })
+    verifyMfaAction.mockResolvedValueOnce({
+      success: true,
+      user: { id: 'u1', name: 'QA', email: 'qa@acme.io' },
+    })
+    const user = await signIn()
+    await user.click(await screen.findByRole('button', { name: /use a recovery code/i }))
+    await user.type(screen.getByLabelText('Recovery code'), 'abcde-fghjk')
+    await user.click(screen.getByRole('button', { name: /verify/i }))
+    await vi.waitFor(() =>
+      expect(verifyMfaAction).toHaveBeenCalledWith({ recoveryCode: 'abcde-fghjk' })
+    )
+  })
+
+  it('goes back to the password form when the challenge expired', async () => {
+    loginAction.mockResolvedValueOnce({ success: true, mfaRequired: true, mfaPurpose: 'verify' })
+    verifyMfaAction.mockResolvedValueOnce({
+      success: false,
+      error: 'Your sign-in verification expired or is no longer valid. Please sign in again.',
+    })
+    const user = await signIn()
+    await user.type(await screen.findByLabelText('Authentication code'), '123456')
+    await user.click(screen.getByRole('button', { name: /verify/i }))
+    expect(await screen.findByLabelText('Password')).toBeInTheDocument()
+  })
+
+  it('forced enrollment: QR, code, recovery codes, then continue', async () => {
+    loginAction.mockResolvedValueOnce({ success: true, mfaRequired: true, mfaPurpose: 'enroll' })
+    startMfaEnrollmentAction.mockResolvedValueOnce({
+      success: true,
+      secret: 'JBSWY3DPEHPK3PXP',
+      otpauthUri: 'otpauth://totp/OpenCTEM:qa%40acme.io?secret=JBSWY3DPEHPK3PXP&issuer=OpenCTEM',
+    })
+    // The session is parked until the codes are acknowledged.
+    confirmMfaEnrollmentAction.mockResolvedValueOnce({
+      success: true,
+      user: { id: 'u1', name: 'QA', email: 'qa@acme.io' },
+      recoveryCodes: ['aaaaa-bbbbb', 'ccccc-ddddd'],
+    })
+    finishMfaEnrollmentAction.mockResolvedValueOnce({
+      success: true,
+      user: { id: 'u1', name: 'QA', email: 'qa@acme.io' },
+      requiresTenantSelection: false,
+    })
+    const user = await signIn()
+    expect(await screen.findByText('Set up two-factor authentication')).toBeInTheDocument()
+    expect(await screen.findByRole('img', { name: /qr code/i })).toBeInTheDocument()
+    expect(screen.getByText('JBSW Y3DP EHPK 3PXP')).toBeInTheDocument()
+    await user.type(screen.getByLabelText('Authentication code'), '654321')
+    await user.click(screen.getByRole('button', { name: /turn on and continue/i }))
+    expect(await screen.findByText('aaaaa-bbbbb')).toBeInTheDocument()
+    const cont = screen.getByRole('button', { name: /^continue$/i })
+    expect(cont).toBeDisabled()
+    await user.click(screen.getByLabelText('I have saved my recovery codes'))
+    expect(finishMfaEnrollmentAction).not.toHaveBeenCalled()
+    await user.click(cont)
+    await vi.waitFor(() => expect(href).toHaveBeenCalledWith('/findings'))
+    expect(confirmMfaEnrollmentAction).toHaveBeenCalledWith('654321')
+    expect(finishMfaEnrollmentAction).toHaveBeenCalledTimes(1)
+    expect(startMfaEnrollmentAction).toHaveBeenCalledTimes(1)
   })
 })

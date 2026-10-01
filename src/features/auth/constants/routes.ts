@@ -49,13 +49,13 @@ export const PROTECTED_ROUTES = {
   /**
    * User profile
    */
-  PROFILE: '/profile',
+  PROFILE: '/account',
 
   /**
    * Account settings
    */
   SETTINGS: '/settings',
-  SETTINGS_ACCOUNT: '/settings/account',
+  SETTINGS_ACCOUNT: '/account',
   SETTINGS_APPEARANCE: '/settings/appearance',
   SETTINGS_NOTIFICATIONS: '/settings/notifications',
   SETTINGS_DISPLAY: '/settings/display',

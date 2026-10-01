@@ -96,6 +96,7 @@ import { tenantEndpoints } from '@/lib/api/endpoints'
 import { getErrorMessage } from '@/lib/api/error-handler'
 import { copyToClipboard } from '@/lib/clipboard'
 import { Can, Permission } from '@/lib/permissions'
+import { MemberMfaBadge } from '@/features/organization/components/member-mfa-badge'
 
 // Tab values for the status filter on the members table. Pending
 // invitations live in their own section (not in the members list), so
@@ -739,6 +740,17 @@ export default function UsersPage() {
       header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
       cell: ({ row }) => <MemberStatusBadge status={row.original.status} />,
     },
+    // Two-factor status: the API includes it for owners and admins only.
+    ...(members.some((m) => m.mfa_status)
+      ? [
+          {
+            id: 'mfa',
+            header: '2FA',
+            enableSorting: false,
+            cell: ({ row }) => <MemberMfaBadge status={row.original.mfa_status} />,
+          } satisfies ColumnDef<MemberWithUser>,
+        ]
+      : []),
     {
       id: 'actions',
       enableSorting: false,

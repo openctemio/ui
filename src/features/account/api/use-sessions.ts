@@ -27,9 +27,10 @@ export function useSessions() {
     }
   )
 
+  const sessions = data?.sessions ?? []
   return {
-    sessions: data?.data || [],
-    total: data?.total || 0,
+    sessions,
+    total: sessions.length,
     isLoading,
     isError: !!error,
     error,
