@@ -39,12 +39,13 @@ export const PATHS_WITHOUT_PAGE: ReadonlySet<string> = new Set([
   '/invitations',
   '/onboarding',
   '/pentest',
+  '/pentest/findings',
   '/pentest/findings/[id]',
-  '/pentest/templates/[id]',
   '/pipelines/[id]',
   '/relationships',
   '/settings/access-control',
   '/settings/tenant',
+  '/settings/pentest/templates/[id]',
   '/simulation',
 ])
 

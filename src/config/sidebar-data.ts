@@ -36,7 +36,6 @@ import {
   ClipboardList,
   Bug,
   RotateCcw,
-  BookTemplate,
   History,
   Timer,
   RadioTower,
@@ -407,6 +406,15 @@ export const sidebarData: SidebarData = {
           module: 'business_impact',
         },
         {
+          // Compensating controls lower a finding's priority, so they sit with
+          // the other prioritization levers (was under Validation).
+          title: 'Compensating Controls',
+          url: '/controls',
+          icon: Shield,
+          permission: Permission.CompensatingControlsRead,
+          module: 'compensating_controls',
+        },
+        {
           title: 'Priority Rules',
           url: '/settings/priority-rules',
           icon: Settings2,
@@ -418,8 +426,9 @@ export const sidebarData: SidebarData = {
 
     // ========================================
     // PHASE 4: VALIDATION
-    // Verify threats and test security controls effectiveness
-    // Module: pentest (requires Business+ plan)
+    // Prove that fixes and controls work. Campaign-first and flat (two levels:
+    // group, then item): a campaign's findings, retests and report are tabs of
+    // its page, not separate entries.
     // ========================================
     {
       title: 'Validation',
@@ -427,68 +436,49 @@ export const sidebarData: SidebarData = {
       cluster: 'cycle',
       items: [
         {
-          title: 'Penetration Testing',
-          icon: Crosshair,
-          permission: Permission.PentestRead,
-          module: 'pentest',
-          items: [
-            {
-              title: 'Campaigns',
-              url: '/pentest/campaigns',
-              icon: ClipboardList,
-            },
-            {
-              title: 'Findings',
-              url: '/pentest/findings',
-              icon: Bug,
-            },
-            {
-              title: 'Retests',
-              url: '/pentest/retests',
-              icon: RotateCcw,
-            },
-            {
-              title: 'Reports',
-              url: '/pentest/reports',
-              icon: FileText,
-            },
-            {
-              title: 'Templates',
-              url: '/pentest/templates',
-              icon: BookTemplate,
-            },
-            {
-              title: 'MITRE Coverage',
-              url: '/pentest/mitre-coverage',
-              icon: LayoutGrid,
-              // Bound to its own module (post-000161) — without this, the
-              // entry inherits parent's `pentest` module and stays visible
-              // even when `mitre_coverage` is disabled, only to dump the
-              // user on a "Feature Not Available" screen after click.
-              module: 'mitre_coverage',
-            },
-          ],
+          // Coverage KPI (findings:read) plus per-module sections, each shown
+          // only when its module is on.
+          title: 'Overview',
+          url: '/validation',
+          icon: LayoutDashboard,
+          permission: Permission.FindingsRead,
         },
         {
-          title: 'Attack Simulation',
+          title: 'Pentest campaigns',
+          url: '/pentest/campaigns',
+          icon: ClipboardList,
+          permission: Permission.PentestRead,
+          module: 'pentest',
+        },
+        {
+          title: 'Attack simulation',
           url: '/attack-simulation',
           icon: Swords,
           permission: Permission.PentestRead,
-          module: 'attack_simulation', // Separate module — not yet implemented
+          module: 'attack_simulation',
         },
         {
-          title: 'Control Testing',
+          title: 'Control testing',
           url: '/control-testing',
           icon: ShieldCheck,
           permission: Permission.PentestRead,
-          module: 'control_testing', // Separate module — not yet implemented
+          module: 'control_testing',
         },
         {
-          title: 'Compensating Controls',
-          url: '/controls',
-          icon: Shield,
-          permission: Permission.CompensatingControlsRead,
-          module: 'compensating_controls',
+          title: 'Retest queue',
+          url: '/validation/retests',
+          icon: RotateCcw,
+          permission: Permission.PentestRead,
+          module: 'pentest',
+        },
+        {
+          // Its own module (post-000161), so turning mitre_coverage off hides
+          // it rather than leading to "Feature Not Available".
+          title: 'ATT&CK coverage',
+          url: '/validation/attack-coverage',
+          icon: LayoutGrid,
+          permission: Permission.PentestRead,
+          module: 'mitre_coverage',
         },
       ],
     },

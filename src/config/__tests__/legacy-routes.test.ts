@@ -97,6 +97,20 @@ describe('legacy route redirects', () => {
     expect(redirectOnce('/agents/abc?status=offline')).toBe('/sensors/abc?status=offline')
     expect(redirectOnce('/settings/integrations/apps?x=1')).toBe('/settings/integrations?x=1')
     expect(redirectOnce('/settings/integrations')).toBeNull()
+    // Validation, campaign-first.
+    expect(redirectOnce('/pentest/findings')).toBe('/findings?sources=pentest')
+    expect(redirectOnce('/pentest/findings?campaign=c1')).toBe(
+      '/pentest/campaigns/c1?view=findings&campaign=c1'
+    )
+    expect(redirectOnce('/pentest/findings/new?campaign=c1')).toBeNull()
+    expect(redirectOnce('/pentest/reports')).toBe('/reports?tab=pentest')
+    expect(redirectOnce('/pentest/reports?campaign=c1')).toBe(
+      '/pentest/campaigns/c1?view=report&campaign=c1'
+    )
+    expect(redirectOnce('/pentest/retests?tab=history')).toBe('/validation/retests?tab=history')
+    expect(redirectOnce('/pentest/mitre-coverage')).toBe('/validation/attack-coverage')
+    expect(redirectOnce('/pentest/templates/abc/edit')).toBe('/settings/pentest/templates/abc/edit')
+    expect(redirectOnce('/pentest/campaigns')).toBeNull()
     expect(redirectOnce('/settings/notifications')).toBe('/account/notifications')
     expect(redirectOnce('/settings/users')).toBe('/settings/members')
     expect(redirectOnce('/settings/access-control/groups/abc')).toBe('/settings/teams/abc')
