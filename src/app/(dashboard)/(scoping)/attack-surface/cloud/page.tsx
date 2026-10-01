@@ -28,7 +28,6 @@ import {
   Globe,
   RefreshCw,
   Download,
-  Filter,
   X,
   Search as SearchIcon,
   Box,
@@ -636,12 +635,11 @@ export default function CloudSurfacePage() {
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <Filter className="h-4 w-4 text-muted-foreground" />
                 <Select
                   value={filterProvider}
                   onValueChange={(v) => setFilterProvider(v as CloudProvider | 'all')}
                 >
-                  <SelectTrigger className="w-28">
+                  <SelectTrigger className="w-28" aria-label="Filter by provider">
                     <SelectValue placeholder="Provider" />
                   </SelectTrigger>
                   <SelectContent>
@@ -656,7 +654,7 @@ export default function CloudSurfacePage() {
                   value={filterType}
                   onValueChange={(v) => setFilterType(v as ResourceType | 'all')}
                 >
-                  <SelectTrigger className="w-32">
+                  <SelectTrigger className="w-32" aria-label="Filter by type">
                     <SelectValue placeholder="Type" />
                   </SelectTrigger>
                   <SelectContent>

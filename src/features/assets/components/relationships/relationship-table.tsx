@@ -11,7 +11,6 @@ import {
   ArrowUpDown,
   ArrowRight,
   ArrowLeft,
-  Filter,
   Search,
   Link2,
   Plus,
@@ -307,8 +306,7 @@ export function RelationshipTable({
             value={typeFilter}
             onValueChange={(v) => setTypeFilter(v as RelationshipType | 'all')}
           >
-            <SelectTrigger className="w-[160px]">
-              <Filter className="me-2 h-4 w-4" />
+            <SelectTrigger className="w-[160px]" aria-label="Filter by relationship type">
               <SelectValue placeholder="Type" />
             </SelectTrigger>
             <SelectContent>
@@ -326,7 +324,7 @@ export function RelationshipTable({
               value={directionFilter}
               onValueChange={(v) => setDirectionFilter(v as RelationshipDirection | 'all')}
             >
-              <SelectTrigger className="w-[140px]">
+              <SelectTrigger className="w-[140px]" aria-label="Filter by direction">
                 <SelectValue placeholder="Direction" />
               </SelectTrigger>
               <SelectContent>

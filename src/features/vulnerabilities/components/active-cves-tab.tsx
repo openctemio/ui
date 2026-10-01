@@ -15,7 +15,13 @@ import { AlertCircle, RefreshCw, Server, ShieldAlert, Zap } from 'lucide-react'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import { DataTable, MetricStrip, SeverityBadge, type MetricStripItem } from '@/features/shared'
+import {
+  DataTable,
+  FilterPanelToggle,
+  MetricStrip,
+  SeverityBadge,
+  type MetricStripItem,
+} from '@/features/shared'
 import type { Severity } from '@/features/shared/types'
 import { FindingStatusBadge } from '@/features/findings/components/finding-status-badge'
 import type { FindingStatus } from '@/features/findings/types'
@@ -24,7 +30,6 @@ import { VulnerabilityDetailSheet } from './vulnerability-detail-sheet'
 import {
   FilterLayout,
   FilterSearchBox,
-  FilterToggleButtons,
   VULN_PAGE_SIZES,
   VulnerabilityFilters,
   useFilterPanelOpen,
@@ -243,8 +248,8 @@ export function ActiveCVEsTab() {
 
   const toolbarStart = (
     <>
-      <FilterToggleButtons
-        panelId={PANEL_ID}
+      <FilterPanelToggle
+        controlsId={PANEL_ID}
         activeCount={f.activeCount}
         open={panel.open}
         onToggle={panel.toggle}
