@@ -612,14 +612,14 @@ export const sidebarData: SidebarData = {
           title: 'Sensors',
           icon: RadioTower,
           permission: Permission.SensorsRead,
-          module: 'scans',
+          module: 'sensors',
           items: [
             {
               title: 'All Sensors',
               url: '/sensors',
               icon: RadioTower,
               permission: Permission.SensorsRead,
-              module: 'scans',
+              module: 'sensors',
             },
             {
               title: 'Capabilities',

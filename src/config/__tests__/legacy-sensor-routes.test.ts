@@ -33,9 +33,12 @@ describe('legacy /agents routes', () => {
     expect(existsSync(join(APP, '(dashboard)', '(scoping)', 'agents'))).toBe(false)
   })
 
-  it('/sensors is guarded by sensors:read and no route guard is left on /agents', () => {
+  it('/sensors is guarded by sensors:read + the sensors module, none left on /agents', () => {
     expect(ROUTE_PERMISSIONS['/sensors']?.permission).toBe(Permission.SensorsRead)
     expect(ROUTE_PERMISSIONS['/sensors/**']?.permission).toBe(Permission.SensorsRead)
+    // The sensors module (renamed in place by the API migration), which the API
+    // grants to members holding sensors:read; not scans.
+    expect(ROUTE_PERMISSIONS['/sensors']?.module).toBe('sensors')
     expect(Object.keys(ROUTE_PERMISSIONS).filter((k) => k.startsWith('/agents'))).toEqual([])
     expect(Permission.SensorsRead).toBe('sensors:read')
   })
