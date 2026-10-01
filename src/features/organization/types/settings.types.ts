@@ -78,6 +78,8 @@ export interface APISettings {
   api_key_enabled: boolean
   webhook_url: string
   webhook_events: WebhookEvent[]
+  /** The signing secret is write-only: the API reports only whether one is set. */
+  webhook_secret_configured?: boolean
 }
 
 export interface UpdateAPISettingsInput {

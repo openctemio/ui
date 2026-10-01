@@ -63,6 +63,7 @@ import { useTenant } from '@/context/tenant-provider'
 import { exportToCsv, type ExportFieldConfig } from '@/hooks/use-csv-export'
 import { fetchAllPages } from '@/lib/api/fetch-all-pages'
 import { exposureEndpoints } from '@/lib/api/endpoints'
+import { LeakedSecretField } from '@/features/credentials'
 
 import {
   useExposures,
@@ -656,10 +657,14 @@ function humanizeKey(key: string): string {
 // Sensitive field patterns
 const SENSITIVE_FIELDS = ['secret_value', 'password', 'api_key', 'token', 'private_key', 'secret']
 
+// A leaked credential's secret is served only as a mask and a keyed
+// fingerprint, both safe to show; the plaintext is revealed on demand through
+// LeakedSecretField. These keys are rendered there, not in the grid.
+const LEAKED_SECRET_FIELDS = ['secret_value', 'secret_masked', 'secret_fingerprint']
+
 // Field labels mapping
 const FIELD_LABELS: Record<string, string> = {
   credential_type: 'Type',
-  secret_value: 'Secret',
   source_type: 'Source type',
   source_url: 'Source URL',
   source_name: 'Source',
@@ -690,15 +695,7 @@ const FIELD_GROUPS: Record<string, { title: string; icon: typeof Key; fields: st
   credential: {
     title: 'Credential',
     icon: Key,
-    fields: [
-      'credential_type',
-      'identifier',
-      'username',
-      'email',
-      'secret_value',
-      'is_verified',
-      'is_revoked',
-    ],
+    fields: ['credential_type', 'identifier', 'username', 'email', 'is_verified', 'is_revoked'],
   },
   database: {
     title: 'Database',
@@ -737,13 +734,25 @@ interface ExposureDetailsViewProps {
   details: Record<string, unknown>
   secretsRevealed: boolean
   onToggleSecrets: () => void
+  /** Set for a credential_leaked exposure: its id doubles as the credential id. */
+  leakedCredentialId?: string
 }
 
 function ExposureDetailsView({
-  details,
+  details: rawDetails,
   secretsRevealed,
   onToggleSecrets,
+  leakedCredentialId,
 }: ExposureDetailsViewProps) {
+  const leakedSecret = {
+    masked: typeof rawDetails.secret_masked === 'string' ? rawDetails.secret_masked : undefined,
+    fingerprint:
+      typeof rawDetails.secret_fingerprint === 'string' ? rawDetails.secret_fingerprint : undefined,
+  }
+  const hasLeakedSecret = Boolean(leakedSecret.masked || leakedSecret.fingerprint)
+  const details = Object.fromEntries(
+    Object.entries(rawDetails).filter(([key]) => !LEAKED_SECRET_FIELDS.includes(key))
+  )
   const handleCopy = (text: string) => {
     copyToClipboard(text)
     toast.success('Copied to clipboard')
@@ -802,6 +811,15 @@ function ExposureDetailsView({
 
   return (
     <div className="space-y-4">
+      {leakedCredentialId && hasLeakedSecret && (
+        <LeakedSecretField
+          credentialId={leakedCredentialId}
+          hasSecret
+          masked={leakedSecret.masked}
+          fingerprint={leakedSecret.fingerprint}
+          showWarning={false}
+        />
+      )}
       <div className="flex items-center justify-between">
         <h4 className="text-sm font-medium">Details</h4>
         {hasSensitiveFields && (
@@ -1069,6 +1087,9 @@ function ExposureDetailSheet({ exposure, open, onOpenChange, onAction }: Exposur
               details={exposure.details}
               secretsRevealed={secretsRevealed}
               onToggleSecrets={() => setSecretsRevealed(!secretsRevealed)}
+              leakedCredentialId={
+                exposure.event_type === 'credential_leaked' ? exposure.id : undefined
+              }
             />
           )}
 

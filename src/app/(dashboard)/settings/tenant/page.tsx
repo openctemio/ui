@@ -354,6 +354,8 @@ export default function TenantPage() {
     api_key_enabled: false,
     webhook_url: '',
     webhook_events: [] as WebhookEvent[],
+    // Write-only: sent only when the owner types a new value.
+    webhook_secret: '',
   })
 
   const [brandingForm, setBrandingForm] = useState({
@@ -397,6 +399,7 @@ export default function TenantPage() {
         api_key_enabled: settings.api.api_key_enabled || false,
         webhook_url: settings.api.webhook_url || '',
         webhook_events: settings.api.webhook_events || [],
+        webhook_secret: '',
       })
       setBrandingForm({
         primary_color: settings.branding.primary_color || '#3B82F6',
@@ -534,8 +537,10 @@ export default function TenantPage() {
         api_key_enabled: apiForm.api_key_enabled,
         webhook_url: apiForm.webhook_url,
         webhook_events: apiForm.webhook_events,
+        ...(apiForm.webhook_secret ? { webhook_secret: apiForm.webhook_secret } : {}),
       })
       if (result) {
+        setApiForm((f) => ({ ...f, webhook_secret: '' }))
         mutate(result)
         toast.success('API settings saved successfully')
       }
@@ -1154,6 +1159,26 @@ export default function TenantPage() {
                     onChange={(e) => setApiForm({ ...apiForm, webhook_url: e.target.value })}
                     disabled={!canManageSecurityAndAPI}
                   />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="webhook-secret">Signing secret</Label>
+                  <Input
+                    id="webhook-secret"
+                    type="password"
+                    autoComplete="new-password"
+                    placeholder={
+                      settings?.api.webhook_secret_configured
+                        ? 'Configured — enter a new value to replace it'
+                        : 'Not set'
+                    }
+                    value={apiForm.webhook_secret}
+                    onChange={(e) => setApiForm({ ...apiForm, webhook_secret: e.target.value })}
+                    disabled={!canManageSecurityAndAPI}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Write-only. The secret is never shown again after it is saved.
+                  </p>
                 </div>
 
                 <div className="space-y-2">

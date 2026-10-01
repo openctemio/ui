@@ -20,6 +20,7 @@ import type {
   ApiCredentialEnums,
   CredentialApiFilters,
   ApiIdentityListResponse,
+  ApiRevealCredentialResponse,
 } from './credential-api.types'
 
 // ============================================
@@ -300,6 +301,27 @@ export function useMarkFalsePositiveApi(credentialId: string | null) {
     async (url: string, { arg }: { arg: { notes?: string } }) => {
       return post<ApiCredential>(url, arg)
     }
+  )
+}
+
+/**
+ * Reveal a leaked credential's plaintext secret.
+ *
+ * Reads return only `secret_masked` and `secret_fingerprint`; the plaintext
+ * comes from this POST alone. The server requires findings:credentials:reveal
+ * and writes a `credential.revealed` audit event before answering. The result
+ * is deliberately not written to any SWR cache key: the caller holds it in
+ * component state and drops it when hidden.
+ */
+export function useRevealCredentialApi(credentialId: string | null) {
+  const { currentTenant } = useTenant()
+
+  return useSWRMutation(
+    currentTenant && credentialId ? `${buildCredentialEndpoint(credentialId)}/reveal` : null,
+    async (url: string) => {
+      return post<ApiRevealCredentialResponse>(url, {})
+    },
+    { populateCache: false, revalidate: false }
   )
 }
 
