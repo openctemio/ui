@@ -9,7 +9,12 @@ import { describe, expect, it } from 'vitest'
 import { existsSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 
-import { LEGACY_ROUTE_REDIRECTS, type LegacyRouteRedirect } from '../legacy-routes'
+import {
+  LEGACY_ROUTE_REDIRECTS,
+  applyLegacyRoute,
+  resolveLegacyRoute,
+  type LegacyRouteRedirect,
+} from '../legacy-routes'
 import nextConfig from '../../../next.config'
 
 const APP = join(__dirname, '..', '..', 'app')
@@ -36,43 +41,8 @@ function pageExists(path: string): boolean {
   return walk(APP, segs)
 }
 
-/** Apply one rule to `path?query`; null when it does not match. */
-function applyRule(r: LegacyRouteRedirect, url: string): string | null {
-  const [path, qs = ''] = url.split('?')
-  const query = new URLSearchParams(qs)
-  for (const h of r.has ?? []) {
-    if (!query.has(h.key) || (h.value !== undefined && query.get(h.key) !== h.value)) return null
-  }
-  for (const m of r.missing ?? []) {
-    if (query.has(m.key) && (m.value === undefined || query.get(m.key) === m.value)) return null
-  }
-  let dest: string
-  if (r.source.endsWith('/:path*')) {
-    const prefix = r.source.slice(0, -'/:path*'.length)
-    if (path !== prefix && !path.startsWith(`${prefix}/`)) return null
-    dest = r.destination.replace('/:path*', path.slice(prefix.length))
-  } else {
-    if (path !== r.source) return null
-    dest = r.destination
-  }
-  // Next.js appends the incoming query to the destination's own query.
-  const [dPath, dQs = ''] = dest.split('?')
-  const merged = new URLSearchParams(dQs)
-  query.forEach((v, k) => {
-    if (!merged.has(k)) merged.set(k, v)
-  })
-  const out = merged.toString()
-  return out ? `${dPath}?${out}` : dPath
-}
-
-/** First matching rule wins, as in Next.js. */
-function redirectOnce(url: string): string | null {
-  for (const r of LEGACY_ROUTE_REDIRECTS) {
-    const hit = applyRule(r, url)
-    if (hit !== null) return hit
-  }
-  return null
-}
+const applyRule = applyLegacyRoute
+const redirectOnce = (url: string) => resolveLegacyRoute(url)
 
 /** A concrete URL that a rule's source matches. */
 function sampleSource(r: LegacyRouteRedirect): string {
@@ -128,5 +98,11 @@ describe('legacy route redirects', () => {
     expect(redirectOnce('/settings/integrations/apps?x=1')).toBe('/settings/integrations?x=1')
     expect(redirectOnce('/settings/integrations')).toBeNull()
     expect(redirectOnce('/settings/notifications')).toBe('/account/notifications')
+    expect(redirectOnce('/settings/users')).toBe('/settings/members')
+    expect(redirectOnce('/settings/access-control/groups/abc')).toBe('/settings/teams/abc')
+    expect(redirectOnce('/settings/access-control/assignment-rules')).toBe(
+      '/settings/teams?tab=assignment-rules'
+    )
+    expect(redirectOnce('/settings/access-control/permission-sets')).toBeNull()
   })
 })
