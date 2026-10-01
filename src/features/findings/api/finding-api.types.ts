@@ -39,7 +39,7 @@ export type FindingSource =
   | 'sast' // Static Application Security Testing (Semgrep, CodeQL, SonarQube)
   | 'dast' // Dynamic Application Security Testing (ZAP, Burp, Nuclei)
   | 'sca' // Software Composition Analysis (Trivy, Snyk, Grype)
-  | 'secret' // Secret detection (Gitleaks, Trufflehog)
+  | 'secret' // Secret detection (Betterleaks, Trufflehog)
   | 'iac' // Infrastructure as Code scanning (Checkov, Tfsec, Kics)
   | 'container' // Container image scanning
   // Cloud & Infrastructure security

@@ -171,7 +171,7 @@ export const SCAN_PROFILE_TOOLS = [
   'semgrep',
   'trivy',
   'nuclei',
-  'gitleaks',
+  'betterleaks',
   'checkov',
   'tfsec',
   'grype',
@@ -185,7 +185,7 @@ export const TOOL_DISPLAY_NAMES: Record<ScanProfileTool, string> = {
   semgrep: 'Semgrep',
   trivy: 'Trivy',
   nuclei: 'Nuclei',
-  gitleaks: 'Gitleaks',
+  betterleaks: 'Betterleaks',
   checkov: 'Checkov',
   tfsec: 'Tfsec',
   grype: 'Grype',
@@ -197,7 +197,7 @@ export const TOOL_DESCRIPTIONS: Record<ScanProfileTool, string> = {
   semgrep: 'Static application security testing (SAST)',
   trivy: 'Container and dependency vulnerability scanning',
   nuclei: 'Web vulnerability scanner',
-  gitleaks: 'Secret detection in git repositories',
+  betterleaks: 'Secret detection in code, git history and archives (replaces Gitleaks)',
   checkov: 'Infrastructure as code security scanner',
   tfsec: 'Terraform security scanner',
   grype: 'Software composition analysis (SCA)',
@@ -315,7 +315,7 @@ export const PRESET_PROFILES: Record<PresetProfileType, Omit<PresetProfile, 'typ
     tools_config: {
       semgrep: { enabled: true, severity: 'high', timeout: 300 },
       trivy: { enabled: true, severity: 'high', timeout: 300 },
-      gitleaks: { enabled: true, timeout: 180 },
+      betterleaks: { enabled: true, timeout: 180 },
       nuclei: { enabled: true, severity: 'critical', timeout: 300 },
     },
     timeout_seconds: 1800, // 30 min
@@ -336,7 +336,7 @@ export const PRESET_PROFILES: Record<PresetProfileType, Omit<PresetProfile, 'typ
       semgrep: { enabled: true, severity: 'low', timeout: 600 },
       trivy: { enabled: true, severity: 'low', timeout: 600 },
       nuclei: { enabled: true, severity: 'low', timeout: 900 },
-      gitleaks: { enabled: true, timeout: 300 },
+      betterleaks: { enabled: true, timeout: 300 },
       checkov: { enabled: true, timeout: 600 },
       tfsec: { enabled: true, timeout: 300 },
       grype: { enabled: true, severity: 'low', timeout: 600 },
@@ -363,7 +363,7 @@ export const PRESET_PROFILES: Record<PresetProfileType, Omit<PresetProfile, 'typ
       trivy: { enabled: true, severity: 'medium', timeout: 600 },
       checkov: { enabled: true, timeout: 600 },
       tfsec: { enabled: true, timeout: 300 },
-      gitleaks: { enabled: true, timeout: 300 },
+      betterleaks: { enabled: true, timeout: 300 },
     },
     timeout_seconds: 3600, // 1 hour
     quality_gate: {

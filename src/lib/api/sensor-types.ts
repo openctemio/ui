@@ -53,7 +53,7 @@ export const SENSOR_TOOLS = [
   'semgrep',
   'trivy',
   'nuclei',
-  'gitleaks',
+  'betterleaks',
   'checkov',
   'tfsec',
   'grype',

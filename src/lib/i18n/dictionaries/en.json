@@ -158,7 +158,7 @@
   "settings.item.scan-profiles": "Scan profiles",
   "settings.desc.scan-profiles": "Reusable scan configurations: tools, intensity and duration.",
   "settings.item.scanner-templates": "Scanner templates",
-  "settings.desc.scanner-templates": "Custom Nuclei, Semgrep and Gitleaks templates.",
+  "settings.desc.scanner-templates": "Custom Nuclei, Semgrep and Betterleaks templates.",
   "settings.item.template-sources": "Template sources",
   "settings.desc.template-sources": "Git, S3 and HTTP sources that keep templates in sync.",
   "settings.item.source-credentials": "Source credentials",
