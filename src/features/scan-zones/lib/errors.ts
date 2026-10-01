@@ -28,6 +28,16 @@ export function scanZoneErrorCode(err: unknown): string | undefined {
   if (!(err instanceof ApiClientError)) return undefined
   const fromDetails = (err.details as { code?: unknown } | undefined)?.code
   if (typeof fromDetails === 'string' && HINTS[fromDetails]) return fromDetails
+  if (HINTS[err.code]) return err.code
+  // Older servers answer a zone conflict with the generic CONFLICT code; tell
+  // the three apart by their message.
+  if (err.statusCode === 409) {
+    const m = err.message.toLowerCase()
+    if (m.includes('name already exists')) return 'ZONE_NAME_TAKEN'
+    if (m.includes('default scan zone')) return 'DEFAULT_ZONE_EXISTS'
+    if (m.includes('queued or running') || m.includes('pinned to this scan zone'))
+      return 'ZONE_IN_USE'
+  }
   return err.code
 }
 

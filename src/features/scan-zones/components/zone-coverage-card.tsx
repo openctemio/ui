@@ -21,8 +21,8 @@ interface InventoryAsset {
   type: string
 }
 
-/** Same asset types the coverage endpoint counts (whose name is one IP address). */
-const ADDRESS_TYPES = 'ip_address,host,server'
+/** Asset types whose name can be one IP address, as the coverage endpoint counts them. */
+const ADDRESS_TYPES = 'ip_address,host'
 const PER_PAGE = 100
 /** Bound the browser-side listing; the counts above always come from the API. */
 const MAX_PAGES = 10

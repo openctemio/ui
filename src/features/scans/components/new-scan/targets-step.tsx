@@ -51,7 +51,8 @@ const TARGET_PATTERNS = {
   hostPort: /^[a-zA-Z0-9.-]+:\d{1,5}$/,
 }
 
-// Internal IP ranges (blocked by backend SSRF protection)
+// Internal IP ranges: refused unless one of the team's scan zones holds them
+// (RFC-023 D6); loopback and link-local are always refused.
 const INTERNAL_IP_PATTERNS = [
   /^10\./,
   /^172\.(1[6-9]|2[0-9]|3[01])\./,
@@ -91,7 +92,7 @@ function validateTarget(target: string): ValidatedTarget {
         target: trimmed,
         status: 'warning',
         type: 'internal',
-        message: 'Internal IP (may be blocked)',
+        message: 'Private address: scanned only inside a scan zone',
       }
     }
   }
@@ -135,7 +136,7 @@ function validateTarget(target: string): ValidatedTarget {
             target: trimmed,
             status: 'warning',
             type: 'internal',
-            message: 'Internal IP URL (may be blocked)',
+            message: 'Private address: scanned only inside a scan zone',
           }
         }
       }
@@ -167,7 +168,7 @@ function validateTarget(target: string): ValidatedTarget {
           target: trimmed,
           status: 'warning',
           type: 'internal',
-          message: 'Internal IP (may be blocked)',
+          message: 'Private address: scanned only inside a scan zone',
         }
       }
     }
@@ -710,7 +711,8 @@ export function TargetsStep({ data, onChange }: TargetsStepProps) {
                           </li>
                         </ul>
                         <p className="text-muted-foreground mt-2">
-                          Internal IPs (10.x, 192.168.x) are blocked for security.
+                          Private addresses (10.x, 192.168.x) are scanned only when a scan zone
+                          holds them.
                         </p>
                       </div>
                     </TooltipContent>

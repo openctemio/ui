@@ -45,7 +45,7 @@ import { ScanZoneTable } from '../components/scan-zone-table'
 import { ScanZoneDialog } from '../components/scan-zone-dialog'
 import { RunDispatchPanel } from '../components/run-dispatch-panel'
 import { addressesOutsideZones } from '../components/zone-coverage-card'
-import { describeScanZoneError, triggerErrorHint } from '../lib/errors'
+import { describeScanZoneError, scanZoneErrorCode, triggerErrorHint } from '../lib/errors'
 
 const zone: ScanZone = {
   id: 'z1',
@@ -189,5 +189,19 @@ describe('helpers', () => {
     expect(triggerErrorHint(err)).toMatch(/outside every scan zone/)
     expect(describeScanZoneError(err, 'x').status).toBe(400)
     expect(triggerErrorHint(new Error('x'))).toBeUndefined()
+  })
+
+  it('tells zone conflicts apart when the server sends the generic CONFLICT code', () => {
+    const conflict = (m: string) => new ApiClientError(m, 'CONFLICT', 409)
+    expect(scanZoneErrorCode(conflict('a scan zone with this name already exists'))).toBe(
+      'ZONE_NAME_TAKEN'
+    )
+    expect(scanZoneErrorCode(conflict('the tenant already has a default scan zone'))).toBe(
+      'DEFAULT_ZONE_EXISTS'
+    )
+    expect(
+      scanZoneErrorCode(conflict('2 scan(s) are pinned to this scan zone; switch them first'))
+    ).toBe('ZONE_IN_USE')
+    expect(scanZoneErrorCode(new ApiClientError('x', 'ZONE_IN_USE', 409))).toBe('ZONE_IN_USE')
   })
 })

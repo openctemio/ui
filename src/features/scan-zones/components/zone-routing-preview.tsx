@@ -81,12 +81,9 @@ function useDebounced<T>(value: T, ms: number): T {
 function TargetRoute({ t, sensorName }: { t: ScanZonePreviewTarget; sensorName: React.ReactNode }) {
   if (t.status === 'uncovered') {
     return (
-      <>
-        <Badge variant="outline" className="text-xs font-normal text-destructive">
-          Not scanned
-        </Badge>
-        <p className="w-full text-xs text-muted-foreground">{t.reason}</p>
-      </>
+      <Badge variant="outline" className="text-xs font-normal text-destructive">
+        Not scanned
+      </Badge>
     )
   }
   if (t.status === 'unzoned') {
@@ -236,6 +233,9 @@ export function ZoneRoutingPreview({ request }: ZoneRoutingPreviewProps) {
               <span className="flex flex-1 flex-wrap items-center justify-end gap-1.5">
                 <TargetRoute t={t} sensorName={sensorLabel(t.sensor_id)} />
               </span>
+              {t.status === 'uncovered' && t.reason && (
+                <p className="basis-full text-xs text-muted-foreground">{t.reason}</p>
+              )}
             </li>
           ))}
         </ul>
