@@ -135,5 +135,7 @@ describe('legacy route redirects', () => {
     )
     expect(redirectOnce('/settings/tenant/create')).toBeNull()
     expect(redirectOnce('/settings/audit')).toBe('/settings/audit-log')
+    expect(redirectOnce('/settings/scoring')).toBe('/settings/risk-scoring')
+    expect(redirectOnce('/settings/priority-rules/x?y=1')).toBe('/priority-rules/x?y=1')
   })
 })

@@ -416,7 +416,7 @@ export const sidebarData: SidebarData = {
         },
         {
           title: 'Priority Rules',
-          url: '/settings/priority-rules',
+          url: '/priority-rules',
           icon: Settings2,
           permission: Permission.PriorityRulesRead,
           module: 'priority_rules',
