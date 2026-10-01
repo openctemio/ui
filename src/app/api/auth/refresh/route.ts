@@ -111,8 +111,11 @@ export async function POST(_request: NextRequest): Promise<NextResponse> {
       )
 
       // CRITICAL: Clear ALL cookies when refresh fails with 401
-      // This prevents login loops caused by stale cookies
-      if (response.status === 401) {
+      // This prevents login loops caused by stale cookies.
+      // MFA_ENROLLMENT_REQUIRED (403): the organization now requires two-factor
+      // authentication and this user has not set it up. The session cannot be
+      // refreshed any more; signing in again leads to the enrollment step.
+      if (response.status === 401 || errorData.code === 'MFA_ENROLLMENT_REQUIRED') {
         devLog.log('[Refresh] Clearing ALL auth cookies due to invalid refresh token')
 
         // Clear access token cookie

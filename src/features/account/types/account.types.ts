@@ -17,7 +17,8 @@ export interface UserProfile {
   created_at: string
   updated_at: string
   email_verified: boolean
-  auth_provider: 'local' | 'google' | 'github' | 'microsoft'
+  /** "local" = signs in with a password; anything else is an identity provider. */
+  auth_provider: 'local' | 'google' | 'github' | 'microsoft' | 'oidc' | 'saml'
 }
 
 export interface UpdateProfileInput {
@@ -39,18 +40,31 @@ export interface ChangePasswordInput {
   confirm_password: string
 }
 
+/** GET /api/v1/users/me/2fa */
 export interface TwoFactorStatus {
+  /** false for accounts that sign in through an identity provider (it owns 2FA) */
+  supported: boolean
   enabled: boolean
-  verified_at?: string
+  enabled_at?: string
+  recovery_codes_remaining: number
+  /** an organization the user belongs to requires 2FA */
+  required_by_organization: boolean
 }
 
+/** POST /api/v1/users/me/2fa/setup — nothing changes until it is confirmed */
 export interface TwoFactorSetupResponse {
   secret: string
-  qr_code_url: string
-  backup_codes: string[]
+  otpauth_uri: string
 }
 
-export interface TwoFactorVerifyInput {
+/** Recovery codes, returned once by enable and regenerate */
+export interface RecoveryCodesResponse {
+  recovery_codes: string[]
+}
+
+export interface TwoFactorDisableInput {
+  password: string
+  /** authenticator code or an unused recovery code */
   code: string
 }
 
@@ -58,21 +72,18 @@ export interface TwoFactorVerifyInput {
 // SESSIONS
 // ============================================
 
+/** One active sign-in, as GET /api/v1/users/me/sessions returns it. */
 export interface Session {
   id: string
-  device: string
-  browser: string
-  os: string
-  ip_address: string
-  location?: string
+  ip_address?: string
+  user_agent?: string
   created_at: string
-  last_active_at: string
+  last_activity_at: string
   is_current: boolean
 }
 
 export interface SessionListResponse {
-  data: Session[]
-  total: number
+  sessions: Session[]
 }
 
 // ============================================

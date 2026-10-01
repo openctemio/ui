@@ -10,7 +10,7 @@
 
 'use server'
 
-import { cookies } from 'next/headers'
+import { cookies, headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 
 import { env } from '@/lib/env'
@@ -97,7 +97,20 @@ export interface LoginBackendResponse {
   // True for a platform administrator (RFC-022). The account belongs to no
   // organization; it goes to the admin console, not onboarding.
   platform_admin?: boolean
+  // Present only on the response that completes a forced 2FA enrollment.
+  recovery_codes?: string[]
 }
+
+// Returned by /auth/login instead of a session when a second factor is
+// needed. mfa_token is not an access token; it only works on /auth/mfa/*.
+export interface MfaChallengeBackendResponse {
+  mfa_required: true
+  mfa_token: string
+  mfa_purpose: MfaPurpose
+  expires_in: number
+}
+
+export type MfaPurpose = 'verify' | 'enroll'
 
 // Token exchange response (tenant-scoped access token)
 export interface TokenExchangeResponse {
@@ -131,6 +144,19 @@ export interface LoginResult {
   suspendedTenants?: LoginTenant[]
   // A platform administrator: the client opens the admin console.
   platformAdmin?: boolean
+  // The password was right but a second factor is needed. No session exists
+  // yet: the form shows the code step (verify) or the setup step (enroll).
+  mfaRequired?: boolean
+  mfaPurpose?: MfaPurpose
+  // Set once, after a forced 2FA enrollment completes the login.
+  recoveryCodes?: string[]
+}
+
+export interface MfaEnrollmentStart {
+  success: boolean
+  secret?: string
+  otpauthUri?: string
+  error?: string
 }
 
 // ============================================
@@ -177,6 +203,27 @@ function extractRefreshFromSetCookie(response: Response): string | undefined {
   return undefined
 }
 
+/**
+ * The browser's User-Agent and address, forwarded so the session the API
+ * creates shows the real device in My account → Sessions (and in the audit
+ * log) instead of this server. The API only believes X-Forwarded-For when
+ * this server is in its SERVER_TRUSTED_PROXIES.
+ */
+async function browserContextHeaders(): Promise<Record<string, string>> {
+  try {
+    const h = await headers()
+    const out: Record<string, string> = {}
+    const ua = h.get('user-agent')
+    if (ua) out['User-Agent'] = ua
+    const fwd = h.get('x-forwarded-for') || h.get('x-real-ip')
+    if (fwd) out['X-Forwarded-For'] = fwd
+    return out
+  } catch {
+    // Outside a request (should not happen in a server action).
+    return {}
+  }
+}
+
 async function backendFetch<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const { data } = await backendFetchWithMeta<T>(endpoint, options)
   return data
@@ -196,6 +243,7 @@ async function backendFetchWithMeta<T>(
     ...options,
     headers: {
       'Content-Type': 'application/json',
+      ...(await browserContextHeaders()),
       ...options.headers,
     },
   })
@@ -286,207 +334,30 @@ export async function loginAction(input: LoginInput): Promise<LoginResult> {
     // S-3: the backend returns the refresh token via Set-Cookie only (not in
     // the JSON body), so read it from the response header. Fall back to the
     // body for backward compatibility with older backends.
-    const { data: loginData, refreshToken: loginRefreshFromCookie } =
-      await backendFetchWithMeta<LoginBackendResponse>(authEndpoints.login(), {
-        method: 'POST',
-        body: JSON.stringify({
-          email: input.email,
-          password: input.password,
-        }),
-      })
-
-    const refreshToken = loginRefreshFromCookie || loginData.refresh_token
-    if (!refreshToken) {
-      throw new Error('Login response did not include a refresh token')
-    }
-
-    // Store refresh token in httpOnly cookie
-    await setServerCookie(env.auth.refreshCookieName, refreshToken, {
-      httpOnly: true,
-      secure: process.env.SECURE_COOKIES !== 'false',
-      sameSite: 'lax',
-      maxAge: loginData.expires_in || 7 * 24 * 60 * 60, // Default 7 days
-      path: '/',
+    const { data, refreshToken: loginRefreshFromCookie } = await backendFetchWithMeta<
+      LoginBackendResponse | MfaChallengeBackendResponse
+    >(authEndpoints.login(), {
+      method: 'POST',
+      body: JSON.stringify({
+        email: input.email,
+        password: input.password,
+      }),
     })
 
-    // Build user response
-    const user: LocalUser = {
-      id: loginData.user.id,
-      email: loginData.user.email,
-      name: loginData.user.name,
-      roles: [],
-      emailVerified: true, // Assume verified if can login
-      authProvider: 'local',
-    }
-
-    // A platform administrator belongs to no organization: send them to the
-    // admin console (which asks for the TOTP code) instead of onboarding.
-    if (loginData.platform_admin) {
-      return { success: true, user, platformAdmin: true, tenants: [] }
-    }
-
-    // Case 1: No tenants - user needs to create or join a team.
-    if (!loginData.tenants || loginData.tenants.length === 0) {
-      // Sub-case 1a: user has only suspended memberships. Don't bounce
-      // them to onboarding — tell them why they have no team. The login
-      // form renders the message and stays on /login.
-      if (loginData.suspended_tenants && loginData.suspended_tenants.length > 0) {
-        devLog.log(
-          '[Login] User has only suspended memberships:',
-          loginData.suspended_tenants.length
-        )
-        const tenantNames = loginData.suspended_tenants.map((t) => t.name).join(', ')
-        return {
-          success: false,
-          user,
-          error: `Your access to ${tenantNames} ${
-            loginData.suspended_tenants.length === 1 ? 'is' : 'are'
-          } suspended. Please contact a team administrator to be reactivated.`,
-          suspendedTenants: loginData.suspended_tenants,
-        }
-      }
-
-      devLog.log('[Login] No tenants found for user - user needs to create or join a team')
-
-      // Store user info for the Create Team page to use as suggested name
-      await setServerCookie(
-        env.cookies.userInfo,
-        JSON.stringify({
-          id: user.id,
-          email: user.email,
-          name: user.name,
-        }),
-        {
-          httpOnly: false, // Frontend needs to read this
-          secure: process.env.SECURE_COOKIES !== 'false',
-          sameSite: 'lax',
-          maxAge: 5 * 60, // 5 minutes - short lived, only needed for initial team creation
-          path: '/',
-        }
-      )
-
-      return {
-        success: true,
-        user,
-        message: 'Login successful. Please create or join a team.',
-        requiresTenantSelection: false,
-        tenants: [],
-      }
-    }
-
-    // Case 2: Multiple tenants - require user to select
-    if (loginData.tenants.length > 1) {
-      devLog.log(
-        '[Login] Multiple tenants found:',
-        loginData.tenants.length,
-        '- requiring selection'
-      )
-
-      // Store tenants in cookie for the selection page.
-      //
-      // TTL: 1 hour. The previous value (5 minutes) was the cause of a UX
-      // bug where users who walked away from /select-tenant for a few minutes
-      // came back to find themselves bounced through /login → /onboarding/
-      // create-team — the system thought they had no tenants because this
-      // cookie expired. The cookie carries no secrets (just a list of
-      // tenant names/ids the user already belongs to), so a longer TTL has
-      // no security cost. /login also falls back to a server-side API call
-      // when this cookie is missing as a defence-in-depth.
-      await setServerCookie(env.cookies.pendingTenants, JSON.stringify(loginData.tenants), {
-        httpOnly: false, // Client needs to read this
-        secure: process.env.SECURE_COOKIES !== 'false',
-        sameSite: 'lax',
-        maxAge: 60 * 60, // 1 hour
-        path: '/',
-      })
-
-      return {
-        success: true,
-        user,
-        message: 'Please select a team to continue.',
-        requiresTenantSelection: true,
-        tenants: loginData.tenants,
-      }
-    }
-
-    // Case 3: Single tenant - auto-select
-    const firstTenant = loginData.tenants[0]
-    devLog.log('[Login] Single tenant found, auto-selecting:', firstTenant.id, firstTenant.slug)
-
-    try {
-      const { data: tokenData, refreshToken: rotatedRefresh } =
-        await backendFetchWithMeta<TokenExchangeResponse>(authEndpoints.token(), {
-          method: 'POST',
-          body: JSON.stringify({
-            refresh_token: refreshToken,
-            tenant_id: firstTenant.id,
-          }),
-        })
-      devLog.log('[Login] Token exchange successful, got access_token:', !!tokenData.access_token)
-
-      // Store access token in httpOnly cookie
-      devLog.log(
-        '[Login] Setting access token cookie:',
-        env.auth.cookieName,
-        'token length:',
-        tokenData.access_token.length
-      )
-      await setServerCookie(env.auth.cookieName, tokenData.access_token, {
+    // Second factor needed: keep the challenge in an httpOnly cookie (the
+    // browser script never sees it) and let the form ask for the code.
+    if ('mfa_required' in data && data.mfa_required) {
+      await setServerCookie(MFA_CHALLENGE_COOKIE, data.mfa_token, {
         httpOnly: true,
         secure: process.env.SECURE_COOKIES !== 'false',
-        sameSite: 'lax',
-        maxAge: tokenData.expires_in || 900, // Default 15 minutes
+        sameSite: 'strict',
+        maxAge: Math.max(1, data.expires_in || 300),
         path: '/',
       })
-      devLog.log('[Login] Access token cookie SET successfully:', env.auth.cookieName)
-
-      // Update refresh token if rotated. ExchangeToken rotates the refresh
-      // token and returns the new one via Set-Cookie (S-3); fall back to the
-      // body for older backends.
-      const newRefresh = rotatedRefresh || tokenData.refresh_token
-      if (newRefresh) {
-        await setServerCookie(env.auth.refreshCookieName, newRefresh, {
-          httpOnly: true,
-          secure: process.env.SECURE_COOKIES !== 'false',
-          sameSite: 'lax',
-          maxAge: 7 * 24 * 60 * 60, // 7 days
-          path: '/',
-        })
-        devLog.log('[Login] Refresh token cookie updated')
-      }
-
-      // Store current tenant info in a separate cookie for reference
-      await setServerCookie(
-        env.cookies.tenant,
-        JSON.stringify({
-          id: tokenData.tenant_id,
-          slug: tokenData.tenant_slug,
-          name: firstTenant.name,
-          role: tokenData.role,
-        }),
-        {
-          httpOnly: false, // Can be read by client
-          secure: process.env.SECURE_COOKIES !== 'false',
-          sameSite: 'lax',
-          maxAge: 7 * 24 * 60 * 60,
-          path: '/',
-        }
-      )
-      devLog.log('[Login] Tenant cookie set:', tokenData.tenant_slug, firstTenant.name)
-      // NOTE: Permissions fetched via /api/v1/me/permissions API (not stored in cookie)
-    } catch (tokenError) {
-      devLog.error('[Login] Token exchange FAILED:', tokenError)
-      throw new Error(
-        `Login succeeded but token exchange failed: ${tokenError instanceof Error ? tokenError.message : 'Unknown error'}`
-      )
+      return { success: true, mfaRequired: true, mfaPurpose: data.mfa_purpose }
     }
 
-    return {
-      success: true,
-      user,
-      message: 'Login successful',
-      requiresTenantSelection: false,
-    }
+    return await completeLogin(data as LoginBackendResponse, loginRefreshFromCookie)
   } catch (error) {
     console.error('Login error:', error)
     return {
@@ -494,6 +365,367 @@ export async function loginAction(input: LoginInput): Promise<LoginResult> {
       error: error instanceof Error ? error.message : 'Login failed',
     }
   }
+}
+
+/**
+ * Finish a login once the backend has issued the session (password only, or
+ * password + second factor): store the refresh token and pick the tenant.
+ */
+async function completeLogin(
+  loginData: LoginBackendResponse,
+  loginRefreshFromCookie: string | undefined
+): Promise<LoginResult> {
+  const refreshToken = loginRefreshFromCookie || loginData.refresh_token
+  if (!refreshToken) {
+    throw new Error('Login response did not include a refresh token')
+  }
+
+  // Store refresh token in httpOnly cookie
+  await setServerCookie(env.auth.refreshCookieName, refreshToken, {
+    httpOnly: true,
+    secure: process.env.SECURE_COOKIES !== 'false',
+    sameSite: 'lax',
+    maxAge: loginData.expires_in || 7 * 24 * 60 * 60, // Default 7 days
+    path: '/',
+  })
+
+  // Build user response
+  const user: LocalUser = {
+    id: loginData.user.id,
+    email: loginData.user.email,
+    name: loginData.user.name,
+    roles: [],
+    emailVerified: true, // Assume verified if can login
+    authProvider: 'local',
+  }
+
+  // A platform administrator belongs to no organization: send them to the
+  // admin console (which asks for the TOTP code) instead of onboarding.
+  if (loginData.platform_admin) {
+    return { success: true, user, platformAdmin: true, tenants: [] }
+  }
+
+  // Case 1: No tenants - user needs to create or join a team.
+  if (!loginData.tenants || loginData.tenants.length === 0) {
+    // Sub-case 1a: user has only suspended memberships. Don't bounce
+    // them to onboarding — tell them why they have no team. The login
+    // form renders the message and stays on /login.
+    if (loginData.suspended_tenants && loginData.suspended_tenants.length > 0) {
+      devLog.log('[Login] User has only suspended memberships:', loginData.suspended_tenants.length)
+      const tenantNames = loginData.suspended_tenants.map((t) => t.name).join(', ')
+      return {
+        success: false,
+        user,
+        error: `Your access to ${tenantNames} ${
+          loginData.suspended_tenants.length === 1 ? 'is' : 'are'
+        } suspended. Please contact a team administrator to be reactivated.`,
+        suspendedTenants: loginData.suspended_tenants,
+      }
+    }
+
+    devLog.log('[Login] No tenants found for user - user needs to create or join a team')
+
+    // Store user info for the Create Team page to use as suggested name
+    await setServerCookie(
+      env.cookies.userInfo,
+      JSON.stringify({
+        id: user.id,
+        email: user.email,
+        name: user.name,
+      }),
+      {
+        httpOnly: false, // Frontend needs to read this
+        secure: process.env.SECURE_COOKIES !== 'false',
+        sameSite: 'lax',
+        maxAge: 5 * 60, // 5 minutes - short lived, only needed for initial team creation
+        path: '/',
+      }
+    )
+
+    return {
+      success: true,
+      user,
+      message: 'Login successful. Please create or join a team.',
+      requiresTenantSelection: false,
+      tenants: [],
+    }
+  }
+
+  // Case 2: Multiple tenants - require user to select
+  if (loginData.tenants.length > 1) {
+    devLog.log('[Login] Multiple tenants found:', loginData.tenants.length, '- requiring selection')
+
+    // Store tenants in cookie for the selection page.
+    //
+    // TTL: 1 hour. The previous value (5 minutes) was the cause of a UX
+    // bug where users who walked away from /select-tenant for a few minutes
+    // came back to find themselves bounced through /login → /onboarding/
+    // create-team — the system thought they had no tenants because this
+    // cookie expired. The cookie carries no secrets (just a list of
+    // tenant names/ids the user already belongs to), so a longer TTL has
+    // no security cost. /login also falls back to a server-side API call
+    // when this cookie is missing as a defence-in-depth.
+    await setServerCookie(env.cookies.pendingTenants, JSON.stringify(loginData.tenants), {
+      httpOnly: false, // Client needs to read this
+      secure: process.env.SECURE_COOKIES !== 'false',
+      sameSite: 'lax',
+      maxAge: 60 * 60, // 1 hour
+      path: '/',
+    })
+
+    return {
+      success: true,
+      user,
+      message: 'Please select a team to continue.',
+      requiresTenantSelection: true,
+      tenants: loginData.tenants,
+    }
+  }
+
+  // Case 3: Single tenant - auto-select
+  const firstTenant = loginData.tenants[0]
+  devLog.log('[Login] Single tenant found, auto-selecting:', firstTenant.id, firstTenant.slug)
+
+  try {
+    const { data: tokenData, refreshToken: rotatedRefresh } =
+      await backendFetchWithMeta<TokenExchangeResponse>(authEndpoints.token(), {
+        method: 'POST',
+        body: JSON.stringify({
+          refresh_token: refreshToken,
+          tenant_id: firstTenant.id,
+        }),
+      })
+    devLog.log('[Login] Token exchange successful, got access_token:', !!tokenData.access_token)
+
+    // Store access token in httpOnly cookie
+    devLog.log(
+      '[Login] Setting access token cookie:',
+      env.auth.cookieName,
+      'token length:',
+      tokenData.access_token.length
+    )
+    await setServerCookie(env.auth.cookieName, tokenData.access_token, {
+      httpOnly: true,
+      secure: process.env.SECURE_COOKIES !== 'false',
+      sameSite: 'lax',
+      maxAge: tokenData.expires_in || 900, // Default 15 minutes
+      path: '/',
+    })
+    devLog.log('[Login] Access token cookie SET successfully:', env.auth.cookieName)
+
+    // Update refresh token if rotated. ExchangeToken rotates the refresh
+    // token and returns the new one via Set-Cookie (S-3); fall back to the
+    // body for older backends.
+    const newRefresh = rotatedRefresh || tokenData.refresh_token
+    if (newRefresh) {
+      await setServerCookie(env.auth.refreshCookieName, newRefresh, {
+        httpOnly: true,
+        secure: process.env.SECURE_COOKIES !== 'false',
+        sameSite: 'lax',
+        maxAge: 7 * 24 * 60 * 60, // 7 days
+        path: '/',
+      })
+      devLog.log('[Login] Refresh token cookie updated')
+    }
+
+    // Store current tenant info in a separate cookie for reference
+    await setServerCookie(
+      env.cookies.tenant,
+      JSON.stringify({
+        id: tokenData.tenant_id,
+        slug: tokenData.tenant_slug,
+        name: firstTenant.name,
+        role: tokenData.role,
+      }),
+      {
+        httpOnly: false, // Can be read by client
+        secure: process.env.SECURE_COOKIES !== 'false',
+        sameSite: 'lax',
+        maxAge: 7 * 24 * 60 * 60,
+        path: '/',
+      }
+    )
+    devLog.log('[Login] Tenant cookie set:', tokenData.tenant_slug, firstTenant.name)
+    // NOTE: Permissions fetched via /api/v1/me/permissions API (not stored in cookie)
+  } catch (tokenError) {
+    devLog.error('[Login] Token exchange FAILED:', tokenError)
+    throw new Error(
+      `Login succeeded but token exchange failed: ${tokenError instanceof Error ? tokenError.message : 'Unknown error'}`
+    )
+  }
+
+  return {
+    success: true,
+    user,
+    message: 'Login successful',
+    requiresTenantSelection: false,
+  }
+}
+
+// ============================================
+// TWO-FACTOR LOGIN STEP
+// ============================================
+
+const MFA_CHALLENGE_COOKIE = 'mfa_challenge'
+
+async function readMfaChallenge(): Promise<string | undefined> {
+  const cookieStore = await cookies()
+  return cookieStore.get(MFA_CHALLENGE_COOKIE)?.value
+}
+
+const MFA_EXPIRED_MESSAGE = 'Your sign-in expired. Please enter your password again.'
+
+/**
+ * Second login step: check an authenticator code or a recovery code against
+ * the challenge from loginAction, then finish the login.
+ */
+export async function verifyMfaAction(input: {
+  code?: string
+  recoveryCode?: string
+}): Promise<LoginResult> {
+  const token = await readMfaChallenge()
+  if (!token) {
+    return { success: false, error: MFA_EXPIRED_MESSAGE, mfaRequired: false }
+  }
+  try {
+    const { data, refreshToken } = await backendFetchWithMeta<LoginBackendResponse>(
+      authEndpoints.mfaVerify(),
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          mfa_token: token,
+          ...(input.recoveryCode
+            ? { recovery_code: input.recoveryCode.trim() }
+            : { code: (input.code ?? '').replace(/\s/g, '') }),
+        }),
+      }
+    )
+    await removeServerCookie(MFA_CHALLENGE_COOKIE)
+    return await completeLogin(data, refreshToken)
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Verification failed' }
+  }
+}
+
+/**
+ * Forced enrollment (the organization requires 2FA): get a new secret for the
+ * authenticator app.
+ */
+export async function startMfaEnrollmentAction(): Promise<MfaEnrollmentStart> {
+  const token = await readMfaChallenge()
+  if (!token) {
+    return { success: false, error: MFA_EXPIRED_MESSAGE }
+  }
+  try {
+    const data = await backendFetch<{ secret: string; otpauth_uri: string }>(
+      authEndpoints.mfaEnrollStart(),
+      { method: 'POST', body: JSON.stringify({ mfa_token: token }) }
+    )
+    return { success: true, secret: data.secret, otpauthUri: data.otpauth_uri }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Could not start two-factor setup',
+    }
+  }
+}
+
+/**
+ * Forced enrollment: confirm the authenticator with a code. Turns 2FA on and
+ * returns the recovery codes (shown once).
+ *
+ * The session the API just issued is NOT installed yet: setting the auth
+ * cookies here would make the /login page redirect into the app on its next
+ * render, before the user has seen the recovery codes. It is parked in a
+ * short-lived httpOnly cookie that /login ignores, and
+ * finishMfaEnrollmentAction installs it when the user continues.
+ */
+export async function confirmMfaEnrollmentAction(code: string): Promise<LoginResult> {
+  const token = await readMfaChallenge()
+  if (!token) {
+    return { success: false, error: MFA_EXPIRED_MESSAGE }
+  }
+  try {
+    const { data, refreshToken } = await backendFetchWithMeta<LoginBackendResponse>(
+      authEndpoints.mfaEnrollConfirm(),
+      {
+        method: 'POST',
+        body: JSON.stringify({ mfa_token: token, code: code.replace(/\s/g, '') }),
+      }
+    )
+    await removeServerCookie(MFA_CHALLENGE_COOKIE)
+    const recoveryCodes = data.recovery_codes ?? []
+    const pending: PendingLogin = {
+      rt: refreshToken || data.refresh_token || '',
+      login: {
+        token_type: data.token_type,
+        expires_in: data.expires_in,
+        user: data.user,
+        tenants: data.tenants,
+        suspended_tenants: data.suspended_tenants,
+        platform_admin: data.platform_admin,
+      },
+    }
+    const encoded = Buffer.from(JSON.stringify(pending)).toString('base64url')
+    if (encoded.length > 3800) {
+      // Too many memberships to park in a cookie: finish now. The codes are
+      // still returned; the page may move on before showing them.
+      const result = await completeLogin(data, refreshToken)
+      return { ...result, recoveryCodes }
+    }
+    await setServerCookie(MFA_PENDING_LOGIN_COOKIE, encoded, {
+      httpOnly: true,
+      secure: process.env.SECURE_COOKIES !== 'false',
+      sameSite: 'strict',
+      maxAge: 10 * 60,
+      path: '/',
+    })
+    return {
+      success: true,
+      recoveryCodes,
+      user: {
+        id: data.user.id,
+        email: data.user.email,
+        name: data.user.name,
+        roles: [],
+        emailVerified: true,
+        authProvider: 'local',
+      },
+    }
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Verification failed' }
+  }
+}
+
+/**
+ * Forced enrollment, last step: the user saved the recovery codes; install
+ * the parked session and pick the tenant like any other login.
+ */
+export async function finishMfaEnrollmentAction(): Promise<LoginResult> {
+  const cookieStore = await cookies()
+  const raw = cookieStore.get(MFA_PENDING_LOGIN_COOKIE)?.value
+  await removeServerCookie(MFA_PENDING_LOGIN_COOKIE)
+  if (!raw) {
+    return { success: false, error: MFA_EXPIRED_MESSAGE }
+  }
+  try {
+    const pending = JSON.parse(Buffer.from(raw, 'base64url').toString('utf8')) as PendingLogin
+    return await completeLogin(pending.login, pending.rt)
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Sign-in failed' }
+  }
+}
+
+const MFA_PENDING_LOGIN_COOKIE = 'mfa_pending_login'
+
+interface PendingLogin {
+  rt: string
+  login: LoginBackendResponse
+}
+
+/** Abandon a pending second step (the user went back to the password form). */
+export async function cancelMfaAction(): Promise<void> {
+  await removeServerCookie(MFA_CHALLENGE_COOKIE)
 }
 
 /**

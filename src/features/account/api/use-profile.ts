@@ -5,7 +5,7 @@
  */
 
 import useSWR from 'swr'
-import { get, put, del } from '@/lib/api/client'
+import { get, put } from '@/lib/api/client'
 import { userEndpoints } from '@/lib/api/endpoints'
 import type { UserProfile, UpdateProfileInput } from '../types/account.types'
 import { useCallback, useState } from 'react'
@@ -76,51 +76,3 @@ export function useUpdateProfile() {
 // ============================================
 // AVATAR
 // ============================================
-
-/**
- * Hook to update user avatar
- */
-export function useUpdateAvatar() {
-  const [isUpdating, setIsUpdating] = useState(false)
-  const [error, setError] = useState<Error | null>(null)
-
-  const updateAvatar = useCallback(async (avatarData: string): Promise<UserProfile | null> => {
-    setIsUpdating(true)
-    setError(null)
-
-    try {
-      const result = await put<UserProfile>(`${userEndpoints.me()}/avatar`, {
-        avatar_data: avatarData,
-      })
-      return result
-    } catch (err) {
-      const error = err instanceof Error ? err : new Error('Failed to update avatar')
-      setError(error)
-      throw error
-    } finally {
-      setIsUpdating(false)
-    }
-  }, [])
-
-  const removeAvatar = useCallback(async (): Promise<void> => {
-    setIsUpdating(true)
-    setError(null)
-
-    try {
-      await del(`${userEndpoints.me()}/avatar`)
-    } catch (err) {
-      const error = err instanceof Error ? err : new Error('Failed to remove avatar')
-      setError(error)
-      throw error
-    } finally {
-      setIsUpdating(false)
-    }
-  }, [])
-
-  return {
-    updateAvatar,
-    removeAvatar,
-    isUpdating,
-    error,
-  }
-}

@@ -33,12 +33,17 @@ export interface MemberRBACRole {
   is_system: boolean
 }
 
+export type MemberMfaStatus = 'enabled' | 'disabled' | 'idp'
+
 export interface MemberWithUser extends Member {
   email: string
   name: string
   avatar_url?: string
   status: MemberStatus
   last_login_at?: string
+  // Two-factor status; the API sends it to owners and admins only.
+  // "idp" = signs in through an identity provider, which owns the 2FA.
+  mfa_status?: MemberMfaStatus
   // RBAC roles (included when ?include=roles)
   rbac_roles?: MemberRBACRole[]
 }

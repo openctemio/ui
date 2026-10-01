@@ -5,13 +5,14 @@
  */
 
 import useSWR from 'swr'
-import { get, post, del } from '@/lib/api/client'
+import { get, post } from '@/lib/api/client'
 import { userEndpoints } from '@/lib/api/endpoints'
 import type {
   ChangePasswordInput,
+  RecoveryCodesResponse,
+  TwoFactorDisableInput,
   TwoFactorStatus,
   TwoFactorSetupResponse,
-  TwoFactorVerifyInput,
 } from '../types/account.types'
 import { useCallback, useState } from 'react'
 
@@ -56,19 +57,14 @@ export function useChangePassword() {
 // TWO-FACTOR AUTHENTICATION
 // ============================================
 
-const TWO_FACTOR_ENDPOINT = '/api/v1/users/me/2fa'
-
 /**
- * Hook to get 2FA status
+ * The signed-in user's 2FA status.
  */
 export function useTwoFactorStatus() {
   const { data, error, isLoading, mutate } = useSWR<TwoFactorStatus>(
-    TWO_FACTOR_ENDPOINT,
+    userEndpoints.twoFactor(),
     (url: string) => get<TwoFactorStatus>(url),
-    {
-      revalidateOnFocus: false,
-      dedupingInterval: 60000,
-    }
+    { revalidateOnFocus: false }
   )
 
   return {
@@ -81,91 +77,59 @@ export function useTwoFactorStatus() {
 }
 
 /**
- * Hook to setup 2FA
+ * Wraps one 2FA mutation with a pending flag. Errors are re-thrown so the
+ * caller can show them next to the field that caused them.
  */
+function useTwoFactorMutation<TArgs extends unknown[], TResult>(
+  run: (...args: TArgs) => Promise<TResult>
+) {
+  const [isPending, setIsPending] = useState(false)
+  const mutate = useCallback(
+    async (...args: TArgs): Promise<TResult> => {
+      setIsPending(true)
+      try {
+        return await run(...args)
+      } finally {
+        setIsPending(false)
+      }
+    },
+    [run]
+  )
+  return { mutate, isPending }
+}
+
+const startSetup = () => post<TwoFactorSetupResponse>(userEndpoints.twoFactorSetup())
+const enable = async (code: string) =>
+  (await post<RecoveryCodesResponse>(userEndpoints.twoFactorEnable(), { code })).recovery_codes
+const disable = (input: TwoFactorDisableInput) =>
+  post<{ message: string }>(userEndpoints.twoFactorDisable(), input)
+const regenerate = async (code: string) =>
+  (await post<RecoveryCodesResponse>(userEndpoints.twoFactorRecoveryCodes(), { code }))
+    .recovery_codes
+
+/** Generate a new (pending) authenticator secret. */
 export function useSetupTwoFactor() {
-  const [isSettingUp, setIsSettingUp] = useState(false)
-  const [error, setError] = useState<Error | null>(null)
-
-  const setupTwoFactor = useCallback(async (): Promise<TwoFactorSetupResponse | null> => {
-    setIsSettingUp(true)
-    setError(null)
-
-    try {
-      const result = await post<TwoFactorSetupResponse>(`${TWO_FACTOR_ENDPOINT}/setup`)
-      return result
-    } catch (err) {
-      const error = err instanceof Error ? err : new Error('Failed to setup 2FA')
-      setError(error)
-      throw error
-    } finally {
-      setIsSettingUp(false)
-    }
-  }, [])
-
-  return {
-    setupTwoFactor,
-    isSettingUp,
-    error,
-  }
+  const { mutate, isPending } = useTwoFactorMutation(startSetup)
+  return { setupTwoFactor: mutate, isSettingUp: isPending }
 }
 
 /**
- * Hook to verify and enable 2FA
+ * Confirm the pending secret with a code. Returns the recovery codes (shown
+ * once). The server signs out every other session.
  */
-export function useVerifyTwoFactor() {
-  const [isVerifying, setIsVerifying] = useState(false)
-  const [error, setError] = useState<Error | null>(null)
-
-  const verifyTwoFactor = useCallback(async (input: TwoFactorVerifyInput): Promise<boolean> => {
-    setIsVerifying(true)
-    setError(null)
-
-    try {
-      await post(`${TWO_FACTOR_ENDPOINT}/verify`, input)
-      return true
-    } catch (err) {
-      const error = err instanceof Error ? err : new Error('Failed to verify 2FA code')
-      setError(error)
-      throw error
-    } finally {
-      setIsVerifying(false)
-    }
-  }, [])
-
-  return {
-    verifyTwoFactor,
-    isVerifying,
-    error,
-  }
+export function useEnableTwoFactor() {
+  const { mutate, isPending } = useTwoFactorMutation(enable)
+  return { enableTwoFactor: mutate, isEnabling: isPending }
 }
 
-/**
- * Hook to disable 2FA
- */
+/** Turn 2FA off (current password + authenticator or recovery code). */
 export function useDisableTwoFactor() {
-  const [isDisabling, setIsDisabling] = useState(false)
-  const [error, setError] = useState<Error | null>(null)
+  const { mutate, isPending } = useTwoFactorMutation(disable)
+  return { disableTwoFactor: mutate, isDisabling: isPending }
+}
 
-  const disableTwoFactor = useCallback(async (password: string): Promise<boolean> => {
-    setIsDisabling(true)
-    setError(null)
-
-    try {
-      await del(TWO_FACTOR_ENDPOINT, { password })
-      return true
-    } catch (err) {
-      const error = err instanceof Error ? err : new Error('Failed to disable 2FA')
-      setError(error)
-      throw error
-    } finally {
-      setIsDisabling(false)
-    }
-  }, [])
-
-  return {
-    disableTwoFactor,
-    isDisabling,
-    error,
-  }
+/** Replace all recovery codes (needs an authenticator code). */
+export function useRegenerateRecoveryCodes() {
+  const { mutate, isPending } = useTwoFactorMutation(regenerate)
+  return { regenerateRecoveryCodes: mutate, isRegenerating: isPending }
 }
