@@ -82,7 +82,6 @@ import {
   FindingDetailDrawer,
   CreateFindingDialog,
   FINDING_STATUS_CONFIG,
-  SEVERITY_CONFIG,
 } from '@/features/findings'
 import { PriorityClassBadge } from '@/features/findings/components/priority-class-badge'
 import { SlaStatusBadge } from '@/features/sla/components/sla-status-badge'
@@ -106,14 +105,15 @@ import {
 } from '@/features/findings/api/use-findings-api'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import type { ApiFinding, FindingApiFilters } from '@/features/findings/api/finding-api.types'
-import type { Finding, FindingStatus, FindingUser } from '@/features/findings'
+import type { Finding, FindingStatus } from '@/features/findings'
 import type { Severity } from '@/features/shared/types'
 import { toast } from 'sonner'
 import { copyToClipboard } from '@/lib/clipboard'
 import { getErrorMessage } from '@/lib/api/error-handler'
-import { patch, post, csrfFetch } from '@/lib/api/client'
+import { post, csrfFetch } from '@/lib/api/client'
 import { usePermissions } from '@/context/permission-provider'
 import { useModuleEnabled } from '@/features/integrations/api/use-tenant-modules'
+import { findingAssetType } from '@/features/findings/lib/finding-asset-type'
 
 // ============================================
 // Transform API Finding to UI Finding
@@ -156,7 +156,7 @@ function transformApiToUiFinding(api: ApiFinding): Finding {
     assets: [
       {
         id: api.asset_id,
-        type: 'repository',
+        type: findingAssetType(api),
         name: locationName,
         url: api.location,
       },
@@ -831,44 +831,13 @@ function FindingsContent() {
     setDrawerOpen(true)
   }, [])
 
-  const handleStatusChange = async (findingId: string, status: FindingStatus) => {
-    try {
-      await patch(`/api/v1/findings/${findingId}/status`, { status })
-      const statusConfig = FINDING_STATUS_CONFIG[status]
-      toast.success(`Status updated to "${statusConfig.label}"`)
-      mutateFindings()
-      mutateStats()
-    } catch (error) {
-      toast.error(getErrorMessage(error, 'Failed to update status'))
-    }
-  }
-
-  const handleSeverityChange = async (findingId: string, severity: Severity) => {
-    try {
-      await patch(`/api/v1/findings/${findingId}/severity`, { severity })
-      const severityConfig = SEVERITY_CONFIG[severity]
-      toast.success(`Severity updated to "${severityConfig.label}"`)
-      mutateFindings()
-      mutateStats()
-    } catch (error) {
-      toast.error(getErrorMessage(error, 'Failed to update severity'))
-    }
-  }
-
-  const handleAssigneeChange = async (findingId: string, assignee: FindingUser | null) => {
-    try {
-      if (assignee) {
-        await post(`/api/v1/findings/${findingId}/assign`, { user_id: assignee.id })
-        toast.success(`Assigned to ${assignee.name}`)
-      } else {
-        await post(`/api/v1/findings/${findingId}/unassign`, {})
-        toast.info('Finding unassigned')
-      }
-      mutateFindings()
-    } catch (error) {
-      toast.error(getErrorMessage(error, 'Failed to update assignee'))
-    }
-  }
+  // The drawer writes status, severity and assignee itself (with its own toast
+  // and Undo); the page only refreshes the list. Writing again here sent every
+  // change twice and showed two toasts.
+  const refreshAfterDrawerChange = useCallback(() => {
+    mutateFindings()
+    mutateStats()
+  }, [mutateFindings, mutateStats])
 
   const handleAddComment = async (findingId: string, comment: string) => {
     try {
@@ -1949,9 +1918,9 @@ function FindingsContent() {
         finding={selectedFinding}
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
-        onStatusChange={handleStatusChange}
-        onSeverityChange={handleSeverityChange}
-        onAssigneeChange={handleAssigneeChange}
+        onStatusChange={refreshAfterDrawerChange}
+        onSeverityChange={refreshAfterDrawerChange}
+        onAssigneeChange={refreshAfterDrawerChange}
         onAddComment={handleAddComment}
       />
 

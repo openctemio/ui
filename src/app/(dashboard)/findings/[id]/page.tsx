@@ -26,7 +26,9 @@ import type {
   ComplianceFramework,
   ComplianceResult,
   ActivityType,
+  AssetType,
 } from '@/features/findings/types'
+import { findingAssetType } from '@/features/findings/lib/finding-asset-type'
 import type { Severity } from '@/features/shared/types'
 import {
   FindingHeader,
@@ -155,9 +157,8 @@ function transformApiToFindingDetail(api: ApiFinding): FindingDetail {
     // Asset - for pentest: show affected targets; for scanner: show repository
     assets: (() => {
       const isPentestSrc = ['pentest', 'bug_bounty', 'red_team', 'manual'].includes(api.source)
-      type AT = 'domain' | 'website' | 'service' | 'ip' | 'repository' | 'cloud' | 'target'
-      const assetType: AT = isPentestSrc ? 'target' : (api.asset?.type as AT) || 'repository'
-      const result: { id: string; type: AT; name: string; url?: string }[] = []
+      const assetType = findingAssetType(api)
+      const result: { id: string; type: AssetType; name: string; url?: string }[] = []
       // Skip nil/zero UUID asset IDs (pentest findings without linked CTEM asset)
       const isValidAssetId = api.asset_id && api.asset_id !== '00000000-0000-0000-0000-000000000000'
       if (isValidAssetId) {
