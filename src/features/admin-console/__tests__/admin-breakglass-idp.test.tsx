@@ -19,6 +19,9 @@ vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 
 // jsdom has no ResizeObserver; Radix's Switch measures itself with one.
 globalThis.ResizeObserver ??= class {
+  constructor(callback: ResizeObserverCallback) {
+    void callback
+  }
   observe() {}
   unobserve() {}
   disconnect() {}
