@@ -19,6 +19,68 @@
  */
 
 export interface paths {
+  '/admin/administrators': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Make someone a platform administrator
+     * @description Links the user account with this email (it must not belong to any organization), or creates a local account and returns its temporary password once. The administrator signs in on the normal /login page.
+     */
+    post: {
+      parameters: {
+        query?: never
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      /** @description Administrator */
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['internal_infra_http_handler.AdminProvisionRequest']
+        }
+      }
+      responses: {
+        /** @description Created */
+        201: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['internal_infra_http_handler.AdminProvisionResponse']
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Already an administrator, or the account belongs to an organization */
+        409: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+      }
+    }
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/admin/audit-logs': {
     parameters: {
       query?: never
@@ -227,6 +289,1276 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/admin/auth/idp': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Administrators' identity provider (sign-in page)
+     * @description Whether the console sign-in page offers the platform identity provider, and its display name. Nothing else about the configuration is public.
+     */
+    get: {
+      parameters: {
+        query?: never
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['internal_infra_http_handler.AdminIdPInfoResponse']
+          }
+        }
+      }
+    }
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/admin/auth/idp/callback': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Finish an identity-provider sign-in to the admin console
+     * @description Exchanges the authorization code, verifies the id_token and matches it to an existing administrator (no administrator is created). Unless the IdP's MFA is trusted by configuration, the console TOTP step follows (POST /admin/auth/mfa). Any failure returns the same generic error; the reason is in the admin audit log.
+     */
+    post: {
+      parameters: {
+        query?: never
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      /** @description Code and state from the IdP redirect */
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['internal_infra_http_handler.AdminIdPCallbackRequest']
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['internal_infra_http_handler.AdminIdPCallbackResponse']
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Single sign-on failed */
+        401: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+      }
+    }
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/admin/auth/idp/start': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Start an identity-provider sign-in to the admin console
+     * @description Begins an OIDC authorization-code sign-in with PKCE and a nonce. Returns the URL to send the browser to and sets the HttpOnly admin_idp cookie that the callback must present.
+     */
+    post: {
+      parameters: {
+        query?: never
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['internal_infra_http_handler.AdminIdPStartResponse']
+          }
+        }
+        /** @description No identity provider is enabled for administrators */
+        404: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+      }
+    }
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/admin/auth/logout': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Admin console logout
+     * @description Ends the caller's console session and the /login session it was opened from (refresh-token cookie), and clears the admin cookies.
+     */
+    post: {
+      parameters: {
+        query?: never
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description No Content */
+        204: {
+          headers: {
+            [name: string]: unknown
+          }
+          content?: never
+        }
+      }
+    }
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/admin/auth/mfa': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Admin console login (TOTP step)
+     * @description Verifies the TOTP code for the pending login (admin_mfa cookie) and issues the admin_session and admin_csrf cookies. On first login this also completes authenticator enrollment.
+     */
+    post: {
+      parameters: {
+        query?: never
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      /** @description TOTP code */
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['internal_infra_http_handler.AdminMFARequest']
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['internal_infra_http_handler.ValidateResponse']
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Invalid or expired verification code */
+        401: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+      }
+    }
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/admin/auth/password': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Change your own password
+     * @description Changes the signed-in administrator's password (their sign-in account's). Every /login and console session of the account ends, so the administrator signs in again.
+     */
+    post: {
+      parameters: {
+        query?: never
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      /** @description Current and new password */
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['internal_infra_http_handler.AdminChangePasswordRequest']
+        }
+      }
+      responses: {
+        /** @description No Content */
+        204: {
+          headers: {
+            [name: string]: unknown
+          }
+          content?: never
+        }
+        /** @description Wrong current password, or the new one does not meet the policy */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            '*/*': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description No console session */
+        401: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            '*/*': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+      }
+    }
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/admin/auth/session': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Open the platform admin console (after /login)
+     * @description Starts a console session for the user signed in on the normal /login page (refresh-token cookie). Only a password sign-in by a user linked to an active platform administrator qualifies; the response says whether to enter a TOTP code or enroll an authenticator first.
+     */
+    post: {
+      parameters: {
+        query?: never
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['internal_infra_http_handler.AdminLoginResponse']
+          }
+        }
+        /** @description Not signed in */
+        401: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Not a platform administrator, or not a password sign-in */
+        403: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+      }
+    }
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/admin/platform-idp': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Get the administrators' identity provider
+     * @description The platform-level OIDC provider administrators may sign in with. The client secret is never returned (has_client_secret only).
+     */
+    get: {
+      parameters: {
+        query?: never
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['internal_infra_http_handler.PlatformIdPResponse']
+          }
+        }
+      }
+    }
+    /**
+     * Configure the administrators' identity provider
+     * @description Creates or updates the platform-level OIDC provider. The issuer's discovery document is fetched (https only, SSRF-guarded) and must report the same issuer. The client secret is stored encrypted; leave it empty to keep the stored one. Changing the issuer removes every administrator's IdP binding. require_idp needs an active break-glass super admin. Audited.
+     */
+    put: {
+      parameters: {
+        query?: never
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      /** @description Configuration */
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['internal_infra_http_handler.PlatformIdPRequest']
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['internal_infra_http_handler.PlatformIdPResponse']
+          }
+        }
+        /** @description Invalid configuration or discovery failed */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description require_idp without a break-glass super admin */
+        409: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+      }
+    }
+    post?: never
+    /**
+     * Remove the administrators' identity provider
+     * @description Removes the configuration (and "require IdP" with it). Administrators sign in with their password again. Audited.
+     */
+    delete: {
+      parameters: {
+        query?: never
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description No Content */
+        204: {
+          headers: {
+            [name: string]: unknown
+          }
+          content?: never
+        }
+        /** @description Not configured */
+        404: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            '*/*': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+      }
+    }
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/admin/tenants': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * List organizations (platform admin)
+     * @description Cross-tenant list of organizations with size and SSO posture. Newest first.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Match name or slug */
+          search?: string
+          /** @description Page (default 1) */
+          page?: number
+          /** @description Page size (default 50, max 200) */
+          per_page?: number
+        }
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['internal_infra_http_handler.AdminOrganizationListResponse']
+          }
+        }
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+      }
+    }
+    put?: never
+    /**
+     * Create an organization (platform admin)
+     * @description Creates an organization with an existing user as its owner. Works in both TENANT_CREATION_MODE values.
+     */
+    post: {
+      parameters: {
+        query?: never
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      /** @description Organization */
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['internal_infra_http_handler.AdminCreateOrganizationRequest']
+        }
+      }
+      responses: {
+        /** @description Created */
+        201: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['internal_infra_http_handler.AdminOrganizationResponse']
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+      }
+    }
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/admin/tenants/{tenantId}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Get an organization (platform admin) */
+    get: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          /** @description Organization ID */
+          tenantId: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['internal_infra_http_handler.AdminOrganizationResponse']
+          }
+        }
+        /** @description Not Found */
+        404: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+      }
+    }
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/admin/tenants/{tenantId}/sso/enforcement': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Get an organization's SSO enforcement */
+    get: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          /** @description Organization ID */
+          tenantId: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['internal_infra_http_handler.AdminSSOEnforcementResponse']
+          }
+        }
+      }
+    }
+    /**
+     * Set an organization's SSO enforcement
+     * @description Requires members to sign in via SSO (the owner is exempt as break-glass). Refused with 400 when the organization has no usable SSO path.
+     */
+    put: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          /** @description Organization ID */
+          tenantId: string
+        }
+        cookie?: never
+      }
+      /** @description Enforcement */
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['internal_infra_http_handler.AdminSSOEnforcementRequest']
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['internal_infra_http_handler.AdminSSOEnforcementResponse']
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+      }
+    }
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/admin/tenants/{tenantId}/sso/identity-providers': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * List an organization's identity providers
+     * @description Platform admin console (RFC-022): runs against the organization in the path.
+     */
+    get: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          /** @description Organization ID */
+          tenantId: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: never
+    }
+    put?: never
+    /**
+     * Create an identity provider for an organization
+     * @description Platform admin console (RFC-022): runs against the organization in the path.
+     */
+    post: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          /** @description Organization ID */
+          tenantId: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: never
+    }
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/admin/tenants/{tenantId}/sso/identity-providers/{id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Get an organization's identity provider
+     * @description Platform admin console (RFC-022): runs against the organization in the path.
+     */
+    get: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          /** @description Organization ID */
+          tenantId: string
+          /** @description Identity provider ID */
+          id: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: never
+    }
+    /**
+     * Update an organization's identity provider
+     * @description Platform admin console (RFC-022): runs against the organization in the path.
+     */
+    put: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          /** @description Organization ID */
+          tenantId: string
+          /** @description Identity provider ID */
+          id: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: never
+    }
+    post?: never
+    /**
+     * Delete an organization's identity provider
+     * @description Platform admin console (RFC-022): runs against the organization in the path.
+     */
+    delete: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          /** @description Organization ID */
+          tenantId: string
+          /** @description Identity provider ID */
+          id: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: never
+    }
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/admin/tenants/{tenantId}/sso/saml': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Get an organization's SAML config
+     * @description Platform admin console (RFC-022): runs against the organization in the path.
+     */
+    get: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          /** @description Organization ID */
+          tenantId: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: never
+    }
+    /**
+     * Set an organization's SAML config
+     * @description Platform admin console (RFC-022): runs against the organization in the path.
+     */
+    put: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          /** @description Organization ID */
+          tenantId: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: never
+    }
+    post?: never
+    /**
+     * Delete an organization's SAML config
+     * @description Platform admin console (RFC-022): runs against the organization in the path.
+     */
+    delete: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          /** @description Organization ID */
+          tenantId: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: never
+    }
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/admin/tenants/{tenantId}/sso/verified-domains': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * List an organization's verified domains
+     * @description Platform admin console (RFC-022): runs against the organization in the path.
+     */
+    get: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          /** @description Organization ID */
+          tenantId: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: never
+    }
+    put?: never
+    /**
+     * Add a domain to verify for an organization
+     * @description Platform admin console (RFC-022): runs against the organization in the path.
+     */
+    post: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          /** @description Organization ID */
+          tenantId: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: never
+    }
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/admin/tenants/{tenantId}/sso/verified-domains/{id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    /**
+     * Delete an organization's verified domain
+     * @description Platform admin console (RFC-022): runs against the organization in the path.
+     */
+    delete: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          /** @description Organization ID */
+          tenantId: string
+          /** @description Domain ID */
+          id: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: never
+    }
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/admin/tenants/{tenantId}/sso/verified-domains/{id}/verify': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Verify an organization's domain via DNS
+     * @description Platform admin console (RFC-022): runs against the organization in the path.
+     */
+    post: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          /** @description Organization ID */
+          tenantId: string
+          /** @description Domain ID */
+          id: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: never
+    }
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/admin/tenants/{tenantId}/users': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** List an organization's users (platform admin) */
+    get: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          /** @description Organization ID */
+          tenantId: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['internal_infra_http_handler.AdminOrgUserListResponse']
+          }
+        }
+        /** @description Not Found */
+        404: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+      }
+    }
+    put?: never
+    /**
+     * Create a user in an organization (platform admin)
+     * @description Same as the organization administrator's POST /tenants/{tenant}/users, with a built-in role. The one-time set-password link is emailed when SMTP is configured, otherwise setup_token is returned once.
+     */
+    post: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          /** @description Organization ID */
+          tenantId: string
+        }
+        cookie?: never
+      }
+      /** @description User */
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['internal_infra_http_handler.AdminCreateOrgUserRequest']
+        }
+      }
+      responses: {
+        /** @description Created */
+        201: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['internal_infra_http_handler.ProvisionedUserResponse']
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Account exists */
+        409: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+      }
+    }
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/admin/users/{id}/break-glass-test': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Confirm a break-glass sign-in was a test
+     * @description Super admin only, and not the break-glass account itself: records the account's last sign-in as its periodic test.
+     */
+    post: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          /** @description Admin user ID */
+          id: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['internal_infra_http_handler.AdminResponse']
+          }
+        }
+        /** @description Not break-glass, never signed in, or your own account */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Not Found */
+        404: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+      }
+    }
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/admin/users/{id}/idp-binding': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    /**
+     * Remove an administrator's identity-provider binding
+     * @description Super admin only. The administrator is bound again, by verified email, on their next IdP sign-in. Ends their console sessions. Audited.
+     */
+    delete: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          /** @description Admin user ID */
+          id: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description No Content */
+        204: {
+          headers: {
+            [name: string]: unknown
+          }
+          content?: never
+        }
+        /** @description Not Found */
+        404: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            '*/*': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+      }
+    }
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/admin/users/{id}/reset-credentials': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Reset another administrator's two-step verification
+     * @description Super admin only. Removes the target administrator's TOTP second factor and ends their console sessions (lost authenticator); they enroll again the next time they open the console.
+     */
+    post: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          /** @description Admin user ID */
+          id: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description No Content */
+        204: {
+          headers: {
+            [name: string]: unknown
+          }
+          content?: never
+        }
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            '*/*': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            '*/*': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Not Found */
+        404: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            '*/*': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+      }
+    }
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/agent/commands': {
     parameters: {
       query?: never
@@ -236,7 +1568,7 @@ export interface paths {
     }
     /**
      * Poll commands
-     * @description Agent polls for pending commands to execute
+     * @description Sensor polls for pending commands to execute
      */
     get: {
       parameters: {
@@ -256,7 +1588,7 @@ export interface paths {
             [name: string]: unknown
           }
           content: {
-            'application/json': components['schemas']['internal_infra_http_handler.CommandResponse'][]
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_sensorproto_legacyv1.Command'][]
           }
         }
         /** @description Unauthorized */
@@ -298,7 +1630,7 @@ export interface paths {
     put?: never
     /**
      * Acknowledge command
-     * @description Agent acknowledges receipt of a command
+     * @description Sensor acknowledges receipt of a command
      */
     post: {
       parameters: {
@@ -318,7 +1650,7 @@ export interface paths {
             [name: string]: unknown
           }
           content: {
-            'application/json': components['schemas']['internal_infra_http_handler.CommandResponse']
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_sensorproto_legacyv1.Command']
           }
         }
         /** @description Bad Request */
@@ -367,7 +1699,7 @@ export interface paths {
     put?: never
     /**
      * Complete command
-     * @description Agent reports successful command completion with optional result
+     * @description Sensor reports successful command completion with optional result
      */
     post: {
       parameters: {
@@ -392,7 +1724,7 @@ export interface paths {
             [name: string]: unknown
           }
           content: {
-            'application/json': components['schemas']['internal_infra_http_handler.CommandResponse']
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_sensorproto_legacyv1.Command']
           }
         }
         /** @description Bad Request */
@@ -441,7 +1773,7 @@ export interface paths {
     put?: never
     /**
      * Fail command
-     * @description Agent reports command execution failure with error message
+     * @description Sensor reports command execution failure with error message
      */
     post: {
       parameters: {
@@ -466,7 +1798,7 @@ export interface paths {
             [name: string]: unknown
           }
           content: {
-            'application/json': components['schemas']['internal_infra_http_handler.CommandResponse']
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_sensorproto_legacyv1.Command']
           }
         }
         /** @description Bad Request */
@@ -515,7 +1847,7 @@ export interface paths {
     put?: never
     /**
      * Start command
-     * @description Agent reports that command execution has started
+     * @description Sensor reports that command execution has started
      */
     post: {
       parameters: {
@@ -535,7 +1867,7 @@ export interface paths {
             [name: string]: unknown
           }
           content: {
-            'application/json': components['schemas']['internal_infra_http_handler.CommandResponse']
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_sensorproto_legacyv1.Command']
           }
         }
         /** @description Bad Request */
@@ -583,8 +1915,8 @@ export interface paths {
     get?: never
     put?: never
     /**
-     * Agent heartbeat
-     * @description Send a heartbeat to indicate agent is alive
+     * Sensor heartbeat
+     * @description Send a heartbeat to indicate sensor is alive
      */
     post: {
       parameters: {
@@ -606,9 +1938,7 @@ export interface paths {
             [name: string]: unknown
           }
           content: {
-            'application/json': {
-              [key: string]: unknown
-            }
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_sensorproto_legacyv1.Heartbeat']
           }
         }
         /** @description Unauthorized */
@@ -1039,8 +2369,8 @@ export interface paths {
     get?: never
     put?: never
     /**
-     * Renew agent API key (self-service)
-     * @description Rotate the calling agent's own API key. Authenticated by the current key; returns a fresh key shown once. The building block for auto-rotating credentials (kubelet-style).
+     * Renew sensor API key (self-service)
+     * @description Rotate the calling sensor's own API key. Authenticated by the current key; returns a fresh key shown once. The building block for auto-rotating credentials (kubelet-style).
      */
     post: {
       parameters: {
@@ -1106,7 +2436,7 @@ export interface paths {
     put?: never
     /**
      * Register scan session
-     * @description Agent registers a new scan session before starting a scan
+     * @description Sensor registers a new scan session before starting a scan
      */
     post: {
       parameters: {
@@ -1174,8 +2504,8 @@ export interface paths {
       cookie?: never
     }
     /**
-     * Get scan session (agent)
-     * @description Agent retrieves scan session details
+     * Get scan session (sensor)
+     * @description Sensor retrieves scan session details
      */
     get: {
       parameters: {
@@ -1195,7 +2525,7 @@ export interface paths {
             [name: string]: unknown
           }
           content: {
-            'application/json': components['schemas']['internal_infra_http_handler.ScanSessionResponse']
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_sensorproto_legacyv1.ScanSession']
           }
         }
         /** @description Bad Request */
@@ -1243,7 +2573,7 @@ export interface paths {
     head?: never
     /**
      * Update scan session
-     * @description Agent updates scan status after completion
+     * @description Sensor updates scan status after completion
      */
     patch: {
       parameters: {
@@ -1312,81 +2642,33 @@ export interface paths {
       cookie?: never
     }
     /**
-     * List agents
-     * @description Get a paginated list of agents for the current tenant
+     * Deprecated: moved to /sensors
+     * @deprecated
+     * @description The sensor management API moved from /agents to /sensors. Every /agents route answers 308 to its /sensors equivalent until the date in the Sunset header.
      */
     get: {
       parameters: {
-        query?: {
-          /** @description Filter by type (runner, worker, collector, sensor) */
-          type?: string
-          /** @description Filter by admin-controlled status (active, disabled, revoked) */
-          status?: string
-          /** @description Filter by automatic health (unknown, online, offline, error) */
-          health?: string
-          /** @description Filter by execution mode (standalone, daemon) */
-          execution_mode?: string
-          /** @description Filter by capabilities (comma-separated) */
-          capabilities?: string
-          /** @description Filter by tools (comma-separated) */
-          tools?: string
-          /** @description Filter by agents with available capacity */
-          has_capacity?: boolean
-          /** @description Search by name or description */
-          search?: string
-          /** @description Page number */
-          page?: number
-          /** @description Items per page */
-          per_page?: number
-        }
+        query?: never
         header?: never
         path?: never
         cookie?: never
       }
       requestBody?: never
       responses: {
-        /** @description OK */
-        200: {
+        /** @description Permanent Redirect */
+        308: {
           headers: {
             [name: string]: unknown
           }
-          content: {
-            'application/json': components['schemas']['internal_infra_http_handler.ListResponse-internal_infra_http_handler_AgentResponse']
-          }
-        }
-        /** @description Bad Request */
-        400: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
-          }
-        }
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
-          }
-        }
-        /** @description Internal Server Error */
-        500: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
-          }
+          content?: never
         }
       }
     }
     put?: never
     /**
-     * Create agent
-     * @description Create a new agent and receive its API key
+     * Deprecated: moved to /sensors
+     * @deprecated
+     * @description The sensor management API moved from /agents to /sensors. Every /agents route answers 308 to its /sensors equivalent until the date in the Sunset header.
      */
     post: {
       parameters: {
@@ -1395,48 +2677,14 @@ export interface paths {
         path?: never
         cookie?: never
       }
-      /** @description Agent data */
-      requestBody: {
-        content: {
-          'application/json': components['schemas']['internal_infra_http_handler.CreateAgentRequest']
-        }
-      }
+      requestBody?: never
       responses: {
-        /** @description Created */
-        201: {
+        /** @description Permanent Redirect */
+        308: {
           headers: {
             [name: string]: unknown
           }
-          content: {
-            'application/json': components['schemas']['internal_infra_http_handler.CreateAgentResponse']
-          }
-        }
-        /** @description Bad Request */
-        400: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
-          }
-        }
-        /** @description Conflict */
-        409: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
-          }
-        }
-        /** @description Internal Server Error */
-        500: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
-          }
+          content?: never
         }
       }
     }
@@ -1454,168 +2702,72 @@ export interface paths {
       cookie?: never
     }
     /**
-     * Get agent
-     * @description Get a single agent by ID
+     * Deprecated: moved to /sensors
+     * @deprecated
+     * @description The sensor management API moved from /agents to /sensors. Every /agents route answers 308 to its /sensors equivalent until the date in the Sunset header.
      */
     get: {
       parameters: {
         query?: never
         header?: never
-        path: {
-          /** @description Agent ID */
-          id: string
-        }
+        path?: never
         cookie?: never
       }
       requestBody?: never
       responses: {
-        /** @description OK */
-        200: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            'application/json': components['schemas']['internal_infra_http_handler.AgentResponse']
-          }
-        }
-        /** @description Bad Request */
-        400: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
-          }
-        }
-        /** @description Not Found */
-        404: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
-          }
-        }
-        /** @description Internal Server Error */
-        500: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
-          }
-        }
-      }
-    }
-    /**
-     * Update agent
-     * @description Update an existing agent
-     */
-    put: {
-      parameters: {
-        query?: never
-        header?: never
-        path: {
-          /** @description Agent ID */
-          id: string
-        }
-        cookie?: never
-      }
-      /** @description Update data */
-      requestBody: {
-        content: {
-          'application/json': components['schemas']['internal_infra_http_handler.UpdateAgentRequest']
-        }
-      }
-      responses: {
-        /** @description OK */
-        200: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            'application/json': components['schemas']['internal_infra_http_handler.AgentResponse']
-          }
-        }
-        /** @description Bad Request */
-        400: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
-          }
-        }
-        /** @description Not Found */
-        404: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
-          }
-        }
-        /** @description Internal Server Error */
-        500: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
-          }
-        }
-      }
-    }
-    post?: never
-    /**
-     * Delete agent
-     * @description Delete an agent and revoke its API key
-     */
-    delete: {
-      parameters: {
-        query?: never
-        header?: never
-        path: {
-          /** @description Agent ID */
-          id: string
-        }
-        cookie?: never
-      }
-      requestBody?: never
-      responses: {
-        /** @description No Content */
-        204: {
+        /** @description Permanent Redirect */
+        308: {
           headers: {
             [name: string]: unknown
           }
           content?: never
         }
-        /** @description Bad Request */
-        400: {
+      }
+    }
+    /**
+     * Deprecated: moved to /sensors
+     * @deprecated
+     * @description The sensor management API moved from /agents to /sensors. Every /agents route answers 308 to its /sensors equivalent until the date in the Sunset header.
+     */
+    put: {
+      parameters: {
+        query?: never
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description Permanent Redirect */
+        308: {
           headers: {
             [name: string]: unknown
           }
-          content: {
-            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
-          }
+          content?: never
         }
-        /** @description Not Found */
-        404: {
+      }
+    }
+    post?: never
+    /**
+     * Deprecated: moved to /sensors
+     * @deprecated
+     * @description The sensor management API moved from /agents to /sensors. Every /agents route answers 308 to its /sensors equivalent until the date in the Sunset header.
+     */
+    delete: {
+      parameters: {
+        query?: never
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description Permanent Redirect */
+        308: {
           headers: {
             [name: string]: unknown
           }
-          content: {
-            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
-          }
-        }
-        /** @description Internal Server Error */
-        500: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
-          }
+          content?: never
         }
       }
     }
@@ -1634,65 +2786,25 @@ export interface paths {
     get?: never
     put?: never
     /**
-     * Activate agent
-     * @description Activate an agent (admin action). Allows the agent to authenticate.
+     * Deprecated: moved to /sensors
+     * @deprecated
+     * @description The sensor management API moved from /agents to /sensors. Every /agents route answers 308 to its /sensors equivalent until the date in the Sunset header.
      */
     post: {
       parameters: {
         query?: never
         header?: never
-        path: {
-          /** @description Agent ID */
-          id: string
-        }
+        path?: never
         cookie?: never
       }
       requestBody?: never
       responses: {
-        /** @description OK */
-        200: {
+        /** @description Permanent Redirect */
+        308: {
           headers: {
             [name: string]: unknown
           }
-          content: {
-            'application/json': components['schemas']['internal_infra_http_handler.AgentResponse']
-          }
-        }
-        /** @description Bad Request */
-        400: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
-          }
-        }
-        /** @description Forbidden */
-        403: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
-          }
-        }
-        /** @description Not Found */
-        404: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
-          }
-        }
-        /** @description Internal Server Error */
-        500: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
-          }
+          content?: never
         }
       }
     }
@@ -1710,59 +2822,25 @@ export interface paths {
       cookie?: never
     }
     /**
-     * Get agent configuration templates
-     * @description Returns rendered config templates for an agent in multiple formats
+     * Deprecated: moved to /sensors
+     * @deprecated
+     * @description The sensor management API moved from /agents to /sensors. Every /agents route answers 308 to its /sensors equivalent until the date in the Sunset header.
      */
     get: {
       parameters: {
         query?: never
-        header?: {
-          /** @description Optional API key to embed in templates (only available right after creation/regeneration). MUST be sent as header, not query parameter. */
-          'X-Agent-API-Key'?: string
-        }
-        path: {
-          /** @description Agent ID */
-          id: string
-        }
+        header?: never
+        path?: never
         cookie?: never
       }
       requestBody?: never
       responses: {
-        /** @description OK */
-        200: {
+        /** @description Permanent Redirect */
+        308: {
           headers: {
             [name: string]: unknown
           }
-          content: {
-            'application/json': components['schemas']['internal_infra_http_handler.AgentConfigTemplatesResponse']
-          }
-        }
-        /** @description Not Found */
-        404: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
-          }
-        }
-        /** @description Internal Server Error */
-        500: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
-          }
-        }
-        /** @description Template service not configured */
-        503: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
-          }
+          content?: never
         }
       }
     }
@@ -1784,61 +2862,25 @@ export interface paths {
     get?: never
     put?: never
     /**
-     * Disable agent
-     * @description Disable an agent (admin action). Prevents the agent from authenticating.
+     * Deprecated: moved to /sensors
+     * @deprecated
+     * @description The sensor management API moved from /agents to /sensors. Every /agents route answers 308 to its /sensors equivalent until the date in the Sunset header.
      */
     post: {
       parameters: {
         query?: never
         header?: never
-        path: {
-          /** @description Agent ID */
-          id: string
-        }
+        path?: never
         cookie?: never
       }
-      /** @description Disable reason */
-      requestBody?: {
-        content: {
-          'application/json': components['schemas']['internal_infra_http_handler.AgentDisableRequest']
-        }
-      }
+      requestBody?: never
       responses: {
-        /** @description OK */
-        200: {
+        /** @description Permanent Redirect */
+        308: {
           headers: {
             [name: string]: unknown
           }
-          content: {
-            'application/json': components['schemas']['internal_infra_http_handler.AgentResponse']
-          }
-        }
-        /** @description Bad Request */
-        400: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
-          }
-        }
-        /** @description Not Found */
-        404: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
-          }
-        }
-        /** @description Internal Server Error */
-        500: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
-          }
+          content?: never
         }
       }
     }
@@ -1858,56 +2900,25 @@ export interface paths {
     get?: never
     put?: never
     /**
-     * Regenerate API key
-     * @description Regenerate the API key for an agent. The old key will be invalidated.
+     * Deprecated: moved to /sensors
+     * @deprecated
+     * @description The sensor management API moved from /agents to /sensors. Every /agents route answers 308 to its /sensors equivalent until the date in the Sunset header.
      */
     post: {
       parameters: {
         query?: never
         header?: never
-        path: {
-          /** @description Agent ID */
-          id: string
-        }
+        path?: never
         cookie?: never
       }
       requestBody?: never
       responses: {
-        /** @description OK */
-        200: {
+        /** @description Permanent Redirect */
+        308: {
           headers: {
             [name: string]: unknown
           }
-          content: {
-            'application/json': components['schemas']['internal_infra_http_handler.AgentRegenerateAPIKeyResponse']
-          }
-        }
-        /** @description Bad Request */
-        400: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
-          }
-        }
-        /** @description Not Found */
-        404: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
-          }
-        }
-        /** @description Internal Server Error */
-        500: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
-          }
+          content?: never
         }
       }
     }
@@ -1927,61 +2938,25 @@ export interface paths {
     get?: never
     put?: never
     /**
-     * Revoke agent
-     * @description Permanently revoke an agent's access (admin action). Cannot be undone.
+     * Deprecated: moved to /sensors
+     * @deprecated
+     * @description The sensor management API moved from /agents to /sensors. Every /agents route answers 308 to its /sensors equivalent until the date in the Sunset header.
      */
     post: {
       parameters: {
         query?: never
         header?: never
-        path: {
-          /** @description Agent ID */
-          id: string
-        }
+        path?: never
         cookie?: never
       }
-      /** @description Revoke reason */
-      requestBody?: {
-        content: {
-          'application/json': components['schemas']['internal_infra_http_handler.AgentRevokeRequest']
-        }
-      }
+      requestBody?: never
       responses: {
-        /** @description OK */
-        200: {
+        /** @description Permanent Redirect */
+        308: {
           headers: {
             [name: string]: unknown
           }
-          content: {
-            'application/json': components['schemas']['internal_infra_http_handler.AgentResponse']
-          }
-        }
-        /** @description Bad Request */
-        400: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
-          }
-        }
-        /** @description Not Found */
-        404: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
-          }
-        }
-        /** @description Internal Server Error */
-        500: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
-          }
+          content?: never
         }
       }
     }
@@ -1999,8 +2974,9 @@ export interface paths {
       cookie?: never
     }
     /**
-     * Get available capabilities
-     * @description Returns all unique capability names from all agents accessible to the tenant
+     * Deprecated: moved to /sensors
+     * @deprecated
+     * @description The sensor management API moved from /agents to /sensors. Every /agents route answers 308 to its /sensors equivalent until the date in the Sunset header.
      */
     get: {
       parameters: {
@@ -2011,32 +2987,12 @@ export interface paths {
       }
       requestBody?: never
       responses: {
-        /** @description OK */
-        200: {
+        /** @description Permanent Redirect */
+        308: {
           headers: {
             [name: string]: unknown
           }
-          content: {
-            'application/json': components['schemas']['internal_infra_http_handler.AvailableCapabilitiesResponse']
-          }
-        }
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
-          }
-        }
-        /** @description Internal server error */
-        500: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
-          }
+          content?: never
         }
       }
     }
@@ -2056,8 +3012,9 @@ export interface paths {
       cookie?: never
     }
     /**
-     * Get tenant agent statistics
-     * @description Returns aggregated stats for the tenant's agents (status, health, type, mode breakdowns)
+     * Deprecated: moved to /sensors
+     * @deprecated
+     * @description The sensor management API moved from /agents to /sensors. Every /agents route answers 308 to its /sensors equivalent until the date in the Sunset header.
      */
     get: {
       parameters: {
@@ -2068,32 +3025,12 @@ export interface paths {
       }
       requestBody?: never
       responses: {
-        /** @description OK */
-        200: {
+        /** @description Permanent Redirect */
+        308: {
           headers: {
             [name: string]: unknown
           }
-          content: {
-            'application/json': components['schemas']['internal_infra_http_handler.AgentStatsResponse']
-          }
-        }
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
-          }
-        }
-        /** @description Internal Server Error */
-        500: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
-          }
+          content?: never
         }
       }
     }
@@ -5739,6 +6676,215 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/auth/mfa/enroll/confirm': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Confirm required 2FA enrollment
+     * @description Confirms the authenticator with a code, turns 2FA on and completes the login. The response is a login response plus recovery_codes, shown once.
+     */
+    post: {
+      parameters: {
+        query?: never
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      /** @description Challenge token and code */
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['internal_infra_http_handler.MFAEnrollmentConfirmRequest']
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['internal_infra_http_handler.LoginResponse']
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': {
+              [key: string]: string
+            }
+          }
+        }
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': {
+              [key: string]: string
+            }
+          }
+        }
+      }
+    }
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/auth/mfa/enroll/start': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Start required 2FA enrollment
+     * @description For a login that returned mfa_purpose=enroll: returns a new TOTP secret to add to an authenticator app.
+     */
+    post: {
+      parameters: {
+        query?: never
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      /** @description Challenge token */
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['internal_infra_http_handler.MFAEnrollmentStartRequest']
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['internal_infra_http_handler.MFASetupResponse']
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': {
+              [key: string]: string
+            }
+          }
+        }
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': {
+              [key: string]: string
+            }
+          }
+        }
+      }
+    }
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/auth/mfa/verify': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Verify second factor
+     * @description Completes a password login with a TOTP code or a recovery code. Returns the same response as a password login without 2FA.
+     */
+    post: {
+      parameters: {
+        query?: never
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      /** @description Challenge token and code */
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['internal_infra_http_handler.VerifyMFARequest']
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['internal_infra_http_handler.LoginResponse']
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': {
+              [key: string]: string
+            }
+          }
+        }
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': {
+              [key: string]: string
+            }
+          }
+        }
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': {
+              [key: string]: string
+            }
+          }
+        }
+      }
+    }
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/auth/oauth/{provider}/authorize': {
     parameters: {
       query?: never
@@ -6309,8 +7455,8 @@ export interface paths {
     get: {
       parameters: {
         query?: {
-          /** @description Filter by agent ID */
-          agent_id?: string
+          /** @description Filter by sensor ID */
+          sensor_id?: string
           /** @description Filter by type (scan, collect, health_check, config_update, cancel) */
           type?: string
           /** @description Filter by status (pending, running, completed, failed, canceled) */
@@ -6360,7 +7506,7 @@ export interface paths {
     put?: never
     /**
      * Create command
-     * @description Create a new command to be executed by an agent
+     * @description Create a new command to be executed by a sensor
      */
     post: {
       parameters: {
@@ -20633,6 +21779,807 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/sensors': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * List sensors
+     * @description Get a paginated list of sensors for the current tenant
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Filter by type (runner, worker, collector, sensor) */
+          type?: string
+          /** @description Filter by admin-controlled status (active, disabled, revoked) */
+          status?: string
+          /** @description Filter by automatic health (unknown, online, offline, error) */
+          health?: string
+          /** @description Filter by execution mode (standalone, daemon) */
+          execution_mode?: string
+          /** @description Filter by capabilities (comma-separated) */
+          capabilities?: string
+          /** @description Filter by tools (comma-separated) */
+          tools?: string
+          /** @description Filter by sensors with available capacity */
+          has_capacity?: boolean
+          /** @description Search by name or description */
+          search?: string
+          /** @description Page number */
+          page?: number
+          /** @description Items per page */
+          per_page?: number
+        }
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['internal_infra_http_handler.ListResponse-internal_infra_http_handler_SensorResponse']
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Internal Server Error */
+        500: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+      }
+    }
+    put?: never
+    /**
+     * Create sensor
+     * @description Create a new sensor and receive its API key
+     */
+    post: {
+      parameters: {
+        query?: never
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      /** @description Sensor data */
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['internal_infra_http_handler.CreateSensorRequest']
+        }
+      }
+      responses: {
+        /** @description Created */
+        201: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['internal_infra_http_handler.CreateSensorResponse']
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Conflict */
+        409: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Internal Server Error */
+        500: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+      }
+    }
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/sensors/{id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Get sensor
+     * @description Get a single sensor by ID
+     */
+    get: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          /** @description Sensor ID */
+          id: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['internal_infra_http_handler.SensorResponse']
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Not Found */
+        404: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Internal Server Error */
+        500: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+      }
+    }
+    /**
+     * Update sensor
+     * @description Update an existing sensor
+     */
+    put: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          /** @description Sensor ID */
+          id: string
+        }
+        cookie?: never
+      }
+      /** @description Update data */
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['internal_infra_http_handler.UpdateSensorRequest']
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['internal_infra_http_handler.SensorResponse']
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Not Found */
+        404: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Internal Server Error */
+        500: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+      }
+    }
+    post?: never
+    /**
+     * Delete sensor
+     * @description Delete a sensor and revoke its API key
+     */
+    delete: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          /** @description Sensor ID */
+          id: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description No Content */
+        204: {
+          headers: {
+            [name: string]: unknown
+          }
+          content?: never
+        }
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Not Found */
+        404: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Internal Server Error */
+        500: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+      }
+    }
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/sensors/{id}/activate': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Activate sensor
+     * @description Activate a sensor (admin action). Allows the sensor to authenticate.
+     */
+    post: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          /** @description Sensor ID */
+          id: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['internal_infra_http_handler.SensorResponse']
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Not Found */
+        404: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Internal Server Error */
+        500: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+      }
+    }
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/sensors/{id}/config-templates': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Get sensor configuration templates
+     * @description Returns rendered config templates for a sensor in multiple formats
+     */
+    get: {
+      parameters: {
+        query?: never
+        header?: {
+          /** @description Optional API key to embed in templates (only available right after creation/regeneration). MUST be sent as header, not query parameter. */
+          'X-Sensor-API-Key'?: string
+        }
+        path: {
+          /** @description Sensor ID */
+          id: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['internal_infra_http_handler.SensorConfigTemplatesResponse']
+          }
+        }
+        /** @description Not Found */
+        404: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Internal Server Error */
+        500: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Template service not configured */
+        503: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+      }
+    }
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/sensors/{id}/deactivate': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Disable sensor
+     * @description Disable a sensor (admin action). Prevents the sensor from authenticating.
+     */
+    post: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          /** @description Sensor ID */
+          id: string
+        }
+        cookie?: never
+      }
+      /** @description Disable reason */
+      requestBody?: {
+        content: {
+          'application/json': components['schemas']['internal_infra_http_handler.SensorDisableRequest']
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['internal_infra_http_handler.SensorResponse']
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Not Found */
+        404: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Internal Server Error */
+        500: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+      }
+    }
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/sensors/{id}/regenerate-key': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Regenerate API key
+     * @description Regenerate the API key for a sensor. The old key will be invalidated.
+     */
+    post: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          /** @description Sensor ID */
+          id: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['internal_infra_http_handler.SensorRegenerateAPIKeyResponse']
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Not Found */
+        404: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Internal Server Error */
+        500: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+      }
+    }
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/sensors/{id}/revoke': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Revoke sensor
+     * @description Permanently revoke a sensor's access (admin action). Cannot be undone.
+     */
+    post: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          /** @description Sensor ID */
+          id: string
+        }
+        cookie?: never
+      }
+      /** @description Revoke reason */
+      requestBody?: {
+        content: {
+          'application/json': components['schemas']['internal_infra_http_handler.SensorRevokeRequest']
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['internal_infra_http_handler.SensorResponse']
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Not Found */
+        404: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Internal Server Error */
+        500: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+      }
+    }
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/sensors/available-capabilities': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Get available capabilities
+     * @description Returns all unique capability names from all sensors accessible to the tenant
+     */
+    get: {
+      parameters: {
+        query?: never
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['internal_infra_http_handler.AvailableCapabilitiesResponse']
+          }
+        }
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+      }
+    }
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/sensors/stats': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Get tenant sensor statistics
+     * @description Returns aggregated stats for the tenant's sensors (status, health, type, mode breakdowns)
+     */
+    get: {
+      parameters: {
+        query?: never
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['internal_infra_http_handler.SensorStatsResponse']
+          }
+        }
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Internal Server Error */
+        500: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+      }
+    }
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/services': {
     parameters: {
       query?: never
@@ -23259,6 +25206,142 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/tenants/{tenant}/users': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Create a user in the organization
+     * @description Creates an account with the given RBAC roles and a one-time set-password link (24h, single use). The link is emailed when SMTP is configured; otherwise setup_token is returned once to the creating administrator. Owner/admin only. Refused with 409 when the email already has an account (invite instead) and 400 when the email domain is outside the organization's allowed domains.
+     */
+    post: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          /** @description Tenant ID or slug */
+          tenant: string
+        }
+        cookie?: never
+      }
+      /** @description User */
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['internal_infra_http_handler.CreateTenantUserRequest']
+        }
+      }
+      responses: {
+        /** @description Created */
+        201: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['internal_infra_http_handler.ProvisionedUserResponse']
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Conflict */
+        409: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+      }
+    }
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/tenants/{tenant}/users/{userId}/setup-link': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Issue a new set-password link for a pending account
+     * @description Replaces the one-time set-password link of an account an administrator created that has never been used and belongs to this organization only. Owner/admin only. 400 for any other account (its owner recovers it with forgot-password).
+     */
+    post: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          /** @description Tenant ID or slug */
+          tenant: string
+          /** @description User ID */
+          userId: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['internal_infra_http_handler.ProvisionedUserResponse']
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Not Found */
+        404: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+      }
+    }
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/tools': {
     parameters: {
       query?: never
@@ -23938,6 +26021,304 @@ export interface paths {
       }
     }
     post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/users/me/2fa': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Get my 2FA status */
+    get: {
+      parameters: {
+        query?: never
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_internal_app.MFAStatus']
+          }
+        }
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': {
+              [key: string]: string
+            }
+          }
+        }
+      }
+    }
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/users/me/2fa/disable': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Disable 2FA
+     * @description Turns 2FA off. Requires the current password and an authenticator code or unused recovery code.
+     */
+    post: {
+      parameters: {
+        query?: never
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      /** @description Password and code */
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['internal_infra_http_handler.MFADisableRequest']
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': {
+              [key: string]: string
+            }
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': {
+              [key: string]: string
+            }
+          }
+        }
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': {
+              [key: string]: string
+            }
+          }
+        }
+      }
+    }
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/users/me/2fa/enable': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Enable 2FA
+     * @description Confirms the authenticator with a code and turns 2FA on. Signs out every other session. Returns recovery codes, shown once.
+     */
+    post: {
+      parameters: {
+        query?: never
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      requestBody: components['requestBodies']['internal_infra_http_handler.MFACodeRequest']
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['internal_infra_http_handler.MFARecoveryCodesResponse']
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': {
+              [key: string]: string
+            }
+          }
+        }
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': {
+              [key: string]: string
+            }
+          }
+        }
+      }
+    }
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/users/me/2fa/recovery-codes': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Regenerate 2FA recovery codes
+     * @description Replaces every recovery code. Requires a current authenticator code. Returns the new codes, shown once.
+     */
+    post: {
+      parameters: {
+        query?: never
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      requestBody: components['requestBodies']['internal_infra_http_handler.MFACodeRequest']
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['internal_infra_http_handler.MFARecoveryCodesResponse']
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': {
+              [key: string]: string
+            }
+          }
+        }
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': {
+              [key: string]: string
+            }
+          }
+        }
+      }
+    }
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/users/me/2fa/setup': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Start 2FA setup
+     * @description Generates a new TOTP secret. Nothing changes until it is confirmed with POST /users/me/2fa/enable.
+     */
+    post: {
+      parameters: {
+        query?: never
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['internal_infra_http_handler.MFASetupResponse']
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': {
+              [key: string]: string
+            }
+          }
+        }
+        /** @description Conflict */
+        409: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': {
+              [key: string]: string
+            }
+          }
+        }
+      }
+    }
     delete?: never
     options?: never
     head?: never
@@ -26251,6 +28632,18 @@ export interface components {
       total?: number
       total_pages?: number
     }
+    'github_com_openctemio_api_internal_app.MFAStatus': {
+      enabled?: boolean
+      enabled_at?: string
+      recovery_codes_remaining?: number
+      /**
+       * @description RequiredByOrganization is true when any organization the user belongs
+       *     to requires 2FA.
+       */
+      required_by_organization?: boolean
+      /** @description Supported is false for federated accounts (2FA is the IdP's job). */
+      supported?: boolean
+    }
     'github_com_openctemio_api_internal_app.ProgramMetrics': {
       /**
        * @description MTTDInternetFacing — mean time to detect new internet-facing assets.
@@ -26436,6 +28829,7 @@ export interface components {
       | 'SERVICE_UNAVAILABLE'
       | 'VALIDATION_FAILED'
       | 'RATE_LIMIT_EXCEEDED'
+      | 'MFA_ENROLLMENT_REQUIRED'
     'github_com_openctemio_api_pkg_apierror.Error': {
       /** @description Machine-readable error code */
       code?: components['schemas']['github_com_openctemio_api_pkg_apierror.Code']
@@ -26743,6 +29137,53 @@ export interface components {
       total?: number
       total_pages?: number
     }
+    'github_com_openctemio_api_pkg_sensorproto_legacyv1.Command': {
+      acknowledged_at?: string
+      agent_id?: string
+      completed_at?: string
+      created_at?: string
+      error_message?: string
+      expires_at?: string
+      id?: string
+      payload?: number[]
+      priority?: string
+      result?: number[]
+      started_at?: string
+      status?: string
+      tenant_id?: string
+      type?: string
+    }
+    'github_com_openctemio_api_pkg_sensorproto_legacyv1.Heartbeat': {
+      agent_id?: string
+      status?: string
+      tenant_id?: string
+    }
+    'github_com_openctemio_api_pkg_sensorproto_legacyv1.ScanSession': {
+      agent_id?: string
+      asset_id?: string
+      asset_type?: string
+      asset_value?: string
+      base_commit_sha?: string
+      branch?: string
+      commit_sha?: string
+      completed_at?: string
+      created_at?: string
+      duration_ms?: number
+      error_message?: string
+      findings_by_severity?: {
+        [key: string]: number
+      }
+      findings_fixed?: number
+      findings_new?: number
+      findings_total?: number
+      id?: string
+      scanner_name?: string
+      scanner_type?: string
+      scanner_version?: string
+      started_at?: string
+      status?: string
+      tenant_id?: string
+    }
     'internal_infra_http_handler.APIKeyDataRequest': {
       key: string
     }
@@ -26797,82 +29238,121 @@ export interface components {
       success?: boolean
       user_agent?: string
     }
+    'internal_infra_http_handler.AdminChangePasswordRequest': {
+      current_password?: string
+      new_password?: string
+    }
+    'internal_infra_http_handler.AdminCreateOrgUserRequest': {
+      email: string
+      name?: string
+      /** @enum {string} */
+      role: 'admin' | 'member' | 'viewer'
+    }
+    'internal_infra_http_handler.AdminCreateOrganizationRequest': {
+      description?: string
+      name: string
+      owner_email: string
+      owner_name?: string
+      slug: string
+    }
+    'internal_infra_http_handler.AdminIdPCallbackRequest': {
+      code?: string
+      state?: string
+    }
+    'internal_infra_http_handler.AdminIdPCallbackResponse': {
+      admin?: components['schemas']['internal_infra_http_handler.ValidateResponse']
+      otpauth_uri?: string
+      secret?: string
+      status?: string
+    }
+    'internal_infra_http_handler.AdminIdPInfoResponse': {
+      display_name?: string
+      enabled?: boolean
+    }
+    'internal_infra_http_handler.AdminIdPStartResponse': {
+      authorization_url?: string
+    }
+    'internal_infra_http_handler.AdminLoginResponse': {
+      otpauth_uri?: string
+      secret?: string
+      status?: string
+    }
+    'internal_infra_http_handler.AdminMFARequest': {
+      code?: string
+    }
+    'internal_infra_http_handler.AdminOrgUserListResponse': {
+      data?: components['schemas']['internal_infra_http_handler.AdminOrgUserResponse'][]
+      total?: number
+    }
+    'internal_infra_http_handler.AdminOrgUserResponse': {
+      email?: string
+      joined_at?: string
+      name?: string
+      pending_setup?: boolean
+      role?: string
+      status?: string
+      user_id?: string
+    }
+    'internal_infra_http_handler.AdminOrganizationListResponse': {
+      data?: components['schemas']['internal_infra_http_handler.AdminOrganizationResponse'][]
+      page?: number
+      per_page?: number
+      total?: number
+      total_pages?: number
+    }
+    'internal_infra_http_handler.AdminOrganizationResponse': {
+      active_identity_providers?: number
+      active_members?: number
+      created_at?: string
+      description?: string
+      id?: string
+      name?: string
+      owner_emails?: string[]
+      saml_enabled?: boolean
+      slug?: string
+      sso_enforced?: boolean
+      verified_domains?: number
+    }
+    'internal_infra_http_handler.AdminProvisionRequest': {
+      /** @description BreakGlass makes a local emergency-access administrator (super_admin only). */
+      break_glass?: boolean
+      email?: string
+      name?: string
+      role?: string
+    }
+    'internal_infra_http_handler.AdminProvisionResponse': {
+      admin?: components['schemas']['internal_infra_http_handler.ValidateResponse']
+      temporary_password?: string
+    }
+    'internal_infra_http_handler.AdminResponse': {
+      break_glass_test_overdue?: boolean
+      break_glass_tested_at?: string
+      created_at?: string
+      email?: string
+      id?: string
+      idp_bound?: boolean
+      idp_bound_at?: string
+      is_active?: boolean
+      /** @description Break-glass (emergency access) and platform IdP state (RFC-022 rev. 4). */
+      is_break_glass?: boolean
+      last_used_at?: string
+      last_used_ip?: string
+      name?: string
+      password_change_required?: boolean
+      role?: string
+      updated_at?: string
+    }
+    'internal_infra_http_handler.AdminSSOEnforcementRequest': {
+      enforced: boolean
+    }
+    'internal_infra_http_handler.AdminSSOEnforcementResponse': {
+      enforced?: boolean
+    }
     'internal_infra_http_handler.AffectedVersionResponse': {
       ecosystem?: string
       fixed?: string
       introduced?: string
       package?: string
-    }
-    'internal_infra_http_handler.AgentConfigTemplatesResponse': {
-      cli?: string
-      docker?: string
-      env?: string
-      yaml?: string
-    }
-    'internal_infra_http_handler.AgentDisableRequest': {
-      reason?: string
-    }
-    'internal_infra_http_handler.AgentRegenerateAPIKeyResponse': {
-      api_key?: string
-    }
-    'internal_infra_http_handler.AgentResponse': {
-      api_key_prefix?: string
-      available_slots?: number
-      capabilities?: string[]
-      /** @description System metrics */
-      cpu_percent?: number
-      created_at?: string
-      current_jobs?: number
-      description?: string
-      error_count?: number
-      execution_mode?: string
-      /** @description Automatic: unknown, online, offline, error */
-      health?: string
-      hostname?: string
-      id?: string
-      ip_address?: string
-      labels?: {
-        [key: string]: unknown
-      }
-      /** @description Statistics */
-      last_seen_at?: string
-      /** @description 0.0 to 1.0 */
-      load_factor?: number
-      /** @description Load balancing */
-      max_concurrent_jobs?: number
-      memory_percent?: number
-      name?: string
-      region?: string
-      /** @description Admin-controlled: active, disabled, revoked */
-      status?: string
-      status_message?: string
-      tenant_id?: string
-      tools?: string[]
-      total_findings?: number
-      total_scans?: number
-      type?: string
-      updated_at?: string
-      version?: string
-    }
-    'internal_infra_http_handler.AgentRevokeRequest': {
-      reason?: string
-    }
-    'internal_infra_http_handler.AgentStatsResponse': {
-      active_jobs?: number
-      by_execution_mode?: {
-        [key: string]: number
-      }
-      by_health?: {
-        [key: string]: number
-      }
-      by_status?: {
-        [key: string]: number
-      }
-      by_type?: {
-        [key: string]: number
-      }
-      online_active?: number
-      total?: number
     }
     'internal_infra_http_handler.AssetBriefResponse': {
       id?: string
@@ -27286,12 +29766,20 @@ export interface components {
       registration_enabled?: boolean
     }
     'internal_infra_http_handler.AuthProvidersResponse': {
+      /**
+       * @description RegistrationEnabled reports whether anyone may self-register
+       *     (AUTH_ALLOW_REGISTRATION, default false). When false the UI hides
+       *     sign-up; an invited person can still register with their invitation.
+       */
+      registration_enabled?: boolean
       social?: components['schemas']['internal_infra_http_handler.SocialProviders']
       /**
        * @description SSOEnvEntraEnabled reports whether the platform-wide (env-based)
        *     Microsoft Entra ID SSO fallback is usable (SSO_ENTRA_* configured).
        */
       sso_env_entra_enabled?: boolean
+      /** @description TenantCreationMode is "self_service" or "admin_only" (TENANT_CREATION_MODE). */
+      tenant_creation_mode?: string
     }
     'internal_infra_http_handler.AuthorizeResponse': {
       authorization_url?: string
@@ -27547,7 +30035,6 @@ export interface components {
     }
     'internal_infra_http_handler.CommandResponse': {
       acknowledged_at?: string
-      agent_id?: string
       completed_at?: string
       created_at?: string
       error_message?: string
@@ -27556,6 +30043,7 @@ export interface components {
       payload?: number[]
       priority?: string
       result?: number[]
+      sensor_id?: string
       started_at?: string
       status?: string
       tenant_id?: string
@@ -27588,21 +30076,6 @@ export interface components {
       updated_at?: string
       version?: string
       vulnerability_count?: number
-    }
-    'internal_infra_http_handler.CreateAgentRequest': {
-      capabilities?: string[]
-      description?: string
-      /** @enum {string} */
-      execution_mode?: 'standalone' | 'daemon'
-      max_concurrent_jobs?: number
-      name: string
-      tools?: string[]
-      /** @enum {string} */
-      type: 'runner' | 'worker' | 'collector' | 'sensor'
-    }
-    'internal_infra_http_handler.CreateAgentResponse': {
-      agent?: components['schemas']['internal_infra_http_handler.AgentResponse']
-      api_key?: string
     }
     'internal_infra_http_handler.CreateAssetGroupRequest': {
       business_unit?: string
@@ -27654,12 +30127,12 @@ export interface components {
       type: string
     }
     'internal_infra_http_handler.CreateCommandRequest': {
-      agent_id?: string
       /** @description Seconds until expiration */
       expires_in?: number
       payload?: number[]
       /** @enum {string} */
       priority?: 'low' | 'normal' | 'high' | 'critical'
+      sensor_id?: string
       /** @enum {string} */
       type: 'scan' | 'collect' | 'health_check' | 'config_update' | 'cancel'
     }
@@ -27877,8 +30350,6 @@ export interface components {
       }
     }
     'internal_infra_http_handler.CreateScanRequest': {
-      /** @enum {string} */
-      agent_preference?: 'auto' | 'tenant' | 'platform'
       /** @description Single asset group (legacy) */
       asset_group_id?: string
       /** @description Multiple asset groups (NEW) */
@@ -27901,6 +30372,8 @@ export interface components {
       schedule_time?: string
       /** @enum {string} */
       schedule_type?: 'manual' | 'daily' | 'weekly' | 'monthly' | 'crontab'
+      /** @enum {string} */
+      sensor_preference?: 'auto' | 'tenant' | 'platform'
       tags?: string[]
       /** @description Direct targets */
       targets?: string[]
@@ -27947,6 +30420,21 @@ export interface components {
       tags?: string[]
       target_type: string
     }
+    'internal_infra_http_handler.CreateSensorRequest': {
+      capabilities?: string[]
+      description?: string
+      /** @enum {string} */
+      execution_mode?: 'standalone' | 'daemon'
+      max_concurrent_jobs?: number
+      name: string
+      tools?: string[]
+      /** @enum {string} */
+      type: 'runner' | 'worker' | 'collector' | 'sensor'
+    }
+    'internal_infra_http_handler.CreateSensorResponse': {
+      api_key?: string
+      sensor?: components['schemas']['internal_infra_http_handler.SensorResponse']
+    }
     'internal_infra_http_handler.CreateTemplateSourceRequest': {
       auto_sync_on_scan?: boolean
       cache_ttl_minutes?: number
@@ -27961,6 +30449,11 @@ export interface components {
       source_type: 'git' | 's3' | 'http'
       /** @enum {string} */
       template_type: 'nuclei' | 'semgrep' | 'gitleaks'
+    }
+    'internal_infra_http_handler.CreateTenantUserRequest': {
+      email: string
+      name?: string
+      role_ids: string[]
     }
     'internal_infra_http_handler.CreateToolRequest': {
       capabilities?: string[]
@@ -28694,7 +31187,7 @@ export interface components {
       collectors?: string[]
       cpu_percent?: number
       /**
-       * @description Disk/network throughput in MB/s. Optional — agents that omit them leave
+       * @description Disk/network throughput in MB/s. Optional — sensors that omit them leave
        *     the corresponding load-balancing terms at zero. Accepted here so the
        *     AGENT_LB_DISK_IO_WEIGHT / AGENT_LB_NETWORK_WEIGHT knobs have real inputs.
        */
@@ -28885,14 +31378,6 @@ export interface components {
       page_size?: number
       total_count?: number
     }
-    'internal_infra_http_handler.ListResponse-internal_infra_http_handler_AgentResponse': {
-      data?: components['schemas']['internal_infra_http_handler.AgentResponse'][]
-      links?: components['schemas']['internal_infra_http_handler.PaginationLinks']
-      page?: number
-      per_page?: number
-      total?: number
-      total_pages?: number
-    }
     'internal_infra_http_handler.ListResponse-internal_infra_http_handler_AssetGroupResponse': {
       data?: components['schemas']['internal_infra_http_handler.AssetGroupResponse'][]
       links?: components['schemas']['internal_infra_http_handler.PaginationLinks']
@@ -28997,6 +31482,14 @@ export interface components {
       total?: number
       total_pages?: number
     }
+    'internal_infra_http_handler.ListResponse-internal_infra_http_handler_SensorResponse': {
+      data?: components['schemas']['internal_infra_http_handler.SensorResponse'][]
+      links?: components['schemas']['internal_infra_http_handler.PaginationLinks']
+      page?: number
+      per_page?: number
+      total?: number
+      total_pages?: number
+    }
     'internal_infra_http_handler.ListResponse-internal_infra_http_handler_TenantToolConfigResponse': {
       data?: components['schemas']['internal_infra_http_handler.TenantToolConfigResponse'][]
       links?: components['schemas']['internal_infra_http_handler.PaginationLinks']
@@ -29057,6 +31550,17 @@ export interface components {
     }
     'internal_infra_http_handler.LoginResponse': {
       expires_in?: number
+      /**
+       * @description PlatformAdmin is true when the account is a platform administrator
+       *     (RFC-022). Such an account belongs to no organization; the client sends
+       *     it to the admin console rather than organization onboarding.
+       */
+      platform_admin?: boolean
+      /**
+       * @description RecoveryCodes is present only on the response that completes a forced
+       *     2FA enrollment (POST /auth/mfa/enroll/confirm). Shown once.
+       */
+      recovery_codes?: string[]
       /** @description Also set in httpOnly cookie */
       refresh_token?: string
       /**
@@ -29070,6 +31574,27 @@ export interface components {
       tenants?: components['schemas']['internal_infra_http_handler.TenantInfo'][]
       token_type?: string
       user?: components['schemas']['internal_infra_http_handler.UserInfo']
+    }
+    'internal_infra_http_handler.MFACodeRequest': {
+      code: string
+    }
+    'internal_infra_http_handler.MFADisableRequest': {
+      code: string
+      password: string
+    }
+    'internal_infra_http_handler.MFAEnrollmentConfirmRequest': {
+      code: string
+      mfa_token: string
+    }
+    'internal_infra_http_handler.MFAEnrollmentStartRequest': {
+      mfa_token: string
+    }
+    'internal_infra_http_handler.MFARecoveryCodesResponse': {
+      recovery_codes?: string[]
+    }
+    'internal_infra_http_handler.MFASetupResponse': {
+      otpauth_uri?: string
+      secret?: string
     }
     'internal_infra_http_handler.NotificationEventCategoryResponse': {
       /** @example finding */
@@ -29245,6 +31770,36 @@ export interface components {
       permissions?: string[]
       version?: number
     }
+    'internal_infra_http_handler.PlatformIdPRequest': {
+      client_id?: string
+      client_secret?: string
+      display_name?: string
+      enabled?: boolean
+      issuer?: string
+      redirect_uri?: string
+      require_idp?: boolean
+      scopes?: string[]
+      trusted_acr_values?: string[]
+      trusted_amr_values?: string[]
+    }
+    'internal_infra_http_handler.PlatformIdPResponse': {
+      authorization_endpoint?: string
+      client_id?: string
+      configured?: boolean
+      display_name?: string
+      enabled?: boolean
+      has_client_secret?: boolean
+      issuer?: string
+      jwks_uri?: string
+      redirect_uri?: string
+      require_idp?: boolean
+      scopes?: string[]
+      token_endpoint?: string
+      token_endpoint_auth_method?: string
+      trusted_acr_values?: string[]
+      trusted_amr_values?: string[]
+      updated_at?: string
+    }
     'internal_infra_http_handler.PortCountResponse': {
       count?: number
       port?: number
@@ -29263,6 +31818,19 @@ export interface components {
     }
     'internal_infra_http_handler.ProvidersResponse': {
       providers?: components['schemas']['github_com_openctemio_api_internal_app.ProviderInfo'][]
+    }
+    'internal_infra_http_handler.ProvisionedUserInfo': {
+      email?: string
+      id?: string
+      name?: string
+    }
+    'internal_infra_http_handler.ProvisionedUserResponse': {
+      email_sent?: boolean
+      membership_id?: string
+      role?: string
+      setup_expires_at?: string
+      setup_token?: string
+      user?: components['schemas']['internal_infra_http_handler.ProvisionedUserInfo']
     }
     'internal_infra_http_handler.QualityGateBreachResponse': {
       actual?: number
@@ -29517,7 +32085,6 @@ export interface components {
       private_key: string
     }
     'internal_infra_http_handler.ScanDetailResponse': {
-      agent_preference?: string
       /** @description Primary asset group (legacy) */
       asset_group_id?: string
       /** @description Multiple asset groups */
@@ -29548,6 +32115,7 @@ export interface components {
       schedule_time?: string
       schedule_timezone?: string
       schedule_type?: string
+      sensor_preference?: string
       status?: string
       successful_runs?: number
       tags?: string[]
@@ -29614,7 +32182,6 @@ export interface components {
       updated_at?: string
     }
     'internal_infra_http_handler.ScanSessionResponse': {
-      agent_id?: string
       asset_id?: string
       asset_type?: string
       asset_value?: string
@@ -29635,6 +32202,7 @@ export interface components {
       scanner_name?: string
       scanner_type?: string
       scanner_version?: string
+      sensor_id?: string
       started_at?: string
       status?: string
       tenant_id?: string
@@ -29719,6 +32287,77 @@ export interface components {
       target_type?: string
       tenant_id?: string
       updated_at?: string
+    }
+    'internal_infra_http_handler.SensorConfigTemplatesResponse': {
+      cli?: string
+      docker?: string
+      env?: string
+      yaml?: string
+    }
+    'internal_infra_http_handler.SensorDisableRequest': {
+      reason?: string
+    }
+    'internal_infra_http_handler.SensorRegenerateAPIKeyResponse': {
+      api_key?: string
+    }
+    'internal_infra_http_handler.SensorResponse': {
+      api_key_prefix?: string
+      available_slots?: number
+      capabilities?: string[]
+      /** @description System metrics */
+      cpu_percent?: number
+      created_at?: string
+      current_jobs?: number
+      description?: string
+      error_count?: number
+      execution_mode?: string
+      /** @description Automatic: unknown, online, offline, error */
+      health?: string
+      hostname?: string
+      id?: string
+      ip_address?: string
+      labels?: {
+        [key: string]: unknown
+      }
+      /** @description Statistics */
+      last_seen_at?: string
+      /** @description 0.0 to 1.0 */
+      load_factor?: number
+      /** @description Load balancing */
+      max_concurrent_jobs?: number
+      memory_percent?: number
+      name?: string
+      region?: string
+      /** @description Admin-controlled: active, disabled, revoked */
+      status?: string
+      status_message?: string
+      tenant_id?: string
+      tools?: string[]
+      total_findings?: number
+      total_scans?: number
+      type?: string
+      updated_at?: string
+      version?: string
+    }
+    'internal_infra_http_handler.SensorRevokeRequest': {
+      reason?: string
+    }
+    'internal_infra_http_handler.SensorStatsResponse': {
+      active_jobs?: number
+      by_execution_mode?: {
+        [key: string]: number
+      }
+      by_health?: {
+        [key: string]: number
+      }
+      by_status?: {
+        [key: string]: number
+      }
+      by_type?: {
+        [key: string]: number
+      }
+      online_active?: number
+      total?: number
     }
     'internal_infra_http_handler.SessionsResponse': {
       sessions?: components['schemas']['github_com_openctemio_api_internal_app.SessionInfo'][]
@@ -30024,7 +32663,7 @@ export interface components {
       effective_config?: {
         [key: string]: unknown
       }
-      /** @description True if at least one agent supports this tool */
+      /** @description True if at least one sensor supports this tool */
       is_available?: boolean
       is_enabled?: boolean
       tenant_config?: components['schemas']['internal_infra_http_handler.TenantToolConfigResponse']
@@ -30041,18 +32680,6 @@ export interface components {
     }
     'internal_infra_http_handler.UnreadCountResponse': {
       count?: number
-    }
-    'internal_infra_http_handler.UpdateAgentRequest': {
-      capabilities?: string[]
-      description?: string
-      max_concurrent_jobs?: number
-      name?: string
-      /**
-       * @description Admin-controlled
-       * @enum {string}
-       */
-      status?: 'active' | 'disabled' | 'revoked'
-      tools?: string[]
     }
     'internal_infra_http_handler.UpdateAssetGroupRequest': {
       business_unit?: string
@@ -30269,8 +32896,6 @@ export interface components {
       }
     }
     'internal_infra_http_handler.UpdateScanRequest': {
-      /** @enum {string} */
-      agent_preference?: 'auto' | 'tenant' | 'platform'
       description?: string
       max_retries?: number
       name?: string
@@ -30287,6 +32912,8 @@ export interface components {
       schedule_time?: string
       /** @enum {string} */
       schedule_type?: 'manual' | 'daily' | 'weekly' | 'monthly' | 'crontab'
+      /** @enum {string} */
+      sensor_preference?: 'auto' | 'tenant' | 'platform'
       tags?: string[]
       targets_per_job?: number
       timeout_seconds?: number
@@ -30334,6 +32961,18 @@ export interface components {
       description?: string
       priority?: number
       tags?: string[]
+    }
+    'internal_infra_http_handler.UpdateSensorRequest': {
+      capabilities?: string[]
+      description?: string
+      max_concurrent_jobs?: number
+      name?: string
+      /**
+       * @description Admin-controlled
+       * @enum {string}
+       */
+      status?: 'active' | 'disabled' | 'revoked'
+      tools?: string[]
     }
     'internal_infra_http_handler.UpdateSeverityRequest': {
       severity: string
@@ -30393,16 +33032,41 @@ export interface components {
       name?: string
     }
     'internal_infra_http_handler.UserResponse': {
+      /**
+       * @description AuthProvider is how the account signs in ("local" = password; others
+       *     are identity providers). The account page uses it to decide whether to
+       *     offer password change and 2FA.
+       */
+      auth_provider?: string
       avatar_url?: string
       created_at?: string
       email?: string
+      email_verified?: boolean
       id?: string
+      /**
+       * @description IsPlatformAdmin marks an account linked to an active platform
+       *     administrator (RFC-022). The UI uses it to offer the admin console. Set
+       *     on the /users/me response only, not in every toUserResponse.
+       */
+      is_platform_admin?: boolean
       last_login_at?: string
       name?: string
       phone?: string
       preferences?: components['schemas']['internal_infra_http_handler.PreferencesDTO']
       status?: string
       updated_at?: string
+    }
+    'internal_infra_http_handler.ValidateResponse': {
+      /** @description AuthMethod is how this console session was opened: password or idp. */
+      auth_method?: string
+      email?: string
+      id?: string
+      /** @description IsBreakGlass marks an emergency-access administrator. */
+      is_break_glass?: boolean
+      name?: string
+      /** @description PasswordChangeRequired: the session may only change the temporary password. */
+      password_change_required?: boolean
+      role?: string
     }
     'internal_infra_http_handler.ValidateScannerTemplateRequest': {
       /** @description Base64 encoded */
@@ -30425,6 +33089,11 @@ export interface components {
     }
     'internal_infra_http_handler.VerifyEmailRequest': {
       token: string
+    }
+    'internal_infra_http_handler.VerifyMFARequest': {
+      code?: string
+      mfa_token: string
+      recovery_code?: string
     }
     'internal_infra_http_handler.VulnerabilityResponse': {
       affected_versions?: components['schemas']['internal_infra_http_handler.AffectedVersionResponse'][]
@@ -30480,6 +33149,12 @@ export interface components {
     'internal_infra_http_handler.BulkToolIDsRequest': {
       content: {
         'application/json': components['schemas']['internal_infra_http_handler.BulkToolIDsRequest']
+      }
+    }
+    /** @description Authenticator code */
+    'internal_infra_http_handler.MFACodeRequest': {
+      content: {
+        'application/json': components['schemas']['internal_infra_http_handler.MFACodeRequest']
       }
     }
   }
