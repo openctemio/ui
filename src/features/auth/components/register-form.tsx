@@ -11,7 +11,6 @@
 import { useMemo, useState, useTransition } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Loader2, UserPlus } from 'lucide-react'
 import { toast } from 'sonner'
@@ -336,19 +335,6 @@ export function RegisterForm({
             </FormItem>
           )}
         />
-
-        {/* Terms and Privacy Notice */}
-        <p className="text-muted-foreground text-xs">
-          By creating an account, you agree to our{' '}
-          <Link href="/terms" className="text-primary hover:underline">
-            Terms of Service
-          </Link>{' '}
-          and{' '}
-          <Link href="/privacy" className="text-primary hover:underline">
-            Privacy Policy
-          </Link>
-          .
-        </p>
 
         {/* Submit Button */}
         <Button className="mt-2" disabled={isLoading} type="submit">
