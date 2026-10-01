@@ -13,11 +13,11 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-  DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { SignOutDialog } from '@/components/sign-out-dialog'
 import { LanguageSwitcher } from '@/components/language-switcher'
+import { Can, Permission } from '@/lib/permissions'
 
 export function ProfileDropdown() {
   const [open, setOpen] = useDialogState()
@@ -62,21 +62,18 @@ export function ProfileDropdown() {
               <Link href="/account" className="flex items-center gap-2">
                 <User className="h-4 w-4" />
                 Profile
-                <DropdownMenuShortcut>⇧⌘P</DropdownMenuShortcut>
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <Link href="/account/security" className="flex items-center gap-2">
                 <Shield className="h-4 w-4" />
                 Security
-                <DropdownMenuShortcut>⌘K</DropdownMenuShortcut>
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <Link href="/account/preferences" className="flex items-center gap-2">
                 <Settings className="h-4 w-4" />
                 Preferences
-                <DropdownMenuShortcut>⌘,</DropdownMenuShortcut>
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
@@ -89,7 +86,6 @@ export function ProfileDropdown() {
               <Link href="/settings/notifications" className="flex items-center gap-2">
                 <Bell className="h-4 w-4" />
                 Notifications
-                <DropdownMenuShortcut>⌘N</DropdownMenuShortcut>
               </Link>
             </DropdownMenuItem>
           </DropdownMenuGroup>
@@ -101,32 +97,37 @@ export function ProfileDropdown() {
 
           <DropdownMenuSeparator />
 
-          {/* Organization Section */}
-          <DropdownMenuLabel className="text-muted-foreground text-xs font-medium">
-            Organization
-          </DropdownMenuLabel>
-          <DropdownMenuGroup>
-            <DropdownMenuItem asChild>
-              <Link href="/settings/tenant" className="flex items-center gap-2">
-                <Building2 className="h-4 w-4" />
-                General Settings
-                <DropdownMenuShortcut>⌘T</DropdownMenuShortcut>
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link href="/settings/users" className="flex items-center gap-2">
-                <Users className="h-4 w-4" />
-                Members
-              </Link>
-            </DropdownMenuItem>
-          </DropdownMenuGroup>
-
-          <DropdownMenuSeparator />
+          {/* Organization section: only the links the user can open, gated on
+              the same permissions as the route guard, so the menu never leads
+              to Access Denied. Members without either see no section. */}
+          <Can permission={[Permission.TeamUpdate, Permission.MembersRead]}>
+            <DropdownMenuLabel className="text-muted-foreground text-xs font-medium">
+              Organization
+            </DropdownMenuLabel>
+            <DropdownMenuGroup>
+              <Can permission={Permission.TeamUpdate}>
+                <DropdownMenuItem asChild>
+                  <Link href="/settings/tenant" className="flex items-center gap-2">
+                    <Building2 className="h-4 w-4" />
+                    General settings
+                  </Link>
+                </DropdownMenuItem>
+              </Can>
+              <Can permission={Permission.MembersRead}>
+                <DropdownMenuItem asChild>
+                  <Link href="/settings/users" className="flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    Members
+                  </Link>
+                </DropdownMenuItem>
+              </Can>
+            </DropdownMenuGroup>
+            <DropdownMenuSeparator />
+          </Can>
 
           <DropdownMenuItem variant="destructive" onClick={() => setOpen(true)}>
             <LogOut className="me-2 h-4 w-4" />
             Sign out
-            <DropdownMenuShortcut className="text-current">⇧⌘Q</DropdownMenuShortcut>
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

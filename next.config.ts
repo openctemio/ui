@@ -2,7 +2,7 @@ import { createRequire } from 'node:module'
 
 import type { NextConfig } from 'next'
 import { validateEnv } from './src/lib/env'
-import { LEGACY_SENSOR_ROUTE_REDIRECTS } from './src/config/legacy-sensor-routes'
+import { LEGACY_ROUTE_REDIRECTS } from './src/config/legacy-routes'
 
 // Optional bundle analyzer - only used when ANALYZE=true
 let withBundleAnalyzer = (config: NextConfig) => config
@@ -41,12 +41,12 @@ const nextConfig: NextConfig = {
   output: 'standalone',
 
   /**
-   * Renamed routes. Bookmarks to /agents keep working after the sensor
-   * rename: 308 to /sensors, path and query kept.
-   * @see src/config/legacy-sensor-routes.ts
+   * Renamed routes. Bookmarks keep working: /agents 308s to /sensors, and moved
+   * settings pages 308 to their new home, path and query kept.
+   * @see src/config/legacy-routes.ts
    */
   async redirects() {
-    return LEGACY_SENSOR_ROUTE_REDIRECTS
+    return LEGACY_ROUTE_REDIRECTS
   },
 
   /**

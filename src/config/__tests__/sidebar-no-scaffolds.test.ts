@@ -13,11 +13,16 @@
  * fed by unrelated numbers is worse than an empty page — an empty page is honest,
  * a wrong one gets believed.
  *
- * Two rules, both checked against the file each sidebar entry points to:
+ * Rules, checked against the file each sidebar entry points to:
  *
  *   1. No leaf may point at a page whose ONLY data source is `useDashboardStats`.
  *   2. A leaf whose page renders `ComingSoonPage` must carry a badge (ui#339 —
  *      the badge is what stops an unbuilt entry from looking shipped).
+ *   3. The reverse: a "Soon" badge must point at a `ComingSoonPage`. SIEM kept
+ *      its badge for months after Splunk HEC shipped because only rule 2
+ *      existed. The Integrations overview cards follow the same two rules.
+ *   4. Every `ComingSoonPage` in src/app is linked from the nav or a card with a
+ *      "Soon" badge, so a placeholder can be neither unlabelled nor orphaned.
  *
  * Rule 1 deliberately keys on the `useDashboardStats` import rather than on
  * "has a domain-scoped hook". The looser form is unreliable here: most real pages
@@ -31,6 +36,7 @@ import { describe, it, expect } from 'vitest'
 import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { sidebarData } from '../sidebar-data'
+import { INTEGRATION_CATEGORIES } from '@/features/integrations/config/integration-categories'
 import type { NavCollapsible, NavItem } from '@/components/types'
 
 const APP_DIR = join(process.cwd(), 'src', 'app')
@@ -139,6 +145,14 @@ describe('sidebar entries do not lead to scaffolds', () => {
 
       const source = readFileSync(file, 'utf8')
 
+      if (leaf.badge === 'Soon') {
+        expect(
+          source.includes('ComingSoonPage'),
+          `${leaf.url} is badged "Soon" but its page is not a ComingSoonPage, so the ` +
+            `nav says a shipped feature is unbuilt. Drop the badge.`
+        ).toBe(true)
+      }
+
       if (source.includes('ComingSoonPage')) {
         expect(
           leaf.badge,
@@ -160,4 +174,57 @@ describe('sidebar entries do not lead to scaffolds', () => {
       ).not.toEqual([])
     })
   }
+})
+
+/** Every page file under src/app, with the URL it serves (route groups dropped). */
+function allPages(): { url: string; file: string }[] {
+  const out: { url: string; file: string }[] = []
+  function walk(dir: string, segments: string[]) {
+    for (const entry of readdirSync(dir)) {
+      const full = join(dir, entry)
+      if (statSync(full).isDirectory()) {
+        const grouped = entry.startsWith('(') && entry.endsWith(')')
+        walk(full, grouped ? segments : [...segments, entry])
+      } else if (entry === 'page.tsx') {
+        out.push({ url: '/' + segments.join('/'), file: full })
+      }
+    }
+  }
+  walk(APP_DIR, [])
+  return out
+}
+
+describe('"Soon" badges and placeholder pages match both ways', () => {
+  const isPlaceholder = (url: string) => {
+    const file = findPageFile(url)
+    return !!file && readFileSync(file, 'utf8').includes('ComingSoonPage')
+  }
+
+  for (const card of INTEGRATION_CATEGORIES) {
+    it(`integrations card ${card.title} (${card.href})`, () => {
+      expect(
+        card.badge === 'Soon',
+        `${card.href}: the card badge ("${card.badge ?? 'none'}") does not match the page ` +
+          `(${isPlaceholder(card.href) ? 'a ComingSoonPage' : 'a shipped page'}).`
+      ).toBe(isPlaceholder(card.href))
+    })
+  }
+
+  it('every ComingSoonPage is linked somewhere with a "Soon" badge', () => {
+    const badged = new Set([
+      ...collectLeaves()
+        .filter((l) => l.badge === 'Soon')
+        .map((l) => l.url),
+      ...INTEGRATION_CATEGORIES.filter((c) => c.badge === 'Soon').map((c) => c.href),
+    ])
+    const placeholders = allPages()
+      .filter((p) => readFileSync(p.file, 'utf8').includes('ComingSoonPage'))
+      .map((p) => p.url)
+    expect(placeholders.length).toBeGreaterThan(0)
+    expect(
+      placeholders.filter((url) => !badged.has(url)),
+      'ComingSoonPage routes with no "Soon"-badged link. Link them with a badge, or ' +
+        'delete the placeholder (an orphan placeholder is dead code).'
+    ).toEqual([])
+  })
 })

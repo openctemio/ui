@@ -13,10 +13,19 @@
  * Kept until the API retires its own /api/v1/agents redirect (sunset
  * 2027-04-01); dropping it earlier breaks bookmarks for no gain.
  */
+/** A query condition, as in Next.js `has` / `missing` (type 'query' only). */
+export interface LegacyRouteQueryCondition {
+  type: 'query'
+  key: string
+  value?: string
+}
+
 export interface LegacyRouteRedirect {
   source: string
   destination: string
   permanent: true
+  has?: LegacyRouteQueryCondition[]
+  missing?: LegacyRouteQueryCondition[]
 }
 
 export const LEGACY_SENSOR_ROUTE_REDIRECTS: LegacyRouteRedirect[] = [
