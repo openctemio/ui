@@ -12,6 +12,7 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
   useSidebar,
+  useSidebarActions,
 } from '@/components/ui/sidebar'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -132,9 +133,9 @@ function AnimatedCollapse({
       id={id}
       inert={!open}
       className={cn(
-        // Linear 200ms: the same curve as the sidebar's own width animation, so a
-        // rail collapse reads as one motion rather than two competing ones.
-        'grid transition-[grid-template-rows,opacity] duration-200 ease-linear motion-reduce:transition-none',
+        // The same duration and curve as the sidebar's own width animation
+        // (ease-sidebar), so a rail collapse reads as one motion rather than two.
+        'grid transition-[grid-template-rows,opacity] duration-250 ease-sidebar motion-reduce:transition-none',
         open ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
       )}
     >
@@ -322,7 +323,7 @@ const SidebarMenuLink = memo(function SidebarMenuLink({
   dynamicBadges: DynamicBadges
 }) {
   const pathname = usePathname()
-  const { setOpenMobile } = useSidebar()
+  const { setOpenMobile } = useSidebarActions()
   const badge = getBadgeValue(dynamicBadges, item.url as string, item.badge)
   const releaseStatusBadge = getReleaseStatusBadge(item.releaseStatus)
   const isComingSoon = item.releaseStatus === 'coming_soon'
@@ -494,7 +495,7 @@ const NavSubLeaf = memo(function NavSubLeaf({
   active?: boolean
 }) {
   const pathname = usePathname()
-  const { setOpenMobile } = useSidebar()
+  const { setOpenMobile } = useSidebarActions()
   const badge = getBadgeValue(dynamicBadges, item.url as string, item.badge)
   const releaseStatusBadge = getReleaseStatusBadge(item.releaseStatus)
   const isComingSoon = item.releaseStatus === 'coming_soon'

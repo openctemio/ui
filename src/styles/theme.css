@@ -69,6 +69,11 @@
 }
 
 @theme inline {
+  /* Sidebar open/collapse motion (class: ease-sidebar). One curve for the
+     sidebar, its gap, the nav rows and the section disclosures so they move as
+     one. Decelerating: quick start, soft landing, instead of a constant-speed
+     linear slide. */
+  --ease-sidebar: cubic-bezier(0.32, 0.72, 0, 1);
   --font-inter: 'Inter', 'sans-serif';
   --font-manrope: 'Manrope', 'sans-serif';
 
