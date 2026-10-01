@@ -19,6 +19,7 @@ import { sidebarData } from '@/config/sidebar-data'
 import { useFilteredSidebarData } from '@/lib/permissions'
 import { useSettingsNav } from '@/hooks/use-settings-nav'
 import { useTranslation } from '@/context/i18n-provider'
+import { commandFilter } from '@/lib/command-filter'
 import { ScrollArea } from './ui/scroll-area'
 
 export function CommandMenu() {
@@ -42,7 +43,7 @@ export function CommandMenu() {
   )
 
   return (
-    <CommandDialog modal open={open} onOpenChange={setOpen}>
+    <CommandDialog modal open={open} onOpenChange={setOpen} filter={commandFilter}>
       <CommandInput placeholder="Type a command or search..." />
       <CommandList>
         <ScrollArea type="hover" className="h-72 pe-1">
@@ -88,8 +89,11 @@ export function CommandMenu() {
               group.items.map((item) => (
                 <CommandItem
                   key={`settings-${item.id}`}
-                  value={`settings ${group.label} ${item.label} ${item.url}`}
-                  keywords={[item.title, item.desc, ...(item.keywords ?? [])]}
+                  // The label alone, plus the group and search keywords: cmdk
+                  // matches fuzzily, so a url or a description in the value
+                  // makes nearly every item match every query.
+                  value={`${item.label} (${group.label})`}
+                  keywords={[item.title, group.title, ...(item.keywords ?? [])]}
                   onSelect={() => {
                     runCommand(() => router.push(item.url))
                   }}
