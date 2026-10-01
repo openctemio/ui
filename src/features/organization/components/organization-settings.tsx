@@ -607,8 +607,8 @@ export function OrganizationSettings({ view }: { view: OrganizationSettingsView 
           <div className="mt-5 space-y-5">
             <Card>
               <CardHeader>
-                <CardTitle>Authentication</CardTitle>
-                <CardDescription>Configure authentication and access settings</CardDescription>
+                <CardTitle>Sign-in</CardTitle>
+                <CardDescription>Two-factor, data scope, session length and e-mail verification</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="flex items-center justify-between">
