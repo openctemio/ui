@@ -13,7 +13,12 @@ import {
   SidebarRail,
 } from '@/components/ui/sidebar'
 import { Separator } from '@/components/ui/separator'
-import { SidebarBrand } from '@/components/layout/sidebar-brand'
+import {
+  SidebarBrand,
+  SIDEBAR_CHIP_CLASS,
+  SIDEBAR_CONTEXT_ROW_CLASS,
+} from '@/components/layout/sidebar-brand'
+import { cn } from '@/lib/utils'
 import { GroupedNav, type GroupedNavSection } from '@/components/layout/grouped-nav'
 import { NAV_COLUMN_CLASS } from '@/components/layout/nav-group'
 import { adminNav } from '../config/admin-nav'
@@ -62,11 +67,10 @@ export function AdminConsoleSidebar({ admin, onSignOut }: AdminConsoleSidebarPro
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
-              size="lg"
-              className="pointer-events-none ps-0"
+              className={cn(SIDEBAR_CONTEXT_ROW_CLASS, 'pointer-events-none h-10')}
               tooltip="Platform admin"
             >
-              <div className="flex aspect-square size-8 shrink-0 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground">
+              <div className={SIDEBAR_CHIP_CLASS}>
                 <ShieldCheck className="size-4" />
               </div>
               <div className="grid flex-1 text-start text-sm leading-tight">
@@ -78,7 +82,7 @@ export function AdminConsoleSidebar({ admin, onSignOut }: AdminConsoleSidebarPro
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
-        <Separator orientation="horizontal" />
+        <Separator orientation="horizontal" className="mt-1" />
       </SidebarHeader>
 
       <SidebarContent>
