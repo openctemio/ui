@@ -5287,6 +5287,78 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/assets/{id}/identifiers': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * List asset identifiers
+     * @description Identifiers the asset was seen with (host ID, cloud ID, BIOS UUID, serial, MAC, SCM repository ID, FQDN, hostname, IP), strongest first. Ingest matches incoming assets on these.
+     */
+    get: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          /** @description Asset ID */
+          id: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': {
+              data?: components['schemas']['internal_infra_http_handler.AssetIdentifierResponse'][]
+              total?: number
+            }
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Not Found */
+        404: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Internal Server Error */
+        500: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+      }
+    }
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/assets/{id}/repository': {
     parameters: {
       query?: never
@@ -28272,6 +28344,12 @@ export interface components {
       discovered_at?: string
       /** @description Unique identifier for this asset within the report */
       id?: string
+      /**
+       * @description Stable identifiers of the asset. A platform matches an incoming asset
+       *     to an existing one on these before it falls back to the name or an IP
+       *     address, so a renamed host or repository keeps its history.
+       */
+      identifiers?: components['schemas']['ctis.AssetIdentifiers']
       /** @description CTEM: Is the asset directly accessible from the internet */
       is_internet_accessible?: boolean
       /** @description Human-readable name */
@@ -28307,6 +28385,30 @@ export interface components {
       pii_exposed?: boolean
       /** @description Regulatory owner email/username */
       regulatory_owner?: string
+    }
+    'ctis.AssetIdentifiers': {
+      /** @description SMBIOS system UUID. */
+      bios_uuid?: string
+      /** @description Cloud instance ID (i-0abc...), VM ID or resource ARN. */
+      cloud_resource_id?: string
+      /**
+       * @description MAC addresses of the host's network interfaces. Receivers ignore
+       *     locally administered, multicast and known shared addresses.
+       */
+      mac_addresses?: string[]
+      /**
+       * @description Host ID read by a sensor on the host: /etc/machine-id on Linux,
+       *     MachineGuid on Windows, IOPlatformUUID on macOS.
+       */
+      machine_id?: string
+      /**
+       * @description Repository ID assigned by the source-code host (the numeric GitHub
+       *     repository ID, the GitLab project ID). It survives renames and
+       *     transfers.
+       */
+      scm_repo_id?: string
+      /** @description Hardware serial number. */
+      serial_number?: string
     }
     'ctis.AssetTechnical': {
       /** @description For certificate assets */
@@ -30478,6 +30580,14 @@ export interface components {
       total?: number
       total_assets?: number
       total_findings?: number
+    }
+    'internal_infra_http_handler.AssetIdentifierResponse': {
+      first_seen?: string
+      kind?: string
+      last_seen?: string
+      source?: string
+      strong?: boolean
+      value?: string
     }
     'internal_infra_http_handler.AssetResponse': {
       category?: string

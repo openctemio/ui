@@ -68,6 +68,13 @@ definitions:
       id:
         description: Unique identifier for this asset within the report
         type: string
+      identifiers:
+        allOf:
+        - $ref: '#/definitions/ctis.AssetIdentifiers'
+        description: |-
+          Stable identifiers of the asset. A platform matches an incoming asset
+          to an existing one on these before it falls back to the name or an IP
+          address, so a renamed host or repository keeps its history.
       is_internet_accessible:
         description: 'CTEM: Is the asset directly accessible from the internet'
         type: boolean
@@ -130,6 +137,36 @@ definitions:
         type: boolean
       regulatory_owner:
         description: Regulatory owner email/username
+        type: string
+    type: object
+  ctis.AssetIdentifiers:
+    properties:
+      bios_uuid:
+        description: SMBIOS system UUID.
+        type: string
+      cloud_resource_id:
+        description: Cloud instance ID (i-0abc...), VM ID or resource ARN.
+        type: string
+      mac_addresses:
+        description: |-
+          MAC addresses of the host's network interfaces. Receivers ignore
+          locally administered, multicast and known shared addresses.
+        items:
+          type: string
+        type: array
+      machine_id:
+        description: |-
+          Host ID read by a sensor on the host: /etc/machine-id on Linux,
+          MachineGuid on Windows, IOPlatformUUID on macOS.
+        type: string
+      scm_repo_id:
+        description: |-
+          Repository ID assigned by the source-code host (the numeric GitHub
+          repository ID, the GitLab project ID). It survives renames and
+          transfers.
+        type: string
+      serial_number:
+        description: Hardware serial number.
         type: string
     type: object
   ctis.AssetTechnical:
@@ -4006,6 +4043,21 @@ definitions:
         type: integer
       total_findings:
         type: integer
+    type: object
+  internal_infra_http_handler.AssetIdentifierResponse:
+    properties:
+      first_seen:
+        type: string
+      kind:
+        type: string
+      last_seen:
+        type: string
+      source:
+        type: string
+      strong:
+        type: boolean
+      value:
+        type: string
     type: object
   internal_infra_http_handler.AssetResponse:
     properties:
@@ -14990,6 +15042,48 @@ paths:
       security:
       - BearerAuth: []
       summary: Get asset with repository
+      tags:
+      - Assets
+  /assets/{id}/identifiers:
+    get:
+      description: Identifiers the asset was seen with (host ID, cloud ID, BIOS UUID,
+        serial, MAC, SCM repository ID, FQDN, hostname, IP), strongest first. Ingest
+        matches incoming assets on these.
+      parameters:
+      - description: Asset ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            properties:
+              data:
+                items:
+                  $ref: '#/definitions/internal_infra_http_handler.AssetIdentifierResponse'
+                type: array
+              total:
+                type: integer
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: List asset identifiers
       tags:
       - Assets
   /assets/{id}/repository:
