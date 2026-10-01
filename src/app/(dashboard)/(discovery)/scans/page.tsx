@@ -5,6 +5,7 @@ import { useState, useMemo, useCallback, useEffect } from 'react'
 import Link from 'next/link'
 import type { ColumnDef } from '@tanstack/react-table'
 import { Main } from '@/components/layout'
+import { triggerErrorHint } from '@/features/scan-zones'
 import {
   PageHeader,
   StatusBadge,
@@ -649,7 +650,9 @@ function ConfigurationsTab() {
       await invalidateScanConfigsCache()
     } catch (error) {
       console.error(`Failed to ${action} scan:`, error)
-      toast.error(getErrorMessage(error, `Failed to ${action} scan "${config.name}"`))
+      toast.error(getErrorMessage(error, `Failed to ${action} scan "${config.name}"`), {
+        description: action === 'trigger' ? triggerErrorHint(error) : undefined,
+      })
     }
   }, [])
 
@@ -1146,7 +1149,9 @@ function ConfigDetailSheet({ config, onClose: _onClose, onDelete }: ConfigDetail
       await invalidateScanConfigsCache()
     } catch (error) {
       console.error('Failed to trigger scan:', error)
-      toast.error(getErrorMessage(error, `Failed to trigger scan "${config.name}"`))
+      toast.error(getErrorMessage(error, `Failed to trigger scan "${config.name}"`), {
+        description: triggerErrorHint(error),
+      })
     } finally {
       setIsTriggering(false)
     }

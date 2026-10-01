@@ -347,6 +347,9 @@ export interface NewScanFormData {
   // Step 4: Schedule
   schedule: ScanSchedule
   notifications: ScanNotifications
+
+  /** Scan zone the scan is restricted to; null/undefined = Automatic (RFC-023). */
+  scanZoneId?: string | null
 }
 
 export const DEFAULT_NEW_SCAN: NewScanFormData = {
@@ -370,6 +373,7 @@ export const DEFAULT_NEW_SCAN: NewScanFormData = {
     time: '02:00',
   },
   notifications: DEFAULT_NOTIFICATIONS,
+  scanZoneId: null,
 }
 
 // ============================================
