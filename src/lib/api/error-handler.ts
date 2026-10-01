@@ -7,6 +7,7 @@
 import { toast } from 'sonner'
 import type { ApiError } from './types'
 import { devLog } from '@/lib/logger'
+import { IP_NOT_ALLOWED_CODE, IP_NOT_ALLOWED_MESSAGE, notifyIpNotAllowed } from './ip-not-allowed'
 
 // ============================================
 // ERROR CLASSES
@@ -187,7 +188,10 @@ export function handleApiError(
   // disabled module should already be hidden and their fetches skipped, but if
   // one slips through we swallow the toast (still logged above). Real RBAC
   // denials (FORBIDDEN) keep their toast.
-  if (showToast && apiError.code !== 'MODULE_NOT_ENABLED') {
+  // IP allowlist blocks share one de-duplicated toast with the API client.
+  if (showToast && apiError.code === IP_NOT_ALLOWED_CODE) {
+    notifyIpNotAllowed()
+  } else if (showToast && apiError.code !== 'MODULE_NOT_ENABLED') {
     // Different toast types based on error
     if (apiError.isAuthError()) {
       toast.error('Authentication Error', {
@@ -244,6 +248,7 @@ function getUserFriendlyMessage(
     TOKEN_EXPIRED: 'Your session has expired. Please log in again',
     INVALID_TOKEN: 'Invalid authentication token',
     FORBIDDEN: 'You do not have permission to access this resource',
+    [IP_NOT_ALLOWED_CODE]: IP_NOT_ALLOWED_MESSAGE,
 
     // Validation errors
     VALIDATION_ERROR: 'Please check your input and try again',
