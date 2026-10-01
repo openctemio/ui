@@ -39,7 +39,7 @@
     },
     {
       "id": "legacy-route-redirects",
-      "files": "^(next\\.config\\.ts|src/config/legacy-sensor-routes\\.ts|src/config/__tests__/legacy-sensor-routes\\.test\\.ts)$",
+      "files": "^(next\\.config\\.ts|src/config/legacy-sensor-routes\\.ts|src/config/__tests__/legacy-(sensor-)?routes\\.test\\.ts)$",
       "pattern": "/agents|'agents'",
       "reason": "Bookmarked /agents URLs redirect permanently to /sensors."
     },

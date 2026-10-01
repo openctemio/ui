@@ -552,9 +552,13 @@ export const routePermissions: Record<string, RoutePermissionConfig> = {
   '/settings/modules': {
     permission: Permission.TeamUpdate,
   },
-  '/settings/notifications': {
-    permission: Permission.TeamUpdate,
-  },
+  // /settings/notifications is deliberately absent: it is the signed-in user's
+  // OWN notification preferences (GET/PUT /api/v1/notifications/preferences is
+  // user-scoped and permission-free), linked from every user's menu. Gating it
+  // on team:update sent members to Access Denied from their own menu. The
+  // org-level channels (Slack/Teams/webhook) live under
+  // /settings/integrations/notifications and stay gated by the integrations
+  // entries below. Pinned by settings-route-guards.test.ts.
   '/settings/sla-policies': {
     permission: Permission.SLARead,
     module: Module.Sla,

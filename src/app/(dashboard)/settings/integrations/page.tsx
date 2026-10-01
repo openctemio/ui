@@ -17,21 +17,8 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import {
-  Puzzle,
-  CheckCircle,
-  XCircle,
-  RefreshCw,
-  AlertTriangle,
-  MessageSquare,
-  GitBranch,
-  Shield,
-  ShieldCheck,
-  ArrowRight,
-  Workflow,
-  TicketCheck,
-  KeyRound,
-} from 'lucide-react'
+import { Puzzle, CheckCircle, XCircle, RefreshCw, AlertTriangle, ArrowRight } from 'lucide-react'
+import { INTEGRATION_CATEGORIES as integrationCategories } from '@/features/integrations/config/integration-categories'
 import { Can, Permission } from '@/lib/permissions'
 import { useSCMConnections } from '@/features/repositories/hooks/use-repositories'
 import type { SCMConnection } from '@/features/repositories/types/repository.types'
@@ -40,60 +27,6 @@ import type {
   Integration,
   IntegrationCategory,
 } from '@/features/integrations/types/integration.types'
-
-// Integration categories for quick access — these are real navigation cards to
-// the management sub-pages, which own the actual connect/configure flows.
-const integrationCategories = [
-  {
-    id: 'scm',
-    title: 'SCM connections',
-    description: 'Connect GitHub, GitLab, Bitbucket, or Azure DevOps',
-    icon: GitBranch,
-    href: '/settings/integrations/scm',
-  },
-  {
-    id: 'notifications',
-    title: 'Notifications',
-    description: 'Slack, Teams, Telegram, and webhook alerts',
-    icon: MessageSquare,
-    href: '/settings/integrations/notifications',
-  },
-  {
-    id: 'cicd',
-    title: 'CI/CD pipelines',
-    description: 'Integrate with Jenkins, GitHub Actions, GitLab CI',
-    icon: Workflow,
-    href: '/settings/integrations/cicd',
-  },
-  {
-    id: 'ticketing',
-    title: 'Ticketing systems',
-    description: 'Connect Jira, ServiceNow, or Linear',
-    icon: TicketCheck,
-    href: '/settings/integrations/ticketing',
-  },
-  {
-    id: 'api-keys',
-    title: 'API keys',
-    description: 'Issue and revoke programmatic access keys',
-    icon: KeyRound,
-    href: '/settings/integrations/api-keys',
-  },
-  {
-    id: 'security',
-    title: 'Vulnerability scanners',
-    description: 'Connect Tenable (Nessus Pro / Tenable.sc)',
-    icon: ShieldCheck,
-    href: '/settings/integrations/security',
-  },
-  {
-    id: 'siem',
-    title: 'SIEM',
-    description: 'Forward security events to Splunk',
-    icon: Shield,
-    href: '/settings/integrations/siem',
-  },
-]
 
 // Per-category label + the sub-page that manages it.
 const categoryMeta: Record<IntegrationCategory, { label: string; href: string }> = {
@@ -232,6 +165,14 @@ export default function IntegrationsPage() {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between gap-2">
                     <span className="font-medium">{category.title}</span>
+                    {category.badge && (
+                      <Badge
+                        variant="outline"
+                        className="shrink-0 rounded-full border-dashed px-1.5 py-0 text-[10px] text-muted-foreground"
+                      >
+                        {category.badge}
+                      </Badge>
+                    )}
                     {category.id === 'scm' && scmConnections.length > 0 && (
                       <Badge variant="secondary" className="tabular-nums">
                         {scmConnectedCount}/{scmConnections.length}
