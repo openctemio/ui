@@ -17,6 +17,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 import { env } from '@/lib/env'
 import { devLog } from '@/lib/logger'
+import { csrfRejection, ensureCsrfCookie, rotatedRefreshToken } from '@/lib/server-auth-cookies'
 
 // Frontend cookie names (from env config)
 const ACCESS_TOKEN_COOKIE = env.auth.cookieName
@@ -42,8 +43,11 @@ interface TenantInfo {
   role: string
 }
 
-export async function POST(_request: NextRequest): Promise<NextResponse> {
+export async function POST(request: NextRequest): Promise<NextResponse> {
   devLog.log('[Refresh] Token refresh request received')
+  // Cookie-authenticated, state-changing: require the double-submit pair.
+  const csrf = csrfRejection(request)
+  if (csrf) return csrf
   try {
     const cookieStore = await cookies()
 
@@ -190,9 +194,12 @@ export async function POST(_request: NextRequest): Promise<NextResponse> {
       path: '/',
     })
 
-    // Update refresh token cookie if rotated
-    if (data.refresh_token) {
-      clientResponse.cookies.set(REFRESH_TOKEN_COOKIE, data.refresh_token, {
+    // Store the rotated refresh token. The API sends it in Set-Cookie only;
+    // keeping the old cookie left a revoked token and the next refresh signed
+    // the user out.
+    const rotated = rotatedRefreshToken(response, data)
+    if (rotated) {
+      clientResponse.cookies.set(REFRESH_TOKEN_COOKIE, rotated, {
         httpOnly: true,
         secure: process.env.SECURE_COOKIES !== 'false',
         sameSite: 'lax',
@@ -219,6 +226,7 @@ export async function POST(_request: NextRequest): Promise<NextResponse> {
       }
     )
     // NOTE: Permissions NOT stored in cookie - frontend fetches via /api/v1/me/permissions
+    ensureCsrfCookie(request, clientResponse)
 
     return clientResponse
   } catch (error) {

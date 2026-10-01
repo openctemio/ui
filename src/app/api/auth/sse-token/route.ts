@@ -17,6 +17,7 @@ import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 
 import { env } from '@/lib/env'
+import { rotatedRefreshToken } from '@/lib/server-auth-cookies'
 
 const ACCESS_TOKEN_COOKIE = env.auth.cookieName
 const REFRESH_TOKEN_COOKIE = env.auth.refreshCookieName
@@ -69,7 +70,8 @@ async function tryRefreshToken(
     const data = await response.json()
     return {
       accessToken: data.access_token,
-      refreshToken: data.refresh_token,
+      // The API sends the rotated refresh token in Set-Cookie only.
+      refreshToken: rotatedRefreshToken(response, data),
       expiresIn: data.expires_in || 900,
     }
   } catch {

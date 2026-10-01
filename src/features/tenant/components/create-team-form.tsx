@@ -28,6 +28,7 @@ import {
 } from '@/components/ui/form'
 import { toast } from 'sonner'
 import { getErrorMessage } from '@/lib/api/error-handler'
+import { csrfHeaders } from '@/lib/csrf-client'
 import { useCreateTenant } from '../api'
 import { createTenantSchema, generateSlug, type CreateTenantInput } from '../schemas'
 import { createFirstTeamAction } from '@/features/auth/actions/local-auth-actions'
@@ -259,7 +260,7 @@ function CreateAdditionalTeamFormInner({
         try {
           const switchResponse = await fetch('/api/auth/switch-team', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
             credentials: 'include',
             body: JSON.stringify({
               tenant_id: result.id,
