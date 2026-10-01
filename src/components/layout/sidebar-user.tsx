@@ -103,13 +103,13 @@ export function SidebarUser({ initialUser }: SidebarUserProps) {
 
               <DropdownMenuSeparator />
 
-              {/* Every signed-in user can open their own account settings. This
-                  used to go to /settings/tenant, which needs team:update, so
-                  members and viewers landed on Access Denied from their own menu. */}
+              {/* The settings overview: every user can open it (it always lists
+                  "My account"). This used to go to /settings/tenant, which needs
+                  team:update, so members landed on Access Denied. */}
               <DropdownMenuItem asChild>
-                <Link href="/account" className="flex items-center gap-2">
+                <Link href="/settings" className="flex items-center gap-2">
                   <Settings className="h-4 w-4" />
-                  Account settings
+                  Settings
                 </Link>
               </DropdownMenuItem>
 

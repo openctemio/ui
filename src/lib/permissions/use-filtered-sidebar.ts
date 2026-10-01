@@ -25,7 +25,7 @@
  * - remediation: Remediation Tasks, Workflows
  */
 
-import { useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
 import { usePermissions } from './hooks'
 import { isRoleAtLeast, type RoleString } from './constants'
 import { useBootstrapModules } from '@/context/bootstrap-provider'
@@ -228,7 +228,12 @@ function filterNavGroup(group: NavGroup, checks: AccessCheckFunctions): NavGroup
  * }
  * ```
  */
-export function useFilteredSidebarData(sidebarData: SidebarData): FilteredSidebarResult {
+/**
+ * The access checks every nav surface shares (main sidebar, settings rail,
+ * command palette): permissions, roles, and the tenant's modules (fail-open
+ * when the API sent no module list, i.e. the OSS edition).
+ */
+function useAccessChecks(): AccessCheckFunctions {
   const { can, canAny, isRole, isAnyRole, tenantRole } = usePermissions()
   const { moduleIds, modules } = useBootstrapModules()
 
@@ -267,10 +272,8 @@ export function useFilteredSidebarData(sidebarData: SidebarData): FilteredSideba
     return { hasModule, getModuleReleaseStatus, isModuleActive }
   }, [modules, moduleIds])
 
-  const result = useMemo(() => {
-    // TenantGate already waits for bootstrap + permissions
-    // So when Sidebar renders, data is ready - just filter
-    const checks: AccessCheckFunctions = {
+  return useMemo(
+    () => ({
       can,
       canAny,
       isRole,
@@ -279,8 +282,32 @@ export function useFilteredSidebarData(sidebarData: SidebarData): FilteredSideba
       hasModule: moduleHelpers.hasModule,
       getModuleReleaseStatus: moduleHelpers.getModuleReleaseStatus,
       isModuleActive: moduleHelpers.isModuleActive,
-    }
+    }),
+    [can, canAny, isRole, isAnyRole, tenantRole, moduleHelpers]
+  )
+}
 
+/**
+ * Whether the current user may see a nav entry with these access rules. The
+ * same decision the main sidebar makes, for nav surfaces that are not built
+ * from `SidebarData` (the settings rail).
+ */
+export function useNavItemAccess(): (item: {
+  module?: string
+  permission?: string | string[]
+  role?: string | string[]
+  minRole?: string
+}) => boolean {
+  const checks = useAccessChecks()
+  return useCallback((item) => hasItemAccess(item, checks), [checks])
+}
+
+export function useFilteredSidebarData(sidebarData: SidebarData): FilteredSidebarResult {
+  const checks = useAccessChecks()
+
+  const result = useMemo(() => {
+    // TenantGate already waits for bootstrap + permissions
+    // So when Sidebar renders, data is ready - just filter
     const filteredNavGroups = sidebarData.navGroups
       .map((group) => filterNavGroup(group, checks))
       .filter((group): group is NavGroup => group !== null)
@@ -289,7 +316,7 @@ export function useFilteredSidebarData(sidebarData: SidebarData): FilteredSideba
       ...sidebarData,
       navGroups: filteredNavGroups,
     }
-  }, [sidebarData, can, canAny, isRole, isAnyRole, tenantRole, moduleHelpers])
+  }, [sidebarData, checks])
 
   // TenantGate handles loading - these are always false when Sidebar renders
   return {

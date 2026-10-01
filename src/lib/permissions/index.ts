@@ -51,4 +51,5 @@ export {
 export { Can, Cannot, type CanProps, type CannotProps, type PermissionMode } from './can'
 
 // Sidebar utilities
-export { useFilteredSidebarData } from './use-filtered-sidebar'
+export { useFilteredSidebarData, useNavItemAccess } from './use-filtered-sidebar'
+export { subModuleStatus } from './sub-modules'
