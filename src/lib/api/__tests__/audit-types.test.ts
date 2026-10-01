@@ -31,6 +31,13 @@ describe('sensor audit events before and after the rename', () => {
     expect(formatAction('agent.key_regenerated')).toBe('Sensor Key Regenerated')
   })
 
+  it('labels the scan zone actions (RFC-023)', () => {
+    expect(getActionLabel('scan_zone.created')).toBe('Scan Zone Created')
+    expect(getActionLabel('scan_zone.sensor_assigned')).toBe('Sensor Assigned to Scan Zone')
+    expect(getActionLabel('scan_zone.sensor_unassigned')).toBe('Sensor Unassigned from Scan Zone')
+    expect(canonicalAuditResourceType('scan_zone')).toBe('scan_zone')
+  })
+
   it('leaves every other action alone', () => {
     expect(canonicalAuditAction('finding.created')).toBe('finding.created')
     expect(canonicalAuditAction('user_agent.created')).toBe('user_agent.created')

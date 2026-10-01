@@ -78,6 +78,8 @@ export interface ScanConfig {
   tags?: string[]
   run_on_tenant_runner: boolean
   sensor_preference: SensorPreference
+  /** Scan zone the scan is restricted to; absent = Automatic (narrowest zone). RFC-023 D5. */
+  scan_zone_id?: string | null
   profile_id?: string
   timeout_seconds: number
   /** Maximum automatic retry attempts (0 = no retry, max 10) */
@@ -134,6 +136,8 @@ export interface CreateScanConfigRequest {
   tags?: string[]
   run_on_tenant_runner?: boolean
   sensor_preference?: SensorPreference
+  /** Restrict the scan to one scan zone; omit for Automatic. */
+  scan_zone_id?: string | null
   profile_id?: string
   /** Max execution time in seconds (min 30, max 86400, default 3600) */
   timeout_seconds?: number
@@ -161,6 +165,8 @@ export interface UpdateScanConfigRequest {
   tags?: string[]
   run_on_tenant_runner?: boolean
   sensor_preference?: SensorPreference
+  /** Scan zone; empty string or null = Automatic, omit to leave unchanged */
+  scan_zone_id?: string | null
   /** Pass empty string to unlink the profile, omit to leave unchanged */
   profile_id?: string
   /** Max execution time in seconds (min 30, max 86400) */
@@ -270,6 +276,49 @@ export interface PipelineRun {
   total_findings: number
   error_message?: string
   created_at: string
+  /** What the trigger dispatched (scope exclusions, zone routing). RFC-023. */
+  dispatch?: RunDispatch
+}
+
+/** A target a run did not scan, with the reason. */
+export interface RunUncoveredTarget {
+  target: string
+  reason: string
+}
+
+/** One zone's share of a run. */
+export interface RunZoneRoute {
+  zone_id: string
+  zone_name: string
+  targets: number
+  jobs: number
+  /** Jobs waiting for a healthy sensor of the zone. */
+  queued_jobs: number
+  /** Sensors the jobs were pinned to. */
+  sensor_ids: string[]
+}
+
+export interface RunZoneRouting {
+  jobs?: number
+  targets_per_job?: number
+  unzoned_targets: number
+  uncovered_targets: number
+  /** Workflow runs: the one zone the run is bound to. */
+  zone_id?: string
+  /** The zone the scan was restricted to (zone picker), when not Automatic. */
+  selected_zone_id?: string
+  zones?: RunZoneRoute[]
+}
+
+/** GET /pipeline-runs/{id} `dispatch`: present when the trigger recorded one. */
+export interface RunDispatch {
+  resolved_targets: number
+  excluded_targets: number
+  warnings?: string[]
+  /** First 100. */
+  uncovered_targets?: RunUncoveredTarget[]
+  zone_routing?: RunZoneRouting
+  sensor_routing?: 'tenant' | 'platform'
 }
 
 /**

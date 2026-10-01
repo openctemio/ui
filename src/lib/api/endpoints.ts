@@ -25,6 +25,7 @@ export const API_BASE = {
   DASHBOARD: '/api/v1/dashboard',
   AUDIT_LOGS: '/api/v1/audit-logs',
   SENSORS: '/api/v1/sensors',
+  SCAN_ZONES: '/api/v1/scan-zones',
   SCAN_PROFILES: '/api/v1/scan-profiles',
   SCANNER_TEMPLATES: '/api/v1/scanner-templates',
   TEMPLATE_SOURCES: '/api/v1/template-sources',
@@ -1624,6 +1625,21 @@ export const pipelineEndpoints = {
 /**
  * Pipeline Run endpoints
  */
+/**
+ * Scan zone endpoints (RFC-023): tenant from the JWT.
+ */
+export const scanZoneEndpoints = {
+  list: () => API_BASE.SCAN_ZONES,
+  coverage: () => `${API_BASE.SCAN_ZONES}/coverage`,
+  preview: () => `${API_BASE.SCAN_ZONES}/preview`,
+  get: (zoneId: string) => `${API_BASE.SCAN_ZONES}/${zoneId}`,
+  create: () => API_BASE.SCAN_ZONES,
+  update: (zoneId: string) => `${API_BASE.SCAN_ZONES}/${zoneId}`,
+  delete: (zoneId: string) => `${API_BASE.SCAN_ZONES}/${zoneId}`,
+  sensor: (zoneId: string, sensorId: string) =>
+    `${API_BASE.SCAN_ZONES}/${zoneId}/sensors/${sensorId}`,
+} as const
+
 export const pipelineRunEndpoints = {
   /**
    * List pipeline runs with optional filters
@@ -2151,6 +2167,7 @@ export const endpoints = {
   dashboard: dashboardEndpoints,
   auditLogs: auditLogEndpoints,
   sensors: sensorEndpoints,
+  scanZones: scanZoneEndpoints,
   scanProfiles: scanProfileEndpoints,
   scannerTemplates: scannerTemplateEndpoints,
   tools: toolEndpoints,

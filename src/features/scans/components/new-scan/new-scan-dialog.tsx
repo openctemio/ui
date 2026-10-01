@@ -7,7 +7,7 @@
 
 'use client'
 
-import { useState, useRef } from 'react'
+import { useMemo, useState, useRef } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -18,6 +18,9 @@ import {
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { ChevronLeft, ChevronRight, Loader2, Play } from 'lucide-react'
+import { ScanRoutingSection, toZonePreviewRequest, triggerErrorHint } from '@/features/scan-zones'
+import { useScanZones } from '@/lib/api/scan-zone-hooks'
+import { Permission, useHasPermission } from '@/lib/permissions'
 
 import { ScanStepper, type ScanWizardStep } from './scan-stepper'
 import { BasicInfoStep } from './basic-info-step'
@@ -112,6 +115,9 @@ function mapFormDataToRequest(formData: NewScanFormData): CreateScanConfigReques
   if (formData.profileId) {
     request.profile_id = formData.profileId
   }
+  if (formData.scanZoneId) {
+    request.scan_zone_id = formData.scanZoneId
+  }
 
   // COMBINE all target sources
   // 1. Asset groups - pass all selected ones
@@ -182,6 +188,16 @@ export function NewScanDialog({ open, onOpenChange, onSubmit }: NewScanDialogPro
 
   // API hooks
   const { trigger: createScanConfig, isMutating: isCreating } = useCreateScanConfig()
+
+  // Scan zones (RFC-023): the picker and routing preview appear once the
+  // team has zones and the user may read them.
+  const canReadZones = useHasPermission(Permission.ScanZonesRead)
+  const { data: zonesData } = useScanZones(canReadZones && open)
+  const zones = useMemo(() => zonesData?.data ?? [], [zonesData?.data])
+  const previewRequest = useMemo(
+    () => toZonePreviewRequest(mapFormDataToRequest(formData), formData.scanZoneId),
+    [formData]
+  )
 
   const currentStepIndex = STEPS.indexOf(currentStep)
   const isFirstStep = currentStepIndex === 0
@@ -310,7 +326,9 @@ export function NewScanDialog({ open, onOpenChange, onSubmit }: NewScanDialogPro
                   window.location.href = `/scans/${scanConfig.id}`
                 },
               },
-              description: 'You can manually trigger the scan from the scan details page.',
+              description:
+                triggerErrorHint(triggerError) ??
+                'You can manually trigger the scan from the scan details page.',
             }
           )
 
@@ -362,7 +380,19 @@ export function NewScanDialog({ open, onOpenChange, onSubmit }: NewScanDialogPro
       case 'options':
         return <OptionsStep data={formData} onChange={handleDataChange} />
       case 'schedule':
-        return <ScheduleStep data={formData} onChange={handleDataChange} />
+        return (
+          <>
+            <ScheduleStep data={formData} onChange={handleDataChange} />
+            {canReadZones && zones.length > 0 && (
+              <ScanRoutingSection
+                zones={zones}
+                value={formData.scanZoneId}
+                onChange={(scanZoneId) => handleDataChange({ scanZoneId })}
+                request={previewRequest}
+              />
+            )}
+          </>
+        )
       default:
         return null
     }
@@ -379,7 +409,7 @@ export function NewScanDialog({ open, onOpenChange, onSubmit }: NewScanDialogPro
         </DialogHeader>
 
         {/* Stepper */}
-        <div className="border-b">
+        <div className="min-w-0 border-b">
           <ScanStepper currentStep={currentStep} onStepClick={handleStepClick} />
         </div>
 
