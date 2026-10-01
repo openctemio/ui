@@ -15,6 +15,7 @@ import {
 import { Separator } from '@/components/ui/separator'
 import { SidebarBrand } from '@/components/layout/sidebar-brand'
 import { GroupedNav, type GroupedNavSection } from '@/components/layout/grouped-nav'
+import { NAV_COLUMN_CLASS } from '@/components/layout/nav-group'
 import { adminNav } from '../config/admin-nav'
 import { adminCan, type AdminIdentity } from '../types'
 
@@ -81,7 +82,9 @@ export function AdminConsoleSidebar({ admin, onSignOut }: AdminConsoleSidebarPro
       </SidebarHeader>
 
       <SidebarContent>
-        <GroupedNav sections={sections} activeUrl={activeUrl} />
+        <div className={NAV_COLUMN_CLASS}>
+          <GroupedNav sections={sections} activeUrl={activeUrl} />
+        </div>
       </SidebarContent>
 
       <SidebarFooter>

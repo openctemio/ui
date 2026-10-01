@@ -5,7 +5,7 @@ import { Sidebar, SidebarContent, SidebarHeader, SidebarRail } from '@/component
 // Use centralized sidebar data from features
 import { sidebarData } from '@/config/sidebar-data'
 import { useFilteredSidebarData } from '@/lib/permissions'
-import { NavClusterLabel, NavGroup } from './nav-group'
+import { NAV_COLUMN_CLASS, NavClusterLabel, NavGroup } from './nav-group'
 import { useTranslation } from '@/context/i18n-provider'
 import { TeamSwitcher } from './team-switcher'
 import { SidebarBrand } from './sidebar-brand'
@@ -49,7 +49,7 @@ export function AppSidebar() {
       {/* Content */}
       <SidebarContent>
         {settingsShell ? (
-          <div className="px-0 py-2">
+          <div className={NAV_COLUMN_CLASS}>
             <SettingsSidebarNav />
           </div>
         ) : isModulesLoading ? (
@@ -67,7 +67,7 @@ export function AppSidebar() {
           // One padded column for every group: the same 8px inset in both states
           // (so rail icons line up with the expanded ones) and an even gap
           // between sections, which are separate <ul>s.
-          <div className="flex flex-col gap-1 px-2 py-2">
+          <div className={NAV_COLUMN_CLASS}>
             {quickLinks.map((group) => (
               <NavGroup key={group.title || 'quick'} {...group} />
             ))}
