@@ -46,7 +46,7 @@ describe('AccessRestrictionsCard', () => {
     expect(screen.getByLabelText('Allowed email domains')).toBeInTheDocument()
     expect(screen.getByLabelText('IP allowlist')).toBeInTheDocument()
     expect(
-      screen.getByText(/sensors \(agents\), api keys and the platform admin console/i)
+      screen.getByText(/sensors, api keys and the platform admin console/i)
     ).toBeInTheDocument()
     expect(screen.getByText('Empty: no IP restriction.')).toBeInTheDocument()
     expect(screen.getByText('Empty: any email domain is allowed.')).toBeInTheDocument()
