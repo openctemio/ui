@@ -23,8 +23,8 @@ import { Main } from '@/components/layout'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { PageHeader } from '@/features/shared'
-import { useAsset } from '@/features/assets'
+import { DetailSections, PageHeader } from '@/features/shared'
+import { AssetIdentitySections, useAsset } from '@/features/assets'
 import { cn } from '@/lib/utils'
 import { CRITICALITY_TEXT_COLORS } from '@/lib/criticality-colors'
 
@@ -220,6 +220,21 @@ export default function AssetDetailPage() {
               }
             />
           )}
+        </CardContent>
+      </Card>
+
+      <Card className="mt-4">
+        <CardHeader>
+          <CardTitle>Identity</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <DetailSections>
+            <AssetIdentitySections
+              assetId={asset.id}
+              assetName={asset.name}
+              properties={asset.metadata}
+            />
+          </DetailSections>
         </CardContent>
       </Card>
 
