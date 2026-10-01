@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo, useCallback } from 'react'
-import { Plus, Bot, Loader2, Search, Download, Trash2, Ban } from 'lucide-react'
+import { Plus, RadioTower, Loader2, Search, Download, Trash2, Ban } from 'lucide-react'
 import { toast } from 'sonner'
 import { getErrorMessage } from '@/lib/api/error-handler'
 
@@ -44,7 +44,9 @@ import {
   useRevokeSensor,
   invalidateSensorsCache,
 } from '@/lib/api/sensor-hooks'
-import type { SensorListFilters, Sensor } from '@/lib/api/sensor-types'
+import type { SensorListFilters, Sensor, SensorRole } from '@/lib/api/sensor-types'
+import { sensorRoleOf } from '@/lib/api/sensor-types'
+import { Tabs, TabsCount, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { PlatformStatsCard } from '@/features/platform'
 import {
   BulkActionBar,
@@ -55,7 +57,13 @@ import {
   type MetricStripItem,
 } from '@/features/shared'
 
-type ModeFilter = 'all' | 'daemon' | 'standalone' | 'collector'
+type ModeFilter = 'all' | 'daemon' | 'standalone'
+/** Settings → Sensors tabs: one per role the data supports today (RFC-023 §9.3 R0). */
+type RoleTab = 'all' | 'scanners' | 'collectors'
+const ROLE_OF_TAB: Record<Exclude<RoleTab, 'all'>, SensorRole> = {
+  scanners: 'scanner',
+  collectors: 'collector',
+}
 type SensorTypeFilter = 'runner' | 'worker' | 'collector' | 'sensor'
 
 interface SensorsSectionProps {
@@ -137,7 +145,7 @@ function calculateStats(sensors: Sensor[]): SensorStats {
 export function SensorsSection({
   typeFilter,
   title = 'Sensors',
-  description = 'Sensors run your scans and collect data. Add one, then deploy it with its API key.',
+  description = 'Sensors (formerly Agents) run your scans and collect data. Add one, then deploy it with its API key.',
 }: SensorsSectionProps) {
   // Dialog states
   const [addDialogOpen, setAddDialogOpen] = useState(false)
@@ -155,9 +163,25 @@ export function SensorsSection({
   // View and filter states
   // Filters and search live in the URL so a filtered view can be shared.
   const [modeParam, setModeFilter] = useUrlFilter('mode', 'all')
+  const [tabParam, setTabParam] = useUrlFilter('tab', 'all')
   const [statusFilter, setStatusFilter] = useUrlFilter('status', 'all')
   const [searchQuery, setSearchQuery] = useUrlFilter('q', '')
-  const activeTab = modeParam as ModeFilter
+  // Collectors used to be a value of the mode filter; a link or bookmark
+  // carrying ?mode=collector now opens the Collectors tab.
+  const legacyCollectorMode = modeParam === 'collector'
+  const activeMode = (legacyCollectorMode ? 'all' : modeParam) as ModeFilter
+  const activeRoleTab: RoleTab = legacyCollectorMode
+    ? 'collectors'
+    : tabParam in ROLE_OF_TAB
+      ? (tabParam as RoleTab)
+      : 'all'
+  const setRoleTab = useCallback(
+    (next: string) => {
+      if (legacyCollectorMode) setModeFilter('all')
+      setTabParam(next)
+    },
+    [legacyCollectorMode, setModeFilter, setTabParam]
+  )
   const [_filters] = useState<SensorListFilters>({})
 
   // Row selection (owned by the table; mirrored here for the bulk-action bar)
@@ -187,6 +211,12 @@ export function SensorsSection({
     if (!typeFilter) return sensors
     return sensors.filter((a) => a.type === typeFilter)
   }, [sensors, typeFilter])
+
+  const roleCounts = useMemo(() => {
+    const counts: Record<SensorRole, number> = { scanner: 0, collector: 0 }
+    for (const s of typeFilteredSensors) counts[sensorRoleOf(s.type)]++
+    return counts
+  }, [typeFilteredSensors])
 
   // Stats — prefer the API-aggregated tenant stats (accurate across all
   // pages); fall back to per-page calculation if the stats request hasn't
@@ -223,13 +253,15 @@ export function SensorsSection({
   const filteredSensors = useMemo(() => {
     let result = [...typeFilteredSensors]
 
-    // Filter by tab (execution mode / type)
-    if (activeTab === 'daemon') {
+    // Filter by role tab, then execution mode
+    if (activeRoleTab !== 'all') {
+      const role = ROLE_OF_TAB[activeRoleTab]
+      result = result.filter((a) => sensorRoleOf(a.type) === role)
+    }
+    if (activeMode === 'daemon') {
       result = result.filter((a) => a.execution_mode === 'daemon')
-    } else if (activeTab === 'standalone') {
+    } else if (activeMode === 'standalone') {
       result = result.filter((a) => a.execution_mode === 'standalone')
-    } else if (activeTab === 'collector') {
-      result = result.filter((a) => a.type === 'collector')
     }
 
     // Filter by status/health
@@ -268,7 +300,7 @@ export function SensorsSection({
     }
 
     return result
-  }, [typeFilteredSensors, activeTab, statusFilter, searchQuery])
+  }, [typeFilteredSensors, activeRoleTab, activeMode, statusFilter, searchQuery])
 
   // Handlers
   const handleRefresh = useCallback(async () => {
@@ -476,7 +508,7 @@ export function SensorsSection({
           className="h-9 ps-9"
         />
       </div>
-      <Select value={activeTab} onValueChange={setModeFilter}>
+      <Select value={activeMode} onValueChange={setModeFilter}>
         <SelectTrigger className="h-9 w-[150px]" aria-label="Mode">
           <SelectValue placeholder="All modes" />
         </SelectTrigger>
@@ -484,7 +516,6 @@ export function SensorsSection({
           <SelectItem value="all">All modes ({stats.total})</SelectItem>
           <SelectItem value="daemon">Daemon ({stats.byMode.daemon})</SelectItem>
           <SelectItem value="standalone">CI/CD ({stats.byMode.standalone})</SelectItem>
-          <SelectItem value="collector">Collectors ({stats.byType.collector})</SelectItem>
         </SelectContent>
       </Select>
       <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -503,7 +534,8 @@ export function SensorsSection({
     </>
   )
 
-  const hasFilter = !!searchQuery || activeTab !== 'all' || statusFilter !== 'all'
+  const hasFilter =
+    !!searchQuery || activeMode !== 'all' || activeRoleTab !== 'all' || statusFilter !== 'all'
 
   let body: React.ReactNode
   if (error) {
@@ -513,7 +545,7 @@ export function SensorsSection({
   } else if (typeFilteredSensors.length === 0 && !hasFilter) {
     body = (
       <EmptyState
-        icon={Bot}
+        icon={RadioTower}
         title="No sensors"
         description="Create a sensor to start scanning and collecting data."
         action={
@@ -558,6 +590,22 @@ export function SensorsSection({
           </Button>
         </Can>
       </PageHeader>
+
+      {!typeFilter && (
+        <Tabs value={activeRoleTab} onValueChange={setRoleTab} className="mt-4">
+          <TabsList>
+            <TabsTrigger value="all">
+              All <TabsCount value={isLoading ? null : typeFilteredSensors.length} />
+            </TabsTrigger>
+            <TabsTrigger value="scanners">
+              Scanners <TabsCount value={isLoading ? null : roleCounts.scanner} />
+            </TabsTrigger>
+            <TabsTrigger value="collectors">
+              Collectors <TabsCount value={isLoading ? null : roleCounts.collector} />
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+      )}
 
       <MetricStrip className="mt-5" loading={isLoading} items={metrics} />
 

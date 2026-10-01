@@ -48,6 +48,7 @@ import {
   Clock,
   Timer,
   Bot,
+  RadioTower,
   FileSliders,
   Wrench,
   // New icons for CTEM architecture
@@ -609,14 +610,14 @@ export const sidebarData: SidebarData = {
         // model; "Scanning" below is narrowed to scan-job configuration.
         {
           title: 'Sensors',
-          icon: Bot,
+          icon: RadioTower,
           permission: Permission.SensorsRead,
           module: 'scans',
           items: [
             {
               title: 'All Sensors',
               url: '/sensors',
-              icon: Bot,
+              icon: RadioTower,
               permission: Permission.SensorsRead,
               module: 'scans',
             },

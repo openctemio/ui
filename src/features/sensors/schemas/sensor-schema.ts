@@ -1,12 +1,14 @@
 import { z } from 'zod'
 
 // Sensor type options (CTEM framework)
+// Legacy v1 type values (RFC-023 §9.1). "Sensor" is now the umbrella term, so
+// the old 'sensor' type (an EASM vantage point) is labelled External (EASM).
 // runner = CI/CD one-shot, worker = daemon, collector = asset discovery, sensor = EASM
 export const SENSOR_TYPE_OPTIONS = [
   { value: 'runner', label: 'Runner', description: 'CI/CD pipeline runner (one-shot execution)' },
   { value: 'worker', label: 'Worker', description: 'Long-running daemon worker' },
   { value: 'collector', label: 'Collector', description: 'Asset discovery collector' },
-  { value: 'sensor', label: 'Sensor', description: 'EASM external sensor' },
+  { value: 'sensor', label: 'External (EASM)', description: 'Internet-facing EASM vantage point' },
 ] as const
 
 // Sensor status options (admin-controlled)
