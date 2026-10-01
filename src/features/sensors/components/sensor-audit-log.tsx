@@ -27,7 +27,12 @@ import { EmptyState } from '@/features/shared'
 import { useResourceAuditHistory } from '@/lib/api/audit-hooks'
 import { useHasModule } from '@/features/integrations/api/use-tenant-modules'
 import type { AuditLog, AuditAction, AuditResult } from '@/lib/api/audit-types'
-import { getActionLabel, getSeverityColor, getResultColor } from '@/lib/api/audit-types'
+import {
+  canonicalAuditAction,
+  getActionLabel,
+  getSeverityColor,
+  getResultColor,
+} from '@/lib/api/audit-types'
 
 interface SensorAuditLogProps {
   sensorId: string
@@ -45,10 +50,12 @@ function getActionIcon(action: AuditAction) {
     'sensor.deactivated': <PowerOff className="h-4 w-4" />,
     'sensor.revoked': <Ban className="h-4 w-4" />,
     'sensor.key_regenerated': <KeyRound className="h-4 w-4" />,
+    'sensor.key_renewed': <KeyRound className="h-4 w-4" />,
     'sensor.connected': <Wifi className="h-4 w-4" />,
     'sensor.disconnected': <WifiOff className="h-4 w-4" />,
   }
-  return iconMap[action] || <FileText className="h-4 w-4" />
+  // Rows written before the rename use the old action prefix; same events.
+  return iconMap[canonicalAuditAction(action)] || <FileText className="h-4 w-4" />
 }
 
 /**
