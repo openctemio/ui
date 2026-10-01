@@ -140,10 +140,14 @@ RUN mkdir .next && chown nextjs:nodejs .next
 # Copy standalone build output
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+# Production entry: the standalone server plus same-origin WebSocket forwarding
+# of /api/v1/ws to BACKEND_API_URL (read at start, not frozen into the build).
+COPY --from=builder --chown=nextjs:nodejs /app/server-with-ws.mjs ./server-with-ws.mjs
 
 # Drop npm from the runtime image.
 #
-# The production stage runs `node server.js` — the Next standalone output — and
+# The production stage runs `node server-with-ws.mjs` (the Next standalone output
+# behind a small WebSocket hop) and
 # never invokes npm or npx. But the node base image ships npm, npm bundles its
 # own dependency tree, and that tree is scanned as part of the artifact we
 # publish. The first Trivy scan of a release-candidate image (ui#347 made that
@@ -169,4 +173,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1
 
 # Start application
-CMD ["node", "server.js"]
+CMD ["node", "server-with-ws.mjs"]
