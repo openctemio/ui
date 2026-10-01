@@ -116,11 +116,11 @@ describe('sanitiseNode — dangerous elements', () => {
     }
   })
 
-  it('leaves safe elements untouched', () => {
-    const node = element('p', { className: 'prose' })
+  it('leaves safe elements and pipeline classes untouched', () => {
+    const node = element('code', { className: ['language-go'] })
     sanitiseNode(node)
-    expect(node.tagName).toBe('p')
-    expect(node.properties).toEqual({ className: 'prose' })
+    expect(node.tagName).toBe('code')
+    expect(node.properties).toEqual({ className: ['language-go'] })
   })
 })
 
@@ -160,10 +160,13 @@ describe('sanitiseNode — event-handler attributes', () => {
 // --- sanitiseNode: URL attributes -----------------------------------------
 
 describe('sanitiseNode — URL attributes', () => {
-  it.each([...URL_ATTRS])('rewrites javascript: in %s', (attr) => {
+  it.each([...URL_ATTRS])('never forwards javascript: in %s', (attr) => {
+    // href/src are rewritten to '#'; the others are not on the attribute
+    // allowlist and are removed outright.
     const node = element('a', { [attr]: 'javascript:alert(1)' })
     sanitiseNode(node)
-    expect(node.properties?.[attr]).toBe('#')
+    const v = node.properties?.[attr]
+    expect(v === undefined || v === '#').toBe(true)
   })
 
   it('keeps legitimate href untouched', () => {
@@ -195,9 +198,9 @@ describe('sanitiseNode — inline style', () => {
   })
 
   it('strips style on safe elements too', () => {
-    const node = element('p', { style: 'color: red', className: 'keep' })
+    const node = element('p', { style: 'color: red', className: 'anchor' })
     sanitiseNode(node)
-    expect(node.properties?.className).toBe('keep')
+    expect(node.properties?.className).toEqual(['anchor'])
     expect(node.properties).not.toHaveProperty('style')
   })
 })
@@ -223,5 +226,68 @@ describe('sanitiseNode — no-op branches', () => {
   it('ignores element nodes without properties', () => {
     const node: HastNode = { type: 'element', tagName: 'p' }
     expect(() => sanitiseNode(node)).not.toThrow()
+  })
+})
+
+// --- sanitiseNode: attribute allowlist, classes, ids ------------------------
+
+describe('sanitiseNode — attributes an author could invent (rehype-attr)', () => {
+  it('drops attributes outside the allowlist', () => {
+    const node = element('a', {
+      href: 'https://ok.test',
+      target: '_top',
+      name: 'currentUser',
+      srcdoc: '<script>alert(1)</script>',
+      ping: 'https://evil.test',
+      download: 'x',
+      'data-anything': 'x',
+    })
+    sanitiseNode(node)
+    expect(node.properties).toEqual({ href: 'https://ok.test' })
+  })
+
+  it('keeps only pipeline classes, from both className and raw class', () => {
+    const node = element('div', {
+      className: ['fixed', 'inset-0', 'language-ts'],
+      class: 'z-50 copied',
+    })
+    sanitiseNode(node)
+    expect(node.properties?.className).toEqual(['language-ts', 'copied'])
+    expect(node.properties).not.toHaveProperty('class')
+  })
+
+  it('removes className entirely when nothing survives', () => {
+    const node = element('div', { className: 'fixed inset-0 z-50 bg-background' })
+    sanitiseNode(node)
+    expect(node.properties).not.toHaveProperty('className')
+  })
+
+  it('prefixes ids and in-page fragment links, idempotently', () => {
+    const h = element('h2', { id: 'setup' })
+    const a = element('a', { href: '#setup' })
+    sanitiseNode(h)
+    sanitiseNode(a)
+    sanitiseNode(h)
+    sanitiseNode(a)
+    expect(h.properties?.id).toBe('user-content-setup')
+    expect(a.properties?.href).toBe('#user-content-setup')
+  })
+
+  it('neutralises form controls and non-checkbox inputs', () => {
+    for (const tag of ['button', 'textarea', 'select']) {
+      const node = element(tag)
+      sanitiseNode(node)
+      expect(node.tagName).toBe('span')
+    }
+    const pw = element('input', { type: 'password', name: 'password' })
+    sanitiseNode(pw)
+    expect(pw.tagName).toBe('span')
+  })
+
+  it('keeps GFM task-list checkboxes, disabled', () => {
+    const cb = element('input', { type: 'checkbox', checked: true })
+    sanitiseNode(cb)
+    expect(cb.tagName).toBe('input')
+    expect(cb.properties).toEqual({ type: 'checkbox', checked: true, disabled: true })
   })
 })

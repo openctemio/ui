@@ -3,7 +3,7 @@
 import * as React from 'react'
 import dynamic from 'next/dynamic'
 import { cn } from '@/lib/utils'
-import { sanitiseNode } from '@/lib/sanitize-markdown'
+import { markdownPreviewSecurityProps } from '@/lib/sanitize-markdown'
 import { useTheme } from 'next-themes'
 
 const MDEditor = dynamic(() => import('@uiw/react-md-editor'), { ssr: false })
@@ -82,10 +82,9 @@ export function MarkdownEditor({
           textareaProps={{
             placeholder,
           }}
-          // Sanitise the editor's own live/preview pane too — without this,
-          // rehypeRewrite only runs in the standalone MarkdownPreview and the
-          // editor preview ('live'/'preview' modes) would render raw HTML.
-          previewOptions={{ rehypeRewrite: sanitiseNode }}
+          // Sanitise the editor's own live/preview pane too, with the same
+          // two passes as MarkdownPreview (before and after rehype-attr).
+          previewOptions={markdownPreviewSecurityProps}
           hideToolbar={hideToolbar}
           visibleDragbar={false}
         />
@@ -114,9 +113,8 @@ export function MarkdownPreview({ content, className }: MarkdownPreviewProps) {
       className={cn('prose prose-sm dark:prose-invert max-w-none', className)}
       data-color-mode={resolvedTheme}
     >
-      {/* rehypeRewrite sanitises every element before render. See
-          @/lib/sanitize-markdown for the blocklist rationale. */}
-      <MDPreview source={content} rehypeRewrite={sanitiseNode} />
+      {/* Sanitised before and after rehype-attr. See @/lib/sanitize-markdown. */}
+      <MDPreview source={content} {...markdownPreviewSecurityProps} />
     </div>
   )
 }
