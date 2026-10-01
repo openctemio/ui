@@ -96,11 +96,18 @@ export function isAuthenticated(req: NextRequest): boolean {
  */
 export function validateRedirectUrl(url: string): string {
   try {
+    // Reject embedded ASCII control characters (tab/newline/CR). Browsers strip
+    // these while parsing a navigation target, so "/\t/evil.com" collapses to
+    // "//evil.com" (protocol-relative external redirect) after passing checks.
+    if (/[\u0000-\u001f\u007f]/.test(url)) {
+      return '/dashboard'
+    }
+
     // If it starts with /, it's internal - safe
-    if (url.startsWith('/') && !url.startsWith('//')) {
+    if (url.startsWith('/')) {
       // Reject backslash / protocol-relative tricks: browsers normalise
-      // "\" to "/", so "/\evil.com" becomes an external protocol-relative
-      // redirect. Block a leading "/" followed by "/" or "\".
+      // "\" to "/", so "//evil.com" or "/\evil.com" becomes an external
+      // protocol-relative redirect. Block a leading "/" followed by "/" or "\".
       if (/^\/[/\\]/.test(url)) {
         return '/dashboard'
       }
@@ -112,7 +119,13 @@ export function validateRedirectUrl(url: string): string {
 
     // Only allow same origin
     if (parsed.origin === process.env.NEXT_PUBLIC_APP_URL) {
-      return parsed.pathname + parsed.search
+      // The same-origin pathname can itself be protocol-relative
+      // ("https://app//evil.com" -> "//evil.com"); re-apply the guard.
+      const safePath = parsed.pathname + parsed.search
+      if (!safePath.startsWith('/') || /^\/[/\\]/.test(safePath)) {
+        return '/dashboard'
+      }
+      return safePath
     }
 
     // Invalid - return default
