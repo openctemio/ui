@@ -602,7 +602,7 @@ export type FindingSource =
   | 'sast' // Static Application Security Testing (Semgrep, CodeQL, SonarQube)
   | 'dast' // Dynamic Application Security Testing (ZAP, Burp, Nuclei)
   | 'sca' // Software Composition Analysis (Trivy, Snyk, Grype)
-  | 'secret' // Secret detection (Gitleaks, Trufflehog)
+  | 'secret' // Secret detection (Betterleaks, Trufflehog)
   | 'iac' // Infrastructure as Code scanning (Checkov, Tfsec, Kics)
   | 'container' // Container image scanning
   // Cloud & Infrastructure security
@@ -832,7 +832,7 @@ export interface Finding {
  */
 export type FindingType =
   | 'vulnerability' // SAST, SCA, DAST findings
-  | 'secret' // Secret detection (Gitleaks, Trufflehog)
+  | 'secret' // Secret detection (Betterleaks, Trufflehog)
   | 'misconfiguration' // IaC findings (Checkov, Trivy-config)
   | 'compliance' // Compliance framework violations
   | 'web3' // Smart contract findings

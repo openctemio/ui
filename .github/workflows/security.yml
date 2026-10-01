@@ -151,26 +151,42 @@ jobs:
         continue-on-error: true
 
   # ============================================
-  # Secret Scanning with Gitleaks (Optional)
+  # Betterleaks - secrets in the code and git history (OSS CLI, no licence).
+  # Betterleaks is gitleaks' successor. v1.x is pinned and checksum-verified
+  # (v2 drops SARIF output). It replaces the opt-in gitleaks-action job,
+  # which needed a GITLEAKS_LICENSE and never ran.
   # ============================================
-  # Requires GITLEAKS_LICENSE secret for organizations
-  # Enable by setting repository variable ENABLE_GITLEAKS=true
-  # Note: Trivy also scans for secrets as a backup
-  gitleaks:
+  secret-scan:
     name: Secret Scanning
     runs-on: ubuntu-latest
-    if: ${{ vars.ENABLE_GITLEAKS == 'true' }}
+    env:
+      BETTERLEAKS_VERSION: 1.9.0
+      BETTERLEAKS_SHA256: f8b185a39ffcece2a1ca82bf3a4e7435cd81963ffd16b7a9128daf75f35f6de7
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
-      - name: Run Gitleaks
-        uses: gitleaks/gitleaks-action@v3
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+      - name: Install Betterleaks (pinned, checksum-verified)
+        run: |
+          curl -sSfL -o betterleaks.tgz \
+            "https://github.com/betterleaks/betterleaks/releases/download/v${BETTERLEAKS_VERSION}/betterleaks_${BETTERLEAKS_VERSION}_linux_x64.tar.gz"
+          echo "${BETTERLEAKS_SHA256}  betterleaks.tgz" | sha256sum -c -
+          tar -xzf betterleaks.tgz betterleaks
+
+      - name: Run Betterleaks
+        # --redact keeps secret values out of the report and the Security tab.
+        run: >-
+          ./betterleaks git --redact --no-banner --exit-code 0
+          --report-format sarif --report-path betterleaks.sarif .
+
+      - name: Upload Betterleaks results
+        uses: github/codeql-action/upload-sarif@v4
+        if: always()
+        with:
+          sarif_file: betterleaks.sarif
+          category: betterleaks
 
   # ============================================
   # Snyk Security Scan (Optional - requires SNYK_TOKEN)

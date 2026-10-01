@@ -1176,7 +1176,7 @@ import type { ScannerTemplateListFilters } from './scanner-template-types'
 
 /**
  * Scanner template endpoints for managing custom detection rules
- * Supports Nuclei (YAML), Semgrep (YAML), and Gitleaks (TOML) templates
+ * Supports Nuclei (YAML), Semgrep (YAML), and Betterleaks (TOML) templates
  */
 export const scannerTemplateEndpoints = {
   /**
