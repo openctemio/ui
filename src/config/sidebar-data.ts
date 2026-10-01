@@ -603,21 +603,21 @@ export const sidebarData: SidebarData = {
       title: 'Settings',
       icon: Settings,
       items: [
-        // Agents — the execution/data-collection runtime (Fleet-style). Agents
+        // Sensors — the execution/data-collection runtime (Fleet-style). Sensors
         // span recon/scan/validate/collect, so they are their own plane, not a
         // sub-item of Scanning. Mirrors the Elastic Agent+Fleet / Datadog Agent
         // model; "Scanning" below is narrowed to scan-job configuration.
         {
-          title: 'Agents',
+          title: 'Sensors',
           icon: Bot,
-          permission: Permission.AgentsRead,
+          permission: Permission.SensorsRead,
           module: 'scans',
           items: [
             {
-              title: 'All Agents',
-              url: '/agents',
+              title: 'All Sensors',
+              url: '/sensors',
               icon: Bot,
-              permission: Permission.AgentsRead,
+              permission: Permission.SensorsRead,
               module: 'scans',
             },
             {

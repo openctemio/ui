@@ -65,9 +65,9 @@ const PERMISSION_TO_LICENSE_MODULE: Record<string, string> = {
   tools: 'scans',
   tenant_tools: 'scans',
 
-  // Agents
-  agents: 'agents',
-  commands: 'agents',
+  // Sensors
+  sensors: 'sensors',
+  commands: 'sensors',
 
   // ===========================================
   // CTEM STAGE 3: PRIORITIZATION

@@ -60,7 +60,7 @@ import { toast } from 'sonner'
 // ─────────────────────────────────────────────────────────
 
 type Engine = 'nessus_pro' | 'tenable_sc'
-type ExecutionMode = 'agent' | 'direct'
+type ExecutionMode = 'sensor' | 'direct'
 
 const ENGINE_LABELS: Record<Engine, string> = {
   nessus_pro: 'Nessus Professional (unlimited IPs)',
@@ -134,7 +134,7 @@ function TenableModeFields({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="agent">Runner (agent) — recommended</SelectItem>
+            <SelectItem value="sensor">Runner (sensor) — recommended</SelectItem>
             <SelectItem value="direct">Direct (backend → Tenable)</SelectItem>
           </SelectContent>
         </Select>
@@ -143,7 +143,7 @@ function TenableModeFields({
   )
 }
 
-function AgentModeNote() {
+function SensorModeNote() {
   return (
     <div className="bg-muted/50 flex gap-2 rounded-lg border p-3">
       <ServerCog className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0" />
@@ -183,7 +183,7 @@ function ConnectTenableDialog({
 }) {
   const [name, setName] = useState('Tenable')
   const [engine, setEngine] = useState<Engine>('nessus_pro')
-  const [mode, setMode] = useState<ExecutionMode>('agent')
+  const [mode, setMode] = useState<ExecutionMode>('sensor')
   const [baseUrl, setBaseUrl] = useState('')
   const [accessKey, setAccessKey] = useState('')
   const [secretKey, setSecretKey] = useState('')
@@ -192,7 +192,7 @@ function ConnectTenableDialog({
   function reset() {
     setName('Tenable')
     setEngine('nessus_pro')
-    setMode('agent')
+    setMode('sensor')
     setBaseUrl('')
     setAccessKey('')
     setSecretKey('')
@@ -243,8 +243,8 @@ function ConnectTenableDialog({
             <Input id="conn-name" value={name} onChange={(e) => setName(e.target.value)} required />
           </div>
           <TenableModeFields engine={engine} setEngine={setEngine} mode={mode} setMode={setMode} />
-          {mode === 'agent' ? (
-            <AgentModeNote />
+          {mode === 'sensor' ? (
+            <SensorModeNote />
           ) : (
             <>
               <DirectModeWarning />
@@ -314,7 +314,7 @@ function EditTenableDialog({
     (getConfigString(integration, 'engine') as Engine) || 'nessus_pro'
   )
   const [mode, setMode] = useState<ExecutionMode>(
-    (getConfigString(integration, 'execution_mode') as ExecutionMode) || 'agent'
+    (getConfigString(integration, 'execution_mode') as ExecutionMode) || 'sensor'
   )
   const [baseUrl, setBaseUrl] = useState(integration.base_url ?? '')
   const [accessKey, setAccessKey] = useState('')
@@ -327,10 +327,10 @@ function EditTenableDialog({
     if (mode === 'direct' && !baseUrl) return toast.error('Base URL is required for direct mode')
 
     // Credentials handling:
-    // - agent mode: clear any stored creds (also required to switch direct→agent).
+    // - sensor mode: clear any stored creds (also required to switch direct→sensor).
     // - direct mode: only send new creds if both keys provided; otherwise keep existing.
     let credentials: string | undefined
-    if (mode === 'agent') {
+    if (mode === 'sensor') {
       credentials = ''
     } else if (accessKey && secretKey) {
       credentials = JSON.stringify({ access_key: accessKey, secret_key: secretKey })
@@ -347,7 +347,9 @@ function EditTenableDialog({
       onSuccess()
       onOpenChange(false)
     } catch {
-      toast.error('Failed to update — check mode/credentials (agent mode cannot store credentials)')
+      toast.error(
+        'Failed to update — check mode/credentials (sensor mode cannot store credentials)'
+      )
     }
   }
 
@@ -364,8 +366,8 @@ function EditTenableDialog({
             <Input id="edit-name" value={name} onChange={(e) => setName(e.target.value)} required />
           </div>
           <TenableModeFields engine={engine} setEngine={setEngine} mode={mode} setMode={setMode} />
-          {mode === 'agent' ? (
-            <AgentModeNote />
+          {mode === 'sensor' ? (
+            <SensorModeNote />
           ) : (
             <>
               <DirectModeWarning />
@@ -416,7 +418,7 @@ function EditTenableDialog({
 }
 
 // ─────────────────────────────────────────────────────────
-// Runner setup guidance (agent mode)
+// Runner setup guidance (sensor mode)
 // ─────────────────────────────────────────────────────────
 
 function RunnerSetupDialog({
@@ -432,9 +434,9 @@ function RunnerSetupDialog({
         <DialogHeader>
           <DialogTitle>Set up the Tenable runner</DialogTitle>
           <DialogDescription>
-            In runner (agent) mode, a runner in your environment talks to Tenable and pushes results
-            to OpenCTEM over an outbound connection. OpenCTEM never reaches your appliance or holds
-            its credentials.
+            In runner (sensor) mode, a runner in your environment talks to Tenable and pushes
+            results to OpenCTEM over an outbound connection. OpenCTEM never reaches your appliance
+            or holds its credentials.
           </DialogDescription>
         </DialogHeader>
         <ol className="list-decimal space-y-3 ps-5 text-sm">
@@ -569,7 +571,7 @@ function ScannerCard({
     integration.id
   )
 
-  const mode = getConfigString(integration, 'execution_mode') || 'agent'
+  const mode = getConfigString(integration, 'execution_mode') || 'sensor'
   const engine = getConfigString(integration, 'engine')
 
   async function handleDelete() {
@@ -592,7 +594,7 @@ function ScannerCard({
               <h3 className="truncate font-semibold">{integration.name}</h3>
               <StatusBadge status={integration.status} />
               <Badge variant="secondary" className="text-xs">
-                {mode === 'agent' ? 'Runner (agent)' : 'Direct'}
+                {mode === 'sensor' ? 'Runner (sensor)' : 'Direct'}
               </Badge>
               {engine && (
                 <Badge variant="outline" className="text-xs">
@@ -611,7 +613,7 @@ function ScannerCard({
             )}
           </div>
           <div className="flex shrink-0 items-center gap-1">
-            {mode === 'agent' && (
+            {mode === 'sensor' && (
               <Button variant="outline" size="sm" onClick={() => setRunnerOpen(true)}>
                 <ServerCog className="me-2 h-4 w-4" />
                 Runner setup
@@ -687,8 +689,8 @@ export default function SecurityScannersPage() {
 
   const scanners = data?.data ?? []
   const connected = scanners.filter((s) => s.status === 'connected').length
-  const agentMode = scanners.filter(
-    (s) => (getConfigString(s, 'execution_mode') || 'agent') === 'agent'
+  const sensorMode = scanners.filter(
+    (s) => (getConfigString(s, 'execution_mode') || 'sensor') === 'sensor'
   ).length
 
   const { data: coverage, isLoading: coverageLoading } = useScanCoverage(30)
@@ -728,14 +730,14 @@ export default function SecurityScannersPage() {
           description={`of ${scanners.length} configured`}
         />
         <StatsCard
-          title="Runner (agent) mode"
-          value={agentMode}
+          title="Runner (sensor) mode"
+          value={sensorMode}
           icon={ServerCog}
           description="Credentials stay in your environment"
         />
         <StatsCard
           title="Direct mode"
-          value={scanners.length - agentMode}
+          value={scanners.length - sensorMode}
           icon={ShieldCheck}
           description="Backend reaches Tenable"
         />

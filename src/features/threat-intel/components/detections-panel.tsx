@@ -114,7 +114,7 @@ export function DetectionsPanel() {
           <EmptyState
             icon={Radar}
             title="No detections yet"
-            description="Detections appear here when a collector agent forwards a runtime event that matches an indicator in your catalogue."
+            description="Detections appear here when a collector sensor forwards a runtime event that matches an indicator in your catalogue."
           />
         ) : (
           <DataTable columns={columns} data={rows} searchPlaceholder="Search detections…" />

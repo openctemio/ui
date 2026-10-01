@@ -1,8 +1,8 @@
 /**
  * Platform Feature Module
  *
- * Tiered Platform Agents feature components and utilities.
- * Platform agents are cloud-hosted scanning infrastructure with
+ * Tiered Platform Sensors feature components and utilities.
+ * Platform sensors are cloud-hosted scanning infrastructure with
  * three tiers: shared, dedicated, and premium.
  */
 

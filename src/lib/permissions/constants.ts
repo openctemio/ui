@@ -195,16 +195,16 @@ export const Permission = {
   SecretStoreDelete: 'scans:secret_store:delete',
 
   // ===========================================
-  // AGENTS MODULE
+  // SENSORS MODULE
   // ===========================================
-  AgentsRead: 'agents:read',
-  AgentsWrite: 'agents:write',
-  AgentsDelete: 'agents:delete',
+  SensorsRead: 'sensors:read',
+  SensorsWrite: 'sensors:write',
+  SensorsDelete: 'sensors:delete',
 
-  // Commands (agents:commands:*)
-  CommandsRead: 'agents:commands:read',
-  CommandsWrite: 'agents:commands:write',
-  CommandsDelete: 'agents:commands:delete',
+  // Commands (sensors:commands:*)
+  CommandsRead: 'sensors:commands:read',
+  CommandsWrite: 'sensors:commands:write',
+  CommandsDelete: 'sensors:commands:delete',
 
   // ===========================================
   // TEAM MODULE (Access Control)
@@ -413,7 +413,7 @@ export const PermissionGroups = {
     Permission.ScannerTemplatesRead,
     Permission.TemplateSourcesRead,
     Permission.SecretStoreRead,
-    Permission.AgentsRead,
+    Permission.SensorsRead,
     Permission.CommandsRead,
     Permission.TeamRead,
     Permission.MembersRead,
@@ -466,7 +466,7 @@ export const PermissionGroups = {
     Permission.ScannerTemplatesWrite,
     Permission.TemplateSourcesWrite,
     Permission.SecretStoreWrite,
-    Permission.AgentsWrite,
+    Permission.SensorsWrite,
     Permission.CommandsWrite,
     Permission.TeamUpdate,
     Permission.MembersWrite,
@@ -513,7 +513,7 @@ export const PermissionGroups = {
     Permission.ScannerTemplatesDelete,
     Permission.TemplateSourcesDelete,
     Permission.SecretStoreDelete,
-    Permission.AgentsDelete,
+    Permission.SensorsDelete,
     Permission.CommandsDelete,
     Permission.TeamDelete,
     Permission.GroupsDelete,
@@ -649,10 +649,10 @@ export const PermissionLabels: Partial<Record<PermissionString, string>> = {
   [Permission.SecretStoreWrite]: 'Manage Secret Store',
   [Permission.SecretStoreDelete]: 'Delete Secrets',
 
-  // Agents
-  [Permission.AgentsRead]: 'View Agents',
-  [Permission.AgentsWrite]: 'Manage Agents',
-  [Permission.AgentsDelete]: 'Delete Agents',
+  // Sensors
+  [Permission.SensorsRead]: 'View Sensors',
+  [Permission.SensorsWrite]: 'Manage Sensors',
+  [Permission.SensorsDelete]: 'Delete Sensors',
   [Permission.CommandsRead]: 'View Commands',
   [Permission.CommandsWrite]: 'Send Commands',
   [Permission.CommandsDelete]: 'Delete Commands',
@@ -847,10 +847,10 @@ export const RolePermissions: Record<RoleString, PermissionString[]> = {
     Permission.SecretStoreRead,
     Permission.SecretStoreWrite,
     Permission.SecretStoreDelete,
-    // Agents
-    Permission.AgentsRead,
-    Permission.AgentsWrite,
-    Permission.AgentsDelete,
+    // Sensors
+    Permission.SensorsRead,
+    Permission.SensorsWrite,
+    Permission.SensorsDelete,
     Permission.CommandsRead,
     Permission.CommandsWrite,
     Permission.CommandsDelete,
@@ -1009,10 +1009,10 @@ export const RolePermissions: Record<RoleString, PermissionString[]> = {
     Permission.SecretStoreRead,
     Permission.SecretStoreWrite,
     Permission.SecretStoreDelete,
-    // Agents
-    Permission.AgentsRead,
-    Permission.AgentsWrite,
-    Permission.AgentsDelete,
+    // Sensors
+    Permission.SensorsRead,
+    Permission.SensorsWrite,
+    Permission.SensorsDelete,
     Permission.CommandsRead,
     Permission.CommandsWrite,
     Permission.CommandsDelete,
@@ -1140,9 +1140,9 @@ export const RolePermissions: Record<RoleString, PermissionString[]> = {
     Permission.ScannerTemplatesWrite,
     Permission.SecretStoreRead,
     Permission.SecretStoreWrite,
-    // Agents (read + write, no delete)
-    Permission.AgentsRead,
-    Permission.AgentsWrite,
+    // Sensors (read + write, no delete)
+    Permission.SensorsRead,
+    Permission.SensorsWrite,
     Permission.CommandsRead,
     Permission.CommandsWrite,
     // Team (read only)
@@ -1222,8 +1222,8 @@ export const RolePermissions: Record<RoleString, PermissionString[]> = {
     Permission.TenantToolsRead,
     Permission.ScannerTemplatesRead,
     Permission.SecretStoreRead,
-    // Agents (read only)
-    Permission.AgentsRead,
+    // Sensors (read only)
+    Permission.SensorsRead,
     Permission.CommandsRead,
     // Team (read only)
     Permission.TeamRead,

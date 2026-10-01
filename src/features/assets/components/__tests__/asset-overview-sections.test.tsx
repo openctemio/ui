@@ -103,10 +103,10 @@ describe('DiscoverySection', () => {
   it('shows the source and tool', () => {
     render(
       <DiscoverySection
-        asset={makeAsset({ discoverySource: 'agent', discoveryTool: 'gitleaks' })}
+        asset={makeAsset({ discoverySource: 'sensor', discoveryTool: 'gitleaks' })}
       />
     )
-    expect(screen.getByText('Agent')).toBeInTheDocument()
+    expect(screen.getByText('Sensor')).toBeInTheDocument()
     expect(screen.getByText('gitleaks')).toBeInTheDocument()
   })
 

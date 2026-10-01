@@ -31,7 +31,7 @@ export interface CapabilityOption extends FormOption {
   toolCount: number
 }
 
-export interface UseAgentFormOptionsReturn {
+export interface UseSensorFormOptionsReturn {
   /** Tool options derived from active tools in database */
   toolOptions: ToolOption[]
   /** Capability options derived from tools' capabilities */
@@ -70,7 +70,7 @@ function buildCapabilityLookup(capabilities: Capability[] | undefined): Map<stri
 // ============================================
 
 /**
- * Hook to get dynamic tool and capability options for agent forms.
+ * Hook to get dynamic tool and capability options for sensor forms.
  *
  * Features:
  * - Fetches active tools from database
@@ -80,7 +80,7 @@ function buildCapabilityLookup(capabilities: Capability[] | undefined): Map<stri
  *
  * @example
  * ```tsx
- * const { toolOptions, capabilityOptions, isLoading } = useAgentFormOptions();
+ * const { toolOptions, capabilityOptions, isLoading } = useSensorFormOptions();
  *
  * // Filter tools by selected capabilities
  * const filteredTools = getToolsByCapabilities(selectedCapabilities);
@@ -92,7 +92,7 @@ const SWR_CONFIG = {
   dedupingInterval: 30000, // Cache for 30 seconds
 }
 
-export function useAgentFormOptions(): UseAgentFormOptionsReturn {
+export function useSensorFormOptions(): UseSensorFormOptionsReturn {
   // Fetch only active tools - use static filter and config objects
   const { data, isLoading, error } = useTools(ACTIVE_TOOLS_FILTER, SWR_CONFIG)
 

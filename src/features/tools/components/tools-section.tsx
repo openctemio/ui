@@ -468,7 +468,7 @@ export function ToolsSection({ onToolSelect, selectedToolId }: ToolsSectionProps
     <>
       <PageHeader
         title="Tools"
-        description="The security tools and scanners agents can run. Platform tools are built in; add custom ones for your own scanners."
+        description="The security tools and scanners sensors can run. Platform tools are built in; add custom ones for your own scanners."
       >
         <Button variant="outline" size="sm" onClick={handleExport}>
           <Download className="h-4 w-4" />

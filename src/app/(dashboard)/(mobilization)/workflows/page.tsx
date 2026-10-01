@@ -461,7 +461,7 @@ export default function WorkflowsPage() {
   // The other counts (active, triggered, successRate) are still derived
   // from `items` because there's no /workflows/stats endpoint yet — they
   // reflect the loaded page only. If a tenant ever crosses 50 workflows we
-  // should add a stats endpoint similar to /agents/stats. For now this is
+  // should add a stats endpoint similar to /sensors/stats. For now this is
   // documented in-line so the next person doesn't think it's a bug.
   const workflowStats = useMemo(() => {
     if (!workflowsData?.items) {

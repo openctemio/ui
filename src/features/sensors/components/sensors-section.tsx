@@ -28,23 +28,23 @@ import { RefreshButton, TableSkeleton } from '@/components/list-page-parts'
 import { useUrlFilter } from '@/hooks/use-url-param'
 import { Can, Permission } from '@/lib/permissions'
 
-import { AddAgentDialog } from './add-agent-dialog'
-import { EditAgentDialog } from './edit-agent-dialog'
+import { AddSensorDialog } from './add-sensor-dialog'
+import { EditSensorDialog } from './edit-sensor-dialog'
 import { RegenerateKeyDialog } from './regenerate-key-dialog'
-import { AgentConfigDialog } from './agent-config-dialog'
-import { AgentDetailSheet } from './agent-detail-sheet'
-import { AgentTable } from './agent-table'
+import { SensorConfigDialog } from './sensor-config-dialog'
+import { SensorDetailSheet } from './sensor-detail-sheet'
+import { SensorTable } from './sensor-table'
 import {
-  useAgents,
-  useTenantAgentStats,
-  useDeleteAgent,
-  useBulkDeleteAgents,
-  useActivateAgent,
-  useDeactivateAgent,
-  useRevokeAgent,
-  invalidateAgentsCache,
-} from '@/lib/api/agent-hooks'
-import type { AgentListFilters, Agent } from '@/lib/api/agent-types'
+  useSensors,
+  useTenantSensorStats,
+  useDeleteSensor,
+  useBulkDeleteSensors,
+  useActivateSensor,
+  useDeactivateSensor,
+  useRevokeSensor,
+  invalidateSensorsCache,
+} from '@/lib/api/sensor-hooks'
+import type { SensorListFilters, Sensor } from '@/lib/api/sensor-types'
 import { PlatformStatsCard } from '@/features/platform'
 import {
   BulkActionBar,
@@ -56,16 +56,16 @@ import {
 } from '@/features/shared'
 
 type ModeFilter = 'all' | 'daemon' | 'standalone' | 'collector'
-type AgentTypeFilter = 'runner' | 'worker' | 'collector' | 'sensor'
+type SensorTypeFilter = 'runner' | 'worker' | 'collector' | 'sensor'
 
-interface AgentsSectionProps {
-  typeFilter?: AgentTypeFilter
+interface SensorsSectionProps {
+  typeFilter?: SensorTypeFilter
   /** Page title and description; the section renders the page header. */
   title?: string
   description?: string
 }
 
-interface AgentStats {
+interface SensorStats {
   total: number
   online: number
   offline: number
@@ -80,39 +80,39 @@ interface AgentStats {
   }
 }
 
-// Check if agent is online using the health field from backend
-function isAgentOnline(agent: Agent): boolean {
-  // Only active agents can be online
-  if (agent.status !== 'active') return false
+// Check if sensor is online using the health field from backend
+function isSensorOnline(sensor: Sensor): boolean {
+  // Only active sensors can be online
+  if (sensor.status !== 'active') return false
   // Use the health field from backend (heartbeat-based)
-  return agent.health === 'online'
+  return sensor.health === 'online'
 }
 
-// Get metrics for an agent - uses real data from backend
-function getAgentMetrics(agent: Agent) {
-  if (agent.status !== 'active' || agent.health !== 'online') {
+// Get metrics for a sensor - uses real data from backend
+function getSensorMetrics(sensor: Sensor) {
+  if (sensor.status !== 'active' || sensor.health !== 'online') {
     return { cpu: 0, memory: 0, activeJobs: 0 }
   }
   // Use real metrics from backend
   return {
-    cpu: agent.cpu_percent || 0,
-    memory: agent.memory_percent || 0,
-    activeJobs: agent.active_jobs || 0,
+    cpu: sensor.cpu_percent || 0,
+    memory: sensor.memory_percent || 0,
+    activeJobs: sensor.active_jobs || 0,
   }
 }
 
-function calculateStats(agents: Agent[]): AgentStats {
-  const daemonAgents = agents.filter((w) => w.execution_mode === 'daemon')
-  const onlineAgents = agents.filter(isAgentOnline)
+function calculateStats(sensors: Sensor[]): SensorStats {
+  const daemonSensors = sensors.filter((w) => w.execution_mode === 'daemon')
+  const onlineSensors = sensors.filter(isSensorOnline)
 
-  // Calculate total active jobs from online daemon agents
-  const totalActiveJobs = daemonAgents
-    .filter(isAgentOnline)
-    .reduce((sum, a) => sum + getAgentMetrics(a).activeJobs, 0)
+  // Calculate total active jobs from online daemon sensors
+  const totalActiveJobs = daemonSensors
+    .filter(isSensorOnline)
+    .reduce((sum, a) => sum + getSensorMetrics(a).activeJobs, 0)
 
-  const total = agents.length
-  const online = onlineAgents.length
-  const error = agents.filter((w) => w.health === 'error').length
+  const total = sensors.length
+  const online = onlineSensors.length
+  const error = sensors.filter((w) => w.health === 'error').length
 
   return {
     total,
@@ -120,25 +120,25 @@ function calculateStats(agents: Agent[]): AgentStats {
     // Offline is everything that is neither online nor errored (offline/unknown
     // health, disabled/revoked status, ...). Deriving it as the remainder keeps
     // the KPI buckets reconciling to Total (online + offline + error === total)
-    // instead of double-counting e.g. a disabled agent whose health is offline.
+    // instead of double-counting e.g. a disabled sensor whose health is offline.
     offline: Math.max(total - online - error, 0),
     error,
     activeJobs: totalActiveJobs,
     byMode: {
-      daemon: daemonAgents.length,
-      standalone: agents.filter((w) => w.execution_mode === 'standalone').length,
+      daemon: daemonSensors.length,
+      standalone: sensors.filter((w) => w.execution_mode === 'standalone').length,
     },
     byType: {
-      collector: agents.filter((w) => w.type === 'collector').length,
+      collector: sensors.filter((w) => w.type === 'collector').length,
     },
   }
 }
 
-export function AgentsSection({
+export function SensorsSection({
   typeFilter,
-  title = 'Agents',
-  description = 'Agents run your scans and collect data. Add one, then deploy it with its API key.',
-}: AgentsSectionProps) {
+  title = 'Sensors',
+  description = 'Sensors run your scans and collect data. Add one, then deploy it with its API key.',
+}: SensorsSectionProps) {
   // Dialog states
   const [addDialogOpen, setAddDialogOpen] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
@@ -149,8 +149,8 @@ export function AgentsSection({
   const [revokeDialogOpen, setRevokeDialogOpen] = useState(false)
   const [detailSheetOpen, setDetailSheetOpen] = useState(false)
 
-  // Selected agent for dialogs
-  const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null)
+  // Selected sensor for dialogs
+  const [selectedSensor, setSelectedSensor] = useState<Sensor | null>(null)
 
   // View and filter states
   // Filters and search live in the URL so a filtered view can be shared.
@@ -158,7 +158,7 @@ export function AgentsSection({
   const [statusFilter, setStatusFilter] = useUrlFilter('status', 'all')
   const [searchQuery, setSearchQuery] = useUrlFilter('q', '')
   const activeTab = modeParam as ModeFilter
-  const [_filters] = useState<AgentListFilters>({})
+  const [_filters] = useState<SensorListFilters>({})
 
   // Row selection (owned by the table; mirrored here for the bulk-action bar)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
@@ -166,62 +166,62 @@ export function AgentsSection({
   const clearSelection = useCallback(() => setSelectionEpoch((n) => n + 1), [])
 
   // API data
-  const { data: agentsData, error, isLoading, mutate } = useAgents(_filters)
-  const agents: Agent[] = useMemo(() => agentsData?.items ?? [], [agentsData?.items])
+  const { data: sensorsData, error, isLoading, mutate } = useSensors(_filters)
+  const sensors: Sensor[] = useMemo(() => sensorsData?.items ?? [], [sensorsData?.items])
 
   // Tenant-wide aggregated stats — independent of pagination/filters so the
   // top stat cards always reflect the FULL dataset, not just the current page.
-  const { data: tenantAgentStats } = useTenantAgentStats()
+  const { data: tenantSensorStats } = useTenantSensorStats()
 
   // Mutations
-  const { trigger: deleteAgentTrigger, isMutating: isDeleting } = useDeleteAgent(
-    selectedAgent?.id || ''
+  const { trigger: deleteSensorTrigger, isMutating: isDeleting } = useDeleteSensor(
+    selectedSensor?.id || ''
   )
-  const { trigger: bulkDeleteAgentsTrigger, isMutating: isBulkDeleting } = useBulkDeleteAgents()
-  const { trigger: activateAgentTrigger } = useActivateAgent(selectedAgent?.id || '')
-  const { trigger: deactivateAgentTrigger } = useDeactivateAgent(selectedAgent?.id || '')
-  const { trigger: revokeAgentTrigger } = useRevokeAgent(selectedAgent?.id || '')
+  const { trigger: bulkDeleteSensorsTrigger, isMutating: isBulkDeleting } = useBulkDeleteSensors()
+  const { trigger: activateSensorTrigger } = useActivateSensor(selectedSensor?.id || '')
+  const { trigger: deactivateSensorTrigger } = useDeactivateSensor(selectedSensor?.id || '')
+  const { trigger: revokeSensorTrigger } = useRevokeSensor(selectedSensor?.id || '')
 
   // Apply type filter first if provided
-  const typeFilteredAgents = useMemo(() => {
-    if (!typeFilter) return agents
-    return agents.filter((a) => a.type === typeFilter)
-  }, [agents, typeFilter])
+  const typeFilteredSensors = useMemo(() => {
+    if (!typeFilter) return sensors
+    return sensors.filter((a) => a.type === typeFilter)
+  }, [sensors, typeFilter])
 
   // Stats — prefer the API-aggregated tenant stats (accurate across all
   // pages); fall back to per-page calculation if the stats request hasn't
   // resolved yet (or for the type-filtered case where we filter client-side).
   const stats = useMemo(() => {
-    if (tenantAgentStats && !typeFilter) {
+    if (tenantSensorStats && !typeFilter) {
       // Single source of truth: derive every status bucket from the tenant
       // total so Total === Online + Offline + Error. `online_active` counts
-      // agents that are both active AND health='online'; Offline is the
+      // sensors that are both active AND health='online'; Offline is the
       // remainder (offline/unknown health + disabled/revoked status), which
-      // avoids double-counting an agent across by_health and by_status.
-      const total = tenantAgentStats.total
-      const online = tenantAgentStats.online_active ?? tenantAgentStats.by_health?.online ?? 0
-      const error = tenantAgentStats.by_health?.error ?? 0
+      // avoids double-counting a sensor across by_health and by_status.
+      const total = tenantSensorStats.total
+      const online = tenantSensorStats.online_active ?? tenantSensorStats.by_health?.online ?? 0
+      const error = tenantSensorStats.by_health?.error ?? 0
       return {
         total,
         online,
         offline: Math.max(total - online - error, 0),
         error,
-        activeJobs: tenantAgentStats.active_jobs,
+        activeJobs: tenantSensorStats.active_jobs,
         byMode: {
-          daemon: tenantAgentStats.by_execution_mode?.daemon ?? 0,
-          standalone: tenantAgentStats.by_execution_mode?.standalone ?? 0,
+          daemon: tenantSensorStats.by_execution_mode?.daemon ?? 0,
+          standalone: tenantSensorStats.by_execution_mode?.standalone ?? 0,
         },
         byType: {
-          collector: tenantAgentStats.by_type?.collector ?? 0,
+          collector: tenantSensorStats.by_type?.collector ?? 0,
         },
       }
     }
-    return calculateStats(typeFilteredAgents)
-  }, [tenantAgentStats, typeFilter, typeFilteredAgents])
+    return calculateStats(typeFilteredSensors)
+  }, [tenantSensorStats, typeFilter, typeFilteredSensors])
 
-  // Filter agents based on tab, status, and search
-  const filteredAgents = useMemo(() => {
-    let result = [...typeFilteredAgents]
+  // Filter sensors based on tab, status, and search
+  const filteredSensors = useMemo(() => {
+    let result = [...typeFilteredSensors]
 
     // Filter by tab (execution mode / type)
     if (activeTab === 'daemon') {
@@ -268,121 +268,121 @@ export function AgentsSection({
     }
 
     return result
-  }, [typeFilteredAgents, activeTab, statusFilter, searchQuery])
+  }, [typeFilteredSensors, activeTab, statusFilter, searchQuery])
 
   // Handlers
   const handleRefresh = useCallback(async () => {
-    await invalidateAgentsCache()
+    await invalidateSensorsCache()
     await mutate()
-    toast.success('Agents refreshed')
+    toast.success('Sensors refreshed')
   }, [mutate])
 
-  const handleViewAgent = useCallback((agent: Agent) => {
-    setSelectedAgent(agent)
+  const handleViewSensor = useCallback((sensor: Sensor) => {
+    setSelectedSensor(sensor)
     setDetailSheetOpen(true)
   }, [])
 
-  const handleEditAgent = useCallback((agent: Agent) => {
-    setSelectedAgent(agent)
+  const handleEditSensor = useCallback((sensor: Sensor) => {
+    setSelectedSensor(sensor)
     setDetailSheetOpen(false)
     setEditDialogOpen(true)
   }, [])
 
-  const handleRegenerateKey = useCallback((agent: Agent) => {
-    setSelectedAgent(agent)
+  const handleRegenerateKey = useCallback((sensor: Sensor) => {
+    setSelectedSensor(sensor)
     setDetailSheetOpen(false)
     setRegenerateKeyDialogOpen(true)
   }, [])
 
-  const handleViewConfig = useCallback((agent: Agent) => {
-    setSelectedAgent(agent)
+  const handleViewConfig = useCallback((sensor: Sensor) => {
+    setSelectedSensor(sensor)
     setDetailSheetOpen(false)
     setConfigDialogOpen(true)
   }, [])
 
-  const handleDeleteClick = useCallback((agent: Agent) => {
-    setSelectedAgent(agent)
+  const handleDeleteClick = useCallback((sensor: Sensor) => {
+    setSelectedSensor(sensor)
     setDetailSheetOpen(false)
     setDeleteDialogOpen(true)
   }, [])
 
   const handleDeleteConfirm = useCallback(async () => {
-    if (!selectedAgent) return
+    if (!selectedSensor) return
     try {
-      await deleteAgentTrigger()
-      toast.success(`Agent "${selectedAgent.name}" deleted`)
-      await invalidateAgentsCache()
+      await deleteSensorTrigger()
+      toast.success(`Sensor "${selectedSensor.name}" deleted`)
+      await invalidateSensorsCache()
       setDeleteDialogOpen(false)
-      setSelectedAgent(null)
+      setSelectedSensor(null)
     } catch (err) {
-      toast.error(getErrorMessage(err, 'Failed to delete agent'))
+      toast.error(getErrorMessage(err, 'Failed to delete sensor'))
     }
-  }, [selectedAgent, deleteAgentTrigger])
+  }, [selectedSensor, deleteSensorTrigger])
 
   const handleBulkDeleteConfirm = useCallback(async () => {
     if (selectedIds.length === 0) return
 
     try {
-      const results = await bulkDeleteAgentsTrigger(selectedIds)
+      const results = await bulkDeleteSensorsTrigger(selectedIds)
       const successCount = results?.filter((r) => r.success).length || 0
       const failCount = results?.filter((r) => !r.success).length || 0
 
       if (failCount === 0) {
-        toast.success(`${successCount} agent(s) deleted successfully`)
+        toast.success(`${successCount} sensor(s) deleted successfully`)
       } else if (successCount > 0) {
         toast.warning(`${successCount} deleted, ${failCount} failed`)
       } else {
-        toast.error('Failed to delete agents')
+        toast.error('Failed to delete sensors')
       }
 
-      await invalidateAgentsCache()
+      await invalidateSensorsCache()
       setBulkDeleteDialogOpen(false)
       clearSelection()
     } catch (err) {
-      toast.error(getErrorMessage(err, 'Failed to delete agents'))
+      toast.error(getErrorMessage(err, 'Failed to delete sensors'))
     }
-  }, [selectedIds, bulkDeleteAgentsTrigger, clearSelection])
+  }, [selectedIds, bulkDeleteSensorsTrigger, clearSelection])
 
-  const handleActivateAgent = useCallback(
-    async (agent: Agent) => {
-      setSelectedAgent(agent)
+  const handleActivateSensor = useCallback(
+    async (sensor: Sensor) => {
+      setSelectedSensor(sensor)
       try {
-        const updatedAgent = await activateAgentTrigger()
-        toast.success(`Agent "${agent.name}" activated`)
-        await invalidateAgentsCache()
+        const updatedSensor = await activateSensorTrigger()
+        toast.success(`Sensor "${sensor.name}" activated`)
+        await invalidateSensorsCache()
         await mutate()
-        // Update selectedAgent with the response from API
-        if (updatedAgent) {
-          setSelectedAgent(updatedAgent)
+        // Update selectedSensor with the response from API
+        if (updatedSensor) {
+          setSelectedSensor(updatedSensor)
         }
       } catch (err) {
-        toast.error(getErrorMessage(err, 'Failed to activate agent'))
+        toast.error(getErrorMessage(err, 'Failed to activate sensor'))
       }
     },
-    [activateAgentTrigger, mutate]
+    [activateSensorTrigger, mutate]
   )
 
-  const handleDeactivateAgent = useCallback(
-    async (agent: Agent) => {
-      setSelectedAgent(agent)
+  const handleDeactivateSensor = useCallback(
+    async (sensor: Sensor) => {
+      setSelectedSensor(sensor)
       try {
-        const updatedAgent = await deactivateAgentTrigger()
-        toast.success(`Agent "${agent.name}" deactivated`)
-        await invalidateAgentsCache()
+        const updatedSensor = await deactivateSensorTrigger()
+        toast.success(`Sensor "${sensor.name}" deactivated`)
+        await invalidateSensorsCache()
         await mutate()
-        // Update selectedAgent with the response from API
-        if (updatedAgent) {
-          setSelectedAgent(updatedAgent)
+        // Update selectedSensor with the response from API
+        if (updatedSensor) {
+          setSelectedSensor(updatedSensor)
         }
       } catch (err) {
-        toast.error(getErrorMessage(err, 'Failed to deactivate agent'))
+        toast.error(getErrorMessage(err, 'Failed to deactivate sensor'))
       }
     },
-    [deactivateAgentTrigger, mutate]
+    [deactivateSensorTrigger, mutate]
   )
 
-  const handleRevokeAgent = useCallback((agent: Agent) => {
-    setSelectedAgent(agent)
+  const handleRevokeSensor = useCallback((sensor: Sensor) => {
+    setSelectedSensor(sensor)
     setDetailSheetOpen(false)
     setRevokeDialogOpen(true)
   }, [])
@@ -390,29 +390,29 @@ export function AgentsSection({
   const [isRevoking, setIsRevoking] = useState(false)
 
   const handleRevokeConfirm = useCallback(async () => {
-    if (!selectedAgent) return
+    if (!selectedSensor) return
     setIsRevoking(true)
     try {
-      const updatedAgent = await revokeAgentTrigger()
-      toast.success(`Agent "${selectedAgent.name}" access revoked`)
-      await invalidateAgentsCache()
+      const updatedSensor = await revokeSensorTrigger()
+      toast.success(`Sensor "${selectedSensor.name}" access revoked`)
+      await invalidateSensorsCache()
       await mutate()
       setRevokeDialogOpen(false)
-      // Update selectedAgent with the response from API
-      if (updatedAgent) {
-        setSelectedAgent(updatedAgent)
+      // Update selectedSensor with the response from API
+      if (updatedSensor) {
+        setSelectedSensor(updatedSensor)
       }
     } catch (err) {
-      toast.error(getErrorMessage(err, 'Failed to revoke agent'))
+      toast.error(getErrorMessage(err, 'Failed to revoke sensor'))
     } finally {
       setIsRevoking(false)
     }
-  }, [selectedAgent, revokeAgentTrigger, mutate])
+  }, [selectedSensor, revokeSensorTrigger, mutate])
 
   const handleExport = useCallback(() => {
     const csv = [
       ['Name', 'Type', 'Status', 'Mode', 'Scans', 'Findings', 'Last Seen'].join(','),
-      ...agents.map((w) =>
+      ...sensors.map((w) =>
         [
           w.name,
           w.type,
@@ -429,16 +429,16 @@ export function AgentsSection({
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
-    link.download = 'agents.csv'
+    link.download = 'sensors.csv'
     link.click()
     URL.revokeObjectURL(url)
-    toast.success('Agents exported')
-  }, [agents])
+    toast.success('Sensors exported')
+  }, [sensors])
 
   // Each status metric toggles the matching status filter.
   const toggleStatus = (value: string) => setStatusFilter(statusFilter === value ? 'all' : value)
   const metrics: MetricStripItem[] = [
-    { key: 'total', label: 'Agents', value: stats.total },
+    { key: 'total', label: 'Sensors', value: stats.total },
     {
       key: 'online',
       label: 'Online',
@@ -470,7 +470,7 @@ export function AgentsSection({
         <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           placeholder="Search name, host or IP…"
-          aria-label="Search agents"
+          aria-label="Search sensors"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="h-9 ps-9"
@@ -507,20 +507,20 @@ export function AgentsSection({
 
   let body: React.ReactNode
   if (error) {
-    body = <ErrorState title="agents" error={error} onRetry={handleRefresh} />
+    body = <ErrorState title="sensors" error={error} onRetry={handleRefresh} />
   } else if (isLoading) {
     body = <TableSkeleton rows={5} />
-  } else if (typeFilteredAgents.length === 0 && !hasFilter) {
+  } else if (typeFilteredSensors.length === 0 && !hasFilter) {
     body = (
       <EmptyState
         icon={Bot}
-        title="No agents"
-        description="Create an agent to start scanning and collecting data."
+        title="No sensors"
+        description="Create a sensor to start scanning and collecting data."
         action={
-          <Can permission={Permission.AgentsWrite}>
+          <Can permission={Permission.SensorsWrite}>
             <Button size="sm" onClick={() => setAddDialogOpen(true)}>
               <Plus className="h-4 w-4" />
-              Add agent
+              Add sensor
             </Button>
           </Can>
         }
@@ -528,13 +528,13 @@ export function AgentsSection({
     )
   } else {
     body = (
-      <AgentTable
-        agents={filteredAgents}
-        onViewAgent={handleViewAgent}
-        onEditAgent={handleEditAgent}
-        onActivateAgent={handleActivateAgent}
-        onDeactivateAgent={handleDeactivateAgent}
-        onDeleteAgent={handleDeleteClick}
+      <SensorTable
+        sensors={filteredSensors}
+        onViewSensor={handleViewSensor}
+        onEditSensor={handleEditSensor}
+        onActivateSensor={handleActivateSensor}
+        onDeactivateSensor={handleDeactivateSensor}
+        onDeleteSensor={handleDeleteClick}
         onRegenerateKey={handleRegenerateKey}
         onSelectionChange={(rows) => setSelectedIds(rows.map((a) => a.id))}
         resetSelectionKey={selectionEpoch}
@@ -551,10 +551,10 @@ export function AgentsSection({
           <Download className="h-4 w-4" />
           Export
         </Button>
-        <Can permission={Permission.AgentsWrite}>
+        <Can permission={Permission.SensorsWrite}>
           <Button size="sm" onClick={() => setAddDialogOpen(true)}>
             <Plus className="h-4 w-4" />
-            Add agent
+            Add sensor
           </Button>
         </Can>
       </PageHeader>
@@ -563,12 +563,12 @@ export function AgentsSection({
 
       <div className="mt-5">{body}</div>
 
-      {/* Cloud-hosted platform agents: capacity and queue, separate from the
-          tenant's own agents listed above, so it follows the table. */}
+      {/* Cloud-hosted platform sensors: capacity and queue, separate from the
+          tenant's own sensors listed above, so it follows the table. */}
       <PlatformStatsCard className="mt-5" />
 
-      <Can permission={Permission.AgentsDelete}>
-        <BulkActionBar count={selectedIds.length} onClear={clearSelection} noun="agents selected">
+      <Can permission={Permission.SensorsDelete}>
+        <BulkActionBar count={selectedIds.length} onClear={clearSelection} noun="sensors selected">
           <Button
             variant="ghost"
             size="sm"
@@ -581,46 +581,46 @@ export function AgentsSection({
         </BulkActionBar>
       </Can>
 
-      {/* Dialogs - Only render AddAgentDialog when open to avoid loading tools/capabilities on page load */}
+      {/* Dialogs - Only render AddSensorDialog when open to avoid loading tools/capabilities on page load */}
       {addDialogOpen && (
-        <AddAgentDialog
+        <AddSensorDialog
           open={addDialogOpen}
           onOpenChange={setAddDialogOpen}
           onSuccess={handleRefresh}
         />
       )}
 
-      {selectedAgent && (
+      {selectedSensor && (
         <>
-          <EditAgentDialog
+          <EditSensorDialog
             open={editDialogOpen}
             onOpenChange={setEditDialogOpen}
-            agent={selectedAgent}
+            sensor={selectedSensor}
           />
 
           <RegenerateKeyDialog
             open={regenerateKeyDialogOpen}
             onOpenChange={setRegenerateKeyDialogOpen}
-            agent={selectedAgent}
+            sensor={selectedSensor}
           />
 
-          <AgentConfigDialog
+          <SensorConfigDialog
             open={configDialogOpen}
             onOpenChange={setConfigDialogOpen}
-            agent={selectedAgent!}
+            sensor={selectedSensor!}
           />
 
-          <AgentDetailSheet
-            agent={selectedAgent}
+          <SensorDetailSheet
+            sensor={selectedSensor}
             open={detailSheetOpen}
             onOpenChange={setDetailSheetOpen}
-            onEdit={handleEditAgent}
+            onEdit={handleEditSensor}
             onRegenerateKey={handleRegenerateKey}
             onViewConfig={handleViewConfig}
             onDelete={handleDeleteClick}
-            onActivate={handleActivateAgent}
-            onDeactivate={handleDeactivateAgent}
-            onRevoke={handleRevokeAgent}
+            onActivate={handleActivateSensor}
+            onDeactivate={handleDeactivateSensor}
+            onRevoke={handleRevokeSensor}
           />
         </>
       )}
@@ -629,11 +629,11 @@ export function AgentsSection({
       <ConfirmDialog
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
-        title="Delete agent"
+        title="Delete sensor"
         desc={
           <>
-            Are you sure you want to delete <strong>{selectedAgent?.name}</strong>? This action
-            cannot be undone and will invalidate the agent&apos;s API key.
+            Are you sure you want to delete <strong>{selectedSensor?.name}</strong>? This action
+            cannot be undone and will invalidate the sensor&apos;s API key.
           </>
         }
         confirmText="Delete"
@@ -646,10 +646,10 @@ export function AgentsSection({
       <ConfirmDialog
         open={bulkDeleteDialogOpen}
         onOpenChange={setBulkDeleteDialogOpen}
-        title="Delete agents"
+        title="Delete sensors"
         desc={
           <>
-            Are you sure you want to delete <strong>{selectedIds.length}</strong> agent(s)? This
+            Are you sure you want to delete <strong>{selectedIds.length}</strong> sensor(s)? This
             action cannot be undone and will invalidate all their API keys.
           </>
         }
@@ -665,19 +665,19 @@ export function AgentsSection({
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2 text-destructive">
               <Ban className="h-5 w-5" />
-              Revoke agent access
+              Revoke sensor access
             </AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className="space-y-2">
                 <p>
-                  Permanently revoke access for <strong>{selectedAgent?.name}</strong>?
+                  Permanently revoke access for <strong>{selectedSensor?.name}</strong>?
                 </p>
                 <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2.5 text-sm text-destructive">
                   <p className="text-xs font-medium">This is permanent</p>
                   <ul className="mt-1.5 space-y-0.5 text-xs">
-                    <li>- Agent loses access immediately</li>
+                    <li>- Sensor loses access immediately</li>
                     <li>- Cannot be undone</li>
-                    <li>- Must create new agent to restore</li>
+                    <li>- Must create new sensor to restore</li>
                   </ul>
                 </div>
                 <p className="text-xs text-muted-foreground">
@@ -693,8 +693,8 @@ export function AgentsSection({
               size="sm"
               onClick={() => {
                 setRevokeDialogOpen(false)
-                if (selectedAgent) {
-                  handleDeactivateAgent(selectedAgent)
+                if (selectedSensor) {
+                  handleDeactivateSensor(selectedSensor)
                 }
               }}
               disabled={isRevoking}

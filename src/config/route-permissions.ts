@@ -493,21 +493,21 @@ export const routePermissions: Record<string, RoutePermissionConfig> = {
   },
 
   // ========================================
-  // Settings - Agents (Module: scans)
-  // Backend uses AgentsRead for agent management routes
+  // Settings - Sensors (Module: scans)
+  // Backend uses SensorsRead for sensor management routes
   // ========================================
-  '/agents': {
-    permission: Permission.AgentsRead,
+  '/sensors': {
+    permission: Permission.SensorsRead,
     module: Module.Scans,
   },
-  '/agents/**': {
-    permission: Permission.AgentsRead,
+  '/sensors/**': {
+    permission: Permission.SensorsRead,
     module: Module.Scans,
   },
-  // /runners renders the same agent/runner inventory as /agents (typeFilter)
+  // /runners renders the same sensor/runner inventory as /sensors (typeFilter)
   // — mirror its guard so it isn't left fail-open.
   '/runners': {
-    permission: Permission.AgentsRead,
+    permission: Permission.SensorsRead,
     module: Module.Scans,
   },
   '/scan-profiles': {

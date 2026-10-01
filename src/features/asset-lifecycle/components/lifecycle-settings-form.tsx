@@ -302,7 +302,7 @@ export function LifecycleSettingsForm({
               </Label>
               <p className="text-xs text-muted-foreground">
                 Skip the tenant entirely if no asset has been seen in the past 48 hours — prevents a
-                crashed agent from wiping the fleet.
+                crashed sensor from wiping the fleet.
               </p>
             </div>
             <Switch

@@ -30,7 +30,7 @@ import { useCreateScanConfig, invalidateScanConfigsCache } from '@/lib/api/scan-
 import type {
   CreateScanConfigRequest,
   ScheduleType,
-  AgentPreference,
+  SensorPreference,
   ScanType,
 } from '@/lib/api/scan-types'
 
@@ -61,9 +61,9 @@ function mapScheduleFrequency(frequency: ScheduleFrequency | undefined): Schedul
 }
 
 /**
- * Map form agent preference to API agent preference
+ * Map form sensor preference to API sensor preference
  */
-function mapAgentPreference(preference: string): AgentPreference {
+function mapSensorPreference(preference: string): SensorPreference {
   switch (preference) {
     case 'auto':
       return 'auto'
@@ -102,7 +102,7 @@ function mapFormDataToRequest(formData: NewScanFormData): CreateScanConfigReques
     description: `Security scan created via UI - ${formData.type}`,
     scan_type: scanType,
     schedule_type: scheduleType,
-    agent_preference: mapAgentPreference(formData.agentPreference),
+    sensor_preference: mapSensorPreference(formData.sensorPreference),
     targets_per_job: formData.maxConcurrent || 10,
     scanner_config: scannerConfig,
     timeout_seconds: formData.timeoutSeconds,
